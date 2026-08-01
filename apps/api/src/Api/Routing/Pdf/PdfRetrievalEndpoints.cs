@@ -182,11 +182,15 @@ internal static class PdfRetrievalEndpoints
         return Results.Json(pdf);
     }
 
-    // #3447 slice: RequireSession enforces a logged-in caller; the handler needs no session data
-    // (per-user authz/copyright gating deferred — slice spec S-4).
-    private static async Task<IResult> HandleGetImageRegions(Guid pdfId, IMediator mediator, CancellationToken ct)
+    // #3447 slice: owner-or-shared-game scoping (mirror HandleGetPdfText #3222); admins bypass.
+    // The handler returns an empty list (no existence leak) for missing/unauthorized PDFs.
+    private static async Task<IResult> HandleGetImageRegions(Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct)
     {
-        var regions = await mediator.Send(new GetPdfImageRegionsQuery(pdfId), ct).ConfigureAwait(false);
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var regions = await mediator.Send(new GetPdfImageRegionsQuery(pdfId, userId, isAdmin), ct).ConfigureAwait(false);
         return Results.Json(new { regions });
     }
 

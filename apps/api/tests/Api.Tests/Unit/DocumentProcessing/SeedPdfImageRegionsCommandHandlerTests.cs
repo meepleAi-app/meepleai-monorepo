@@ -1,4 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -20,11 +23,28 @@ public sealed class SeedPdfImageRegionsCommandHandlerTests
     ]}
     """;
 
+    private static void SeedPdf(MeepleAiDbContext db, Guid pdfId)
+    {
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "test.pdf",
+            FilePath = "/tmp/test.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = Guid.NewGuid(),
+            ProcessingState = "Ready",
+        });
+    }
+
     [Fact]
     public async Task Handle_InsertsParsedRegions_AndIsIdempotent()
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext($"seedimg_{Guid.NewGuid():N}");
         var pdfId = Guid.NewGuid();
+        SeedPdf(db, pdfId);
+        await db.SaveChangesAsync();
+
         var handler = new SeedPdfImageRegionsCommandHandler(db, NullLogger<SeedPdfImageRegionsCommandHandler>.Instance);
 
         var count1 = await handler.Handle(new SeedPdfImageRegionsCommand(pdfId, HiResJson), CancellationToken.None);
@@ -34,5 +54,17 @@ public sealed class SeedPdfImageRegionsCommandHandlerTests
         var count2 = await handler.Handle(new SeedPdfImageRegionsCommand(pdfId, HiResJson), CancellationToken.None);
         count2.Should().Be(1);
         (await db.PdfImageRegions.CountAsync(r => r.PdfDocumentId == pdfId)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_UnknownPdf_ThrowsNotFound()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"seedimg_{Guid.NewGuid():N}");
+        var handler = new SeedPdfImageRegionsCommandHandler(db, NullLogger<SeedPdfImageRegionsCommandHandler>.Instance);
+
+        var act = () => handler.Handle(new SeedPdfImageRegionsCommand(Guid.NewGuid(), HiResJson), CancellationToken.None);
+
+        // Guards the FK: a non-existent PDF is a clean 404, not a SaveChanges FK 500.
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

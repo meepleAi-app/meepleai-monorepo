@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +22,17 @@ internal class SeedPdfImageRegionsCommandHandler : ICommandHandler<SeedPdfImageR
 
     public async Task<int> Handle(SeedPdfImageRegionsCommand command, CancellationToken cancellationToken)
     {
+        // Guard the FK: seeding regions for a non-existent PDF would violate
+        // FK_pdf_image_regions_pdf_documents on SaveChanges → 500. Fail with a clean 404 instead
+        // (repo convention #2568 — NotFoundException for missing entities, never InvalidOperation/500).
+        var pdfExists = await _dbContext.PdfDocuments
+            .AnyAsync(p => p.Id == command.PdfId, cancellationToken)
+            .ConfigureAwait(false);
+        if (!pdfExists)
+        {
+            throw new NotFoundException("PdfDocument", command.PdfId.ToString());
+        }
+
         var regions = ImageRegionExtractor.FromHiResJson(command.HiResJson);
 
         var existing = await _dbContext.PdfImageRegions

@@ -161,6 +161,30 @@ gh run watch $(gh run list --workflow "Deploy to Staging" --limit 1 --json datab
 The slow path takes ~15-25 min (CI rebuild + deploy) vs ~10 min for the image-tag path,
 but produces a clean git history. Use slow path for P2/P3, fast path for P1.
 
+## Servizi AI — rebuild immagine `unstructured-service` (#3455)
+
+Quando modifichi la **pipeline coordinate** di `unstructured-service`
+(`apps/unstructured-service/src/api/coordinates.py` o `schemas.py`, es. SP-B #3406),
+l'immagine Docker **NON** si aggiorna da sola: `partition_pdf` continua a girare sul
+codice bakeato nell'immagine.
+
+- **Staging/prod**: il job `build` (push GHCR) ricostruisce le immagini ad ogni deploy →
+  la modifica a `coordinates.py` è inclusa automaticamente una volta mergiata e deployata.
+- **Locale**: `docker compose build` **non** è automatico. Dopo aver toccato `coordinates.py`
+  ricostruisci a mano, altrimenti `POST /extract` (strategy=hi_res) restituisce elementi
+  `Image`/`FigureCaption` **senza** `bbox` (0 bbox), pur avendo la libreria le coordinate.
+
+Rebuild + verifica in locale:
+
+```bash
+cd infra && docker compose --profile ai build unstructured-service
+docker compose --profile ai up -d unstructured-service
+# conferma che l'immagine ricostruita include la pipeline #3406:
+docker exec meepleai-unstructured grep -n normalized_bbox /app/src/api/coordinates.py
+```
+
+Ref: #3455 (epic #3435 image-table grounding), slice #3447.
+
 ## Observability
 
 - Slack: notifiche via `notify-start` + `notify-end` jobs (channel configurato in repo secrets `SLACK_GITNOTIFY_WEBHOOK_URL` + `SLACK_CRITICAL_WEBHOOK_URL`)

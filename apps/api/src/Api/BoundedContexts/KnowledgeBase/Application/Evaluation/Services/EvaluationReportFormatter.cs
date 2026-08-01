@@ -40,7 +40,14 @@ internal static class EvaluationReportFormatter
             .GroupBy(s => s.Id, StringComparer.Ordinal)
             .ToDictionary(
                 g => g.Key,
-                g => string.IsNullOrEmpty(g.First().Language) ? "unknown" : g.First().Language,
+                g =>
+                {
+                    // Extract into a local so IsNullOrEmpty's [NotNullWhen(false)] narrows the
+                    // else branch to non-null string (a second g.First().Language call would not
+                    // be narrowed), keeping the dictionary value type non-nullable.
+                    var language = g.First().Language;
+                    return string.IsNullOrEmpty(language) ? "unknown" : language;
+                },
                 StringComparer.Ordinal);
 
         var byLanguage = new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal);

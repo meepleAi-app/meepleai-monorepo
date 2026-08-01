@@ -4,10 +4,16 @@
 **Tipo**: design — follow-up investigazione #3419
 **Epic**: #3435 — "Image-table extraction & grounding" (il *Livello 2* rinviato dall'epic #3403)
 **Branch previsto**: feature branch per sub-progetto (parent `main-dev`)
-**Stato**: **design v1** — v0 draft + **spec-panel review incorporata (2026-08-01)**
-> Panel: Fowler/Nygard/Newman/Wiegers/Adzic/Crispin/Hightower. Le modifiche v1 chiudono: retrievability della
-> Metà R (§2), Fase-0 spike bloccanti (§5), assunzione 1:tabella:regione (§7 IA-6), design operativo del job VLM
-> (§8), contratto SmolDocling (DC-G), golden-set (§10), NFR VLM (§4), esempio worked (§12).
+**Stato**: **design v1.2** — v1.1 (spike) + **reframe "Metà C = batch, non servizio" + alternative a costo zero (§5bis)**
+> Panel: Fowler/Nygard/Newman/Wiegers/Adzic/Crispin/Hightower. v1 chiude: retrievability Metà R (§2), Fase-0 spike
+> (§5), IA-6 (§7), job VLM (§8), contratto SmolDocling (DC-G), golden-set (§10), NFR (§4), esempio worked (§12).
+> **v1.1** registra gli esiti spike: **DC-A ✅NO** (fast dà bbox testo ma non le regioni-immagine → serve hi_res async),
+> **DC-G ✅SÌ** (VLM image-native → thin endpoint `/extract-image` → Opzione B viabile), **DC-E ✅BLOCCATO** (il box
+> staging 8GB non può ospitare SmolDocling — 172 MiB liberi, 2.6 GiB già in swap → benchmark off-box + prerequisito
+> infra). Restano DC-C (dipende dal benchmark off-box), DC-B, DC-F.
+> **v1.2** riformula: la Metà C è un **batch di arricchimento una-tantum**, non un servizio always-on → **il vincolo
+> infra si applica solo all'ingestion CONTINUA**, non alla validazione né al corpus attuale (che si estraggono con
+> un batch locale/off-box a **costo zero** — §5bis). MVP a costo zero propeso dall'owner = **Opzione E** (region-only via hi_res).
 
 > **Origine**: investigazione di attivazione di DC-2 #3419 su staging (2026-08-01). Il wiring hi_res-per-tabelle
 > è corretto e mergiato ma **inerte sul corpus reale**: né `fast` né `hi_res` producono elementi `Table`,
@@ -122,15 +128,43 @@ Non-goal:
 > **Correzione v1 (Wiegers, CRITICAL)**: la scelta A/B/C dipende da nodi tecnici irrisolti. Vanno chiusi da spike
 > mirati **prima** di stimare l'effort e committare un'opzione. Nessun SP di implementazione parte prima.
 
-| Spike | Domanda | Sblocca | Come |
-|---|---|---|---|
-| **DC-A** | `fast` (coordinate-aware post SP-B) emette bbox `Image`/`FigureCaption` a costo basso, o servono solo con hi_res (>120s)? | Se sì → Metà R senza il nodo-timeout | Rieseguire il confronto categorie fast-vs-hi_res guardando `Image`/`FigureCaption` (non solo `Table`) |
-| **DC-F** *(nuovo v1)* | Meccanismo di legame citazione-testo → regione-immagine: prossimità di pagina è sufficiente per valore-utente, o serve overlap geometrico / stesso-blocco? | Se il linkage per-pagina basta → Metà R ha valore senza Metà C | Prototipo: per un chunk citato, mostrare le Image-region della stessa pagina; valutare rumore (illustrazioni non-tabella) |
-| **DC-C** | SmolDocling DocTags espone **location** (`<loc_*>`) usabili come bbox? | Contenuto+regione insieme (Opzione C) vs regione da hi_res + contenuto da VLM (Opzione B) | Ispezionare DocTags raw su una pagina-tabella nota |
-| **DC-G** *(nuovo v1)* | SmolDocling accetta **input immagine (crop)** o solo **PDF**? (oggi rende PDF→immagine internamente) | Opzione B (crop) fattibile senza nuovo servizio? | Leggere `smoldocling_adapter.py`/`main.py`; prototipo POST crop |
-| **DC-E** | Deploy SmolDocling su staging 8GB CPU-only: fattibilità + benchmark latenza/memoria; rischio OOM con 10 container già su | Qualsiasi opzione con Metà C | Deploy con `mem_limit`; benchmark 3-5 rulebook; misurare RAM/latenza |
+| Spike | Domanda | Esito (2026-08-01) |
+|---|---|---|
+| **DC-A** | `fast` emette bbox `Image`/`FigureCaption` a costo basso, o solo hi_res (>120s)? | ✅ **NO**. `fast` è coordinate-aware (454/454 elementi con bbox su agricola) **ma non emette `Image`/`FigureCaption`** (solo testo) — il layout model è esclusivo di hi_res. La regione precisa richiede hi_res async; niente scorciatoia region-only economica. fast dà solo bbox del testo circostante (grounding debole, già coperto da #3403). |
+| **DC-G** *(nuovo v1)* | SmolDocling accetta **input immagine (crop)** o solo **PDF**? | ✅ **SÌ, con aggiunta minima**. La VLM è image-native (`process_page(PageImage)` → `processor(images=…)`); l'endpoint pubblico è PDF-only per convenzione. Opzione B (crop) = thin endpoint `POST /extract-image` che wrappa il crop in `PageImage` e chiama il `process_page` esistente. Zero nuovo servizio. |
+| **DC-E** *(riformulato v1.1)* | ~~Deploy SmolDocling su staging 8GB~~ → **Su quale infra girano il benchmark e la Metà C?** | ✅ **BLOCCATO su staging**. Misurato: box 8GB con **172 MiB RAM liberi** + **2.6/4.0 GiB swap già usato** (`unstructured` 2.3 GiB, `embedding` 888 MiB/87%). SmolDocling vuole 2-3 GiB → **headroom negativo** → OOM-kill di un container critico (probabile vittima: `unstructured`) o thrashing. `mem_limit` non risolve (non c'è RAM fisica). **DC-E diventa: benchmark OFF-BOX (locale/VM throwaway) + decisione infra (resize a 16 GiB o nodo dedicato) prima di qualsiasi deploy Metà C.** |
+| **DC-C** | SmolDocling DocTags espone **location** (`<loc_*>`) usabili come bbox? | ⏳ Aperto — dipende dal **benchmark off-box** (DC-E): il `process_page` cattura `doctags_text` raw; i DocTags Docling tipicamente hanno `<loc_*>`, ma va confermato su modello running. Decide Opzione B (regione da hi_res) vs C (regione da DocTags). |
+| **DC-F** *(nuovo v1)* | Legame citazione-testo → regione-immagine: prossimità pagina basta? | ⏳ Aperto — valore atteso **debole** dato DC-A (fast dà solo bbox testo → highlight del testo vicino, non della tabella). |
+| **DC-B** | Router "PDF table-heavy": euristica vs flag manuale | ⏳ Aperto (analisi leggera, no deploy) |
 
 **Output di Fase 0**: una decisione documentata A/B/C con effort stimato. Solo allora partono gli SP §7.
+
+> **⚠️ Prerequisito infra (v1.1→v1.2, Hightower/Nygard)**: la Metà C **sempre-attiva** (SmolDocling VLM come servizio)
+> non è deployabile sul box 8GB saturo (172 MiB liberi, swap 65%). **MA** (v1.2) questo vincolo si applica **solo
+> all'ingestion continua** di PDF nuovi: la validazione e l'estrazione del **corpus attuale** sono un **batch**
+> eseguibile off-box a costo zero (§5bis). L'infra a pagamento serve **solo** se/quando si vuole l'estrazione VLM
+> real-time su ogni upload futuro — decisione da rimandare a feature-provata.
+
+---
+
+## 5bis. Metà C = batch, non servizio → alternative a costo zero (v1.2)
+
+**Reframe**: l'estrazione del contenuto-tabella è un **job di arricchimento una-tantum** (batch), non un servizio
+always-on. Il VLM gira, produce contenuto+bbox, si salvano in DB, e **il VLM non serve più**. Quindi il "deploy
+SmolDocling su staging" (DC-E) era un over-engineering: il batch può girare **ovunque** e solo i risultati vanno in DB.
+
+| # | Alternativa | Spesa | Trade-off |
+|---|---|---|---|
+| **A** | **Batch locale** — SmolDocling gira sulla dev machine (rulebook già in `data/rulebook/`; `docker compose --profile ai up smoldocling-service`). Estrai offline, importi i risultati in staging | **€0 ma tempo-impraticabile su CPU** | ⚠️ **Misurato (01-ago, dev machine CPU)**: SmolDocling **>95s/pagina** (agricola 12 pagine **non finite in 20 min**) vs "3-5s/pagina" del README (assume HW migliore). Corpus 52 PDF = **ore-giorni**. Il VLM è utile **solo con GPU** (~0.5s/pag) → spesa. La qualità di lettura tabelle **non è stata validata** (inference non completata) |
+| **B** | **Batch su staging in finestra di manutenzione** — fermi i non-essenziali (monitoring + reranker/embedding) + buff/cache reclaimable → RAM per un batch time-boxed, poi ripristini | **€0** | Downtime breve staging (accettabile). Più rischioso di A |
+| **C** | **OCR leggero (Tesseract, ~150 MiB)** sui crop-tabella di hi_res → testo retrievabile + regione, senza VLM | **€0** | Niente struttura tabellare, qualità più bassa; footprint minimo, può stare always-on sul box attuale |
+| **D** | **Riusare l'LLM che già paghi** (se il provider fa vision) — mandi i crop all'API esistente | pay-per-call | Spesa marginale, non zero. Solo con budget headroom |
+| **E** ⭐ | **Solo Metà R via hi_res** — nessun VLM: hi_res (già su `unstructured`) dà la bbox della tabella-immagine → il FE evidenzia la regione, l'utente la legge da sé | **€0** | Valore parziale (grounding visivo, no answerability). Rinvia la Metà C. **Quick-win MVP a costo zero (propeso dall'owner)** |
+
+**Percorso a costo zero raccomandato (aggiornato con l'esito empirico 01-ago)**:
+1. **Ora, MVP**: **Opzione E** — grounding visivo delle regioni-tabella via hi_res (async job, nessun VLM, nessuna spesa). L'utente vede la tabella evidenziata anche senza contenuto estratto. **È il percorso più solido dato che il VLM su CPU è impraticabile.**
+2. **Se serve il contenuto a costo zero**: **Opzione C (Tesseract OCR)** sui crop-tabella — veloce su CPU (~ms/regione), a differenza del VLM (>95s/pagina). Qualità inferiore (no struttura) ma pratica. **Opzione A (batch VLM locale) è scartata**: tempo-impraticabile su CPU (ore-giorni per il corpus).
+3. **VLM (Opzione B/C-SmolDocling) = solo con GPU** → spesa infra, **solo dopo** feature-provata E ingestion continua desiderata. Su CPU il VLM non è un'opzione pratica.
 
 ---
 
@@ -159,8 +193,16 @@ location (se DC-C=sì) → contenuto+regione in un colpo.
 - **Contro**: SmolDocling lento CPU (minuti/rulebook), quality più bassa (0.70-0.78) → **rischio di degradare il testo
   narrativo** vs Unstructured; da deployare (DC-E); router affidabile (DC-B).
 
-**Raccomandazione (contingente)**: risolvere Fase 0; poi **B se DC-C=no**, **C se DC-C=sì e il testo narrativo non
-degrada**; **A solo** come quick-win di grounding se DC-F dà valore accettabile e Metà C è rimandata.
+**Raccomandazione (aggiornata v1.1 con esiti spike)**:
+- **Opzione A** indebolita: DC-A=no → nessuna regione-immagine economica via `fast`; A darebbe solo grounding del
+  testo circostante (già in #3403). Quick-win marginale.
+- **Opzione B** confermata **fattibile** (DC-G=sì, thin endpoint crop) — richiede la Metà C, ma (v1.2) come **batch**
+  off-box, **non** un servizio always-on: nessun deploy persistente né spesa infra per il corpus attuale (§5bis).
+- **Opzione C** resta contingente a DC-C (DocTags location), risolvibile col benchmark **locale** (§5bis Opzione A).
+- **Percorso raccomandato v1.2** (a costo zero, vedi §5bis): (1) **MVP = Opzione E** (region-only via hi_res async,
+  nessun VLM) per il grounding visivo immediato; (2) **validare Metà C** con un **batch locale** di SmolDocling
+  (chiude DC-C + numeri); (3) decidere B vs C e l'infra a pagamento **solo dopo** feature-provata, e solo per
+  l'ingestion continua real-time. Il gate non è più "infra o niente" — l'MVP a costo zero è E.
 
 ---
 
@@ -208,10 +250,10 @@ degrada**; **A solo** come quick-win di grounding se DC-F dà valore accettabile
 
 | SP | Cosa | Metà | Costo | Dipende da |
 |----|------|------|-------|-----------|
-| **SP0 — Fase 0 spike** | Chiudere DC-A/C/E/F/G (§5) → decisione A/B/C documentata | — | S | — |
+| **SP0 — Fase 0 spike** | ~~DC-A ✅ DC-G ✅ DC-E ✅(blocco infra)~~; resta **benchmark off-box** (chiude DC-C + numeri) + decisione infra | — | S | — |
 | **SP1 — Image-region capture** | Estendere il capture bbox #3403 a `Image`/`FigureCaption`; linkage per-pagina (DC-F); FE disegna la regione | R | S | #3403 SP-B/SP-D; DC-A/DC-F |
 | **SP2 — Table-region router** | Euristica DC-B per marcare PDF/pagine con tabelle-immagine candidate | R+C | S | SP1 |
-| **SP3 — SmolDocling deploy + extract** | Deploy SmolDocling staging (DC-E, `mem_limit`); endpoint estrazione (crop se DC-G, else pagina) | C | L | SP2, DC-E/DC-G |
+| **SP3 — SmolDocling deploy + extract** | Deploy SmolDocling su **infra adeguata** (NON il box staging 8GB — resize/nodo dedicato, DC-E); thin endpoint `POST /extract-image` per i crop (DC-G ✅) | C | L | SP2, DC-E (infra), DC-G |
 | **SP4 — VLM enrichment job** | Job asincrono §8 (idempotenza/retry/checkpoint/observability/gate qualità) | C | L | SP3 |
 | **SP5 — Table-chunk indexing** | Contenuto-tabella come chunk retrievabile con `bounding_boxes_json`=regione; gating copyright | C | M | SP4 |
 | **SP6 — Answerability + citazione tabella** | Citazione chunk-tabella apre pagina + evidenzia regione; test golden-set (§10) | C | M | SP5 |
@@ -247,7 +289,8 @@ SP0 è bloccante. SP1-SP2 (Metà R) spedibili dopo SP0 se DC-A/DC-F ok. SP3-SP6 
 | **N:M tabella↔regione** | IA-6: MVP 1:1; N:M fuori scope + test di degradazione |
 | **Correlazione crop↔contenuto** (Opzione B) | bbox della regione definisce il crop → contenuto e regione condividono la geometria (valido sotto IA-6 1:1) |
 | **Contratto SmolDocling** (PDF vs crop) | DC-G in Fase 0 prima di committare Opzione B |
-| **OOM su 8GB CPU** | §8: concurrency=1, `mem_limit`, checkpoint, circuit-breaker; DC-E benchmark obbligatorio |
+| **Metà C non deployabile su infra staging attuale** *(v1.1, CRITICAL)* | Misurato: box 8GB con 172 MiB liberi + swap 65%. SmolDocling (2-3 GiB) → headroom negativo → OOM-kill di `unstructured`/critici. `mem_limit` NON basta (manca RAM fisica). **Gate**: benchmark off-box + resize (16 GiB) o nodo VLM dedicato prima di deployare la Metà C |
+| **OOM durante benchmark** | Eseguire il benchmark **fuori dal box condiviso** (locale/VM throwaway); mai avviare SmolDocling sul box saturo |
 | **Copyright leak** (contenuto verbatim) | IA-4 gating `Full`; test `regions=null`/no-content su Protected |
 | **Costo VLM sul corpus** | IA-5/NFR1: VLM solo su PDF con regioni candidate; batch, non ingest sincrono |
 | **Drift corpus post-feature** | SP7: bump `IndexerVersion` + re-extract mirato per-env |

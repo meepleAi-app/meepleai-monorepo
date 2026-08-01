@@ -155,16 +155,16 @@ SmolDocling su staging" (DC-E) era un over-engineering: il batch può girare **o
 
 | # | Alternativa | Spesa | Trade-off |
 |---|---|---|---|
-| **A** | **Batch locale** — SmolDocling gira sulla dev machine (rulebook già in `data/rulebook/`; `docker compose --profile ai up smoldocling-service`). Estrai offline (una-tantum, ~ore), importi i risultati in staging | **€0** | Dev machine 16+ GiB → il VLM 2-3 GiB ci sta. Chiude DC-C + numeri. Solo corpus attuale |
+| **A** | **Batch locale** — SmolDocling gira sulla dev machine (rulebook già in `data/rulebook/`; `docker compose --profile ai up smoldocling-service`). Estrai offline, importi i risultati in staging | **€0 ma tempo-impraticabile su CPU** | ⚠️ **Misurato (01-ago, dev machine CPU)**: SmolDocling **>95s/pagina** (agricola 12 pagine **non finite in 20 min**) vs "3-5s/pagina" del README (assume HW migliore). Corpus 52 PDF = **ore-giorni**. Il VLM è utile **solo con GPU** (~0.5s/pag) → spesa. La qualità di lettura tabelle **non è stata validata** (inference non completata) |
 | **B** | **Batch su staging in finestra di manutenzione** — fermi i non-essenziali (monitoring + reranker/embedding) + buff/cache reclaimable → RAM per un batch time-boxed, poi ripristini | **€0** | Downtime breve staging (accettabile). Più rischioso di A |
 | **C** | **OCR leggero (Tesseract, ~150 MiB)** sui crop-tabella di hi_res → testo retrievabile + regione, senza VLM | **€0** | Niente struttura tabellare, qualità più bassa; footprint minimo, può stare always-on sul box attuale |
 | **D** | **Riusare l'LLM che già paghi** (se il provider fa vision) — mandi i crop all'API esistente | pay-per-call | Spesa marginale, non zero. Solo con budget headroom |
 | **E** ⭐ | **Solo Metà R via hi_res** — nessun VLM: hi_res (già su `unstructured`) dà la bbox della tabella-immagine → il FE evidenzia la regione, l'utente la legge da sé | **€0** | Valore parziale (grounding visivo, no answerability). Rinvia la Metà C. **Quick-win MVP a costo zero (propeso dall'owner)** |
 
-**Percorso a costo zero raccomandato**:
-1. **Ora, MVP**: **Opzione E** — grounding visivo delle regioni-tabella via hi_res (async job, nessun VLM, nessuna spesa). L'utente vede la tabella evidenziata anche senza contenuto estratto.
-2. **Validazione Metà C, gratis**: **Opzione A** (batch locale) su 1-2 rulebook → chiude DC-C + numeri qualità/latenza, senza toccare staging.
-3. **Infra a pagamento**: **solo dopo** che la feature ha dimostrato valore E si vuole l'ingestion continua real-time.
+**Percorso a costo zero raccomandato (aggiornato con l'esito empirico 01-ago)**:
+1. **Ora, MVP**: **Opzione E** — grounding visivo delle regioni-tabella via hi_res (async job, nessun VLM, nessuna spesa). L'utente vede la tabella evidenziata anche senza contenuto estratto. **È il percorso più solido dato che il VLM su CPU è impraticabile.**
+2. **Se serve il contenuto a costo zero**: **Opzione C (Tesseract OCR)** sui crop-tabella — veloce su CPU (~ms/regione), a differenza del VLM (>95s/pagina). Qualità inferiore (no struttura) ma pratica. **Opzione A (batch VLM locale) è scartata**: tempo-impraticabile su CPU (ore-giorni per il corpus).
+3. **VLM (Opzione B/C-SmolDocling) = solo con GPU** → spesa infra, **solo dopo** feature-provata E ingestion continua desiderata. Su CPU il VLM non è un'opzione pratica.
 
 ---
 

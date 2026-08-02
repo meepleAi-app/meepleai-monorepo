@@ -14,6 +14,7 @@ public sealed class GameCoverAssignmentTests
 {
     private static readonly Guid GameId = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
     private static readonly Guid AdminId = Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd");
+    private static readonly Guid Admin2Id = Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
 
     [Fact]
     public void Create_WithDefaults_CentersFocalAndLeavesCropUnrendered()
@@ -28,6 +29,7 @@ public sealed class GameCoverAssignmentTests
         a.GeneratedR2Key.Should().BeNull();
         a.CreatedBy.Should().Be(AdminId);
         a.UpdatedAt.Should().BeNull();
+        a.UpdatedBy.Should().BeNull();
     }
 
     [Theory]
@@ -53,16 +55,41 @@ public sealed class GameCoverAssignmentTests
     }
 
     [Fact]
-    public void ChangeSource_ClearsGeneratedKeyAndStampsUpdate()
+    public void Create_RejectsNonFiniteFocalPoint()
+    {
+        var actNan = () => GameCoverAssignment.Create(
+            GameId, CoverContext.Card, CoverAssignmentSource.Pdf, AdminId, double.NaN, 0.5);
+        var actInf = () => GameCoverAssignment.Create(
+            GameId, CoverContext.Card, CoverAssignmentSource.Pdf, AdminId, 0.5, double.PositiveInfinity);
+
+        actNan.Should().Throw<ArgumentOutOfRangeException>();
+        actInf.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void Create_RejectsUndefinedEnumValues()
+    {
+        var actContext = () => GameCoverAssignment.Create(
+            GameId, (CoverContext)99, CoverAssignmentSource.Pdf, AdminId);
+        var actSource = () => GameCoverAssignment.Create(
+            GameId, CoverContext.Card, (CoverAssignmentSource)99, AdminId);
+
+        actContext.Should().Throw<ArgumentException>();
+        actSource.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void ChangeSource_ClearsGeneratedKeyAndStampsUpdater()
     {
         var a = GameCoverAssignment.Create(GameId, CoverContext.Card, CoverAssignmentSource.Pdf, AdminId);
         a.SetGeneratedKey("covers/manual/x/cover.webp");
 
-        a.ChangeSource(CoverAssignmentSource.Manual);
+        a.ChangeSource(CoverAssignmentSource.Manual, Admin2Id);
 
         a.Source.Should().Be(CoverAssignmentSource.Manual);
         a.GeneratedR2Key.Should().BeNull("changing source invalidates the stale rendered crop");
         a.UpdatedAt.Should().NotBeNull();
+        a.UpdatedBy.Should().Be(Admin2Id);
     }
 
     [Fact]
@@ -71,22 +98,36 @@ public sealed class GameCoverAssignmentTests
         var a = GameCoverAssignment.Create(GameId, CoverContext.Card, CoverAssignmentSource.Pdf, AdminId);
         a.SetGeneratedKey("k.webp");
 
-        a.ChangeSource(CoverAssignmentSource.Pdf);
+        a.ChangeSource(CoverAssignmentSource.Pdf, Admin2Id);
 
         a.GeneratedR2Key.Should().Be("k.webp", "a no-op source change must not clear the crop");
+        a.UpdatedBy.Should().BeNull("a no-op change must not stamp an updater");
     }
 
     [Fact]
-    public void SetFocalPoint_UpdatesAndClearsGeneratedKey()
+    public void ChangeSource_RejectsUndefinedSourceAndEmptyUpdater()
+    {
+        var a = GameCoverAssignment.Create(GameId, CoverContext.Card, CoverAssignmentSource.Pdf, AdminId);
+
+        var actEnum = () => a.ChangeSource((CoverAssignmentSource)99, Admin2Id);
+        var actUpdater = () => a.ChangeSource(CoverAssignmentSource.Wikidata, Guid.Empty);
+
+        actEnum.Should().Throw<ArgumentException>();
+        actUpdater.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void SetFocalPoint_UpdatesClearsGeneratedKeyAndStampsUpdater()
     {
         var a = GameCoverAssignment.Create(GameId, CoverContext.Hero, CoverAssignmentSource.Bgg, AdminId);
         a.SetGeneratedKey("k.webp");
 
-        a.SetFocalPoint(0.25, 0.75);
+        a.SetFocalPoint(0.25, 0.75, Admin2Id);
 
         a.FocalX.Should().Be(0.25);
         a.FocalY.Should().Be(0.75);
         a.GeneratedR2Key.Should().BeNull();
+        a.UpdatedBy.Should().Be(Admin2Id);
     }
 
     [Fact]
@@ -97,5 +138,16 @@ public sealed class GameCoverAssignmentTests
         var act = () => a.SetGeneratedKey("  ");
 
         act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void SetGeneratedKey_IsSystemOp_DoesNotStampUpdater()
+    {
+        var a = GameCoverAssignment.Create(GameId, CoverContext.Card, CoverAssignmentSource.Pdf, AdminId);
+
+        a.SetGeneratedKey("covers/manual/x/cover.webp");
+
+        a.UpdatedAt.Should().NotBeNull("the render pipeline still stamps the timestamp");
+        a.UpdatedBy.Should().BeNull("a system render is not attributed to an admin");
     }
 }

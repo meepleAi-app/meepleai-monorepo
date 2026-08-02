@@ -23,6 +23,7 @@ public sealed class GameCoverAssignment : Entity<Guid>
     private readonly DateTime _createdAt;
     private readonly Guid _createdBy;
     private DateTime? _updatedAt;
+    private Guid? _updatedBy;
 
     /// <summary>Gets the unique identifier of this assignment.</summary>
     public new Guid Id => _id;
@@ -54,6 +55,9 @@ public sealed class GameCoverAssignment : Entity<Guid>
     /// <summary>Gets the last update timestamp.</summary>
     public DateTime? UpdatedAt => _updatedAt;
 
+    /// <summary>Gets the id of the admin who last changed source/focal point.</summary>
+    public Guid? UpdatedBy => _updatedBy;
+
     /// <summary>Parameterless constructor for EF Core.</summary>
     private GameCoverAssignment() : base()
     {
@@ -70,7 +74,8 @@ public sealed class GameCoverAssignment : Entity<Guid>
         string? generatedR2Key,
         DateTime createdAt,
         Guid createdBy,
-        DateTime? updatedAt) : base(id)
+        DateTime? updatedAt,
+        Guid? updatedBy) : base(id)
     {
         _id = id;
         _sharedGameId = sharedGameId;
@@ -82,6 +87,7 @@ public sealed class GameCoverAssignment : Entity<Guid>
         _createdAt = createdAt;
         _createdBy = createdBy;
         _updatedAt = updatedAt;
+        _updatedBy = updatedBy;
     }
 
     /// <summary>Creates a new assignment with validation.</summary>
@@ -99,6 +105,12 @@ public sealed class GameCoverAssignment : Entity<Guid>
         if (createdBy == Guid.Empty)
             throw new ArgumentException("CreatedBy cannot be empty", nameof(createdBy));
 
+        if (!Enum.IsDefined(context))
+            throw new ArgumentException("Invalid CoverContext", nameof(context));
+
+        if (!Enum.IsDefined(source))
+            throw new ArgumentException("Invalid CoverAssignmentSource", nameof(source));
+
         EnsureFocalInRange(focalX, nameof(focalX));
         EnsureFocalInRange(focalY, nameof(focalY));
 
@@ -112,33 +124,47 @@ public sealed class GameCoverAssignment : Entity<Guid>
             generatedR2Key: null,
             DateTime.UtcNow,
             createdBy,
-            updatedAt: null);
+            updatedAt: null,
+            updatedBy: null);
     }
 
     /// <summary>Repoints the assignment at a different source; clears the stale rendered crop.</summary>
-    public void ChangeSource(CoverAssignmentSource source)
+    public void ChangeSource(CoverAssignmentSource source, Guid updatedBy)
     {
+        if (!Enum.IsDefined(source))
+            throw new ArgumentException("Invalid CoverAssignmentSource", nameof(source));
+
+        if (updatedBy == Guid.Empty)
+            throw new ArgumentException("UpdatedBy cannot be empty", nameof(updatedBy));
+
         if (_source == source)
             return;
 
         _source = source;
         _generatedR2Key = null;
-        _updatedAt = DateTime.UtcNow;
+        Touch(updatedBy);
     }
 
     /// <summary>Updates the crop focal point; clears the stale rendered crop.</summary>
-    public void SetFocalPoint(double focalX, double focalY)
+    public void SetFocalPoint(double focalX, double focalY, Guid updatedBy)
     {
         EnsureFocalInRange(focalX, nameof(focalX));
         EnsureFocalInRange(focalY, nameof(focalY));
 
+        if (updatedBy == Guid.Empty)
+            throw new ArgumentException("UpdatedBy cannot be empty", nameof(updatedBy));
+
         _focalX = focalX;
         _focalY = focalY;
         _generatedR2Key = null;
-        _updatedAt = DateTime.UtcNow;
+        Touch(updatedBy);
     }
 
-    /// <summary>Records the R2 key of the rendered per-context crop.</summary>
+    /// <summary>
+    /// Records the R2 key of the rendered per-context crop. This is a system
+    /// operation (the rendering pipeline), so it stamps the timestamp but not an
+    /// admin actor — <see cref="UpdatedBy"/> keeps the last human change.
+    /// </summary>
     public void SetGeneratedKey(string generatedR2Key)
     {
         if (string.IsNullOrWhiteSpace(generatedR2Key))
@@ -148,9 +174,15 @@ public sealed class GameCoverAssignment : Entity<Guid>
         _updatedAt = DateTime.UtcNow;
     }
 
+    private void Touch(Guid updatedBy)
+    {
+        _updatedAt = DateTime.UtcNow;
+        _updatedBy = updatedBy;
+    }
+
     private static void EnsureFocalInRange(double value, string paramName)
     {
-        if (value < 0.0 || value > 1.0)
-            throw new ArgumentOutOfRangeException(paramName, value, "Focal point must be in [0, 1].");
+        if (double.IsNaN(value) || double.IsInfinity(value) || value < 0.0 || value > 1.0)
+            throw new ArgumentOutOfRangeException(paramName, value, "Focal point must be a finite value in [0, 1].");
     }
 }

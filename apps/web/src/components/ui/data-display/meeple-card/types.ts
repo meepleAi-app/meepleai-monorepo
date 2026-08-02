@@ -157,6 +157,13 @@ export interface MeepleCardProps {
   /** Optional test id forwarded to the root wrapper element. */
   'data-testid'?: string;
   /**
+   * Issue #3470 Slice 1d-c — optional cover-edit affordance (admin only) rendered
+   * OUTSIDE the card's anchor/button root (to avoid axe nested-interactive) over the
+   * cover. Currently honored by GridCard only. When omitted the card renders unchanged,
+   * so existing consumers are unaffected.
+   */
+  coverEditSlot?: ReactNode;
+  /**
    * Issue #1823 Wave 3 M14 — license + attribution metadata for the cover
    * image. Renders a small footer chip under the title when present
    * (typically Wikidata-sourced covers per ADR DEC-3c whitelist).

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type MeepleCardGameLabels } from './meeple-card-game';
 import {
@@ -24,6 +24,28 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
+
+vi.mock('@/hooks/useAdminRole', () => ({ useAdminRole: vi.fn() }));
+vi.mock('@/components/features/cover-editor', () => ({
+  AdminCoverEditAffordance: ({ gameId }: { gameId: string }) => (
+    <div data-testid="cover-affordance" data-game-id={gameId} />
+  ),
+}));
+
+import { useAdminRole } from '@/hooks/useAdminRole';
+
+const mockUseAdminRole = useAdminRole as unknown as ReturnType<typeof vi.fn>;
+
+function setRole(isEditorOrAbove: boolean) {
+  mockUseAdminRole.mockReturnValue({
+    user: null,
+    isSuperAdmin: false,
+    isAdminOrAbove: isEditorOrAbove,
+    isEditorOrAbove,
+    hasRole: () => false,
+    isLoading: false,
+  });
+}
 
 const cardLabels: MeepleCardGameLabels = {
   ratingAriaLabel: 'Voto',
@@ -65,6 +87,26 @@ function build(overrides: Partial<SharedGamesGridProps> = {}): SharedGamesGridPr
 }
 
 describe('SharedGamesGrid (v2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRole(false);
+  });
+
+  it('does not render cover-edit affordances for a non-admin', () => {
+    setRole(false);
+    render(<SharedGamesGrid {...build()} />);
+    expect(screen.queryAllByTestId('cover-affordance')).toHaveLength(0);
+  });
+
+  it('renders a role-gated cover-edit affordance per card for an editor-or-above', () => {
+    setRole(true);
+    render(<SharedGamesGrid {...build()} />);
+    const affordances = screen.getAllByTestId('cover-affordance');
+    expect(affordances).toHaveLength(2);
+    expect(affordances[0]).toHaveAttribute('data-game-id', games[0].id);
+    expect(affordances[1]).toHaveAttribute('data-game-id', games[1].id);
+  });
+
   it('emits data-state matching the state prop', () => {
     const { container, rerender } = render(<SharedGamesGrid {...build({ state: 'default' })} />);
     expect(container.querySelector('[data-slot="shared-games-grid"]')).toHaveAttribute(

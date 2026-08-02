@@ -16,7 +16,7 @@
  * interface (to avoid churning /shared-games page-client) but are no longer
  * consumed by the canonical render; a follow-up may prune them.
  */
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card/MeepleCard';
 import type { ConnectionChipProps } from '@/components/ui/data-display/meeple-card/types';
@@ -55,6 +55,12 @@ export interface MeepleCardGameProps {
   readonly wikidataCoverLicense?: string | null;
   readonly wikidataCoverAttribution?: string | null;
   readonly wikidataCoverSourceUrl?: string | null;
+  /**
+   * Issue #3470 Slice 1d-c — optional admin cover-edit affordance forwarded to the
+   * canonical MeepleCard cover slot (rendered outside the card anchor). Omitted for
+   * non-admins so the tile renders unchanged.
+   */
+  readonly coverEditSlot?: ReactNode;
 }
 
 export function MeepleCardGame({
@@ -72,6 +78,7 @@ export function MeepleCardGame({
   wikidataCoverLicense = null,
   wikidataCoverAttribution = null,
   wikidataCoverSourceUrl = null,
+  coverEditSlot,
 }: MeepleCardGameProps): JSX.Element {
   const connections: ConnectionChipProps[] = [];
   if (toolkitsCount > 0) {
@@ -114,6 +121,7 @@ export function MeepleCardGame({
       wikidataCoverLicense={wikidataCoverLicense}
       wikidataCoverAttribution={wikidataCoverAttribution}
       wikidataCoverSourceUrl={wikidataCoverSourceUrl}
+      coverEditSlot={coverEditSlot}
     />
   );
 }

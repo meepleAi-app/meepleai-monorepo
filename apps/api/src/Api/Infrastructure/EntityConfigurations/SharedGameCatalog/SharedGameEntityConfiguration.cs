@@ -160,6 +160,35 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .HasColumnName("wikidata_cover_attribution")
             .IsRequired(false);
 
+        // Epic #3470 — admin manual-URL cover (fetched + re-hosted on R2).
+        builder.Property(e => e.ManualCoverR2Key)
+            .HasMaxLength(512)
+            .HasColumnName("manual_cover_r2_key")
+            .IsRequired(false);
+
+        builder.Property(e => e.ManualCoverLicense)
+            .HasMaxLength(64)
+            .HasColumnName("manual_cover_license")
+            .IsRequired(false);
+
+        builder.Property(e => e.ManualCoverAttribution)
+            .HasMaxLength(512)
+            .HasColumnName("manual_cover_attribution")
+            .IsRequired(false);
+
+        builder.Property(e => e.ManualCoverSourceUrl)
+            .HasMaxLength(2048)
+            .HasColumnName("manual_cover_source_url")
+            .IsRequired(false);
+
+        builder.Property(e => e.ManualCoverAttestedBy)
+            .HasColumnName("manual_cover_attested_by")
+            .IsRequired(false);
+
+        builder.Property(e => e.ManualCoverAttestedAt)
+            .HasColumnName("manual_cover_attested_at")
+            .IsRequired(false);
+
         // Issue #1823 Phase B M8 — Wikidata QID resolved against shared_games
         // before the cover-enrichment orchestrator runs (ADR DEC-3a). Max 32
         // chars covers Q-numbers well past the current Wikidata range.

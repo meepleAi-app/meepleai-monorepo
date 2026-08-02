@@ -114,6 +114,29 @@ public class SharedGameEntity
     public string? BggCoverR2Key { get; set; }
 
     /// <summary>
+    /// Epic #3470 — admin manual-URL cover source. The URL is fetched
+    /// server-to-server, license-validated + re-encoded to WebP and re-hosted on
+    /// R2 (never hotlinked); only this R2 key is persisted. Resolved as
+    /// <c>CoverKind.Manual</c>. Null when no manual cover was set.
+    /// </summary>
+    public string? ManualCoverR2Key { get; set; }
+
+    /// <summary>License identifier the admin attested for the manual cover (whitelist-validated).</summary>
+    public string? ManualCoverLicense { get; set; }
+
+    /// <summary>Attribution string for the manual cover, shown in the attribution footer.</summary>
+    public string? ManualCoverAttribution { get; set; }
+
+    /// <summary>Original source URL of the manual cover (audit/provenance; never rendered).</summary>
+    public string? ManualCoverSourceUrl { get; set; }
+
+    /// <summary>Admin who attested the manual cover's license.</summary>
+    public Guid? ManualCoverAttestedBy { get; set; }
+
+    /// <summary>When the manual cover's license was attested.</summary>
+    public DateTime? ManualCoverAttestedAt { get; set; }
+
+    /// <summary>
     /// Issue #1929 Task C Macro 3a (DEC-B-8, DEC-C-8) — E2E test seeding scope marker.
     /// Explicit column (NOT shadow property) to avoid EF Core 9 + Npgsql null-after-save bug.
     /// Stamped on insert by SeedTestLibraryGameCommandHandler; consumed by
@@ -130,6 +153,7 @@ public class SharedGameEntity
     public ICollection<GameMechanicEntity> Mechanics { get; set; } = new List<GameMechanicEntity>();
 
     // Navigation properties (one-to-many)
+    public ICollection<GameCoverAssignmentEntity> CoverAssignments { get; set; } = new List<GameCoverAssignmentEntity>();
     public ICollection<GameFaqEntity> Faqs { get; set; } = new List<GameFaqEntity>();
     public ICollection<GameErrataEntity> Erratas { get; set; } = new List<GameErrataEntity>();
     public ICollection<SharedGameDocumentEntity> Documents { get; set; } = new List<SharedGameDocumentEntity>();

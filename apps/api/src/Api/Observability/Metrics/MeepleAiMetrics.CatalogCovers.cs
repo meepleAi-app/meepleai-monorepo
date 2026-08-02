@@ -15,6 +15,8 @@ internal static partial class MeepleAiMetrics
     ///   <item><c>r2_pdf</c>: PDF-derived cover from rulebook page 1 (L4)</item>
     ///   <item><c>r2_bgg</c>: BGG cover re-uploaded server-side via the admin pipeline (L2.5)</item>
     ///   <item><c>r2_wikidata</c>: Wikidata/Wikimedia Commons cover (L2)</item>
+    ///   <item><c>r2_manual</c>: admin manual-URL cover re-hosted on R2 (epic #3470); only
+    ///     wins as an explicit per-context admin override, never in the implicit chain</item>
     ///   <item><c>placeholder</c>: no cover available, FE renders deterministic placeholder</item>
     /// </list>
     ///

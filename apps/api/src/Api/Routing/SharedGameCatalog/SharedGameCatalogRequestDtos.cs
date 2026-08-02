@@ -4,8 +4,19 @@ using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.SharedKernel.Domain.Covers;
 
 namespace Api.Routing;
+
+/// <summary>
+/// Request body for the cover-picker upsert (epic #3470). The UI context is a route
+/// segment; the body carries the pinned source and the crop focal point (defaults
+/// to center). The acting admin comes from the session, never the body.
+/// </summary>
+internal record AssignCoverRequest(
+    CoverAssignmentSource Source,
+    double FocalX = 0.5,
+    double FocalY = 0.5);
 
 // ========================================
 // REQUEST DTOS

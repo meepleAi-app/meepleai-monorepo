@@ -74,6 +74,25 @@ public sealed class GroundedAnswerServiceTests
     }
 
     [Fact]
+    public async Task Finalize_ProtectedTier_PopulatesParaphraseFromMarker()
+    {
+        // #3490 convergence: FinalizeAsync wires ParaphraseExtractor for Protected citations (the
+        // one-shot path gained this via the consolidation onto streaming's behaviour). Given a
+        // [ref:doc:page] marker + distinct text, ParaphrasedSnippet is populated while SnippetPreview
+        // stays null (no verbatim leak).
+        var svc = BuildService();
+
+        var result = await svc.FinalizeAsync(
+            "According to the rules, [ref:doc-1:3] you gain one victory point per settlement.",
+            new List<ChunkCitation> { Cite(CopyrightTier.Protected, doc: "doc-1", preview: "verbatim protected text") },
+            "How do I score?", "en", CancellationToken.None);
+
+        result.CitationDtos.Should().ContainSingle();
+        result.CitationDtos[0].SnippetPreview.Should().BeNull("Protected must not leak the verbatim preview");
+        result.CitationDtos[0].ParaphrasedSnippet.Should().NotBeNull("FinalizeAsync extracts a paraphrase for Protected citations");
+    }
+
+    [Fact]
     public async Task Finalize_NoCitations_Ungrounded()
     {
         var svc = BuildService();

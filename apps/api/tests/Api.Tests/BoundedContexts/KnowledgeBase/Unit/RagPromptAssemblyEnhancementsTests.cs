@@ -531,6 +531,35 @@ public class RagPromptAssemblyEnhancementsTests
     }
 
     [Fact]
+    public async Task WhenEnabledEnhancementsNone_BypassesLegacyTierPath()
+    {
+        // #3390 D1 edge: an EXPLICIT empty set (RagEnhancement.None) takes the explicit branch (is {}
+        // matches any non-null enum value, including None) and bypasses enhancements entirely — it must
+        // NOT fall into the legacy tier path, even with a tier that would otherwise enable one.
+        var tier = UserTier.Premium;
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.AdaptiveRouting);
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act — explicit None set + a tier that WOULD otherwise enable AdaptiveRouting
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, tier, "it", CancellationToken.None,
+            retrievalPolicy: RetrievalPolicy.LiveSessionWith(RagEnhancement.None));
+
+        // Assert — no tier lookup, no enhancement ran
+        _ragEnhancementMock.Verify(
+            r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _complexityClassifierMock.Verify(
+            c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task WhenEnabledEnhancementsNull_LegacyTierPathUnchanged()
     {
         // #3390 D1 backward-compat: a policy with EnabledEnhancements=null keeps the legacy behaviour —

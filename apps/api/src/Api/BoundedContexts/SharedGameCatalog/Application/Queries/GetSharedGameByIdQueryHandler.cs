@@ -393,11 +393,20 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var coverUrl = sharedGameEntity is not null
-            ? await CoverUrlResolver
-                .ResolvePublicAsync(sharedGameEntity, _blobStorage)
-                .ConfigureAwait(false)
-            : null;
+        // Epic #3470 Slice 1d-a — resolve the cover AND its winning source so the
+        // attribution footer follows the actual image (previously emitted Wikidata
+        // license/attribution unconditionally, even for a PDF/BGG-sourced cover).
+        string? coverUrl = null;
+        string? coverLicense = null, coverAttribution = null, coverSourceUrl = null;
+        if (sharedGameEntity is not null)
+        {
+            var cover = await CoverUrlResolver
+                .ResolvePublicWithSourceAsync(sharedGameEntity, _blobStorage)
+                .ConfigureAwait(false);
+            coverUrl = cover.Url;
+            (coverLicense, coverAttribution, coverSourceUrl) =
+                CoverAttribution.ForWinningSource(cover.Kind, sharedGameEntity);
+        }
 
         return new SharedGameDetailDto(
             game.Id,
@@ -437,9 +446,10 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             isTopRated,
             isNew,
             CoverUrl: coverUrl,
-            // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
-            WikidataCoverLicense: game.WikidataCoverLicense,
-            WikidataCoverAttribution: AttributionTextExtractor.Strip(game.WikidataCoverAttribution),
-            WikidataCoverSourceUrl: game.WikidataCoverSourceUrl);
+            // Epic #3470 Slice 1d-a — source-aware attribution (read from the entity, gated
+            // on the winning cover source; was emitted unconditionally from the aggregate).
+            WikidataCoverLicense: coverLicense,
+            WikidataCoverAttribution: coverAttribution,
+            WikidataCoverSourceUrl: coverSourceUrl);
     }
 }

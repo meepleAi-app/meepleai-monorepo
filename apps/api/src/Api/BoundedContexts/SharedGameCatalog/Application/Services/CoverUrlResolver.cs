@@ -41,6 +41,14 @@ internal static class CoverUrlResolver
 {
     private const string SourceTag = "source";
 
+    /// <summary>
+    /// The outcome of a source-aware resolution: the presigned <see cref="Url"/>
+    /// (null on placeholder/miss) and the <see cref="Kind"/> of the layer that won
+    /// (null on placeholder). Lets the caller gate license/attribution on the actual
+    /// winning source rather than emitting it unconditionally (epic #3470 Slice 1d-a).
+    /// </summary>
+    internal readonly record struct ResolvedCover(string? Url, CoverKind? Kind);
+
     public static async Task<string?> ResolveForUserAsync(
         SharedGameEntity sharedGame,
         UserLibraryEntryEntity? userEntry,
@@ -75,6 +83,18 @@ internal static class CoverUrlResolver
 
     public static async Task<string?> ResolvePublicAsync(
         SharedGameEntity sharedGame,
+        IBlobStorageService blobStorage) =>
+        (await ResolvePublicWithSourceAsync(sharedGame, blobStorage).ConfigureAwait(false)).Url;
+
+    /// <summary>
+    /// Source-aware variant of <see cref="ResolvePublicAsync"/> (epic #3470 Slice 1d-a):
+    /// returns both the URL and the winning <see cref="CoverKind"/> so callers can render
+    /// a source-correct attribution footer instead of crediting Wikidata unconditionally.
+    /// Owns the single <see cref="MeepleAiMetrics.CoverResolution"/> emission — the string
+    /// overload delegates here, preserving the exactly-one-event-per-call invariant.
+    /// </summary>
+    public static async Task<ResolvedCover> ResolvePublicWithSourceAsync(
+        SharedGameEntity sharedGame,
         IBlobStorageService blobStorage)
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
@@ -89,7 +109,7 @@ internal static class CoverUrlResolver
             if (url is not null)
             {
                 EmitResolution("r2_pdf");
-                return url;
+                return new ResolvedCover(url, CoverKind.Pdf);
             }
         }
 
@@ -109,7 +129,7 @@ internal static class CoverUrlResolver
             if (url is not null)
             {
                 EmitResolution("r2_bgg");
-                return url;
+                return new ResolvedCover(url, CoverKind.Bgg);
             }
         }
 
@@ -123,12 +143,12 @@ internal static class CoverUrlResolver
             if (url is not null)
             {
                 EmitResolution("r2_wikidata");
-                return url;
+                return new ResolvedCover(url, CoverKind.Wikidata);
             }
         }
 
         EmitResolution("placeholder");
-        return null;
+        return new ResolvedCover(null, null);
     }
 
     /// <summary>

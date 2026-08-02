@@ -590,4 +590,72 @@ public class CoverUrlResolverTests
         emissions.Should().HaveCount(1);
         emissions[0].Tags["source"].Should().Be("r2_pdf");
     }
+
+    // ----- Epic #3470 Slice 1d-a: source-aware resolution --------------------
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_PdfWins_ReturnsPdfKind()
+    {
+        var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var result = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        result.Url.Should().Be("https://r2/pdf.webp");
+        result.Kind.Should().Be(CoverKind.Pdf);
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_WikidataWins_ReturnsWikidataKind()
+    {
+        var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+
+        var result = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        result.Url.Should().Be("https://r2/wiki.webp");
+        result.Kind.Should().Be(CoverKind.Wikidata);
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_AllMiss_ReturnsNullUrlAndKind()
+    {
+        var result = await CoverUrlResolver.ResolvePublicWithSourceAsync(new SharedGameEntity(), _blob.Object);
+
+        result.Url.Should().BeNull();
+        result.Kind.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_EmitsExactlyOneMetric()
+    {
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        capture.LongMeasurements
+            .Where(m => m.Name == "meepleai.cover.resolution.total")
+            .Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task ResolvePublicAsync_DelegatesToWithSource_StillReturnsUrlAndEmitsOnce()
+    {
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+
+        var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
+
+        url.Should().Be("https://r2/wiki.webp");
+        capture.LongMeasurements
+            .Where(m => m.Name == "meepleai.cover.resolution.total")
+            .Should().HaveCount(1);
+    }
 }

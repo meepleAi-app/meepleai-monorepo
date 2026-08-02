@@ -20,3 +20,4 @@ export {
   type AdminMechanicMetricsClient,
   type MechanicMetricsFilters,
 } from './adminMechanicMetricsClient';
+export { createAdminCoverClient, type AdminCoverClient } from './adminCoverClient';

@@ -80,7 +80,7 @@ internal static class AdminPdfManagementEndpoints
         CancellationToken cancellationToken)
     {
         var count = await mediator.Send(
-            new SeedPdfImageRegionsCommand(pdfId, request.HiResJson),
+            new SeedPdfImageRegionsCommand(pdfId, request.HiResJson, request.MinAreaFraction),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(new { success = true, seeded = count });
     }
@@ -124,4 +124,4 @@ internal static class AdminPdfManagementEndpoints
 
 internal record BulkDeletePdfsRequest(List<Guid> PdfIds);
 internal record ReindexDocumentRequest(string? IndexerVersion);
-internal record SeedImageRegionsRequest(string HiResJson);
+internal record SeedImageRegionsRequest(string HiResJson, double? MinAreaFraction = null);

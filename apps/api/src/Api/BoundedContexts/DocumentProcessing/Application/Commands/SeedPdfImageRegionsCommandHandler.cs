@@ -33,7 +33,9 @@ internal class SeedPdfImageRegionsCommandHandler : ICommandHandler<SeedPdfImageR
             throw new NotFoundException("PdfDocument", command.PdfId.ToString());
         }
 
-        var regions = ImageRegionExtractor.FromHiResJson(command.HiResJson);
+        var regions = ImageRegionExtractor.FromHiResJson(
+            command.HiResJson,
+            command.MinAreaFraction ?? ImageRegionExtractor.DefaultMinAreaFraction);
 
         var existing = await _dbContext.PdfImageRegions
             .Where(r => r.PdfDocumentId == command.PdfId)

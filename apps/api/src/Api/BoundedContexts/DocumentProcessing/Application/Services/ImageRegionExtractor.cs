@@ -11,10 +11,16 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// </summary>
 public static class ImageRegionExtractor
 {
+    /// <summary>Default anti-noise threshold (#3456): keep regions whose normalized area
+    /// (Width*Height, fraction of page) is at least 3%. Filters out icons/glyphs.</summary>
+    public const double DefaultMinAreaFraction = 0.03;
+
     private static readonly HashSet<string> RegionCategories =
         new(StringComparer.Ordinal) { "Image", "FigureCaption" };
 
-    public static IReadOnlyList<ExtractedImageRegion> FromHiResJson(string? hiResJson)
+    public static IReadOnlyList<ExtractedImageRegion> FromHiResJson(
+        string? hiResJson,
+        double minAreaFraction = DefaultMinAreaFraction)
     {
         if (string.IsNullOrWhiteSpace(hiResJson))
         {
@@ -38,6 +44,9 @@ public static class ImageRegionExtractor
                     Width: Clamp01(e.Bbox!.Width),
                     Height: Clamp01(e.Bbox!.Height),
                     ElementType: e.Category!))
+                // #3456 anti-noise: drop tiny regions (icons/glyphs) below the area threshold.
+                // Area is on already-clamped values; >= keeps a region exactly at the threshold.
+                .Where(r => r.Width * r.Height >= minAreaFraction)
                 .ToList();
         }
         catch (JsonException)

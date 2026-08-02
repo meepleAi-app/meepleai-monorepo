@@ -174,7 +174,15 @@ export interface GetModelsResponse {
   models: BackendModelDto[];
 }
 
-/** AgentConfigurationDto from PATCH/GET /api/v1/agents/:id/configuration */
+/**
+ * AgentConfigurationDto from PATCH/GET /api/v1/agents/:id/configuration.
+ *
+ * LLM configuration only (model/provider/temperature/maxTokens). Per-agent KB linking
+ * (selected documents) is NOT part of this contract — it is a separate flow owned by the
+ * backend AgentConfiguration aggregate (#2391) and exposed via
+ * `api.agentDocuments.updateSelectedDocuments` (see useGameAgentDocuments). Issue #3394
+ * removed the previously accepted-and-discarded `selectedDocumentIds` field.
+ */
 export interface BackendAgentConfigurationDto {
   id: string;
   agentId: string;
@@ -182,17 +190,18 @@ export interface BackendAgentConfigurationDto {
   llmProvider: string;
   temperature: number;
   maxTokens: number;
-  selectedDocumentIds: string[];
   isCurrent: boolean;
   createdAt: string;
 }
 
-/** Request body for PATCH /api/v1/agents/:id/configuration */
+/**
+ * Request body for PATCH /api/v1/agents/:id/configuration.
+ * LLM config only — see BackendAgentConfigurationDto note re: KB linking (#3394).
+ */
 export interface UpdateAgentConfigurationRequest {
   modelId?: string;
   temperature?: number;
   maxTokens?: number;
-  selectedDocumentIds?: string[];
 }
 
 /**

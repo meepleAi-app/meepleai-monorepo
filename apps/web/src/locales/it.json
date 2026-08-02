@@ -3947,8 +3947,6 @@
       },
       "chatAgent": {
         "title": "ChatAgent",
-        "onlineLabel": "Online",
-        "latencyAriaLabel": "Latenza {ms}ms",
         "agentNameAriaLabel": "Nome agente {name}",
         "collapsedAriaLabel": "ChatAgent collassato — clic per espandere",
         "expandedAriaLabel": "ChatAgent espanso — clic per collassare",
@@ -3974,8 +3972,6 @@
         "title": "Note",
         "inputAriaLabel": "Scrivi una nota",
         "addAriaLabel": "Aggiungi nota",
-        "visibilityPrivate": "Privata",
-        "visibilityShared": "Condivisa",
         "emptyMessage": "Nessuna nota ancora.",
         "addNoteErrorToast": "Impossibile salvare la nota. Riprova."
       },

@@ -74,6 +74,8 @@ const PREMIUM_MODELS = [
   },
 ];
 
+// #3394: config contract no longer exposes selectedDocumentIds (KB linking is a separate
+// flow owned by the AgentConfiguration aggregate / updateSelectedDocuments endpoint).
 const MOCK_AGENT_CONFIG = {
   id: 'config-1',
   agentId: 'agent-123',
@@ -81,7 +83,6 @@ const MOCK_AGENT_CONFIG = {
   llmProvider: 'openrouter',
   temperature: 0.3,
   maxTokens: 2048,
-  selectedDocumentIds: [],
   isCurrent: true,
   createdAt: '2026-01-01T00:00:00Z',
 };
@@ -104,7 +105,11 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // Import mocked modules for dynamic control
-import { useAvailableModels, useAgentConfiguration, useUpdateAgentConfiguration } from '@/hooks/queries/useModels';
+import {
+  useAvailableModels,
+  useAgentConfiguration,
+  useUpdateAgentConfiguration,
+} from '@/hooks/queries/useModels';
 
 const mockUseAvailableModels = vi.mocked(useAvailableModels);
 const mockUseAgentConfiguration = vi.mocked(useAgentConfiguration);
@@ -137,7 +142,11 @@ const defaultProps = {
   onNameUpdated: vi.fn(),
 };
 
-function setupMocks(options?: { models?: typeof FREE_MODELS; config?: typeof MOCK_AGENT_CONFIG | null; loading?: boolean }) {
+function setupMocks(options?: {
+  models?: typeof FREE_MODELS;
+  config?: typeof MOCK_AGENT_CONFIG | null;
+  loading?: boolean;
+}) {
   const models = options?.models ?? FREE_MODELS;
   const config = options?.config !== undefined ? options.config : MOCK_AGENT_CONFIG;
   const loading = options?.loading ?? false;

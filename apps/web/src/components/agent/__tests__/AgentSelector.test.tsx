@@ -52,17 +52,20 @@ describe('AgentSelector', () => {
     });
   });
 
-  it('shows status indicators for each agent', async () => {
+  it('does NOT show fabricated "online" status indicators (#3393)', async () => {
     render(<AgentSelector {...defaultProps} />);
 
     const trigger = screen.getByRole('combobox');
     fireEvent.click(trigger);
 
+    // Options render (descriptions confirm the dropdown opened) ...
     await waitFor(() => {
-      // Should show "Online" status for all agents in POC
-      const statusLabels = screen.getAllByText('Online');
-      expect(statusLabels.length).toBeGreaterThan(0);
+      const autoDesc = screen.getAllByText(/Automatically routes to best agent/i);
+      expect(autoDesc.length).toBeGreaterThan(0);
     });
+
+    // ... but the hardcoded "Online" status pill is gone.
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
   });
 
   it('calls onChange when agent is selected', async () => {

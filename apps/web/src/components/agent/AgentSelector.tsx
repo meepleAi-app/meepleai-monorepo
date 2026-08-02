@@ -3,17 +3,17 @@
  *
  * Features:
  * - Dropdown selector for Tutor, Arbitro, Stratega, Narratore, Orchestrator (auto)
- * - Agent status indicators (online/offline/busy)
  * - Agent descriptions and icons
  * - Selection persistence per conversation
- * - Real-time status updates
+ *
+ * #3393 (finding C9c): the hardcoded "online" status indicators and the no-op
+ * 30s poll (which only ever re-set every agent to 'online') were removed — no
+ * real per-agent online/offline signal exists in the backend.
  */
 
 'use client';
 
-import { useState, useEffect } from 'react';
-
-import { Bot, Sparkles, Shield, Zap, Circle, BookOpen, Target } from 'lucide-react';
+import { Bot, Sparkles, Shield, Zap, BookOpen, Target } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -30,14 +30,12 @@ import { cn } from '@/lib/utils';
 // ============================================================================
 
 export type AgentType = 'auto' | 'tutor' | 'arbitro' | 'stratega' | 'narratore';
-export type AgentStatus = 'online' | 'offline' | 'busy';
 
 export interface Agent {
   id: AgentType;
   name: string;
   description: string;
   icon: typeof Bot;
-  status: AgentStatus;
 }
 
 export interface AgentSelectorProps {
@@ -63,7 +61,7 @@ export const AGENT_NAMES: Record<AgentType, string> = {
   narratore: 'Narratore',
 };
 
-const AGENTS: Record<AgentType, Omit<Agent, 'status'>> = {
+const AGENTS: Record<AgentType, Agent> = {
   auto: {
     id: 'auto',
     name: 'Auto (Orchestrator)',
@@ -96,51 +94,11 @@ const AGENTS: Record<AgentType, Omit<Agent, 'status'>> = {
   },
 };
 
-const STATUS_COLORS: Record<AgentStatus, string> = {
-  online: 'bg-green-500',
-  offline: 'bg-gray-400',
-  busy: 'bg-amber-500',
-};
-
-const STATUS_LABELS: Record<AgentStatus, string> = {
-  online: 'Online',
-  offline: 'Offline',
-  busy: 'Busy',
-};
-
 // ============================================================================
 // Main Component
 // ============================================================================
 
 export function AgentSelector({ value, onChange, className, disabled }: AgentSelectorProps) {
-  const [_agentStatuses, setAgentStatuses] = useState<Record<AgentType, AgentStatus>>({
-    auto: 'online',
-    tutor: 'online',
-    arbitro: 'online',
-    stratega: 'online',
-    narratore: 'online',
-  });
-
-  // Fetch agent statuses from API (real implementation would poll or use WebSocket)
-  useEffect(() => {
-    const fetchStatuses = async () => {
-      // In POC, assume all online
-      // Real implementation: await api.agents.getAll() and check status
-      setAgentStatuses({
-        auto: 'online',
-        tutor: 'online',
-        arbitro: 'online',
-        stratega: 'online',
-        narratore: 'online',
-      });
-    };
-
-    fetchStatuses();
-    // Poll every 30s for status updates
-    const interval = setInterval(fetchStatuses, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <div className={cn('flex items-center gap-3', className)}>
       <span className="text-sm text-muted-foreground font-nunito">Agent:</span>
@@ -151,7 +109,6 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
         <SelectContent>
           {(Object.keys(AGENTS) as AgentType[]).map(agentId => {
             const agent = AGENTS[agentId];
-            const status = _agentStatuses[agentId];
             const Icon = agent.icon;
 
             return (
@@ -164,16 +121,7 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
 
                   {/* Name & Description */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{agent.name}</span>
-                      {/* Status Indicator */}
-                      <div className="flex items-center gap-1">
-                        <Circle className={cn('h-2 w-2 fill-current', STATUS_COLORS[status])} />
-                        <span className="text-xs text-muted-foreground">
-                          {STATUS_LABELS[status]}
-                        </span>
-                      </div>
-                    </div>
+                    <span className="font-medium text-sm">{agent.name}</span>
                     <p className="text-xs text-muted-foreground truncate">{agent.description}</p>
                   </div>
                 </div>

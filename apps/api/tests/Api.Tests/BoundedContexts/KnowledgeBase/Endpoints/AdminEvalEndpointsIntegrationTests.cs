@@ -59,9 +59,10 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
 
         var mockRagService = new Mock<IRagService>();
         mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))

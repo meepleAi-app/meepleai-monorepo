@@ -1,0 +1,70 @@
+# promtool unit tests for agent-grounding.yml (#3390 Slice 1).
+#
+# Run locally (Windows/Git Bash, from repo root):
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/agent-grounding.test.yml
+#
+# There is no promtool CI gate in this repo (see recon in #3082); this file documents +
+# verifies the alert behaviour on demand. It guards the two subtle properties of the alert:
+#   1. the ratio is scoped to the RAG-capable path only (path=text, retrieval_profile=live_session),
+#      so by-design-ungrounded image traffic can NEVER make it fire;
+#   2. no traffic / flat counters never fire (clamp_min + superset-denominator safety).
+rule_files:
+  - agent-grounding.yml
+
+evaluation_interval: 1m
+
+tests:
+  # 1. Text/RAG path ungrounded 100% (grounded flat) sustained → alert fires.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
+        values: '0+10x60'
+      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 46m
+        alertname: HighUngroundedRateOnRagLivePath
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: in-session-agent
+            exp_annotations:
+              summary: "In-session RAG agent is ungrounded on >50% of text turns (15m)"
+              description: "More than half of the in-session live-path (RAG) answers over the last 15m carried zero citations (grounding_status=ungrounded). The live path should be grounded-capable; a sustained ungrounded majority means retrieval is failing to produce citations. Baseline citation-accuracy floor is tracked in docs/for-developers/evaluation-reports/baseline-2026-08-02.md (#3390)."
+
+  # 2. Text/RAG path 40% ungrounded (below the 50% threshold) → no alert.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
+        values: '0+4x60'
+      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
+        values: '0+6x60'
+    alert_rule_test:
+      - eval_time: 46m
+        alertname: HighUngroundedRateOnRagLivePath
+        exp_alerts: []
+
+  # 3. Idle: text counters present but flat at 0 (rate 0/0) → clamp_min keeps it 0 → no alert.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
+        values: '0x60'
+      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
+        values: '0x60'
+    alert_rule_test:
+      - eval_time: 46m
+        alertname: HighUngroundedRateOnRagLivePath
+        exp_alerts: []
+
+  # 4. Scoping guard: only image traffic, 100% ungrounded by design (retrieval_profile=none).
+  #    The text/live_session series set is empty → alert must NOT fire. This is the calibration
+  #    invariant — dropping the path/retrieval_profile matchers would regress this to a firing.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_agent_response_grounding_total{path="image",retrieval_profile="none",grounding_status="ungrounded"}'
+        values: '0+20x60'
+    alert_rule_test:
+      - eval_time: 46m
+        alertname: HighUngroundedRateOnRagLivePath
+        exp_alerts: []

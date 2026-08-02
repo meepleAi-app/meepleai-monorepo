@@ -53,9 +53,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
-    private readonly ICopyrightLeakGuard _copyrightLeakGuard;
-    private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
-    private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
+    private readonly IGroundedAnswerService _groundedAnswerService;
     private readonly ILiveSessionStreamGateway _liveSessionStreamGateway;
     private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
 
@@ -86,9 +84,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ICircuitBreakerRegistry circuitBreakerRegistry,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatWithSessionAgentCommandHandler> logger,
-        ICopyrightLeakGuard copyrightLeakGuard,
-        ICopyrightFallbackMessageProvider fallbackMessageProvider,
-        IOptions<CopyrightLeakGuardOptions> copyrightOptions,
+        IGroundedAnswerService groundedAnswerService,
         ILiveSessionStreamGateway liveSessionStreamGateway,
         IOptions<SessionAgentOptions>? sessionAgentOptions = null)
     {
@@ -106,9 +102,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _copyrightLeakGuard = copyrightLeakGuard ?? throw new ArgumentNullException(nameof(copyrightLeakGuard));
-        _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
-        _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
+        _groundedAnswerService = groundedAnswerService ?? throw new ArgumentNullException(nameof(groundedAnswerService));
         _liveSessionStreamGateway = liveSessionStreamGateway ?? throw new ArgumentNullException(nameof(liveSessionStreamGateway));
         _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
     }
@@ -500,74 +494,36 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var responseText = fullResponse.ToString();
         var totalTokens = finalUsage?.TotalTokens ?? 0;
 
-        // #447: Copyright leak guard (fail-open)
-        var protectedCitations = resolvedCitations
-            .Where(c => c.CopyrightTier == CopyrightTier.Protected)
-            .ToList();
+        // #447 / #3490 (ADR-090): shared grounded finalize — copyright leak guard (fail-open scan /
+        // fail-closed sanitize) → paraphrase (Protected) → CitationDto mapping (Full-gated tier-nulling)
+        // → grounding (#3388) → confidence. Same seam as the one-shot path (GroundedAnswerService), so
+        // the trust-critical logic lives in ONE place (removes the ADR-090 drift). FinalizeAsync emits
+        // the copyright scan/verbatim metrics internally — the handler must NOT re-emit them.
+        //
+        // Cancellation: FinalizeAsync PROPAGATES an OperationCanceledException on the caller's token
+        // (a client-disconnect during the scan). The previous inline code fail-opened the scan but then
+        // aborted at the following SaveChangesAsync(cancellationToken) anyway — so the net user outcome
+        // (no persist, no broadcast) is IDENTICAL; propagating just drops the spurious "fail-open" log +
+        // CopyrightScanErrors metric that a mere cancel should never have produced.
+        var grounded = await _groundedAnswerService
+            .FinalizeAsync(responseText, resolvedCitations, command.UserQuestion, agentLanguage, cancellationToken)
+            .ConfigureAwait(false);
 
-        CopyrightLeakResult? leakResult = null;
+        responseText = grounded.ResponseText;
+        var finalCitations = grounded.FinalCitations;
 
-        if (protectedCitations.Count > 0)
+        // Copyright sanitize event kept in the handler: the C# iterator method forbids `yield` inside a
+        // try/catch, so FinalizeAsync does the scan/sanitize and returns LeakMatchCount for the yield.
+        if (grounded.LeakMatchCount > 0)
         {
-            try
-            {
-                using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                scanCts.CancelAfter(TimeSpan.FromMilliseconds(_copyrightOptions.Value.ScanTimeoutMs));
-
-                var scanSw = Stopwatch.StartNew();
-                leakResult = await _copyrightLeakGuard
-                    .ScanAsync(responseText, protectedCitations, scanCts.Token)
-                    .ConfigureAwait(false);
-                scanSw.Stop();
-
-                MeepleAiMetrics.CopyrightScanDurationMs.Record(scanSw.ElapsedMilliseconds);
-            }
-            catch (Exception ex)
-            {
-                MeepleAiMetrics.CopyrightScanErrors.Add(1,
-                    new KeyValuePair<string, object?>("error_type", ex.GetType().Name));
-                _logger.LogError(ex,
-                    "Copyright leak guard failed for session {SessionId}, allowing response (fail-open)",
-                    command.AgentSessionId);
-                leakResult = null;  // fail-open
-            }
-        }
-
-        // #447: Leak detection result handling (placed here due to C# iterator method constraints)
-        if (leakResult?.HasLeak == true)
-        {
-            foreach (var match in leakResult.Matches)
-            {
-                MeepleAiMetrics.CopyrightVerbatimDetected.Add(1,
-                    new KeyValuePair<string, object?>("run_length", match.RunLength),
-                    new KeyValuePair<string, object?>("document_id", match.DocumentId));
-            }
-
             _logger.LogWarning(
-                "Copyright leak detected in session {SessionId}: {MatchCount} matches, sanitizing response",
-                command.AgentSessionId, leakResult.Matches.Count);
-
-            var fallbackMessage = _fallbackMessageProvider.GetMessage(agentLanguage);
+                "Copyright leak detected in session {SessionId}: {MatchCount} matches, response sanitized",
+                command.AgentSessionId, grounded.LeakMatchCount);
 
             yield return CreateEvent(
                 StreamingEventType.CopyrightSanitized,
-                new StreamingCopyrightSanitized(fallbackMessage, leakResult.Matches.Count));
-
-            responseText = fallbackMessage;
+                new StreamingCopyrightSanitized(responseText, grounded.LeakMatchCount));
         }
-
-        // Extract paraphrased snippets for Protected-tier citations
-        var finalCitations = resolvedCitations.Select(c =>
-        {
-            if (c.CopyrightTier == CopyrightTier.Protected)
-            {
-                var paraphrase = ParaphraseExtractor.Extract(
-                    responseText, c.DocumentId, c.PageNumber,
-                    c.SnippetPreview, command.UserQuestion);
-                return c with { ParaphrasedSnippet = paraphrase };
-            }
-            return c;
-        }).ToList();
 
         // Persist assistant response with citations
         var citationsJson = JsonSerializer.Serialize(finalCitations);
@@ -647,20 +603,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _ = GenerateConversationSummaryAsync(thread.Id);
         }
 
-        // Build citation DTOs for SSE response (reused for both StreamingComplete and session:chat broadcast).
-        var citationDtos = finalCitations.Select(c => new CitationDto(
-            c.DocumentId,
-            c.PageNumber,
-            c.RelevanceScore,
-            c.CopyrightTier == CopyrightTier.Full ? c.SnippetPreview : null,
-            c.CopyrightTier.ToString().ToLowerInvariant(),
-            c.ParaphrasedSnippet,
-            c.IsPublic,
-            // SP-C (#3407): region overlay + char offsets are Full-gated (same rule as SnippetPreview) —
-            // parsed from the raw bbox JSON only for Full-tier citations (DA-4: no verbatim highlight leak).
-            Regions: c.CopyrightTier == CopyrightTier.Full ? CitationRegion.Parse(c.BoundingBoxesJson) : null,
-            CharStart: c.CopyrightTier == CopyrightTier.Full ? c.CharStart : null,
-            CharEnd: c.CopyrightTier == CopyrightTier.Full ? c.CharEnd : null)).ToList();
+        // Citation DTOs for the SSE response + session:chat broadcast — built by the shared finalize
+        // (Full-gated tier-nulling; SP-C #3407 region/offset gating inherited, no Protected verbatim leak).
+        var citationDtos = grounded.CitationDtos;
 
         // SP5-b T2: record citations-per-answer ONCE, post-stream, using citationDtos.Count
         // (the broadcast-authoritative list — NOT the earlier assembled.Citations or resolvedCitations).
@@ -712,7 +657,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             }
         }
 
-        var groundingStatus = citationDtos.Count > 0 ? "Grounded" : "Ungrounded";
+        // Wire grounding string (#3388) from the shared finalize enum (Grounded/Ungrounded — derived
+        // from citation count, never Partial). SSE serializes enums numerically, so send the name.
+        var groundingStatus = grounded.GroundingStatus.ToString();
 
         // #3390 Slice 1: structured grounding observability (text path -> RAG, LiveSession profile).
         // Wrapped so a metrics fault can never break the user's stream (mirrors the broadcast guard above).
@@ -736,7 +683,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 promptTokens: finalUsage?.PromptTokens ?? 0,
                 completionTokens: finalUsage?.CompletionTokens ?? 0,
                 totalTokens: totalTokens,
-                confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
+                confidence: grounded.Confidence,
                 chatThreadId: thread.Id,
                 Citations: citationDtos,
                 GroundingStatus: groundingStatus));

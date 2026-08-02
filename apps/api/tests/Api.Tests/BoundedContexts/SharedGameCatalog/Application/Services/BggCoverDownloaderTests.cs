@@ -13,8 +13,10 @@ public sealed class BggCoverDownloaderTests
     private readonly Mock<IBggCoverUploadPipeline> _pipelineMock = new();
     private readonly Mock<ILogger<BggCoverDownloader>> _loggerMock = new();
 
-    // RFC 5737 TEST-NET-3 literal keeps the SSRF DNS check offline/deterministic.
-    private const string PublicHttpsUrl = "https://203.0.113.10/abc.jpg";
+    // A genuinely-public IP literal keeps the SSRF DNS check offline/deterministic (a literal
+    // resolves to itself without a DNS query). RFC 5737 TEST-NET ranges can't be used here — the
+    // IANA-driven SsrfPolicy (#3495) correctly blocks them as reserved; 8.8.8.8 is never dialed.
+    private const string PublicHttpsUrl = "https://8.8.8.8/abc.jpg";
 
     [Fact]
     public async Task DownloadAndUploadAsync_OnSuccess_ReturnsPipelineKey()
@@ -42,7 +44,7 @@ public sealed class BggCoverDownloaderTests
 
         var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
 
-        var result = await sut.DownloadAndUploadAsync(99, "https://203.0.113.10/image.PNG", CancellationToken.None);
+        var result = await sut.DownloadAndUploadAsync(99, "https://8.8.8.8/image.PNG", CancellationToken.None);
 
         result.Should().Be("bgg-covers/99/cover.png");
         _pipelineMock.Verify(p => p.UploadAsync(99, It.IsAny<byte[]>(), ".png", It.IsAny<CancellationToken>()), Times.Once);
@@ -105,6 +107,24 @@ public sealed class BggCoverDownloaderTests
 
         result.Should().BeNull("a URL resolving to a private/reserved IP must be blocked by the SSRF guard");
         VerifyNoHttpCall(handler);
+    }
+
+    [Fact]
+    public async Task DownloadAndUploadAsync_BodyExceedsSizeCap_ReturnsNullWithoutUploading()
+    {
+        // 11 MB body — over the 10 MB image cap (#3495 C5). ByteArrayContent advertises a
+        // Content-Length, so this exercises the pre-read rejection; the streamed ceiling covers
+        // the chunked/absent-Content-Length case.
+        var oversized = new byte[(11 * 1024 * 1024)];
+        var httpClient = BuildHttpClient(HttpStatusCode.OK, oversized);
+        var sut = new BggCoverDownloader(httpClient, _pipelineMock.Object, _loggerMock.Object);
+
+        var result = await sut.DownloadAndUploadAsync(7, PublicHttpsUrl, CancellationToken.None);
+
+        result.Should().BeNull();
+        _pipelineMock.Verify(
+            p => p.UploadAsync(It.IsAny<int>(), It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     private static HttpClient BuildHttpClient(HttpStatusCode statusCode, byte[]? content = null)

@@ -57,6 +57,16 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        // Cover picker read shape: materialized source candidates + per-context assignments (epic #3470)
+        group.MapGet("/admin/shared-games/{id:guid}/cover-candidates", HandleGetCoverCandidates)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("GetCoverCandidates")
+            .WithSummary("Get cover source candidates for a game (Admin/Editor)")
+            .WithDescription("Returns the materialized cover sources (each with a preview URL) and the current per-context cover assignments, feeding the admin cover picker.")
+            .Produces<CoverCandidatesDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
         // Submit game for approval (Draft → PendingApproval) - Issue #2514
         group.MapPost("/admin/shared-games/{id:guid}/submit-for-approval", HandleSubmitForApproval)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -864,6 +874,15 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     // Issue #3533: New handlers for admin approval workflow
+    private static async Task<IResult> HandleGetCoverCandidates(
+        Guid id,
+        IMediator mediator,
+        CancellationToken ct = default)
+    {
+        var result = await mediator.Send(new GetCoverCandidatesQuery(id), ct).ConfigureAwait(false);
+        return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
     private static async Task<IResult> HandleGetApprovalQueue(
         IMediator mediator,
         [FromQuery] bool? urgency = null,

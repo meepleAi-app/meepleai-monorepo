@@ -453,8 +453,6 @@ const MESSAGES: Record<string, string> = {
   // ChatAgentPanel labels (G1 #2374 T3 — composite header)
   'pages.sessionLive.chatAgent.title': 'ChatAgent',
   'pages.sessionLive.chatAgent.agentNameAriaLabel': 'Nome agente {name}',
-  'pages.sessionLive.chatAgent.onlineLabel': 'Online',
-  'pages.sessionLive.chatAgent.latencyAriaLabel': 'Latenza {ms}ms',
   // Agent launch status feedback messages (#2500 Task 4-FE R-FINDING-5)
   'pages.sessionLive.chatAgent.launchingMessage': "Avvio dell'assistente di gioco…",
   'pages.sessionLive.chatAgent.noAgentMessage': 'Nessun assistente disponibile per questo gioco.',
@@ -481,8 +479,6 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.notes.title': 'Note',
   'pages.sessionLive.notes.inputAriaLabel': 'Scrivi una nota',
   'pages.sessionLive.notes.addAriaLabel': 'Aggiungi nota',
-  'pages.sessionLive.notes.visibilityPrivate': 'Privata',
-  'pages.sessionLive.notes.visibilityShared': 'Condivisa',
   'pages.sessionLive.notes.emptyMessage': 'Nessuna nota ancora.',
   // SP5-a Task 3 (finding #16): diary write response-ack toast key
   'pages.sessionLive.notes.addNoteErrorToast': 'Impossibile salvare la nota. Riprova.',

@@ -24,8 +24,6 @@ const messages = {
 const labels = {
   title: 'ChatAgent',
   agentNameAriaLabel: 'Agent name MeepleAI',
-  onlineLabel: 'Online',
-  latencyAriaLabel: 'Latency 42ms',
   chatPanelLabels: {
     title: 'Chat',
     inputAriaLabel: 'Write a message',
@@ -66,7 +64,6 @@ function renderPanel(collapsed: boolean) {
         onSendMessage={() => {}}
         agentName="MeepleAI"
         agentEmoji="🤖"
-        latencyMs={42}
         collapsed={collapsed}
         onHeaderClick={() => {}}
         labels={labels}

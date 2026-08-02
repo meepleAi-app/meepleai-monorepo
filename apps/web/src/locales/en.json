@@ -3883,8 +3883,6 @@
       },
       "chatAgent": {
         "title": "ChatAgent",
-        "onlineLabel": "Online",
-        "latencyAriaLabel": "Latency {ms}ms",
         "agentNameAriaLabel": "Agent name {name}",
         "collapsedAriaLabel": "ChatAgent collapsed — click to expand",
         "expandedAriaLabel": "ChatAgent expanded — click to collapse",
@@ -3910,8 +3908,6 @@
         "title": "Notes",
         "inputAriaLabel": "Write a note",
         "addAriaLabel": "Add note",
-        "visibilityPrivate": "Private",
-        "visibilityShared": "Shared",
         "emptyMessage": "No notes yet.",
         "addNoteErrorToast": "Failed to save note. Please try again."
       },

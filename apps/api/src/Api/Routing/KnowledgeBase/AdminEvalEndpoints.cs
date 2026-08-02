@@ -55,7 +55,12 @@ internal static class AdminEvalEndpoints
             new LoadDatasetCommand { FilePath = request.DatasetPath }, ct).ConfigureAwait(false);
 
         var result = await mediator.Send(
-            new RunEvaluationCommand { DatasetPath = request.DatasetPath, MaxSamples = request.MaxSamples },
+            new RunEvaluationCommand
+            {
+                DatasetPath = request.DatasetPath,
+                MaxSamples = request.MaxSamples,
+                Enhancements = request.Enhancements
+            },
             ct).ConfigureAwait(false);
 
         var byLanguage = EvaluationReportFormatter.MetricsByLanguage(result, dataset);
@@ -131,6 +136,9 @@ internal static class AdminEvalEndpoints
     }
 }
 
-internal sealed record RunRetrievalEvaluationRequest(string DatasetPath, int? MaxSamples = null);
+// #3390 Slice 4 Step 1: Enhancements null → legacy hybrid eval; non-null (incl. empty) → grounded seam
+// with the parsed enhancement set (empty = grounded baseline). Identifiers: "crag-evaluation" etc.
+internal sealed record RunRetrievalEvaluationRequest(
+    string DatasetPath, int? MaxSamples = null, IReadOnlyList<string>? Enhancements = null);
 internal sealed record GenerateLabelingCandidatesRequest(string DatasetPath, int? TopN = null);
 internal sealed record MergeLabelsRequest(string DatasetPath, LabelingReview Review, string? OutputPath = null);

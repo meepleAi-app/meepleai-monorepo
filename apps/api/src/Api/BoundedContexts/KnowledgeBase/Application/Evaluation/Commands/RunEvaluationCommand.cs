@@ -32,4 +32,15 @@ internal sealed record RunEvaluationCommand : IRequest<EvaluationResult>
     /// Number of top results to retrieve per query.
     /// </summary>
     public int TopK { get; init; } = 10;
+
+    /// <summary>
+    /// #3390 Slice 4 Step 1: RAG enhancement identifiers to activate on the grounded eval seam
+    /// (e.g. <c>["crag-evaluation"]</c>, or <c>["rag.enhancement.raptor-retrieval"]</c>). When
+    /// <b>non-null</b> the eval runs through <c>AssemblePromptAsync</c> under
+    /// <c>RetrievalPolicy.LiveSessionWith(parsedSet)</c> — an <b>empty</b> list is the grounded
+    /// baseline (no enhancements). When <b>null</b>, the legacy <c>AskWithHybridSearchAsync</c> path
+    /// runs (preserves the #3477 baseline). Parsed via <c>RagEnhancementExtensions.ParseFlags</c>
+    /// (fail-loud on an unknown identifier).
+    /// </summary>
+    public IReadOnlyList<string>? Enhancements { get; init; }
 }

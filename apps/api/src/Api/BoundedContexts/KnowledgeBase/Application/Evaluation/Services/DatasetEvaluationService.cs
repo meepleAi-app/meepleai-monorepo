@@ -1,8 +1,14 @@
 using System.Diagnostics;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Microsoft.Extensions.Logging;
+// Api.Models also declares an EvaluationMetrics; pin only the two wire types we need to avoid ambiguity.
+using Snippet = Api.Models.Snippet;
+using QaResponse = Api.Models.QaResponse;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 
@@ -14,17 +20,23 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 {
     private readonly IRagService _ragService;
+    private readonly IRagPromptAssemblyService _ragPromptService;
+    private readonly ILlmService _llmService;
     private readonly InlineCitationMatcherService _citationMatcher;
     private readonly ICitationValidationService _citationValidation;
     private readonly ILogger<DatasetEvaluationService> _logger;
 
     public DatasetEvaluationService(
         IRagService ragService,
+        IRagPromptAssemblyService ragPromptService,
+        ILlmService llmService,
         InlineCitationMatcherService citationMatcher,
         ICitationValidationService citationValidation,
         ILogger<DatasetEvaluationService> logger)
     {
         _ragService = ragService ?? throw new ArgumentNullException(nameof(ragService));
+        _ragPromptService = ragPromptService ?? throw new ArgumentNullException(nameof(ragPromptService));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
         _citationValidation = citationValidation ?? throw new ArgumentNullException(nameof(citationValidation));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -104,17 +116,21 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 
         try
         {
-            // Query the RAG system via the canonical hybrid retrieval path. IRagService.AskAsync's legacy
-            // vector path is deprecated and returns empty results (RagService.ExecuteRetrievalPhaseAsync),
-            // so the eval must use AskWithHybridSearchAsync to exercise the real production retrieval.
-            // bypassCache: true so each run measures fresh retrieval, not a possibly-stale cached response.
-            var ragResponse = await _ragService.AskWithHybridSearchAsync(
-                sample.GameId ?? "",
-                sample.Question,
-                SearchMode.Hybrid,
-                language: null,
-                bypassCache: true,
-                cancellationToken).ConfigureAwait(false);
+            // Retrieval. Two paths, selected by options.GroundedEnhancements (#3390 Step 1):
+            //  - non-null → the SAME grounded seam the in-session live path uses (AssemblePromptAsync)
+            //    under RetrievalPolicy.LiveSessionWith(set), so enhancements are actually exercised and
+            //    the eval can measure them (closes the #3475-class wrong-path gap).
+            //  - null → legacy AskWithHybridSearchAsync (backward-compatible; preserves #3477 baseline).
+            //    bypassCache: true so each run measures fresh retrieval, not a possibly-stale cache.
+            var ragResponse = options.GroundedEnhancements is { } groundedEnhancements
+                ? await RunGroundedRetrievalAsync(sample, groundedEnhancements, cancellationToken).ConfigureAwait(false)
+                : await _ragService.AskWithHybridSearchAsync(
+                    sample.GameId ?? "",
+                    sample.Question,
+                    SearchMode.Hybrid,
+                    language: null,
+                    bypassCache: true,
+                    cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
 
@@ -209,6 +225,61 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             };
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// #3390 Slice 4 Step 1: retrieval through the SAME grounded seam the in-session live path uses
+    /// (<c>AssemblePromptAsync</c>), under <c>RetrievalPolicy.LiveSessionWith(enhancements)</c>, then
+    /// generation. Produces a <see cref="QaResponse"/> whose <c>snippets</c> have the identical shape
+    /// <c>AskWithHybridSearchAsync</c> emits (<c>source = "PDF:{documentId}"</c>, <c>page</c>), so the
+    /// downstream metrics are unchanged — only the retrieval PATH changes, which is the whole point:
+    /// enhancements now affect the measured numbers.
+    /// </summary>
+    private async Task<QaResponse> RunGroundedRetrievalAsync(
+        EvaluationSample sample,
+        RagEnhancement enhancements,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(sample.GameId, out var gameGuid))
+        {
+            // The grounded seam needs a UUID GameId; the golden set is UUID-resolved. A slug here is a
+            // data error — surface it (the caller's catch records a failed sample, not a silent zero).
+            throw new InvalidOperationException(
+                $"Grounded eval requires a UUID GameId; sample '{sample.Id}' has '{sample.GameId}'.");
+        }
+
+        var assembled = await _ragPromptService.AssemblePromptAsync(
+            agentTypology: "tutor",
+            gameTitle: string.Empty,
+            gameState: null,
+            userQuestion: sample.Question,
+            gameId: gameGuid,
+            chatThread: null,
+            userTier: null,
+            agentLanguage: "en",
+            cancellationToken,
+            retrievalPolicy: RetrievalPolicy.LiveSessionWith(enhancements)).ConfigureAwait(false);
+
+        var completion = await _llmService.GenerateCompletionAsync(
+            assembled.SystemPrompt, assembled.UserPrompt, RequestSource.RagPipeline, cancellationToken)
+            .ConfigureAwait(false);
+
+        var answer = completion.Success ? completion.Response : string.Empty;
+
+        // Map ChunkCitation → Snippet with the same shape the hybrid path emits (source "PDF:{guid}",
+        // page). Metrics read only source/page from snippets + the answer text; text is used solely by
+        // the inline citation matcher.
+        var snippets = assembled.Citations
+            .Select(c => new Snippet(
+                c.FullText ?? c.SnippetPreview,
+                $"PDF:{c.DocumentId}",
+                c.PageNumber,
+                0,
+                c.RelevanceScore))
+            .ToList();
+
+        var confidence = RagPromptAssemblyService.ComputeConfidence(assembled.Citations, answer);
+        return new QaResponse(answer, snippets, confidence: confidence);
     }
 
     /// <inheritdoc/>

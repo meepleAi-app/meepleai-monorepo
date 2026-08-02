@@ -118,4 +118,36 @@ public class RagEnhancementTests
         var flags = all.GetIndividualFlags().ToList();
         flags.Count.Should().Be(5);
     }
+
+    // ── #3390 Slice 4 Step 1: ParseFlags ──
+
+    [Theory]
+    [InlineData("rag.enhancement.crag-evaluation")]  // full feature-flag key
+    [InlineData("crag-evaluation")]                   // suffix
+    [InlineData("CragEvaluation")]                    // enum name
+    [InlineData("cragevaluation")]                    // case-insensitive
+    public void ParseFlags_AcceptsKeyFormats(string id)
+    {
+        RagEnhancementExtensions.ParseFlags(new[] { id }).Should().Be(RagEnhancement.CragEvaluation);
+    }
+
+    [Fact]
+    public void ParseFlags_CombinesMultiple()
+    {
+        var result = RagEnhancementExtensions.ParseFlags(new[] { "crag-evaluation", "raptor-retrieval" });
+        result.Should().Be(RagEnhancement.CragEvaluation | RagEnhancement.RaptorRetrieval);
+    }
+
+    [Fact]
+    public void ParseFlags_Empty_ReturnsNone()
+    {
+        RagEnhancementExtensions.ParseFlags(Array.Empty<string>()).Should().Be(RagEnhancement.None);
+    }
+
+    [Fact]
+    public void ParseFlags_UnknownIdentifier_ThrowsFailLoud()
+    {
+        var act = () => RagEnhancementExtensions.ParseFlags(new[] { "crag-evaluatino" }); // typo
+        act.Should().Throw<ArgumentException>().WithMessage("*Unknown RAG enhancement*");
+    }
 }

@@ -78,6 +78,17 @@ internal sealed record EvaluationOptions
     public string? GameIdFilter { get; init; }
 
     /// <summary>
+    /// #3390 Slice 4 Step 1: when non-null, the eval exercises the SAME grounded retrieval seam the
+    /// in-session live path uses (<c>AssemblePromptAsync</c>) under a <c>RetrievalPolicy</c> carrying
+    /// this explicit enhancement set — so flipping an enhancement actually changes retrieval and the
+    /// eval can measure it. <c>None</c> = grounded baseline (no enhancements). When <b>null</b>, the
+    /// legacy <c>AskWithHybridSearchAsync</c> path is used (backward-compatible; preserves the #3477
+    /// baseline's reproducibility). Note: the legacy path never touches the enhancement gate, so
+    /// per-enhancement measurement REQUIRES this to be non-null (#3390 R1 / #3475-class gap).
+    /// </summary>
+    public Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagEnhancement? GroundedEnhancements { get; init; }
+
+    /// <summary>
     /// Default options for baseline evaluation.
     /// </summary>
     public static EvaluationOptions Default => new();

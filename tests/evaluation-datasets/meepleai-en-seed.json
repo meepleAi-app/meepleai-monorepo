@@ -1,9 +1,9 @@
 {
-  "name": "MeepleAI English Seed Evaluation Dataset",
-  "description": "English-language seed evaluation dataset for the RAG retrieval-evaluation harness. Covers the 5 golden games (Catan, Wingspan, Dominion, Ark Nova, 7 Wonders) with unlabeled samples intended to be labeled via the labeling-assist workflow.",
-  "version": "1.0.0",
+  "name": "MeepleAI English Golden Evaluation Dataset",
+  "description": "English golden evaluation dataset for the 5 golden games (Catan, Wingspan, Dominion, Ark Nova, 7 Wonders). Unions real source_page ground truth from the seed/mozilla/custom datasets into page-level expected_citations (#3467). relevant_chunk_ids are intentionally empty pending the #3427 re-index (recall labeling via the labeling-assist workflow).",
+  "version": "1.1.0",
   "source_type": "meepleai_custom",
-  "created_at": "2026-08-01T00:00:00Z",
+  "created_at": "2026-08-02T00:00:00Z",
   "samples": [
     {
       "id": "en-seed-001",
@@ -15,10 +15,22 @@
       "difficulty": "easy",
       "category": "setup",
       "game_id": "catan",
-      "expected_keywords": ["brick", "lumber", "wool", "grain", "ore"],
+      "expected_keywords": [
+        "brick",
+        "lumber",
+        "wool",
+        "grain",
+        "ore"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          2
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-002",
@@ -30,10 +42,20 @@
       "difficulty": "easy",
       "category": "scoring",
       "game_id": "catan",
-      "expected_keywords": ["10", "victory points", "win"],
+      "expected_keywords": [
+        "10",
+        "victory points",
+        "win"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          12
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-003",
@@ -45,10 +67,20 @@
       "difficulty": "easy",
       "category": "setup",
       "game_id": "wingspan",
-      "expected_keywords": ["5", "bird cards", "food tokens"],
+      "expected_keywords": [
+        "5",
+        "bird cards",
+        "food tokens"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          4
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-004",
@@ -60,10 +92,20 @@
       "difficulty": "medium",
       "category": "gameplay",
       "game_id": "wingspan",
-      "expected_keywords": ["Forest", "Grassland", "Wetland"],
+      "expected_keywords": [
+        "Forest",
+        "Grassland",
+        "Wetland"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          6
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-005",
@@ -75,10 +117,20 @@
       "difficulty": "medium",
       "category": "gameplay",
       "game_id": "dominion",
-      "expected_keywords": ["Action", "Buy", "Cleanup"],
+      "expected_keywords": [
+        "Action",
+        "Buy",
+        "Cleanup"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          3
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-006",
@@ -90,10 +142,23 @@
       "difficulty": "hard",
       "category": "setup",
       "game_id": "dominion",
-      "expected_keywords": ["46", "Copper", "40", "Silver", "30", "Gold"],
+      "expected_keywords": [
+        "46",
+        "Copper",
+        "40",
+        "Silver",
+        "30",
+        "Gold"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          5
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-007",
@@ -105,10 +170,20 @@
       "difficulty": "medium",
       "category": "gameplay",
       "game_id": "dominion",
-      "expected_keywords": ["discards", "5 cards", "reshuffle"],
+      "expected_keywords": [
+        "discards",
+        "5 cards",
+        "reshuffle"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          4
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-008",
@@ -120,10 +195,21 @@
       "difficulty": "medium",
       "category": "gameplay",
       "game_id": "ark-nova",
-      "expected_keywords": ["Build", "Animals", "Cards", "Association"],
+      "expected_keywords": [
+        "Build",
+        "Animals",
+        "Cards",
+        "Association"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          7
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-009",
@@ -135,10 +221,20 @@
       "difficulty": "hard",
       "category": "scoring",
       "game_id": "ark-nova",
-      "expected_keywords": ["reputation", "animals", "conservation"],
+      "expected_keywords": [
+        "reputation",
+        "animals",
+        "conservation"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          15
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-010",
@@ -150,10 +246,20 @@
       "difficulty": "easy",
       "category": "setup",
       "game_id": "7-wonders",
-      "expected_keywords": ["3 ages", "7 cards", "draft"],
+      "expected_keywords": [
+        "3 ages",
+        "7 cards",
+        "draft"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          3
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-011",
@@ -165,10 +271,20 @@
       "difficulty": "medium",
       "category": "gameplay",
       "game_id": "7-wonders",
-      "expected_keywords": ["counter-clockwise", "Age II", "right"],
+      "expected_keywords": [
+        "counter-clockwise",
+        "Age II",
+        "right"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
-      "language": "en"
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          4
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
     },
     {
       "id": "en-seed-012",
@@ -180,7 +296,527 @@
       "difficulty": "hard",
       "category": "scoring",
       "game_id": "7-wonders",
-      "expected_keywords": ["shields", "conflict token", "defeat token"],
+      "expected_keywords": [
+        "shields",
+        "conflict token",
+        "defeat token"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          9
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-013",
+      "question": "How many settlement pieces does each player start with in Catan?",
+      "expected_answer": "Each player starts with 5 settlement pieces.",
+      "source": "catan-rulebook",
+      "source_page": 3,
+      "section": "Components",
+      "difficulty": "easy",
+      "category": "setup",
+      "game_id": "catan",
+      "expected_keywords": [
+        "5",
+        "settlement"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          3
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-014",
+      "question": "What resource cards are needed to build a road in Catan?",
+      "expected_answer": "One brick and one lumber are needed to build a road.",
+      "source": "catan-rulebook",
+      "source_page": 7,
+      "section": "Building Costs",
+      "difficulty": "easy",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "brick",
+        "lumber"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          7
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-015",
+      "question": "When a 7 is rolled in Catan, what happens to players with more than 7 resource cards?",
+      "expected_answer": "Players with more than 7 resource cards must discard half of their resource cards (rounded down).",
+      "source": "catan-rulebook",
+      "source_page": 8,
+      "section": "The Robber",
+      "difficulty": "medium",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "discard",
+        "half",
+        "7"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          8
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-016",
+      "question": "How many victory points are needed to win a standard game of Catan?",
+      "expected_answer": "10 victory points are needed to win.",
+      "source": "catan-rulebook",
+      "source_page": 12,
+      "section": "Winning",
+      "difficulty": "easy",
+      "category": "scoring",
+      "game_id": "catan",
+      "expected_keywords": [
+        "10",
+        "victory"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          12
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-017",
+      "question": "What is the longest road bonus in Catan and how many victory points is it worth?",
+      "expected_answer": "The Longest Road card is awarded to the first player to build a continuous road of at least 5 segments. It is worth 2 victory points.",
+      "source": "catan-rulebook",
+      "source_page": 11,
+      "section": "Special Victory Points",
+      "difficulty": "medium",
+      "category": "scoring",
+      "game_id": "catan",
+      "expected_keywords": [
+        "5",
+        "road",
+        "2",
+        "victory"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          11
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-018",
+      "question": "In 7 Wonders, how many cards does each player receive in the first age?",
+      "expected_answer": "Each player receives 7 cards at the beginning of each age.",
+      "source": "7wonders-rulebook",
+      "source_page": 5,
+      "section": "Card Distribution",
+      "difficulty": "easy",
+      "category": "setup",
+      "game_id": "7-wonders",
+      "expected_keywords": [
+        "7",
+        "cards"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          5
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-019",
+      "question": "How does card drafting work in 7 Wonders?",
+      "expected_answer": "Each player selects one card from their hand, plays it simultaneously, then passes the remaining cards to the next player. Direction alternates by age.",
+      "source": "7wonders-rulebook",
+      "source_page": 6,
+      "section": "Drafting",
+      "difficulty": "hard",
+      "category": "gameplay",
+      "game_id": "7-wonders",
+      "expected_keywords": [
+        "select",
+        "simultaneously",
+        "pass",
+        "direction"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          6
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-020",
+      "question": "Can you trade with the bank in Catan, and at what ratio?",
+      "expected_answer": "Yes, you can trade 4 identical resource cards for 1 resource card of any type with the bank. With a harbor, the ratio can be 3:1 (general) or 2:1 (specific resource).",
+      "source": "catan-rulebook",
+      "source_page": 9,
+      "section": "Trading",
+      "difficulty": "hard",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "4",
+        "bank",
+        "harbor",
+        "3:1",
+        "2:1"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          9
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-021",
+      "question": "How many development cards can you buy per turn in Catan?",
+      "expected_answer": "You can buy as many development cards as you can afford per turn, but you can only play one development card per turn.",
+      "source": "catan-rulebook",
+      "source_page": 10,
+      "section": "Development Cards",
+      "difficulty": "hard",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "buy",
+        "play",
+        "one"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          10
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-022",
+      "question": "How many resource cards does each terrain hex produce when its number is rolled?",
+      "expected_answer": "Each terrain hex produces 1 resource card for every settlement adjacent to it, and 2 resource cards for every city adjacent to it.",
+      "source": "catan-rulebook",
+      "source_page": 6,
+      "section": "Resource Production",
+      "difficulty": "easy",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "1",
+        "settlement",
+        "2",
+        "city"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          6
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-023",
+      "question": "What resources are needed to build a city in Catan?",
+      "expected_answer": "3 ore and 2 grain are needed to upgrade a settlement to a city.",
+      "source": "catan-rulebook",
+      "source_page": 7,
+      "section": "Building Costs",
+      "difficulty": "easy",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "3",
+        "ore",
+        "2",
+        "grain"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          7
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-024",
+      "question": "What is the placement rule for settlements in Catan?",
+      "expected_answer": "Settlements must be placed on an unoccupied intersection that is at least two intersections away from any other settlement or city (the distance rule).",
+      "source": "catan-rulebook",
+      "source_page": 5,
+      "section": "Placement Rules",
+      "difficulty": "medium",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "intersection",
+        "two",
+        "distance"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          5
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-025",
+      "question": "How do ports work in Catan?",
+      "expected_answer": "Ports allow better trade ratios with the bank. A general port allows 3:1 trades, while specific resource ports allow 2:1 trades for that resource. You must build a settlement on a port to use it.",
+      "source": "catan-rulebook",
+      "source_page": 9,
+      "section": "Maritime Trade",
+      "difficulty": "medium",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "3:1",
+        "2:1",
+        "settlement",
+        "port"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          9
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-026",
+      "question": "What is the Knight card in Catan and how is Largest Army determined?",
+      "expected_answer": "The Knight card lets you move the robber to a new hex and steal a resource from an adjacent player. The player who plays the most Knight cards (minimum 3) receives the Largest Army card worth 2 victory points.",
+      "source": "catan-rulebook",
+      "source_page": 10,
+      "section": "Development Cards",
+      "difficulty": "hard",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "robber",
+        "steal",
+        "3",
+        "Largest Army",
+        "2"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          10
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-027",
+      "question": "Can you play a development card on the same turn you buy it in Catan?",
+      "expected_answer": "No, you cannot play a development card on the same turn you bought it. You must wait until a subsequent turn to play it.",
+      "source": "catan-rulebook",
+      "source_page": 10,
+      "section": "Development Cards",
+      "difficulty": "hard",
+      "category": "gameplay",
+      "game_id": "catan",
+      "expected_keywords": [
+        "cannot",
+        "same",
+        "turn",
+        "subsequent"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          10
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-028",
+      "question": "What happens during initial placement in Catan?",
+      "expected_answer": "Players take turns placing 1 settlement and 1 road in order, then in reverse order place a second settlement and road. The second settlement produces starting resources.",
+      "source": "catan-rulebook",
+      "source_page": 4,
+      "section": "Setup",
+      "difficulty": "medium",
+      "category": "setup",
+      "game_id": "catan",
+      "expected_keywords": [
+        "settlement",
+        "road",
+        "reverse",
+        "second",
+        "resources"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en",
+      "expected_citations": {
+        "primary_pages": [
+          4
+        ],
+        "match_policy": "overlap_at_least_one"
+      }
+    },
+    {
+      "id": "en-seed-029",
+      "question": "What are the three main actions a player can take on their turn in Wingspan besides playing a bird?",
+      "expected_answer": "Gain food from the birdfeeder, lay eggs, and draw bird cards — each activated by placing an action cube in the Forest, Grassland, or Wetland row respectively.",
+      "source": "wingspan-rulebook",
+      "difficulty": "medium",
+      "category": "gameplay",
+      "game_id": "wingspan",
+      "expected_keywords": [
+        "gain food",
+        "lay eggs",
+        "draw"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en"
+    },
+    {
+      "id": "en-seed-030",
+      "question": "How many rounds are played in a game of Wingspan and how do the available turns change?",
+      "expected_answer": "A game lasts 4 rounds; the number of available turns decreases each round (8, 7, 6, then 5) as cubes are set aside for end-of-round goals.",
+      "source": "wingspan-rulebook",
+      "difficulty": "medium",
+      "category": "scoring",
+      "game_id": "wingspan",
+      "expected_keywords": [
+        "4 rounds",
+        "turns",
+        "decrease"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en"
+    },
+    {
+      "id": "en-seed-031",
+      "question": "How many cards make up a player's starting deck in Dominion and what are they?",
+      "expected_answer": "Each player starts with a 10-card deck: 7 Copper and 3 Estates.",
+      "source": "dominion-rulebook",
+      "difficulty": "easy",
+      "category": "setup",
+      "game_id": "dominion",
+      "expected_keywords": [
+        "10 cards",
+        "7 Copper",
+        "3 Estate"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en"
+    },
+    {
+      "id": "en-seed-032",
+      "question": "What conditions end a game of Dominion?",
+      "expected_answer": "The game ends when the Province pile is empty or when any three Supply piles are empty; the player with the most victory points then wins.",
+      "source": "dominion-rulebook",
+      "difficulty": "medium",
+      "category": "scoring",
+      "game_id": "dominion",
+      "expected_keywords": [
+        "Province",
+        "three",
+        "piles empty"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en"
+    },
+    {
+      "id": "en-seed-033",
+      "question": "What are the two scoring tracks in Ark Nova and how does the game end?",
+      "expected_answer": "The Appeal track and the Conservation Points track; the game ends when the two markers meet or cross on the scoring display.",
+      "source": "ark-nova-rulebook",
+      "difficulty": "hard",
+      "category": "scoring",
+      "game_id": "ark-nova",
+      "expected_keywords": [
+        "Appeal",
+        "Conservation",
+        "cross"
+      ],
+      "relevant_chunk_ids": [],
+      "dataset_source": "meepleai_custom",
+      "language": "en"
+    },
+    {
+      "id": "en-seed-034",
+      "question": "What do break icons trigger in Ark Nova?",
+      "expected_answer": "Break icons trigger the Break phase, during which the player takes a Sponsors bonus and the card display is refreshed before play continues.",
+      "source": "ark-nova-rulebook",
+      "difficulty": "medium",
+      "category": "gameplay",
+      "game_id": "ark-nova",
+      "expected_keywords": [
+        "break",
+        "phase",
+        "display"
+      ],
       "relevant_chunk_ids": [],
       "dataset_source": "meepleai_custom",
       "language": "en"

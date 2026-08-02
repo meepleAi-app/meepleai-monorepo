@@ -89,15 +89,18 @@ internal static class EvaluationReportFormatter
         AppendMetricRow(sb, "MRR", metrics.Mrr);
         AppendMetricRow(sb, "P95 Latency (ms)", metrics.P95LatencyMs);
         AppendMetricRow(sb, "Answer Correctness", metrics.AnswerCorrectness);
+        AppendMetricRow(sb, "Citation Accuracy", metrics.CitationAccuracy);
+        AppendMetricRow(sb, "Citation Structural Validity", metrics.CitationStructuralValidity);
         sb.Append("| Sample Count | ").Append(metrics.SampleCount.ToString(CultureInfo.InvariantCulture)).AppendLine(" |");
         sb.Append("| Labeled | ").Append(metrics.LabeledSampleCount.ToString(CultureInfo.InvariantCulture)).AppendLine(" |");
         sb.Append("| Unlabeled | ").Append(metrics.UnlabeledSampleCount.ToString(CultureInfo.InvariantCulture)).AppendLine(" |");
+        sb.Append("| Cited | ").Append(metrics.CitedSampleCount.ToString(CultureInfo.InvariantCulture)).AppendLine(" |");
         sb.AppendLine();
 
         sb.AppendLine("## Metrics by Language");
         sb.AppendLine();
-        sb.AppendLine("| Language | Recall@5 | Recall@10 | nDCG@10 | MRR | Answer Correctness | Labeled | Unlabeled |");
-        sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- | --- |");
+        sb.AppendLine("| Language | Recall@5 | Recall@10 | nDCG@10 | MRR | Answer Correctness | Citation Accuracy | Labeled | Unlabeled |");
+        sb.AppendLine("| --- | --- | --- | --- | --- | --- | --- | --- | --- |");
 
         foreach (var (language, languageMetrics) in byLanguage.OrderBy(kvp => kvp.Key, StringComparer.Ordinal))
         {
@@ -107,6 +110,7 @@ internal static class EvaluationReportFormatter
               .Append(" | ").Append(FormatDouble(languageMetrics.NdcgAt10))
               .Append(" | ").Append(FormatDouble(languageMetrics.Mrr))
               .Append(" | ").Append(FormatDouble(languageMetrics.AnswerCorrectness))
+              .Append(" | ").Append(FormatDouble(languageMetrics.CitationAccuracy))
               .Append(" | ").Append(languageMetrics.LabeledSampleCount.ToString(CultureInfo.InvariantCulture))
               .Append(" | ").Append(languageMetrics.UnlabeledSampleCount.ToString(CultureInfo.InvariantCulture))
               .AppendLine(" |");
@@ -159,7 +163,10 @@ internal static class EvaluationReportFormatter
         AnswerCorrectness = metrics.AnswerCorrectness,
         SampleCount = metrics.SampleCount,
         LabeledSampleCount = metrics.LabeledSampleCount,
-        UnlabeledSampleCount = metrics.UnlabeledSampleCount
+        UnlabeledSampleCount = metrics.UnlabeledSampleCount,
+        CitationAccuracy = metrics.CitationAccuracy,
+        CitationStructuralValidity = metrics.CitationStructuralValidity,
+        CitedSampleCount = metrics.CitedSampleCount
     };
 
     private sealed class ReportProjection
@@ -193,6 +200,9 @@ internal static class EvaluationReportFormatter
         public int SampleCount { get; init; }
         public int LabeledSampleCount { get; init; }
         public int UnlabeledSampleCount { get; init; }
+        public double CitationAccuracy { get; init; }
+        public double CitationStructuralValidity { get; init; }
+        public int CitedSampleCount { get; init; }
     }
 
     private sealed class CoverageProjection

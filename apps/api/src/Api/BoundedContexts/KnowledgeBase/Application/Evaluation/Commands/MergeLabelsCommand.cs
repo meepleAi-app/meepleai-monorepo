@@ -10,5 +10,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Commands;
 /// </summary>
 /// <param name="DatasetPath">Path to the dataset JSON file to load samples from.</param>
 /// <param name="Review">The reviewed labeling candidates to merge.</param>
-internal sealed record MergeLabelsCommand(string DatasetPath, LabelingReview Review)
+/// <param name="OutputPath">
+/// Optional destination for persisting the merged dataset JSON. When null, the merge is in-memory
+/// only (backward compatible); when set, the handler writes the labeled dataset to this path.
+/// </param>
+internal sealed record MergeLabelsCommand(string DatasetPath, LabelingReview Review, string? OutputPath = null)
     : IRequest<EvaluationDataset>;

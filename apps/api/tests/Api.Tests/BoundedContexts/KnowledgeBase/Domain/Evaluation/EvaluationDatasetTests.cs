@@ -480,6 +480,105 @@ public class EvaluationDatasetTests
     }
 
     [Fact]
+    public void ToJson_AndFromJson_RoundTripsExpectedCitations()
+    {
+        // Arrange
+        var dataset = EvaluationDataset.Create("Test Dataset", "A test dataset");
+        dataset.AddSample(new EvaluationSample
+        {
+            Id = "sample-1",
+            Question = "What is the setup?",
+            ExpectedAnswer = "Set up the board",
+            ExpectedCitations = new ExpectedCitations
+            {
+                PrimaryPages = new[] { 3, 5 },
+                MatchPolicy = CitationMatchPolicy.Subset
+            }
+        });
+
+        // Act
+        var roundTripped = EvaluationDataset.FromJson(dataset.ToJson());
+
+        // Assert
+        var restored = roundTripped.Samples[0].ExpectedCitations;
+        restored.Should().NotBeNull();
+        restored!.PrimaryPages.Should().Equal(3, 5);
+        restored.MatchPolicy.Should().Be(CitationMatchPolicy.Subset);
+    }
+
+    [Fact]
+    public void FromJson_ReadsExpectedCitations_FromSnakeCase()
+    {
+        // Arrange
+        var json = """
+        {
+            "name": "Test Dataset",
+            "description": "Test",
+            "samples": [
+                {
+                    "id": "sample-1",
+                    "question": "Q1",
+                    "expected_answer": "A1",
+                    "expected_citations": { "primary_pages": [7, 9], "match_policy": "exact" }
+                }
+            ]
+        }
+        """;
+
+        // Act
+        var dataset = EvaluationDataset.FromJson(json);
+
+        // Assert
+        var citations = dataset.Samples[0].ExpectedCitations;
+        citations.Should().NotBeNull();
+        citations!.PrimaryPages.Should().Equal(7, 9);
+        citations.MatchPolicy.Should().Be(CitationMatchPolicy.Exact);
+    }
+
+    [Fact]
+    public void FromJson_ExpectedCitationsWithoutMatchPolicy_DefaultsToOverlapAtLeastOne()
+    {
+        // Arrange
+        var json = """
+        {
+            "samples": [
+                {
+                    "id": "sample-1",
+                    "question": "Q1",
+                    "expected_answer": "A1",
+                    "expected_citations": { "primary_pages": [4] }
+                }
+            ]
+        }
+        """;
+
+        // Act
+        var dataset = EvaluationDataset.FromJson(json);
+
+        // Assert
+        dataset.Samples[0].ExpectedCitations!.MatchPolicy.Should().Be(CitationMatchPolicy.OverlapAtLeastOne);
+    }
+
+    [Fact]
+    public void FromJson_WithoutExpectedCitations_IsNull()
+    {
+        // Arrange
+        var json = """
+        {
+            "samples": [
+                { "id": "sample-1", "question": "Q1", "expected_answer": "A1" }
+            ]
+        }
+        """;
+
+        // Act
+        var dataset = EvaluationDataset.FromJson(json);
+
+        // Assert
+        dataset.Samples[0].ExpectedCitations.Should().BeNull();
+    }
+
+    [Fact]
     public void Count_ReflectsNumberOfSamples()
     {
         // Arrange

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Plugins.Implementations.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Plugins.Implementations.Retrieval;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -458,6 +460,58 @@ public class RagPromptAssemblyEnhancementsTests
         _complexityClassifierMock.Verify(
             c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    #endregion
+
+    #region CRAG web-fallback OFF on the closed rulebook domain (#3467)
+
+    [Fact]
+    public async Task WhenLiveSessionPolicy_CragEvaluatorNeverInvoked()
+    {
+        // #3467 negative-space assertion: on the in-session live path the CRAG evaluator must NOT run —
+        // even when the user's tier would activate CRAG — because RetrievalPolicy.LiveSession gates
+        // enhancements OFF (EnhancementsEnabled=false). This is the trust-critical invariant the grounding
+        // audit (§7) flagged as invisible to CI. It guards the #3389 wiring against regression.
+        var tier = UserTier.Premium;
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.CragEvaluation);
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act — live path alongside a tier whose enhancements include CRAG
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, tier, "it", CancellationToken.None,
+            retrievalPolicy: RetrievalPolicy.LiveSession);
+
+        // Assert — CRAG evaluation never runs on the live path, and the tier is never even consulted
+        _relevanceEvaluatorMock.Verify(
+            e => e.EvaluateAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<ScoredChunk>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _ragEnhancementMock.Verify(
+            r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void RagPromptAssemblyService_HasNoWebRetrievalDependency()
+    {
+        // #3467 negative-space assertion: the CRAG "corrective" requery on the closed rulebook domain
+        // stays internal to the corpus (ExpandQueryAsync + TryHybridSearchAsync). The forward-looking
+        // web-fallback plugins (RetrievalWebPlugin / EvaluationCragPlugin, which simulate "web_search")
+        // must NEVER be wired into the live prompt-assembly path. If #3390 later routes an action here to
+        // a web plugin, this test goes RED — forcing an explicit new flag that keeps the rulebook domain OFF.
+        var ctor = typeof(RagPromptAssemblyService).GetConstructors().Single();
+        var parameterTypes = ctor.GetParameters().Select(p => p.ParameterType).ToList();
+
+        parameterTypes.Should().NotContain(typeof(RetrievalWebPlugin));
+        parameterTypes.Should().NotContain(typeof(EvaluationCragPlugin));
+        parameterTypes.Select(t => t.Name).Should().NotContain(
+            n => n.Contains("WebPlugin", StringComparison.Ordinal),
+            "web-fallback retrieval must not be a dependency of the live prompt-assembly path");
     }
 
     #endregion

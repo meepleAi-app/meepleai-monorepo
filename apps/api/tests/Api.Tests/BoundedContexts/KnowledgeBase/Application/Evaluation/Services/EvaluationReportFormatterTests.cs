@@ -191,4 +191,52 @@ public class EvaluationReportFormatterTests
         // Assert
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void ToMarkdown_IncludesCitationMetrics()
+    {
+        // Arrange
+        var sampleResults = new List<EvaluationSampleResult>
+        {
+            CreateSampleResult("s-001") with { CitationMatched = true, CitationStructuralValidity = 1.0 }
+        };
+        var result = CreateResult(sampleResults);
+        var byLanguage = new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal)
+        {
+            ["en"] = EvaluationMetrics.Compute(sampleResults)
+        };
+
+        // Act
+        var markdown = EvaluationReportFormatter.ToMarkdown(result, byLanguage);
+
+        // Assert
+        markdown.Should().Contain("Citation Accuracy");
+        markdown.Should().Contain("Citation Structural Validity");
+        markdown.Should().Contain("Cited");
+    }
+
+    [Fact]
+    public void ToJson_IncludesCitationMetrics()
+    {
+        // Arrange
+        var sampleResults = new List<EvaluationSampleResult>
+        {
+            CreateSampleResult("s-001") with { CitationMatched = true, CitationStructuralValidity = 1.0 }
+        };
+        var result = CreateResult(sampleResults);
+        var byLanguage = new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal)
+        {
+            ["en"] = EvaluationMetrics.Compute(sampleResults)
+        };
+
+        // Act
+        var json = EvaluationReportFormatter.ToJson(result, byLanguage);
+
+        // Assert
+        using var document = JsonDocument.Parse(json);
+        var metrics = document.RootElement.GetProperty("metrics");
+        metrics.TryGetProperty("citation_accuracy", out _).Should().BeTrue();
+        metrics.TryGetProperty("citation_structural_validity", out _).Should().BeTrue();
+        metrics.TryGetProperty("cited_sample_count", out _).Should().BeTrue();
+    }
 }

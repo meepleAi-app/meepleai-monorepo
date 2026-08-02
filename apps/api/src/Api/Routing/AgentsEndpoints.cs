@@ -120,8 +120,7 @@ internal static class AgentsEndpoints
     private sealed record UpdateAgentConfigurationRequest(
         string? ModelId = null,
         decimal? Temperature = null,
-        int? MaxTokens = null,
-        List<Guid>? SelectedDocumentIds = null
+        int? MaxTokens = null
     );
 
     private static void MapGetAgentsEndpoint(RouteGroupBuilder group)
@@ -494,7 +493,7 @@ internal static class AgentsEndpoints
         .Produces(404)
         .WithTags("Agents")
         .WithSummary("Get agent LLM configuration")
-        .WithDescription("Returns the current LLM configuration view (model, provider, temperature, maxTokens, selectedDocumentIds). LlmProvider is heuristically inferred from the model name; SelectedDocumentIds is empty in MVP (KB linking deferred). Issue #657.")
+        .WithDescription("Returns the current LLM configuration view (model, provider, temperature, maxTokens). LlmProvider is heuristically inferred from the model name. Per-agent KB linking is owned by the AgentConfiguration aggregate / updateSelectedDocuments endpoint (#2391), not this contract (#3394). Issue #657.")
         .WithOpenApi();
     }
 
@@ -516,8 +515,7 @@ internal static class AgentsEndpoints
                     AgentId: id,
                     ModelId: request.ModelId,
                     Temperature: request.Temperature,
-                    MaxTokens: request.MaxTokens,
-                    SelectedDocumentIds: request.SelectedDocumentIds);
+                    MaxTokens: request.MaxTokens);
 
                 var dto = await mediator.Send(command, ct).ConfigureAwait(false);
                 return dto is null ? Results.NotFound() : Results.Ok(dto);
@@ -534,7 +532,7 @@ internal static class AgentsEndpoints
         .Produces(404)
         .WithTags("Agents")
         .WithSummary("Update agent LLM configuration")
-        .WithDescription("Partial update (PATCH) of agent LLM configuration: modelId, temperature, maxTokens. Range validation delegated to AgentDefinitionConfig.Create (temperature 0.0-2.0, maxTokens 100-32000). SelectedDocumentIds accepted but not persisted (KB linking deferred). Issue #658.")
+        .WithDescription("Partial update (PATCH) of agent LLM configuration: modelId, temperature, maxTokens. Range validation delegated to AgentDefinitionConfig.Create (temperature 0.0-2.0, maxTokens 100-32000). Per-agent KB linking is owned by the AgentConfiguration aggregate / updateSelectedDocuments endpoint (#2391), not this contract (#3394). Issue #658.")
         .WithOpenApi();
     }
 

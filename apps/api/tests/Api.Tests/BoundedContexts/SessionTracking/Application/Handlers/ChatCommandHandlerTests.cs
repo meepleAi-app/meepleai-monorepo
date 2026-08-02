@@ -578,6 +578,100 @@ public class AskSessionAgentCommandHandlerTests
         mockLlm.Verify(l => l.GenerateMultimodalCompletionAsync(It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3390 Slice 3: vision-derived retrieval query for empty-text turns
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_VisionExpansionOn_EmptyText_DerivesQueryFromVisionState()
+    {
+        // Arrange — empty turn text, vision-expansion + image-retrieval flags ON, a vision snapshot exists.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+        SessionChatMessage? capturedUserMessage = null;
+        mockChatRepo.Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => capturedUserMessage ??= m)
+            .Returns(Task.CompletedTask);
+
+        var mockExtractor = new Mock<IGameStateExtractor>();
+        mockExtractor
+            .Setup(e => e.ExtractIfNeededAsync(It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("{\"observations\":\"Red player has 3 settlements\",\"game_phase\":\"main\",\"visible_elements\":{\"resources\":[\"wood\",\"brick\"]}}");
+
+        var mockMediator = new Mock<IMediator>();
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroundedSessionAnswerDto("You can build. [Page 3]", new List<Api.Models.CitationDto> { new("d", 3, 0.9f, "s", "full") }, GroundingStatus.Grounded, 0.8));
+        var mockLlm = new Mock<ILlmService>();
+
+        var mockFlags = new Mock<IFeatureFlagService>();
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveVisionQueryExpansionKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>())).ReturnsAsync(true);
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>())).ReturnsAsync(true);
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
+            new Mock<IImagePreprocessor>().Object, mockExtractor.Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            mockFlags.Object);
+
+        // Act — empty turn text.
+        await handler.Handle(new AskSessionAgentCommand(sessionId, senderId, "", 1), TestContext.Current.CancellationToken);
+
+        // Assert — retrieval query derived from vision terms, and the user message shows the same query.
+        mockMediator.Verify(m => m.Send(
+            It.Is<AskGroundedSessionQuery>(q => q.Question.Contains("settlements") && q.Question.Contains("board state")),
+            It.IsAny<CancellationToken>()), Times.Once);
+        capturedUserMessage.Should().NotBeNull();
+        capturedUserMessage!.Content.Should().Contain("settlements", "the user message shows the vision-derived query (transparency)");
+    }
+
+    [Fact]
+    public async Task Handle_VisionExpansionOn_EmptyText_NoVision_UsesFallbackQuery()
+    {
+        // Arrange — empty turn text, flag ON, but no vision snapshot → deterministic fallback query.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+        var mockExtractor = new Mock<IGameStateExtractor>(); // ExtractIfNeededAsync → null (no snapshot)
+
+        var mockMediator = new Mock<IMediator>();
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroundedSessionAnswerDto("No match.", new List<Api.Models.CitationDto>(), GroundingStatus.Ungrounded, null));
+        var mockLlm = new Mock<ILlmService>();
+
+        var mockFlags = new Mock<IFeatureFlagService>();
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveVisionQueryExpansionKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>())).ReturnsAsync(true);
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>())).ReturnsAsync(true);
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
+            new Mock<IImagePreprocessor>().Object, mockExtractor.Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            mockFlags.Object);
+
+        // Act — whitespace text.
+        await handler.Handle(new AskSessionAgentCommand(sessionId, senderId, "   ", 1), TestContext.Current.CancellationToken);
+
+        // Assert — deterministic fallback retrieval query.
+        mockMediator.Verify(m => m.Send(
+            It.Is<AskGroundedSessionQuery>(q => q.Question == "What should I do now based on the current board state?"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static MeterListener BuildCounterListener(
         string metricName,
         List<(long Value, Dictionary<string, object?> Tags)> captures)

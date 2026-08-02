@@ -14,7 +14,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <list type="bullet">
 ///   <item><c>Id</c> mirrors <c>AgentId</c> (no separate AgentConfiguration aggregate exposed).</item>
 ///   <item><c>LlmProvider</c> is heuristically derived from the model name prefix.</item>
-///   <item><c>SelectedDocumentIds</c> is empty (KB linking deferred — same as PR #695).</item>
+///   <item>Per-agent KB linking is out of scope — owned by the <c>AgentConfiguration</c> aggregate
+///   (#2391) / <c>updateSelectedDocuments</c> endpoint (Issue #3394 removed the SelectedDocumentIds field).</item>
 ///   <item><c>IsCurrent</c> is always <c>true</c> (single config per agent in MVP).</item>
 /// </list>
 /// Returns <c>null</c> when no agent matches the supplied id (route surfaces 404).
@@ -58,7 +59,6 @@ internal sealed class GetAgentConfigurationQueryHandler
             LlmProvider: InferProvider(agent.Config.Model),
             Temperature: (decimal)agent.Config.Temperature,
             MaxTokens: agent.Config.MaxTokens,
-            SelectedDocumentIds: Array.Empty<Guid>(),
             IsCurrent: true,
             CreatedAt: agent.CreatedAt);
     }

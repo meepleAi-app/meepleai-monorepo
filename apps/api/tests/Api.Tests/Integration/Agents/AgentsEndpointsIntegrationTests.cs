@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -876,7 +877,13 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var dto = await response.Content.ReadFromJsonAsync<AgentConfigurationDto>();
+        var json = await response.Content.ReadAsStringAsync();
+        // #3394: the LLM-config contract no longer exposes SelectedDocumentIds. Per-agent KB
+        // linking is owned by the AgentConfiguration aggregate (#2391) / updateSelectedDocuments.
+        json.Should().NotContainEquivalentOf("selectedDocumentIds");
+        var dto = JsonSerializer.Deserialize<AgentConfigurationDto>(
+            json,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
         dto.Should().NotBeNull();
         dto!.AgentId.Should().Be(seededId);
         dto.LlmModel.Should().Be("gpt-4");
@@ -884,7 +891,6 @@ public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
         dto.MaxTokens.Should().Be(1000);
         dto.Temperature.Should().BeApproximately(0.7m, 0.001m);
         dto.IsCurrent.Should().BeTrue();
-        dto.SelectedDocumentIds.Should().BeEmpty();
     }
 
     // -------------------------------------------------------------------------

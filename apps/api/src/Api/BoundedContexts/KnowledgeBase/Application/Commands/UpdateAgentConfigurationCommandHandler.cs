@@ -19,7 +19,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// explicitly to persist.
 /// Range validation is delegated to <see cref="AgentDefinitionConfig.Create"/>; invalid
 /// inputs surface as <see cref="ArgumentException"/> which the route maps to <c>400</c>.
-/// SelectedDocumentIds is accepted on the wire but not persisted in MVP (same as PR #695).
+/// Scope: LLM config only (model/temperature/maxTokens). Per-agent KB linking is owned by the
+/// <c>AgentConfiguration</c> aggregate (#2391) / <c>updateSelectedDocuments</c> endpoint, not this
+/// handler (Issue #3394 removed the accepted-and-discarded SelectedDocumentIds field).
 /// </remarks>
 internal sealed class UpdateAgentConfigurationCommandHandler
     : IRequestHandler<UpdateAgentConfigurationCommand, AgentConfigurationDto?>

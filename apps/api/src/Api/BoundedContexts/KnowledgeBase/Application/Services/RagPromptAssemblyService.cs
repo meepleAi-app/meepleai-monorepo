@@ -180,10 +180,17 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             // a null tier no longer silently means "Default profile + all enhancements off": the profile is
             // an explicit named choice and enhancements are explicitly gated off (wiring deferred to #3390).
             var profile = retrievalPolicy?.BaseProfile ?? RetrievalProfile.Default;
-            var enhancementsAllowed = retrievalPolicy?.EnhancementsEnabled ?? true;
             var activeEnhancements = RagEnhancement.None;
-            if (enhancementsAllowed && userTier != null)
+            if (retrievalPolicy?.EnabledEnhancements is { } explicitEnhancements)
             {
+                // #3390 Slice 4 (D1): explicit, tier-independent enhancement set. Used directly — the live
+                // path resolves enhancements from the global rag.enhancement.* flags at the boundary, not
+                // from the user's tier (grounding is a correctness property, not a tier perk).
+                activeEnhancements = explicitEnhancements;
+            }
+            else if ((retrievalPolicy?.EnhancementsEnabled ?? true) && userTier != null)
+            {
+                // Legacy: enhancements gated by tier presence (classic QA paths, admin debug).
                 activeEnhancements = await _ragEnhancementService
                     .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);
             }

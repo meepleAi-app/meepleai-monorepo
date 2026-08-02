@@ -464,6 +464,100 @@ public class RagPromptAssemblyEnhancementsTests
 
     #endregion
 
+    #region Tier-independent EnabledEnhancements set (#3390 Slice 4 / D1)
+
+    [Fact]
+    public async Task WhenEnabledEnhancementsSet_ActivatesWithoutTier()
+    {
+        // #3390 D1: an explicit EnabledEnhancements set activates enhancements with NO tier at all —
+        // grounding is a correctness property, not a tier perk. Here AdaptiveRouting is requested via
+        // the policy set (userTier=null); the complexity classifier must run.
+        _complexityClassifierMock
+            .Setup(c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(QueryComplexity.Simple("Greeting query", 0.95f));
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act — explicit set, tier null
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "Hello!",
+            TestGameId, null, userTier: null, "it", CancellationToken.None,
+            retrievalPolicy: RetrievalPolicy.LiveSessionWith(RagEnhancement.AdaptiveRouting));
+
+        // Assert — the enhancement activated from the explicit set, without any tier lookup
+        _complexityClassifierMock.Verify(
+            c => c.ClassifyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _ragEnhancementMock.Verify(
+            r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task WhenEnabledEnhancementsSet_BypassesTierLookup()
+    {
+        // #3390 D1: the explicit set wins over the tier path — GetActiveEnhancementsAsync is never
+        // consulted even when a tier is present. Here CRAG is requested via the set; its evaluator runs.
+        var tier = UserTier.Premium;
+        _relevanceEvaluatorMock
+            .Setup(e => e.EvaluateAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<ScoredChunk>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RelevanceEvaluation(RelevanceVerdict.Correct, 0.9f, "Relevant"));
+        var docId = Guid.NewGuid();
+        _textSearchMock
+            .Setup(t => t.FullTextSearchAsync(
+                It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<TextChunkMatch>
+            {
+                new(docId, "Initial chunk text", 0, 1, 0.90f),
+                new(docId, "Initial chunk text", 0, 1, 0.85f), // duplicate boosts RRF above threshold
+            });
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act — explicit CRAG set AND a tier that would otherwise drive the tier path
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How does castling work?",
+            TestGameId, null, tier, "it", CancellationToken.None,
+            retrievalPolicy: RetrievalPolicy.LiveSessionWith(RagEnhancement.CragEvaluation));
+
+        // Assert — CRAG ran from the explicit set; the tier lookup was bypassed entirely
+        _relevanceEvaluatorMock.Verify(
+            e => e.EvaluateAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<ScoredChunk>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _ragEnhancementMock.Verify(
+            r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task WhenEnabledEnhancementsNull_LegacyTierPathUnchanged()
+    {
+        // #3390 D1 backward-compat: a policy with EnabledEnhancements=null keeps the legacy behaviour —
+        // enhancements resolved from the tier via GetActiveEnhancementsAsync. RetrievalPolicy.Default
+        // carries EnhancementsEnabled=true and no explicit set, so the tier path runs.
+        var tier = UserTier.Premium;
+        _ragEnhancementMock
+            .Setup(r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(RagEnhancement.None);
+        SetupTextSearchResults(CreateChunk("doc1", 0, 0.90f, "Pawns move forward."));
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act — explicit-null set + a tier → legacy tier path
+        await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, tier, "it", CancellationToken.None,
+            retrievalPolicy: RetrievalPolicy.Default);
+
+        // Assert — the tier lookup ran (legacy path preserved)
+        _ragEnhancementMock.Verify(
+            r => r.GetActiveEnhancementsAsync(tier, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
+
     #region CRAG web-fallback OFF on the closed rulebook domain (#3467)
 
     [Fact]

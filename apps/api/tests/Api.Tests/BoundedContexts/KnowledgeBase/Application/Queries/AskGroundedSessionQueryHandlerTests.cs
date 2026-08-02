@@ -151,13 +151,18 @@ public sealed class AskGroundedSessionQueryHandlerTests
         var fallbackProvider = new Mock<ICopyrightFallbackMessageProvider>();
         fallbackProvider.Setup(f => f.GetMessage(It.IsAny<string>())).Returns("[copyright fallback]");
 
+        // #3490: the handler delegates finalize to the shared GroundedAnswerService — use the REAL
+        // service (with mocked leak guard / fallback) so the finalize logic stays exercised end-to-end.
+        var groundedAnswerService = new GroundedAnswerService(
+            leakGuard.Object,
+            fallbackProvider.Object,
+            Options.Create(new CopyrightLeakGuardOptions()),
+            NullLogger<GroundedAnswerService>.Instance);
+
         return new AskGroundedSessionQueryHandler(
             ragPrompt.Object,
             tierResolver.Object,
             llm.Object,
-            leakGuard.Object,
-            fallbackProvider.Object,
-            Options.Create(new CopyrightLeakGuardOptions()),
-            NullLogger<AskGroundedSessionQueryHandler>.Instance);
+            groundedAnswerService);
     }
 }

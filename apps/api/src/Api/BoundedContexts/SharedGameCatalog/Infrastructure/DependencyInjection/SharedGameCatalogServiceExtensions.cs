@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
@@ -15,6 +16,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -190,11 +192,23 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
-        // Gap G2: BGG cover re-upload service (typed HttpClient pattern).
-        // 10s timeout — BGG CDN images are typically < 500 KB.
+        // #3495 fix 2/N: DNS-resolution seam shared by the SSRF connect pin.
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+
+        // Gap G2: BGG cover re-upload service (typed HttpClient pattern). 10s timeout — BGG CDN
+        // images are typically < 500 KB (BggCoverDownloader stream-caps the body at 10MB).
+        // #3495 fix 2/N: the SSRF-pinned ConnectCallback resolves once and dials the validated
+        // IP, so DNS-rebinding and redirect-to-internal are closed by construction on EVERY
+        // connection (the initial request and each of the ≤5 auto-redirect hops).
         services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
         {
             client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .ConfigurePrimaryHttpMessageHandler(static sp => new SocketsHttpHandler
+        {
+            ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>()),
+            AllowAutoRedirect = true,
+            MaxAutomaticRedirections = 5,
         });
 
         // Issue #1903 M5.2: register HttpClients, keyed catalog providers,

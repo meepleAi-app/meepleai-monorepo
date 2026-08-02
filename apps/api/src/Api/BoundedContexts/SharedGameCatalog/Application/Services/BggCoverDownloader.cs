@@ -9,6 +9,11 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
     private readonly IBggCoverUploadPipeline _uploadPipeline;
     private readonly ILogger<BggCoverDownloader> _logger;
 
+    // #3495 (finding C5): stream-and-cap the image body to bound memory. The HttpClient-level
+    // MaxResponseContentBufferSize belt is a no-op under ResponseHeadersRead, so the ceiling is
+    // enforced here during the read.
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024;
+
     public BggCoverDownloader(
         HttpClient httpClient,
         IBggCoverUploadPipeline uploadPipeline,
@@ -59,7 +64,37 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
                 return null;
             }
 
-            var imageBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            // Reject early on an advertised over-cap length; Content-Length is spoofable/absent
+            // (chunked), so the ceiling is ALSO enforced during the streamed read below.
+            if (response.Content.Headers.ContentLength > MaxImageSizeBytes)
+            {
+                _logger.LogWarning("BGG cover exceeds size cap (Content-Length): BggId={BggId}", bggId);
+                return null;
+            }
+
+            byte[] imageBytes;
+            using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            using (var buffer = new MemoryStream())
+            {
+                var chunk = new byte[81920];
+                long total = 0;
+                int read;
+                while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    total += read;
+                    if (total > MaxImageSizeBytes)
+                    {
+                        _logger.LogWarning(
+                            "BGG cover exceeds {Cap}-byte cap mid-stream: BggId={BggId}", MaxImageSizeBytes, bggId);
+                        return null;
+                    }
+
+                    await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                }
+
+                imageBytes = buffer.ToArray();
+            }
+
             if (imageBytes.Length == 0)
             {
                 _logger.LogWarning("BGG cover download returned empty body: BggId={BggId}", bggId);

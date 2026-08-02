@@ -19,10 +19,12 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure.External;
 [Trait("Issue", "1840")]
 public class SlackWebhookClientTests
 {
-    // A public, non-private IP literal (RFC 5737 TEST-NET-3). Using an IP literal keeps the SSRF
-    // guard's DNS resolution offline/deterministic in unit tests (Dns.GetHostAddressesAsync on a
-    // literal returns it without a DNS query), while still passing the private-IP check.
-    private const string PublicWebhookUrl = "https://203.0.113.10/services/T1/B1/abc";
+    // A genuinely-public IP literal. An IP literal keeps the SSRF guard's DNS resolution
+    // offline/deterministic in unit tests (Dns.GetHostAddressesAsync on a literal returns it
+    // without a DNS query). NB: RFC 5737 TEST-NET ranges are NOT usable here — the IANA-driven
+    // SsrfPolicy (#3495) correctly blocks them as reserved; 8.8.8.8 is public and, with the mock
+    // handler below, is never actually dialed.
+    private const string PublicWebhookUrl = "https://8.8.8.8/services/T1/B1/abc";
 
     private static SlackWebhookClient CreateClient(Mock<HttpMessageHandler> handler)
     {

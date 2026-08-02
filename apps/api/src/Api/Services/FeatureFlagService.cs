@@ -23,6 +23,10 @@ public static class FeatureFlagConstants
     // citations) instead of the multimodal-only path. Default OFF (rollback-safe migration).
     public const string LiveImageRetrievalKey = "rag.live-image-retrieval";
 
+    // #3390 Slice 3: when the in-session turn has no text, derive the retrieval query (and the
+    // user-visible chat message) from the vision board-state. Default OFF.
+    public const string LiveVisionQueryExpansionKey = "rag.live-vision-query-expansion";
+
     public static readonly string[] RagEnhancements =
     [
         "rag.enhancement.adaptive-routing",

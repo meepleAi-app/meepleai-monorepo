@@ -151,21 +151,37 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         _ = session.Participants.FirstOrDefault(p => p.Id == request.SenderId)
             ?? throw new NotFoundException($"Participant {request.SenderId} not found in session");
 
-        // Save the user's question as a chat message
+        // #3390 Slice 3: extract the vision board-state BEFORE writing the user message, so an empty
+        // turn text can be replaced by a query derived from the vision (non-blocking, returns cached).
+        var gameState = await _gameStateExtractor.ExtractIfNeededAsync(
+            request.SessionId, null, cancellationToken).ConfigureAwait(false);
+
+        // #3390 Slice 3: empty turn text + flag ON → derive the retrieval query from the vision
+        // board-state. The derived query is BOTH the retrieval query and the user-visible chat-message
+        // content (transparent). Deterministic: fires ONLY on truly-empty text, never overriding a
+        // real question. Flag rag.live-vision-query-expansion, default OFF.
+        var effectiveQuery = request.Question;
+        if (string.IsNullOrWhiteSpace(request.Question)
+            && _featureFlags is not null
+            && await _featureFlags.IsEnabledAsync(FeatureFlagConstants.LiveVisionQueryExpansionKey).ConfigureAwait(false))
+        {
+            effectiveQuery = DeriveQueryFromVision(gameState);
+            _logger.LogInformation(
+                "Empty turn text for session {SessionId}; derived retrieval query from vision board-state",
+                request.SessionId);
+        }
+
+        // Save the user's question (or the vision-derived query) as a chat message.
         var userSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var userMessage = SessionChatMessage.CreateTextMessage(
             request.SessionId,
             request.SenderId,
-            request.Question,
+            effectiveQuery,
             userSeq,
             request.TurnNumber);
 
         await _chatRepository.AddAsync(userMessage, cancellationToken).ConfigureAwait(false);
         await _chatRepository.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-
-        // Extract game state from latest vision snapshot (non-blocking, returns cached if available)
-        var gameState = await _gameStateExtractor.ExtractIfNeededAsync(
-            request.SessionId, null, cancellationToken).ConfigureAwait(false);
 
         // Build system prompt with optional game state context
         var agentType = "tutor";
@@ -186,9 +202,8 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         var citationCount = 0;
         var hasImages = request.Images is { Count: > 0 };
 
-        // #3390 Slice 2: the turn TEXT is the retrieval query. Isolated in one variable so Slice 3
-        // (empty-text → vision-derived query) has a single seam to intercept.
-        var retrievalQuery = request.Question;
+        // #3390 Slice 2/3: the (possibly vision-derived) query drives retrieval and the LLM prompt.
+        var retrievalQuery = effectiveQuery;
 
         // Feature-gated (rag.live-image-retrieval, default OFF). Requires non-empty text (the
         // empty-text case is Slice 3). Null feature-flag service (test construction) ⇒ treated as OFF.
@@ -276,7 +291,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                     contentParts.Add(new ImageContentPart(base64, processed.MediaType));
                 }
 
-                contentParts.Add(new TextContentPart(request.Question));
+                contentParts.Add(new TextContentPart(effectiveQuery));
 
                 var messages = new List<LlmMessage>
                 {
@@ -308,7 +323,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 // Text-only path (existing behavior)
                 var result = await _llmService.GenerateCompletionAsync(
                     systemPrompt,
-                    request.Question,
+                    effectiveQuery,
                     RequestSource.AgentTask,
                     cancellationToken).ConfigureAwait(false);
 
@@ -376,6 +391,96 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         }
 
         return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, citationsJson, groundingStatus);
+    }
+
+    // #3390 Slice 3: default retrieval query when the turn has no text and no usable vision state.
+    private const string VisionQueryFallback = "What should I do now based on the current board state?";
+
+    /// <summary>
+    /// Derives a concise retrieval query from the GameStateExtractor vision JSON (observations +
+    /// game_phase + scalar visible_elements keywords). Defensive: any parse failure or empty state
+    /// falls back to <see cref="VisionQueryFallback"/> so the turn never breaks. The result is used
+    /// both as the retrieval query and as the user-visible chat message (transparency).
+    /// </summary>
+    private static string DeriveQueryFromVision(string? gameState)
+    {
+        if (string.IsNullOrWhiteSpace(gameState))
+        {
+            return VisionQueryFallback;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(gameState);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                return VisionQueryFallback;
+            }
+
+            var parts = new List<string>();
+
+            if (root.TryGetProperty("observations", out var obs) && obs.ValueKind == JsonValueKind.String)
+            {
+                var o = obs.GetString();
+                if (!string.IsNullOrWhiteSpace(o)) parts.Add(o!.Trim());
+            }
+
+            if (root.TryGetProperty("game_phase", out var phase) && phase.ValueKind == JsonValueKind.String)
+            {
+                var p = phase.GetString();
+                if (!string.IsNullOrWhiteSpace(p)) parts.Add($"phase: {p!.Trim()}");
+            }
+
+            if (root.TryGetProperty("visible_elements", out var ve))
+            {
+                CollectScalarText(ve, parts);
+            }
+
+            if (parts.Count == 0)
+            {
+                return VisionQueryFallback;
+            }
+
+            var summary = string.Join("; ", parts);
+            if (summary.Length > 400)
+            {
+                summary = summary[..400];
+            }
+
+            return $"Given the current board state ({summary}), what can I do on my turn?";
+        }
+        catch (JsonException)
+        {
+            return VisionQueryFallback;
+        }
+    }
+
+    /// <summary>
+    /// Recursively collects non-empty string leaves from a JSON element (visible_elements can nest
+    /// objects/arrays). Numbers/bools/null are skipped — they are not useful retrieval terms.
+    /// </summary>
+    private static void CollectScalarText(JsonElement element, List<string> sink)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                var s = element.GetString();
+                if (!string.IsNullOrWhiteSpace(s)) sink.Add(s!.Trim());
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    CollectScalarText(item, sink);
+                }
+                break;
+            case JsonValueKind.Object:
+                foreach (var prop in element.EnumerateObject())
+                {
+                    CollectScalarText(prop.Value, sink);
+                }
+                break;
+        }
     }
 }
 

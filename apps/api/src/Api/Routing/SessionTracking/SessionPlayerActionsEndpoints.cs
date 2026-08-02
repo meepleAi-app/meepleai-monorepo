@@ -598,9 +598,11 @@ internal static class SessionPlayerActionsEndpoints
                 // Multipart form: supports image attachments
                 var form = await httpRequest.ReadFormAsync(ct).ConfigureAwait(false);
 
+                // #3390 Slice 3: empty question is allowed on the multipart (image) path — the
+                // AskSessionAgentCommandValidator enforces "question required unless an image is
+                // attached", so the empty-text vision turn reaches the handler (and its
+                // vision-derived query) instead of being rejected here.
                 var questionStr = form["question"].ToString();
-                if (string.IsNullOrWhiteSpace(questionStr))
-                    return Results.BadRequest(new { error = "Question is required" });
 
                 if (!Guid.TryParse(form["senderId"].ToString(), out var senderId))
                     return Results.BadRequest(new { error = "Valid senderId is required" });

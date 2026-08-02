@@ -463,11 +463,12 @@ public class DatasetEvaluationServiceTests
             new("Snippet text 2", "chunk-2", 2, 1, 0.85f)
         };
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -494,11 +495,12 @@ public class DatasetEvaluationServiceTests
         // Arrange
         var sample = CreateSample();
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -537,11 +539,12 @@ public class DatasetEvaluationServiceTests
             dataset.AddSample(CreateSample($"sample-{i}"));
         }
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -569,11 +572,12 @@ public class DatasetEvaluationServiceTests
             dataset.AddSample(CreateSample($"sample-{i}"));
         }
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -605,11 +609,12 @@ public class DatasetEvaluationServiceTests
         var callCount = 0;
         using var cts = new CancellationTokenSource();
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -669,11 +674,12 @@ public class DatasetEvaluationServiceTests
             new("Snippet text", "s1", 1, 1, 0.9f)
         };
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -700,13 +706,30 @@ public class DatasetEvaluationServiceTests
     {
         var snippet = new Snippet(text: CitablePhrase, source: source, page: page, line: 0, score: 0.9f);
         _mockRagService
-            .Setup(r => r.AskAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(),
+            .Setup(r => r.AskWithHybridSearchAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(), It.IsAny<string?>(),
                 It.IsAny<bool>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new QaResponse(
                 answer: CitablePhrase,
                 snippets: new List<Snippet> { snippet },
                 confidence: 0.9));
+    }
+
+    [Fact]
+    public async Task EvaluateSample_UsesHybridSearchPath_NotLegacyAskAsync()
+    {
+        // The eval must exercise the canonical hybrid retrieval path. IRagService.AskAsync's legacy
+        // vector path is deprecated and returns empty results (RagService.ExecuteRetrievalPhaseAsync),
+        // so using it would make every eval sample retrieve nothing (degenerate citation/recall metrics).
+        SetupRagResponseCitingPage(page: 7);
+
+        await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        _mockRagService.Verify(
+            r => r.AskWithHybridSearchAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(),
+                It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

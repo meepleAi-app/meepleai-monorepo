@@ -62,9 +62,10 @@ public class LabelingAssistTests
 
             var mockRagService = new Mock<IRagService>();
             mockRagService
-                .Setup(r => r.AskAsync(
+                .Setup(r => r.AskWithHybridSearchAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
+                    It.IsAny<SearchMode>(),
                     It.IsAny<string?>(),
                     It.IsAny<bool>(),
                     It.IsAny<CancellationToken>()))
@@ -89,9 +90,10 @@ public class LabelingAssistTests
             item.Candidates[1].ChunkId.Should().Be("s2");
             item.Candidates[1].Relevant.Should().BeNull();
 
-            mockRagService.Verify(r => r.AskAsync(
+            mockRagService.Verify(r => r.AskWithHybridSearchAsync(
                 "",
                 "How many players?",
+                It.IsAny<SearchMode>(),
                 null,
                 false,
                 It.IsAny<CancellationToken>()), Times.Once);
@@ -121,9 +123,10 @@ public class LabelingAssistTests
 
             var mockRagService = new Mock<IRagService>();
             mockRagService
-                .Setup(r => r.AskAsync(
+                .Setup(r => r.AskWithHybridSearchAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
+                    It.IsAny<SearchMode>(),
                     It.IsAny<string?>(),
                     It.IsAny<bool>(),
                     It.IsAny<CancellationToken>()))

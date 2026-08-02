@@ -104,13 +104,16 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 
         try
         {
-            // Query the RAG system
-            // Note: IRagService.AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
-            var ragResponse = await _ragService.AskAsync(
+            // Query the RAG system via the canonical hybrid retrieval path. IRagService.AskAsync's legacy
+            // vector path is deprecated and returns empty results (RagService.ExecuteRetrievalPhaseAsync),
+            // so the eval must use AskWithHybridSearchAsync to exercise the real production retrieval.
+            // bypassCache: true so each run measures fresh retrieval, not a possibly-stale cached response.
+            var ragResponse = await _ragService.AskWithHybridSearchAsync(
                 sample.GameId ?? "",
                 sample.Question,
-                null,
-                false,
+                SearchMode.Hybrid,
+                language: null,
+                bypassCache: true,
                 cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();

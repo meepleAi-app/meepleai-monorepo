@@ -381,10 +381,49 @@ public sealed class ChatWithSessionAgentMetricsTests
             Times.Once);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3490: streaming handler delegates finalize to IGroundedAnswerService; the
+    // CopyrightSanitized yield is driven by the returned LeakMatchCount (the one
+    // handler-specific behavior the shared-service tests cannot cover — the yield).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "#3490: streaming path yields CopyrightSanitized when the shared finalize detects a leak")]
+    public async Task Handle_LeakDetected_YieldsCopyrightSanitizedEvent()
+    {
+        // Arrange — a Protected citation (so the finalize scans) + a leaking scan result.
+        var protectedCitation = new ChunkCitation(
+            DocumentId: "doc-1", PageNumber: 1, RelevanceScore: 0.9f,
+            SnippetPreview: "verbatim", CopyrightTier: CopyrightTier.Protected, IsPublic: false);
+        var leak = new CopyrightLeakResult(
+            HasLeak: true,
+            Matches: new List<LeakMatch> { new("doc-1", 1, 12, 0, "verbatim run") });
+        var handler = BuildHandler(
+            resolvedCitations: new List<ChunkCitation> { protectedCitation },
+            ragPromptMock: out _,
+            tokenContent: "a verbatim run leaked",
+            leakResult: leak);
+
+        // Act — capture the CopyrightSanitized event
+        StreamingCopyrightSanitized? sanitized = null;
+        await foreach (var evt in handler.Handle(BuildCommand(), CancellationToken.None))
+        {
+            if (evt.Type == StreamingEventType.CopyrightSanitized)
+            {
+                sanitized = evt.Data as StreamingCopyrightSanitized;
+            }
+        }
+
+        // Assert — the handler yielded the sanitize event with the fallback body + match count
+        sanitized.Should().NotBeNull("the shared finalize detected a leak → the handler must yield CopyrightSanitized");
+        sanitized!.MatchCount.Should().Be(1);
+        sanitized.SanitizedBody.Should().Be("[copyright sanitized]");
+    }
+
     private static ChatWithSessionAgentCommandHandler BuildHandler(
         IReadOnlyList<ChunkCitation> resolvedCitations,
         out Mock<IRagPromptAssemblyService> ragPromptMock,
-        string tokenContent = "Hello world")
+        string tokenContent = "Hello world",
+        CopyrightLeakResult? leakResult = null)
     {
         // --- AgentSession repo ---
         var playerId = Guid.NewGuid();
@@ -508,16 +547,17 @@ public sealed class ChatWithSessionAgentMetricsTests
         // --- ServiceScopeFactory (chunk usage increment fire-and-forget) ---
         var scopeFactory = new Mock<IServiceScopeFactory>();
 
-        // --- Copyright leak guard (no leak) ---
-        var noLeak = new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>());
+        // --- Copyright leak guard (no leak by default; a leaking result exercises the sanitize path) ---
+        var scanResult = leakResult ?? new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>());
         var leakGuard = new Mock<ICopyrightLeakGuard>();
         leakGuard
             .Setup(g => g.ScanAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<ChunkCitation>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(noLeak);
+            .ReturnsAsync(scanResult);
 
         var fallbackProvider = new Mock<ICopyrightFallbackMessageProvider>();
+        fallbackProvider.Setup(f => f.GetMessage(It.IsAny<string>())).Returns("[copyright sanitized]");
 
         var gateway = new Mock<ILiveSessionStreamGateway>();
 
@@ -536,9 +576,10 @@ public sealed class ChatWithSessionAgentMetricsTests
             circuitBreakerRegistry: registry.Object,
             scopeFactory: scopeFactory.Object,
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,
-            copyrightLeakGuard: leakGuard.Object,
-            fallbackMessageProvider: fallbackProvider.Object,
-            copyrightOptions: Options.Create(new CopyrightLeakGuardOptions()),
+            groundedAnswerService: new GroundedAnswerService(
+                leakGuard.Object, fallbackProvider.Object,
+                Options.Create(new CopyrightLeakGuardOptions()),
+                NullLogger<GroundedAnswerService>.Instance),
             liveSessionStreamGateway: gateway.Object);
     }
 

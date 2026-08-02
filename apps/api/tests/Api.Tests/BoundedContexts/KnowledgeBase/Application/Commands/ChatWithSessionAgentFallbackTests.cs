@@ -145,9 +145,10 @@ public class ChatWithSessionAgentFallbackTests
             circuitBreakerRegistry: registry,
             scopeFactory: Mock.Of<IServiceScopeFactory>(),
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,
-            copyrightLeakGuard: Mock.Of<ICopyrightLeakGuard>(),
-            fallbackMessageProvider: Mock.Of<ICopyrightFallbackMessageProvider>(),
-            copyrightOptions: Options.Create(new CopyrightLeakGuardOptions()),
+            groundedAnswerService: new GroundedAnswerService(
+                Mock.Of<ICopyrightLeakGuard>(), Mock.Of<ICopyrightFallbackMessageProvider>(),
+                Options.Create(new CopyrightLeakGuardOptions()),
+                NullLogger<GroundedAnswerService>.Instance),
             liveSessionStreamGateway: Mock.Of<ILiveSessionStreamGateway>());
     }
 }

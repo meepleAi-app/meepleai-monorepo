@@ -2,6 +2,8 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.Services;
@@ -158,6 +160,7 @@ public class SendSystemEventCommandHandlerTests
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SessionTracking")]
+[Collection("AgentGroundingMetrics")]
 public class AskSessionAgentCommandHandlerTests
 {
     private readonly Mock<ISessionRepository> _mockSessionRepo;
@@ -370,6 +373,209 @@ public class AskSessionAgentCommandHandlerTests
         tags["path"].Should().Be("image", "images attached -> vision branch");
         tags["grounding_status"].Should().Be("ungrounded");
         tags["retrieval_profile"].Should().Be("none");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3390 Slice 2: grounded retrieval on the image/text path (feature-gated, with fallback)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_FlagOn_GroundedRetrieval_ReturnsGroundedWithLiveSessionProfile()
+    {
+        // Arrange — flag ON, non-empty text, KnowledgeBase returns a grounded answer.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+        var mockMediator = new Mock<IMediator>();
+        var groundedDto = new GroundedSessionAnswerDto(
+            "You take turns placing settlements. [Page 2]",
+            new List<Api.Models.CitationDto> { new("doc-1", 2, 0.9f, "settlements", "full") },
+            GroundingStatus.Grounded,
+            0.82);
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(groundedDto);
+        var mockLlm = new Mock<ILlmService>();
+
+        var mockFlags = new Mock<IFeatureFlagService>();
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
+            new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            mockFlags.Object);
+
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        // Act — text turn (no images).
+        var result = await handler.Handle(
+            new AskSessionAgentCommand(sessionId, senderId, "How do I start my turn?", 1),
+            TestContext.Current.CancellationToken);
+
+        // Assert — grounded result, citations persisted, LLM never called directly (retrieval owned by KB).
+        result.GroundingStatus.Should().Be(GroundingStatus.Grounded);
+        result.CitationsJson.Should().NotBeNullOrEmpty("grounded answer carries serialized citations");
+        mockLlm.Verify(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
+        captures.Should().ContainSingle();
+        captures[0].Tags["path"].Should().Be("text");
+        captures[0].Tags["grounding_status"].Should().Be("grounded");
+        captures[0].Tags["retrieval_profile"].Should().Be("live_session");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_RetrievalThrows_FallsBackToMultimodalUngrounded()
+    {
+        // Arrange — flag ON, but the grounded query fails (timeout/error). Must degrade fail-open.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+        var mockMediator = new Mock<IMediator>();
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GroundedSessionGenerationException("kb down"));
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Multimodal fallback answer"));
+
+        var mockFlags = new Mock<IFeatureFlagService>();
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
+            new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            mockFlags.Object);
+
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        // Act
+        var result = await handler.Handle(
+            new AskSessionAgentCommand(sessionId, senderId, "How do I start?", 1),
+            TestContext.Current.CancellationToken);
+
+        // Assert — degraded to multimodal-only: ungrounded, no citations, LLM WAS called (fallback).
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+        result.CitationsJson.Should().BeNull();
+        mockLlm.Verify(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Once);
+        captures.Should().ContainSingle();
+        captures[0].Tags["grounding_status"].Should().Be("ungrounded");
+        captures[0].Tags["retrieval_profile"].Should().Be("none", "fallback path uses no retrieval profile");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_ImageTurn_GroundedEmpty_FallsBackToMultimodal()
+    {
+        // Arrange — image attached, flag ON, but grounded retrieval finds 0 citations. The image
+        // must still be analyzed (multimodal fallback), not silently dropped for a text-only answer.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+        var mockMediator = new Mock<IMediator>();
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GroundedSessionAnswerDto("Not in the rulebook.", new List<Api.Models.CitationDto>(), GroundingStatus.Ungrounded, null));
+        var mockImagePreprocessor = new Mock<IImagePreprocessor>();
+        mockImagePreprocessor
+            .Setup(p => p.ProcessAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<ImageProcessingOptions?>()))
+            .ReturnsAsync(new ProcessedImage(new byte[] { 1 }, "image/jpeg", 1, 1, 1));
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(l => l.GenerateMultimodalCompletionAsync(It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("I see a board with red tokens."));
+
+        var mockFlags = new Mock<IFeatureFlagService>();
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
+            mockImagePreprocessor.Object, new Mock<IGameStateExtractor>().Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            mockFlags.Object);
+
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var command = new AskSessionAgentCommand(
+            sessionId, senderId, "What should I do?", 1,
+            new List<ChatImageAttachment> { new(new byte[] { 1 }, "image/jpeg", "board.jpg") });
+
+        // Act
+        var result = await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert — multimodal fallback ran (image analyzed), ungrounded, retrieval_profile=none.
+        mockLlm.Verify(l => l.GenerateMultimodalCompletionAsync(It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Once);
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+        captures.Should().ContainSingle();
+        captures[0].Tags["path"].Should().Be("image");
+        captures[0].Tags["retrieval_profile"].Should().Be("none");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_ClientCancels_PropagatesWithoutFallback()
+    {
+        // Arrange — the client aborts the request. Cancellation must propagate; the handler must
+        // NOT fail-open into a wasted second (multimodal) LLM call.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var mockMediator = new Mock<IMediator>();
+        mockMediator
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+        var mockLlm = new Mock<ILlmService>();
+
+        var mockFlags = new Mock<IFeatureFlagService>();
+        mockFlags.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey, It.IsAny<Api.Infrastructure.Entities.UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
+            new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            mockFlags.Object);
+
+        // Act — client-cancelled token.
+        var act = () => handler.Handle(new AskSessionAgentCommand(sessionId, senderId, "Question", 1), cts.Token);
+
+        // Assert — cancellation propagates; no multimodal/text fallback LLM call.
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        mockLlm.Verify(l => l.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
+        mockLlm.Verify(l => l.GenerateMultimodalCompletionAsync(It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static MeterListener BuildCounterListener(

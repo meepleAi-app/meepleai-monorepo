@@ -16,7 +16,9 @@ internal static partial class MeepleAiMetrics
     //
     // Two producers, one contract (mirrors the #3388 GroundingStatus wire contract):
     //   - text  -> ChatWithSessionAgentCommandHandler (KnowledgeBase, RAG, retrieval_profile=live_session)
-    //   - image -> AskSessionAgentCommandHandler       (SessionTracking, multimodal, retrieval_profile=none)
+    //   - image -> AskSessionAgentCommandHandler       (SessionTracking). Since #3390 Slice 2 this path
+    //              can be grounded too: retrieval_profile=live_session when the grounded RAG query ran
+    //              (flag rag.live-image-retrieval), or none when it fell back to multimodal-only.
     //
     // Cardinality rule (see MeepleAiMetrics.Rag.cs): tags are bounded sets ONLY — no
     // session/user/game ids. citation_count is NOT a tag (unbounded) -> separate histogram.

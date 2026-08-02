@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Observability;
@@ -129,6 +130,113 @@ internal static class CoverUrlResolver
         EmitResolution("placeholder");
         return null;
     }
+
+    /// <summary>
+    /// Epic #3470 (Slice 1c) — context-aware resolution. When the admin has pinned
+    /// a <see cref="GameCoverAssignmentEntity"/> for <paramref name="context"/>, that
+    /// override wins: first the rendered per-context crop (<c>GeneratedR2Key</c>),
+    /// then the pinned source's base cover key (via <see cref="CoverKeyBuilder"/>).
+    /// If neither resolves (crop stale AND base key absent/unreachable) the call
+    /// FALLS THROUGH to the implicit precedence of <see cref="ResolvePublicAsync"/>
+    /// — never a placeholder while another layer could still serve a cover.
+    ///
+    /// The override sits BELOW the L3 user-custom cover (SD3): this method is the
+    /// public/no-user context path, mirroring <see cref="ResolvePublicAsync"/>; the
+    /// per-user layering stays in <see cref="ResolveForUserAsync"/>.
+    ///
+    /// Metric invariant (Issue #2123): exactly one <see cref="MeepleAiMetrics.CoverResolution"/>
+    /// event per call — the override emits its pinned-source tag on a win; on a
+    /// fall-through the single event comes from <see cref="ResolvePublicAsync"/>.
+    /// </summary>
+    public static async Task<string?> ResolveForContextAsync(
+        SharedGameEntity sharedGame,
+        CoverContext context,
+        IBlobStorageService blobStorage)
+    {
+        ArgumentNullException.ThrowIfNull(sharedGame);
+        ArgumentNullException.ThrowIfNull(blobStorage);
+
+        var assignment = sharedGame.CoverAssignments?
+            .FirstOrDefault(a => a.Context == context);
+
+        if (assignment is not null)
+        {
+            var overrideUrl = await ResolveAssignmentAsync(sharedGame, assignment, blobStorage)
+                .ConfigureAwait(false);
+            if (overrideUrl is not null)
+            {
+                EmitResolution(SourceTagFor(assignment.Source));
+                return overrideUrl;
+            }
+            // Override present but unresolvable (crop stale AND base key
+            // absent/unreachable). Intentionally NO metric emission here — the
+            // ResolvePublicAsync call below emits exactly one CoverResolution event
+            // for the winning implicit layer (or "placeholder"), preserving the
+            // one-event-per-call invariant.
+        }
+
+        return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resolves a single admin assignment to a presigned URL, or null when it
+    /// cannot serve a cover: the rendered per-context crop first, then the pinned
+    /// source's base cover key. Returns null WITHOUT emitting a metric so the caller
+    /// can fall through to the implicit precedence.
+    /// </summary>
+    private static async Task<string?> ResolveAssignmentAsync(
+        SharedGameEntity sharedGame,
+        GameCoverAssignmentEntity assignment,
+        IBlobStorageService blobStorage)
+    {
+        // 1) The rendered per-context WebP crop (produced with the focal point) is
+        //    a full physical R2 key — resolve it verbatim.
+        if (!string.IsNullOrWhiteSpace(assignment.GeneratedR2Key))
+        {
+            var cropUrl = await blobStorage
+                .GetPresignedUrlForRawKeyAsync(assignment.GeneratedR2Key)
+                .ConfigureAwait(false);
+            if (cropUrl is not null)
+            {
+                return cropUrl;
+            }
+        }
+
+        // 2) Fall back to the pinned source's base cover key. The source→kind map
+        //    is explicit (the enums do not share numeric values); the base DB key
+        //    lives on the entity column for that source.
+        var kind = assignment.Source.ToCoverKind();
+        var baseKey = SourceDbKey(sharedGame, kind);
+        if (string.IsNullOrWhiteSpace(baseKey))
+        {
+            return null;
+        }
+
+        return await blobStorage
+            .GetPresignedUrlForRawKeyAsync(CoverKeyBuilder.PhysicalKeyFor(kind, baseKey))
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>Selects the entity column holding the base (suffix-free) DB key for a source kind.</summary>
+    private static string? SourceDbKey(SharedGameEntity sharedGame, CoverKind kind) => kind switch
+    {
+        CoverKind.Pdf => sharedGame.PdfCoverR2Key,
+        CoverKind.Bgg => sharedGame.BggCoverR2Key,
+        CoverKind.Wikidata => sharedGame.WikidataCoverR2Key,
+        CoverKind.Manual => sharedGame.ManualCoverR2Key,
+        // CoverKind.User (L3) is per-user and never a catalog assignment source.
+        _ => null,
+    };
+
+    /// <summary>Maps a pinned source to its <c>source</c> metric tag (mirrors the implicit-layer tags).</summary>
+    private static string SourceTagFor(CoverAssignmentSource source) => source switch
+    {
+        CoverAssignmentSource.Pdf => "r2_pdf",
+        CoverAssignmentSource.Bgg => "r2_bgg",
+        CoverAssignmentSource.Wikidata => "r2_wikidata",
+        CoverAssignmentSource.Manual => "r2_manual",
+        _ => throw new ArgumentOutOfRangeException(nameof(source), source, "Unknown cover assignment source."),
+    };
 
     private static void EmitResolution(string source)
     {

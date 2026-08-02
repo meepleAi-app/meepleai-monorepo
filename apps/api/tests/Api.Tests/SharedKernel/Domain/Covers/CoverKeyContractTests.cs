@@ -54,6 +54,16 @@ public sealed class CoverKeyContractTests
         key.PhysicalKey.Should().Be($"covers/{GameId:D}/cover.webp");
     }
 
+    [Fact]
+    public void ForManual_MatchesProductionConvention()
+    {
+        var key = CoverKeyBuilder.ForManual(GameId);
+
+        key.Kind.Should().Be(CoverKind.Manual);
+        key.DbKey.Should().Be($"covers/manual/{GameId:D}/cover");
+        key.PhysicalKey.Should().Be($"covers/manual/{GameId:D}/cover.webp");
+    }
+
     [Theory]
     [InlineData(".jpg", "bgg-covers/13/cover.jpg")]
     [InlineData("jpg", "bgg-covers/13/cover.jpg")]    // normalizes a missing leading dot
@@ -88,6 +98,7 @@ public sealed class CoverKeyContractTests
             CoverKeyBuilder.ForUser(UserId, GameId),
             CoverKeyBuilder.ForPdf(PdfId),
             CoverKeyBuilder.ForWikidata(GameId),
+            CoverKeyBuilder.ForManual(GameId),
             CoverKeyBuilder.ForBgg(BggId, ".jpg"),
             CoverKeyBuilder.ForBgg(BggId, ".webp"),
         };

@@ -116,12 +116,22 @@ internal sealed class AskGroundedSessionQueryHandler
         }
 
         var responseText = completion.Response;
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            // Success but empty body — treat as failure so the caller degrades (matches the SSE
+            // text path's EMPTY_RESPONSE guard) instead of shipping a blank "grounded" answer,
+            // which would also throw at SessionChatMessage.CreateAgentResponse (empty content → 500).
+            throw new GroundedSessionGenerationException("empty grounded answer");
+        }
 
-        // 5. Copyright leak guard (fail-open) — same posture as the SSE text path (#447).
+        // 5. Copyright leak guard (#447). The SCAN is fail-open (a guard fault must not break the
+        //    answer), but leak HANDLING/sanitization runs OUTSIDE the try so a fault while sanitizing
+        //    can never ship the original verbatim-leaking text — the leak handling itself fails CLOSED.
         var protectedCitations = resolvedCitations
             .Where(c => c.CopyrightTier == CopyrightTier.Protected)
             .ToList();
 
+        CopyrightLeakResult? leakResult = null;
         if (protectedCitations.Count > 0)
         {
             try
@@ -130,34 +140,42 @@ internal sealed class AskGroundedSessionQueryHandler
                 scanCts.CancelAfter(TimeSpan.FromMilliseconds(_copyrightOptions.Value.ScanTimeoutMs));
 
                 var scanSw = Stopwatch.StartNew();
-                var leakResult = await _copyrightLeakGuard
+                leakResult = await _copyrightLeakGuard
                     .ScanAsync(responseText, protectedCitations, scanCts.Token)
                     .ConfigureAwait(false);
                 scanSw.Stop();
                 MeepleAiMetrics.CopyrightScanDurationMs.Record(scanSw.ElapsedMilliseconds);
-
-                if (leakResult.HasLeak)
-                {
-                    foreach (var match in leakResult.Matches)
-                    {
-                        MeepleAiMetrics.CopyrightVerbatimDetected.Add(1,
-                            new KeyValuePair<string, object?>("run_length", match.RunLength),
-                            new KeyValuePair<string, object?>("document_id", match.DocumentId));
-                    }
-                    _logger.LogWarning(
-                        "Copyright leak detected in grounded session answer (game {GameId}): {MatchCount} matches, sanitizing",
-                        request.GameId, leakResult.Matches.Count);
-                    responseText = _fallbackMessageProvider.GetMessage(request.AgentLanguage);
-                }
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The caller's latency budget / client cancellation fired — propagate so
+                // SessionTracking degrades, don't fail-open into a possibly-unscanned answer.
+                throw;
             }
             catch (Exception ex)
             {
                 MeepleAiMetrics.CopyrightScanErrors.Add(1,
                     new KeyValuePair<string, object?>("error_type", ex.GetType().Name));
                 _logger.LogError(ex,
-                    "Copyright leak guard failed for grounded session answer (game {GameId}), allowing response (fail-open)",
+                    "Copyright leak guard failed for grounded session answer (game {GameId}), allowing response (fail-open on the scan)",
                     request.GameId);
+                leakResult = null; // fail-open on the SCAN only
             }
+        }
+
+        // Leak handling OUTSIDE the fail-open try: once a leak is detected, sanitize unconditionally.
+        if (leakResult?.HasLeak == true)
+        {
+            foreach (var match in leakResult.Matches)
+            {
+                MeepleAiMetrics.CopyrightVerbatimDetected.Add(1,
+                    new KeyValuePair<string, object?>("run_length", match.RunLength),
+                    new KeyValuePair<string, object?>("document_id", match.DocumentId));
+            }
+            _logger.LogWarning(
+                "Copyright leak detected in grounded session answer (game {GameId}): {MatchCount} matches, sanitizing",
+                request.GameId, leakResult.Matches.Count);
+            responseText = _fallbackMessageProvider.GetMessage(request.AgentLanguage);
         }
 
         // 6. Map to the wire CitationDto (tier-nulling identical to ChatWithSessionAgentCommandHandler).

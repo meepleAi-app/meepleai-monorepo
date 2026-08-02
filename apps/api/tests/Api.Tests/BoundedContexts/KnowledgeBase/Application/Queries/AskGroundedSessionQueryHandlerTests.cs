@@ -94,6 +94,22 @@ public sealed class AskGroundedSessionQueryHandlerTests
         await act.Should().ThrowAsync<GroundedSessionGenerationException>();
     }
 
+    [Fact]
+    public async Task Handle_SuccessButEmptyResponse_Throws()
+    {
+        // Arrange — provider returns Success=true but a blank body. Must be treated as a failure
+        // so the caller degrades, not shipped as a blank "grounded" answer (would 500 downstream).
+        var handler = BuildHandler(new List<ChunkCitation>(), llmAnswer: "   ", llmSuccess: true);
+
+        // Act
+        var act = () => handler.Handle(
+            new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<GroundedSessionGenerationException>();
+    }
+
     private static AskGroundedSessionQueryHandler BuildHandler(
         IReadOnlyList<ChunkCitation> citations,
         string? llmAnswer,

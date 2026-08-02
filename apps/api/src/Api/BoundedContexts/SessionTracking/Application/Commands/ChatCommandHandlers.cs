@@ -211,15 +211,35 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                     new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, userId),
                     retrievalCts.Token).ConfigureAwait(false);
 
-                answer = grounded.Answer;
-                confidence = grounded.Confidence.HasValue ? (float)grounded.Confidence.Value : null;
-                citationCount = grounded.Citations.Count;
-                citationsJson = citationCount > 0 ? JsonSerializer.Serialize(grounded.Citations) : null;
-                groundingStatus = grounded.GroundingStatus;
-                retrievalProfileTag = MeepleAiMetrics.AgentRetrievalProfiles.LiveSession;
-                groundedProduced = true;
+                if (hasImages && grounded.Citations.Count == 0)
+                {
+                    // Image attached but rulebook retrieval found nothing → fall through to the
+                    // multimodal path so THIS turn's image is actually analyzed. A text-only
+                    // ungrounded answer would silently drop the photo — strictly worse than the
+                    // pre-flag behavior. Text-only turns keep the (ungrounded) grounded answer,
+                    // since there is no image to analyze. groundedProduced stays false.
+                    _logger.LogInformation(
+                        "Grounded retrieval returned no citations for image turn (session {SessionId}); falling back to multimodal to analyze the image",
+                        request.SessionId);
+                }
+                else
+                {
+                    answer = grounded.Answer;
+                    confidence = grounded.Confidence.HasValue ? (float)grounded.Confidence.Value : null;
+                    citationCount = grounded.Citations.Count;
+                    citationsJson = citationCount > 0 ? JsonSerializer.Serialize(grounded.Citations) : null;
+                    groundingStatus = grounded.GroundingStatus;
+                    retrievalProfileTag = MeepleAiMetrics.AgentRetrievalProfiles.LiveSession;
+                    groundedProduced = true;
+                }
             }
-            catch (OperationCanceledException oce) when (retrievalCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Client aborted the whole request (not the retrieval budget) → propagate, do NOT
+                // fail-open (which would waste a second LLM call and pollute the fallback metric).
+                throw;
+            }
+            catch (OperationCanceledException oce) when (retrievalCts.IsCancellationRequested)
             {
                 // Budget expired → degrade to multimodal-only (fail-open). The response must not wait.
                 _logger.LogWarning(oce,

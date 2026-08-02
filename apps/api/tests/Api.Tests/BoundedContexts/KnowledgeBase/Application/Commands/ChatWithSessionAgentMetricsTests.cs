@@ -55,6 +55,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Area", "Observability")]
 [Trait("Issue", "2582")]
+[Collection("AgentGroundingMetrics")]
 public sealed class ChatWithSessionAgentMetricsTests
 {
     private const string FirstTokenLatencyName = "meepleai.rag.first_token_latency";

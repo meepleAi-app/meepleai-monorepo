@@ -1,4 +1,6 @@
 using MediatR;
+using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -11,6 +13,8 @@ using Api.Services.ImageProcessing;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 
@@ -112,6 +116,10 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     private readonly IImagePreprocessor _imagePreprocessor;
     private readonly IGameStateExtractor _gameStateExtractor;
     private readonly ILogger<AskSessionAgentCommandHandler> _logger;
+    // #3390 Slice 2: optional (null-safe) so existing 7-arg test construction keeps compiling —
+    // null feature flags means the flag is treated as OFF (current multimodal-only behavior).
+    private readonly IFeatureFlagService? _featureFlags;
+    private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
 
     public AskSessionAgentCommandHandler(
         ISessionRepository sessionRepository,
@@ -120,7 +128,9 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         ILlmService llmService,
         IImagePreprocessor imagePreprocessor,
         IGameStateExtractor gameStateExtractor,
-        ILogger<AskSessionAgentCommandHandler> logger)
+        ILogger<AskSessionAgentCommandHandler> logger,
+        IFeatureFlagService? featureFlags = null,
+        IOptions<SessionAgentOptions>? sessionAgentOptions = null)
     {
         _sessionRepository = sessionRepository;
         _chatRepository = chatRepository;
@@ -129,6 +139,8 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         _imagePreprocessor = imagePreprocessor;
         _gameStateExtractor = gameStateExtractor;
         _logger = logger;
+        _featureFlags = featureFlags;
+        _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
     }
 
     public async Task<AskSessionAgentResult> Handle(AskSessionAgentCommand request, CancellationToken cancellationToken)
@@ -165,10 +177,70 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             systemPrompt += $"\n\nCurrent game state from board analysis:\n{gameState}";
         }
 
-        string answer;
-        float? confidence;
+        // Initialized to the ungrounded defaults; the grounded path (below) overwrites them on success.
+        string answer = string.Empty;
+        float? confidence = null;
+        string? citationsJson = null;
+        var groundingStatus = GroundingStatus.Ungrounded;
+        var retrievalProfileTag = MeepleAiMetrics.AgentRetrievalProfiles.None;
+        var citationCount = 0;
         var hasImages = request.Images is { Count: > 0 };
 
+        // #3390 Slice 2: the turn TEXT is the retrieval query. Isolated in one variable so Slice 3
+        // (empty-text → vision-derived query) has a single seam to intercept.
+        var retrievalQuery = request.Question;
+
+        // Feature-gated (rag.live-image-retrieval, default OFF). Requires non-empty text (the
+        // empty-text case is Slice 3). Null feature-flag service (test construction) ⇒ treated as OFF.
+        var liveImageRetrievalEnabled = _featureFlags is not null
+            && !string.IsNullOrWhiteSpace(retrievalQuery)
+            && await _featureFlags.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey).ConfigureAwait(false);
+
+        var groundedProduced = false;
+        if (liveImageRetrievalEnabled)
+        {
+            var userId = session.Participants.FirstOrDefault(p => p.Id == request.SenderId)?.UserId ?? Guid.Empty;
+            using var retrievalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            retrievalCts.CancelAfter(TimeSpan.FromMilliseconds(_sessionAgentOptions.Value.RetrievalBudgetMs));
+            try
+            {
+                // KnowledgeBase owns "grounded answer on the rulebook" — consumed via IMediator
+                // (DDD Customer/Supplier), never by injecting a KB service. Vision stays as state
+                // context (gameState); the turn text is the retrieval query.
+                var grounded = await _mediator.Send(
+                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, userId),
+                    retrievalCts.Token).ConfigureAwait(false);
+
+                answer = grounded.Answer;
+                confidence = grounded.Confidence.HasValue ? (float)grounded.Confidence.Value : null;
+                citationCount = grounded.Citations.Count;
+                citationsJson = citationCount > 0 ? JsonSerializer.Serialize(grounded.Citations) : null;
+                groundingStatus = grounded.GroundingStatus;
+                retrievalProfileTag = MeepleAiMetrics.AgentRetrievalProfiles.LiveSession;
+                groundedProduced = true;
+            }
+            catch (OperationCanceledException oce) when (retrievalCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+                // Budget expired → degrade to multimodal-only (fail-open). The response must not wait.
+                _logger.LogWarning(oce,
+                    "Grounded retrieval exceeded the {BudgetMs}ms budget for session {SessionId}; degrading to multimodal (ungrounded)",
+                    _sessionAgentOptions.Value.RetrievalBudgetMs, request.SessionId);
+                MeepleAiMetrics.RecordRetrievalFallback(
+                    MeepleAiMetrics.RagFallbackTypes.RetrievalBudget, MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
+            }
+            catch (Exception ex)
+            {
+                // Any retrieval/generation failure → fail-open to the existing multimodal path.
+                _logger.LogWarning(ex,
+                    "Grounded retrieval failed for session {SessionId}; degrading to multimodal (ungrounded)",
+                    request.SessionId);
+                MeepleAiMetrics.RecordRetrievalFallback(
+                    MeepleAiMetrics.RagFallbackTypes.Unknown, MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
+            }
+        }
+
+        if (!groundedProduced)
+        {
         try
         {
             if (hasImages)
@@ -241,6 +313,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             answer = "I'm sorry, an error occurred while processing your question. Please try again.";
             confidence = null;
         }
+        } // end if (!groundedProduced) — multimodal/text-only fallback (ungrounded)
 
         var agentSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var agentMessage = SessionChatMessage.CreateAgentResponse(
@@ -249,7 +322,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             agentSeq,
             agentType,
             confidence,
-            null,
+            citationsJson,
             request.TurnNumber);
 
         await _chatRepository.AddAsync(agentMessage, cancellationToken).ConfigureAwait(false);
@@ -265,23 +338,24 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             TurnNumber = request.TurnNumber,
         }, cancellationToken).ConfigureAwait(false);
 
-        // This path never produces citations (no retrieval grounding), so it is always Ungrounded (#3388).
-        // #3390 Slice 1: structured grounding observability (image or text-only, no retrieval -> profile=none).
-        // Guarded so a metrics fault can never break the agent response.
+        // #3390 Slice 1/2: structured grounding observability. retrieval_profile=live_session when the
+        // grounded path produced the answer (Slice 2), none when it fell back to multimodal/text-only.
+        // groundingStatus is Grounded iff the grounded path returned citations. Guarded so a metrics
+        // fault can never break the agent response.
         try
         {
             MeepleAiMetrics.RecordAgentResponseGrounding(
                 path: hasImages ? MeepleAiMetrics.AgentResponsePaths.Image : MeepleAiMetrics.AgentResponsePaths.Text,
-                groundingStatusWire: GroundingStatus.Ungrounded.ToString(),
-                retrievalProfile: MeepleAiMetrics.AgentRetrievalProfiles.None,
-                citationCount: 0);
+                groundingStatusWire: groundingStatus.ToString(),
+                retrievalProfile: retrievalProfileTag,
+                citationCount: citationCount);
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "agent-response grounding metric emission failed for session {SessionId}", request.SessionId);
         }
 
-        return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, null, GroundingStatus.Ungrounded);
+        return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, citationsJson, groundingStatus);
     }
 }
 

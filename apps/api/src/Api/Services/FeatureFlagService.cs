@@ -19,6 +19,10 @@ public static class FeatureFlagConstants
     // R1 (issue #3416, ADR-088): gate approved mechanic-card claim injection into RAG answers. Default off.
     public const string MechanicCardInjectionKey = "rag.mechanic-card-injection";
 
+    // #3390 Slice 2: route the in-session IMAGE agent path through RAG retrieval (grounded, with
+    // citations) instead of the multimodal-only path. Default OFF (rollback-safe migration).
+    public const string LiveImageRetrievalKey = "rag.live-image-retrieval";
+
     public static readonly string[] RagEnhancements =
     [
         "rag.enhancement.adaptive-routing",

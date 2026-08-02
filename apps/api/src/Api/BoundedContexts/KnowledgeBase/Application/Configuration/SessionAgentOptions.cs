@@ -17,4 +17,19 @@ internal sealed class SessionAgentOptions
     /// valid and used in unit tests to avoid waiting 30 s.
     /// </summary>
     public double LlmPerChunkTimeoutSeconds { get; set; } = 30.0;
+
+    /// <summary>
+    /// #3390 Slice 2 — latency budget (in milliseconds) for the grounded RAG retrieval on the
+    /// in-session IMAGE path (embedding + pgvector + rerank). When it expires, the handler
+    /// degrades to the multimodal-only path (which stays Ungrounded, #3388) instead of making
+    /// the user wait. The retrieval respects the caller's CancellationToken end-to-end, so the
+    /// budget is enforced caller-side via a linked CTS + CancelAfter.
+    /// Default: 700 ms.
+    ///
+    /// NEEDS TUNING: the live path is the hottest (user at the table) and the baseline P95 is
+    /// already ~2500 ms. Observe the retrieval_profile=none fallback rate on
+    /// meepleai.agent.response.grounding and the meepleai.rag.retrieval.fallbacks{fallback_type=retrieval_budget}
+    /// counter before widening.
+    /// </summary>
+    public int RetrievalBudgetMs { get; set; } = 700;
 }

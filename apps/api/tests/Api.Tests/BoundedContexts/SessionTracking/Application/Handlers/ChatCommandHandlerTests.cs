@@ -3,9 +3,11 @@ using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.Services.ImageProcessing;
+using Api.Services.LlmClients;
 using Api.SharedKernel.Domain.Enums;
 using Api.Tests.Constants;
 using MediatR;
@@ -13,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -277,6 +280,124 @@ public class AskSessionAgentCommandHandlerTests
 
         var act4 = () => _handler.Handle(command, TestContext.Current.CancellationToken);
         await act4.Should().ThrowAsync<NotFoundException>();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3390 Slice 1: structured grounding observability (image / text-only path)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const string AgentGroundingName = "meepleai.agent.response.grounding";
+
+    [Fact]
+    public async Task Handle_TextOnlyPath_EmitsGroundingMetricTextUngroundedNone()
+    {
+        // Arrange — the text-only branch (no images) of the multimodal handler: no retrieval.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+        _mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        _mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var command = new AskSessionAgentCommand(sessionId, senderId, "What are the rules?", 1);
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        captures.Should().ContainSingle("grounding must be recorded exactly once per response");
+        var (value, tags) = captures[0];
+        value.Should().Be(1L);
+        tags["path"].Should().Be("text", "no images attached -> text branch");
+        tags["grounding_status"].Should().Be("ungrounded", "this handler never retrieves, so it is always ungrounded (#3388)");
+        tags["retrieval_profile"].Should().Be("none", "no retrieval on this path");
+    }
+
+    [Fact]
+    public async Task Handle_ImagePath_EmitsGroundingMetricImageUngroundedNone()
+    {
+        // Arrange — the vision branch: images attached, multimodal LLM, still no retrieval.
+        var sessionId = Guid.NewGuid();
+        var senderId = Guid.NewGuid();
+        var session = CreateSessionWithParticipant(sessionId, senderId);
+
+        var mockSessionRepo = new Mock<ISessionRepository>();
+        mockSessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+        var mockChatRepo = new Mock<ISessionChatRepository>();
+        mockChatRepo.SetupSequence(r => r.GetNextSequenceNumberAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1).ReturnsAsync(2);
+        var mockMediator = new Mock<IMediator>();
+
+        var mockImagePreprocessor = new Mock<IImagePreprocessor>();
+        mockImagePreprocessor
+            .Setup(p => p.ProcessAsync(It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<ImageProcessingOptions?>()))
+            .ReturnsAsync(new ProcessedImage(new byte[] { 1, 2, 3 }, "image/jpeg", 10, 10, 3));
+
+        var mockLlm = new Mock<ILlmService>();
+        mockLlm
+            .Setup(s => s.GenerateMultimodalCompletionAsync(
+                It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("I see a Catan board mid-game."));
+
+        var handler = new AskSessionAgentCommandHandler(
+            mockSessionRepo.Object,
+            mockChatRepo.Object,
+            mockMediator.Object,
+            mockLlm.Object,
+            mockImagePreprocessor.Object,
+            new Mock<IGameStateExtractor>().Object,
+            new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
+
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var command = new AskSessionAgentCommand(
+            sessionId, senderId, "What should I do?", 1,
+            new List<ChatImageAttachment> { new(new byte[] { 1, 2, 3 }, "image/jpeg", "board.jpg") });
+
+        // Act
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        captures.Should().ContainSingle();
+        var (value, tags) = captures[0];
+        value.Should().Be(1L);
+        tags["path"].Should().Be("image", "images attached -> vision branch");
+        tags["grounding_status"].Should().Be("ungrounded");
+        tags["retrieval_profile"].Should().Be("none");
+    }
+
+    private static MeterListener BuildCounterListener(
+        string metricName,
+        List<(long Value, Dictionary<string, object?> Tags)> captures)
+    {
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Meter.Name == MeepleAiMetrics.MeterName
+                    && instrument.Name == metricName)
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            var dict = new Dictionary<string, object?>();
+            foreach (var kv in tags)
+            {
+                dict[kv.Key] = kv.Value;
+            }
+            captures.Add((value, dict));
+        });
+        listener.Start();
+        return listener;
     }
 }
 

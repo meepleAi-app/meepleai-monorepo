@@ -5,6 +5,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
 using Api.Services.ImageProcessing;
 using Api.Services.LlmClients;
@@ -265,6 +266,21 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         }, cancellationToken).ConfigureAwait(false);
 
         // This path never produces citations (no retrieval grounding), so it is always Ungrounded (#3388).
+        // #3390 Slice 1: structured grounding observability (image or text-only, no retrieval -> profile=none).
+        // Guarded so a metrics fault can never break the agent response.
+        try
+        {
+            MeepleAiMetrics.RecordAgentResponseGrounding(
+                path: hasImages ? MeepleAiMetrics.AgentResponsePaths.Image : MeepleAiMetrics.AgentResponsePaths.Text,
+                groundingStatusWire: GroundingStatus.Ungrounded.ToString(),
+                retrievalProfile: MeepleAiMetrics.AgentRetrievalProfiles.None,
+                citationCount: 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "agent-response grounding metric emission failed for session {SessionId}", request.SessionId);
+        }
+
         return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, null, GroundingStatus.Ungrounded);
     }
 }

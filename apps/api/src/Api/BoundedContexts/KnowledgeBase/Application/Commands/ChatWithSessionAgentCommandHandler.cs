@@ -712,6 +712,23 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             }
         }
 
+        var groundingStatus = citationDtos.Count > 0 ? "Grounded" : "Ungrounded";
+
+        // #3390 Slice 1: structured grounding observability (text path -> RAG, LiveSession profile).
+        // Wrapped so a metrics fault can never break the user's stream (mirrors the broadcast guard above).
+        try
+        {
+            MeepleAiMetrics.RecordAgentResponseGrounding(
+                path: MeepleAiMetrics.AgentResponsePaths.Text,
+                groundingStatusWire: groundingStatus,
+                retrievalProfile: MeepleAiMetrics.AgentRetrievalProfiles.LiveSession,
+                citationCount: citationDtos.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "agent-response grounding metric emission failed; stream unaffected");
+        }
+
         yield return CreateEvent(
             StreamingEventType.Complete,
             new StreamingComplete(
@@ -722,7 +739,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
                 chatThreadId: thread.Id,
                 Citations: citationDtos,
-                GroundingStatus: citationDtos.Count > 0 ? "Grounded" : "Ungrounded"));
+                GroundingStatus: groundingStatus));
     }
 
     private async Task GenerateConversationSummaryAsync(Guid threadId)

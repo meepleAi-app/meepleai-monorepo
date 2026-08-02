@@ -18,7 +18,7 @@
  * viewports / preview cards in future waves.
  */
 
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
@@ -61,6 +61,12 @@ export interface HeroProps {
   readonly labels: HeroLabels;
   readonly compact?: boolean;
   readonly className?: string;
+  /**
+   * Optional overlay rendered over the (relative) cover region — used by the admin
+   * cover-edit affordance on public surfaces (#3470 Slice 1d-c). The cover region is
+   * a `group` so a hover-revealed affordance can react to cover hover.
+   */
+  readonly coverOverlay?: ReactNode;
 }
 
 function Stars({
@@ -156,6 +162,7 @@ export function Hero({
   labels,
   compact = false,
   className,
+  coverOverlay,
 }: HeroProps): JSX.Element {
   const coverH = compact ? 'h-[160px]' : 'h-[220px]';
   const titleSize = compact ? 'text-[22px]' : 'text-[30px]';
@@ -189,7 +196,8 @@ export function Hero({
     >
       {/* Cover */}
       <div
-        className={clsx('relative flex items-center justify-center overflow-hidden', coverH)}
+        data-slot="hero-cover"
+        className={clsx('group relative flex items-center justify-center overflow-hidden', coverH)}
         style={{
           backgroundColor: entityHsl('game', 0.12),
         }}
@@ -206,6 +214,7 @@ export function Hero({
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/35 to-transparent"
         />
+        {coverOverlay}
       </div>
 
       {/* Body */}

@@ -464,6 +464,24 @@ eval-retrieval: ## Run RAG retrieval evaluation via admin endpoint (DATASET=path
 		-d "{\"datasetPath\":\"$(DATASET)\",\"maxSamples\":$$max}" \
 		| (command -v jq >/dev/null 2>&1 && jq . || cat)
 
+eval-merge-labels: ## Merge a human-reviewed LabelingReview into a dataset and persist it (DATASET=path + REVIEW=path-to-review-json required; OUTPUT optional, defaults to DATASET; BASE_URL default localhost:8080; ADMIN_EMAIL/ADMIN_PASSWORD to auto-login). Recall labeling deferred until #3427 corpus re-index completes.
+	@test -n "$(DATASET)" || (echo "DATASET required: make eval-merge-labels DATASET=../tests/evaluation-datasets/meepleai-en-seed.json REVIEW=review.json" && exit 64)
+	@test -n "$(REVIEW)" || (echo "REVIEW required: path to a JSON file containing the reviewed LabelingReview ({\"items\":[...]})" && exit 64)
+	@test -f "$(REVIEW)" || (echo "REVIEW file not found: $(REVIEW)" && exit 66)
+	@cookie=$$(mktemp); trap 'rm -f "$$cookie"' EXIT; \
+	base="$(BASE_URL)"; [ -n "$$base" ] || base="http://localhost:8080"; \
+	out="$(OUTPUT)"; [ -n "$$out" ] || out="$(DATASET)"; \
+	if [ -n "$(ADMIN_EMAIL)" ] && [ -n "$(ADMIN_PASSWORD)" ]; then \
+		curl -s -o /dev/null -c "$$cookie" -X POST "$$base/api/v1/auth/login" \
+			-H 'Content-Type: application/json' \
+			-d "{\"email\":\"$(ADMIN_EMAIL)\",\"password\":\"$(ADMIN_PASSWORD)\"}"; \
+	fi; \
+	review=$$(cat "$(REVIEW)"); \
+	curl -s -b "$$cookie" -X POST "$$base/api/v1/admin/eval/merge-labels" \
+		-H 'Content-Type: application/json' \
+		-d "{\"datasetPath\":\"$(DATASET)\",\"outputPath\":\"$$out\",\"review\":$$review}" \
+		| (command -v jq >/dev/null 2>&1 && jq . || cat)
+
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
@@ -477,4 +495,4 @@ eval-retrieval: ## Run RAG retrieval evaluation via admin endpoint (DATASET=path
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
         game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse \
         reindex-corpus reindex-corpus-help \
-        eval-retrieval
+        eval-retrieval eval-merge-labels

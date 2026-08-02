@@ -34,6 +34,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
 {
     private const string RetrievalEndpoint = "/api/v1/admin/eval/retrieval";
+    private const string MergeLabelsEndpoint = "/api/v1/admin/eval/merge-labels";
 
     private static readonly Guid TestAdminId = Guid.NewGuid();
 
@@ -44,6 +45,7 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
     private string _adminSessionToken = null!;
     private string _userSessionToken = null!;
     private string _datasetPath = null!;
+    private string _mergeOutputPath = null!;
 
     public AdminEvalEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -103,6 +105,8 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
 
         _datasetPath = Path.Combine(Path.GetTempPath(), $"eval-dataset-{Guid.NewGuid():N}.json");
         await File.WriteAllTextAsync(_datasetPath, dataset.ToJson());
+
+        _mergeOutputPath = Path.Combine(Path.GetTempPath(), $"eval-merged-{Guid.NewGuid():N}.json");
     }
 
     public async ValueTask DisposeAsync()
@@ -115,7 +119,33 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
         {
             File.Delete(_datasetPath);
         }
+
+        if (File.Exists(_mergeOutputPath))
+        {
+            File.Delete(_mergeOutputPath);
+        }
     }
+
+    private static object BuildMergeReviewBody(string datasetPath, string? outputPath) => new
+    {
+        datasetPath,
+        outputPath,
+        review = new
+        {
+            items = new[]
+            {
+                new
+                {
+                    sampleId = "s1",
+                    question = "Where do I place my first settlement?",
+                    candidates = new[]
+                    {
+                        new { chunkId = "chunk-1", page = 3, score = 0.9f, snippet = "Setup rules...", relevant = true }
+                    }
+                }
+            }
+        }
+    };
 
     [Fact]
     public async Task RunRetrievalEvaluation_WithAdminAuth_Returns200WithMetricsJson()
@@ -185,6 +215,96 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
         var request = new HttpRequestMessage(HttpMethod.Post, RetrievalEndpoint)
         {
             Content = JsonContent.Create(new { datasetPath = _datasetPath })
+        };
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task MergeLabels_WithAdminAuth_PersistsLabeledDatasetAndReturns200()
+    {
+        // Arrange
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            MergeLabelsEndpoint,
+            _adminSessionToken,
+            BuildMergeReviewBody(_datasetPath, _mergeOutputPath));
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        File.Exists(_mergeOutputPath).Should().BeTrue("the endpoint persists the merged dataset to the output path");
+        var persisted = EvaluationDataset.FromJson(await File.ReadAllTextAsync(_mergeOutputPath));
+        persisted.Samples.Should().ContainSingle()
+            .Which.RelevantChunkIds.Should().BeEquivalentTo(new[] { "chunk-1" });
+    }
+
+    [Fact]
+    public async Task MergeLabels_WithNonExistentDatasetPath_Returns404()
+    {
+        // Arrange
+        var missingDatasetPath = Path.Combine(Path.GetTempPath(), $"missing-dataset-{Guid.NewGuid():N}.json");
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            MergeLabelsEndpoint,
+            _adminSessionToken,
+            BuildMergeReviewBody(missingDatasetPath, _mergeOutputPath));
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task MergeLabels_WithNullReviewItems_Returns400()
+    {
+        // Arrange — a body like {"review":{}} deserializes to a non-null Review with null Items; the endpoint
+        // must reject it (400) rather than NRE (500) when the handler enumerates the items.
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            MergeLabelsEndpoint,
+            _adminSessionToken,
+            new { datasetPath = _datasetPath, outputPath = _mergeOutputPath, review = new { } });
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task MergeLabels_WithRegularUserAuth_Returns403()
+    {
+        // Arrange
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            MergeLabelsEndpoint,
+            _userSessionToken,
+            BuildMergeReviewBody(_datasetPath, _mergeOutputPath));
+
+        // Act
+        var response = await _client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task MergeLabels_WithoutAuth_Returns401()
+    {
+        // Arrange
+        var request = new HttpRequestMessage(HttpMethod.Post, MergeLabelsEndpoint)
+        {
+            Content = JsonContent.Create(BuildMergeReviewBody(_datasetPath, _mergeOutputPath))
         };
 
         // Act

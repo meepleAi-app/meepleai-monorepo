@@ -32,8 +32,8 @@ internal sealed record EvaluationMetrics
     public double P95LatencyMs { get; init; }
 
     /// <summary>
-    /// Answer correctness score from LLM-as-judge evaluation.
-    /// Range: 0.0 to 1.0
+    /// Answer correctness score from deterministic keyword / word-overlap matching (NOT an LLM-as-judge;
+    /// kept keyword-based for CI stability). Range: 0.0 to 1.0.
     /// </summary>
     public double AnswerCorrectness { get; init; }
 
@@ -53,6 +53,24 @@ internal sealed record EvaluationMetrics
     public int UnlabeledSampleCount { get; init; }
 
     /// <summary>
+    /// Citation accuracy (0..1): among citation-graded samples (those with <c>ExpectedCitations</c>),
+    /// the fraction whose actual cited pages satisfy the expected pages per the sample's match policy.
+    /// Page-level, so stable across corpus re-index (#3427).
+    /// </summary>
+    public double CitationAccuracy { get; init; }
+
+    /// <summary>
+    /// Structural validity (0..1): mean fraction of well-formed citations (PDF:guid + existing document +
+    /// page in range) across successful samples. A trust floor separate from page-accuracy.
+    /// </summary>
+    public double CitationStructuralValidity { get; init; }
+
+    /// <summary>
+    /// Number of citation-graded samples (with <c>ExpectedCitations</c>) contributing to <see cref="CitationAccuracy"/>.
+    /// </summary>
+    public int CitedSampleCount { get; init; }
+
+    /// <summary>
     /// Empty metrics instance for fallback scenarios.
     /// </summary>
     public static EvaluationMetrics Empty => new()
@@ -65,7 +83,10 @@ internal sealed record EvaluationMetrics
         AnswerCorrectness = 0.0,
         SampleCount = 0,
         LabeledSampleCount = 0,
-        UnlabeledSampleCount = 0
+        UnlabeledSampleCount = 0,
+        CitationAccuracy = 0.0,
+        CitationStructuralValidity = 0.0,
+        CitedSampleCount = 0
     };
 
     /// <summary>
@@ -80,7 +101,10 @@ internal sealed record EvaluationMetrics
         double answerCorrectness,
         int sampleCount,
         int labeledSampleCount = 0,
-        int unlabeledSampleCount = 0)
+        int unlabeledSampleCount = 0,
+        double citationAccuracy = 0.0,
+        double citationStructuralValidity = 0.0,
+        int citedSampleCount = 0)
     {
         return new EvaluationMetrics
         {
@@ -92,7 +116,10 @@ internal sealed record EvaluationMetrics
             AnswerCorrectness = Math.Clamp(answerCorrectness, 0.0, 1.0),
             SampleCount = Math.Max(0, sampleCount),
             LabeledSampleCount = Math.Max(0, labeledSampleCount),
-            UnlabeledSampleCount = Math.Max(0, unlabeledSampleCount)
+            UnlabeledSampleCount = Math.Max(0, unlabeledSampleCount),
+            CitationAccuracy = Math.Clamp(citationAccuracy, 0.0, 1.0),
+            CitationStructuralValidity = Math.Clamp(citationStructuralValidity, 0.0, 1.0),
+            CitedSampleCount = Math.Max(0, citedSampleCount)
         };
     }
 
@@ -121,6 +148,16 @@ internal sealed record EvaluationMetrics
         var mrr = labeled.Count > 0 ? labeled.Average(r => r.ReciprocalRank) : 0.0;
         var answerCorrectness = successful.Average(r => r.AnswerCorrectness);
 
+        // Citation accuracy is computed only over "citation-graded" samples (those with ExpectedCitations,
+        // i.e. CitationMatched != null) so ungraded samples cannot silently pollute it — mirroring how
+        // retrieval metrics exclude unlabeled samples. Structural validity is a trust floor over ALL
+        // successful samples (a sample that cited nothing is vacuously valid, CitationStructuralValidity = 1.0).
+        var citationGraded = successful.Where(r => r.CitationMatched.HasValue).ToList();
+        var citationAccuracy = citationGraded.Count > 0
+            ? citationGraded.Average(r => r.CitationMatched!.Value ? 1.0 : 0.0)
+            : 0.0;
+        var citationStructuralValidity = successful.Average(r => r.CitationStructuralValidity);
+
         // Calculate P95 latency over all successful samples
         var latencies = successful.Select(r => r.LatencyMs).OrderBy(l => l).ToList();
         var p95Index = (int)Math.Ceiling(latencies.Count * 0.95) - 1;
@@ -135,7 +172,10 @@ internal sealed record EvaluationMetrics
             answerCorrectness: answerCorrectness,
             sampleCount: successful.Count,
             labeledSampleCount: labeled.Count,
-            unlabeledSampleCount: successful.Count - labeled.Count
+            unlabeledSampleCount: successful.Count - labeled.Count,
+            citationAccuracy: citationAccuracy,
+            citationStructuralValidity: citationStructuralValidity,
+            citedSampleCount: citationGraded.Count
         );
     }
 
@@ -155,4 +195,17 @@ internal sealed record EvaluationMetrics
     /// </summary>
     public bool MeetsPhase5Target() =>
         RecallAt10 >= 0.70 && P95LatencyMs < 1500.0;
+
+    /// <summary>
+    /// The citation-accuracy gate for the in-session live path (#3467): no enhancement wired in #3390
+    /// may regress citation accuracy below this page-level threshold.
+    /// </summary>
+    public const double CitationAccuracyTarget = 0.80;
+
+    /// <summary>
+    /// Checks if metrics meet the citation-accuracy target (<see cref="CitationAccuracyTarget"/>).
+    /// This is the per-enhancement gate #3390 must satisfy, alongside <see cref="MeetsPhase5Target"/>.
+    /// </summary>
+    public bool MeetsCitationAccuracyTarget() =>
+        CitationAccuracy >= CitationAccuracyTarget;
 }

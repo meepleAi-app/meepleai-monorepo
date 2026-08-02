@@ -30,6 +30,11 @@ internal static class AdminEvalEndpoints
             .WithName("GenerateLabelingCandidates")
             .Produces<LabelingReview>(200)
             .WithSummary("Generate AI-proposed retrieval candidates from a dataset file, awaiting human relevance review");
+
+        group.MapPost("/merge-labels", HandleMergeLabels)
+            .WithName("MergeEvaluationLabels")
+            .Produces<string>(200, contentType: "application/json")
+            .WithSummary("Merge human-reviewed labeling verdicts into a dataset and persist the labeled dataset to file");
     }
 
     private static async Task<IResult> HandleRunRetrievalEvaluation(
@@ -80,6 +85,36 @@ internal static class AdminEvalEndpoints
         return Results.Ok(review);
     }
 
+    private static async Task<IResult> HandleMergeLabels(
+        MergeLabelsRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        // NOTE: this only rejects a missing/non-existent datasetPath with a 4xx before
+        // dispatching any command. Full path sandboxing (restricting datasetPath to an
+        // allowlisted root directory) is tracked in issue #3438.
+        var pathError = ValidateDatasetPath(request.DatasetPath);
+        if (pathError is not null)
+        {
+            return pathError;
+        }
+
+        // Guard Items too: a body like {"review":{}} deserializes to a non-null Review with a null Items,
+        // which would NRE (500) when the handler enumerates it — reject it as a 400 instead.
+        if (request.Review?.Items is null)
+        {
+            return Results.BadRequest(new { error = "review with items is required" });
+        }
+
+        // OutputPath defaults to the source dataset (apply labels in-place); callers may target a
+        // separate file. Path sandboxing of the output path is deferred to #3438 alongside datasetPath.
+        var merged = await mediator.Send(
+            new MergeLabelsCommand(request.DatasetPath, request.Review, request.OutputPath ?? request.DatasetPath),
+            ct).ConfigureAwait(false);
+
+        return Results.Text(merged.ToJson(), "application/json");
+    }
+
     private static IResult? ValidateDatasetPath(string? datasetPath)
     {
         if (string.IsNullOrWhiteSpace(datasetPath))
@@ -98,3 +133,4 @@ internal static class AdminEvalEndpoints
 
 internal sealed record RunRetrievalEvaluationRequest(string DatasetPath, int? MaxSamples = null);
 internal sealed record GenerateLabelingCandidatesRequest(string DatasetPath, int? TopN = null);
+internal sealed record MergeLabelsRequest(string DatasetPath, LabelingReview Review, string? OutputPath = null);

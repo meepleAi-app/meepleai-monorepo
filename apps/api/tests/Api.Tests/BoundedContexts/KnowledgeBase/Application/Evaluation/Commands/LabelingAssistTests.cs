@@ -188,6 +188,132 @@ public class LabelingAssistTests
     }
 
     [Fact]
+    public async Task Merge_PreservesDatasetVersionAndCreatedAt()
+    {
+        // Arrange — a dataset carrying non-default version + created_at (the golden set is version-tracked).
+        const string json = """
+        {
+          "name": "versioned-dataset",
+          "description": "metadata-preservation regression",
+          "version": "1.1.0",
+          "source_type": "meepleai_custom",
+          "created_at": "2026-08-02T00:00:00Z",
+          "samples": [
+            { "id": "s1", "question": "Q1?", "expected_answer": "A1" }
+          ]
+        }
+        """;
+        var datasetPath = Path.GetTempFileName();
+        await File.WriteAllTextAsync(datasetPath, json);
+        var outputPath = Path.Combine(Path.GetTempPath(), $"merged-meta-{Guid.NewGuid():N}.json");
+        var original = EvaluationDataset.FromJson(json);
+
+        try
+        {
+            var handler = new MergeLabelsCommandHandler(Mock.Of<ILogger<MergeLabelsCommandHandler>>());
+            var command = new MergeLabelsCommand(datasetPath, new LabelingReview(new List<LabelingReviewItem>()), outputPath);
+
+            // Act
+            var merged = await handler.Handle(command, CancellationToken.None);
+
+            // Assert — merging must not silently downgrade version / reset created_at
+            merged.Version.Should().Be(original.Version);
+            merged.CreatedAt.Should().Be(original.CreatedAt);
+
+            var reloaded = EvaluationDataset.FromJson(await File.ReadAllTextAsync(outputPath));
+            reloaded.Version.Should().Be(original.Version);
+            reloaded.CreatedAt.Should().Be(original.CreatedAt);
+        }
+        finally
+        {
+            File.Delete(datasetPath);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Merge_WithOutputPath_PersistsMergedDatasetToFile()
+    {
+        // Arrange
+        var dataset = BuildSingleSampleDataset("sample-x", "What is the goal?");
+        var datasetPath = WriteDatasetToTempFile(dataset);
+        var outputPath = Path.Combine(Path.GetTempPath(), $"merged-labels-{Guid.NewGuid():N}.json");
+
+        try
+        {
+            var review = new LabelingReview(new List<LabelingReviewItem>
+            {
+                new(
+                    SampleId: "sample-x",
+                    Question: "What is the goal?",
+                    Candidates: new List<LabelingCandidate>
+                    {
+                        new(ChunkId: "s1", Page: 1, Score: 0.9f, Snippet: "text s1", Relevant: true)
+                    })
+            });
+
+            var handler = new MergeLabelsCommandHandler(Mock.Of<ILogger<MergeLabelsCommandHandler>>());
+            var command = new MergeLabelsCommand(datasetPath, review, outputPath);
+
+            // Act
+            await handler.Handle(command, CancellationToken.None);
+
+            // Assert — the merged dataset is persisted to disk with the applied labels
+            File.Exists(outputPath).Should().BeTrue();
+            var persisted = EvaluationDataset.FromJson(await File.ReadAllTextAsync(outputPath));
+            persisted.Samples.Should().ContainSingle()
+                .Which.RelevantChunkIds.Should().BeEquivalentTo(new[] { "s1" });
+        }
+        finally
+        {
+            File.Delete(datasetPath);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Merge_WithoutOutputPath_DoesNotWriteToDatasetPath()
+    {
+        // Arrange — capture the original file contents; a no-OutputPath merge must not overwrite it.
+        var dataset = BuildSingleSampleDataset("sample-x", "What is the goal?");
+        var datasetPath = WriteDatasetToTempFile(dataset);
+        var originalContents = await File.ReadAllTextAsync(datasetPath);
+
+        try
+        {
+            var review = new LabelingReview(new List<LabelingReviewItem>
+            {
+                new(
+                    SampleId: "sample-x",
+                    Question: "What is the goal?",
+                    Candidates: new List<LabelingCandidate>
+                    {
+                        new(ChunkId: "s1", Page: 1, Score: 0.9f, Snippet: "text s1", Relevant: true)
+                    })
+            });
+
+            var handler = new MergeLabelsCommandHandler(Mock.Of<ILogger<MergeLabelsCommandHandler>>());
+            var command = new MergeLabelsCommand(datasetPath, review);
+
+            // Act
+            await handler.Handle(command, CancellationToken.None);
+
+            // Assert — source file untouched (persistence is opt-in via OutputPath)
+            (await File.ReadAllTextAsync(datasetPath)).Should().Be(originalContents);
+        }
+        finally
+        {
+            File.Delete(datasetPath);
+        }
+    }
+
+    [Fact]
     public async Task Merge_SampleWithoutReviewItem_KeepsOriginalRelevantChunkIds()
     {
         // Arrange

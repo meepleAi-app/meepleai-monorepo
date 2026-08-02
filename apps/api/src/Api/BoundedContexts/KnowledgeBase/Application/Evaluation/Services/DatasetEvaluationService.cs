@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Microsoft.Extensions.Logging;
 
@@ -13,13 +14,19 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 {
     private readonly IRagService _ragService;
+    private readonly InlineCitationMatcherService _citationMatcher;
+    private readonly ICitationValidationService _citationValidation;
     private readonly ILogger<DatasetEvaluationService> _logger;
 
     public DatasetEvaluationService(
         IRagService ragService,
+        InlineCitationMatcherService citationMatcher,
+        ICitationValidationService citationValidation,
         ILogger<DatasetEvaluationService> logger)
     {
         _ragService = ragService ?? throw new ArgumentNullException(nameof(ragService));
+        _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
+        _citationValidation = citationValidation ?? throw new ArgumentNullException(nameof(citationValidation));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -121,11 +128,30 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             var hitAt10 = HasHitAtK(retrievedChunkIds, relevantChunkIds, 10);
             var (dcg, idealDcg) = CalculateDcgComponents(retrievedChunkIds, relevantChunkIds, 10);
 
-            // Calculate answer correctness using keyword matching
+            // Calculate answer correctness using keyword/word-overlap matching (deterministic, CI-stable;
+            // NOT an LLM-as-judge despite historical naming).
             var answerCorrectness = CalculateAnswerCorrectness(
                 sample.ExpectedAnswer,
                 ragResponse.answer ?? "",
                 sample.ExpectedKeywords);
+
+            // Citation accuracy (#3467): page-level, stable across corpus re-index. The pages the answer
+            // actually cites come from InlineCitationMatcherService (phrases in the answer grounded to
+            // snippets), compared to the sample's ExpectedCitations per its match policy. Structural
+            // validity is a separate trust floor (well-formed PDF:guid + existing doc + page in range).
+            var snippets = ragResponse.snippets ?? [];
+            var inlineMatches = _citationMatcher.Match(ragResponse.answer ?? string.Empty, snippets);
+            var actualCitationPages = inlineMatches
+                .Select(m => m.PageNumber)
+                .Distinct()
+                .OrderBy(p => p)
+                .ToList();
+            bool? citationMatched = sample.ExpectedCitations?.IsSatisfiedBy(actualCitationPages);
+            var expectedCitationPages = sample.ExpectedCitations?.PrimaryPages.ToList() ?? [];
+
+            var citationValidation = await _citationValidation
+                .ValidateCitationsAsync(snippets, sample.GameId ?? string.Empty, cancellationToken)
+                .ConfigureAwait(false);
 
             return new EvaluationSampleResult
             {
@@ -141,6 +167,10 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
                 DcgAt10 = dcg,
                 IdealDcgAt10 = idealDcg,
                 AnswerCorrectness = answerCorrectness,
+                ActualCitationPages = actualCitationPages,
+                ExpectedCitationPages = expectedCitationPages,
+                CitationMatched = citationMatched,
+                CitationStructuralValidity = citationValidation.ValidationAccuracy,
                 LatencyMs = stopwatch.Elapsed.TotalMilliseconds,
                 Confidence = ragResponse.confidence ?? 0.0
             };
@@ -262,6 +292,12 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
         return (dcg, idealDcg);
     }
 
+    /// <summary>
+    /// Deterministic answer-correctness heuristic: expected-keyword hit rate when keywords are provided,
+    /// else containment / word-overlap between expected and generated answers. This is intentionally NOT
+    /// an LLM-as-judge — it is kept keyword-based so scores are deterministic and CI-stable (a real
+    /// LLM-judge is explicitly out of scope, YAGNI).
+    /// </summary>
     private static double CalculateAnswerCorrectness(
         string expectedAnswer,
         string generatedAnswer,

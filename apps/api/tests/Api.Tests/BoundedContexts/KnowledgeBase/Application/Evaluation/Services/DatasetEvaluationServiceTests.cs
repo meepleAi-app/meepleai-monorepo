@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -18,14 +19,33 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Service
 public class DatasetEvaluationServiceTests
 {
     private readonly Mock<IRagService> _mockRagService;
+    private readonly Mock<ICitationValidationService> _mockCitationValidation;
+    private readonly InlineCitationMatcherService _citationMatcher;
     private readonly Mock<ILogger<DatasetEvaluationService>> _mockLogger;
     private readonly DatasetEvaluationService _service;
 
     public DatasetEvaluationServiceTests()
     {
         _mockRagService = new Mock<IRagService>();
+        _mockCitationValidation = new Mock<ICitationValidationService>();
+        _citationMatcher = new InlineCitationMatcherService();
         _mockLogger = new Mock<ILogger<DatasetEvaluationService>>();
-        _service = new DatasetEvaluationService(_mockRagService.Object, _mockLogger.Object);
+
+        // Default: citation validation reports a vacuously-valid result (no citations to validate),
+        // so structural validity defaults to 1.0 for tests that do not exercise it.
+        _mockCitationValidation
+            .Setup(v => v.ValidateCitationsAsync(It.IsAny<IReadOnlyList<Snippet>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CitationValidationResult
+            {
+                IsValid = true,
+                TotalCitations = 0,
+                ValidCitations = 0,
+                Errors = new List<CitationValidationError>(),
+                Message = string.Empty
+            });
+
+        _service = new DatasetEvaluationService(
+            _mockRagService.Object, _citationMatcher, _mockCitationValidation.Object, _mockLogger.Object);
     }
 
     private static EvaluationSample CreateSample(
@@ -60,7 +80,25 @@ public class DatasetEvaluationServiceTests
     {
         // Act & Assert
         Action act = () =>
-            new DatasetEvaluationService(null!, _mockLogger.Object);
+            new DatasetEvaluationService(null!, _citationMatcher, _mockCitationValidation.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullCitationMatcher_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, null!, _mockCitationValidation.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullCitationValidation_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, _citationMatcher, null!, _mockLogger.Object);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -69,7 +107,7 @@ public class DatasetEvaluationServiceTests
     {
         // Act & Assert
         Action act = () =>
-            new DatasetEvaluationService(_mockRagService.Object, null!);
+            new DatasetEvaluationService(_mockRagService.Object, _citationMatcher, _mockCitationValidation.Object, null!);
         act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
@@ -650,5 +688,116 @@ public class DatasetEvaluationServiceTests
         result.Metrics.LabeledSampleCount.Should().Be(1);
         result.Metrics.UnlabeledSampleCount.Should().Be(1);
         result.Metrics.RecallAt5.Should().Be(1.0); // Labeled sample's hit only; unlabeled doesn't drag it to 0.5
+    }
+
+    // === Citation accuracy (#3467) ===
+
+    // A >5-word phrase so InlineCitationMatcherService extracts it as a significant phrase; the
+    // generated answer repeats it verbatim so the matcher yields the snippet's page as an actual citation.
+    private const string CitablePhrase = "the five resource types are brick lumber wool grain and ore";
+
+    private void SetupRagResponseCitingPage(int page, string source = "PDF:doc-1")
+    {
+        var snippet = new Snippet(text: CitablePhrase, source: source, page: page, line: 0, score: 0.9f);
+        _mockRagService
+            .Setup(r => r.AskAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(),
+                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QaResponse(
+                answer: CitablePhrase,
+                snippets: new List<Snippet> { snippet },
+                confidence: 0.9));
+    }
+
+    [Fact]
+    public async Task EvaluateSample_ExtractsActualCitationPages_FromInlineMatches()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.ActualCitationPages.Should().Contain(7);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_CitationMatched_WhenActualPageOverlapsExpected()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+        var sample = CreateSample() with
+        {
+            ExpectedCitations = new ExpectedCitations
+            {
+                PrimaryPages = new[] { 7 },
+                MatchPolicy = CitationMatchPolicy.OverlapAtLeastOne
+            }
+        };
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(sample, EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationMatched.Should().BeTrue();
+        result.ExpectedCitationPages.Should().Equal(7);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_CitationNotMatched_WhenActualPageMissesExpected()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 3); // answer cites page 3, ground truth is page 7
+        var sample = CreateSample() with
+        {
+            ExpectedCitations = new ExpectedCitations
+            {
+                PrimaryPages = new[] { 7 },
+                MatchPolicy = CitationMatchPolicy.OverlapAtLeastOne
+            }
+        };
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(sample, EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationMatched.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EvaluateSample_CitationMatchedNull_WhenSampleHasNoExpectedCitations()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+
+        // Act — sample has no ExpectedCitations, so it is not citation-graded
+        var result = await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationMatched.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EvaluateSample_StructuralValidity_ReflectsCitationValidation()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+        _mockCitationValidation
+            .Setup(v => v.ValidateCitationsAsync(It.IsAny<IReadOnlyList<Snippet>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CitationValidationResult
+            {
+                IsValid = false,
+                TotalCitations = 4,
+                ValidCitations = 3,
+                Errors = new List<CitationValidationError>(),
+                Message = string.Empty
+            });
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationStructuralValidity.Should().Be(0.75);
     }
 }

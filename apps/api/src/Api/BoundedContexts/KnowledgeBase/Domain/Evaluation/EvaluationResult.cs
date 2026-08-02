@@ -64,7 +64,7 @@ internal sealed record EvaluationSampleResult
     public double IdealDcgAt10 { get; init; }
 
     /// <summary>
-    /// Answer correctness score from keyword matching or LLM judge.
+    /// Answer correctness score from the deterministic keyword / word-overlap heuristic (not an LLM judge).
     /// </summary>
     public double AnswerCorrectness { get; init; }
 
@@ -77,6 +77,29 @@ internal sealed record EvaluationSampleResult
     /// Confidence score from RAG system.
     /// </summary>
     public double Confidence { get; init; }
+
+    /// <summary>
+    /// Pages the generated answer actually cited inline (distinct, from InlineCitationMatcher).
+    /// </summary>
+    public IReadOnlyList<int> ActualCitationPages { get; init; } = [];
+
+    /// <summary>
+    /// Ground-truth expected citation pages for this sample (from <c>ExpectedCitations.PrimaryPages</c>).
+    /// </summary>
+    public IReadOnlyList<int> ExpectedCitationPages { get; init; } = [];
+
+    /// <summary>
+    /// Whether the actual cited pages satisfy the sample's expected citations per its match policy.
+    /// Null = the sample has no <c>ExpectedCitations</c> (not citation-graded; excluded from CitationAccuracy).
+    /// </summary>
+    public bool? CitationMatched { get; init; }
+
+    /// <summary>
+    /// Structural validity sub-score (0..1): fraction of the response's citations that are well-formed
+    /// (PDF:guid + existing document + page in range), via CitationValidationService. Defaults to 1.0
+    /// (vacuously valid when the response cited nothing).
+    /// </summary>
+    public double CitationStructuralValidity { get; init; } = 1.0;
 
     /// <summary>
     /// Error message if evaluation failed.

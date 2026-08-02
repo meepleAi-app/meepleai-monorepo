@@ -58,16 +58,24 @@ internal sealed class EvaluationDataset
     public int Count => _samples.Count;
 
     /// <summary>
-    /// Creates an empty dataset.
+    /// Creates an empty dataset. <paramref name="version"/> and <paramref name="createdAt"/> are optional so
+    /// callers that rebuild a dataset (e.g. the label-merge handler) can preserve the source metadata instead
+    /// of silently resetting version to the default and created_at to "now".
     /// </summary>
-    public static EvaluationDataset Create(string name, string description, string sourceType = "meepleai_custom")
+    public static EvaluationDataset Create(
+        string name,
+        string description,
+        string sourceType = "meepleai_custom",
+        string? version = null,
+        DateTime? createdAt = null)
     {
         return new EvaluationDataset
         {
             Name = name,
             Description = description,
             SourceType = sourceType,
-            CreatedAt = DateTime.UtcNow
+            Version = version ?? "1.0.0",
+            CreatedAt = createdAt ?? DateTime.UtcNow
         };
     }
 
@@ -227,7 +235,14 @@ internal sealed class EvaluationDataset
                 ExpectedKeywords = s.ExpectedKeywords.ToList(),
                 RelevantChunkIds = s.RelevantChunkIds.ToList(),
                 DatasetSource = s.DatasetSource,
-                Language = s.Language
+                Language = s.Language,
+                ExpectedCitations = s.ExpectedCitations is null
+                    ? null
+                    : new ExpectedCitationsDto
+                    {
+                        PrimaryPages = s.ExpectedCitations.PrimaryPages.ToList(),
+                        MatchPolicy = s.ExpectedCitations.MatchPolicy.ToWireValue()
+                    }
             }).ToList()
         };
 
@@ -267,7 +282,14 @@ internal sealed class EvaluationDataset
                 ExpectedKeywords = sampleDto.ExpectedKeywords ?? [],
                 RelevantChunkIds = sampleDto.RelevantChunkIds ?? [],
                 DatasetSource = sampleDto.DatasetSource ?? "unknown",
-                Language = sampleDto.Language
+                Language = sampleDto.Language,
+                ExpectedCitations = sampleDto.ExpectedCitations is null
+                    ? null
+                    : new ExpectedCitations
+                    {
+                        PrimaryPages = sampleDto.ExpectedCitations.PrimaryPages ?? [],
+                        MatchPolicy = CitationMatchPolicyWire.Parse(sampleDto.ExpectedCitations.MatchPolicy)
+                    }
             };
             dataset._samples.Add(sample);
         }
@@ -300,5 +322,12 @@ internal sealed class EvaluationDataset
         public List<string>? RelevantChunkIds { get; set; }
         public string? DatasetSource { get; set; }
         public string? Language { get; set; }
+        public ExpectedCitationsDto? ExpectedCitations { get; set; }
+    }
+
+    private sealed class ExpectedCitationsDto
+    {
+        public List<int>? PrimaryPages { get; set; }
+        public string? MatchPolicy { get; set; }
     }
 }

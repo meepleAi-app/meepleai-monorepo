@@ -212,8 +212,95 @@ public sealed class ChatWithSessionAgentMetricsTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // #3390 Slice 1: structured grounding observability (text path)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const string AgentGroundingName = "meepleai.agent.response.grounding";
+
+    [Fact(DisplayName = "#3390 Slice 1: text path WITH citations emits grounding{path=text,status=grounded,profile=live_session} once")]
+    public async Task Handle_TextPathWithCitations_EmitsGroundedMetric()
+    {
+        // Arrange
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var citations = new List<ChunkCitation>
+        {
+            new ChunkCitation(
+                DocumentId: "doc-1",
+                PageNumber: 1,
+                RelevanceScore: 0.9f,
+                SnippetPreview: "snippet A",
+                CopyrightTier: CopyrightTier.Full,
+                IsPublic: true),
+        };
+        var handler = BuildHandler(resolvedCitations: citations, ragPromptMock: out _, tokenContent: "cited answer");
+
+        // Act
+        await foreach (var _ in handler.Handle(BuildCommand(), CancellationToken.None)) { }
+
+        // Assert — exactly one grounding measurement, correct bounded tags
+        captures.Should().ContainSingle("grounding must be recorded exactly once per response");
+        var (value, tags) = captures[0];
+        value.Should().Be(1L);
+        tags["path"].Should().Be("text");
+        tags["grounding_status"].Should().Be("grounded", "a cited RAG answer is grounded");
+        tags["retrieval_profile"].Should().Be("live_session", "the in-session live path uses RetrievalPolicy.LiveSession (#3389)");
+    }
+
+    [Fact(DisplayName = "#3390 Slice 1: text path WITHOUT citations emits grounding{path=text,status=ungrounded}")]
+    public async Task Handle_TextPathNoCitations_EmitsUngroundedMetric()
+    {
+        // Arrange
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "uncited answer");
+
+        // Act
+        await foreach (var _ in handler.Handle(BuildCommand(), CancellationToken.None)) { }
+
+        // Assert
+        captures.Should().ContainSingle();
+        captures[0].Tags["path"].Should().Be("text");
+        captures[0].Tags["grounding_status"].Should().Be("ungrounded", "zero citations -> ungrounded (never fabricate grounded)");
+        captures[0].Tags["retrieval_profile"].Should().Be("live_session");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Captures counter measurements with their tag set (copied out of the ref-struct span).
+    /// </summary>
+    private static MeterListener BuildCounterListener(
+        string metricName,
+        List<(long Value, Dictionary<string, object?> Tags)> captures)
+    {
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Meter.Name == MeepleAiMetrics.MeterName
+                    && instrument.Name == metricName)
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            var dict = new Dictionary<string, object?>();
+            foreach (var kv in tags)
+            {
+                dict[kv.Key] = kv.Value;
+            }
+            captures.Add((value, dict));
+        });
+        listener.Start();
+        return listener;
+    }
 
     private static MeterListener BuildHistogramListener<T>(string metricName, List<T> observations)
         where T : struct

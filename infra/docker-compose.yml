@@ -363,6 +363,8 @@ services:
       - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
       # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
       - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
+      # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]

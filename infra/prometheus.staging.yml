@@ -35,6 +35,8 @@ rule_files:
   - '/etc/prometheus/domain-event-outbox-duplicate-publish.yml'
   # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
   - '/etc/prometheus/copyright-enforcement.yml'
+  # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (ungrounded-rate on RAG live path).
+  - '/etc/prometheus/agent-grounding.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

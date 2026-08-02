@@ -15,6 +15,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Extensions;
 using Api.Middleware.Exceptions;
 using Api.Models;
+using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Domain.Exceptions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -65,6 +66,27 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithSummary("Get cover source candidates for a game (Admin/Editor)")
             .WithDescription("Returns the materialized cover sources (each with a preview URL) and the current per-context cover assignments, feeding the admin cover picker.")
             .Produces<CoverCandidatesDto>()
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Cover picker upsert: pin a source (+ focal point) for a UI context (epic #3470)
+        group.MapPut("/admin/shared-games/{id:guid}/cover-assignments/{context}", HandleAssignCover)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("AssignCover")
+            .WithSummary("Pin a cover source for a UI context (Admin/Editor)")
+            .WithDescription("Upserts the per-context cover assignment for a game (at most one per context) and returns the persisted assignment.")
+            .Produces<CoverAssignmentDto>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Cover picker reset: remove a context's assignment → back to implicit precedence (epic #3470)
+        group.MapDelete("/admin/shared-games/{id:guid}/cover-assignments/{context}", HandleRemoveCoverAssignment)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("RemoveCoverAssignment")
+            .WithSummary("Reset a UI context's cover to implicit precedence (Admin/Editor)")
+            .WithDescription("Removes the per-context cover assignment for a game; idempotent (no-op when absent).")
+            .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
         // Submit game for approval (Draft → PendingApproval) - Issue #2514
@@ -881,6 +903,38 @@ internal static class SharedGameCatalogAdminEndpoints
     {
         var result = await mediator.Send(new GetCoverCandidatesQuery(id), ct).ConfigureAwait(false);
         return result is null ? Results.NotFound() : Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleAssignCover(
+        Guid id,
+        CoverContext context,
+        AssignCoverRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new AssignCoverCommand(
+            id, context, request.Source, session!.Principal!.Subject.Id, request.FocalX, request.FocalY);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRemoveCoverAssignment(
+        Guid id,
+        CoverContext context,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        await mediator.Send(new RemoveCoverAssignmentCommand(id, context, session!.Principal!.Subject.Id), ct)
+            .ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> HandleGetApprovalQueue(

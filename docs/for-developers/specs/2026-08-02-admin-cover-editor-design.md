@@ -1,8 +1,8 @@
 # Admin Cover Editor — design spec
 
-**Status**: Draft (spec-panel design, 2026-08-02)
+**Status**: Slice 0 contract-locked (spec-panel design, 2026-08-02)
 **Origine**: richiesta utente + spec-panel multi-esperto (Cockburn / Fowler / Nygard / Crispin), radicato nel codice della cover-stack (ADR-087, [[r2-cover-resolver-p1]]).
-**Tracker**: epic da aprire.
+**Tracker**: epic [#3470](https://github.com/meepleAi-app/meepleai-monorepo/issues/3470).
 
 ## 1. Obiettivo
 
@@ -18,6 +18,16 @@ Come **admin/editor**, da `/shared-games`, con pochi click: scegliere quale cove
 
 > D1 è l'interpretazione a costo più alto: cambia DTO, resolver e i call-site di `MeepleCard`. Effort complessivo **L+**, da decomporre in slice.
 
+### 2.1 Contratto Slice 0 — sub-decisioni ratificate (2026-08-02)
+
+| # | Sub-decisione | Scelta |
+|---|---|---|
+| SD1 | Set `CoverContext` | **3**: `Card` (2:3, copre grid/list/thumbnail via crop), `Hero` (~16:9, copre hero/featured/hub), `Social` (1.91:1, OG) |
+| SD2 | Per-contesto = sorgente o crop? | **Sorgente + focal-point configurabile**: l'admin sceglie una sorgente e regola il punto focale del crop per contesto (rende configurabile `Gravity`, oggi hardcoded `Center` in `WebpVariantGenerator.cs:96-97`) |
+| SD3 | Override admin vs L3 user-custom | Admin override **sotto** L3: la cover personale dell'utente NON viene scavalcata (l'override vive in `ResolvePublicAsync`, sopra L4) |
+| SD4 | Licenza URL manuale | **Attestazione admin** (licenza da whitelist `LicenseValidator`) + audit `attestedBy`+timestamp; responsabilità legale sull'admin |
+| SD5 | Ruoli | Pick tra sorgenti materializzate = `AdminOrEditorPolicy`; path URL manuale (attestazione) = `AdminOnlyPolicy` |
+
 ## 3. Vincolo strutturale (stato attuale)
 
 - Il `CoverUrlResolver` sceglie per **precedenza implicita** L3 user → L4 PDF → L2.5 BGG → L2 Wikidata → placeholder (`CoverUrlResolver.cs:51/82/102/116`). **Non esiste override esplicito**, né concetto di contesto.
@@ -27,16 +37,31 @@ Come **admin/editor**, da `/shared-games`, con pochi click: scegliere quale cove
 
 ## 4. Architettura proposta
 
-### 4.1 Modello dati — assegnazione per-contesto (D1)
+### 4.1 Modello dati — assegnazione per-contesto (D1/SD1/SD2) — schema Slice 0
 
-Nuovo enum **`CoverContext`** (SharedKernel): set MINIMO da confermare (vedi §8), proposta:
-- `Card` — griglia/list (ritratto ~2:3, thumb 200×300)
-- `Hero` — hero del dettaglio (immagine più larga / preview 600×900)
-- `Thumbnail` — usi compatti (avatar/chip)
+Nuovo enum **`CoverContext`** (SharedKernel/Domain/Covers): `Card=0`, `Hero=1`, `Social=2` (aspect target: 2:3, 16:9, 1.91:1). Nuovo valore **`CoverKind.Manual`** in `CoverKeyBuilder` (+ suffisso in `SuffixFor`).
 
-Nuova collezione figlia **`GameCoverAssignment`** (aggregato SharedGame): `(SharedGameId, Context, SourceKind: CoverKind, R2Key)`. Assenza di riga per un contesto ⇒ **fallback alla precedenza implicita di oggi** (retrocompat totale, nessun backfill). Persistenza EF come owned/child collection (pattern EF detached-graph: reconcile in `SharedGameRepository`, cfr [[ef-detached-graph-child-loss]]).
+Nuova collezione figlia **`GameCoverAssignment`** (aggregato SharedGame, tabella `game_cover_assignments`):
 
-> Alternativa scartata: colonne override per-contesto sull'entity — non scala col numero di contesti. Il child-table è preferito.
+| Colonna | Tipo | Note |
+|---|---|---|
+| `id` | uuid PK | |
+| `shared_game_id` | uuid FK → shared_games | cascade delete |
+| `context` | smallint | `CoverContext` (Card/Hero/Social) — UNIQUE(shared_game_id, context) |
+| `source_kind` | smallint | `CoverKind` Pdf/Bgg/Wikidata/Manual (NON User: L3 è per-utente) |
+| `focal_x` | real nullable | punto focale crop 0..1 (SD2), default 0.5 (center) |
+| `focal_y` | real nullable | idem, default 0.5 |
+| `generated_r2_key` | text nullable | WebP croppato per il contesto (prodotto da `WebpVariantGenerator` con focal-point) |
+| `created_at`/`created_by`/`updated_at`/`updated_by` | audit | pattern standard |
+| xmin | (system) | optimistic concurrency (ADR-060) |
+
+Assenza di riga per un contesto ⇒ **fallback alla precedenza implicita** (retrocompat totale, nessun backfill). Persistenza EF come child collection con reconcile in `SharedGameRepository` (pattern [[ef-detached-graph-child-loss]]).
+
+**Sorgente URL manuale** (SD4) — nuove colonne su `SharedGameEntity` (a specchio delle `WikidataCover*`, config come `SharedGameEntityConfiguration.cs:130-161`): `manual_cover_r2_key`, `manual_cover_license`, `manual_cover_attribution`, `manual_cover_source_url`, `manual_cover_attested_by`, `manual_cover_attested_at`. La cover manuale è **fetchata + ri-ospitata su R2** (mai URL grezzo).
+
+**`WebpVariantGenerator`** (SD2): estendere `GenerateWebpAsync` con un parametro focal-point/gravity opzionale (default `Gravity.Center` = comportamento attuale, retrocompat) → `Extent` usa la gravità derivata dal focal-point invece dell'hardcoded `Center`.
+
+> Alternativa scartata: colonne override per-contesto sull'entity — non scala col numero di contesti né col focal-point. Il child-table è preferito.
 
 ### 4.2 Resolver
 
@@ -78,13 +103,9 @@ Regola d'oro (Nygard): **l'URL è input transiente, mai render-source**. Nuovo c
 - **Attribution footer errato**: `GetSharedGameByIdQueryHandler.cs:441-443` emette `WikidataCoverLicense/Attribution` **incondizionatamente** anche quando vince la cover PDF/Manual → il footer mostra attribution Wikidata sbagliata. Rendere l'attribution **source-aware** (segue la sorgente vincente) — naturale in Slice 1.
 - **SSRF TOCTOU/DNS-rebinding**: `ValidateResolvedIpAsync` risolve il DNS una volta e `GetAsync` un'altra (stesso gap in `BggCoverDownloader`). Fix in Slice 3: risolvere una volta e connettersi all'IP validato (pin), o ri-validare per-hop.
 
-## 8. Sub-decisioni aperte (da chiudere in Slice 0)
+## 8. Sub-decisioni — CHIUSE in Slice 0 (2026-08-02)
 
-1. **Set esatto dei `CoverContext`**: Card/Hero/Thumbnail bastano, o servono anche Featured/Focus/OG-social?
-2. **Per-contesto = sorgente diversa, o crop/framing diverso della stessa immagine?** (es. box-art quadrata in Card vs banner in Hero → potrebbe servire crop/gravity per-contesto, non solo scelta-sorgente).
-3. **Override admin vs L3 user-custom**: l'assegnazione admin sta SOTTO la cover personale dell'utente (raccomandato) o la scavalca?
-4. **Licenza su URL manuale = attestazione admin** (non verificabile): accettata la responsabilità legale sull'admin, con audit?
-5. **Ruoli**: pick tra sorgenti materializzate = `AdminOrEditor`; URL manuale = `AdminOnly`. Confermare lo split.
+Tutte ratificate (vedi §2.1): SD1 contesti = **Card/Hero/Social**; SD2 = **sorgente + focal-point configurabile**; SD3 = override **sotto** L3-utente; SD4 = **attestazione admin + audit** su URL manuale; SD5 = **AdminOrEditor** (pick) / **AdminOnly** (URL manuale). Contract lock completo → pronto per Slice 1.
 
 ## 9. Testing (Crispin)
 

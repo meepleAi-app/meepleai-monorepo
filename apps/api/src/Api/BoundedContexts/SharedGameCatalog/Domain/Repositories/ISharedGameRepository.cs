@@ -87,6 +87,19 @@ public interface ISharedGameRepository
     void Update(SharedGame sharedGame);
 
     /// <summary>
+    /// Epic #3470 — reconciles the game's per-context cover assignment child
+    /// collection against its DB-resident rows: children new since the load are
+    /// inserted, existing ones updated in place (preserving the loaded <c>xmin</c>
+    /// concurrency token), and rows the aggregate dropped are deleted. Does NOT
+    /// call <c>SaveChanges</c>; the caller's unit of work commits. This is the
+    /// child-safe alternative to a detached full-graph <c>Update()</c>, which would
+    /// silently lose a newly-added assignment on Postgres.
+    /// </summary>
+    /// <param name="sharedGame">The aggregate whose <c>CoverAssignments</c> are the desired state.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task ReconcileCoverAssignmentsAsync(SharedGame sharedGame, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Checks if a game with the given BGG ID already exists.
     /// </summary>
     /// <param name="bggId">The BGG ID to check</param>

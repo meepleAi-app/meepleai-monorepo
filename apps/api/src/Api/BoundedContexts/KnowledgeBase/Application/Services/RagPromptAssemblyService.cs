@@ -298,7 +298,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     {
                         Score = (float)scored.Score,
                         Text = scored.Embedding.TextContent,
-                        PdfId = scored.Embedding.VectorDocumentId.ToString(),
+                        // #3390 Slice-4 follow-up: cite the owning PDF document id (pdf_documents.Id,
+                        // resolved by the scored pgvector read via vector_documents.PdfDocumentId), NOT
+                        // the vector-store document id (vector_documents.Id). CitationValidationService
+                        // keys structural validity on pdf_documents.Id, and the FE resolves citations to
+                        // the source PDF by the same id — VectorDocumentId failed both. The legacy hybrid
+                        // path (HybridSearchService.cs:287) already keys on PdfDocumentId; this is parity.
+                        PdfId = scored.Embedding.PdfDocumentId.ToString(),
                         Page = scored.Embedding.PageNumber,
                         ChunkIndex = scored.Embedding.ChunkIndex,
                         // SP-C (#3407): carry region-grounding primitives from the vector arm.

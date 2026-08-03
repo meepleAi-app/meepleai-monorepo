@@ -232,6 +232,52 @@ public class RagPromptAssemblyServiceTests
         cited.CharEnd.Should().Be(250);
     }
 
+    [Fact]
+    public async Task AssemblePrompt_VectorChunkCitation_UsesPdfDocumentIdNotVectorDocumentId()
+    {
+        // Regression (#3390 Slice-4 follow-up): the grounded vector arm mapped the citation's
+        // source document id from Embedding.VectorDocumentId (vector_documents.Id) instead of
+        // Embedding.PdfDocumentId (pdf_documents.Id). CitationValidationService keys structural
+        // validity on pdf_documents.Id, so vector-arm citations failed with DocumentNotFound and,
+        // on the live path, carried a doc id the FE cannot resolve to the source PDF. The legacy
+        // hybrid path (HybridSearchService.cs:287) already keys on PdfDocumentId — this restores parity.
+        var vectorDocumentId = Guid.NewGuid();
+        var pdfDocumentId = Guid.NewGuid();
+        SetupSuccessfulEmbedding();
+        var scored = new List<ScoredEmbedding>
+        {
+            new(new Embedding(
+                    id: Guid.NewGuid(),
+                    vectorDocumentId: vectorDocumentId,
+                    textContent: "Pawns move forward one square.",
+                    vector: new Vector(TestEmbedding),
+                    model: "test-model",
+                    chunkIndex: 0,
+                    pageNumber: 3,
+                    pdfDocumentId: pdfDocumentId),
+                0.85)
+        };
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scored);
+        SetupTextSearchResults(); // no FTS — the vector chunk alone flows through hybrid fusion
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, null, "it", CancellationToken.None);
+
+        // Assert — the citation's source doc id is the owning PDF id, never the vector-store doc id.
+        var citation = result.Citations.Should().ContainSingle().Which;
+        citation.DocumentId.Should().Be(pdfDocumentId.ToString());
+        citation.DocumentId.Should().NotBe(vectorDocumentId.ToString());
+        citation.PageNumber.Should().Be(3);
+    }
+
     #endregion
 
     #region AssemblePromptAsync - With Chunks (FTS-only post pgvector migration)

@@ -112,11 +112,14 @@ class QualityScoreCalculator:
         if pages_with_equations > 0:
             score += 0.3
 
-        # Structure detected (check for DocTags markup)
+        # Structure detected: match the DocTags tags docling actually parses into content
+        # (<text>/<section_header_*>/<caption>/...); the old </section>/</paragraph> checks
+        # never matched real SmolDocling output (issue #3435).
+        structure_tags = ("<text>", "<section_header", "<list_item>", "<caption>", "<page_header>")
         pages_with_structure = sum(
             1
             for page in page_results
-            if "</section>" in page.doctags_text or "</paragraph>" in page.doctags_text
+            if any(tag in page.doctags_text for tag in structure_tags)
         )
         if pages_with_structure > 0:
             score += 0.3

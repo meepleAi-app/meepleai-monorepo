@@ -14,6 +14,33 @@ logger = logging.getLogger(__name__)
 class SmolDoclingAdapter:
     """Adapter for SmolDocling VLM model (256M parameters)"""
 
+    # True chat/control special tokens to strip from the decoded output. These are
+    # NOT DocTags markup — the DocTags tokens (<loc_*>, <otsl>, <fcel>, <doctag>, ...)
+    # must be preserved for region-grounding + table structure (issue #3435, spec §5ter).
+    _CONTROL_TOKENS = (
+        "<|im_start|>",
+        "<|im_end|>",
+        "<|endoftext|>",
+        "<end_of_utterance>",
+        "<fake_token_around_image>",
+        "<image>",
+    )
+
+    # Instruction handed to the VLM via the chat template (official SmolDocling recipe).
+    _PROMPT_TEXT = "Convert this page to docling."
+
+    # Real DocTags structure tags — the ones docling-core actually parses into content
+    # (verified: <text>/<section_header_*> export to markdown; the vocab's <paragraph>/
+    # <list_item> do NOT). Matched as substrings, so tokenization is irrelevant. Used as a
+    # "page has structured layout" signal.
+    _STRUCTURE_TAGS = (
+        "<text>",
+        "<section_header",
+        "<list_item>",
+        "<caption>",
+        "<page_header>",
+    )
+
     def __init__(self):
         self.settings = settings
         self.device = self._get_device()
@@ -98,9 +125,27 @@ class SmolDoclingAdapter:
         logger.debug(f"Processing page {page_image.page_number} with SmolDocling VLM")
 
         try:
-            # Prepare inputs
+            # Build the chat prompt (official SmolDocling recipe). The Idefics3Processor
+            # only emits input_ids when a text prompt is supplied (processing_idefics3.py:
+            # input_ids is added inside `if text is not None:`); calling it images-only
+            # yields no input_ids, so generation cannot align the <image> tokens and the
+            # prompt-trim below would KeyError (issue #3435).
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "image"},
+                        {"type": "text", "text": self._PROMPT_TEXT},
+                    ],
+                }
+            ]
+            prompt = self.processor.apply_chat_template(
+                messages, add_generation_prompt=True
+            )
+
+            # Prepare inputs (text + image so input_ids and the image tokens are aligned)
             inputs = self.processor(
-                images=page_image.image, return_tensors="pt"
+                text=prompt, images=[page_image.image], return_tensors="pt"
             ).to(self.device)
 
             # Some processor outputs (rows/cols) are unused by the current model
@@ -120,17 +165,32 @@ class SmolDoclingAdapter:
                     do_sample=False,  # Deterministic output
                 )
 
-            # Decode output
-            doctags_text = self.processor.batch_decode(
-                generated_ids, skip_special_tokens=True
+            # Trim the prompt (image/instruction placeholder tokens) so only the newly
+            # generated DocTags are decoded — matches the official SmolDocling recipe
+            # (generated_ids[:, prompt_length:]). If the model generated nothing beyond
+            # the prompt, the slice is empty and decode yields "" (clean degradation, R5)
+            # rather than leaking prompt/instruction text into doctags_text.
+            prompt_len = filtered_inputs["input_ids"].shape[1]
+            generated_ids = generated_ids[:, prompt_len:]
+
+            # Decode WITH special tokens: DocTags markup (<loc_*>, <otsl>, <fcel>, ...)
+            # is flagged `special` in the tokenizer, so skip_special_tokens=True would
+            # strip the location coordinates and table structure this feature needs
+            # (issue #3435, spec §5ter). We decode everything, then remove only the true
+            # chat/control tokens in _clean_doctags().
+            raw_doctags = self.processor.batch_decode(
+                generated_ids, skip_special_tokens=False
             )[0]
+            doctags_text = self._clean_doctags(raw_doctags)
 
             # Convert to Markdown using Docling
             markdown_text = self._convert_to_markdown(doctags_text)
 
-            # Extract metadata
-            has_tables = "<table>" in doctags_text.lower()
-            has_equations = "<equation>" in doctags_text.lower() or "$" in doctags_text
+            # Extract metadata. SmolDocling emits tables in OTSL (<otsl>) and formulas as
+            # <formula> — never <table>/<equation>. The old `"$" in doctags_text` heuristic
+            # false-positived on any rulebook price ("pay $5"), so it is dropped (#3435).
+            has_tables = self._detect_has_tables(doctags_text)
+            has_equations = "<formula>" in doctags_text.lower()
 
             # Calculate confidence (placeholder - SmolDocling doesn't return confidence scores)
             # In production, could use token probability if needed
@@ -168,6 +228,36 @@ class SmolDoclingAdapter:
                 confidence_score=0.0,
             )
 
+    def _clean_doctags(self, raw: str) -> str:
+        """
+        Remove chat/control special tokens from a DocTags decode while PRESERVING
+        the DocTags markup (location + structure tokens).
+
+        The output is decoded with ``skip_special_tokens=False`` so that DocTags tokens
+        survive; this strips only the true control tokens (``<|im_end|>``,
+        ``<end_of_utterance>``, image placeholders, ...) — see ``_CONTROL_TOKENS``.
+
+        Args:
+            raw: Raw decoded text (special tokens NOT skipped)
+
+        Returns:
+            DocTags text with control tokens removed, whitespace-trimmed
+        """
+        text = raw
+        for control in self._CONTROL_TOKENS:
+            text = text.replace(control, "")
+        return text.strip()
+
+    @staticmethod
+    def _detect_has_tables(doctags_text: str) -> bool:
+        """
+        Detect whether the DocTags output contains a table.
+
+        SmolDocling renders tables in OTSL (``<otsl>``/``<fcel>``), NOT as ``<table>``;
+        looking for ``<table>`` (the previous behaviour) never matched (issue #3435).
+        """
+        return "<otsl>" in doctags_text.lower()
+
     def _convert_to_markdown(self, doctags_text: str) -> str:
         """
         Convert DocTags markup to Markdown
@@ -187,8 +277,12 @@ class SmolDoclingAdapter:
             return docling_doc.export_to_markdown()
 
         except Exception as e:
-            logger.warning("Markdown conversion failed, returning raw DocTags text: %s", e)
-            return doctags_text
+            # Do NOT fall back to raw DocTags: doctags_text now carries markup
+            # (<loc_*>, <otsl>, <fcel>, ...) that would pollute the RAG corpus and the
+            # /preprocess extracted_text handed to the LLM (issue #3435). Return "" so the
+            # page is treated as empty (is_empty) instead of ingesting markup as content.
+            logger.warning("Markdown conversion failed, dropping page content: %s", e)
+            return ""
 
     def _estimate_confidence(self, doctags_text: str) -> float:
         """
@@ -208,12 +302,15 @@ class SmolDoclingAdapter:
 
         score = 0.7  # Base score for non-empty output
 
-        # Heuristics (rough estimates)
+        # Heuristics (rough estimates). Tags aligned with SmolDocling's real DocTags
+        # vocabulary: OTSL tables (<otsl>) and formulas (<formula>), and structure tags
+        # verified in the tokenizer vocab — the old <table>/<equation>/</section> checks
+        # never matched real output (issue #3435).
         if len(doctags_text) > 500:
             score += 0.1  # Substantial text extracted
-        if "<table>" in doctags_text or "<equation>" in doctags_text:
+        if self._detect_has_tables(doctags_text) or "<formula>" in doctags_text.lower():
             score += 0.1  # Structured elements detected
-        if "</section>" in doctags_text or "</paragraph>" in doctags_text:
+        if any(tag in doctags_text for tag in self._STRUCTURE_TAGS):
             score += 0.1  # Proper structure
 
         return min(score, 1.0)

@@ -41,8 +41,15 @@ class PageExtractionResult:
 
     @property
     def is_empty(self) -> bool:
-        """Check if page extraction is empty"""
-        return len(self.doctags_text.strip()) == 0
+        """Check if the page yields no usable text content.
+
+        Keyed on ``markdown_text`` (the rendered content that becomes RAG chunks), NOT
+        on ``doctags_text``: after issue #3435 the raw DocTags markup (``<doctag>``,
+        ``<loc_*>``, ``<otsl>``, ...) is retained in ``doctags_text``, so a
+        structural-wrapper-only page (e.g. a blank page emitting ``<doctag></doctag>``)
+        has non-empty DocTags but empty markdown and must still count as empty.
+        """
+        return len(self.markdown_text.strip()) == 0
 
 
 @dataclass

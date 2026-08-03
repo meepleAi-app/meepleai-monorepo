@@ -20,6 +20,11 @@
 > **⚠️ 2 bug adapter bloccanti** per QUALSIASI opzione VLM (B o C): **P1** `batch_decode(skip_special_tokens=True)`
 > (`smoldocling_adapter.py:124-126`) strippa `<loc_`/`<otsl>`/`<fcel>` (special) → location e struttura tabellare **perse**;
 > **P2** `has_tables="<table>" in doctags_text` (:132) cerca un tag inesistente (è `<otsl>`) → sempre `False`. Vedi §5ter.
+> **v1.4** (2026-08-04) chiude la **Fase 0**: (a) **FIX adapter applicato** (commit `62816eeef`) — P1+P2 + hardening da
+> review adversariale (10 finding confermati, incl. **#6 blocker**: mancava `apply_chat_template`; §5quater); (b)
+> **DC-B ✅** (router image-density, riusa il pattern `ExtractionStrategyDecider`) e **DC-F ✅** (page-proximity, già
+> wired; overlap solo refiner) decisi — §5quinquies. **Tutti gli spike DC-* sono chiusi**; resta solo il benchmark
+> off-box per i *numeri* Metà C (qualità/latenza), non più bloccante per l'MVP (Opzione E).
 
 > **Origine**: investigazione di attivazione di DC-2 #3419 su staging (2026-08-01). Il wiring hi_res-per-tabelle
 > è corretto e mergiato ma **inerte sul corpus reale**: né `fast` né `hi_res` producono elementi `Table`,
@@ -139,9 +144,9 @@ Non-goal:
 | **DC-A** | `fast` emette bbox `Image`/`FigureCaption` a costo basso, o solo hi_res (>120s)? | ✅ **NO**. `fast` è coordinate-aware (454/454 elementi con bbox su agricola) **ma non emette `Image`/`FigureCaption`** (solo testo) — il layout model è esclusivo di hi_res. La regione precisa richiede hi_res async; niente scorciatoia region-only economica. fast dà solo bbox del testo circostante (grounding debole, già coperto da #3403). |
 | **DC-G** *(nuovo v1)* | SmolDocling accetta **input immagine (crop)** o solo **PDF**? | ✅ **SÌ, con aggiunta minima**. La VLM è image-native (`process_page(PageImage)` → `processor(images=…)`); l'endpoint pubblico è PDF-only per convenzione. Opzione B (crop) = thin endpoint `POST /extract-image` che wrappa il crop in `PageImage` e chiama il `process_page` esistente. Zero nuovo servizio. |
 | **DC-E** *(riformulato v1.1)* | ~~Deploy SmolDocling su staging 8GB~~ → **Su quale infra girano il benchmark e la Metà C?** | ✅ **BLOCCATO su staging**. Misurato: box 8GB con **172 MiB RAM liberi** + **2.6/4.0 GiB swap già usato** (`unstructured` 2.3 GiB, `embedding` 888 MiB/87%). SmolDocling vuole 2-3 GiB → **headroom negativo** → OOM-kill di un container critico (probabile vittima: `unstructured`) o thrashing. `mem_limit` non risolve (non c'è RAM fisica). **DC-E diventa: benchmark OFF-BOX (locale/VM throwaway) + decisione infra (resize a 16 GiB o nodo dedicato) prima di qualsiasi deploy Metà C.** |
-| **DC-C** | SmolDocling DocTags espone **location** (`<loc_*>`) usabili come bbox? | ✅ **SÌ** (2026-08-03, tokenizer-spike §5ter, **senza inference**). `docling-project/SmolDocling-256M-preview` emette DocTags con `<loc_N>` (N∈0..500); `DoclingDocument.load_from_doctags(…, images=None)` → `prov[].bbox` **[0,1] top-left** = formato #3403 (DA-1). **MA** l'adapter attuale ha 2 bug bloccanti (P1 `skip_special_tokens=True` strippa i tag; P2 `has_tables` cerca `<table>` invece di `<otsl>`). DC-C sblocca **sia** Opzione C (regione+contenuto da DocTags) **sia** il crop di Opzione B — dopo il fix adapter. |
-| **DC-F** *(nuovo v1)* | Legame citazione-testo → regione-immagine: prossimità pagina basta? | ⏳ Aperto — valore atteso **debole** dato DC-A (fast dà solo bbox testo → highlight del testo vicino, non della tabella). |
-| **DC-B** | Router "PDF table-heavy": euristica vs flag manuale | ⏳ Aperto (analisi leggera, no deploy) |
+| **DC-C** | SmolDocling DocTags espone **location** (`<loc_*>`) usabili come bbox? | ✅ **SÌ** (2026-08-03, tokenizer-spike §5ter, **senza inference**). `docling-project/SmolDocling-256M-preview` emette DocTags con `<loc_N>` (N∈0..500); `DoclingDocument.load_from_doctags(…, images=None)` → `prov[].bbox` **[0,1] top-left** = formato #3403 (DA-1). **MA** l'adapter attuale ha 2 bug bloccanti (P1 `skip_special_tokens=True` strippa i tag; P2 `has_tables` cerca `<table>` invece di `<otsl>`). DC-C sblocca **sia** Opzione C (regione+contenuto da DocTags) **sia** il crop di Opzione B — dopo il fix adapter. **FIX APPLICATO** (2026-08-04, commit `62816eeef`): P1+P2 + hardening da review adversariale (10 finding, incl. **#6 blocker**: mancava `apply_chat_template` → nessun `input_ids`); §5quater. |
+| **DC-F** *(nuovo v1)* | Legame citazione-testo → regione-immagine: prossimità pagina basta? | ✅ **SÌ, page-proximity** (2026-08-04, §5quinquies). È l'**unico** segnale primario viabile (DC-A: la bbox del chunk narrativo copre solo il testo circostante → nessun overlap geometrico con la tabella) ed è **già wired** nel viewer (`PdfInlineViewer.tsx`). Overlap solo come *refiner* (regione più vicina verticalmente). Join key `(PdfDocumentId, PageNumber)`, nessun chunk↔region FK. Effort M. |
+| **DC-B** | Router "PDF table-heavy": euristica vs flag manuale | ✅ **Euristica image-density, riusando il pattern `ExtractionStrategyDecider`** (2026-08-04, §5quinquies). NON il predicato `Table` (inerte: 0 `Table` su 52 PDF), NON un `has_tables` VLM-sample (accoppierebbe DC-B al Metà C bloccato), NON un flag per-gioco. Segnale MVP = **region count in `pdf_image_regions`** (già area-filtered #3456). Effort S. |
 
 **Output di Fase 0**: una decisione documentata A/B/C con effort stimato. Solo allora partono gli SP §7.
 
@@ -215,6 +220,71 @@ un colpo dai DocTags). Ma i vincoli di v1.1/v1.2 restano (SmolDocling CPU >95s/p
 "degrada testo narrativo" di C) → **Opzione B** (hi_res per la regione + SmolDocling-crop solo sul contenuto) resta
 operativamente preferibile. **Entrambe** richiedono prima il fix P1 dell'adapter (SP3). Restano aperti solo **DC-B**
 (router) e **DC-F** (linkage), entrambi analisi leggere non bloccanti.
+
+---
+
+## 5quater. Fix adapter SmolDocling (2026-08-04) — P1/P2 + hardening da review adversariale
+
+Il fix DC-C è stato implementato (commit `62816eeef`, branch `feature/issue-3435-sp0-spike`) e passato a una
+**review adversariale multi-lente** (5 lenti × verifica indipendente): **13 finding, 10 confermati (0 uncertain)**.
+Tutti indirizzati. Il più importante NON era P1/P2 ma un **blocker pre-esistente** che il fix ha reso attivo:
+
+- **#6 (BLOCKER)** — `process_page` chiamava il processor **senza** `apply_chat_template`; il vero `Idefics3Processor`
+  (transformers 4.46.3, `processing_idefics3.py:265`) aggiunge `input_ids` **solo** dentro `if text is not None:`.
+  Quindi la chiamata images-only non produceva `input_ids` → il trim del prompt (`filtered_inputs["input_ids"]`)
+  avrebbe dato `KeyError` a runtime e la generazione non poteva allineare i token immagine. **Fix**: costruito il
+  prompt col chat template ufficiale (`text=prompt, images=[img]`).
+- **P1** — decode `skip_special_tokens=False` + trim prompt (`generated_ids[:, prompt_len:]`, recipe ufficiale) +
+  `_clean_doctags` rimuove **solo** i control token (`<|im_end|>`, `<end_of_utterance>`, image placeholder). I DocTags
+  (`<loc_*>`, `<otsl>`, `<fcel>`) sopravvivono.
+- **P2** — `has_tables` su `<otsl>`.
+- **#2 (regression)** — `PageExtractionResult.is_empty` ora chiave su `markdown_text`, non `doctags_text`: il wrapper
+  `<doctag>` conservato non fa più contare le pagine vuote come non-vuote (evita chunk vuoti nel RAG + skew coverage/confidence).
+- **#3 (regression)** — il fallback di `_convert_to_markdown` su eccezione ritorna `""`, non il raw DocTags (niente
+  markup nel corpus RAG / `extracted_text` del `/preprocess`).
+- **#4/#8/#10** — confidence/layout/`has_equations` allineati ai tag DocTags **reali** (verificati: tabelle `<otsl>`,
+  formule `<formula>`, struttura `<text>`/`<section_header_*>` che docling parsa; `<table>`/`<equation>`/`<paragraph>`
+  NON sono emessi/parsati). Rimossa l'euristica `"$" in text` (false-positive su prezzi "$5").
+- **Test (#1/#5/#7/#9)** — suite adapter riscritta (13 casi): i fake rispecchiano il contratto reale
+  (`input_ids` solo con `text`; `batch_decode` funzione degli ids → trim/leak osservabili), + test text-only no-leak,
+  fallback, confidence, `has_equations`. **Suite servizio verde: 29 passed, 1 skip.**
+
+> **⚠️ Limite noto**: l'inference **end-to-end reale** (VLM su GPU) NON è validata — SmolDocling su CPU è >95s/pagina
+> (impraticabile in sviluppo) e lo staging è saturo (DC-E). I test coprono la logica decode/clean/metadata con fake;
+> la validazione E2E resta parte di **SP3** (quando l'infra VLM è disponibile).
+
+---
+
+## 5quinquies. Decisioni DC-B e DC-F (2026-08-04) — chiudono la Fase 0
+
+Analisi (workflow multi-reader sul codice reale). Entrambe **riusano infrastruttura già esistente**; entrambe sono
+**inerti sul corpus reale** finché non atterra l'ingestion automatica delle regioni (deferred, #3435) — oggi solo
+l'endpoint admin `POST /admin/pdfs/{pdfId}/seed-image-regions` scrive in `pdf_image_regions`.
+
+**DC-B — router table-heavy = euristica image-density (effort S)**
+- **Riusa il *pattern*** static-decider + scoped-selector di `ExtractionStrategyDecider`
+  (`…/DocumentProcessing/Domain/Services/ExtractionStrategy.cs:30-56`, wired a `PdfProcessingPipelineService.cs:528`),
+  **non** il suo predicato `Table`: quest'ultimo è **inerte** sul corpus (0 `ElementType="Table"` su 52 PDF, §1).
+- **Segnale MVP** = **region count in `pdf_image_regions`** (già filtrato per area ≥3%, #3456): "PDF con ≥1
+  image-region ⇒ candidato Metà-C". Zero nuova infra euristica.
+- **Gate pre-hi_res** (solo se serve isolare il costo su ingestion continua, NFR1): densità raster via
+  `pdfimages`/poppler — deterministico, zero-model.
+- **Rifiutati**: `has_tables` VLM-sample (accoppia DC-B al Metà C bloccato, **inverte** la dipendenza IA-5/NFR1 —
+  il router deve *gateare* il VLM, non dipenderne); flag manuale per-gioco (toil su 52 giochi, non scala).
+
+**DC-F — linkage citazione→regione = page-proximity (effort M)**
+- **Page-proximity è l'unico segnale primario viabile** ed è **già wired** nel viewer (`PdfInlineViewer.tsx:101,162-176`;
+  `CitationPdfTab` apre a `initialPage` → le regioni della pagina citata già si disegnano). Join key
+  `(PdfDocumentId, PageNumber)` — **non** esiste chunk↔region FK; le citazioni risolvono già `PdfDocumentId` (#3517).
+- **Overlap geometrico NON può essere primario** (DC-A: la bbox del chunk narrativo copre il **testo circostante**, non
+  la tabella → nessun overlap). Utile **solo come refiner** (regione verticalmente più vicina al chunk citato).
+- **Noise**: il filtro area #3456 già rimuove icone/glifi; per illustrazioni decorative grandi serve la
+  discriminazione tabella-vs-illustrazione, che richiede il segnale `has_tables` della Metà C (IA-1, **deferred L**).
+- **Gap di correttezza da chiudere prima del rollout** (open risk): **copyright-gate divergence** — `regions[]` sono
+  `Full`-gated (R4/IA-4/DA-4) ma l'endpoint image-regions è solo owner/shared-scoped e fetchato incondizionatamente →
+  i box immagine **leakano** per citazioni `Protected`-tier. Aggiungere gating `CopyrightTier=Full` al path image-region
+  (slice S-4, deferred). Quando il pipeline grounded consuma le regioni deve passare per **`IMediator`** (ADR-090,
+  confine KB↔DocumentProcessing), mai query diretta a `pdf_image_regions` da KB.
 
 ---
 
@@ -305,7 +375,7 @@ location (se DC-C=sì) → contenuto+regione in un colpo.
 
 | SP | Cosa | Metà | Costo | Dipende da |
 |----|------|------|-------|-----------|
-| **SP0 — Fase 0 spike** | ~~DC-A ✅ DC-G ✅ DC-E ✅(blocco infra) DC-C ✅(§5ter, tokenizer-spike)~~; resta solo **benchmark off-box** (numeri qualità/latenza, non più DC-C) + decisione infra; restano DC-B/DC-F (analisi leggere) | — | S | — |
+| **SP0 — Fase 0 spike** | ✅ **CHIUSA** (2026-08-04): DC-A/DC-G/DC-E/DC-C/DC-B/DC-F tutti risolti (§5/§5ter/§5quinquies) + **fix adapter applicato** (§5quater, commit `62816eeef`). Resta solo il **benchmark off-box** per i *numeri* Metà C (qualità/latenza) + decisione infra — non bloccante per l'MVP (Opzione E) | — | S | — |
 | **SP1 — Image-region capture** | Estendere il capture bbox #3403 a `Image`/`FigureCaption`; linkage per-pagina (DC-F); FE disegna la regione | R | S | #3403 SP-B/SP-D; DC-A/DC-F |
 | **SP2 — Table-region router** | Euristica DC-B per marcare PDF/pagine con tabelle-immagine candidate | R+C | S | SP1 |
 | **SP3 — SmolDocling deploy + extract** | **PRE: fix adapter P1/P2 (§5ter) — `skip_special_tokens=False` + `has_tables` su `<otsl>`, bloccante**; poi deploy SmolDocling su **infra adeguata** (NON il box staging 8GB — resize/nodo dedicato, DC-E); thin endpoint `POST /extract-image` per i crop (DC-G ✅); bbox via `load_from_doctags(images=None)` → [0,1] top-left (§5ter, no parsing manuale) | C | L | SP2, DC-E (infra), DC-G |

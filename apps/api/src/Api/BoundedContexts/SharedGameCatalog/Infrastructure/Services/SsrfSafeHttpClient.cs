@@ -1,4 +1,5 @@
 using System.Net;
+using Api.SharedKernel.Infrastructure.Http;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
@@ -76,8 +77,16 @@ internal sealed class SsrfSafeHttpClient
 
     /// <summary>
     /// Validates that the URL does not resolve to a private or reserved IP address.
+    /// <para>
+    /// PRIVATE (issue #3495 fix 3/N): this pre-connect DNS check is inherently TOCTOU
+    /// (DNS-rebinding). It is NOT a security boundary for live egress — the connect-pin
+    /// (<see cref="Api.SharedKernel.Infrastructure.Http.SsrfPinnedConnect"/>, applied via
+    /// <c>ConfigureSsrfPin</c>) is. It survives only as an internal fail-fast pre-check for the
+    /// not-yet-wired <see cref="DownloadPdfAsync"/> path; when that path is integrated into the
+    /// DocumentProcessing BC its HttpClient MUST be registered with the pin.
+    /// </para>
     /// </summary>
-    internal static async Task ValidateResolvedIpAsync(string url, CancellationToken ct)
+    private static async Task ValidateResolvedIpAsync(string url, CancellationToken ct)
     {
         var uri = new Uri(url);
         var addresses = await Dns.GetHostAddressesAsync(uri.Host, ct).ConfigureAwait(false);

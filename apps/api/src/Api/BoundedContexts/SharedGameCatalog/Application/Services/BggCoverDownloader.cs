@@ -34,14 +34,15 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
             return null;
         }
 
-        // SSRF guard (#2655 finding #10): only fetch HTTPS URLs that resolve to public IPs.
-        // Fails closed — an invalid scheme or a private/reserved target aborts the download.
+        // SSRF guard: reject non-HTTPS / malformed URLs up front (fail-fast). The public-IP
+        // guarantee is enforced at connect time by the SSRF connect-pin on this client's handler
+        // (ConfigureSsrfPin, #3495) — which, unlike a pre-connect DNS check, is not TOCTOU: every
+        // connection (and each redirect hop) dials only a validated public address.
         try
         {
             SsrfSafeHttpClient.ValidateUrlScheme(remoteImageUrl);
-            await SsrfSafeHttpClient.ValidateResolvedIpAsync(remoteImageUrl, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        catch (ArgumentException ex)
         {
             _logger.LogWarning(
                 ex,

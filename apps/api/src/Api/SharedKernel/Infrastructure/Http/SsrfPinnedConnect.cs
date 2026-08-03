@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 
-namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+namespace Api.SharedKernel.Infrastructure.Http;
 
 /// <summary>
 /// SSRF-safe connect pin (issue #3495, findings C1/C2/H4). Used as a

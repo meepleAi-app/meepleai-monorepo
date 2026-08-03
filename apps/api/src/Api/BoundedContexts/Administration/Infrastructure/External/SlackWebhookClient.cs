@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Helpers;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.External;
@@ -46,19 +45,16 @@ internal sealed class SlackWebhookClient : ISlackWebhookClient
             return new SlackSendResult(false, "Webhook URL is not a valid absolute URI.");
         }
 
-        // SSRF guard (#2655 finding #11): a compromised/misconfigured webhook URL must not be able
-        // to reach internal services or the cloud metadata endpoint. Only HTTPS URLs resolving to
-        // public IPs are allowed. The response message stays generic (no resolved IP) and the URL is
-        // never logged (it embeds the webhook secret).
-        try
+        // SSRF guard (#2655 finding #11 / #3495 fix 3/N): reject non-HTTPS schemes up front, then
+        // let the SSRF connect-pin on this client's handler (ConfigureSsrfPin) enforce the public-IP
+        // guarantee at connect time. The pin — unlike a pre-connect DNS check — is not TOCTOU: every
+        // connection (and redirect hop) dials only a validated public address, so a compromised or
+        // misconfigured webhook cannot reach internal services or the cloud metadata endpoint. The
+        // URL is never logged (it embeds the webhook secret).
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
         {
-            SsrfSafeHttpClient.ValidateUrlScheme(webhookUrl);
-            await SsrfSafeHttpClient.ValidateResolvedIpAsync(webhookUrl, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
-        {
-            _logger.LogWarning(ex, "Slack webhook blocked by SSRF guard");
-            return new SlackSendResult(false, "Webhook URL is not allowed (must be HTTPS to a public host).");
+            _logger.LogWarning("Slack webhook blocked by SSRF guard: non-HTTPS scheme");
+            return new SlackSendResult(false, "Webhook URL is not allowed (must be HTTPS).");
         }
 
         var payload = BuildPayload(message);

@@ -24,18 +24,24 @@ public sealed class SlackWebhookClientPinIntegrationTests
     private sealed class StubDnsResolver : IDnsResolver
     {
         private readonly IPAddress _address;
+        public int ResolveCalls { get; private set; }
+
         public StubDnsResolver(string ip) => _address = IPAddress.Parse(ip);
 
         public Task<IReadOnlyList<IPAddress>> ResolveAsync(string host, CancellationToken ct)
-            => Task.FromResult<IReadOnlyList<IPAddress>>(new[] { _address });
+        {
+            ResolveCalls++;
+            return Task.FromResult<IReadOnlyList<IPAddress>>(new[] { _address });
+        }
     }
 
     [Fact]
     public async Task Slack_WebhookResolvingToPrivateIp_FailsClosedAtConnectPin()
     {
+        var dns = new StubDnsResolver("10.0.0.5");
         var services = new ServiceCollection();
         // Registered BEFORE the seam so its TryAddSingleton<IDnsResolver> does not override this stub.
-        services.AddSingleton<IDnsResolver>(new StubDnsResolver("10.0.0.5"));
+        services.AddSingleton<IDnsResolver>(dns);
         AdministrationServiceExtensions.AddSlackWebhookClientForTests(services);
         using var provider = services.BuildServiceProvider();
 
@@ -49,5 +55,10 @@ public sealed class SlackWebhookClientPinIntegrationTests
             CancellationToken.None);
 
         result.Success.Should().BeFalse("the SSRF connect-pin must block a private-resolving webhook host");
+        // The stub is consulted ONLY by the pin's ConnectCallback — a non-zero count proves
+        // ConfigureSsrfPin is actually wired. Without the pin the default handler would do its own
+        // DNS (8.8.8.8, public) and never touch this stub, so this assertion fails deterministically
+        // if the pin is ever silently dropped from AddSlackWebhookClient.
+        dns.ResolveCalls.Should().BeGreaterThan(0, "the connect-pin must consult the injected resolver");
     }
 }

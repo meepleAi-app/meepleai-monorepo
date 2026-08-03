@@ -25,19 +25,25 @@ public sealed class BggCoverDownloaderPinIntegrationTests
     private sealed class StubDnsResolver : IDnsResolver
     {
         private readonly IPAddress _address;
+        public int ResolveCalls { get; private set; }
+
         public StubDnsResolver(string ip) => _address = IPAddress.Parse(ip);
 
         public Task<IReadOnlyList<IPAddress>> ResolveAsync(string host, CancellationToken ct)
-            => Task.FromResult<IReadOnlyList<IPAddress>>(new[] { _address });
+        {
+            ResolveCalls++;
+            return Task.FromResult<IReadOnlyList<IPAddress>>(new[] { _address });
+        }
     }
 
     [Fact]
     public async Task Bgg_CoverHostResolvingToPrivateIp_FailsClosedWithoutUploading()
     {
+        var dns = new StubDnsResolver("169.254.169.254"); // cloud metadata endpoint
         var pipeline = new Mock<IBggCoverUploadPipeline>();
         var services = new ServiceCollection();
         // Registered BEFORE the seam so its TryAddSingleton<IDnsResolver> does not override this stub.
-        services.AddSingleton<IDnsResolver>(new StubDnsResolver("169.254.169.254")); // cloud metadata endpoint
+        services.AddSingleton<IDnsResolver>(dns);
         services.AddSingleton(pipeline.Object);
         SharedGameCatalogServiceExtensions.AddBggCoverDownloaderForTests(services);
         using var provider = services.BuildServiceProvider();
@@ -53,5 +59,10 @@ public sealed class BggCoverDownloaderPinIntegrationTests
         pipeline.Verify(
             p => p.UploadAsync(It.IsAny<int>(), It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        // The stub is consulted ONLY by the pin's ConnectCallback — a non-zero count proves
+        // ConfigureSsrfPin is actually wired. Without the pin the default handler would do its own
+        // DNS (8.8.8.8, public) and never touch this stub, so this assertion fails deterministically
+        // if the pin is ever silently dropped from AddBggCoverDownloader.
+        dns.ResolveCalls.Should().BeGreaterThan(0, "the connect-pin must consult the injected resolver");
     }
 }

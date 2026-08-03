@@ -20,15 +20,21 @@ internal static class SsrfPinnedHttpClientBuilderExtensions
     /// Configures the client's primary handler as a <see cref="SocketsHttpHandler"/> whose
     /// <see cref="SocketsHttpHandler.ConnectCallback"/> pins to the validated address. Requires an
     /// <see cref="IDnsResolver"/> to be registered in the same container.
+    /// <para>
+    /// <paramref name="allowAutoRedirect"/> defaults to <see langword="true"/> for fixed-host sinks
+    /// (BGG/Wikidata/Commons/Slack), where every ≤5 auto-redirect hop is re-pinned at connect. The
+    /// arbitrary-URL manual sink (issue #3495 fix 5/N) passes <see langword="false"/> so it can follow
+    /// redirects itself through an HTTPS-only scheme gate the connect-pin cannot express.
+    /// </para>
     /// </summary>
-    public static IHttpClientBuilder ConfigureSsrfPin(this IHttpClientBuilder builder)
+    public static IHttpClientBuilder ConfigureSsrfPin(this IHttpClientBuilder builder, bool allowAutoRedirect = true)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        return builder.ConfigurePrimaryHttpMessageHandler(static sp => new SocketsHttpHandler
+        return builder.ConfigurePrimaryHttpMessageHandler(sp => new SocketsHttpHandler
         {
             ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>()),
-            AllowAutoRedirect = true,
+            AllowAutoRedirect = allowAutoRedirect,
             MaxAutomaticRedirections = 5,
         });
     }

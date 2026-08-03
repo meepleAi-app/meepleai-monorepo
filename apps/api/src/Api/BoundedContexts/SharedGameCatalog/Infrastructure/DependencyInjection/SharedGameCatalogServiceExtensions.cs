@@ -203,6 +203,12 @@ internal static class SharedGameCatalogServiceExtensions
         // request and each of the ≤5 auto-redirect hops).
         AddBggCoverDownloader(services);
 
+        // #3495 fix 5/N: the arbitrary-URL manual/PDF download client (SsrfSafeHttpClient) — the
+        // prerequisite egress client for #3470 Slice 3. Pinned like the cover clients, but with
+        // AllowAutoRedirect=false so the client follows redirects itself through an HTTPS-only
+        // per-hop scheme gate (the pin only re-checks the IP). 30s timeout accommodates larger PDFs.
+        AddSsrfSafeHttpClient(services);
+
         // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
         // aggregator, and Quartz CatalogSeedFetchJob.
         RegisterCatalogSeedProviders(services);
@@ -398,6 +404,19 @@ internal static class SharedGameCatalogServiceExtensions
         .ConfigureSsrfPin();
 
     /// <summary>
+    /// Issue #3495 fix 5/N — registers the hardened arbitrary-URL download client
+    /// (<see cref="SsrfSafeHttpClient"/>, the #3470 Slice 3 prerequisite) with the SSRF connect-pin.
+    /// <c>allowAutoRedirect: false</c> so the client follows redirects manually through an HTTPS-only
+    /// per-hop scheme gate — the connect-pin re-validates the IP of each hop but not the scheme.
+    /// </summary>
+    private static void AddSsrfSafeHttpClient(IServiceCollection services) =>
+        services.AddHttpClient<SsrfSafeHttpClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .ConfigureSsrfPin(allowAutoRedirect: false);
+
+    /// <summary>
     /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned BGG cover-download client so
     /// a DI-resolution test can prove a private-resolving cover host fails closed at the connect-pin.
     /// The caller MUST register an <see cref="IBggCoverUploadPipeline"/> + <see cref="IDnsResolver"/>
@@ -408,6 +427,19 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddLogging();
         services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
         AddBggCoverDownloader(services);
+    }
+
+    /// <summary>
+    /// Test seam (issue #3495 fix 5/N): registers ONLY the SSRF-pinned arbitrary-URL client
+    /// (<see cref="SsrfSafeHttpClient"/>) so a DI-resolution test can prove a private-resolving host
+    /// fails closed at the connect-pin. The caller MUST register an <see cref="IDnsResolver"/> on the
+    /// same collection before resolving to override the <c>TryAddSingleton</c> default.
+    /// </summary>
+    internal static void AddSsrfSafeHttpClientForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        AddSsrfSafeHttpClient(services);
     }
 
     private static BggCoverUploadPipeline BuildBggCoverUploadPipeline(

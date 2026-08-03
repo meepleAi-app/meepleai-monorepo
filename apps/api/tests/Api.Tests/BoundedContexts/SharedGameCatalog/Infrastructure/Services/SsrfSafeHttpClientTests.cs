@@ -56,53 +56,119 @@ public class SsrfSafeHttpClientTests
 
     #endregion
 
-    #region IsPrivateOrReserved Tests
+    // IsPrivateOrReserved tests removed with the method (#3495 fix 5/N): the pre-connect DNS
+    // check was TOCTOU and is retired in favor of the connect-pin (SsrfPinnedConnect), whose
+    // IANA IP policy is covered by SsrfPolicyTests. The IP boundary is no longer this class's.
 
-    [Theory]
-    [InlineData("127.0.0.1")]       // Loopback
-    [InlineData("127.0.0.2")]       // Loopback range
-    [InlineData("10.0.0.1")]        // 10.0.0.0/8
-    [InlineData("10.255.255.255")]  // 10.0.0.0/8 end
-    [InlineData("172.16.0.1")]      // 172.16.0.0/12 start
-    [InlineData("172.31.255.255")]  // 172.16.0.0/12 end
-    [InlineData("192.168.0.1")]     // 192.168.0.0/16
-    [InlineData("192.168.255.255")] // 192.168.0.0/16 end
-    [InlineData("169.254.0.1")]     // Link-local / AWS metadata
-    [InlineData("169.254.169.254")] // AWS metadata endpoint
-    [InlineData("0.0.0.0")]         // 0.0.0.0/8
-    public void IsPrivateOrReserved_PrivateIp_ShouldReturnTrue(string ipStr)
+    #region Redirect / scheme / size-cap tests (#3495 fix 5/N)
+
+    private static HttpResponseMessage Redirect(HttpStatusCode code, string location)
     {
-        var ip = IPAddress.Parse(ipStr);
+        var r = new HttpResponseMessage(code);
+        r.Headers.Location = new Uri(location, UriKind.RelativeOrAbsolute);
+        return r;
+    }
 
-        SsrfSafeHttpClient.IsPrivateOrReserved(ip).Should().BeTrue();
+    private static HttpResponseMessage Pdf() => new(HttpStatusCode.OK)
+    {
+        Content = new ByteArrayContent(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\nok")),
+    };
+
+    [Fact]
+    public async Task DownloadPdfAsync_FollowsHttpsRedirect_ToFinalPayload()
+    {
+        using var handler = new SequenceHttpMessageHandler(
+            _ => Redirect(HttpStatusCode.Found, "https://cdn.example/final.pdf"),
+            _ => Pdf());
+        using var httpClient = new HttpClient(handler);
+        var sut = new SsrfSafeHttpClient(httpClient);
+
+        var result = await sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+
+        using var reader = new StreamReader(result);
+        (await reader.ReadToEndAsync()).Should().StartWith("%PDF");
+        handler.RequestedUris.Should().HaveCount(2);
+        handler.RequestedUris[1].Should().Be(new Uri("https://cdn.example/final.pdf"));
     }
 
     [Theory]
-    [InlineData("8.8.8.8")]         // Google DNS
-    [InlineData("1.1.1.1")]         // Cloudflare DNS
-    [InlineData("104.18.32.7")]     // Public IP
-    [InlineData("172.15.255.255")]  // Just outside 172.16.0.0/12
-    [InlineData("172.32.0.0")]      // Just outside 172.16.0.0/12
-    [InlineData("192.167.0.1")]     // Not 192.168.x.x
-    public void IsPrivateOrReserved_PublicIp_ShouldReturnFalse(string ipStr)
+    [InlineData("http://cdn.example/final.pdf")]     // https → http downgrade
+    [InlineData("file:///etc/passwd")]                // scheme downgrade to file
+    [InlineData("gopher://internal/x")]               // exotic scheme
+    public async Task DownloadPdfAsync_RejectsSchemeDowngradeOnRedirect(string location)
     {
-        var ip = IPAddress.Parse(ipStr);
+        using var handler = new SequenceHttpMessageHandler(_ => Redirect(HttpStatusCode.Found, location));
+        using var httpClient = new HttpClient(handler);
+        var sut = new SsrfSafeHttpClient(httpClient);
 
-        SsrfSafeHttpClient.IsPrivateOrReserved(ip).Should().BeFalse();
+        var act = () => sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>()
+            .WithMessage("Only HTTPS URLs are allowed*");
     }
 
     [Fact]
-    public void IsPrivateOrReserved_IPv6Loopback_ShouldReturnTrue()
+    public async Task DownloadPdfAsync_RejectsRedirectLoop()
     {
-        SsrfSafeHttpClient.IsPrivateOrReserved(IPAddress.IPv6Loopback).Should().BeTrue();
+        using var handler = new SequenceHttpMessageHandler(
+            _ => Redirect(HttpStatusCode.Found, "https://example.com/rules.pdf")); // → itself
+        using var httpClient = new HttpClient(handler);
+        var sut = new SsrfSafeHttpClient(httpClient);
+
+        var act = () => sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*loop*");
     }
 
     [Fact]
-    public void IsPrivateOrReserved_IPv6LinkLocal_ShouldReturnTrue()
+    public async Task DownloadPdfAsync_RejectsTooManyRedirects()
     {
-        var ip = IPAddress.Parse("fe80::1");
+        var n = 0;
+        using var handler = new SequenceHttpMessageHandler(
+            _ => Redirect(HttpStatusCode.Found, $"https://example.com/hop{++n}.pdf"));
+        using var httpClient = new HttpClient(handler);
+        var sut = new SsrfSafeHttpClient(httpClient);
 
-        SsrfSafeHttpClient.IsPrivateOrReserved(ip).Should().BeTrue();
+        var act = () => sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*maximum*redirects*");
+    }
+
+    [Fact]
+    public async Task FetchWithLimitAsync_AbortsMidStreamOverCeiling()
+    {
+        // 2 KB body against a 1 KB ceiling → must throw before buffering the whole payload.
+        var body = new byte[2048];
+        using var handler = new SequenceHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new ByteArrayContent(body),
+        });
+        using var httpClient = new HttpClient(handler);
+        var sut = new SsrfSafeHttpClient(httpClient);
+
+        var act = () => sut.FetchWithLimitAsync("https://example.com/blob", 1024, CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*exceeds*");
+    }
+
+    private sealed class SequenceHttpMessageHandler : HttpMessageHandler
+    {
+        private readonly Queue<Func<HttpRequestMessage, HttpResponseMessage>> _responders;
+        public List<Uri> RequestedUris { get; } = new();
+
+        public SequenceHttpMessageHandler(params Func<HttpRequestMessage, HttpResponseMessage>[] responders)
+            => _responders = new Queue<Func<HttpRequestMessage, HttpResponseMessage>>(responders);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestedUris.Add(request.RequestUri!);
+            // Reuse the last responder once the queue is down to one (steady-state redirect/payload).
+            var responder = _responders.Count > 1 ? _responders.Dequeue() : _responders.Peek();
+            return Task.FromResult(responder(request));
+        }
     }
 
     #endregion

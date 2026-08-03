@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "_comment": "Epic #3338 WP3 extraction-quality regression guard. Per-game title-health (TitleHealthMetric over each shared game's distinct text_chunks.Heading), captured from the STAGING corpus via GET /api/v1/admin/kb/title-health. Asserted by .github/workflows/title-health-staging.yml (SSH-fetch from staging → scripts/title-health-assert.sh --current-file). It fails a run if a baselined game's band DOWNGRADES (green→yellow/red, yellow→red), its plausibleFraction drops by more than `fractionRegressionTolerance`, or a baselined game vanishes. New (unbaselined) games are a NOTICE, never a FAIL. Runs against STAGING (not the CI seed snapshot) because the snapshot is Docnet-extracted = headingless; staging carries the heading-aware re-indexed corpus. `games` starts EMPTY → the gate SKIPs (dormant) until captured via workflow_dispatch (update_baseline=true). Because staging is not version-pinned, RE-CAPTURE after any deliberate re-index; the guard still catches unintended downgrades between captures. Docs: docs/for-developers/operations/2026-07-28-wp3-title-health-go-no-go.md.",
   "fractionRegressionTolerance": 0.05,
-  "capturedAt": "2026-07-30T11:58:56Z",
+  "capturedAt": "2026-08-03T14:57:25Z",
   "games": {
     "013e4db3-6550-4283-b9a0-8d673cc18a34": {
       "gameTitle": "7 Wonders",
@@ -20,21 +20,13 @@
       "canonicalCoverage": 3,
       "distinctHeadings": 119
     },
-    "03924dbd-f638-4eb8-bb93-71e694709501": {
-      "gameTitle": "A Feast for Odin",
-      "language": "en",
-      "band": "green",
-      "plausibleFraction": 0.9064,
-      "canonicalCoverage": 3,
-      "distinctHeadings": 203
-    },
     "5392922e-9102-4614-a972-58ec6bdb550d": {
       "gameTitle": "Aeon's End",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.877,
-      "canonicalCoverage": 5,
-      "distinctHeadings": 187
+      "plausibleFraction": 0.8796,
+      "canonicalCoverage": 9,
+      "distinctHeadings": 191
     },
     "5e657697-4c65-4002-8ab0-efa12aca0283": {
       "gameTitle": "Agricola",
@@ -64,9 +56,9 @@
       "gameTitle": "Ark Nova",
       "language": "en",
       "band": "yellow",
-      "plausibleFraction": 0.785,
-      "canonicalCoverage": 4,
-      "distinctHeadings": 107
+      "plausibleFraction": 0.787,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 108
     },
     "24ef490b-316f-4ce7-8cf8-0b2d6493682f": {
       "gameTitle": "Arkham Horror: The Card Game",
@@ -136,9 +128,9 @@
       "gameTitle": "Catan",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.8654,
-      "canonicalCoverage": 2,
-      "distinctHeadings": 104
+      "plausibleFraction": 0.8667,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 105
     },
     "58f9b3d2-cb02-40ec-a3bb-d1ff8b194990": {
       "gameTitle": "Century: Spice Road",
@@ -177,8 +169,8 @@
       "language": "en",
       "band": "green",
       "plausibleFraction": 1,
-      "canonicalCoverage": 1,
-      "distinctHeadings": 16
+      "canonicalCoverage": 3,
+      "distinctHeadings": 18
     },
     "d57a47e7-8b06-46e2-90fb-60c8105b27b9": {
       "gameTitle": "Concordia",
@@ -220,7 +212,7 @@
       "canonicalCoverage": 6,
       "distinctHeadings": 232
     },
-    "ba9df1b5-0b63-4a28-a42b-2aeec76058d1": {
+    "0f5e0d2f-4281-d76c-ceea-51c076a149b6": {
       "gameTitle": "Disney Villainous: The Worst Takes it All",
       "language": "en",
       "band": "green",
@@ -272,9 +264,9 @@
       "gameTitle": "Dune: Imperium - Uprising",
       "language": "en",
       "band": "yellow",
-      "plausibleFraction": 0.7692,
-      "canonicalCoverage": 1,
-      "distinctHeadings": 91
+      "plausibleFraction": 0.7717,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 92
     },
     "ac4559c5-29f2-44e8-b248-994b3811220f": {
       "gameTitle": "Eclipse: New Dawn for the Galaxy",
@@ -431,10 +423,10 @@
     "2676681f-7bd1-4d7f-b139-4f79a95337c9": {
       "gameTitle": "Hero Realms",
       "language": "en",
-      "band": "yellow",
-      "plausibleFraction": 0.7857,
-      "canonicalCoverage": 0,
-      "distinctHeadings": 28
+      "band": "green",
+      "plausibleFraction": 0.8,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 30
     },
     "e3c0e6a1-54b6-4d94-b064-6353cbc182d0": {
       "gameTitle": "Imperial Settlers",
@@ -491,14 +483,6 @@
       "plausibleFraction": 0.8,
       "canonicalCoverage": 0,
       "distinctHeadings": 5
-    },
-    "247ea37c-0bd0-4333-9f75-6ce62060efe1": {
-      "gameTitle": "Mage Knight Board Game",
-      "language": "en",
-      "band": "green",
-      "plausibleFraction": 0.8387,
-      "canonicalCoverage": 2,
-      "distinctHeadings": 93
     },
     "ea3a1053-cb7c-46ff-afc5-5d24ce3c50b2": {
       "gameTitle": "Maracaibo",
@@ -564,14 +548,6 @@
       "canonicalCoverage": 11,
       "distinctHeadings": 286
     },
-    "e045e05d-59c3-4a3b-96fa-85e7c88c560a": {
-      "gameTitle": "Orleans",
-      "language": "en",
-      "band": "green",
-      "plausibleFraction": 0.9528,
-      "canonicalCoverage": 2,
-      "distinctHeadings": 127
-    },
     "3597f07a-f665-429d-9431-55cccaf1c2a9": {
       "gameTitle": "Paladins of the West Kingdom",
       "language": "en",
@@ -600,17 +576,17 @@
       "gameTitle": "Pandemic Legacy: Season 1",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.9522,
-      "canonicalCoverage": 2,
-      "distinctHeadings": 293
+      "plausibleFraction": 0.9525,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 295
     },
     "57ef634c-d1b2-475e-ad7f-c00ffc9e7d6f": {
       "gameTitle": "Pandemic Legacy: Season 2",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.9115,
+      "plausibleFraction": 0.9162,
       "canonicalCoverage": 2,
-      "distinctHeadings": 192
+      "distinctHeadings": 191
     },
     "334e6e2b-6a29-4bc1-8ff6-ce0afce34173": {
       "gameTitle": "Patchwork",
@@ -688,9 +664,9 @@
       "gameTitle": "Roll Player",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.8571,
-      "canonicalCoverage": 6,
-      "distinctHeadings": 28
+      "plausibleFraction": 0.8621,
+      "canonicalCoverage": 7,
+      "distinctHeadings": 29
     },
     "95450369-09d7-4785-99b6-9a28ffdd9757": {
       "gameTitle": "SETI: Search for Extraterrestrial Intelligence",
@@ -715,14 +691,6 @@
       "plausibleFraction": 0.8482,
       "canonicalCoverage": 4,
       "distinctHeadings": 112
-    },
-    "d97655f3-0d72-4ad9-b9e5-832944818861": {
-      "gameTitle": "Skytear",
-      "language": "en",
-      "band": "green",
-      "plausibleFraction": 0.8368,
-      "canonicalCoverage": 2,
-      "distinctHeadings": 380
     },
     "bcea103d-b957-4b76-87b8-9453edb99405": {
       "gameTitle": "Slay the Spire: The Board Game",
@@ -752,9 +720,9 @@
       "gameTitle": "Splendor",
       "language": "it",
       "band": "green",
-      "plausibleFraction": 0.8571,
-      "canonicalCoverage": 2,
-      "distinctHeadings": 14
+      "plausibleFraction": 0.8667,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 15
     },
     "73fe33a4-672b-44b4-ac8a-a91a39c19639": {
       "gameTitle": "Spot it!",
@@ -792,17 +760,9 @@
       "gameTitle": "Sushi Go!",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.9355,
-      "canonicalCoverage": 0,
-      "distinctHeadings": 31
-    },
-    "06f7cd68-751e-4523-85ee-d6f64bd6b10b": {
-      "gameTitle": "Terra Mystica",
-      "language": "en",
-      "band": "green",
-      "plausibleFraction": 0.8687,
-      "canonicalCoverage": 11,
-      "distinctHeadings": 99
+      "plausibleFraction": 0.9412,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 34
     },
     "6ba11322-4dd9-46b8-8c86-d5c092c7a3bf": {
       "gameTitle": "Terraforming Mars",
@@ -860,14 +820,6 @@
       "canonicalCoverage": 2,
       "distinctHeadings": 57
     },
-    "fdfa50e0-70cb-42ed-ac3b-c6b807eeff75": {
-      "gameTitle": "Too Many Bones",
-      "language": "en",
-      "band": "green",
-      "plausibleFraction": 0.945,
-      "canonicalCoverage": 0,
-      "distinctHeadings": 109
-    },
     "512acb7a-4ad8-4d15-9613-298a3e506396": {
       "gameTitle": "Townsfolk Tussle",
       "language": "en",
@@ -920,9 +872,9 @@
       "gameTitle": "Wingspan",
       "language": "en",
       "band": "green",
-      "plausibleFraction": 0.902,
-      "canonicalCoverage": 0,
-      "distinctHeadings": 102
+      "plausibleFraction": 0.9029,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 103
     },
     "7e723f7f-7738-4b9a-a270-595d3cc12556": {
       "gameTitle": "Wingspan: Asia",

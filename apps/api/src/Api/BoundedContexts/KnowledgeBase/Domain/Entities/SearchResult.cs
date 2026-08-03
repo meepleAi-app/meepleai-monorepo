@@ -84,19 +84,6 @@ internal sealed class SearchResult : Entity<Guid>
     }
 
     /// <summary>
-    /// Creates a citation from this search result.
-    /// </summary>
-    public Citation ToCitation()
-    {
-        return new Citation(
-            documentId: VectorDocumentId,
-            pageNumber: PageNumber,
-            snippet: TextContent.Length > 200 ? TextContent[..200] + "..." : TextContent,
-            relevanceScore: RelevanceScore.Value
-        );
-    }
-
-    /// <summary>
     /// Checks if this result meets a minimum confidence threshold.
     /// </summary>
     public bool MeetsThreshold(double minScore)

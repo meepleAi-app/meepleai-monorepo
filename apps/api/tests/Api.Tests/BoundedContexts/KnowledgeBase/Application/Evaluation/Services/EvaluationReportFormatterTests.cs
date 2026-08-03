@@ -239,4 +239,50 @@ public class EvaluationReportFormatterTests
         metrics.TryGetProperty("citation_structural_validity", out _).Should().BeTrue();
         metrics.TryGetProperty("cited_sample_count", out _).Should().BeTrue();
     }
+
+    [Fact]
+    public void ToJson_EmitsPerSampleResults_ForPairedMcNemarHolm()
+    {
+        // Arrange — McNemar's paired test consumes a per-sample citation-correct binary
+        // (CitationMatched), keyed by sample_id so two runs can be paired sample-for-sample;
+        // an ungraded sample (no ExpectedCitations) must round-trip as JSON null so the offline
+        // test can exclude it from the pairing (null != false).
+        var sampleResults = new List<EvaluationSampleResult>
+        {
+            CreateSampleResult("s-001") with { CitationMatched = true, CitationStructuralValidity = 1.0 },
+            CreateSampleResult("s-002") with { CitationMatched = false, CitationStructuralValidity = 0.5 },
+            CreateSampleResult("s-003") // no ExpectedCitations -> CitationMatched stays null (ungraded)
+        };
+        var result = CreateResult(sampleResults);
+        var byLanguage = new Dictionary<string, EvaluationMetrics>(StringComparer.Ordinal)
+        {
+            ["en"] = EvaluationMetrics.Compute(sampleResults)
+        };
+
+        // Act
+        var json = EvaluationReportFormatter.ToJson(result, byLanguage);
+
+        // Assert — a top-level `samples` array with one entry per sample.
+        using var document = JsonDocument.Parse(json);
+        var samples = document.RootElement.GetProperty("samples");
+        samples.ValueKind.Should().Be(JsonValueKind.Array);
+        samples.GetArrayLength().Should().Be(3);
+
+        var byId = samples.EnumerateArray().ToDictionary(
+            e => e.GetProperty("sample_id").GetString()!,
+            e => e,
+            StringComparer.Ordinal);
+
+        // graded-true: the per-sample McNemar binary + carried structural validity + success flag.
+        byId["s-001"].GetProperty("citation_matched").GetBoolean().Should().BeTrue();
+        byId["s-001"].GetProperty("citation_structural_validity").GetDouble().Should().Be(1.0);
+        byId["s-001"].GetProperty("is_success").GetBoolean().Should().BeTrue();
+        byId["s-001"].TryGetProperty("answer_correctness", out _).Should().BeTrue();
+
+        // graded-false: distinct binary outcome (a discordant pair vs a true run drives McNemar).
+        byId["s-002"].GetProperty("citation_matched").GetBoolean().Should().BeFalse();
+
+        // ungraded: citation_matched round-trips as JSON null, distinguishable from false.
+        byId["s-003"].GetProperty("citation_matched").ValueKind.Should().Be(JsonValueKind.Null);
+    }
 }

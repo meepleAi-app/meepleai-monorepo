@@ -172,6 +172,17 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
         root.GetProperty("coverage").GetProperty("labeled").GetInt32().Should().Be(1);
         root.GetProperty("coverage").GetProperty("unlabeled").GetInt32().Should().Be(0);
         root.GetProperty("by_language").GetProperty("en").GetProperty("recall_at_10").GetDouble().Should().Be(1.0);
+
+        // Per-sample results (#3390 follow-up): the wire response carries one entry per sample so a
+        // paired McNemar/Holm analysis can be run offline. Assert the array + a graded entry's fields.
+        var samples = root.GetProperty("samples");
+        samples.ValueKind.Should().Be(JsonValueKind.Array);
+        samples.GetArrayLength().Should().Be(1);
+        var sample = samples[0];
+        sample.GetProperty("sample_id").GetString().Should().NotBeNullOrEmpty();
+        sample.GetProperty("is_success").GetBoolean().Should().BeTrue();
+        sample.TryGetProperty("citation_matched", out _).Should().BeTrue(
+            because: "the per-sample McNemar binary must be present (JSON null when the sample is ungraded)");
     }
 
     [Fact]

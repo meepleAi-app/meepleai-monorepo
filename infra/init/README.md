@@ -2,16 +2,14 @@
 
 ## Contenuto
 
-Script e file di inizializzazione per database, n8n workflows e altri servizi.
+Script e file di inizializzazione per database e altri servizi.
 
 ## Struttura
 
 ```
 init/
 ├── postgres-init.sql          Inizializzazione PostgreSQL (minimal)
-├── api-migrations-20251118.sql   Snapshot migrations API
-└── n8n/                       n8n workflows initialization
-    └── README.md              (vedi sottocartella)
+└── api-migrations-20251118.sql   Snapshot migrations API
 ```
 
 ## File di Inizializzazione
@@ -78,15 +76,6 @@ docker compose exec postgres psql -U meepleai -d meepleai -f /docker-entrypoint-
 cd apps/api/src/Api
 dotnet ef database update
 ```
-
-### n8n/
-
-Vedi `n8n/README.md` per dettagli su workflow initialization.
-
-**Contenuto**:
-- Workflow template import scripts
-- Credentials initialization
-- n8n configuration
 
 ## Workflow di Inizializzazione
 
@@ -372,7 +361,6 @@ dotnet ef database update
 
 ## Related Documentation
 
-- `n8n/README.md` - n8n workflows initialization
 - `../env/README.md` - Environment variables
 - `../../docs/02-development/database-migrations.md`
 - EF Core migrations: `apps/api/src/Api/Migrations/`

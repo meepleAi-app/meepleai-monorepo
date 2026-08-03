@@ -309,7 +309,6 @@ docker compose up -d
 # - jaeger: http://localhost:16686
 # - prometheus: http://localhost:9090
 # - grafana: http://localhost:3001
-# - n8n: http://localhost:5678
 ```
 
 **Option 2: Run Individually**

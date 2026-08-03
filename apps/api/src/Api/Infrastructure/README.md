@@ -15,16 +15,14 @@ Infrastructure/
 │   ├── DocumentProcessing/
 │   ├── GameManagement/
 │   ├── KnowledgeBase/
-│   ├── SystemConfiguration/
-│   └── WorkflowIntegration/
+│   └── SystemConfiguration/
 ├── EntityConfigurations/    Fluent API configurations (organizzate per bounded context)
 │   ├── Administration/
 │   ├── Authentication/
 │   ├── DocumentProcessing/
 │   ├── GameManagement/
 │   ├── KnowledgeBase/
-│   ├── SystemConfiguration/
-│   └── WorkflowIntegration/
+│   └── SystemConfiguration/
 ├── Security/                Security utilities (encryption, hashing, token management)
 ├── Telemetry/               OpenTelemetry, logging, metrics setup
 ├── MeepleAiDbContext.cs     EF Core DbContext principale
@@ -84,10 +82,6 @@ services.AddDbContext<MeepleAiDbContext>(options =>
 - `ExtractionResults`
 - `QualityReports`
 
-**WorkflowIntegration**:
-- `N8nConfigs`
-- `WorkflowExecutions`
-- `WorkflowErrors`
 
 **SystemConfiguration**:
 - `ConfigurationSettings`

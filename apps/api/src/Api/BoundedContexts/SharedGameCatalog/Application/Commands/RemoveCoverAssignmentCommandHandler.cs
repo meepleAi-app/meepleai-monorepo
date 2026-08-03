@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -11,20 +12,29 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// Epic #3470 — removes a context's cover assignment (resetting it to the resolver's
 /// implicit precedence) through the aggregate + reconcile path. Removing an absent
 /// assignment is an idempotent no-op; only a missing game is a 404.
+///
+/// Slice 2 (AC-6): evicts the read-model caches (list + detail) across replicas after
+/// the change so the reverted cover renders immediately instead of waiting for the TTL.
 /// </summary>
 internal sealed class RemoveCoverAssignmentCommandHandler : ICommandHandler<RemoveCoverAssignmentCommand, Unit>
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
     private readonly ILogger<RemoveCoverAssignmentCommandHandler> _logger;
 
     public RemoveCoverAssignmentCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
+        IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy cacheRetryPolicy,
         ILogger<RemoveCoverAssignmentCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -42,6 +52,10 @@ internal sealed class RemoveCoverAssignmentCommandHandler : ICommandHandler<Remo
 
         await _repository.ReconcileCoverAssignmentsAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await CoverCacheInvalidation
+            .EvictReadModelAsync(_cache, _cacheRetryPolicy, command.GameId, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Removed cover assignment for {Context} on game {GameId} by {AdminId}",

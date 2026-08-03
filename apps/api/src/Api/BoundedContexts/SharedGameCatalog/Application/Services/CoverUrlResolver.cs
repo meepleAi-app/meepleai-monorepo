@@ -167,8 +167,27 @@ internal static class CoverUrlResolver
     /// Metric invariant (Issue #2123): exactly one <see cref="MeepleAiMetrics.CoverResolution"/>
     /// event per call — the override emits its pinned-source tag on a win; on a
     /// fall-through the single event comes from <see cref="ResolvePublicAsync"/>.
+    ///
+    /// Epic #3470 (Slice 2): delegates to <see cref="ResolveForContextWithSourceAsync"/>
+    /// so per-context render surfaces that also need the winning source (attribution)
+    /// share one code path and one metric emission.
     /// </summary>
     public static async Task<string?> ResolveForContextAsync(
+        SharedGameEntity sharedGame,
+        CoverContext context,
+        IBlobStorageService blobStorage) =>
+        (await ResolveForContextWithSourceAsync(sharedGame, context, blobStorage).ConfigureAwait(false)).Url;
+
+    /// <summary>
+    /// Source-aware variant of <see cref="ResolveForContextAsync"/> (epic #3470 Slice 2):
+    /// returns both the URL and the winning <see cref="CoverKind"/> so per-context render
+    /// surfaces (e.g. the detail Hero, the catalog Card) can credit the correct source in
+    /// their attribution footer instead of the implicit-precedence winner. On an override
+    /// win the Kind is the pinned source's kind; on a fall-through it is the implicit
+    /// precedence winner from <see cref="ResolvePublicWithSourceAsync"/>. Owns exactly one
+    /// <see cref="MeepleAiMetrics.CoverResolution"/> emission per call.
+    /// </summary>
+    public static async Task<ResolvedCover> ResolveForContextWithSourceAsync(
         SharedGameEntity sharedGame,
         CoverContext context,
         IBlobStorageService blobStorage)
@@ -186,16 +205,16 @@ internal static class CoverUrlResolver
             if (overrideUrl is not null)
             {
                 EmitResolution(SourceTagFor(assignment.Source));
-                return overrideUrl;
+                return new ResolvedCover(overrideUrl, assignment.Source.ToCoverKind());
             }
             // Override present but unresolvable (crop stale AND base key
             // absent/unreachable). Intentionally NO metric emission here — the
-            // ResolvePublicAsync call below emits exactly one CoverResolution event
-            // for the winning implicit layer (or "placeholder"), preserving the
+            // ResolvePublicWithSourceAsync call below emits exactly one CoverResolution
+            // event for the winning implicit layer (or "placeholder"), preserving the
             // one-event-per-call invariant.
         }
 
-        return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);
+        return await ResolvePublicWithSourceAsync(sharedGame, blobStorage).ConfigureAwait(false);
     }
 
     /// <summary>

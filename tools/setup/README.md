@@ -37,12 +37,6 @@ bash tools/setup/setup-test-environment.sh --help
 **Who:** Repository admin (run once)
 **When:** Repository initialization
 
-### 🔄 **setup-n8n-service-account.ps1**
-**Purpose:** Create service account for n8n workflow automation
-**Usage:** `.\tools\setup\setup-n8n-service-account.ps1`
-**Who:** DevOps team
-**When:** n8n integration setup
-
 ### 📦 **.dotnet-install.sh**
 **Purpose:** Official Microsoft .NET SDK installer script
 **Usage:** `bash tools/setup/.dotnet-install.sh --version 9.0`

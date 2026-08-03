@@ -371,12 +371,10 @@ services:
   alertmanager:
     restart: always
 
-  # n8n removed from staging (#2796): the WorkflowIntegration webhook client is
-  # disabled by default (N8n:IsEnabled=false, never set true in staging), so no
-  # GameNight webhooks were ever firing. The 1.62GB image + always-on container
-  # were pure disk cost on the CAX21. Base compose still defines n8n under the
-  # `automation` profile for local dev; re-enable in staging by re-adding this
-  # block AND setting N8n:IsEnabled=true.
+  # n8n fully decommissioned: #2796 first removed it from staging (disabled by
+  # default, no webhooks firing, pure disk cost on the CAX21); the WorkflowIntegration
+  # bounded context + the n8n service were later removed from the codebase entirely.
+  # No n8n service exists in any compose file anymore.
 
 # Traefik service definition removed (PR #738, post CF Tunnel cutover, T18 Phase 6).
 # Edge is now Cloudflare Tunnel (cloudflared on VPS). For rollback see

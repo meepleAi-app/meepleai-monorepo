@@ -175,7 +175,6 @@ internal static class AuthenticationServiceExtensions
         services.Configure<AlertingConfiguration>(configuration.GetSection("Alerting"));
         services.AddScoped<IAlertingService, AlertingService>();
         services.AddScoped<IAlertChannel, EmailAlertChannel>();
-        services.AddScoped<IAlertChannel, SlackAlertChannel>();
         services.AddScoped<IAlertChannel, PagerDutyAlertChannel>();
 
         return services;

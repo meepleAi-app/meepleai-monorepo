@@ -6,9 +6,9 @@ namespace Api.BoundedContexts.Administration.Infrastructure.External;
 /// Client abstraction for Slack incoming webhooks used by the alerting subsystem
 /// (Issue #1840 — SP5 F4-C7 Alerts re-skin).
 ///
-/// <para>This client is intentionally distinct from the legacy
-/// <see cref="Api.Services.SlackAlertChannel"/> (OPS-07) which is statically
-/// configured via <c>AlertingConfiguration:Slack</c>. The new client accepts
+/// <para>This client superseded the legacy IAlertChannel-based Slack alert
+/// channel (OPS-07, removed) which was statically configured via
+/// <c>AlertingConfiguration:Slack</c>. This client accepts
 /// the webhook URL as an argument so the URL can come from the
 /// <c>AlertChannel</c> aggregate (admin-configurable per channel) and so that
 /// the test-connection endpoint can probe arbitrary URLs without mutating
@@ -42,7 +42,7 @@ internal interface ISlackWebhookClient
 
 /// <summary>
 /// Minimal Slack message payload. Mirrors the legacy
-/// <c>BuildSlackPayload</c> shape from <see cref="Api.Services.SlackAlertChannel"/>
+/// <c>BuildSlackPayload</c> shape from the removed OPS-07 Slack alert channel
 /// but exposes only the fields the alerting subsystem needs.
 /// </summary>
 internal sealed record SlackMessage(

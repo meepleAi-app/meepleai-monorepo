@@ -31,7 +31,6 @@ import {
   ServerIcon,
   DatabaseIcon,
   BoxIcon,
-  PackageIcon,
   DownloadIcon,
   MailIcon,
   FlaskConicalIcon,
@@ -387,11 +386,6 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         href: '/admin/services',
         label: 'Services',
         icon: BoxIcon,
-      },
-      {
-        href: '/admin/n8n-templates',
-        label: 'n8n Templates',
-        icon: PackageIcon,
       },
       {
         href: '/admin/bulk-export',

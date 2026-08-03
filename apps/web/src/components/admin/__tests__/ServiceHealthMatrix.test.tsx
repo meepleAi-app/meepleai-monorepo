@@ -58,13 +58,12 @@ describe('ServiceHealthMatrix', () => {
       createMockService('postgres', 'Healthy', 15300),
       createMockService('redis', 'Healthy', 900),
       createMockService('pgvector', 'Healthy', 25000),
-      createMockService('n8n', 'Healthy', 350000),
     ];
 
     render(<ServiceHealthMatrix services={services} locale="it" />);
 
     const cards = screen.getAllByRole('listitem');
-    expect(cards).toHaveLength(4);
+    expect(cards).toHaveLength(3);
   });
 
   // ==================== Loading State ====================
@@ -185,7 +184,7 @@ describe('ServiceHealthMatrix', () => {
   it('displays response time in seconds for values >= 1000ms', () => {
     const services: ServiceHealthStatus[] = [
       {
-        serviceName: 'n8n',
+        serviceName: 'redis',
         state: 'Healthy',
         errorMessage: null,
         checkedAt: new Date().toISOString(),

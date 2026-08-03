@@ -72,10 +72,6 @@ const serviceDescriptions: Record<string, { it: string; en: string }> = {
     it: 'Cache distribuita e gestione sessioni',
     en: 'Distributed cache and session management',
   },
-  n8n: {
-    it: 'Motore di automazione workflow',
-    en: 'Workflow automation engine',
-  },
 };
 
 export function ServiceStatusCard({

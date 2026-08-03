@@ -464,47 +464,6 @@ describe('AdminClient - Issue #2340', () => {
     });
   });
 
-  // ========== N8N Workflow Templates Tests ==========
-
-  describe('getWorkflowTemplates', () => {
-    it('should fetch n8n workflow templates', async () => {
-      const mockTemplates = [{ id: 'wf_1', name: 'Email Notification' }];
-      vi.mocked(mockHttpClient.get).mockResolvedValue(mockTemplates);
-
-      const client = createAdminClient({ httpClient: mockHttpClient });
-      const result = await client.getWorkflowTemplates();
-
-      expect(result).toHaveLength(1);
-      expect(result[0].name).toBe('Email Notification');
-    });
-
-    it('should filter templates by category', async () => {
-      vi.mocked(mockHttpClient.get).mockResolvedValue([]);
-
-      const client = createAdminClient({ httpClient: mockHttpClient });
-      await client.getWorkflowTemplates('notifications');
-
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        expect.stringContaining('category=notifications'),
-        expect.any(Object)
-      );
-    });
-  });
-
-  describe('importWorkflowTemplate', () => {
-    it('should import n8n workflow template', async () => {
-      const mockResult = { workflowId: 'new_wf_1', status: 'imported' };
-      vi.mocked(mockHttpClient.post).mockResolvedValue(mockResult);
-
-      const client = createAdminClient({ httpClient: mockHttpClient });
-      const result = await client.importWorkflowTemplate('template_1', {
-        apiKey: 'key_123',
-      });
-
-      expect(result.workflowId).toBe('new_wf_1');
-    });
-  });
-
   // ========== Activity & Audit Tests ==========
 
   describe('getRecentActivity', () => {

@@ -581,10 +581,6 @@
       }
     }
   },
-  "n8n": {
-    "namePlaceholder": "Production n8n",
-    "title": "n8n Workflows"
-  },
   "nav": {
     "home": "Home"
   },

@@ -22,8 +22,8 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// These exercise behaviour that a unit test with an in-memory provider CANNOT: the SQL runs
 /// against the GENERATED <c>search_vector</c> column and a query-time
 /// <c>to_tsvector(&lt;cfg&gt;, "Content")</c>, so the schema must be built via the real EF
-/// migrations (<c>MigrateAsync</c>, not <c>EnsureCreated</c>) — the migration
-/// <c>20260713065129_RestoreSearchVectorColumns</c> creates the generated column + GIN index via
+/// migrations (<c>MigrateAsync</c>, not <c>EnsureCreated</c>) — the flattened
+/// <c>InitialCreate</c> baseline creates the generated column + GIN index via
 /// raw SQL that <c>EnsureCreated</c> would drop.
 /// </para>
 ///

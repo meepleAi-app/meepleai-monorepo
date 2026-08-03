@@ -21,17 +21,20 @@ internal sealed class RemoveCoverAssignmentCommandHandler : ICommandHandler<Remo
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
     private readonly ILogger<RemoveCoverAssignmentCommandHandler> _logger;
 
     public RemoveCoverAssignmentCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
         IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy cacheRetryPolicy,
         ILogger<RemoveCoverAssignmentCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -51,7 +54,7 @@ internal sealed class RemoveCoverAssignmentCommandHandler : ICommandHandler<Remo
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         await CoverCacheInvalidation
-            .EvictReadModelAsync(_cache, command.GameId, cancellationToken)
+            .EvictReadModelAsync(_cache, _cacheRetryPolicy, command.GameId, cancellationToken)
             .ConfigureAwait(false);
 
         _logger.LogInformation(

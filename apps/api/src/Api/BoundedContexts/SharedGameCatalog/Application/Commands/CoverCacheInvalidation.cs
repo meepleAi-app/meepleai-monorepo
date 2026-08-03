@@ -10,7 +10,9 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// instead of waiting for the 15min–2h HybridCache TTL.
 ///
 /// The literal tags mirror <c>SearchSharedGamesQueryHandler</c> (list) and
-/// <c>GetSharedGameByIdQueryHandler</c> (detail), and the invalidation pattern mirrors
+/// <c>GetSharedGameByIdQueryHandler</c> (detail). Each eviction runs through
+/// <see cref="ICacheInvalidationRetryPolicy"/> (issue #613) so a transient Redis blip
+/// is retried rather than silently leaving the L2 copy stale — mirroring
 /// <c>EnrichCatalogCoverCommandHandler</c>, the other cover-mutating command in this BC.
 /// </summary>
 internal static class CoverCacheInvalidation
@@ -19,15 +21,21 @@ internal static class CoverCacheInvalidation
 
     public static async Task EvictReadModelAsync(
         IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy retryPolicy,
         Guid gameId,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(retryPolicy);
 
-        // Cross-replica L1+L2 eviction via Redis Pub/Sub; falls back to local
-        // eviction when Redis is unreachable (see IHybridCacheService docs), so a
-        // transient Redis outage degrades to a per-node TTL wait rather than throwing.
-        await cache.RemoveByTagAcrossReplicasAsync(SearchGamesTag, cancellationToken).ConfigureAwait(false);
-        await cache.RemoveByTagAcrossReplicasAsync($"shared-game:{gameId}", cancellationToken).ConfigureAwait(false);
+        await retryPolicy.ExecuteAsync(
+            token => new ValueTask(cache.RemoveByTagAcrossReplicasAsync(SearchGamesTag, token)),
+            "shared-games.list",
+            cancellationToken).ConfigureAwait(false);
+
+        await retryPolicy.ExecuteAsync(
+            token => new ValueTask(cache.RemoveByTagAcrossReplicasAsync($"shared-game:{gameId}", token)),
+            "shared-games.detail",
+            cancellationToken).ConfigureAwait(false);
     }
 }

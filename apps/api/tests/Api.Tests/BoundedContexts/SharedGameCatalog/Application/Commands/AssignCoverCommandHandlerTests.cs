@@ -29,12 +29,22 @@ public sealed class AssignCoverCommandHandlerTests
     private readonly Mock<ISharedGameRepository> _repository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
+    private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+
+    public AssignCoverCommandHandlerTests()
+    {
+        // Passthrough: actually run the wrapped cache operation so the RemoveByTag*
+        // calls are exercised (mirrors the real retry policy on the happy path).
+        _cacheRetryPolicy
+            .Setup(p => p.ExecuteAsync(It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, ValueTask> op, string _, CancellationToken ct) => op(ct).AsTask());
+    }
 
     private AssignCoverCommandHandler CreateAssignHandler() =>
-        new(_repository.Object, _unitOfWork.Object, _cache.Object, NullLogger<AssignCoverCommandHandler>.Instance);
+        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object, NullLogger<AssignCoverCommandHandler>.Instance);
 
     private RemoveCoverAssignmentCommandHandler CreateRemoveHandler() =>
-        new(_repository.Object, _unitOfWork.Object, _cache.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
+        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
 
     private static SharedGame NewGame() => SharedGame.Create(
         "Catan", 1995, "desc", 3, 4, 90, 10, 2.5m, 7.8m,

@@ -480,7 +480,11 @@ internal static class SharedGameCatalogServiceExtensions
         // versa — separate handler instances per typed client.
         .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
             sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
-            clientName: "wikidata-sparql"));
+            clientName: "wikidata-sparql"))
+        // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
+        // ConfigureSsrfPin uses ConfigurePrimaryHttpMessageHandler (innermost), so the circuit-breaker
+        // delegating handler above stays outer (CB → pin), matching the Slack registration.
+        .ConfigureSsrfPin();
 
         // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
         // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
@@ -512,14 +516,22 @@ internal static class SharedGameCatalogServiceExtensions
         // breaker independently.
         .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
             sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
-            clientName: "commons-api"));
+            clientName: "commons-api"))
+        // #3495 follow-up: SSRF connect-pin. ConfigureSsrfPin sets AllowAutoRedirect=true, so the
+        // M8 invariant above (Special:FilePath 302 → upload.wikimedia.org MUST be auto-followed) still
+        // holds — and each redirect hop's host is independently re-resolved and SSRF-validated by the
+        // per-connection pin (upload.wikimedia.org is public → allowed). Do NOT add any other
+        // ConfigurePrimaryHttpMessageHandler here: it would override the pin.
+        .ConfigureSsrfPin();
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
             client.BaseAddress = new Uri(BggBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        })
+        // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
+        .ConfigureSsrfPin();
 
         // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
         // and "bgg" (fallback) explicitly — avoids relying on registration order.
@@ -535,6 +547,22 @@ internal static class SharedGameCatalogServiceExtensions
             var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
             return new CatalogSeedAggregator(wikidata, bgg, logger);
         });
+    }
+
+    /// <summary>
+    /// Test seam (issue #3495 follow-up): registers the catalog-seed external egress clients via the
+    /// REAL <see cref="RegisterCatalogSeedProviders"/> so a DI-resolution test can prove the SSRF
+    /// connect-pin is actually applied — resolving through the production registration guards against
+    /// the pin being silently dropped. Adds the ambient deps those clients need (logging, the
+    /// <see cref="IDnsResolver"/> seam, the Wikimedia rate limiter). Register a controlling
+    /// <see cref="IDnsResolver"/> BEFORE calling this to steer the pin (the TryAdd below won't override it).
+    /// </summary>
+    internal static void AddCatalogSeedProvidersForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        services.TryAddSingleton<IWikimediaRateLimiter, InMemoryWikimediaRateLimiter>();
+        RegisterCatalogSeedProviders(services);
     }
 
     /// <summary>

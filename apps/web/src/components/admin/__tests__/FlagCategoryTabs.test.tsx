@@ -23,7 +23,7 @@ describe('detectFlagCategory', () => {
     ['Features:EmbeddingService', 'ai'],
     ['Features:LlmRouting', 'ai'],
     ['Features:OAuthGoogle', 'integrations'],
-    ['Features:WebhookN8n', 'integrations'],
+    ['Features:WebhookSlack', 'integrations'],
     ['Features:SSO', 'integrations'],
     ['Features:MFA', 'security'],
     ['Features:RateLimitProtection', 'security'],

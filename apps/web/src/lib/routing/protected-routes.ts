@@ -35,7 +35,6 @@ export const PROTECTED_ROUTES = [
   '/hub',
   '/knowledge-base',
   '/library',
-  '/n8n',
   '/notifications',
   '/onboarding',
   '/pipeline-builder',

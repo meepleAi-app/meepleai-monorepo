@@ -504,11 +504,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         icon: ZapIcon,
       },
       {
-        href: '/admin/config/n8n',
-        label: 'n8n Workflows',
-        icon: ZapIcon,
-      },
-      {
         href: '/admin/ui-library',
         label: 'UI Library',
         icon: Palette,

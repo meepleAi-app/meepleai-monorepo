@@ -17,7 +17,7 @@ apps/web/
 │   │   ├── chat/page.tsx                # Chat experience (Zustand-powered)
 │   │   ├── upload/page.tsx              # PDF uploads + rulebook matcher
 │   │   ├── sessions/{page.tsx,history,[id]/page.tsx}
-│   │   └── ... (31 total route segments incl. board-game-ai/, chess/, versions/, n8n/, etc.)
+│   │   └── ... (30 total route segments incl. board-game-ai/, chess/, versions/, etc.)
 │   ├── pages/api/                       # API routes (health checks, legacy proxy endpoints)
 │   ├── components/                      # React components
 │   │   ├── ui/                          # Shadcn/UI primitives (CVA variants)

@@ -245,7 +245,11 @@ public sealed record SharedGameDetailDto(
     // when WikidataCoverLicense is non-null.
     string? WikidataCoverLicense = null,
     string? WikidataCoverAttribution = null,
-    string? WikidataCoverSourceUrl = null);
+    string? WikidataCoverSourceUrl = null,
+    // Epic #3470 Slice 2d (AC-2): cover resolved for the Social (OpenGraph) context,
+    // consumed by the FE OG meta (#3452). Falls through to the implicit precedence when
+    // no Social override is pinned, so it is never worse than CoverUrl.
+    string? SocialCoverUrl = null);
 
 /// <summary>
 /// Data transfer object for approval queue items.

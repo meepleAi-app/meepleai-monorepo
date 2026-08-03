@@ -203,6 +203,65 @@ public class GetSharedGameByIdQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ResolvesSocialCover_IndependentlyOfHero()
+    {
+        // Epic #3470 Slice 2d AC-2: the detail DTO exposes a Social cover (for OG meta)
+        // resolved for the Social context. A Social override must surface on SocialCoverUrl
+        // WITHOUT affecting the Hero cover (CoverUrl), which here has no override and so
+        // falls through to the implicit PDF precedence.
+        var game = SharedGame.Create(
+            "Catan", 1995, "Description", 3, 4, 90, 10, 2.5m, 7.8m,
+            "https://example.com/catan.jpg", "https://example.com/thumb.jpg",
+            GameRules.Create("Rules content", "en"), Guid.NewGuid(), 13);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+            .ReturnsAsync("https://r2/wiki-social.webp");
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+            .ReturnsAsync("https://r2/pdf.webp");
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = game.Id,
+            Title = "Catan",
+            Description = "desc",
+            Status = 1,
+            PdfCoverR2Key = "pdf-key",        // implicit precedence winner (Hero, no override)
+            WikidataCoverR2Key = "wiki-key",  // pinned by the Social override
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Context = CoverContext.Social,
+                    Source = CoverAssignmentSource.Wikidata,
+                    CreatedBy = Guid.NewGuid(),
+                },
+            },
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.ChangeTracker.Clear();
+
+        var handler = CreateHandler(db);
+
+        var result = await handler.Handle(new GetSharedGameByIdQuery(game.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.SocialCoverUrl.Should().Be(
+            "https://r2/wiki-social.webp",
+            "the Social override pins Wikidata for the OG image");
+        result.CoverUrl.Should().Be(
+            "https://r2/pdf.webp",
+            "the Hero cover has no override and must fall through to the implicit PDF precedence, unaffected by the Social override");
+    }
+
+    [Fact]
     public async Task Handle_WithGameWithoutRules_ReturnsNullRules()
     {
         // Arrange

@@ -405,6 +405,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // attribution unconditionally, even for a PDF/BGG-sourced cover).
         string? coverUrl = null;
         string? coverLicense = null, coverAttribution = null, coverSourceUrl = null;
+        string? socialCoverUrl = null;
         if (sharedGameEntity is not null)
         {
             var cover = await CoverUrlResolver
@@ -413,6 +414,13 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             coverUrl = cover.Url;
             (coverLicense, coverAttribution, coverSourceUrl) =
                 CoverAttribution.ForWinningSource(cover.Kind, sharedGameEntity);
+
+            // Epic #3470 Slice 2d (AC-2) — the Social-context cover feeds the FE OpenGraph
+            // meta (#3452). Independent of the Hero cover; falls through to the implicit
+            // precedence when no Social override is pinned.
+            socialCoverUrl = await CoverUrlResolver
+                .ResolveForContextAsync(sharedGameEntity, CoverContext.Social, _blobStorage)
+                .ConfigureAwait(false);
         }
 
         return new SharedGameDetailDto(
@@ -457,6 +465,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             // on the winning cover source; was emitted unconditionally from the aggregate).
             WikidataCoverLicense: coverLicense,
             WikidataCoverAttribution: coverAttribution,
-            WikidataCoverSourceUrl: coverSourceUrl);
+            WikidataCoverSourceUrl: coverSourceUrl,
+            SocialCoverUrl: socialCoverUrl);
     }
 }

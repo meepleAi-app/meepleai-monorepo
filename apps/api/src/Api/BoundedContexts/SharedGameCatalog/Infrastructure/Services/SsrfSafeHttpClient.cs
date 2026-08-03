@@ -1,16 +1,30 @@
 using System.Net;
-using Api.SharedKernel.Infrastructure.Http;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
 /// <summary>
-/// HTTP client wrapper that validates URLs against SSRF attacks before downloading.
-/// Blocks private/reserved IP ranges, non-HTTPS schemes, and oversized responses.
+/// Hardened egress client for the manual / arbitrary-URL download path (epic #3470 Slice 3
+/// prerequisite, issue #3495 fix 5/N).
+/// <para>
+/// The IP boundary is the connect-pin (<see cref="Api.SharedKernel.Infrastructure.Http.SsrfPinnedConnect"/>,
+/// applied to this client's <see cref="HttpClient"/> via <c>ConfigureSsrfPin(allowAutoRedirect: false)</c>):
+/// every connection resolves the host once and dials a validated public IP, closing DNS-rebinding
+/// and redirect-to-internal by construction. This class adds the remaining arbitrary-URL guards the
+/// pin cannot express: HTTPS-only scheme re-validated on EVERY hop (blocks a redirect that downgrades
+/// to <c>http/file/gopher</c> or points at a non-HTTP scheme — the pin only re-checks the IP), a
+/// bounded manual redirect follow with loop detection, and a mid-stream byte ceiling.
+/// </para>
+/// <para>
+/// Auto-redirect is DISABLED on the primary handler so 3xx responses surface here and are followed
+/// manually through the scheme gate — with <c>AllowAutoRedirect=true</c> the handler would follow a
+/// downgrade before this code could reject it.
+/// </para>
 /// </summary>
 internal sealed class SsrfSafeHttpClient
 {
     private readonly HttpClient _httpClient;
     private const long MaxPdfSizeBytes = 100 * 1024 * 1024; // 100MB
+    private const int MaxRedirectHops = 5;
 
     public SsrfSafeHttpClient(HttpClient httpClient)
     {
@@ -18,53 +32,104 @@ internal sealed class SsrfSafeHttpClient
     }
 
     /// <summary>
-    /// Downloads a PDF from the given URL after validating it is safe (HTTPS, public IP, valid PDF).
+    /// Downloads a PDF from the given URL through the hardened fetch path (HTTPS-only per hop,
+    /// bounded redirect follow, mid-stream 100MB ceiling, IP-pinned connection), then validates
+    /// the payload is a PDF.
     /// </summary>
-    /// <param name="url">The HTTPS URL to download the PDF from.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A seekable MemoryStream containing the PDF content.</returns>
-    /// <exception cref="ArgumentException">If the URL is invalid or not HTTPS.</exception>
-    /// <exception cref="InvalidOperationException">If the URL resolves to a private IP, the file is too large, or content is not a valid PDF.</exception>
+    /// <exception cref="ArgumentException">The URL (or a redirect target) is not an absolute HTTPS URL.</exception>
+    /// <exception cref="InvalidOperationException">Redirect loop / too many hops, oversize, or non-PDF content.</exception>
     public async Task<Stream> DownloadPdfAsync(string url, CancellationToken ct)
     {
-        ValidateUrlScheme(url);
-        await ValidateResolvedIpAsync(url, ct).ConfigureAwait(false);
+        var bytes = await FetchWithLimitAsync(url, MaxPdfSizeBytes, ct).ConfigureAwait(false);
 
-        // Dispose the response on every exit path: with ResponseHeadersRead it holds the live
-        // connection open until disposed. Disposing the response also disposes its content and
-        // the stream returned by ReadAsStreamAsync (the content owns that stream), so the source
-        // is fully released once this scope exits. The validated payload is copied into an
-        // independent MemoryStream before this method returns, so scope-exit disposal is safe.
-        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-
-        // Validate size from Content-Length header if available
-        if (response.Content.Headers.ContentLength > MaxPdfSizeBytes)
-            throw new InvalidOperationException($"PDF exceeds maximum size of {MaxPdfSizeBytes / (1024 * 1024)}MB");
-
-        // Owned by `response`; disposed together with it at scope exit (see comment above).
-        var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-
-        // Validate PDF magic bytes (%PDF)
-        var buffer = new byte[4];
-        var bytesRead = await stream.ReadAsync(buffer, ct).ConfigureAwait(false);
-        if (bytesRead < 4 || buffer[0] != 0x25 || buffer[1] != 0x50 || buffer[2] != 0x44 || buffer[3] != 0x46)
+        // Validate PDF magic bytes (%PDF).
+        if (bytes.Length < 4 || bytes[0] != 0x25 || bytes[1] != 0x50 || bytes[2] != 0x44 || bytes[3] != 0x46)
             throw new InvalidOperationException("Downloaded content is not a valid PDF file");
 
-        // Return a new stream that includes the magic bytes we already read
-        var memStream = new MemoryStream();
-        await memStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct).ConfigureAwait(false);
-        await stream.CopyToAsync(memStream, ct).ConfigureAwait(false);
-
-        if (memStream.Length > MaxPdfSizeBytes)
-            throw new InvalidOperationException($"PDF exceeds maximum size of {MaxPdfSizeBytes / (1024 * 1024)}MB");
-
-        memStream.Position = 0;
-        return memStream;
+        return new MemoryStream(bytes, writable: false);
     }
 
     /// <summary>
-    /// Validates that the URL uses the HTTPS scheme.
+    /// Hardened fetch shared by every arbitrary-URL sink on this client: validates the scheme on
+    /// the initial URL and on every redirect hop (HTTPS-only), follows up to
+    /// <see cref="MaxRedirectHops"/> redirects with loop detection, and reads the body under a
+    /// streamed <paramref name="maxBytes"/> ceiling (aborts at limit+1, before buffering the whole
+    /// payload). The connection-level IP validation is provided by the connect-pin. Returns the
+    /// fully-read, within-limit bytes; the response and its content stream are disposed on exit.
+    /// </summary>
+    internal async Task<byte[]> FetchWithLimitAsync(string url, long maxBytes, CancellationToken ct)
+    {
+        var current = ParseHttpsAbsolute(url);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+
+        // The initial request plus up to MaxRedirectHops redirect follows.
+        for (var hop = 0; hop <= MaxRedirectHops; hop++)
+        {
+            if (!visited.Add(current.AbsoluteUri))
+                throw new InvalidOperationException("Redirect loop detected");
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, current);
+            using var response = await _httpClient
+                .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)
+                .ConfigureAwait(false);
+
+            if (!IsRedirect(response.StatusCode))
+            {
+                response.EnsureSuccessStatusCode();
+
+                // Reject early on an advertised over-cap length; Content-Length is spoofable/absent
+                // (chunked), so the ceiling is ALSO enforced during the streamed read below.
+                if (response.Content.Headers.ContentLength > maxBytes)
+                    throw new InvalidOperationException($"Response exceeds the maximum size of {maxBytes / (1024 * 1024)}MB");
+
+                return await ReadWithCeilingAsync(response, maxBytes, ct).ConfigureAwait(false);
+            }
+
+            var location = response.Headers.Location
+                ?? throw new InvalidOperationException("Redirect response had no Location header");
+
+            // Resolve relative → absolute against the current URL, then RE-VALIDATE the scheme:
+            // an absolute http/file/gopher Location or a relative-to-non-http target is rejected
+            // here (the pin only re-checks the IP, not the scheme).
+            current = ParseHttpsAbsolute(new Uri(current, location).AbsoluteUri);
+        }
+
+        throw new InvalidOperationException($"Exceeded the maximum of {MaxRedirectHops} redirects");
+    }
+
+    private static async Task<byte[]> ReadWithCeilingAsync(HttpResponseMessage response, long maxBytes, CancellationToken ct)
+    {
+        using var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
+        using var buffer = new MemoryStream();
+
+        var chunk = new byte[81920];
+        long total = 0;
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct).ConfigureAwait(false)) > 0)
+        {
+            total += read;
+            if (total > maxBytes)
+                throw new InvalidOperationException($"Response exceeds the maximum size of {maxBytes / (1024 * 1024)}MB");
+
+            await buffer.WriteAsync(chunk.AsMemory(0, read), ct).ConfigureAwait(false);
+        }
+
+        return buffer.ToArray();
+    }
+
+    private static bool IsRedirect(HttpStatusCode code) => code is
+        HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther
+        or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect;
+
+    private static Uri ParseHttpsAbsolute(string url)
+    {
+        ValidateUrlScheme(url);
+        return new Uri(url, UriKind.Absolute);
+    }
+
+    /// <summary>
+    /// Validates that the URL is absolute and uses the HTTPS scheme. Applied to the initial URL and
+    /// re-applied to every redirect target.
     /// </summary>
     internal static void ValidateUrlScheme(string url)
     {
@@ -74,33 +139,4 @@ internal sealed class SsrfSafeHttpClient
         if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Only HTTPS URLs are allowed", nameof(url));
     }
-
-    /// <summary>
-    /// Validates that the URL does not resolve to a private or reserved IP address.
-    /// <para>
-    /// PRIVATE (issue #3495 fix 3/N): this pre-connect DNS check is inherently TOCTOU
-    /// (DNS-rebinding). It is NOT a security boundary for live egress — the connect-pin
-    /// (<see cref="Api.SharedKernel.Infrastructure.Http.SsrfPinnedConnect"/>, applied via
-    /// <c>ConfigureSsrfPin</c>) is. It survives only as an internal fail-fast pre-check for the
-    /// not-yet-wired <see cref="DownloadPdfAsync"/> path; when that path is integrated into the
-    /// DocumentProcessing BC its HttpClient MUST be registered with the pin.
-    /// </para>
-    /// </summary>
-    private static async Task ValidateResolvedIpAsync(string url, CancellationToken ct)
-    {
-        var uri = new Uri(url);
-        var addresses = await Dns.GetHostAddressesAsync(uri.Host, ct).ConfigureAwait(false);
-
-        foreach (var ip in addresses)
-        {
-            if (IsPrivateOrReserved(ip))
-                throw new InvalidOperationException($"URL resolves to blocked IP range: {ip}");
-        }
-    }
-
-    /// <summary>
-    /// Checks whether an IP address belongs to a private or reserved range. Delegates to the
-    /// IANA-driven <see cref="SsrfPolicy"/> classifier (issue #3495, finding H3).
-    /// </summary>
-    internal static bool IsPrivateOrReserved(IPAddress ip) => SsrfPolicy.IsBlocked(ip);
 }

@@ -4,7 +4,6 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
-using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.Services.Pdf;
@@ -119,13 +118,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
 
     private async Task<PagedResult<SharedGameDto>> ExecuteSearchAsync(SearchSharedGamesQuery query, CancellationToken cancellationToken)
     {
-        // Epic #3470 Slice 2: eager-load CoverAssignments so the per-context (Card)
-        // resolver can honor an admin override on each grid card; without the Include
-        // the assignment silently falls through to the implicit precedence. The
-        // projection below keeps `Game = g` (the full entity), so the Include is honored.
-        // Typed IQueryable (not the IIncludableQueryable that Include returns) so the
-        // subsequent `dbQuery = dbQuery.Where(...)` filter reassignments still compile.
-        IQueryable<SharedGameEntity> dbQuery = _context.SharedGames.AsNoTracking().Include(g => g.CoverAssignments);
+        var dbQuery = _context.SharedGames.AsNoTracking();
 
         // Default filter: Published games only (unless specific Status is requested)
         if (query.Status is null)
@@ -331,6 +324,12 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var projected = dbQuery.Select(g => new
         {
             Game = g,
+            // Epic #3470 Slice 2: project the per-context cover assignments explicitly.
+            // A bare `.Include(g => g.CoverAssignments)` is IGNORED once the query has a
+            // Select projection (EF Core "ignored includes"), so the Card resolver would
+            // never see the admin override. Projecting the collection here loads it; the
+            // materialization loop assigns it back onto `Game` before resolving.
+            Assignments = g.CoverAssignments.ToList(),
             // ToolkitsCount: per-user custom toolkits (excludes the read-only default
             // BR-02 from Issue #5144) for any approved Game linked to this SharedGame.
             ToolkitsCount = ctxToolkits.Count(t =>
@@ -420,6 +419,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var games = new List<SharedGameDto>(projected2.Count);
         foreach (var p in projected2)
         {
+            // Attach the separately-projected assignments (AsNoTracking does no fixup)
+            // so the context resolver can read them off the entity.
+            p.Game.CoverAssignments = p.Assignments;
+
             // Epic #3470 Slice 2 — catalog grid cards are the Card context: honor an
             // admin per-context override, else fall through to implicit precedence.
             // Source-aware so the card attribution follows the winning source.

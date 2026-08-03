@@ -55,5 +55,5 @@ Mechanism notes:
 
 ## Follow-ups
 - ✅ ~~Investigate the grounded-path structural_validity discrepancy~~ — done: fixed (PR #3517) and verified on staging (0.07 → 1.00). The dead-code twin of the same defect on the `/search` path (`SearchResult.ToCitation()`) was also removed (PR #3520).
-- Emit per-sample results from the eval endpoint to enable the full McNemar/Holm protocol.
+- ✅ ~~Emit per-sample results from the eval endpoint to enable the full McNemar/Holm protocol.~~ — done: the endpoint now emits a top-level `samples` array (PR #3523), and `tests/llm-eval/mcnemar_holm.py` (PR #3525) runs the paired McNemar + Holm-Bonferroni offline over the per-config JSONs (`--selftest` proves the statistics; run the endpoint once per config to generate inputs). This aggregate run (aggregate p + test-retest noise floor) predates the per-sample protocol; re-run per-config with the `samples` emission to apply it.
 - Re-baseline the live grounded path formally (this run supersedes #3477's legacy 0.286 as the live-path reference: ~0.50).

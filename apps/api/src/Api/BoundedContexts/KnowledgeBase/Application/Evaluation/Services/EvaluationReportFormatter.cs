@@ -140,7 +140,13 @@ internal static class EvaluationReportFormatter
             ByLanguage = byLanguage.ToDictionary(
                 kvp => kvp.Key,
                 kvp => ToMetricsProjection(kvp.Value),
-                StringComparer.Ordinal)
+                StringComparer.Ordinal),
+            // Per-sample results (#3390 follow-up): the aggregate metrics collapse each sample's
+            // outcome, which loses the paired per-sample data a McNemar test (+ Holm correction
+            // across enhancements) needs. Emit one entry per sample so two runs can be paired by
+            // sample_id offline. CitationMatched (nullable) is the per-sample citation-correct
+            // binary; a null (ungraded) sample serialises as JSON null and is excluded from pairing.
+            Samples = result.SampleResults.Select(ToSampleProjection).ToList()
         };
 
         return JsonSerializer.Serialize(projection, s_jsonOptions);
@@ -169,12 +175,22 @@ internal static class EvaluationReportFormatter
         CitedSampleCount = metrics.CitedSampleCount
     };
 
+    private static SampleProjection ToSampleProjection(EvaluationSampleResult sample) => new()
+    {
+        SampleId = sample.SampleId,
+        CitationMatched = sample.CitationMatched,
+        CitationStructuralValidity = sample.CitationStructuralValidity,
+        AnswerCorrectness = sample.AnswerCorrectness,
+        IsSuccess = sample.IsSuccess
+    };
+
     private sealed class ReportProjection
     {
         public string Dataset { get; init; } = string.Empty;
         public MetricsProjection Metrics { get; init; } = new();
         public CoverageProjection Coverage { get; init; } = new();
         public Dictionary<string, MetricsProjection> ByLanguage { get; init; } = new(StringComparer.Ordinal);
+        public List<SampleProjection> Samples { get; init; } = new();
     }
 
     private sealed class MetricsProjection
@@ -209,5 +225,22 @@ internal static class EvaluationReportFormatter
     {
         public int Labeled { get; init; }
         public int Unlabeled { get; init; }
+    }
+
+    /// <summary>
+    /// Per-sample projection carrying the fields a paired McNemar/Holm analysis needs offline:
+    /// <c>sample_id</c> (pairing key across runs), <c>citation_matched</c> (the per-sample
+    /// citation-correct binary; JSON null when the sample is ungraded and must be excluded),
+    /// plus <c>citation_structural_validity</c>, <c>answer_correctness</c>, and <c>is_success</c>
+    /// as secondary per-sample outcomes / filters. All names are snake_case-clean (no trailing
+    /// digit) so the auto policy needs no <see cref="JsonPropertyNameAttribute"/> overrides.
+    /// </summary>
+    private sealed class SampleProjection
+    {
+        public string SampleId { get; init; } = string.Empty;
+        public bool? CitationMatched { get; init; }
+        public double CitationStructuralValidity { get; init; }
+        public double AnswerCorrectness { get; init; }
+        public bool IsSuccess { get; init; }
     }
 }

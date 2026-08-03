@@ -12,17 +12,23 @@ namespace Api.Services.Pdf;
 internal sealed class S3BlobStorageService : IBlobStorageService
 {
     private readonly IAmazonS3 _s3Client;
+    private readonly IAmazonS3 _presignClient;
     private readonly S3StorageOptions _options;
     private readonly ILogger<S3BlobStorageService> _logger;
 
+    // Issue #3498: `presignClient` (optional) is configured against S3StorageOptions.PublicEndpoint
+    // and used ONLY to sign presigned URLs (SigV4 signs the host). Defaults to `s3Client` when the
+    // store host is already browser-reachable (prod R2/AWS). HEAD/existence checks always use `s3Client`.
     public S3BlobStorageService(
         IAmazonS3 s3Client,
         S3StorageOptions options,
-        ILogger<S3BlobStorageService> logger)
+        ILogger<S3BlobStorageService> logger,
+        IAmazonS3? presignClient = null)
     {
         _s3Client = s3Client ?? throw new ArgumentNullException(nameof(s3Client));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _presignClient = presignClient ?? s3Client;
     }
 
     /// <summary>
@@ -333,7 +339,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Verb = HttpVerb.GET
             };
 
-            var url = await _s3Client.GetPreSignedURLAsync(request).ConfigureAwait(false);
+            var url = await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Generated pre-signed URL for {Key} (expires in {Expiry}s)",
@@ -397,7 +403,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Verb = HttpVerb.GET
             };
 
-            var url = await _s3Client.GetPreSignedURLAsync(request).ConfigureAwait(false);
+            var url = await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Generated pre-signed URL for raw key {Key} (expires in {Expiry}s)",

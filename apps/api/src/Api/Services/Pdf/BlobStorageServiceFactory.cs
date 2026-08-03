@@ -37,6 +37,9 @@ internal static class BlobStorageServiceFactory
         var options = new S3StorageOptions
         {
             Endpoint = config["S3_ENDPOINT"] ?? throw new InvalidOperationException("S3_ENDPOINT is required when STORAGE_PROVIDER=s3"),
+            // Issue #3498: optional presign-only public endpoint (e.g. localhost:9000 for MinIO in E2E)
+            // so browser-fetched presigned covers are signed against a browser-reachable host.
+            PublicEndpoint = config["S3_PUBLIC_ENDPOINT"],
             AccessKey = config["S3_ACCESS_KEY"] ?? throw new InvalidOperationException("S3_ACCESS_KEY is required when STORAGE_PROVIDER=s3"),
             SecretKey = config["S3_SECRET_KEY"] ?? throw new InvalidOperationException("S3_SECRET_KEY is required when STORAGE_PROVIDER=s3"),
             BucketName = config["S3_BUCKET_NAME"] ?? throw new InvalidOperationException("S3_BUCKET_NAME is required when STORAGE_PROVIDER=s3"),
@@ -73,11 +76,31 @@ internal static class BlobStorageServiceFactory
         // simply stop returning 501.
         s3Client.BeforeRequestEvent += StripUnsupportedR2Headers;
 
-        logger.LogInformation(
-            "Initialized S3 storage: endpoint={Endpoint}, bucket={Bucket}, region={Region}, encryption={Encryption}",
-            options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
+        // Issue #3498: when a distinct public presign endpoint is configured, build a presign-only
+        // client signed against it (SigV4 signs the host). Presigning is pure computation, so this
+        // client never opens a connection — HEAD/existence checks stay on the main client.
+        AmazonS3Client? presignClient = null;
+        if (!string.IsNullOrWhiteSpace(options.PublicEndpoint) &&
+            !string.Equals(options.PublicEndpoint, options.Endpoint, StringComparison.OrdinalIgnoreCase))
+        {
+            var presignConfig = new AmazonS3Config
+            {
+                ServiceURL = options.PublicEndpoint,
+                ForcePathStyle = options.ForcePathStyle,
+                AuthenticationRegion = options.Region
+            };
+            if (!string.Equals(options.Region, "auto", StringComparison.Ordinal) && RegionEndpoint.GetBySystemName(options.Region) != null)
+            {
+                presignConfig.RegionEndpoint = RegionEndpoint.GetBySystemName(options.Region);
+            }
+            presignClient = new AmazonS3Client(credentials, presignConfig);
+        }
 
-        return new S3BlobStorageService(s3Client, options, logger);
+        logger.LogInformation(
+            "Initialized S3 storage: endpoint={Endpoint}, presignEndpoint={PresignEndpoint}, bucket={Bucket}, region={Region}, encryption={Encryption}",
+            options.Endpoint, options.PublicEndpoint ?? options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
+
+        return new S3BlobStorageService(s3Client, options, logger, presignClient);
     }
 
     /// <summary>

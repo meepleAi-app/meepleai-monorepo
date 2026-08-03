@@ -697,6 +697,34 @@ public sealed class S3BlobStorageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_SignsWithPresignClient_HeadStaysOnMainClient()
+    {
+        // Issue #3498: when a distinct presign client is supplied it (the public-endpoint client)
+        // must sign the URL, while the HEAD/existence check stays on the main (private/container)
+        // client — SigV4 signs the host, so the browser-reachable host must be the one signed.
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var presignUrl = $"http://localhost:9000/test-bucket/{rawKey}?X-Amz-Signature=sig";
+
+        var presignMock = new Mock<IAmazonS3>();
+        presignMock.Setup(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()))
+            .ReturnsAsync(presignUrl);
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync("test-bucket", rawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        var sut = new S3BlobStorageService(_mockS3Client.Object, _options, _mockLogger.Object, presignMock.Object);
+
+        var result = await sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        result.Should().Be(presignUrl);
+        presignMock.Verify(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()), Times.Once);
+        // The main client signed nothing — it only performed the HEAD existence check.
+        _mockS3Client.Verify(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()), Times.Never);
+        _mockS3Client.Verify(
+            x => x.GetObjectMetadataAsync("test-bucket", rawKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task GetPresignedUrlForRawKeyAsync_ObjectMissing_ReturnsNull()
     {
         // Arrange

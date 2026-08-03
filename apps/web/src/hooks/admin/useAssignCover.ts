@@ -55,7 +55,15 @@ export function useAssignCover(): UseMutationResult<
       if (previous) {
         queryClient.setQueryData<CoverCandidates>(key, {
           ...previous,
-          assignments: { ...previous.assignments, [assignmentKey(context)]: body.source },
+          // Epic #3470 Slice 2e (AC-5): the per-context assignment now carries the focal too.
+          assignments: {
+            ...previous.assignments,
+            [assignmentKey(context)]: {
+              source: body.source,
+              focalX: body.focalX,
+              focalY: body.focalY,
+            },
+          },
         });
       }
       return { previous };

@@ -73,49 +73,50 @@ export function AdminCoverSourceDialog({
   const [activeContext, setActiveContext] = useState<CoverContext>('Card');
   const [pendingSource, setPendingSource] = useState<CoverAssignmentSource | null>(null);
   const [focal, setFocal] = useState(DEFAULT_FOCAL);
-  // The read shape carries no persisted focal, so the picker always starts at 0.5/0.5.
-  // Require an explicit change (candidate pick or focal move) before Applica is enabled,
-  // so a zero-interaction click can't silently re-center an already fine-tuned focal.
-  const [focalTouched, setFocalTouched] = useState(false);
 
   const currentAssignment = data?.assignments[ASSIGN_KEY[activeContext]] ?? null;
-  const selectedSource = pendingSource ?? currentAssignment;
+  // Epic #3470 Slice 2e (AC-5): the read shape now carries the persisted focal, so the
+  // picker pre-fills the saved value and "dirty" is a genuine diff against that baseline
+  // — replacing the old focal-touched workaround.
+  const baselineFocal = currentAssignment
+    ? { x: currentAssignment.focalX, y: currentAssignment.focalY }
+    : DEFAULT_FOCAL;
+  const currentSource = currentAssignment?.source ?? null;
+  const selectedSource = pendingSource ?? currentSource;
   const selectedCandidate = data?.candidates.find(c => c.source === selectedSource) ?? null;
-  const dirty = pendingSource !== null || focalTouched;
+  const dirty =
+    selectedSource !== currentSource || focal.x !== baselineFocal.x || focal.y !== baselineFocal.y;
 
-  const resetLocal = () => {
+  // Sync local edit state to the active context's persisted assignment whenever the
+  // context changes or the candidates reload (post-mutation): clear any pending pick and
+  // pre-fill the saved focal, so the picker opens showing the current state. `data` keeps
+  // a stable reference across no-op refetches (react-query structural sharing), so this
+  // does not clobber an in-progress edit.
+  useEffect(() => {
+    const assignment = data?.assignments[ASSIGN_KEY[activeContext]] ?? null;
     setPendingSource(null);
-    setFocal(DEFAULT_FOCAL);
-    setFocalTouched(false);
-  };
+    setFocal(assignment ? { x: assignment.focalX, y: assignment.focalY } : DEFAULT_FOCAL);
+  }, [activeContext, data]);
 
-  // Clear abandoned edit state when the dialog closes so it never resurfaces (and
-  // never becomes accidentally re-appliable) on the next open. The dialog component
-  // stays mounted across open/close, so this reset must be explicit.
+  // Reset to the default context when the dialog closes so it never resurfaces on the
+  // next open; the sync effect above re-derives the focal once data reloads.
   useEffect(() => {
     if (!open) {
       setActiveContext('Card');
       setPendingSource(null);
       setFocal(DEFAULT_FOCAL);
-      setFocalTouched(false);
     }
   }, [open]);
 
-  const handleTabChange = (value: string) => {
-    setActiveContext(value as CoverContext);
-    resetLocal();
-  };
+  const handleTabChange = (value: string) => setActiveContext(value as CoverContext);
 
   const handlePick = (source: CoverAssignmentSource) => {
     setPendingSource(source);
+    // A newly picked source has no saved focal for this context yet → center it.
     setFocal(DEFAULT_FOCAL);
-    setFocalTouched(false);
   };
 
-  const handleFocalChange = (next: { x: number; y: number }) => {
-    setFocal(next);
-    setFocalTouched(true);
-  };
+  const handleFocalChange = (next: { x: number; y: number }) => setFocal(next);
 
   const handleApply = () => {
     if (!selectedSource) return;
@@ -128,7 +129,8 @@ export function AdminCoverSourceDialog({
 
   const handleReset = () => {
     remove.mutate({ gameId, context: activeContext });
-    resetLocal();
+    setPendingSource(null);
+    setFocal(DEFAULT_FOCAL);
   };
 
   return (
@@ -172,7 +174,7 @@ export function AdminCoverSourceDialog({
                   <>
                     <p className="text-sm text-muted-foreground">
                       {currentAssignment
-                        ? `Attualmente: ${SOURCE_LABEL[currentAssignment]}`
+                        ? `Attualmente: ${SOURCE_LABEL[currentAssignment.source]}`
                         : 'Attualmente: automatico (precedenza implicita)'}
                     </p>
 

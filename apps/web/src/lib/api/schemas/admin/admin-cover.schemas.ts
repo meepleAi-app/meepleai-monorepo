@@ -32,11 +32,23 @@ export const CoverCandidateSchema = z.object({
 });
 export type CoverCandidate = z.infer<typeof CoverCandidateSchema>;
 
-/** Which source is currently pinned per context; null = implicit precedence (CoverContextAssignmentsDto). */
+/**
+ * A single per-context admin assignment: the pinned source + the persisted focal point
+ * (CoverContextAssignmentDto, epic #3470 Slice 2e / AC-5). Exposing the focal lets the
+ * picker pre-fill the saved value instead of always starting at 0.5/0.5.
+ */
+export const CoverContextAssignmentSchema = z.object({
+  source: CoverAssignmentSourceSchema,
+  focalX: z.number(),
+  focalY: z.number(),
+});
+export type CoverContextAssignment = z.infer<typeof CoverContextAssignmentSchema>;
+
+/** Which assignment is currently pinned per context; null = implicit precedence (CoverContextAssignmentsDto). */
 export const CoverContextAssignmentsSchema = z.object({
-  card: CoverAssignmentSourceSchema.nullable().optional(),
-  hero: CoverAssignmentSourceSchema.nullable().optional(),
-  social: CoverAssignmentSourceSchema.nullable().optional(),
+  card: CoverContextAssignmentSchema.nullable().optional(),
+  hero: CoverContextAssignmentSchema.nullable().optional(),
+  social: CoverContextAssignmentSchema.nullable().optional(),
 });
 export type CoverContextAssignments = z.infer<typeof CoverContextAssignmentsSchema>;
 

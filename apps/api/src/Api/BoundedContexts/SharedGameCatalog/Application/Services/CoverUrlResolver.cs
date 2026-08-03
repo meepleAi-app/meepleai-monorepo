@@ -49,9 +49,18 @@ internal static class CoverUrlResolver
     /// </summary>
     internal readonly record struct ResolvedCover(string? Url, CoverKind? Kind);
 
+    /// <summary>
+    /// Per-user resolution with the full layering (epic #3470 Slice 2c / SD3 / AC-4):
+    /// L3 user-custom cover → admin per-<paramref name="context"/> override → implicit
+    /// precedence. The user cover outranks the admin override; on an L3 miss the call
+    /// falls through to <see cref="ResolveForContextAsync"/> (which honors the admin
+    /// override then the implicit chain), NOT the context-blind <see cref="ResolvePublicAsync"/>.
+    /// Owns exactly one <see cref="MeepleAiMetrics.CoverResolution"/> emission per call.
+    /// </summary>
     public static async Task<string?> ResolveForUserAsync(
         SharedGameEntity sharedGame,
         UserLibraryEntryEntity? userEntry,
+        CoverContext context,
         IBlobStorageService blobStorage)
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
@@ -70,15 +79,17 @@ internal static class CoverUrlResolver
             }
             // L3 miss while the key was present (R2 unreachable in dev, blob
             // expired, etc.). Intentionally NO metric emission here — the
-            // recursive call to ResolvePublicAsync below emits exactly one
-            // CoverResolution event for the winning fallback layer (or
-            // "placeholder" if all layers miss), preserving the invariant that
-            // every public-facing resolution call increments the counter
-            // exactly once. The L3 miss itself is observable via the storage
-            // service's own logs / metrics, not duplicated here.
+            // ResolveForContextAsync call below emits exactly one CoverResolution
+            // event for the winning layer (admin override / implicit / "placeholder"),
+            // preserving the invariant that every public-facing resolution call
+            // increments the counter exactly once. The L3 miss itself is observable
+            // via the storage service's own logs / metrics, not duplicated here.
         }
 
-        return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);
+        // L3 absent/unresolvable → the admin per-context override sits BELOW L3 (SD3),
+        // so fall through to the context path (admin override → implicit precedence),
+        // NOT the context-blind ResolvePublicAsync.
+        return await ResolveForContextAsync(sharedGame, context, blobStorage).ConfigureAwait(false);
     }
 
     public static async Task<string?> ResolvePublicAsync(

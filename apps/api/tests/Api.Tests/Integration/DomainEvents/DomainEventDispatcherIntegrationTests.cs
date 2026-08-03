@@ -2,7 +2,6 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
-using Api.BoundedContexts.GameManagement.Application.IntegrationEvents;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -176,11 +175,10 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     #region Cross-Context Integration Tests
 
     /// <summary>
-    /// Test: GameManagement event → WorkflowIntegration handler
-    /// Cross-Context: GameCreated event → GameCreatedIntegrationEventHandler
+    /// Test: GameCreated domain event dispatches to its handler and writes an audit_outbox row.
     /// </summary>
     [Fact]
-    public async Task GameCreated_ShouldTriggerWorkflowIntegrationHandler()
+    public async Task GameCreated_ShouldDispatchAndAudit()
     {
         // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
@@ -191,10 +189,8 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         _eventCollector.Collect(new GameCreatedEvent(gameId, gameName));
 
-        // Act - SaveChangesAsync triggers:
-        // 1. GameCreatedEvent → GameCreatedEventHandler
-        // 2. GameCreatedEventHandler publishes GameCreatedIntegrationEvent
-        // 3. GameCreatedIntegrationEvent → GameCreatedIntegrationEventHandler
+        // Act - SaveChangesAsync dispatches GameCreatedEvent → GameCreatedEventHandler,
+        // which writes an audit_outbox row via the base handler.
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert - audit_outbox row from domain event handler
@@ -203,9 +199,6 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         outboxRow.Should().NotBeNull();
         outboxRow!.PayloadJson.Should().Contain(gameId.ToString());
-
-        // Integration event handler logs (check via logger, not DB)
-        // In real scenario, would verify n8n workflow triggered
     }
 
     /// <summary>

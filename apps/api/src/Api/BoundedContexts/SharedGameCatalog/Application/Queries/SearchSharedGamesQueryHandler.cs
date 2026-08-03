@@ -412,9 +412,10 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var games = new List<SharedGameDto>(projected2.Count);
         foreach (var p in projected2)
         {
-            var coverUrl = await CoverUrlResolver
-                .ResolvePublicAsync(p.Game, _blobStorage)
+            var cover = await CoverUrlResolver
+                .ResolvePublicWithSourceAsync(p.Game, _blobStorage)
                 .ConfigureAwait(false);
+            var (coverLicense, coverAttribution, coverSourceUrl) = CoverAttribution.ForWinningSource(cover.Kind, p.Game);
 
             games.Add(new SharedGameDto(
                 p.Game.Id,
@@ -445,11 +446,11 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 p.Game.AverageRating != null && p.Game.AverageRating >= topRatedThreshold,
                 // IsNew: derived from NewThisWeekCount per mockup sp3-shared-games.jsx:127.
                 p.NewThisWeekCount >= IsNewMinThreshold,
-                CoverUrl: coverUrl,
-                // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
-                WikidataCoverLicense: p.Game.WikidataCoverLicense,
-                WikidataCoverAttribution: AttributionTextExtractor.Strip(p.Game.WikidataCoverAttribution),
-                WikidataCoverSourceUrl: p.Game.WikidataCoverSourceUrl));
+                CoverUrl: cover.Url,
+                // Epic #3470 Slice 1d-a — attribution follows the winning source.
+                WikidataCoverLicense: coverLicense,
+                WikidataCoverAttribution: coverAttribution,
+                WikidataCoverSourceUrl: coverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

@@ -1,5 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -7,6 +13,7 @@ using Moq;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
+using SharedUserTier = Api.SharedKernel.Domain.ValueObjects.UserTier;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 
@@ -18,14 +25,38 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Evaluation.Service
 public class DatasetEvaluationServiceTests
 {
     private readonly Mock<IRagService> _mockRagService;
+    private readonly Mock<IRagPromptAssemblyService> _mockRagPromptService;
+    private readonly Mock<ILlmService> _mockLlmService;
+    private readonly Mock<ICitationValidationService> _mockCitationValidation;
+    private readonly InlineCitationMatcherService _citationMatcher;
     private readonly Mock<ILogger<DatasetEvaluationService>> _mockLogger;
     private readonly DatasetEvaluationService _service;
 
     public DatasetEvaluationServiceTests()
     {
         _mockRagService = new Mock<IRagService>();
+        _mockRagPromptService = new Mock<IRagPromptAssemblyService>();
+        _mockLlmService = new Mock<ILlmService>();
+        _mockCitationValidation = new Mock<ICitationValidationService>();
+        _citationMatcher = new InlineCitationMatcherService();
         _mockLogger = new Mock<ILogger<DatasetEvaluationService>>();
-        _service = new DatasetEvaluationService(_mockRagService.Object, _mockLogger.Object);
+
+        // Default: citation validation reports a vacuously-valid result (no citations to validate),
+        // so structural validity defaults to 1.0 for tests that do not exercise it.
+        _mockCitationValidation
+            .Setup(v => v.ValidateCitationsAsync(It.IsAny<IReadOnlyList<Snippet>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CitationValidationResult
+            {
+                IsValid = true,
+                TotalCitations = 0,
+                ValidCitations = 0,
+                Errors = new List<CitationValidationError>(),
+                Message = string.Empty
+            });
+
+        _service = new DatasetEvaluationService(
+            _mockRagService.Object, _mockRagPromptService.Object, _mockLlmService.Object,
+            _citationMatcher, _mockCitationValidation.Object, _mockLogger.Object);
     }
 
     private static EvaluationSample CreateSample(
@@ -55,21 +86,182 @@ public class DatasetEvaluationServiceTests
             snippets: snippets ?? [],
             confidence: confidence);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3390 Slice 4 Step 1: grounded eval seam (options.GroundedEnhancements)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const string GroundedGameGuid = "9a3d0250-dc8b-4c35-96a2-716fe08cff08";
+
+    private void SetupGroundedSeam(RetrievalPolicy? capturedInto = null, string answer = "Grounded answer. [Page 3]")
+    {
+        var assembled = new AssembledPrompt(
+            SystemPrompt: "You are a tutor.",
+            UserPrompt: "Question",
+            Citations: new List<ChunkCitation>
+            {
+                new(DocumentId: "doc-1", PageNumber: 3, RelevanceScore: 0.9f, SnippetPreview: "settlements score",
+                    CopyrightTier: CopyrightTier.Full, IsPublic: true),
+            },
+            EstimatedTokens: 100);
+
+        _mockRagPromptService
+            .Setup(r => r.AssemblePromptAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
+                It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
+                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()))
+            .ReturnsAsync(assembled);
+
+        _mockLlmService
+            .Setup(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(answer));
+    }
+
+    [Fact]
+    public async Task EvaluateSample_GroundedSeam_PassesEnabledEnhancementsToAssemble_R1aCanary()
+    {
+        // #3390 R1a: the self-verifying wiring canary — when the eval runs the grounded seam, it MUST
+        // invoke AssemblePromptAsync (the enhancement-gated path) with a RetrievalPolicy carrying the
+        // requested EnabledEnhancements set. If this ever routes elsewhere, per-enhancement measurement
+        // is measuring the wrong path (#3475 class) — this test goes red.
+        SetupGroundedSeam();
+        var sample = new EvaluationSample
+        {
+            Id = "g-1", Question = "How do I score?", ExpectedAnswer = "settlements",
+            GameId = GroundedGameGuid, ExpectedKeywords = [], RelevantChunkIds = []
+        };
+        var options = new EvaluationOptions { GroundedEnhancements = RagEnhancement.CragEvaluation };
+
+        await _service.EvaluateSampleAsync(sample, options);
+
+        _mockRagPromptService.Verify(r => r.AssemblePromptAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
+            It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
+            It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(),
+            It.Is<RetrievalPolicy?>(p => p != null && p.EnabledEnhancements == RagEnhancement.CragEvaluation)),
+            Times.Once);
+        // and the legacy hybrid path is NOT taken
+        _mockRagService.Verify(r => r.AskWithHybridSearchAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(), It.IsAny<string?>(),
+            It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_GroundedSeam_MapsCitationsToSnippets()
+    {
+        // The grounded citations become snippets with source "PDF:{documentId}" (the metric key), so
+        // retrievedChunkIds reflect the grounded retrieval.
+        SetupGroundedSeam();
+        var sample = new EvaluationSample
+        {
+            Id = "g-2", Question = "How do I score?", ExpectedAnswer = "settlements",
+            GameId = GroundedGameGuid, ExpectedKeywords = [], RelevantChunkIds = ["PDF:doc-1"]
+        };
+        var options = new EvaluationOptions { GroundedEnhancements = RagEnhancement.None };
+
+        var result = await _service.EvaluateSampleAsync(sample, options);
+
+        result.RetrievedChunkIds.Should().ContainSingle().Which.Should().Be("PDF:doc-1");
+        result.GeneratedAnswer.Should().Contain("[Page 3]");
+    }
+
+    [Fact]
+    public async Task EvaluateSample_NullGroundedEnhancements_UsesLegacyHybridPath()
+    {
+        // Backward-compat: null → legacy AskWithHybridSearchAsync (preserves the #3477 baseline path);
+        // the grounded seam is NOT invoked.
+        _mockRagService
+            .Setup(r => r.AskWithHybridSearchAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(), It.IsAny<string?>(),
+                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateQaResponse());
+        var sample = new EvaluationSample
+        {
+            Id = "l-1", Question = "Q", ExpectedAnswer = "a",
+            GameId = GroundedGameGuid, ExpectedKeywords = [], RelevantChunkIds = []
+        };
+        var options = new EvaluationOptions { GroundedEnhancements = null };
+
+        await _service.EvaluateSampleAsync(sample, options);
+
+        _mockRagService.Verify(r => r.AskWithHybridSearchAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(), It.IsAny<string?>(),
+            It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockRagPromptService.Verify(r => r.AssemblePromptAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
+            It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
+            It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
+            It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_GroundedSeam_NonUuidGameId_RecordsFailedSample()
+    {
+        // The grounded seam needs a UUID GameId; a slug is a data error surfaced as a failed sample
+        // (the batch is not aborted).
+        SetupGroundedSeam();
+        var sample = new EvaluationSample
+        {
+            Id = "g-3", Question = "Q", ExpectedAnswer = "a",
+            GameId = "catan-slug-not-a-guid", ExpectedKeywords = [], RelevantChunkIds = []
+        };
+        var options = new EvaluationOptions { GroundedEnhancements = RagEnhancement.None };
+
+        var result = await _service.EvaluateSampleAsync(sample, options);
+
+        result.ErrorMessage.Should().NotBeNullOrEmpty();
+        result.GeneratedAnswer.Should().BeNull();
+    }
+
     [Fact]
     public void Constructor_WithNullRagService_ThrowsArgumentNullException()
     {
-        // Act & Assert
         Action act = () =>
-            new DatasetEvaluationService(null!, _mockLogger.Object);
+            new DatasetEvaluationService(null!, _mockRagPromptService.Object, _mockLlmService.Object, _citationMatcher, _mockCitationValidation.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullRagPromptService_ThrowsArgumentNullException()
+    {
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, null!, _mockLlmService.Object, _citationMatcher, _mockCitationValidation.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullLlmService_ThrowsArgumentNullException()
+    {
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, _mockRagPromptService.Object, null!, _citationMatcher, _mockCitationValidation.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullCitationMatcher_ThrowsArgumentNullException()
+    {
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, _mockRagPromptService.Object, _mockLlmService.Object, null!, _mockCitationValidation.Object, _mockLogger.Object);
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullCitationValidation_ThrowsArgumentNullException()
+    {
+        Action act = () =>
+            new DatasetEvaluationService(_mockRagService.Object, _mockRagPromptService.Object, _mockLlmService.Object, _citationMatcher, null!, _mockLogger.Object);
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
-        // Act & Assert
         Action act = () =>
-            new DatasetEvaluationService(_mockRagService.Object, null!);
+            new DatasetEvaluationService(_mockRagService.Object, _mockRagPromptService.Object, _mockLlmService.Object, _citationMatcher, _mockCitationValidation.Object, null!);
         act.Should().Throw<ArgumentNullException>();
     }
     [Fact]
@@ -425,11 +617,12 @@ public class DatasetEvaluationServiceTests
             new("Snippet text 2", "chunk-2", 2, 1, 0.85f)
         };
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -456,11 +649,12 @@ public class DatasetEvaluationServiceTests
         // Arrange
         var sample = CreateSample();
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -499,11 +693,12 @@ public class DatasetEvaluationServiceTests
             dataset.AddSample(CreateSample($"sample-{i}"));
         }
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -531,11 +726,12 @@ public class DatasetEvaluationServiceTests
             dataset.AddSample(CreateSample($"sample-{i}"));
         }
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -567,11 +763,12 @@ public class DatasetEvaluationServiceTests
         var callCount = 0;
         using var cts = new CancellationTokenSource();
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -631,11 +828,12 @@ public class DatasetEvaluationServiceTests
             new("Snippet text", "s1", 1, 1, 0.9f)
         };
 
-        // Note: AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
+        // Note: AskWithHybridSearchAsync signature is (gameId, query, searchMode, language, bypassCache, cancellationToken)
         _mockRagService
-            .Setup(r => r.AskAsync(
+            .Setup(r => r.AskWithHybridSearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<SearchMode>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<CancellationToken>()))
@@ -650,5 +848,133 @@ public class DatasetEvaluationServiceTests
         result.Metrics.LabeledSampleCount.Should().Be(1);
         result.Metrics.UnlabeledSampleCount.Should().Be(1);
         result.Metrics.RecallAt5.Should().Be(1.0); // Labeled sample's hit only; unlabeled doesn't drag it to 0.5
+    }
+
+    // === Citation accuracy (#3467) ===
+
+    // A >5-word phrase so InlineCitationMatcherService extracts it as a significant phrase; the
+    // generated answer repeats it verbatim so the matcher yields the snippet's page as an actual citation.
+    private const string CitablePhrase = "the five resource types are brick lumber wool grain and ore";
+
+    private void SetupRagResponseCitingPage(int page, string source = "PDF:doc-1")
+    {
+        var snippet = new Snippet(text: CitablePhrase, source: source, page: page, line: 0, score: 0.9f);
+        _mockRagService
+            .Setup(r => r.AskWithHybridSearchAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(), It.IsAny<string?>(),
+                It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QaResponse(
+                answer: CitablePhrase,
+                snippets: new List<Snippet> { snippet },
+                confidence: 0.9));
+    }
+
+    [Fact]
+    public async Task EvaluateSample_UsesHybridSearchPath_NotLegacyAskAsync()
+    {
+        // The eval must exercise the canonical hybrid retrieval path. IRagService.AskAsync's legacy
+        // vector path is deprecated and returns empty results (RagService.ExecuteRetrievalPhaseAsync),
+        // so using it would make every eval sample retrieve nothing (degenerate citation/recall metrics).
+        SetupRagResponseCitingPage(page: 7);
+
+        await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        _mockRagService.Verify(
+            r => r.AskWithHybridSearchAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<SearchMode>(),
+                It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_ExtractsActualCitationPages_FromInlineMatches()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.ActualCitationPages.Should().Contain(7);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_CitationMatched_WhenActualPageOverlapsExpected()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+        var sample = CreateSample() with
+        {
+            ExpectedCitations = new ExpectedCitations
+            {
+                PrimaryPages = new[] { 7 },
+                MatchPolicy = CitationMatchPolicy.OverlapAtLeastOne
+            }
+        };
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(sample, EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationMatched.Should().BeTrue();
+        result.ExpectedCitationPages.Should().Equal(7);
+    }
+
+    [Fact]
+    public async Task EvaluateSample_CitationNotMatched_WhenActualPageMissesExpected()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 3); // answer cites page 3, ground truth is page 7
+        var sample = CreateSample() with
+        {
+            ExpectedCitations = new ExpectedCitations
+            {
+                PrimaryPages = new[] { 7 },
+                MatchPolicy = CitationMatchPolicy.OverlapAtLeastOne
+            }
+        };
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(sample, EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationMatched.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task EvaluateSample_CitationMatchedNull_WhenSampleHasNoExpectedCitations()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+
+        // Act — sample has no ExpectedCitations, so it is not citation-graded
+        var result = await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationMatched.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task EvaluateSample_StructuralValidity_ReflectsCitationValidation()
+    {
+        // Arrange
+        SetupRagResponseCitingPage(page: 7);
+        _mockCitationValidation
+            .Setup(v => v.ValidateCitationsAsync(It.IsAny<IReadOnlyList<Snippet>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CitationValidationResult
+            {
+                IsValid = false,
+                TotalCitations = 4,
+                ValidCitations = 3,
+                Errors = new List<CitationValidationError>(),
+                Message = string.Empty
+            });
+
+        // Act
+        var result = await _service.EvaluateSampleAsync(CreateSample(), EvaluationOptions.Default, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.CitationStructuralValidity.Should().Be(0.75);
     }
 }

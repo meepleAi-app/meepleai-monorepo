@@ -561,11 +561,6 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/admin/n8n-templates',
-        destination: '/admin/config?tab=n8n',
-        permanent: true,
-      },
-      {
         source: '/admin/wizard',
         destination: '/admin/config?tab=wizard',
         permanent: true,

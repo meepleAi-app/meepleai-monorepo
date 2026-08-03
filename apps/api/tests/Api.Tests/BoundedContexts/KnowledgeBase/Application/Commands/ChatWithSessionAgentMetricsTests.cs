@@ -55,6 +55,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Area", "Observability")]
 [Trait("Issue", "2582")]
+[Collection("AgentGroundingMetrics")]
 public sealed class ChatWithSessionAgentMetricsTests
 {
     private const string FirstTokenLatencyName = "meepleai.rag.first_token_latency";
@@ -212,8 +213,95 @@ public sealed class ChatWithSessionAgentMetricsTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // #3390 Slice 1: structured grounding observability (text path)
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const string AgentGroundingName = "meepleai.agent.response.grounding";
+
+    [Fact(DisplayName = "#3390 Slice 1: text path WITH citations emits grounding{path=text,status=grounded,profile=live_session} once")]
+    public async Task Handle_TextPathWithCitations_EmitsGroundedMetric()
+    {
+        // Arrange
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var citations = new List<ChunkCitation>
+        {
+            new ChunkCitation(
+                DocumentId: "doc-1",
+                PageNumber: 1,
+                RelevanceScore: 0.9f,
+                SnippetPreview: "snippet A",
+                CopyrightTier: CopyrightTier.Full,
+                IsPublic: true),
+        };
+        var handler = BuildHandler(resolvedCitations: citations, ragPromptMock: out _, tokenContent: "cited answer");
+
+        // Act
+        await foreach (var _ in handler.Handle(BuildCommand(), CancellationToken.None)) { }
+
+        // Assert — exactly one grounding measurement, correct bounded tags
+        captures.Should().ContainSingle("grounding must be recorded exactly once per response");
+        var (value, tags) = captures[0];
+        value.Should().Be(1L);
+        tags["path"].Should().Be("text");
+        tags["grounding_status"].Should().Be("grounded", "a cited RAG answer is grounded");
+        tags["retrieval_profile"].Should().Be("live_session", "the in-session live path uses RetrievalPolicy.LiveSession (#3389)");
+    }
+
+    [Fact(DisplayName = "#3390 Slice 1: text path WITHOUT citations emits grounding{path=text,status=ungrounded}")]
+    public async Task Handle_TextPathNoCitations_EmitsUngroundedMetric()
+    {
+        // Arrange
+        var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
+        using var listener = BuildCounterListener(AgentGroundingName, captures);
+
+        var handler = BuildHandler(resolvedCitations: new List<ChunkCitation>(), ragPromptMock: out _, tokenContent: "uncited answer");
+
+        // Act
+        await foreach (var _ in handler.Handle(BuildCommand(), CancellationToken.None)) { }
+
+        // Assert
+        captures.Should().ContainSingle();
+        captures[0].Tags["path"].Should().Be("text");
+        captures[0].Tags["grounding_status"].Should().Be("ungrounded", "zero citations -> ungrounded (never fabricate grounded)");
+        captures[0].Tags["retrieval_profile"].Should().Be("live_session");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Captures counter measurements with their tag set (copied out of the ref-struct span).
+    /// </summary>
+    private static MeterListener BuildCounterListener(
+        string metricName,
+        List<(long Value, Dictionary<string, object?> Tags)> captures)
+    {
+        var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Meter.Name == MeepleAiMetrics.MeterName
+                    && instrument.Name == metricName)
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            var dict = new Dictionary<string, object?>();
+            foreach (var kv in tags)
+            {
+                dict[kv.Key] = kv.Value;
+            }
+            captures.Add((value, dict));
+        });
+        listener.Start();
+        return listener;
+    }
 
     private static MeterListener BuildHistogramListener<T>(string metricName, List<T> observations)
         where T : struct
@@ -293,10 +381,49 @@ public sealed class ChatWithSessionAgentMetricsTests
             Times.Once);
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // #3490: streaming handler delegates finalize to IGroundedAnswerService; the
+    // CopyrightSanitized yield is driven by the returned LeakMatchCount (the one
+    // handler-specific behavior the shared-service tests cannot cover — the yield).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "#3490: streaming path yields CopyrightSanitized when the shared finalize detects a leak")]
+    public async Task Handle_LeakDetected_YieldsCopyrightSanitizedEvent()
+    {
+        // Arrange — a Protected citation (so the finalize scans) + a leaking scan result.
+        var protectedCitation = new ChunkCitation(
+            DocumentId: "doc-1", PageNumber: 1, RelevanceScore: 0.9f,
+            SnippetPreview: "verbatim", CopyrightTier: CopyrightTier.Protected, IsPublic: false);
+        var leak = new CopyrightLeakResult(
+            HasLeak: true,
+            Matches: new List<LeakMatch> { new("doc-1", 1, 12, 0, "verbatim run") });
+        var handler = BuildHandler(
+            resolvedCitations: new List<ChunkCitation> { protectedCitation },
+            ragPromptMock: out _,
+            tokenContent: "a verbatim run leaked",
+            leakResult: leak);
+
+        // Act — capture the CopyrightSanitized event
+        StreamingCopyrightSanitized? sanitized = null;
+        await foreach (var evt in handler.Handle(BuildCommand(), CancellationToken.None))
+        {
+            if (evt.Type == StreamingEventType.CopyrightSanitized)
+            {
+                sanitized = evt.Data as StreamingCopyrightSanitized;
+            }
+        }
+
+        // Assert — the handler yielded the sanitize event with the fallback body + match count
+        sanitized.Should().NotBeNull("the shared finalize detected a leak → the handler must yield CopyrightSanitized");
+        sanitized!.MatchCount.Should().Be(1);
+        sanitized.SanitizedBody.Should().Be("[copyright sanitized]");
+    }
+
     private static ChatWithSessionAgentCommandHandler BuildHandler(
         IReadOnlyList<ChunkCitation> resolvedCitations,
         out Mock<IRagPromptAssemblyService> ragPromptMock,
-        string tokenContent = "Hello world")
+        string tokenContent = "Hello world",
+        CopyrightLeakResult? leakResult = null)
     {
         // --- AgentSession repo ---
         var playerId = Guid.NewGuid();
@@ -420,16 +547,17 @@ public sealed class ChatWithSessionAgentMetricsTests
         // --- ServiceScopeFactory (chunk usage increment fire-and-forget) ---
         var scopeFactory = new Mock<IServiceScopeFactory>();
 
-        // --- Copyright leak guard (no leak) ---
-        var noLeak = new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>());
+        // --- Copyright leak guard (no leak by default; a leaking result exercises the sanitize path) ---
+        var scanResult = leakResult ?? new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>());
         var leakGuard = new Mock<ICopyrightLeakGuard>();
         leakGuard
             .Setup(g => g.ScanAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<ChunkCitation>>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(noLeak);
+            .ReturnsAsync(scanResult);
 
         var fallbackProvider = new Mock<ICopyrightFallbackMessageProvider>();
+        fallbackProvider.Setup(f => f.GetMessage(It.IsAny<string>())).Returns("[copyright sanitized]");
 
         var gateway = new Mock<ILiveSessionStreamGateway>();
 
@@ -448,9 +576,10 @@ public sealed class ChatWithSessionAgentMetricsTests
             circuitBreakerRegistry: registry.Object,
             scopeFactory: scopeFactory.Object,
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,
-            copyrightLeakGuard: leakGuard.Object,
-            fallbackMessageProvider: fallbackProvider.Object,
-            copyrightOptions: Options.Create(new CopyrightLeakGuardOptions()),
+            groundedAnswerService: new GroundedAnswerService(
+                leakGuard.Object, fallbackProvider.Object,
+                Options.Create(new CopyrightLeakGuardOptions()),
+                NullLogger<GroundedAnswerService>.Instance),
             liveSessionStreamGateway: gateway.Object);
     }
 

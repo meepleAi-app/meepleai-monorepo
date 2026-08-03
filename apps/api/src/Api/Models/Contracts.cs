@@ -394,99 +394,6 @@ internal record SetupGuideStep(
     bool isOptional = false
 );
 
-// ADM-02: n8n Configuration models
-internal record N8NConfigDto(
-    string Id,
-    string Name,
-    string BaseUrl,
-    string? WebhookUrl,
-    bool IsActive,
-    DateTime? LastTestedAt,
-    string? LastTestResult,
-    DateTime CreatedAt,
-    DateTime UpdatedAt
-);
-
-internal record CreateN8NConfigRequest(
-    string Name,
-    string BaseUrl,
-    string ApiKey,
-    string? WebhookUrl
-);
-
-internal record UpdateN8NConfigRequest(
-    string? Name,
-    string? BaseUrl,
-    string? ApiKey,
-    string? WebhookUrl,
-    bool? IsActive
-);
-
-internal record N8NTestResult(
-    bool Success,
-    string Message,
-    int? LatencyMs
-);
-
-// N8N-04: Workflow template models
-public record WorkflowTemplateDto(
-    string Id,
-    string Name,
-    string Version,
-    string Description,
-    string Category,
-    string Author,
-    IList<string> Tags,
-    string Icon,
-    string? Screenshot,
-    string? Documentation,
-    IList<TemplateParameterDto> Parameters
-);
-
-public record TemplateParameterDto(
-    string Name,
-    string Type,
-    string Label,
-    string Description,
-    bool Required,
-    string? Default,
-    IList<string>? Options,
-    bool Sensitive
-);
-
-public record WorkflowTemplateDetailDto(
-    string Id,
-    string Name,
-    string Version,
-    string Description,
-    string Category,
-    string Author,
-    IList<string> Tags,
-    string Icon,
-    string? Screenshot,
-    string? Documentation,
-    IList<TemplateParameterDto> Parameters,
-    object Workflow
-);
-
-internal record ImportTemplateRequest(
-    IDictionary<string, string> Parameters
-);
-
-public record ImportTemplateResponse(
-    string WorkflowId,
-    string Message
-);
-
-internal record ValidateTemplateRequest(
-    string TemplateJson
-);
-
-public record ValidateTemplateResponse(
-    [property: JsonPropertyName("valid")] bool IsValid,
-    [property: JsonPropertyName("errors")] IList<string>? Errors
-);
-
 // UI-01: Chat management models
 internal record ChatMessageDto(
     Guid Id,
@@ -937,26 +844,6 @@ public record BggGameDetailsDto(
     IList<string> Publishers
 );
 
-// N8N-05: Workflow Error Logging models
-internal record LogWorkflowErrorRequest(
-    [Required][MaxLength(255)] string WorkflowId,
-    [Required][MaxLength(255)] string ExecutionId,
-    [Required][MaxLength(5000)] string ErrorMessage,
-    [MaxLength(255)] string? NodeName = null,
-    int RetryCount = 0,
-    [MaxLength(10000)] string? StackTrace = null
-);
-
-internal record WorkflowErrorDto(
-    Guid Id,
-    string WorkflowId,
-    string ExecutionId,
-    string ErrorMessage,
-    string? NodeName,
-    int RetryCount,
-    string? StackTrace,
-    DateTime CreatedAt
-);
 
 internal record WorkflowErrorsQueryParams(
     string? WorkflowId = null,

@@ -37,7 +37,7 @@ public class PdfUploadMockE2ETestFactory : WebApplicationFactory<Program>
         // Testing environment: skips secret validation and DB migrations (Program.cs:102, 891)
         builder.UseEnvironment("Testing");
 
-        // Set all 8 MOCK_* toggles before the host builds so MockToggleStateProvider
+        // Set all 7 MOCK_* toggles before the host builds so MockToggleStateProvider
         // reads them from Environment.GetEnvironmentVariables() inside AddMeepleDevTools().
         System.Environment.SetEnvironmentVariable("MOCK_LLM", "true");
         System.Environment.SetEnvironmentVariable("MOCK_EMBEDDING", "true");
@@ -45,7 +45,6 @@ public class PdfUploadMockE2ETestFactory : WebApplicationFactory<Program>
         System.Environment.SetEnvironmentVariable("MOCK_SMOLDOCLING", "true");
         System.Environment.SetEnvironmentVariable("MOCK_UNSTRUCTURED", "true");
         System.Environment.SetEnvironmentVariable("MOCK_BGG", "true");
-        System.Environment.SetEnvironmentVariable("MOCK_N8N", "true");
         System.Environment.SetEnvironmentVariable("MOCK_RERANKER", "true");
 
         builder.ConfigureAppConfiguration((_, configBuilder) =>
@@ -115,7 +114,6 @@ public class PdfUploadMockE2ETestFactory : WebApplicationFactory<Program>
             System.Environment.SetEnvironmentVariable("MOCK_SMOLDOCLING", null);
             System.Environment.SetEnvironmentVariable("MOCK_UNSTRUCTURED", null);
             System.Environment.SetEnvironmentVariable("MOCK_BGG", null);
-            System.Environment.SetEnvironmentVariable("MOCK_N8N", null);
             System.Environment.SetEnvironmentVariable("MOCK_RERANKER", null);
         }
         base.Dispose(disposing);
@@ -184,17 +182,16 @@ public sealed class PdfUploadMockE2ETests : IClassFixture<PdfUploadMockE2ETestFa
         response.Headers.Contains("X-Meeple-Mock").Should().BeTrue(
             "X-Meeple-Mock header must be present on all responses when MockHeaderMiddleware is in the pipeline");
 
-        // Assert: header value must start with "backend-di:" and list all 8 mocks
+        // Assert: header value must start with "backend-di:" and list all 7 mocks
         var headerValue = string.Join(",", response.Headers.GetValues("X-Meeple-Mock"));
         headerValue.Should().StartWith("backend-di:",
             $"X-Meeple-Mock must start with 'backend-di:' but was '{headerValue}'");
 
-        // All 8 known mock service keys must appear in the header
+        // All 7 known mock service keys must appear in the header
         var activeMocks = headerValue["backend-di:".Length..].Split(',', StringSplitOptions.RemoveEmptyEntries);
         activeMocks.Should().Contain("bgg", "MOCK_BGG=true");
         activeMocks.Should().Contain("embedding", "MOCK_EMBEDDING=true");
         activeMocks.Should().Contain("llm", "MOCK_LLM=true");
-        activeMocks.Should().Contain("n8n", "MOCK_N8N=true");
         activeMocks.Should().Contain("reranker", "MOCK_RERANKER=true");
         activeMocks.Should().Contain("s3", "MOCK_S3=true");
         activeMocks.Should().Contain("smoldocling", "MOCK_SMOLDOCLING=true");

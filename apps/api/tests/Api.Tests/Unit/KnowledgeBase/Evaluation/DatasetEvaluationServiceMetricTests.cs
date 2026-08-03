@@ -1,5 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -23,8 +25,13 @@ public sealed class DatasetEvaluationServiceMetricTests
     public DatasetEvaluationServiceMetricTests()
     {
         var ragService = new Mock<IRagService>();
+        var ragPromptService = new Mock<IRagPromptAssemblyService>();
+        var llmService = new Mock<ILlmService>();
+        var citationValidation = new Mock<ICitationValidationService>();
         var logger = new Mock<ILogger<DatasetEvaluationService>>();
-        _service = new DatasetEvaluationService(ragService.Object, logger.Object);
+        _service = new DatasetEvaluationService(
+            ragService.Object, ragPromptService.Object, llmService.Object,
+            new InlineCitationMatcherService(), citationValidation.Object, logger.Object);
     }
 
     #region CalculateRecallAtK Tests

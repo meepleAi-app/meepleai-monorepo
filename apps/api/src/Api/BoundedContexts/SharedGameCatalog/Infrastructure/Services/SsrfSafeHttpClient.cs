@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Sockets;
+using Api.SharedKernel.Infrastructure.Http;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
@@ -77,8 +77,16 @@ internal sealed class SsrfSafeHttpClient
 
     /// <summary>
     /// Validates that the URL does not resolve to a private or reserved IP address.
+    /// <para>
+    /// PRIVATE (issue #3495 fix 3/N): this pre-connect DNS check is inherently TOCTOU
+    /// (DNS-rebinding). It is NOT a security boundary for live egress — the connect-pin
+    /// (<see cref="Api.SharedKernel.Infrastructure.Http.SsrfPinnedConnect"/>, applied via
+    /// <c>ConfigureSsrfPin</c>) is. It survives only as an internal fail-fast pre-check for the
+    /// not-yet-wired <see cref="DownloadPdfAsync"/> path; when that path is integrated into the
+    /// DocumentProcessing BC its HttpClient MUST be registered with the pin.
+    /// </para>
     /// </summary>
-    internal static async Task ValidateResolvedIpAsync(string url, CancellationToken ct)
+    private static async Task ValidateResolvedIpAsync(string url, CancellationToken ct)
     {
         var uri = new Uri(url);
         var addresses = await Dns.GetHostAddressesAsync(uri.Host, ct).ConfigureAwait(false);
@@ -91,31 +99,8 @@ internal sealed class SsrfSafeHttpClient
     }
 
     /// <summary>
-    /// Checks whether an IP address belongs to a private or reserved range (RFC 1918, link-local, loopback, etc.).
+    /// Checks whether an IP address belongs to a private or reserved range. Delegates to the
+    /// IANA-driven <see cref="SsrfPolicy"/> classifier (issue #3495, finding H3).
     /// </summary>
-    internal static bool IsPrivateOrReserved(IPAddress ip)
-    {
-        if (IPAddress.IsLoopback(ip)) return true;
-
-        // IPv4-mapped IPv6 addresses (e.g. ::ffff:10.0.0.1) must be checked as IPv4
-        if (ip.IsIPv4MappedToIPv6)
-            return IsPrivateOrReserved(ip.MapToIPv4());
-
-        var bytes = ip.GetAddressBytes();
-
-        return ip.AddressFamily switch
-        {
-            AddressFamily.InterNetwork => bytes[0] switch
-            {
-                10 => true,                                           // 10.0.0.0/8
-                172 => bytes[1] >= 16 && bytes[1] <= 31,             // 172.16.0.0/12
-                192 => bytes[1] == 168,                               // 192.168.0.0/16
-                169 => bytes[1] == 254,                               // 169.254.0.0/16 (link-local/AWS metadata)
-                0 => true,                                            // 0.0.0.0/8
-                _ => false
-            },
-            AddressFamily.InterNetworkV6 => ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || ip.Equals(IPAddress.IPv6Loopback),
-            _ => true // Block unknown address families
-        };
-    }
+    internal static bool IsPrivateOrReserved(IPAddress ip) => SsrfPolicy.IsBlocked(ip);
 }

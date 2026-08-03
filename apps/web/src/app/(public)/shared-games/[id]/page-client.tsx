@@ -21,6 +21,7 @@ import { useMemo, type JSX } from 'react';
 
 import { useSearchParams } from 'next/navigation';
 
+import { AdminCoverEditAffordance } from '@/components/features/cover-editor';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
 import {
   AgentListItem,
@@ -351,6 +352,10 @@ export function SharedGameDetailPageClient({
           agentsCount={game.agentsCount}
           kbsCount={game.kbsCount}
           labels={heroLabels}
+          // #3470 Slice 1d-c — admin-only cover-source editor over the hero cover.
+          // Self-gated via useAdminRole (renders null for non-admins), so the public
+          // audience contract is untouched (#2118).
+          coverOverlay={<AdminCoverEditAffordance gameId={game.id} title={resolvedTitle} />}
         />
 
         <Tabs

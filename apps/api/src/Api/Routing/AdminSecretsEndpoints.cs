@@ -36,7 +36,6 @@ internal static class AdminSecretsEndpoints
         ["storage.secret"] = "Storage",
         ["slack.secret"] = "Slack",
         // ["traefik.secret"] removed (PR #738 cutover to CF Tunnel)
-        ["n8n.secret"] = "n8n",
     };
 
     public static IEndpointRouteBuilder MapAdminSecretsEndpoints(this IEndpointRouteBuilder app)

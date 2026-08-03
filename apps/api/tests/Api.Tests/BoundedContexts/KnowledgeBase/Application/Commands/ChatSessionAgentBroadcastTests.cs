@@ -494,9 +494,10 @@ public class ChatSessionAgentBroadcastTests
             circuitBreakerRegistry: registry.Object,
             scopeFactory: scopeFactory.Object,
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,
-            copyrightLeakGuard: leakGuard.Object,
-            fallbackMessageProvider: fallbackProvider.Object,
-            copyrightOptions: Options.Create(new CopyrightLeakGuardOptions()),
+            groundedAnswerService: new GroundedAnswerService(
+                leakGuard.Object, fallbackProvider.Object,
+                Options.Create(new CopyrightLeakGuardOptions()),
+                NullLogger<GroundedAnswerService>.Instance),
             liveSessionStreamGateway: gateway);
     }
 

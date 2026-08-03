@@ -61,13 +61,6 @@ internal static class ApplicationServiceExtensions
         // CONFIG-05: Feature flags service
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
-        // N8N services
-        services.AddScoped<N8NConfigService>();
-        services.AddScoped<IN8NTemplateService, N8NTemplateService>(); // N8N-04: Workflow template service
-
-        // N8N-05: Workflow error logging service
-        services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();
-
         return services;
     }
 
@@ -273,10 +266,6 @@ internal static class ApplicationServiceExtensions
 
         // Register validators from DatabaseSync bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.DatabaseSync.Application.Commands.ApplyMigrationsCommandValidator>(
-            includeInternalTypes: true);
-
-        // Register validators from WorkflowIntegration bounded context
-        services.AddValidatorsFromAssemblyContaining<BoundedContexts.WorkflowIntegration.Application.Validators.CreateN8NConfigCommandValidator>(
             includeInternalTypes: true);
 
         // Register validators from GameManagement bounded context

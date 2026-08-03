@@ -20,6 +20,9 @@ internal enum CoverKind
 
     /// <summary>Wikidata/Commons cover — physical key adds <c>.webp</c>.</summary>
     Wikidata,
+
+    /// <summary>Admin manual-URL cover (epic #3470): fetched + re-hosted on R2 — physical key adds <c>.webp</c>.</summary>
+    Manual,
 }
 
 /// <summary>
@@ -54,6 +57,10 @@ internal static class CoverKeyBuilder
     /// <summary>Wikidata/Commons cover (L2): <c>covers/{gameId:D}/cover</c>.</summary>
     public static CoverKey ForWikidata(Guid gameId) =>
         Build(CoverKind.Wikidata, $"covers/{gameId:D}/cover");
+
+    /// <summary>Admin manual-URL cover (epic #3470): <c>covers/manual/{gameId:D}/cover</c>.</summary>
+    public static CoverKey ForManual(Guid gameId) =>
+        Build(CoverKind.Manual, $"covers/manual/{gameId:D}/cover");
 
     /// <summary>
     /// BGG re-uploaded cover (L2.5): <c>bgg-covers/{bggId}/cover{ext}</c>. The
@@ -104,6 +111,7 @@ internal static class CoverKeyBuilder
         CoverKind.Pdf => "-preview.webp",
         CoverKind.Bgg => string.Empty,
         CoverKind.Wikidata => ".webp",
+        CoverKind.Manual => ".webp",
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown cover kind."),
     };
 

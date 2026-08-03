@@ -1,0 +1,35 @@
+# Issue #3390 (epic #3397) Slice 1 — In-session agent grounding observability.
+#
+# Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.AgentGrounding.cs):
+#   - meepleai_agent_response_grounding_total (Counter<long>)
+#       labels: path (text|image), grounding_status (grounded|partial|ungrounded),
+#               retrieval_profile (live_session|default|none)
+#   - meepleai_agent_response_citation_count (Histogram<int>, label: path)
+#
+# Emitted by the two in-session agent producers:
+#   - text  -> ChatWithSessionAgentCommandHandler (KnowledgeBase, RAG, retrieval_profile=live_session)
+#   - image -> AskSessionAgentCommandHandler       (SessionTracking, multimodal, retrieval_profile=none)
+#
+# CALIBRATION: the image path is ungrounded 100% by design until #3390 Slice 2 wires
+# retrieval into it, so this alert scopes to the RAG-capable path ONLY
+# (path=text, retrieval_profile=live_session). A high ungrounded rate THERE means the
+# retrieval is silently failing to cite — the exact trust-critical failure the #3397 audit
+# named ("a system honest intermittently is less trustworthy than one never honest").
+# Do NOT drop the path/retrieval_profile filters or the image traffic will mask the signal.
+groups:
+  - name: meepleai_agent_grounding_alerts
+    rules:
+      - alert: HighUngroundedRateOnRagLivePath
+        expr: |
+          (
+            sum(rate(meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}[15m]))
+            /
+            clamp_min(sum(rate(meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session"}[15m])), 1e-9)
+          ) > 0.5
+        for: 30m
+        labels:
+          severity: warning
+          subsystem: in-session-agent
+        annotations:
+          summary: "In-session RAG agent is ungrounded on >50% of text turns (15m)"
+          description: "More than half of the in-session live-path (RAG) answers over the last 15m carried zero citations (grounding_status=ungrounded). The live path should be grounded-capable; a sustained ungrounded majority means retrieval is failing to produce citations. Baseline citation-accuracy floor is tracked in docs/for-developers/evaluation-reports/baseline-2026-08-02.md (#3390)."

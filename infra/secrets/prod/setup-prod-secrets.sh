@@ -91,25 +91,6 @@ else
 fi
 
 # =============================================================================
-# N8N Secrets
-# =============================================================================
-echo "📦 Generating N8N secrets..."
-
-if [ ! -f n8n-encryption-key.txt ]; then
-    generate_secret > n8n-encryption-key.txt
-    echo "   ✅ n8n-encryption-key.txt"
-else
-    echo "   ⏭️  n8n-encryption-key.txt (exists)"
-fi
-
-if [ ! -f n8n-basic-auth-password.txt ]; then
-    generate_password > n8n-basic-auth-password.txt
-    echo "   ✅ n8n-basic-auth-password.txt"
-else
-    echo "   ⏭️  n8n-basic-auth-password.txt (exists)"
-fi
-
-# =============================================================================
 # API Keys (placeholders)
 # =============================================================================
 echo "📦 Creating API key placeholders..."

@@ -1,48 +1,34 @@
-using Api.BoundedContexts.GameManagement.Application.IntegrationEvents;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 
 /// <summary>
 /// Handles the GameCreatedEvent domain event.
-/// Creates audit log entry automatically via base class.
-/// Publishes integration event for cross-context communication.
+/// Creates an audit log entry automatically via the base class.
 /// </summary>
 internal sealed class GameCreatedEventHandler : DomainEventHandlerBase<GameCreatedEvent>
 {
-    private readonly IMediator _mediator;
-
     public GameCreatedEventHandler(
         MeepleAiDbContext dbContext,
-        ILogger<GameCreatedEventHandler> logger,
-        IMediator mediator)
+        ILogger<GameCreatedEventHandler> logger)
         : base(dbContext, logger)
     {
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
     }
 
-    protected override async Task HandleEventAsync(GameCreatedEvent domainEvent, CancellationToken cancellationToken)
+    protected override Task HandleEventAsync(GameCreatedEvent domainEvent, CancellationToken cancellationToken)
     {
-        // Auto-audit logging is handled by base class
-
-        // Publish integration event for cross-context communication
-        var integrationEvent = new GameCreatedIntegrationEvent(
-            gameId: domainEvent.GameId,
-            gameName: domainEvent.Name,
-            bggId: domainEvent.BggId
-        );
-
-        await _mediator.Publish(integrationEvent, cancellationToken).ConfigureAwait(false);
+        // Audit logging is handled by the base class (see GetAuditMetadata). The integration-event
+        // publish was removed with the n8n / WorkflowIntegration decommission — GameCreatedIntegrationEvent
+        // had no remaining subscribers, so its publish was a dead no-op.
+        return Task.CompletedTask;
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(GameCreatedEvent domainEvent)
     {
-        return new Dictionary<string, object?>
-(StringComparer.Ordinal)
+        return new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["GameId"] = domainEvent.GameId,
             ["Name"] = domainEvent.Name,

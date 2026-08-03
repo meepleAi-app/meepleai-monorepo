@@ -31,8 +31,14 @@ public class AskSessionAgentCommandValidator : AbstractValidator<AskSessionAgent
     {
         RuleFor(x => x.SessionId).NotEmpty().WithMessage("Session ID is required.");
         RuleFor(x => x.SenderId).NotEmpty().WithMessage("Sender ID is required.");
-        RuleFor(x => x.Question).NotEmpty().MaximumLength(2000)
-            .WithMessage("Question must be 1-2000 characters.");
+        RuleFor(x => x.Question)
+            .MaximumLength(2000).WithMessage("Question must be at most 2000 characters.");
+        // #3390 Slice 3: the turn text may be empty ONLY when an image is attached — that is the
+        // vision-derived-query path (the handler derives the retrieval query from the board state).
+        // A text-only turn still requires a non-empty question.
+        RuleFor(x => x)
+            .Must(cmd => !string.IsNullOrWhiteSpace(cmd.Question) || cmd.Images is { Count: > 0 })
+            .WithMessage("A question is required unless an image is attached.");
         RuleFor(x => x.Images)
             .Must(imgs => imgs is null || imgs.Count <= MaxImages)
             .WithMessage($"Maximum {MaxImages} images per request.");

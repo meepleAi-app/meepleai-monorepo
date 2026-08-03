@@ -29,7 +29,7 @@ bash infra/scripts/integration-tunnel.sh stop     # Chiudi tunnel
 bash infra/scripts/integration-tunnel.sh status   # Verifica stato
 ```
 
-Forwarda 11 servizi (PostgreSQL, Redis, Embedding, Reranker, Unstructured, SmolDocling, Ollama, n8n, Grafana, Prometheus, Orchestrator). Usa control socket SSH per gestione persistente.
+Forwarda 10 servizi (PostgreSQL, Redis, Embedding, Reranker, Unstructured, SmolDocling, Ollama, Grafana, Prometheus, Orchestrator). Usa control socket SSH per gestione persistente.
 
 Integrato nel Makefile: `make tunnel`, `make tunnel-stop`, `make tunnel-status`.
 
@@ -37,7 +37,7 @@ Integrato nel Makefile: `make tunnel`, `make tunnel-stop`, `make tunnel-status`.
 
 #### load-secrets-env.sh
 
-Entrypoint per container Docker (n8n, Grafana, Prometheus, Alertmanager). Mappa variabili da `.secret` files a formati specifici dei servizi (es. `POSTGRES_*` → `DB_POSTGRESDB_*` per n8n, `REDIS_PASSWORD` → `REDIS_URL`).
+Entrypoint per container Docker (Grafana, Prometheus, Alertmanager). Mappa variabili da `.secret` files a formati specifici dei servizi (es. `REDIS_PASSWORD` → `REDIS_URL`).
 
 Usato in `docker-compose.yml` come entrypoint — **non eliminare**.
 

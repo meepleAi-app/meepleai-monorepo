@@ -122,6 +122,12 @@ internal static partial class MeepleAiMetrics
         public const string QueryExpansion = "query_expansion";
         public const string GraphTraversal = "graph_traversal";
         public const string Raptor = "raptor";
+
+        // #3390 Slice 2 — the in-session image-path retrieval exceeded its latency budget and
+        // degraded to the multimodal-only (ungrounded) path. Distinct from Unknown so ops can
+        // separate "budget expired on the hot path" from a generic unhandled retrieval error.
+        public const string RetrievalBudget = "retrieval_budget";
+
         public const string Unknown = "unknown";
     }
 

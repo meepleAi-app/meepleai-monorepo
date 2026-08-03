@@ -58,7 +58,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IMediator m) =>
 app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService svc) => ...);
 ```
 
-### DDD Bounded Contexts (21)
+### DDD Bounded Contexts (20)
 
 `apps/api/src/Api/BoundedContexts/` — **Layers**: Domain → Application (commands/queries) → Infrastructure
 
@@ -84,7 +84,6 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService sv
 | Testing | Test-support endpoints (seed/cleanup test entities) |
 | UserLibrary | Collections, wishlist, history |
 | UserNotifications | Alerts, email, push |
-| WorkflowIntegration | n8n, webhooks, logging |
 
 ### Key Data Patterns
 
@@ -304,6 +303,7 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 | [ADR-062](./docs/for-claude/architecture/adr/adr-062-config-environment-field-semantics.md) | Config `Environment` field: default to `"All"` for global keys; per-env per-row only when value diverges by design |
 | [ADR-060](./docs/for-claude/architecture/adr/adr-060-live-session-persistence.md) | LiveSession is EF-backed. Command handlers calling `_sessionRepository.AddAsync`/`UpdateAsync` MUST also `await _unitOfWork.SaveChangesAsync(ct)`. Domain events dispatch post-SaveChanges. Optimistic concurrency via Postgres `xmin` (#2097 → #2305); same on `game_night_playlists`, `mechanic_drafts` (#2306) |
 | [ADR-078](./docs/for-claude/architecture/adr/adr-078-auto-issue-noise-thresholds.md) | Every `.github/workflows/*-monitor.yml` (cron calling GH Issues Search API) MUST declare `concurrency: group: monitor-<type>-${{ github.ref }}` to stay under the 1k req/h rate limit (advisory) |
+| [ADR-090](./docs/for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) | In-session grounded answer: `KnowledgeBase` OWNS it; `SessionTracking` consumes via `IMediator` (never inject KB services), public DTO boundary. The #3390 grounded pipeline is duplicated across `AskGroundedSessionQueryHandler` + `ChatWithSessionAgentCommandHandler` — a correctness/copyright fix must touch both until consolidated on a shared KB service (where Slice 4 enhancements wire) |
 
 ---
 

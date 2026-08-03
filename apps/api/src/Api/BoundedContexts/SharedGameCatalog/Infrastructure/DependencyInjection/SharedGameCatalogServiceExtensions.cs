@@ -12,9 +12,11 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -190,12 +192,16 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
-        // Gap G2: BGG cover re-upload service (typed HttpClient pattern).
-        // 10s timeout — BGG CDN images are typically < 500 KB.
-        services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(10);
-        });
+        // #3495: DNS-resolution seam shared by the SSRF connect pin (promoted to
+        // Api.SharedKernel.Infrastructure.Http in fix 3/N so every egress sink can share it).
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+
+        // Gap G2: BGG cover re-upload service (typed HttpClient pattern). 10s timeout — BGG CDN
+        // images are typically < 500 KB (BggCoverDownloader stream-caps the body at 10MB).
+        // #3495: ConfigureSsrfPin resolves once and dials the validated IP, so DNS-rebinding and
+        // redirect-to-internal are closed by construction on EVERY connection (the initial
+        // request and each of the ≤5 auto-redirect hops).
+        AddBggCoverDownloader(services);
 
         // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
         // aggregator, and Quartz CatalogSeedFetchJob.
@@ -378,6 +384,32 @@ internal static class SharedGameCatalogServiceExtensions
         RegisterBggCoverUploadPipeline(services);
     }
 
+    /// <summary>
+    /// Issue #3495 fix 3/N — registers the BGG cover-download typed <see cref="HttpClient"/> with
+    /// the SSRF connect-pin (<c>ConfigureSsrfPin</c>) as its primary handler. Extracted so the prod
+    /// registration and the DI test seam (<see cref="AddBggCoverDownloaderForTests"/>) share the
+    /// exact same pin wiring — drop the pin here and both prod and the fail-closed test lose it.
+    /// </summary>
+    private static void AddBggCoverDownloader(IServiceCollection services) =>
+        services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .ConfigureSsrfPin();
+
+    /// <summary>
+    /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned BGG cover-download client so
+    /// a DI-resolution test can prove a private-resolving cover host fails closed at the connect-pin.
+    /// The caller MUST register an <see cref="IBggCoverUploadPipeline"/> + <see cref="IDnsResolver"/>
+    /// on the same collection before resolving <see cref="IBggCoverDownloader"/>.
+    /// </summary>
+    internal static void AddBggCoverDownloaderForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        AddBggCoverDownloader(services);
+    }
+
     private static BggCoverUploadPipeline BuildBggCoverUploadPipeline(
         IConfiguration config,
         ILogger<BggCoverUploadPipeline> logger)
@@ -448,7 +480,11 @@ internal static class SharedGameCatalogServiceExtensions
         // versa — separate handler instances per typed client.
         .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
             sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
-            clientName: "wikidata-sparql"));
+            clientName: "wikidata-sparql"))
+        // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
+        // ConfigureSsrfPin uses ConfigurePrimaryHttpMessageHandler (innermost), so the circuit-breaker
+        // delegating handler above stays outer (CB → pin), matching the Slack registration.
+        .ConfigureSsrfPin();
 
         // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
         // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
@@ -480,14 +516,22 @@ internal static class SharedGameCatalogServiceExtensions
         // breaker independently.
         .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
             sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
-            clientName: "commons-api"));
+            clientName: "commons-api"))
+        // #3495 follow-up: SSRF connect-pin. ConfigureSsrfPin sets AllowAutoRedirect=true, so the
+        // M8 invariant above (Special:FilePath 302 → upload.wikimedia.org MUST be auto-followed) still
+        // holds — and each redirect hop's host is independently re-resolved and SSRF-validated by the
+        // per-connection pin (upload.wikimedia.org is public → allowed). Do NOT add any other
+        // ConfigurePrimaryHttpMessageHandler here: it would override the pin.
+        .ConfigureSsrfPin();
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
             client.BaseAddress = new Uri(BggBaseUrl);
             client.DefaultRequestHeaders.UserAgent.ParseAdd(CatalogUserAgent);
             client.Timeout = TimeSpan.FromSeconds(30);
-        });
+        })
+        // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
+        .ConfigureSsrfPin();
 
         // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
         // and "bgg" (fallback) explicitly — avoids relying on registration order.
@@ -503,6 +547,22 @@ internal static class SharedGameCatalogServiceExtensions
             var logger = sp.GetRequiredService<ILogger<CatalogSeedAggregator>>();
             return new CatalogSeedAggregator(wikidata, bgg, logger);
         });
+    }
+
+    /// <summary>
+    /// Test seam (issue #3495 follow-up): registers the catalog-seed external egress clients via the
+    /// REAL <see cref="RegisterCatalogSeedProviders"/> so a DI-resolution test can prove the SSRF
+    /// connect-pin is actually applied — resolving through the production registration guards against
+    /// the pin being silently dropped. Adds the ambient deps those clients need (logging, the
+    /// <see cref="IDnsResolver"/> seam, the Wikimedia rate limiter). Register a controlling
+    /// <see cref="IDnsResolver"/> BEFORE calling this to steer the pin (the TryAdd below won't override it).
+    /// </summary>
+    internal static void AddCatalogSeedProvidersForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        services.TryAddSingleton<IWikimediaRateLimiter, InMemoryWikimediaRateLimiter>();
+        RegisterCatalogSeedProviders(services);
     }
 
     /// <summary>

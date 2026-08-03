@@ -24,8 +24,6 @@ echo ""
 declare -a EXPECTED_SECRETS=(
     "postgres-password"
     "openrouter-api-key"
-    "n8n-encryption-key"
-    "n8n-basic-auth-password"
     "gmail-app-password"
     "grafana-admin-password"
     "initial-admin-password"

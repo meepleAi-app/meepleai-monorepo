@@ -6,9 +6,20 @@ Evaluation datasets for measuring MeepleAI RAG pipeline quality, as defined in A
 
 | Dataset | Source Format | Samples | Games | Difficulty Levels |
 |---------|--------------|---------|-------|-------------------|
+| `meepleai-en-seed.json` | MeepleAI Golden (EN) | 35 | 5 golden | easy, medium, hard |
 | `mozilla-boardgames.json` | Mozilla Structured QA | 25 | 6 | easy, medium, hard |
 | `meepleai-custom.json` | MeepleAI Custom | 35 | 3 | easy, medium, hard |
-| **Total** | **Combined** | **60** | **8** | **3 levels** |
+
+### `meepleai-en-seed.json` — golden evaluation set (#3467)
+
+The **golden** set for the 5 golden games (Catan, Wingspan, Dominion, Ark Nova, 7 Wonders). It unions the
+real `source_page` ground truth from the seed/mozilla/custom datasets into page-level **`expected_citations`**
+and is the gate the in-session live path must pass before enhancements are wired in #3390. See
+[`docs/for-developers/testing/rag-golden-eval-set.md`](../../docs/for-developers/testing/rag-golden-eval-set.md).
+
+- **`expected_citations`**: `{ "primary_pages": int[], "match_policy": "exact" | "overlap_at_least_one" | "subset" | "superset" }`.
+  Page-level, so stable across the #3427 re-index. A sample without it is not citation-graded.
+- `relevant_chunk_ids` are intentionally empty pending #3427 (recall labeling via the labeling-assist workflow).
 
 ## Dataset Formats
 

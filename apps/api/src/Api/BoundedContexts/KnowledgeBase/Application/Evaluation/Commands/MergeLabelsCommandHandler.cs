@@ -39,7 +39,10 @@ internal sealed class MergeLabelsCommandHandler : IRequestHandler<MergeLabelsCom
                     .ToList(),
                 StringComparer.Ordinal);
 
-        var merged = EvaluationDataset.Create(dataset.Name, dataset.Description, dataset.SourceType);
+        // Preserve source metadata (Version/CreatedAt) — persisting an in-place merge must not silently
+        // downgrade the version-tracked golden dataset.
+        var merged = EvaluationDataset.Create(
+            dataset.Name, dataset.Description, dataset.SourceType, dataset.Version, dataset.CreatedAt);
 
         foreach (var sample in dataset.Samples)
         {
@@ -55,6 +58,18 @@ internal sealed class MergeLabelsCommandHandler : IRequestHandler<MergeLabelsCom
             relevantChunkIdsBySampleId.Count,
             dataset.Count,
             request.DatasetPath);
+
+        // Persistence is opt-in: when an OutputPath is supplied, write the labeled dataset back to disk
+        // (closing the labeling round-trip); otherwise the merge stays in-memory (backward compatible).
+        // Write to a temp file then move-with-overwrite so a crash/concurrent write can never truncate the
+        // (possibly in-place / version-tracked) destination file.
+        if (!string.IsNullOrWhiteSpace(request.OutputPath))
+        {
+            var tempPath = request.OutputPath + ".tmp";
+            await File.WriteAllTextAsync(tempPath, merged.ToJson(), cancellationToken).ConfigureAwait(false);
+            File.Move(tempPath, request.OutputPath, overwrite: true);
+            _logger.LogInformation("Persisted merged dataset to '{OutputPath}'", request.OutputPath);
+        }
 
         return merged;
     }

@@ -61,13 +61,22 @@ internal sealed class RunEvaluationCommandHandler : IRequestHandler<RunEvaluatio
                 string.Join("; ", errors));
         }
 
+        // #3390 Slice 4 Step 1: null Enhancements → legacy hybrid path; non-null (incl. empty) → the
+        // grounded seam with the parsed enhancement set (empty = grounded baseline). ParseFlags is
+        // fail-loud on a typo, so a bad identifier surfaces as a 4xx rather than a silent wrong-set run.
+        Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagEnhancement? groundedEnhancements =
+            request.Enhancements is null
+                ? null
+                : Api.BoundedContexts.KnowledgeBase.Domain.Enums.RagEnhancementExtensions.ParseFlags(request.Enhancements);
+
         // Create evaluation options
         var options = new EvaluationOptions
         {
             Configuration = request.Configuration,
             TopK = request.TopK,
             EvaluateAnswerCorrectness = request.EvaluateAnswerCorrectness,
-            MaxSamples = request.MaxSamples
+            MaxSamples = request.MaxSamples,
+            GroundedEnhancements = groundedEnhancements
         };
 
         // Run evaluation

@@ -103,7 +103,6 @@ start_api() {
     export RERANKER_URL=http://localhost:18003
 
     # AI & monitoring services (tunneled to Docker container IPs)
-    export N8N_URL=http://localhost:15678
     export ORCHESTRATION_SERVICE_URL=http://localhost:18004
     export OLLAMA_URL=http://localhost:21434
 

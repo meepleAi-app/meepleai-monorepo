@@ -43,7 +43,6 @@ foreach ($file in $serviceFiles) {
         "Bgg|Game" { "GameManagement" }
         "Rag|Embedding|Hybrid|Keyword|Qdrant|TextChunking|LlmService" { "KnowledgeBase" }
         "Configuration|FeatureFlag|Cache" { "SystemConfiguration" }
-        "N8n|Workflow|BackgroundTask" { "WorkflowIntegration" }
         "Export|Language" { "Utilities" }
         default { "Uncategorized" }
     }

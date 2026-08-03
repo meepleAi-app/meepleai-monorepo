@@ -94,6 +94,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
+        services.AddScoped<IGroundedAnswerService, GroundedAnswerService>(); // #3490 (ADR-090): shared grounded finalize (leak guard + citation map + grounding)
         services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
         services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint

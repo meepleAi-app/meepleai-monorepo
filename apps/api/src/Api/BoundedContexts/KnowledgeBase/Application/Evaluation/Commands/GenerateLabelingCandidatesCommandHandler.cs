@@ -43,11 +43,14 @@ internal sealed class GenerateLabelingCandidatesCommandHandler
 
         foreach (var sample in dataset.Samples)
         {
-            var response = await _ragService.AskAsync(
+            // Canonical hybrid retrieval path — AskAsync's legacy vector path is deprecated and returns
+            // empty results, so labeling candidates must come from AskWithHybridSearchAsync.
+            var response = await _ragService.AskWithHybridSearchAsync(
                 sample.GameId ?? "",
                 sample.Question,
-                null,
-                false,
+                SearchMode.Hybrid,
+                language: null,
+                bypassCache: false,
                 cancellationToken).ConfigureAwait(false);
 
             var candidates = (response.snippets ?? [])

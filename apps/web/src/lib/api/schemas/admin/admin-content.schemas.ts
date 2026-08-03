@@ -2,7 +2,7 @@
  * Admin Content Management Schemas
  *
  * Publication workflow, prompt templates, versions, audit logs,
- * N8N workflow templates, and game bulk import.
+ * and game bulk import.
  */
 
 import { z } from 'zod';
@@ -138,47 +138,6 @@ export const CreatePromptVersionResponseSchema = z.object({
 });
 
 export type CreatePromptVersionResponse = z.infer<typeof CreatePromptVersionResponseSchema>;
-
-// ========== N8N Workflow Templates ==========
-
-export const TemplateParameterSchema = z.object({
-  name: z.string(),
-  label: z.string(),
-  type: z.enum(['string', 'number', 'boolean', 'select']),
-  required: z.boolean(),
-  defaultValue: z.string().optional(),
-  description: z.string().optional(),
-  options: z.array(z.string()).optional(),
-  sensitive: z.boolean(),
-});
-
-export type TemplateParameter = z.infer<typeof TemplateParameterSchema>;
-
-export const WorkflowTemplateSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  version: z.string(),
-  category: z.string(),
-  description: z.string(),
-  icon: z.string().optional(),
-  tags: z.array(z.string()),
-  parameters: z.array(TemplateParameterSchema),
-});
-
-export type WorkflowTemplate = z.infer<typeof WorkflowTemplateSchema>;
-
-export const WorkflowTemplateDetailSchema = WorkflowTemplateSchema.extend({
-  workflow: z.any(), // N8N workflow JSON structure
-});
-
-export type WorkflowTemplateDetail = z.infer<typeof WorkflowTemplateDetailSchema>;
-
-export const ImportWorkflowResponseSchema = z.object({
-  workflowId: z.string(),
-  message: z.string(),
-});
-
-export type ImportWorkflowResponse = z.infer<typeof ImportWorkflowResponseSchema>;
 
 // ========== Game Bulk Import (Issue #4355) ==========
 

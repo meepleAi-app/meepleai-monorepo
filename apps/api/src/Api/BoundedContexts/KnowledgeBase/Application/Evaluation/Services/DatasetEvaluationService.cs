@@ -1,7 +1,14 @@
 using System.Diagnostics;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Microsoft.Extensions.Logging;
+// Api.Models also declares an EvaluationMetrics; pin only the two wire types we need to avoid ambiguity.
+using Snippet = Api.Models.Snippet;
+using QaResponse = Api.Models.QaResponse;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 
@@ -13,13 +20,25 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 {
     private readonly IRagService _ragService;
+    private readonly IRagPromptAssemblyService _ragPromptService;
+    private readonly ILlmService _llmService;
+    private readonly InlineCitationMatcherService _citationMatcher;
+    private readonly ICitationValidationService _citationValidation;
     private readonly ILogger<DatasetEvaluationService> _logger;
 
     public DatasetEvaluationService(
         IRagService ragService,
+        IRagPromptAssemblyService ragPromptService,
+        ILlmService llmService,
+        InlineCitationMatcherService citationMatcher,
+        ICitationValidationService citationValidation,
         ILogger<DatasetEvaluationService> logger)
     {
         _ragService = ragService ?? throw new ArgumentNullException(nameof(ragService));
+        _ragPromptService = ragPromptService ?? throw new ArgumentNullException(nameof(ragPromptService));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
+        _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
+        _citationValidation = citationValidation ?? throw new ArgumentNullException(nameof(citationValidation));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -97,14 +116,21 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
 
         try
         {
-            // Query the RAG system
-            // Note: IRagService.AskAsync signature is (gameId, query, language, bypassCache, cancellationToken)
-            var ragResponse = await _ragService.AskAsync(
-                sample.GameId ?? "",
-                sample.Question,
-                null,
-                false,
-                cancellationToken).ConfigureAwait(false);
+            // Retrieval. Two paths, selected by options.GroundedEnhancements (#3390 Step 1):
+            //  - non-null → the SAME grounded seam the in-session live path uses (AssemblePromptAsync)
+            //    under RetrievalPolicy.LiveSessionWith(set), so enhancements are actually exercised and
+            //    the eval can measure them (closes the #3475-class wrong-path gap).
+            //  - null → legacy AskWithHybridSearchAsync (backward-compatible; preserves #3477 baseline).
+            //    bypassCache: true so each run measures fresh retrieval, not a possibly-stale cache.
+            var ragResponse = options.GroundedEnhancements is { } groundedEnhancements
+                ? await RunGroundedRetrievalAsync(sample, groundedEnhancements, cancellationToken).ConfigureAwait(false)
+                : await _ragService.AskWithHybridSearchAsync(
+                    sample.GameId ?? "",
+                    sample.Question,
+                    SearchMode.Hybrid,
+                    language: null,
+                    bypassCache: true,
+                    cancellationToken).ConfigureAwait(false);
 
             stopwatch.Stop();
 
@@ -121,11 +147,30 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             var hitAt10 = HasHitAtK(retrievedChunkIds, relevantChunkIds, 10);
             var (dcg, idealDcg) = CalculateDcgComponents(retrievedChunkIds, relevantChunkIds, 10);
 
-            // Calculate answer correctness using keyword matching
+            // Calculate answer correctness using keyword/word-overlap matching (deterministic, CI-stable;
+            // NOT an LLM-as-judge despite historical naming).
             var answerCorrectness = CalculateAnswerCorrectness(
                 sample.ExpectedAnswer,
                 ragResponse.answer ?? "",
                 sample.ExpectedKeywords);
+
+            // Citation accuracy (#3467): page-level, stable across corpus re-index. The pages the answer
+            // actually cites come from InlineCitationMatcherService (phrases in the answer grounded to
+            // snippets), compared to the sample's ExpectedCitations per its match policy. Structural
+            // validity is a separate trust floor (well-formed PDF:guid + existing doc + page in range).
+            var snippets = ragResponse.snippets ?? [];
+            var inlineMatches = _citationMatcher.Match(ragResponse.answer ?? string.Empty, snippets);
+            var actualCitationPages = inlineMatches
+                .Select(m => m.PageNumber)
+                .Distinct()
+                .OrderBy(p => p)
+                .ToList();
+            bool? citationMatched = sample.ExpectedCitations?.IsSatisfiedBy(actualCitationPages);
+            var expectedCitationPages = sample.ExpectedCitations?.PrimaryPages.ToList() ?? [];
+
+            var citationValidation = await _citationValidation
+                .ValidateCitationsAsync(snippets, sample.GameId ?? string.Empty, cancellationToken)
+                .ConfigureAwait(false);
 
             return new EvaluationSampleResult
             {
@@ -141,6 +186,10 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
                 DcgAt10 = dcg,
                 IdealDcgAt10 = idealDcg,
                 AnswerCorrectness = answerCorrectness,
+                ActualCitationPages = actualCitationPages,
+                ExpectedCitationPages = expectedCitationPages,
+                CitationMatched = citationMatched,
+                CitationStructuralValidity = citationValidation.ValidationAccuracy,
                 LatencyMs = stopwatch.Elapsed.TotalMilliseconds,
                 Confidence = ragResponse.confidence ?? 0.0
             };
@@ -176,6 +225,61 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             };
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// #3390 Slice 4 Step 1: retrieval through the SAME grounded seam the in-session live path uses
+    /// (<c>AssemblePromptAsync</c>), under <c>RetrievalPolicy.LiveSessionWith(enhancements)</c>, then
+    /// generation. Produces a <see cref="QaResponse"/> whose <c>snippets</c> have the identical shape
+    /// <c>AskWithHybridSearchAsync</c> emits (<c>source = "PDF:{documentId}"</c>, <c>page</c>), so the
+    /// downstream metrics are unchanged — only the retrieval PATH changes, which is the whole point:
+    /// enhancements now affect the measured numbers.
+    /// </summary>
+    private async Task<QaResponse> RunGroundedRetrievalAsync(
+        EvaluationSample sample,
+        RagEnhancement enhancements,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(sample.GameId, out var gameGuid))
+        {
+            // The grounded seam needs a UUID GameId; the golden set is UUID-resolved. A slug here is a
+            // data error — surface it (the caller's catch records a failed sample, not a silent zero).
+            throw new InvalidOperationException(
+                $"Grounded eval requires a UUID GameId; sample '{sample.Id}' has '{sample.GameId}'.");
+        }
+
+        var assembled = await _ragPromptService.AssemblePromptAsync(
+            agentTypology: "tutor",
+            gameTitle: string.Empty,
+            gameState: null,
+            userQuestion: sample.Question,
+            gameId: gameGuid,
+            chatThread: null,
+            userTier: null,
+            agentLanguage: "en",
+            cancellationToken,
+            retrievalPolicy: RetrievalPolicy.LiveSessionWith(enhancements)).ConfigureAwait(false);
+
+        var completion = await _llmService.GenerateCompletionAsync(
+            assembled.SystemPrompt, assembled.UserPrompt, RequestSource.RagPipeline, cancellationToken)
+            .ConfigureAwait(false);
+
+        var answer = completion.Success ? completion.Response : string.Empty;
+
+        // Map ChunkCitation → Snippet with the same shape the hybrid path emits (source "PDF:{guid}",
+        // page). Metrics read only source/page from snippets + the answer text; text is used solely by
+        // the inline citation matcher.
+        var snippets = assembled.Citations
+            .Select(c => new Snippet(
+                c.FullText ?? c.SnippetPreview,
+                $"PDF:{c.DocumentId}",
+                c.PageNumber,
+                0,
+                c.RelevanceScore))
+            .ToList();
+
+        var confidence = RagPromptAssemblyService.ComputeConfidence(assembled.Citations, answer);
+        return new QaResponse(answer, snippets, confidence: confidence);
     }
 
     /// <inheritdoc/>
@@ -262,6 +366,12 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
         return (dcg, idealDcg);
     }
 
+    /// <summary>
+    /// Deterministic answer-correctness heuristic: expected-keyword hit rate when keywords are provided,
+    /// else containment / word-overlap between expected and generated answers. This is intentionally NOT
+    /// an LLM-as-judge — it is kept keyword-based so scores are deterministic and CI-stable (a real
+    /// LLM-judge is explicitly out of scope, YAGNI).
+    /// </summary>
     private static double CalculateAnswerCorrectness(
         string expectedAnswer,
         string generatedAnswer,

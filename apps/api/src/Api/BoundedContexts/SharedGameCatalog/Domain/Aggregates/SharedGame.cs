@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -75,6 +76,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private readonly List<GameErrata> _erratas = new();
     private readonly List<QuickQuestion> _quickQuestions = new();
     private readonly List<Contributor> _contributors = new();
+    // Epic #3470: admin per-context cover assignments (child collection).
+    private readonly List<GameCoverAssignment> _coverAssignments = new();
 
     /// <summary>
     /// Gets the unique identifier of this game.
@@ -287,6 +290,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the contributors who have contributed to this game.
     /// </summary>
     public IReadOnlyCollection<Contributor> Contributors => _contributors.AsReadOnly();
+
+    /// <summary>
+    /// Gets the admin per-context cover assignments (epic #3470). Hydrated only
+    /// when the caller eager-loaded the navigation (else empty, like the other
+    /// aggregate collections). At most one entry per <see cref="CoverContext"/>.
+    /// </summary>
+    public IReadOnlyCollection<GameCoverAssignment> CoverAssignments => _coverAssignments.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -1433,6 +1443,78 @@ public sealed class SharedGame : AggregateRoot<Guid>
     {
         _isRagPublic = isPublic;
         _modifiedAt = DateTime.UtcNow;
+    }
+
+    // Cover Assignment Methods (Epic #3470)
+
+    /// <summary>
+    /// Pins a cover source (and crop focal point) for a UI context, creating the
+    /// assignment when the context has none or updating the existing one in place —
+    /// there is at most one assignment per context (mirrors the DB unique
+    /// constraint). Re-assigning invalidates any stale rendered crop; the render
+    /// pipeline produces a fresh per-context WebP.
+    /// </summary>
+    /// <param name="context">The UI context to pin.</param>
+    /// <param name="source">The cover source to pin for the context.</param>
+    /// <param name="adminId">The admin/editor performing the assignment.</param>
+    /// <param name="focalX">Crop focal point X in [0,1] (0.5 = center).</param>
+    /// <param name="focalY">Crop focal point Y in [0,1] (0.5 = center).</param>
+    /// <returns>The created or updated assignment.</returns>
+    public GameCoverAssignment AssignCover(
+        CoverContext context,
+        CoverAssignmentSource source,
+        Guid adminId,
+        double focalX = 0.5,
+        double focalY = 0.5)
+    {
+        var existing = _coverAssignments.FirstOrDefault(a => a.Context == context);
+        if (existing is null)
+        {
+            var created = GameCoverAssignment.Create(_id, context, source, adminId, focalX, focalY);
+            _coverAssignments.Add(created);
+            return created;
+        }
+
+        // Idempotent upsert: a resave with the SAME source and focal is a true no-op —
+        // skip it so a duplicate / retried submission doesn't wipe an already-rendered
+        // crop (GeneratedR2Key) or bump the audit stamp. .Equals avoids the SonarAnalyzer
+        // S1244 floating-point-equality trap (focal values are stored/compared verbatim,
+        // never the result of arithmetic).
+        if (existing.Source == source && existing.FocalX.Equals(focalX) && existing.FocalY.Equals(focalY))
+        {
+            return existing;
+        }
+
+        existing.ChangeSource(source, adminId);
+        existing.SetFocalPoint(focalX, focalY, adminId);
+        return existing;
+    }
+
+    /// <summary>
+    /// Removes the cover assignment for a context, if any. The context then falls
+    /// back to the resolver's implicit precedence.
+    /// </summary>
+    /// <returns><see langword="true"/> when an assignment was removed; otherwise <see langword="false"/>.</returns>
+    public bool RemoveCoverAssignment(CoverContext context)
+    {
+        var existing = _coverAssignments.FirstOrDefault(a => a.Context == context);
+        if (existing is null)
+        {
+            return false;
+        }
+
+        _coverAssignments.Remove(existing);
+        return true;
+    }
+
+    /// <summary>
+    /// Reconstitution hook for the repository: appends a persisted assignment to
+    /// the aggregate WITHOUT re-running creation validation or raising events.
+    /// </summary>
+    internal void LoadCoverAssignment(GameCoverAssignment assignment)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+        _coverAssignments.Add(assignment);
     }
 
     // Validation Methods

@@ -191,9 +191,16 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         // Issue #2035: Include Designers so MapToDomain can hydrate the aggregate's
         // designer collection — required by GetGameDetailQueryHandler which surfaces
         // designer names on the library detail DTO.
+        // Epic #3470: Include CoverAssignments so the aggregate carries its per-context
+        // admin cover overrides (≤3 rows) for the context-aware resolver + write path.
+        // AsSplitQuery: two collection includes (Designers M:N + CoverAssignments 1:N)
+        // would otherwise form a cartesian product that, under AsNoTracking (no identity
+        // resolution), DUPLICATES the child rows in each navigation. Split queries issue
+        // one SELECT per collection instead — matches MechanicAnalysisRepository.
         var entity = await DbContext.Set<SharedGameEntity>()
             .AsNoTracking()
             .Include(g => g.Designers)
+            .Include(g => g.CoverAssignments)
             .FirstOrDefaultAsync(g => g.Id == id && !g.IsDeleted, cancellationToken)
             .ConfigureAwait(false);
 
@@ -215,6 +222,63 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         ArgumentNullException.ThrowIfNull(sharedGame);
         var entity = MapToEntity(sharedGame);
         DbContext.Set<SharedGameEntity>().Update(entity);
+    }
+
+    /// <summary>
+    /// Epic #3470 — child-safe reconcile of the per-context cover assignments.
+    /// Loads the current DB rows with <c>.AsTracking()</c> — the DbContext default is
+    /// <c>QueryTrackingBehavior.NoTracking</c> (PERF-06), so WITHOUT this override an
+    /// in-place mutation of a fetched row would be a silent no-op at SaveChanges
+    /// (<c>notracking-default-update-gotcha</c>). Tracking also lets the in-place
+    /// update carry the loaded <c>xmin</c> into the concurrency <c>WHERE</c> clause
+    /// (ADR-060). Assignments new since the load are inserted, and rows the aggregate
+    /// dropped are deleted. A detached full-graph <c>Update()</c> would instead mark a
+    /// newly-added row (fresh <c>Guid.NewGuid()</c>) as Modified — an UPDATE against a
+    /// nonexistent row that silently loses the insert on Postgres (InMemory hides it).
+    /// No <c>SaveChanges</c> here — the caller's unit of work commits.
+    /// </summary>
+    public async Task ReconcileCoverAssignmentsAsync(SharedGame sharedGame, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sharedGame);
+
+        var set = DbContext.Set<GameCoverAssignmentEntity>();
+
+        var existing = await set
+            .AsTracking()
+            .Where(a => a.SharedGameId == sharedGame.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var existingById = existing.ToDictionary(e => e.Id);
+
+        var desiredIds = new HashSet<Guid>();
+        foreach (var assignment in sharedGame.CoverAssignments)
+        {
+            desiredIds.Add(assignment.Id);
+
+            if (existingById.TryGetValue(assignment.Id, out var tracked))
+            {
+                // Update in place — Context / CreatedAt / CreatedBy are immutable.
+                // Mutating the tracked entity preserves its loaded xmin OriginalValue.
+                tracked.Source = assignment.Source;
+                tracked.FocalX = assignment.FocalX;
+                tracked.FocalY = assignment.FocalY;
+                tracked.GeneratedR2Key = assignment.GeneratedR2Key;
+                tracked.UpdatedAt = assignment.UpdatedAt;
+                tracked.UpdatedBy = assignment.UpdatedBy;
+            }
+            else
+            {
+                set.Add(MapAssignmentToEntity(assignment));
+            }
+        }
+
+        foreach (var tracked in existing)
+        {
+            if (!desiredIds.Contains(tracked.Id))
+            {
+                set.Remove(tracked);
+            }
+        }
     }
 
     public async Task<bool> ExistsByBggIdAsync(int bggId, CancellationToken cancellationToken = default)
@@ -334,6 +398,25 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             }
         }
 
+        // Epic #3470: Hydrate per-context cover assignments (child collection). Empty
+        // unless the caller eager-loaded the navigation (GetByIdAsync). Reconstituted
+        // via the internal ctor — no re-validation, no events.
+        foreach (var ca in entity.CoverAssignments)
+        {
+            sharedGame.LoadCoverAssignment(new GameCoverAssignment(
+                ca.Id,
+                ca.SharedGameId,
+                ca.Context,
+                ca.Source,
+                ca.FocalX,
+                ca.FocalY,
+                ca.GeneratedR2Key,
+                ca.CreatedAt,
+                ca.CreatedBy,
+                ca.UpdatedAt,
+                ca.UpdatedBy));
+        }
+
         return sharedGame;
     }
 
@@ -377,6 +460,23 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             AgentDefinitionId = game.AgentDefinitionId  // Issue #4228
         };
     }
+
+    /// <summary>Epic #3470 — maps a domain cover assignment to its persistence entity (INSERT path).</summary>
+    private static GameCoverAssignmentEntity MapAssignmentToEntity(GameCoverAssignment assignment) =>
+        new()
+        {
+            Id = assignment.Id,
+            SharedGameId = assignment.SharedGameId,
+            Context = assignment.Context,
+            Source = assignment.Source,
+            FocalX = assignment.FocalX,
+            FocalY = assignment.FocalY,
+            GeneratedR2Key = assignment.GeneratedR2Key,
+            CreatedAt = assignment.CreatedAt,
+            CreatedBy = assignment.CreatedBy,
+            UpdatedAt = assignment.UpdatedAt,
+            UpdatedBy = assignment.UpdatedBy,
+        };
 
     public async Task<SharedGame?> GetGameByFaqIdAsync(Guid faqId, CancellationToken cancellationToken = default)
     {

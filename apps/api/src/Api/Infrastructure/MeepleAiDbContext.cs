@@ -147,7 +147,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
-    public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
     public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();
     public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();
@@ -156,7 +155,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<EmailVerificationEntity> EmailVerifications => Set<EmailVerificationEntity>(); // ISSUE-3071: Email verification
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
-    public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05
     // ADMIN-01 Phase 4: Prompt Evaluation Results
     public DbSet<PromptEvaluationResultEntity> PromptEvaluationResults => Set<PromptEvaluationResultEntity>();
     // BGAI-039: Validation Accuracy Baseline Tracking
@@ -196,6 +194,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameCategoryEntity> GameCategories => Set<GameCategoryEntity>(); // ISSUE-2370: Game categories taxonomy
     public DbSet<GameMechanicEntity> GameMechanics => Set<GameMechanicEntity>(); // ISSUE-2370: Game mechanics taxonomy
     public DbSet<GameFaqEntity> GameFaqs => Set<GameFaqEntity>(); // ISSUE-2370: Game FAQs
+    public DbSet<GameCoverAssignmentEntity> GameCoverAssignments => Set<GameCoverAssignmentEntity>(); // #3470: admin per-context cover editor
     public DbSet<GameErrataEntity> GameErrata => Set<GameErrataEntity>(); // ISSUE-2370: Game errata
     public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association

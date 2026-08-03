@@ -9,6 +9,11 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
     private readonly IBggCoverUploadPipeline _uploadPipeline;
     private readonly ILogger<BggCoverDownloader> _logger;
 
+    // #3495 (finding C5): stream-and-cap the image body to bound memory. The HttpClient-level
+    // MaxResponseContentBufferSize belt is a no-op under ResponseHeadersRead, so the ceiling is
+    // enforced here during the read.
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024;
+
     public BggCoverDownloader(
         HttpClient httpClient,
         IBggCoverUploadPipeline uploadPipeline,
@@ -29,14 +34,15 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
             return null;
         }
 
-        // SSRF guard (#2655 finding #10): only fetch HTTPS URLs that resolve to public IPs.
-        // Fails closed — an invalid scheme or a private/reserved target aborts the download.
+        // SSRF guard: reject non-HTTPS / malformed URLs up front (fail-fast). The public-IP
+        // guarantee is enforced at connect time by the SSRF connect-pin on this client's handler
+        // (ConfigureSsrfPin, #3495) — which, unlike a pre-connect DNS check, is not TOCTOU: every
+        // connection (and each redirect hop) dials only a validated public address.
         try
         {
             SsrfSafeHttpClient.ValidateUrlScheme(remoteImageUrl);
-            await SsrfSafeHttpClient.ValidateResolvedIpAsync(remoteImageUrl, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        catch (ArgumentException ex)
         {
             _logger.LogWarning(
                 ex,
@@ -59,7 +65,37 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
                 return null;
             }
 
-            var imageBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            // Reject early on an advertised over-cap length; Content-Length is spoofable/absent
+            // (chunked), so the ceiling is ALSO enforced during the streamed read below.
+            if (response.Content.Headers.ContentLength > MaxImageSizeBytes)
+            {
+                _logger.LogWarning("BGG cover exceeds size cap (Content-Length): BggId={BggId}", bggId);
+                return null;
+            }
+
+            byte[] imageBytes;
+            using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            using (var buffer = new MemoryStream())
+            {
+                var chunk = new byte[81920];
+                long total = 0;
+                int read;
+                while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    total += read;
+                    if (total > MaxImageSizeBytes)
+                    {
+                        _logger.LogWarning(
+                            "BGG cover exceeds {Cap}-byte cap mid-stream: BggId={BggId}", MaxImageSizeBytes, bggId);
+                        return null;
+                    }
+
+                    await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                }
+
+                imageBytes = buffer.ToArray();
+            }
+
             if (imageBytes.Length == 0)
             {
                 _logger.LogWarning("BGG cover download returned empty body: BggId={BggId}", bggId);

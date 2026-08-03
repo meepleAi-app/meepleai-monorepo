@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Models;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,6 +47,10 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
         // Filter by PendingApproval status
         var dbQuery = _context.SharedGames
             .AsNoTracking()
+            // Epic #3470 Slice 2b: eager-load CoverAssignments so the per-context (Card)
+            // resolver honors an admin override. Entities are materialized directly (no
+            // Select projection), so the Include is honored — unlike the search handler.
+            .Include(g => g.CoverAssignments)
             .Where(g => g.Status == (int)GameStatus.PendingApproval)
             .OrderBy(g => g.ModifiedAt ?? g.CreatedAt); // Oldest submissions first
 
@@ -62,8 +67,9 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
         var games = new List<SharedGameDto>(entities.Count);
         foreach (var g in entities)
         {
+            // Epic #3470 Slice 2b — the pending-approval queue is a Card surface.
             var cover = await CoverUrlResolver
-                .ResolvePublicWithSourceAsync(g, _blobStorage)
+                .ResolveForContextWithSourceAsync(g, CoverContext.Card, _blobStorage)
                 .ConfigureAwait(false);
             var (coverLicense, coverAttribution, coverSourceUrl) = CoverAttribution.ForWinningSource(cover.Kind, g);
 

@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
@@ -27,12 +28,13 @@ public sealed class AssignCoverCommandHandlerTests
 
     private readonly Mock<ISharedGameRepository> _repository = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
+    private readonly Mock<IHybridCacheService> _cache = new();
 
     private AssignCoverCommandHandler CreateAssignHandler() =>
-        new(_repository.Object, _unitOfWork.Object, NullLogger<AssignCoverCommandHandler>.Instance);
+        new(_repository.Object, _unitOfWork.Object, _cache.Object, NullLogger<AssignCoverCommandHandler>.Instance);
 
     private RemoveCoverAssignmentCommandHandler CreateRemoveHandler() =>
-        new(_repository.Object, _unitOfWork.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
+        new(_repository.Object, _unitOfWork.Object, _cache.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
 
     private static SharedGame NewGame() => SharedGame.Create(
         "Catan", 1995, "desc", 3, 4, 90, 10, 2.5m, 7.8m,
@@ -103,5 +105,55 @@ public sealed class AssignCoverCommandHandlerTests
             CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    // ----- Epic #3470 Slice 2 AC-6: cache invalidation on assign/remove ------
+
+    [Fact]
+    public async Task Assign_InvalidatesSearchAndDetailCacheTags()
+    {
+        // Without busting the read-model tags, a per-context assignment stays
+        // invisible until the 15min–2h HybridCache TTL — the picker looks broken.
+        var game = NewGame();
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        var handler = CreateAssignHandler();
+
+        await handler.Handle(
+            new AssignCoverCommand(game.Id, CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId),
+            CancellationToken.None);
+
+        _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Remove_InvalidatesSearchAndDetailCacheTags()
+    {
+        var game = NewGame();
+        game.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId);
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        var handler = CreateRemoveHandler();
+
+        await handler.Handle(new RemoveCoverAssignmentCommand(game.Id, CoverContext.Card, AdminId), CancellationToken.None);
+
+        _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Assign_GameNotFound_DoesNotInvalidateCache()
+    {
+        // A 404 short-circuits before any persistence, so nothing changed → no
+        // cache eviction (avoids wasted cross-replica pub/sub churn).
+        _repository.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                   .ReturnsAsync((SharedGame?)null);
+        var handler = CreateAssignHandler();
+
+        var act = () => handler.Handle(
+            new AssignCoverCommand(Guid.NewGuid(), CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

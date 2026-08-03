@@ -4,10 +4,12 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -117,7 +119,13 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
 
     private async Task<PagedResult<SharedGameDto>> ExecuteSearchAsync(SearchSharedGamesQuery query, CancellationToken cancellationToken)
     {
-        var dbQuery = _context.SharedGames.AsNoTracking();
+        // Epic #3470 Slice 2: eager-load CoverAssignments so the per-context (Card)
+        // resolver can honor an admin override on each grid card; without the Include
+        // the assignment silently falls through to the implicit precedence. The
+        // projection below keeps `Game = g` (the full entity), so the Include is honored.
+        // Typed IQueryable (not the IIncludableQueryable that Include returns) so the
+        // subsequent `dbQuery = dbQuery.Where(...)` filter reassignments still compile.
+        IQueryable<SharedGameEntity> dbQuery = _context.SharedGames.AsNoTracking().Include(g => g.CoverAssignments);
 
         // Default filter: Published games only (unless specific Status is requested)
         if (query.Status is null)
@@ -412,8 +420,11 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var games = new List<SharedGameDto>(projected2.Count);
         foreach (var p in projected2)
         {
+            // Epic #3470 Slice 2 — catalog grid cards are the Card context: honor an
+            // admin per-context override, else fall through to implicit precedence.
+            // Source-aware so the card attribution follows the winning source.
             var cover = await CoverUrlResolver
-                .ResolvePublicWithSourceAsync(p.Game, _blobStorage)
+                .ResolveForContextWithSourceAsync(p.Game, CoverContext.Card, _blobStorage)
                 .ConfigureAwait(false);
             var (coverLicense, coverAttribution, coverSourceUrl) = CoverAttribution.ForWinningSource(cover.Kind, p.Game);
 

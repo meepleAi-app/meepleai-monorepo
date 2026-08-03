@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -142,6 +143,63 @@ public class GetSharedGameByIdQueryHandlerTests
 
         // Assert
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_ResolvesHeroContextCover_HonoringAdminOverride()
+    {
+        // Epic #3470 Slice 2 AC-1: the detail page is the sole Hero surface. An admin
+        // Hero override pinning Wikidata must win over the implicit precedence (PDF is
+        // higher in the chain) — proving the handler resolves the HERO context AND
+        // eager-loads CoverAssignments (without the Include the AsNoTracking entity has
+        // no assignments and the override is silently ignored, yielding the PDF cover).
+        var game = SharedGame.Create(
+            "Catan", 1995, "Description", 3, 4, 90, 10, 2.5m, 7.8m,
+            "https://example.com/catan.jpg", "https://example.com/thumb.jpg",
+            GameRules.Create("Rules content", "en"), Guid.NewGuid(), 13);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+            .ReturnsAsync("https://r2/wiki-hero.webp");
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+            .ReturnsAsync("https://r2/pdf.webp");
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = game.Id,
+            Title = "Catan",
+            Description = "desc",
+            Status = 1,
+            PdfCoverR2Key = "pdf-key",        // would win the implicit precedence
+            WikidataCoverR2Key = "wiki-key",  // pinned by the Hero override
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Context = CoverContext.Hero,
+                    Source = CoverAssignmentSource.Wikidata,
+                    CreatedBy = Guid.NewGuid(),
+                },
+            },
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.ChangeTracker.Clear();
+
+        var handler = CreateHandler(db);
+
+        var result = await handler.Handle(new GetSharedGameByIdQuery(game.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.CoverUrl.Should().Be(
+            "https://r2/wiki-hero.webp",
+            "the Hero admin override pins Wikidata; the PDF implicit precedence must NOT win");
     }
 
     [Fact]

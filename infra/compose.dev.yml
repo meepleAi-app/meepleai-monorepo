@@ -178,10 +178,6 @@ services:
   # Automation (profile: automation)
   # ===========================================================================
 
-  n8n:
-    env_file: [./secrets/database.secret, ./secrets/n8n.secret, ./env/n8n.env.dev]
-    ports: ["127.0.0.1:5678:5678"]
-
   mailpit:
     ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]
 

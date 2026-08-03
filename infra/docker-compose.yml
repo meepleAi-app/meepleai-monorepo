@@ -532,29 +532,6 @@ services:
   # Automation services (profile: automation)
   # ---------------------------------------------------------------------------
 
-  n8n:
-    image: n8nio/n8n:1.114.4
-    container_name: meepleai-n8n
-    restart: unless-stopped
-    profiles: [automation]
-    volumes:
-      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
-    entrypoint: ["/scripts/load-secrets-env.sh"]
-    command: ["n8n"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - meepleai
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
-
   mailpit:
     image: axllent/mailpit:v1.22
     container_name: mailpit

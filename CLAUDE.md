@@ -58,7 +58,7 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IMediator m) =>
 app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService svc) => ...);
 ```
 
-### DDD Bounded Contexts (21)
+### DDD Bounded Contexts (20)
 
 `apps/api/src/Api/BoundedContexts/` — **Layers**: Domain → Application (commands/queries) → Infrastructure
 
@@ -84,7 +84,6 @@ app.MapPost("/api/v1/auth/register", async (RegisterCommand cmd, IAuthService sv
 | Testing | Test-support endpoints (seed/cleanup test entities) |
 | UserLibrary | Collections, wishlist, history |
 | UserNotifications | Alerts, email, push |
-| WorkflowIntegration | n8n, webhooks, logging |
 
 ### Key Data Patterns
 

@@ -259,23 +259,7 @@ pwsh tools/delete-qdrant-collection.ps1 -CollectionName "meepleai_vectors"
 
 **Prerequisiti**: Qdrant deve essere in esecuzione (`docker compose up qdrant`)
 
-### 8. Configurazione n8n
-
-**File**: `register-n8n-webhook.ps1`, `setup-n8n-service-account.ps1`
-
-Configurazione e registrazione webhook per n8n workflow automation.
-
-**Uso**:
-
-```powershell
-# Setup account servizio n8n
-pwsh tools/setup-n8n-service-account.ps1
-
-# Registra webhook
-pwsh tools/register-n8n-webhook.ps1 -WebhookUrl "http://localhost:5678/webhook/xxx"
-```
-
-### 9. Generazione Issue Admin Console
+### 8. Generazione Issue Admin Console
 
 **File**: `create-admin-console-issues.{js,ps1,sh}`
 

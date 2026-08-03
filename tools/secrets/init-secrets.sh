@@ -95,7 +95,7 @@ fi
 # PostgreSQL Password
 create_secret \
     "postgres-password" \
-    "PostgreSQL database password (used by postgres, api, n8n)" \
+    "PostgreSQL database password (used by postgres, api)" \
     "meeplepass" \
     false
 
@@ -104,20 +104,6 @@ create_secret \
     "openrouter-api-key" \
     "OpenRouter API key for LLM (get from https://openrouter.ai/)" \
     "" \
-    false
-
-# n8n Encryption Key (auto-generate)
-create_secret \
-    "n8n-encryption-key" \
-    "n8n encryption key (auto-generated secure random)" \
-    "" \
-    true
-
-# n8n Basic Auth Password
-create_secret \
-    "n8n-basic-auth-password" \
-    "n8n UI basic auth password" \
-    "admin123" \
     false
 
 # Gmail App Password

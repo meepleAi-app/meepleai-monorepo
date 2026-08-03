@@ -41,6 +41,7 @@
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
     "lint": "eslint . --max-warnings=510",
     "lint:fix": "eslint . --fix",
+    "lint:no-cover-fixme": "node scripts/no-cover-fixme.mjs",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "lint:tokens:mockups": "node scripts/lint-tokens-mockups.mjs",
     "audit-mockups:discover": "node scripts/audit-mockups/discover-clusters.mjs",

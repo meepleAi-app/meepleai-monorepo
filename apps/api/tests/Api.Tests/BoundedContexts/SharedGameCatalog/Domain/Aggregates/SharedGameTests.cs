@@ -1384,4 +1384,62 @@ public sealed class SharedGameTests
     }
 
     #endregion
+
+    #region SetManualCover (epic #3470 Slice 3a)
+
+    private static SharedGame NewManualCoverGame() => SharedGame.Create(
+        "Catan", 2010, "desc", 3, 4, 90, 10, 2.5m, 7.8m,
+        "https://example.com/c.jpg", "https://example.com/c-thumb.jpg", null, Guid.NewGuid());
+
+    [Fact]
+    public void SetManualCover_ValidInput_SetsAllFields()
+    {
+        var game = NewManualCoverGame();
+        var admin = Guid.NewGuid();
+        var attestedAt = DateTime.UtcNow;
+
+        game.SetManualCover("covers/manual/x/cover", "CC-BY-4.0", "Jane Artist", "https://example.com/src", admin, attestedAt);
+
+        game.ManualCoverR2Key.Should().Be("covers/manual/x/cover");
+        game.ManualCoverLicense.Should().Be("CC-BY-4.0");
+        game.ManualCoverAttribution.Should().Be("Jane Artist");
+        game.ManualCoverSourceUrl.Should().Be("https://example.com/src");
+        game.ManualCoverAttestedBy.Should().Be(admin);
+        game.ManualCoverAttestedAt.Should().Be(attestedAt);
+    }
+
+    [Fact]
+    public void SetManualCover_BlankAttribution_StoresNull()
+    {
+        var game = NewManualCoverGame();
+
+        game.SetManualCover("k", "CC0", "   ", "https://s", Guid.NewGuid(), DateTime.UtcNow);
+
+        game.ManualCoverAttribution.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("", "CC0", "https://s")]  // empty r2Key
+    [InlineData("k", "", "https://s")]    // empty license
+    [InlineData("k", "CC0", "")]          // empty sourceUrl
+    public void SetManualCover_MissingRequiredField_Throws(string r2Key, string license, string sourceUrl)
+    {
+        var game = NewManualCoverGame();
+
+        var act = () => game.SetManualCover(r2Key, license, null, sourceUrl, Guid.NewGuid(), DateTime.UtcNow);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void SetManualCover_EmptyAttestedBy_Throws()
+    {
+        var game = NewManualCoverGame();
+
+        var act = () => game.SetManualCover("k", "CC0", null, "https://s", Guid.Empty, DateTime.UtcNow);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    #endregion
 }

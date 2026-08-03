@@ -183,19 +183,9 @@ public class SlackWebhookClientTests
             "SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
     }
 
-    [Theory]
-    [InlineData("https://127.0.0.1/services/T1/B1/abc")]     // loopback
-    [InlineData("https://169.254.169.254/latest")]           // cloud metadata endpoint
-    [InlineData("https://10.0.0.5/services/T1/B1/abc")]      // RFC 1918 private
-    public async Task SendAsync_PrivateOrReservedIp_BlockedWithoutPosting(string webhookUrl)
-    {
-        var handler = HandlerReturning(HttpStatusCode.OK, "ok");
-        var client = CreateClient(handler);
-
-        var result = await client.SendAsync(webhookUrl, new SlackMessage("Hello"), CancellationToken.None);
-
-        result.Success.Should().BeFalse("a webhook URL resolving to a private/reserved IP must be blocked by the SSRF guard");
-        handler.Protected().Verify(
-            "SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
-    }
+    // #3495 fix 3/N: the private/reserved-IP guarantee moved from a pre-connect DNS check in the
+    // client to the SSRF connect-pin on the DI-wired primary handler (ConfigureSsrfPin). A unit
+    // test with a hand-built mock handler cannot exercise the pin, so that guarantee is proven by
+    // (a) SsrfPinnedConnectTests (the pin fails closed on private/mixed/empty resolutions) and
+    // (b) SlackWebhookClientPinIntegrationTests (the Slack DI registration is actually pinned).
 }

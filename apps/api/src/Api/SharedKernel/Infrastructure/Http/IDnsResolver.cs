@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+namespace Api.SharedKernel.Infrastructure.Http;
 
 /// <summary>
 /// Seam over DNS resolution (issue #3495, finding H4). Injecting it lets the SSRF connect pin

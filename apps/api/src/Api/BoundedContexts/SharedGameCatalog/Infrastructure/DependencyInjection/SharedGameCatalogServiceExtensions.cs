@@ -1,4 +1,3 @@
-using System.Net.Http;
 using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
@@ -13,6 +12,7 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -192,24 +192,16 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithDescription("Runs every 15 min to evict shared-game detail tags for top-N most-viewed games and the search-games list tag"));
         });
 
-        // #3495 fix 2/N: DNS-resolution seam shared by the SSRF connect pin.
+        // #3495: DNS-resolution seam shared by the SSRF connect pin (promoted to
+        // Api.SharedKernel.Infrastructure.Http in fix 3/N so every egress sink can share it).
         services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
 
         // Gap G2: BGG cover re-upload service (typed HttpClient pattern). 10s timeout — BGG CDN
         // images are typically < 500 KB (BggCoverDownloader stream-caps the body at 10MB).
-        // #3495 fix 2/N: the SSRF-pinned ConnectCallback resolves once and dials the validated
-        // IP, so DNS-rebinding and redirect-to-internal are closed by construction on EVERY
-        // connection (the initial request and each of the ≤5 auto-redirect hops).
-        services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(10);
-        })
-        .ConfigurePrimaryHttpMessageHandler(static sp => new SocketsHttpHandler
-        {
-            ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>()),
-            AllowAutoRedirect = true,
-            MaxAutomaticRedirections = 5,
-        });
+        // #3495: ConfigureSsrfPin resolves once and dials the validated IP, so DNS-rebinding and
+        // redirect-to-internal are closed by construction on EVERY connection (the initial
+        // request and each of the ≤5 auto-redirect hops).
+        AddBggCoverDownloader(services);
 
         // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
         // aggregator, and Quartz CatalogSeedFetchJob.
@@ -390,6 +382,32 @@ internal static class SharedGameCatalogServiceExtensions
     {
         services.AddLogging();
         RegisterBggCoverUploadPipeline(services);
+    }
+
+    /// <summary>
+    /// Issue #3495 fix 3/N — registers the BGG cover-download typed <see cref="HttpClient"/> with
+    /// the SSRF connect-pin (<c>ConfigureSsrfPin</c>) as its primary handler. Extracted so the prod
+    /// registration and the DI test seam (<see cref="AddBggCoverDownloaderForTests"/>) share the
+    /// exact same pin wiring — drop the pin here and both prod and the fail-closed test lose it.
+    /// </summary>
+    private static void AddBggCoverDownloader(IServiceCollection services) =>
+        services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .ConfigureSsrfPin();
+
+    /// <summary>
+    /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned BGG cover-download client so
+    /// a DI-resolution test can prove a private-resolving cover host fails closed at the connect-pin.
+    /// The caller MUST register an <see cref="IBggCoverUploadPipeline"/> + <see cref="IDnsResolver"/>
+    /// on the same collection before resolving <see cref="IBggCoverDownloader"/>.
+    /// </summary>
+    internal static void AddBggCoverDownloaderForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        AddBggCoverDownloader(services);
     }
 
     private static BggCoverUploadPipeline BuildBggCoverUploadPipeline(

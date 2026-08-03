@@ -94,20 +94,11 @@ public sealed class BggCoverDownloaderTests
         VerifyNoHttpCall(handler);
     }
 
-    [Theory]
-    [InlineData("https://127.0.0.1/abc.jpg")]
-    [InlineData("https://169.254.169.254/latest")]
-    [InlineData("https://10.0.0.5/abc.jpg")]
-    public async Task DownloadAndUploadAsync_PrivateOrReservedIp_BlockedWithoutFetching(string url)
-    {
-        var handler = TrackingHandler(HttpStatusCode.OK, new byte[] { 0x01 });
-        var sut = new BggCoverDownloader(new HttpClient(handler.Object), _pipelineMock.Object, _loggerMock.Object);
-
-        var result = await sut.DownloadAndUploadAsync(13, url, CancellationToken.None);
-
-        result.Should().BeNull("a URL resolving to a private/reserved IP must be blocked by the SSRF guard");
-        VerifyNoHttpCall(handler);
-    }
+    // #3495 fix 3/N: the private/reserved-IP guarantee moved from a pre-connect DNS check in the
+    // downloader to the SSRF connect-pin on the DI-wired primary handler (ConfigureSsrfPin). A unit
+    // test with a hand-built mock handler cannot exercise the pin, so that guarantee is proven by
+    // (a) SsrfPinnedConnectTests (the pin fails closed on private/mixed/empty resolutions) and
+    // (b) BggCoverDownloaderPinIntegrationTests (the BGG DI registration is actually pinned).
 
     [Fact]
     public async Task DownloadAndUploadAsync_BodyExceedsSizeCap_ReturnsNullWithoutUploading()

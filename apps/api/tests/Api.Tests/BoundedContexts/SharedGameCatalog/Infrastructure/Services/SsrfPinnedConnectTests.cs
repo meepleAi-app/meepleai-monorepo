@@ -1,5 +1,5 @@
 using System.Net;
-using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;

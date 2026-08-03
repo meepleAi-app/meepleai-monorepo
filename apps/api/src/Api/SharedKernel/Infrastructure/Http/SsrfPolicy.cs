@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+namespace Api.SharedKernel.Infrastructure.Http;
 
 /// <summary>
 /// SSRF IP classifier (issue #3495, finding H3). Pure, fail-closed classification of an

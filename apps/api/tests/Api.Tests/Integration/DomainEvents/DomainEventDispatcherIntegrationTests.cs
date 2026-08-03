@@ -176,11 +176,11 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
     #region Cross-Context Integration Tests
 
     /// <summary>
-    /// Test: GameManagement event → WorkflowIntegration handler
-    /// Cross-Context: GameCreated event → GameCreatedIntegrationEventHandler
+    /// Test: GameManagement event → integration-event chain (audit_outbox).
+    /// Cross-Context: GameCreated event → GameCreatedIntegrationEventHandler.
     /// </summary>
     [Fact]
-    public async Task GameCreated_ShouldTriggerWorkflowIntegrationHandler()
+    public async Task GameCreated_ShouldDispatchIntegrationEventChain()
     {
         // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
@@ -203,9 +203,6 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         outboxRow.Should().NotBeNull();
         outboxRow!.PayloadJson.Should().Contain(gameId.ToString());
-
-        // Integration event handler logs (check via logger, not DB)
-        // In real scenario, would verify n8n workflow triggered
     }
 
     /// <summary>

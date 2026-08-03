@@ -4,7 +4,10 @@ namespace Api.BoundedContexts.GameManagement.Application.IntegrationEvents;
 
 /// <summary>
 /// Integration event published when a game is created.
-/// Subscribers: WorkflowIntegration (trigger game setup workflows), KnowledgeBase (prepare vector indices)
+/// Currently has no subscribers: the WorkflowIntegration subscriber was removed with the n8n
+/// decommission, and a KnowledgeBase index-prep subscriber was documented but never implemented.
+/// Still published (a MediatR publish with no handlers is a harmless no-op) for future
+/// cross-context consumers; the dead publish + this event are a candidate for a follow-up cleanup.
 /// </summary>
 internal sealed class GameCreatedIntegrationEvent : IntegrationEventBase
 {

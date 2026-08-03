@@ -157,7 +157,6 @@ public sealed class AdministrationDomainModelsTests
     [InlineData("postgres")]
     [InlineData("redis")]
     [InlineData("embedding")]
-    [InlineData("n8n")]
     [InlineData("prometheus")]
     public void ServiceHealthStatus_AcceptsAllServiceNames(string serviceName)
     {

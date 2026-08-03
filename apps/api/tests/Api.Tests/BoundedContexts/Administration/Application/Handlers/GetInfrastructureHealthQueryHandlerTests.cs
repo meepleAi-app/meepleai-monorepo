@@ -79,14 +79,13 @@ public class GetInfrastructureHealthQueryHandlerTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(30)),
-            new("embedding", HealthState.Degraded, "Slow response", DateTime.UtcNow, TimeSpan.FromMilliseconds(800)),
-            new("n8n", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
+            new("embedding", HealthState.Degraded, "Slow response", DateTime.UtcNow, TimeSpan.FromMilliseconds(800))
         };
 
         var overallHealth = new OverallHealthStatus(
             HealthState.Degraded, // Degraded because embedding is degraded
-            4,
             3,
+            2,
             1,
             0,
             DateTime.UtcNow);
@@ -105,11 +104,11 @@ public class GetInfrastructureHealthQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Overall.State.ToString().Should().Be("Degraded");
-        result.Overall.TotalServices.Should().Be(4);
-        result.Overall.HealthyServices.Should().Be(3);
+        result.Overall.TotalServices.Should().Be(3);
+        result.Overall.HealthyServices.Should().Be(2);
         result.Overall.DegradedServices.Should().Be(1);
         result.Overall.UnhealthyServices.Should().Be(0);
-        result.Services.Count.Should().Be(4);
+        result.Services.Count.Should().Be(3);
 
         _mockHealthService.Verify(s => s.GetAllServicesHealthAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -428,14 +427,13 @@ public class GetInfrastructureHealthQueryHandlerTests
         {
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(50)),
             new("redis", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(30)),
-            new("embedding", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100)),
-            new("n8n", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(80))
+            new("embedding", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100))
         };
 
         var overallHealth = new OverallHealthStatus(
             HealthState.Healthy,
-            4,
-            4,
+            3,
+            3,
             0,
             0,
             DateTime.UtcNow);
@@ -454,8 +452,8 @@ public class GetInfrastructureHealthQueryHandlerTests
         // Assert
         result.Should().NotBeNull();
         result.Overall.State.ToString().Should().Be("Healthy");
-        result.Overall.TotalServices.Should().Be(4);
-        result.Overall.HealthyServices.Should().Be(4);
+        result.Overall.TotalServices.Should().Be(3);
+        result.Overall.HealthyServices.Should().Be(3);
         result.Overall.DegradedServices.Should().Be(0);
         result.Overall.UnhealthyServices.Should().Be(0);
         result.Services.Should().AllSatisfy(service =>

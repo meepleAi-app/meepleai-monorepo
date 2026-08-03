@@ -1,5 +1,4 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.BoundedContexts.WorkflowIntegration.Application.IntegrationEventHandlers;
 using Api.Infrastructure;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
@@ -19,14 +18,14 @@ namespace Api.Tests.Integration.CrossContext;
 
 /// <summary>
 /// Integration tests for cross-context event dispatch and handling.
-/// Tests GameManagement → WorkflowIntegration integration event flow.
+/// Tests GameManagement cross-context domain-event dispatch (audit_outbox).
 /// Issue #2307: Week 3 - Cross-context integration testing.
 /// Issue #1320 (P2c): Removed Game aggregate usage; events constructed directly.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2307")]
-[Trait("CrossContext", "GameManagement-WorkflowIntegration")]
+[Trait("CrossContext", "GameManagement-Dispatch")]
 public sealed class CrossContextIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -76,14 +75,13 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         }
     }
 
-    #region GameManagement → WorkflowIntegration Tests
+    #region GameManagement cross-context dispatch tests
 
     /// <summary>
-    /// Test: GameCreated event triggers workflow integration
-    /// Cross-Context: GameManagement → WorkflowIntegration event dispatch
+    /// Test: GameCreated event dispatches cross-context (audit_outbox row written).
     /// </summary>
     [Fact]
-    public async Task GameCreated_ShouldDispatchToWorkflowIntegration()
+    public async Task GameCreated_ShouldDispatchCrossContext()
     {
         // Arrange — seed SharedGameEntity and inject GameCreatedEvent directly
         var gameId = Guid.NewGuid();
@@ -115,11 +113,10 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Test: GameLinkedToBgg event triggers workflow integration
-    /// Cross-Context: GameManagement → WorkflowIntegration BGG integration
+    /// Test: GameLinkedToBgg event dispatches cross-context (audit_outbox row written).
     /// </summary>
     [Fact]
-    public async Task GameLinkedToBgg_ShouldDispatchToWorkflowIntegration()
+    public async Task GameLinkedToBgg_ShouldDispatchCrossContext()
     {
         // Arrange — seed SharedGameEntity and inject GameLinkedToBggEvent directly
         var gameId = Guid.NewGuid();

@@ -72,12 +72,10 @@ jobs:
           ssh -T -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=20 \
             "${STAGING_USER}@${STAGING_HOST}" 'bash -s' > raw.out <<'REMOTE'
           set -euo pipefail
-          # Admin creds: the managed admin.secret is currently STALE (login → 400 "Invalid email or
-          # password"); the working (temp) password lives in reindex-corpus/.env.staging — the one the
-          # ops re-index authenticated with. Prefer it, fall back to admin.secret.
-          # TODO(#3338 ops): reconcile the staging admin password so admin.secret alone suffices.
-          CREDS=/opt/meepleai/repo/infra/scripts/reindex-corpus/.env.staging
-          [ -f "$CREDS" ] || CREDS=/opt/meepleai/repo/infra/secrets/admin.secret
+          # Admin creds for the admin-only endpoint: source the managed admin.secret. Its ADMIN_PASSWORD
+          # was reconciled to the live staging admin password in the #3338 closeout (2026-08-03), so
+          # admin.secret alone now authenticates — the earlier reindex-corpus/.env.staging fallback is gone.
+          CREDS=/opt/meepleai/repo/infra/secrets/admin.secret
           set -a; . "$CREDS"; set +a
           # The API runs in a container fronted by Traefik — localhost:8080 does NOT resolve on the
           # host (no port map), only INSIDE the api container. Run login + GET via `docker exec`

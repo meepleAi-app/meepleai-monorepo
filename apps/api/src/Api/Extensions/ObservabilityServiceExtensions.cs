@@ -26,7 +26,6 @@ internal static class ObservabilityServiceExtensions
 
     private static readonly string[] PostgresTags = new[] { "db", "sql", HealthCheckTags.Core, HealthCheckTags.Critical };
     private static readonly string[] RedisTags = new[] { "cache", "redis", HealthCheckTags.Core, HealthCheckTags.Critical };
-    private static readonly string[] N8nTags = new[] { "automation", "workflow" };
     private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
     private static readonly string[] ConfigurationTags = new[] { "configuration", "startup" };
 
@@ -170,11 +169,6 @@ internal static class ObservabilityServiceExtensions
 
     private static void AddExternalHealthChecks(IHealthChecksBuilder builder, IConfiguration configuration)
     {
-        // S1075: Default URLs extracted to const
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback values
-        const string DefaultN8nUrl = "http://n8n:5678";
-#pragma warning restore S1075
-
         // Issue #2152: Build Redis connection string with password (same as InfrastructureServiceExtensions)
         var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST")
             ?? configuration["REDIS_HOST"]
@@ -189,8 +183,6 @@ internal static class ObservabilityServiceExtensions
             ? $"{redisHost}:{redisPort}"
             : $"{redisHost}:{redisPort},password={redisPassword}";
 
-        var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
-
         builder
             .AddRedis(
                 healthCheckRedisConnectionString,
@@ -204,21 +196,6 @@ internal static class ObservabilityServiceExtensions
                 "configuration",
                 failureStatus: HealthStatus.Degraded,
                 tags: ConfigurationTags);
-
-        // #2796: only health-check n8n when the WorkflowIntegration webhook client
-        // is actually enabled (mirrors N8nWebhookClientOptions.SectionName "N8n" +
-        // IsEnabled). Staging removed n8n entirely (disk); an unconditional probe
-        // would report permanent Unhealthy on the dashboard for a service we don't
-        // integrate with. String-indexer read avoids coupling to the WI context.
-        var n8nEnabled = string.Equals(
-            configuration["N8n:IsEnabled"], "true", StringComparison.OrdinalIgnoreCase);
-        if (n8nEnabled)
-        {
-            builder.AddUrlGroup(
-                new Uri($"{n8nUrl}/healthz"),
-                name: "n8n",
-                tags: N8nTags);
-        }
     }
 
     /// <summary>

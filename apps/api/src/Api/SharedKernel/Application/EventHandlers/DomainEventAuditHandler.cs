@@ -94,7 +94,7 @@ internal sealed class DomainEventAuditHandler<TEvent> : INotificationHandler<TEv
     ///   <item><c>CreatedByUserId</c>, <c>CreatedBy</c>, <c>ModifiedBy</c>, <c>DeletedBy</c>,
     ///     <c>ApprovedBy</c>, <c>ApprovedByUserId</c>, <c>RejectedBy</c>, <c>PublishedBy</c>,
     ///     <c>ArchivedBy</c>, <c>SubmittedBy</c>, <c>RequestedBy</c> — SharedGameCatalog content
-    ///     lifecycle + Authentication access requests + SystemConfiguration + WorkflowIntegration</item>
+    ///     lifecycle + Authentication access requests + SystemConfiguration</item>
     /// </list>
     /// Issue #1534 review fix: original implementation matched only <c>UserId</c>, dropping
     /// attribution silently for ~22 admin/content-lifecycle events (security audit gap).

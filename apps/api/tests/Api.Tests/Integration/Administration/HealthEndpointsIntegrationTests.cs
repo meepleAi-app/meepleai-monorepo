@@ -12,7 +12,7 @@ namespace Api.Tests.Integration.Administration;
 
 /// <summary>
 /// Integration tests for individual service health endpoints (Issue #892).
-/// Tests the 4 dedicated health endpoints: postgres, redis, qdrant, n8n.
+/// Tests the dedicated health endpoints: postgres, redis, qdrant.
 ///
 /// Test Categories:
 /// 1. Individual Endpoint Tests: Each service endpoint returns correct data
@@ -42,7 +42,6 @@ public sealed class HealthEndpointsIntegrationTests
     [InlineData("postgres", "PostgreSQL")]
     [InlineData("redis", "Redis")]
     [InlineData("qdrant", "Qdrant")]
-    [InlineData("n8n", "n8n")]
     public async Task GetServiceHealth_ValidService_ReturnsHealthStatus(string serviceName, string displayName)
     {
         // Arrange
@@ -82,7 +81,6 @@ public sealed class HealthEndpointsIntegrationTests
     [InlineData("postgres")]
     [InlineData("redis")]
     [InlineData("qdrant")]
-    [InlineData("n8n")]
     public async Task GetServiceHealth_UnhealthyService_ReturnsUnhealthyStatus(string serviceName)
     {
         // Arrange
@@ -116,7 +114,6 @@ public sealed class HealthEndpointsIntegrationTests
     [InlineData("postgres")]
     [InlineData("redis")]
     [InlineData("qdrant")]
-    [InlineData("n8n")]
     public async Task GetServiceHealth_DegradedService_ReturnsDegradedStatus(string serviceName)
     {
         // Arrange
@@ -176,39 +173,10 @@ public sealed class HealthEndpointsIntegrationTests
             "PostgreSQL endpoint should query 'postgres' service name");
     }
 
-    [Fact]
-    public async Task GetServiceHealth_N8N_ReturnsWorkflowServiceHealth()
-    {
-        // Arrange - Issue #892: New n8n health endpoint
-        var expectedStatus = new ServiceHealthStatus(
-            "n8n",
-            HealthState.Healthy,
-            null,
-            DateTime.UtcNow,
-            TimeSpan.FromMilliseconds(100));
-
-        _healthServiceMock
-            .Setup(s => s.GetServiceHealthAsync("n8n", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(expectedStatus);
-
-        var handler = CreateHandler();
-        var query = new GetInfrastructureHealthQuery { ServiceName = "n8n" };
-
-        // Act
-        var result = await handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        result.Services.Should().ContainSingle();
-        var service = result.Services.ElementAt(0);
-        service.ServiceName.Should().Be("n8n");
-        service.State.Should().Be("Healthy");
-    }
-
     [Theory]
     [InlineData("postgres", 45.5)]
     [InlineData("redis", 12.3)]
     [InlineData("qdrant", 78.9)]
-    [InlineData("n8n", 150.2)]
     public async Task GetServiceHealth_ValidService_IncludesResponseTime(string serviceName, double responseTimeMs)
     {
         // Arrange

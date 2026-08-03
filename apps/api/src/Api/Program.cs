@@ -36,7 +36,6 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -399,9 +398,6 @@ builder.Services.AddKnowledgeBaseServices();
 
 // Issue #1675: KbQuality bounded context (per-doc quality eval)
 builder.Services.AddKbQualityModule(builder.Configuration);
-
-// DDD-PHASE3: WorkflowIntegration bounded context
-builder.Services.AddWorkflowIntegrationContext(builder.Configuration);
 
 // DDD-PHASE3: SystemConfiguration bounded context
 builder.Services.AddSystemConfigurationContext();
@@ -1006,10 +1002,6 @@ v1Api.MapAdminLogEndpoints();          // Structured application log viewer (Seq
 v1Api.MapAdminServiceCallEndpoints();  // Service call history and statistics
 v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibility
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
-
-// Workflows
-v1Api.MapWorkflowEndpoints();          // n8n workflow integration
-v1Api.MapN8nWebhookEndpoints();        // Issue #57: n8n → API webhook callbacks
 
 // AI extended
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)

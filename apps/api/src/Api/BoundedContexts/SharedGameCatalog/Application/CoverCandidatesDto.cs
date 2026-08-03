@@ -27,11 +27,21 @@ public sealed record CoverCandidateDto(
     string? SourceUrl);
 
 /// <summary>
-/// Which cover source is currently pinned for each UI context. A <see langword="null"/>
+/// A single per-context admin assignment: the pinned source plus the persisted focal
+/// point (epic #3470 Slice 2e / AC-5). Exposing the focal lets the picker pre-fill the
+/// saved value instead of always starting at 0.5/0.5.
+/// </summary>
+public sealed record CoverContextAssignmentDto(
+    CoverAssignmentSource Source,
+    double FocalX,
+    double FocalY);
+
+/// <summary>
+/// Which cover assignment is currently pinned for each UI context. A <see langword="null"/>
 /// field means the context has no explicit admin assignment and falls back to the
 /// resolver's implicit precedence.
 /// </summary>
 public sealed record CoverContextAssignmentsDto(
-    CoverAssignmentSource? Card,
-    CoverAssignmentSource? Hero,
-    CoverAssignmentSource? Social);
+    CoverContextAssignmentDto? Card,
+    CoverContextAssignmentDto? Hero,
+    CoverContextAssignmentDto? Social);

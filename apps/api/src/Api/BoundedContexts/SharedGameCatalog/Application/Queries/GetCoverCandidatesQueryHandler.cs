@@ -61,9 +61,9 @@ internal sealed class GetCoverCandidatesQueryHandler
         var candidates = resolved.Where(c => c is not null).Select(c => c!).ToList();
 
         var assignments = new CoverContextAssignmentsDto(
-            Card: SourceForContext(game, CoverContext.Card),
-            Hero: SourceForContext(game, CoverContext.Hero),
-            Social: SourceForContext(game, CoverContext.Social));
+            Card: AssignmentForContext(game, CoverContext.Card),
+            Hero: AssignmentForContext(game, CoverContext.Hero),
+            Social: AssignmentForContext(game, CoverContext.Social));
 
         return new CoverCandidatesDto(game.Id, candidates, assignments);
     }
@@ -90,6 +90,11 @@ internal sealed class GetCoverCandidatesQueryHandler
         return new CoverCandidateDto(source, previewUrl, license, attribution, sourceUrl);
     }
 
-    private static CoverAssignmentSource? SourceForContext(SharedGameEntity game, CoverContext context) =>
-        game.CoverAssignments.FirstOrDefault(a => a.Context == context)?.Source;
+    private static CoverContextAssignmentDto? AssignmentForContext(SharedGameEntity game, CoverContext context)
+    {
+        var assignment = game.CoverAssignments.FirstOrDefault(a => a.Context == context);
+        return assignment is null
+            ? null
+            : new CoverContextAssignmentDto(assignment.Source, assignment.FocalX, assignment.FocalY);
+    }
 }

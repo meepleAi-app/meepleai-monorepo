@@ -38,7 +38,7 @@ const candidatesData = {
       sourceUrl: 'https://commons.wikimedia.org/wiki/File:x.jpg',
     },
   ],
-  assignments: { card: 'Pdf', hero: null, social: null },
+  assignments: { card: { source: 'Pdf', focalX: 0.25, focalY: 0.75 }, hero: null, social: null },
 };
 
 let assignMutate: ReturnType<typeof vi.fn>;
@@ -73,6 +73,14 @@ describe('AdminCoverSourceDialog', () => {
     renderDialog();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/Catan/)).toBeInTheDocument();
+  });
+
+  it('pre-fills the saved focal for the active context (#3470 Slice 2e)', () => {
+    // The Card context has a saved focal of 0.25 / 0.75; the picker must pre-fill it
+    // (25% / 75%) instead of starting at the 0.5 / 0.5 default.
+    renderDialog();
+    const handle = screen.getByRole('button', { name: /punto focale/i });
+    expect(handle).toHaveStyle({ left: '25%', top: '75%' });
   });
 
   it('renders nothing when closed', () => {

@@ -52,7 +52,7 @@ beforeEach(() => {
           sourceUrl: 'https://commons.example/x',
         },
       ],
-      assignments: { card: 'Pdf', hero: null, social: null },
+      assignments: { card: { source: 'Pdf', focalX: 0.5, focalY: 0.5 }, hero: null, social: null },
     },
   });
 });

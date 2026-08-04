@@ -120,6 +120,27 @@ public class WebpVariantGeneratorTests
         decoded.Height.Should().Be((uint)TargetHeight);
     }
 
+    [Theory]
+    [InlineData(MagickFormat.Gif)]
+    [InlineData(MagickFormat.Bmp)]
+    [InlineData(MagickFormat.Tiff)]
+    [InlineData(MagickFormat.WebP)]
+    public async Task GenerateWebpAsync_AllowlistedRasterSource_ProducesWebp(MagickFormat sourceFormat)
+    {
+        // #3495 M1 — the raster-only allowlist gates decode on a 6-branch magic-byte sniff.
+        // Prove each allow-listed source format (beyond PNG/JPEG) is correctly sniffed + decoded,
+        // so a typo'd offset/byte in the GIF/BMP/TIFF/WebP branch would fail CI, not ship silently.
+        var source = CreateSolidImage(width: 400, height: 400, MagickColors.Teal, sourceFormat);
+        var sut = CreateSut();
+
+        var output = await sut.GenerateWebpAsync(source, TargetWidth, TargetHeight, CancellationToken.None);
+
+        output.Should().NotBeNullOrEmpty();
+        System.Text.Encoding.ASCII.GetString(output, 0, 4).Should().Be("RIFF",
+            $"a {sourceFormat} source must be accepted by the allowlist and re-encoded to WebP");
+        System.Text.Encoding.ASCII.GetString(output, 8, 4).Should().Be("WEBP");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Input validation (ArgumentException)
     // ──────────────────────────────────────────────────────────────────────────
@@ -372,6 +393,15 @@ public class WebpVariantGeneratorTests
         using var image = new MagickImage(color, (uint)width, (uint)height);
         image.Format = MagickFormat.Jpeg;
         image.Quality = 90;
+        using var ms = new MemoryStream();
+        image.Write(ms);
+        return ms.ToArray();
+    }
+
+    private static byte[] CreateSolidImage(int width, int height, MagickColor color, MagickFormat format)
+    {
+        using var image = new MagickImage(color, (uint)width, (uint)height);
+        image.Format = format;
         using var ms = new MemoryStream();
         image.Write(ms);
         return ms.ToArray();

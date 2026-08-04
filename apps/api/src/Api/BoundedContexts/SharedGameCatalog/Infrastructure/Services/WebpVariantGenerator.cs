@@ -107,11 +107,15 @@ internal sealed class WebpVariantGenerator : IWebpVariantGenerator
                 "Source image format is not a supported raster type (PNG/JPEG/WebP/GIF/BMP/TIFF).");
         }
 
+        // Pin the sniffed format for BOTH the header ping and the decode, so neither relies on
+        // ImageMagick's content-based coder auto-detection (the mechanism the allowlist bypasses).
+        var readSettings = new MagickReadSettings { Format = format.Value };
+
         // #3495 M1 — decompression-bomb defense: inspect the header only (no pixel
         // allocation) and reject sources beyond the dimension/megapixel cap before decode.
         try
         {
-            var info = new MagickImageInfo(originalImage);
+            var info = new MagickImageInfo(originalImage, readSettings);
             if (info.Width > MaxSourceDimension ||
                 info.Height > MaxSourceDimension ||
                 (long)info.Width * info.Height > MaxSourcePixels)
@@ -138,7 +142,6 @@ internal sealed class WebpVariantGenerator : IWebpVariantGenerator
             // Decode with the sniffed format pinned (no coder guessing / polyglot confusion)
             // inside Task.Run so callers keep the async contract. The header-only ping cap above
             // has already bounded the source to <= MaxSourcePixels before this allocation.
-            var readSettings = new MagickReadSettings { Format = format.Value };
             image = await Task.Run(() => new MagickImage(originalImage, readSettings), ct).ConfigureAwait(false);
         }
         catch (MagickException ex)

@@ -621,6 +621,14 @@ internal static class InfrastructureServiceExtensions
             BoundedContexts.SecurityAudit.Application.Services.IAuditLogger,
             BoundedContexts.SecurityAudit.Infrastructure.Services.AuditLogger>();
 
+        // #3495 H6: transactional audit writer — the OPPOSITE guarantee to AuditLogger above. Scoped
+        // so it shares the SAME per-request MeepleAiDbContext as IUnitOfWork; it Adds an evidence row
+        // WITHOUT SaveChanges, so the caller's SaveChangesAsync commits evidence + domain write
+        // atomically (evidence-or-nothing). Register both interface + impl (#2565).
+        services.AddScoped<
+            BoundedContexts.SecurityAudit.Application.Services.ITransactionalAuditWriter,
+            BoundedContexts.SecurityAudit.Infrastructure.Services.TransactionalAuditWriter>();
+
         // I5 (auth security fixes): email outbox + drainer. The service is
         // scoped (per-request DbContext); the drainer is hosted (singleton
         // via BackgroundService and uses IServiceScopeFactory to spin up a

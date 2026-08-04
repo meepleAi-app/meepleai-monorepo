@@ -978,12 +978,15 @@ internal static class SharedGameCatalogAdminEndpoints
         Guid id,
         IMediator mediator,
         HttpContext httpContext,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromBody] RevokeManualCoverRequest? request = null)
     {
         var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
         if (!authorized) return error!;
 
-        await mediator.Send(new RevokeManualCoverCommand(id, session!.Principal!.Subject.Id), ct)
+        // #3495 H6 — optional takedown reason (null when the caller sends no body) → audit event.
+        await mediator.Send(
+                new RevokeManualCoverCommand(id, session!.Principal!.Subject.Id, request?.Reason), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
     }

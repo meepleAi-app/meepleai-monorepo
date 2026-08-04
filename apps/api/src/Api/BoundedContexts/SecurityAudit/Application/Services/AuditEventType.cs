@@ -126,4 +126,21 @@ public static class AuditEventType
     /// ActorUserId = admin.
     /// </summary>
     public const string CategoryDeleted = "admin.category.deleted";
+
+    // ── Manual cover (arbitrary-URL) copyright evidence (#3495 C6/H6) ────
+
+    /// <summary>
+    /// An admin set a manual cover from an arbitrary URL. Immutable copyright
+    /// evidence written in the SAME transaction as the shared_games write.
+    /// Metadata JSON: <c>{ "sha256": hex, "license": string, "sourceUrl": string, "dbKey": string }</c>
+    /// where <c>sha256</c> is the SHA-256 of the RE-ENCODED WebP bytes stored in R2.
+    /// ActorUserId = attesting admin.
+    /// </summary>
+    public const string ManualCoverSet = "cover.manual.set";
+
+    /// <summary>
+    /// An admin revoked a manual cover (takedown). Metadata JSON:
+    /// <c>{ "reason": string?, "dbKey": string }</c>. ActorUserId = revoking admin.
+    /// </summary>
+    public const string ManualCoverRevoked = "cover.manual.revoked";
 }

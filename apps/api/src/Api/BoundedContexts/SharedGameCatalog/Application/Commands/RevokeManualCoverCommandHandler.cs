@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -29,6 +31,7 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHybridCacheService _cache;
     private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
+    private readonly ITransactionalAuditWriter _auditWriter;
     private readonly ILogger<RevokeManualCoverCommandHandler> _logger;
 
     public RevokeManualCoverCommandHandler(
@@ -37,6 +40,7 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
         IUnitOfWork unitOfWork,
         IHybridCacheService cache,
         ICacheInvalidationRetryPolicy cacheRetryPolicy,
+        ITransactionalAuditWriter auditWriter,
         ILogger<RevokeManualCoverCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -44,6 +48,7 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
+        _auditWriter = auditWriter ?? throw new ArgumentNullException(nameof(auditWriter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -73,6 +78,14 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
         // collection so those deletes persist (Update maps scalars only). Update + Reconcile
         // compose (disjoint DbSets); verified on Postgres by the reconcile integration suite.
         await _repository.ReconcileCoverAssignmentsAsync(game, cancellationToken).ConfigureAwait(false);
+
+        // #3495 H6 — takedown evidence, committed in the SAME transaction as the DB null-out (only
+        // on an actual revoke, never on the idempotent 204 no-op above).
+        _auditWriter.Append(
+            AuditEventType.ManualCoverRevoked,
+            actorUserId: command.AdminId,
+            metadata: JsonSerializer.Serialize(new { reason = command.Reason, dbKey = keyToDelete }));
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Best-effort R2 cleanup AFTER the authoritative DB revoke. The raw-key delete (#3384)

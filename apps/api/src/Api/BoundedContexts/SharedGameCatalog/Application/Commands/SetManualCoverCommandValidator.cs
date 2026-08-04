@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+using Api.SharedKernel.Infrastructure.Http;
 using FluentValidation;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
@@ -22,7 +23,9 @@ internal sealed class SetManualCoverCommandValidator : AbstractValidator<SetManu
 
         RuleFor(x => x.SourceUrl)
             .NotEmpty().WithMessage("SourceUrl is required")
-            .Must(BeAbsoluteHttps).WithMessage("SourceUrl must be an absolute HTTPS URL");
+            .Must(BeAbsoluteHttps).WithMessage("SourceUrl must be an absolute HTTPS URL")
+            .Must(url => !BggHostDenyList.IsBanned(url))
+            .WithMessage("SourceUrl host is banned by ADR-059 §5 (BGG/geekdo assets)");
 
         RuleFor(x => x.License)
             .NotEmpty().WithMessage("License is required")

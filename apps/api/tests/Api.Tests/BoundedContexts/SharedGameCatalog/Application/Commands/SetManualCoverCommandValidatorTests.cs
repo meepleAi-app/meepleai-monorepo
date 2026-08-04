@@ -71,6 +71,21 @@ public sealed class SetManualCoverCommandValidatorTests
     }
 
     [Theory]
+    [InlineData("https://cf.geekdo-images.com/x/original/cover.jpg")]
+    [InlineData("https://images.geekdo.com/x/cover.jpg")]
+    [InlineData("https://geekdo-images.com/cover.jpg")]
+    [InlineData("https://api.boardgamegeek.com/xmlapi2/thing?id=13")]
+    [InlineData("https://www.boardgamegeek.com/image/123")]
+    public void Fails_WhenSourceUrlIsBannedBggHost(string url)
+    {
+        // #3495 C6 — ADR-059 §5 / #2123: the manual (arbitrary-URL) path must reject BGG/geekdo
+        // hosts BEFORE download, so it cannot launder around the catalog-wide BGG asset freeze.
+        // Each URL is absolute-HTTPS with a whitelisted license, so ONLY the new host rule can reject it.
+        _validator.TestValidate(Valid() with { SourceUrl = url })
+            .ShouldHaveValidationErrorFor(x => x.SourceUrl);
+    }
+
+    [Theory]
     [InlineData("")]
     [InlineData("   ")]
     public void Fails_WhenLicenseEmpty(string license)

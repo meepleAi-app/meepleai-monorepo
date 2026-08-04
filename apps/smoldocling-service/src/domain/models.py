@@ -1,7 +1,7 @@
 """Domain models for SmolDocling PDF extraction"""
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from PIL import Image
 
 
@@ -59,6 +59,39 @@ class PageExtractionResult:
         has non-empty DocTags but empty markdown and must still count as empty.
         """
         return len(self.markdown_text.strip()) == 0
+
+
+@dataclass
+class CropExtractionResult:
+    """Result of running the crop-discriminator on a single image crop (issue #3435 SP3).
+
+    The crop-discriminator decides whether an hi_res image region (an ``Image``/
+    ``FigureCaption`` crop) is a *table* worth extracting or a decorative *illustration* to
+    discard. Only the presence of an OTSL table (``<otsl>``) in the VLM's plain-mode DocTags
+    output is authoritative (spec §5quinquies): illustrations do not emit ``<otsl>``. A cheap
+    colorfulness pre-filter rejects obvious illustrations *before* the VLM to contain cost,
+    and a repetition early-stop caps the degenerate loop the VLM falls into on illustrations
+    (de-risk "Opzione B" — memory ``project_epic_3435_image_table_grounding``).
+
+    Field ownership: the ``SmolDoclingAdapter`` fills the VLM-side fields (``is_table``,
+    ``reason``, ``markdown``, ``bbox``, ``doctags``, ``confidence``, ``degenerated``,
+    ``duration_ms``) with ``prefiltered=False`` and ``colorfulness=0.0``; the
+    ``CropDiscriminator`` sets ``colorfulness`` (always) and builds the whole result itself on
+    the pre-filter-reject path.
+    """
+
+    is_table: bool
+    # table-otsl | prefilter-colorful | no-otsl | degenerate-earlystop | conversion-failed
+    # | empty-output | service-unavailable
+    reason: str
+    markdown: str  # rebuilt table markdown; "" when discarded
+    bbox: Optional[Tuple[float, float, float, float]]  # [x0,y0,x1,y1] in [0,1] top-left; None when discarded/absent
+    doctags: str  # raw cleaned DocTags (audit/debug)
+    confidence: float  # heuristic VLM confidence (0-1)
+    prefiltered: bool  # True when rejected by the colorfulness pre-filter (VLM NOT run)
+    degenerated: bool  # True when the repetition early-stop fired
+    colorfulness: float  # Hasler-Süsstrunk colorfulness of the crop (0 = grayscale)
+    duration_ms: int
 
 
 @dataclass

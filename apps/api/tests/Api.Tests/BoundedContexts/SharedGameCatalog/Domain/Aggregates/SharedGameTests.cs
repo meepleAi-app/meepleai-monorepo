@@ -1442,4 +1442,48 @@ public sealed class SharedGameTests
     }
 
     #endregion
+
+    #region RevokeManualCover (epic #3470 Slice 3a-3)
+
+    [Fact]
+    public void RevokeManualCover_WithManualCoverSet_ClearsAllFields_ReturnsTrue()
+    {
+        var game = NewManualCoverGame();
+        game.SetManualCover("covers/manual/x/cover", "CC-BY-4.0", "Jane Artist", "https://example.com/src", Guid.NewGuid(), DateTime.UtcNow);
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeTrue();
+        game.ManualCoverR2Key.Should().BeNull();
+        game.ManualCoverLicense.Should().BeNull();
+        game.ManualCoverAttribution.Should().BeNull();
+        game.ManualCoverSourceUrl.Should().BeNull();
+        game.ManualCoverAttestedBy.Should().BeNull();
+        game.ManualCoverAttestedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeManualCover_WhenNothingSet_ReturnsFalse_NoChange()
+    {
+        // Idempotent: revoking a game that never had a manual cover is a no-op the
+        // handler can turn into a 204 without persisting/evicting anything.
+        var game = NewManualCoverGame();
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeFalse();
+        game.ManualCoverR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeManualCover_SecondCall_ReturnsFalse()
+    {
+        var game = NewManualCoverGame();
+        game.SetManualCover("k", "CC0", null, "https://s", Guid.NewGuid(), DateTime.UtcNow);
+
+        game.RevokeManualCover().Should().BeTrue();
+        game.RevokeManualCover().Should().BeFalse("the manual cover is already cleared");
+    }
+
+    #endregion
 }

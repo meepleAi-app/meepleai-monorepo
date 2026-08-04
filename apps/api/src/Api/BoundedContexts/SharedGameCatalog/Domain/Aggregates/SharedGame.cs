@@ -881,6 +881,41 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Epic #3470 Slice 3a-3 — revokes the admin-set manual cover by clearing the six manual
+    /// cover / attestation fields. Returns <c>true</c> when something was cleared, <c>false</c>
+    /// when there was no manual cover to revoke — an idempotent no-op the caller turns into a
+    /// 204 without persisting or evicting caches.
+    /// </summary>
+    /// <remarks>
+    /// Follow-up (gated on per-context crop generation): once an <c>AssignCover</c> flow
+    /// populates a rendered <c>GeneratedR2Key</c> on a Manual-sourced assignment, revoke must
+    /// ALSO remove those assignments (and delete their crop objects), else the crop would keep
+    /// serving after revoke. Today no crop is generated for a Manual assignment, so a dangling
+    /// Manual assignment resolves to a null base key and falls through to the implicit
+    /// precedence — the revoked image genuinely stops serving.
+    /// </remarks>
+    public bool RevokeManualCover()
+    {
+        if (_manualCoverR2Key is null
+            && _manualCoverLicense is null
+            && _manualCoverAttribution is null
+            && _manualCoverSourceUrl is null
+            && _manualCoverAttestedBy is null
+            && _manualCoverAttestedAt is null)
+        {
+            return false;
+        }
+
+        _manualCoverR2Key = null;
+        _manualCoverLicense = null;
+        _manualCoverAttribution = null;
+        _manualCoverSourceUrl = null;
+        _manualCoverAttestedBy = null;
+        _manualCoverAttestedAt = null;
+        return true;
+    }
+
+    /// <summary>
     /// Assigns a BGG ID to this game. Only allowed for Skeleton or Failed games.
     /// Enables subsequent BGG enrichment.
     /// </summary>

@@ -170,4 +170,29 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
 
         result.Should().BeEmpty();
     }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task Handle_ResolvesTier_WithThisPdfIdAndUserId()
+    {
+        // #3517-class guard: the tier must be resolved for THIS pdf + user, not a swapped id — a wrong
+        // argument would gate the wrong document's copyright and silently leak/hide regions.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"getimg_{Guid.NewGuid():N}");
+        var pdfId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SeedPdf(db, pdfId, ownerId: userId); // owner -> scoping passes, tier gate is reached
+        await db.SaveChangesAsync();
+
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<ResolvePdfCopyrightTierQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CopyrightTier.Full);
+        var handler = new GetPdfImageRegionsQueryHandler(db, mediator.Object);
+
+        await handler.Handle(new GetPdfImageRegionsQuery(pdfId, userId, IsAdmin: false), CancellationToken.None);
+
+        mediator.Verify(m => m.Send(
+            It.Is<ResolvePdfCopyrightTierQuery>(q => q.DocumentId == pdfId.ToString() && q.UserId == userId),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

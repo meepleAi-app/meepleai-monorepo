@@ -769,7 +769,17 @@ internal static class SharedGameCatalogServiceExtensions
             .AddPolicy("AdminOrEditorPolicy", policy =>
                 policy.RequireRole("SuperAdmin", "Admin", "Editor"))
             .AddPolicy("AdminOnlyPolicy", policy =>
-                policy.RequireRole("SuperAdmin", "Admin"));
+                policy.RequireRole("SuperAdmin", "Admin"))
+            // Issue #3472: policy names referenced by endpoints via .RequireAuthorization("...")
+            // but previously never registered — an unregistered policy makes the authorization
+            // middleware throw "AuthorizationPolicy named 'X' was not found" → HTTP 500 at request
+            // time. "AdminPolicy" (GameToolkitRoutes review routes + RemoveRag full-cleanup) mirrors
+            // AdminOnlyPolicy; "EditorOnlyPolicy" (bulk approve/reject share-requests) mirrors
+            // AdminOrEditorPolicy (editor tier and above — admins are never below editors).
+            .AddPolicy("AdminPolicy", policy =>
+                policy.RequireRole("SuperAdmin", "Admin"))
+            .AddPolicy("EditorOnlyPolicy", policy =>
+                policy.RequireRole("SuperAdmin", "Admin", "Editor"));
 
         return services;
     }

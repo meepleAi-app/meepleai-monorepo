@@ -29,7 +29,9 @@ RUN python -c "from transformers import AutoProcessor, AutoModelForImageTextToTe
     print('Model download complete')"
 
 # ============================================================
-# Stage 2: Runtime — CUDA base for GPU, no build-essential
+# Stage 2: Runtime — CUDA base for GPU. Keeps build-essential OUT of the runtime
+# image (the #248 size optimization), EXCEPT the minimal gcc + headers that Triton's
+# runtime JIT needs on the GPU path — installed below with a rationale comment (#3435).
 # ============================================================
 FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu22.04
 

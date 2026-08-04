@@ -1,9 +1,11 @@
 # Opt-in GPU overlay for smoldocling-service (#3435 SP3 — Metà-C VLM local validation/benchmark).
 #
 # Mirrors compose.gpu.local.yml (embedding-service): gives smoldocling-service access to the host
-# NVIDIA GPU so SmolDocling VLM inference runs on the GPU (~0.5s/page) instead of CPU (>95s/page,
-# impractical — spec §5bis/§5ter). Also pins DEVICE=cuda so the service fails loudly if the GPU is
-# not actually reachable, rather than silently falling back to CPU under device=auto.
+# NVIDIA GPU so SmolDocling VLM inference runs on the GPU (~57s/page measured on an RTX 4070, #3435)
+# instead of CPU (>95s/page, impractical — spec §5bis/§5ter). Both are far slower than the upstream
+# README's 0.5s/page estimate, which #3435 validated as ~100x optimistic. Also pins DEVICE=cuda so the
+# service fails loudly if the GPU is not actually reachable, rather than silently falling back to CPU
+# under device=auto.
 #
 # STANDALONE opt-in overlay: NOT referenced by the default stack, so `make dev` is unaffected on
 # machines without an NVIDIA GPU. A `driver: nvidia` reservation would make `make dev` FAIL if merged
@@ -12,8 +14,12 @@
 # Apply it explicitly only when you have an NVIDIA GPU + container runtime (from repo root):
 #
 #   docker compose -p meepleai \
-#     -f infra/docker-compose.yml -f infra/compose.smoldocling.gpu.local.yml \
+#     -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.smoldocling.gpu.local.yml \
 #     up -d --build smoldocling-service
+#
+# compose.dev.yml is included so the host port (127.0.0.1:8002) is published for local validation;
+# drop it if you only `docker exec` into the container. The explicit service name starts it despite
+# its `ai` profile.
 services:
   smoldocling-service:
     environment:

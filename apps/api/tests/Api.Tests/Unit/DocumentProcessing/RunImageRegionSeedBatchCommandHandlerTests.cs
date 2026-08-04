@@ -1,7 +1,9 @@
+using System.Diagnostics.Metrics;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -19,6 +21,9 @@ namespace Api.Tests.Unit.DocumentProcessing;
 /// #3435 (SP1): unit tests for the automatic image-region seed batch. hi_res is ~200s and not
 /// reproducible in CI, so the hi_res extractor + blob are stubbed and IMediator delegates the
 /// inner <see cref="SeedPdfImageRegionsCommand"/> to the real handler on the same in-memory db.
+/// Blind spot (project-wide): the marker-save / attempts-save DbUpdateException paths
+/// (concurrency win, deadlock) are NOT exercised here — EF InMemory never raises DbUpdateException;
+/// those catches are validated only against Postgres.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
@@ -45,7 +50,8 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         string? indexerVersion = "v1",
         DateTime? seededAt = null,
         string filePath = "pdfs/abc/doc.pdf",
-        DateTime? uploadedAt = null)
+        DateTime? uploadedAt = null,
+        int attempts = 0)
     {
         var id = Guid.NewGuid();
         db.PdfDocuments.Add(new PdfDocumentEntity
@@ -60,9 +66,13 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
             IndexerVersion = indexerVersion,
             ImageRegionsSeededAt = seededAt,
             UploadedAt = uploadedAt ?? DateTime.UtcNow,
+            ImageRegionSeedAttempts = attempts,
         });
         return id;
     }
+
+    private static async Task<int> AttemptsOf(MeepleAiDbContext db, Guid id)
+        => (await db.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == id)).ImageRegionSeedAttempts;
 
     private static Mock<IBlobStorageService> BlobReturning(byte[]? bytes)
     {
@@ -169,6 +179,46 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         result.Failed.Should().Be(1);
         result.Processed.Should().Be(0);
         (await MarkerOf(db, id)).Should().BeNull(); // unmarked → retried next batch
+        (await AttemptsOf(db, id)).Should().Be(1);  // failed attempt counted (slice 2 retry-cap)
+    }
+
+    [Fact]
+    public async Task Handle_SkipsDeadLetteredPdfs()
+    {
+        // A PDF that exhausted its retry budget is excluded from the selector (dead-letter),
+        // so it no longer re-runs the ~200s hi_res pass and doesn't starve newer PDFs.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"sib_{Guid.NewGuid():N}");
+        SeedPdf(db, attempts: RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts);
+        await db.SaveChangesAsync();
+        var extractor = new Mock<IRawHiResExtractor>(MockBehavior.Strict);
+
+        var handler = Create(db, extractor.Object, BlobReturning(new byte[] { 1 }).Object,
+            new Mock<IMediator>().Object, Config(enabled: true));
+        var result = await handler.Handle(new RunImageRegionSeedBatchCommand(), CancellationToken.None);
+
+        result.Processed.Should().Be(0);
+        result.Failed.Should().Be(0);
+        extractor.VerifyNoOtherCalls(); // dead-lettered PDF never re-attempted
+    }
+
+    [Fact]
+    public async Task Handle_ExtractorThrows_DeadLettersAtMaxAttempts()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"sib_{Guid.NewGuid():N}");
+        // one attempt short of the cap → this failure pushes it to the cap
+        var id = SeedPdf(db, attempts: RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts - 1);
+        await db.SaveChangesAsync();
+        var extractor = new Mock<IRawHiResExtractor>();
+        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("hi_res timeout"));
+
+        var handler = Create(db, extractor.Object, BlobReturning(new byte[] { 1 }).Object,
+            DelegatingMediator(db).Object, Config(enabled: true));
+        var result = await handler.Handle(new RunImageRegionSeedBatchCommand(), CancellationToken.None);
+
+        result.Failed.Should().Be(1);
+        (await AttemptsOf(db, id)).Should().Be(RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts);
+        (await MarkerOf(db, id)).Should().BeNull();
     }
 
     [Fact]
@@ -186,6 +236,7 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         result.Failed.Should().Be(1);
         result.Processed.Should().Be(0);
         (await MarkerOf(db, id)).Should().BeNull();
+        (await AttemptsOf(db, id)).Should().Be(1); // storage-miss counts a failed attempt (slice 2)
         extractor.VerifyNoOtherCalls(); // missing blob → no hi_res call
     }
 
@@ -273,5 +324,59 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
 
         // Genuine caller cancellation must propagate, not be swallowed as a per-item failure.
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Handle_EmitsMetricForEachOutcome()
+    {
+        // Capture the outcome tag of meepleai.image_region_seed.total — only this handler emits it,
+        // so Contain() is robust to any concurrent test class.
+        var outcomes = new List<string>();
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == "meepleai.image_region_seed.total")
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+        {
+            foreach (var tag in tags)
+            {
+                if (tag.Key == "outcome")
+                {
+                    lock (outcomes) { outcomes.Add(tag.Value?.ToString() ?? ""); }
+                }
+            }
+        });
+        listener.Start();
+
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"sib_{Guid.NewGuid():N}");
+        var t0 = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        SeedPdf(db, uploadedAt: t0);                                                        // seeded
+        SeedPdf(db, uploadedAt: t0.AddMinutes(1));                                          // empty
+        SeedPdf(db, uploadedAt: t0.AddMinutes(2));                                          // failed (throw, attempts 0->1)
+        SeedPdf(db, uploadedAt: t0.AddMinutes(3),
+            attempts: RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts - 1);          // dead_letter (throw at cap)
+        await db.SaveChangesAsync();
+
+        var extractor = new Mock<IRawHiResExtractor>();
+        extractor.SetupSequence(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ImageRegionJson)
+            .ReturnsAsync(EmptyRegionsJson)
+            .ThrowsAsync(new InvalidOperationException("hi_res timeout"))
+            .ThrowsAsync(new InvalidOperationException("hi_res timeout"));
+
+        var handler = Create(db, extractor.Object, BlobReturning(new byte[] { 1 }).Object,
+            DelegatingMediator(db).Object, Config(enabled: true, delayMs: 0));
+        await handler.Handle(new RunImageRegionSeedBatchCommand(BatchSize: 4), CancellationToken.None);
+
+        outcomes.Should().Contain(MeepleAiMetrics.ImageRegionSeedOutcomeSeeded);
+        outcomes.Should().Contain(MeepleAiMetrics.ImageRegionSeedOutcomeEmpty);
+        outcomes.Should().Contain(MeepleAiMetrics.ImageRegionSeedOutcomeFailed);
+        outcomes.Should().Contain(MeepleAiMetrics.ImageRegionSeedOutcomeDeadLetter);
     }
 }

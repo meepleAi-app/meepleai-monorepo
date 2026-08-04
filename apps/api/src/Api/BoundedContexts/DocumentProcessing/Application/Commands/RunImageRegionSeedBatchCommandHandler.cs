@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
@@ -24,16 +25,20 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// NoTracking, re-loads each PDF AsTracking per item, and calls <c>ChangeTracker.Clear()</c> in a
 /// finally — a failed item can never leave a ghost Modified/Added entity that the next item's
 /// SaveChanges would re-flush.
-/// Deferred to slice 2 (documented follow-ups, not in this slice): the periodic Quartz trigger,
-/// a bounded failure-retry / dead-letter cap so a persistently-failing PDF doesn't re-run hi_res
-/// forever and starve newer ones (#6), an overlap guard against concurrent triggers (#7), and
-/// Prometheus metrics for stuck/failing batches (#8).
+/// Slice 2 (this): a periodic Quartz trigger (<c>SeedImageRegionsJob</c>, <c>[DisallowConcurrentExecution]</c>)
+/// drives this command automatically; a bounded failed-attempt counter (<see cref="MaxSeedAttempts"/>)
+/// dead-letters a persistently-failing PDF so it stops re-running the ~200s hi_res pass and starving
+/// newer ones; per-outcome Prometheus metrics (<see cref="MeepleAiMetrics.RecordImageRegionSeed"/>).
+/// Still deferred: an overlap guard between a manual admin trigger and the Quartz job (both are
+/// idempotent — replace-by-pdf + the marker — so a rare concurrent double-pass only wastes work).
 /// </remarks>
 internal sealed class RunImageRegionSeedBatchCommandHandler
     : ICommandHandler<RunImageRegionSeedBatchCommand, RunImageRegionSeedBatchResult>
 {
     internal const int DefaultBatchSize = 3;
     internal const int DefaultDelayBetweenItemsMs = 500;
+    /// <summary>Failed hi_res attempts before a PDF is dead-lettered (excluded from the selector).</summary>
+    internal const int MaxSeedAttempts = 3;
     internal const string EnabledConfigKey = "PdfProcessing:ImageRegionSeeding:Enabled";
     internal const string BatchSizeConfigKey = "PdfProcessing:ImageRegionSeeding:BatchSize";
     internal const string DelayMsConfigKey = "PdfProcessing:ImageRegionSeeding:DelayMs";
@@ -89,15 +94,16 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
         // Select candidates NoTracking (id + path only): the entities are NOT kept tracked across the
         // loop. Each item re-loads its PDF AsTracking and ChangeTracker.Clear()s in a finally, so a
         // failed item can't poison later items via the shared scoped DbContext (#534 / PR #2830).
-        // Filter: Ready, never-seeded, in the current KB corpus (IndexerVersion set), excluding
-        // demo-mock shells. NB: this slice has NO image-candidacy pre-filter (the Table-region router
-        // is SP2, deferred), so every corpus PDF — text-only included — gets ONE hi_res pass; the
-        // marker below guarantees "exactly once". True VLM cost-isolation (never on text-only, NFR1)
-        // lands with the router at SP2/SP3.
+        // Filter: Ready, never-seeded, still within the retry budget (dead-letter after MaxSeedAttempts),
+        // in the current KB corpus (IndexerVersion set), excluding demo-mock shells. NB: this slice has
+        // NO image-candidacy pre-filter (the Table-region router is SP2, deferred), so every corpus PDF —
+        // text-only included — gets ONE hi_res pass; the marker below guarantees "exactly once". True VLM
+        // cost-isolation (never on text-only, NFR1) lands with the router at SP2/SP3.
         var candidates = await _dbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.ProcessingState == readyState
                 && p.ImageRegionsSeededAt == null
+                && p.ImageRegionSeedAttempts < MaxSeedAttempts
                 && p.IndexerVersion != null
                 && !p.FilePath.StartsWith(demoPrefix))
             .OrderBy(p => p.UploadedAt)
@@ -123,6 +129,8 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
         {
             cancellationToken.ThrowIfCancellationRequested();
             var candidate = candidates[i];
+            var outcome = MeepleAiMetrics.ImageRegionSeedOutcomeFailed;
+            var recordMetric = true;
 
             try
             {
@@ -130,10 +138,11 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
                     .ConfigureAwait(false);
                 if (bytes is null)
                 {
-                    // Transient storage miss — leave unmarked so the next batch retries.
+                    // Transient storage miss — count a failed attempt (dead-letter after MaxSeedAttempts).
                     _logger.LogWarning(
                         "RunImageRegionSeedBatch: PDF {PdfId} binary not found in blob storage; skipping (will retry)",
                         candidate.Id);
+                    outcome = await RecordSeedFailureAsync(candidate.Id, cancellationToken).ConfigureAwait(false);
                     failed++;
                     continue;
                 }
@@ -169,16 +178,22 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
                     }
                     catch (DbUpdateConcurrencyException ex)
                     {
-                        // ADR-060 Category-B: an admin/re-index mutation won the row during the ~200s
-                        // hi_res window. The regions were still persisted by the seed command; leaving
-                        // the marker unset means one extra idempotent hi_res pass next run. The finally
-                        // below clears the tracker so this conflict cannot leak into the next item.
+                        // ADR-060 optimistic concurrency (xmin): an admin/re-index mutation won the row
+                        // during the ~200s hi_res window. The seed succeeded (regions persisted); the
+                        // marker is deferred to the next idempotent run — a rare, self-resolving retry, so
+                        // it is NOT counted as a seed failure. NB: any OTHER marker-save error (deadlock,
+                        // constraint, blip) is deliberately NOT caught here — it falls through to the outer
+                        // catch → RecordSeedFailureAsync, which bumps the attempt counter so a PERSISTENT
+                        // marker failure eventually dead-letters instead of re-running hi_res forever.
                         _logger.LogWarning(ex,
                             "RunImageRegionSeedBatch: concurrency conflict stamping seed marker for PDF {PdfId}; " +
                             "regions persisted, marker deferred to next run", candidate.Id);
                     }
                 }
 
+                outcome = seeded > 0
+                    ? MeepleAiMetrics.ImageRegionSeedOutcomeSeeded
+                    : MeepleAiMetrics.ImageRegionSeedOutcomeEmpty;
                 _logger.LogInformation(
                     "RunImageRegionSeedBatch: seeded {Regions} region(s) for PDF {PdfId}", seeded, candidate.Id);
                 processed++;
@@ -188,24 +203,31 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
                 // Genuine caller cancellation propagates. A hi_res CLIENT timeout is also an
                 // OperationCanceledException but with a different token, so it does NOT match here and
                 // falls through to the per-item catch below (mark failed + continue), not an abort.
+                // Do NOT emit a 'failed' metric for a cancelled item (it's not a real hi_res failure).
+                recordMetric = false;
                 throw;
             }
 #pragma warning disable CA1031 // Do not catch general exception types
             // BATCH PATTERN: per-item failures (hi_res timeout/HTTP error, parse) must not abort the
-            // batch — log and continue, leaving the PDF unmarked so the next run retries it.
+            // batch — log, count a failed attempt, and continue.
             catch (Exception ex)
 #pragma warning restore CA1031
             {
                 _logger.LogWarning(ex,
                     "RunImageRegionSeedBatch: hi_res region seed failed for PDF {PdfId}; skipping (will retry)",
                     candidate.Id);
+                outcome = await RecordSeedFailureAsync(candidate.Id, cancellationToken).ConfigureAwait(false);
                 failed++;
             }
             finally
             {
+                if (recordMetric)
+                {
+                    MeepleAiMetrics.RecordImageRegionSeed(outcome);
+                }
                 // Isolate each iteration: detach any entity this item tracked/mutated so a failure
-                // (esp. a swallowed marker concurrency conflict) can't be re-flushed by the next item's
-                // inner SaveChanges (#534 / PR #2830).
+                // (esp. a swallowed marker/attempts concurrency conflict) can't be re-flushed by the
+                // next item's inner SaveChanges (#534 / PR #2830).
                 _dbContext.ChangeTracker.Clear();
             }
 
@@ -221,6 +243,54 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
 
         return new RunImageRegionSeedBatchResult(
             Enabled: true, Processed: processed, TotalRegionsSeeded: totalSeeded, Failed: failed);
+    }
+
+    // Increments the failed-attempt counter for a PDF and returns the metric outcome
+    // (dead_letter once it reaches MaxSeedAttempts, else failed). The caller's finally
+    // ChangeTracker.Clear() detaches the loaded entity afterwards.
+    private async Task<string> RecordSeedFailureAsync(Guid pdfId, CancellationToken ct)
+    {
+        // Guarantee a clean tracker regardless of what the failing in-try path left pending (e.g. a
+        // failed inner seed SaveChanges or a partially-mutated marker entity), so this attempts write
+        // never re-flushes another entity's changes (#534 / PR #2830).
+        _dbContext.ChangeTracker.Clear();
+
+        var pdf = await _dbContext.PdfDocuments
+            .AsTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfId, ct)
+            .ConfigureAwait(false);
+        if (pdf is null)
+        {
+            return MeepleAiMetrics.ImageRegionSeedOutcomeFailed;
+        }
+
+        pdf.ImageRegionSeedAttempts += 1;
+        pdf.UpdatedAt = DateTime.UtcNow;
+        var deadLettered = pdf.ImageRegionSeedAttempts >= MaxSeedAttempts;
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex)
+        {
+            // This failure-recording write must NEVER abort the batch (per-item isolation, #534): any DB
+            // save error — concurrency, deadlock, constraint, connection blip — is swallowed, so the
+            // attempt bump is simply lost and retried on the next run. Mirrors BackfillPdfCoversJob's
+            // defensive catch around its own save-of-failure. (A genuine caller cancellation surfaces as
+            // OperationCanceledException, not DbUpdateException, so it still propagates.)
+            _logger.LogWarning(ex,
+                "RunImageRegionSeedBatch: failed to persist attempts bump for PDF {PdfId}", pdfId);
+            return MeepleAiMetrics.ImageRegionSeedOutcomeFailed;
+        }
+
+        if (deadLettered)
+        {
+            _logger.LogWarning(
+                "RunImageRegionSeedBatch: PDF {PdfId} dead-lettered after {Attempts} failed hi_res attempts",
+                pdfId, pdf.ImageRegionSeedAttempts);
+            return MeepleAiMetrics.ImageRegionSeedOutcomeDeadLetter;
+        }
+        return MeepleAiMetrics.ImageRegionSeedOutcomeFailed;
     }
 
     // Mirror of BackfillPdfCoversJob.LoadPdfBytesAsync — R2-only (backfill/seed run in

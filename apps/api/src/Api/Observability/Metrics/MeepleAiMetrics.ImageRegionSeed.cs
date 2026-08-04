@@ -26,6 +26,9 @@ internal static partial class MeepleAiMetrics
     /// Counter of automatic image-region seed outcomes, emitted per PDF by
     /// <c>RunImageRegionSeedBatchCommandHandler</c> (#3435 SP1). Tag <c>outcome</c>:
     /// <c>seeded</c>|<c>empty</c>|<c>failed</c>|<c>dead_letter</c>.
+    /// NB (naming): unlike <c>meepleai_cover_generation_total</c> — where <c>failed</c> is TERMINAL and
+    /// <c>retrying</c> is the transient tag — here <c>failed</c> is the TRANSIENT/retry-eligible outcome
+    /// and <c>dead_letter</c> is terminal. Alert on <c>dead_letter</c> for give-ups, not <c>failed</c>.
     ///
     /// Suggested alerting:
     /// <list type="bullet">

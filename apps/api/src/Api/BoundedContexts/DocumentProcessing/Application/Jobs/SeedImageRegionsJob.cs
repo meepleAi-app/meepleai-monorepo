@@ -36,16 +36,32 @@ public sealed class SeedImageRegionsJob : IJob
         var ct = context.CancellationToken;
         _logger.LogDebug("SeedImageRegionsJob started: FireTime={FireTime}", context.FireTimeUtc);
 
-        using var scope = _serviceProvider.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-
-        var result = await mediator.Send(new RunImageRegionSeedBatchCommand(), ct).ConfigureAwait(false);
-
-        if (result.Enabled && (result.Processed > 0 || result.Failed > 0))
+        try
         {
-            _logger.LogInformation(
-                "SeedImageRegionsJob: processed={Processed}, regionsSeeded={Seeded}, failed={Failed}",
-                result.Processed, result.TotalRegionsSeeded, result.Failed);
+            using var scope = _serviceProvider.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+            var result = await mediator.Send(new RunImageRegionSeedBatchCommand(), ct).ConfigureAwait(false);
+
+            if (result.Enabled && (result.Processed > 0 || result.Failed > 0))
+            {
+                _logger.LogInformation(
+                    "SeedImageRegionsJob: processed={Processed}, regionsSeeded={Seeded}, failed={Failed}",
+                    result.Processed, result.TotalRegionsSeeded, result.Failed);
+            }
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw; // scheduler shutdown — let Quartz handle it
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // Background job — must not throw or Quartz suspends the trigger (mirrors the sibling jobs, e.g.
+        // KbFlagDriftAuditJob). A batch-level failure (e.g. the initial candidate query throwing) is
+        // logged and swallowed so the periodic seed keeps running on the next tick.
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(ex, "SeedImageRegionsJob failed; the seed will retry on the next tick");
         }
     }
 }

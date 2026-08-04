@@ -176,16 +176,17 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
                     {
                         await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                     }
-                    catch (DbUpdateException ex)
+                    catch (DbUpdateConcurrencyException ex)
                     {
-                        // The seed SUCCEEDED (regions persisted); only the marker stamp failed — an
-                        // admin/re-index concurrency win (ADR-060 Category-B) OR any other DB save error
-                        // (deadlock 40P01, transient blip). Catch the whole DbUpdateException family so a
-                        // marker-only failure is NEVER re-routed into the per-item failure/attempts path
-                        // (which would mislabel a successful seed as failed and burn a retry). Marker is
-                        // deferred to the next idempotent run; the finally clears the tracker.
+                        // ADR-060 optimistic concurrency (xmin): an admin/re-index mutation won the row
+                        // during the ~200s hi_res window. The seed succeeded (regions persisted); the
+                        // marker is deferred to the next idempotent run — a rare, self-resolving retry, so
+                        // it is NOT counted as a seed failure. NB: any OTHER marker-save error (deadlock,
+                        // constraint, blip) is deliberately NOT caught here — it falls through to the outer
+                        // catch → RecordSeedFailureAsync, which bumps the attempt counter so a PERSISTENT
+                        // marker failure eventually dead-letters instead of re-running hi_res forever.
                         _logger.LogWarning(ex,
-                            "RunImageRegionSeedBatch: failed to stamp seed marker for PDF {PdfId}; " +
+                            "RunImageRegionSeedBatch: concurrency conflict stamping seed marker for PDF {PdfId}; " +
                             "regions persisted, marker deferred to next run", candidate.Id);
                     }
                 }
@@ -270,11 +271,15 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
         {
             await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateException ex)
         {
-            // admin/re-index won the row; the attempt bump is lost and retried next run. Log + continue.
+            // This failure-recording write must NEVER abort the batch (per-item isolation, #534): any DB
+            // save error — concurrency, deadlock, constraint, connection blip — is swallowed, so the
+            // attempt bump is simply lost and retried on the next run. Mirrors BackfillPdfCoversJob's
+            // defensive catch around its own save-of-failure. (A genuine caller cancellation surfaces as
+            // OperationCanceledException, not DbUpdateException, so it still propagates.)
             _logger.LogWarning(ex,
-                "RunImageRegionSeedBatch: concurrency conflict bumping attempts for PDF {PdfId}", pdfId);
+                "RunImageRegionSeedBatch: failed to persist attempts bump for PDF {PdfId}", pdfId);
             return MeepleAiMetrics.ImageRegionSeedOutcomeFailed;
         }
 

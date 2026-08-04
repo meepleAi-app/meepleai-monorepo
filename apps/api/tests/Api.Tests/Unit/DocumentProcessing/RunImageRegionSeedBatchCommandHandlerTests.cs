@@ -21,6 +21,9 @@ namespace Api.Tests.Unit.DocumentProcessing;
 /// #3435 (SP1): unit tests for the automatic image-region seed batch. hi_res is ~200s and not
 /// reproducible in CI, so the hi_res extractor + blob are stubbed and IMediator delegates the
 /// inner <see cref="SeedPdfImageRegionsCommand"/> to the real handler on the same in-memory db.
+/// Blind spot (project-wide): the marker-save / attempts-save DbUpdateException paths
+/// (concurrency win, deadlock) are NOT exercised here — EF InMemory never raises DbUpdateException;
+/// those catches are validated only against Postgres.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]

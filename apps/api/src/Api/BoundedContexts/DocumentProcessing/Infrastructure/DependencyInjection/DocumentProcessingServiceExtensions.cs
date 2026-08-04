@@ -243,6 +243,8 @@ internal static class DocumentProcessingServiceExtensions
             intervalMinutes = 30;
         }
 
+        // Only register the job definition + trigger here — do NOT call AddQuartzHostedService
+        // (bootstrapped once in the Administration context; a second call would duplicate the scheduler).
         services.AddQuartz(q =>
         {
             var jobKey = new Quartz.JobKey("SeedImageRegionsJob", "DocumentProcessing");

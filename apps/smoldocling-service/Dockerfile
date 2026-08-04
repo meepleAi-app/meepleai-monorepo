@@ -70,6 +70,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsm6 \
     libxext6 \
     libxrender-dev \
+    # Triton JIT toolchain (#3435 SP3): torch>=2.12 JIT-compiles Triton CUDA kernels
+    # (e.g. bmm_outer_product) at RUNTIME inside model.generate(). Triton shells out to
+    # gcc to build a `cuda_utils.c` glue module that #includes <Python.h>, so it needs
+    # BOTH a host C compiler (gcc + libc6-dev) AND the Python dev headers
+    # (python3.11-dev → /usr/include/python3.11/Python.h). Without them every GPU
+    # inference fails per-page and the adapter swallows it → empty extraction (0 chunks).
+    # ptxas is already bundled in triton/backends/nvidia. GPU-only overhead, small; the
+    # CPU path never hits the Triton kernel.
+    gcc \
+    libc6-dev \
+    python3.11-dev \
     # Cleanup
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

@@ -119,9 +119,9 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
                 CoverUrl: cover.Url,
                 // Epic #3470 Slice 1d-a — attribution follows the WINNING source (was
                 // emitted unconditionally); all-null unless the Wikidata cover won.
-                WikidataCoverLicense: coverLicense,
-                WikidataCoverAttribution: coverAttribution,
-                WikidataCoverSourceUrl: coverSourceUrl));
+                CoverLicense: coverLicense,
+                CoverAttribution: coverAttribution,
+                CoverSourceUrl: coverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

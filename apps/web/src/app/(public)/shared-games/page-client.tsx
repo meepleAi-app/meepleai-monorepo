@@ -237,9 +237,9 @@ export function SharedGamesPageClient({
       kbsCount: g.kbsCount,
       newThisWeekCount: g.newThisWeekCount,
       // Issue #2055 Phase 7 — Wikidata cover attribution pass-through.
-      wikidataCoverLicense: g.wikidataCoverLicense ?? null,
-      wikidataCoverAttribution: g.wikidataCoverAttribution ?? null,
-      wikidataCoverSourceUrl: g.wikidataCoverSourceUrl ?? null,
+      coverLicense: g.coverLicense ?? null,
+      coverAttribution: g.coverAttribution ?? null,
+      coverSourceUrl: g.coverSourceUrl ?? null,
     }));
   }, [data]);
 

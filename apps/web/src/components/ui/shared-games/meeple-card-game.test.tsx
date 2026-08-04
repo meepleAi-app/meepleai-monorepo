@@ -122,13 +122,13 @@ describe('MeepleCardGame (adapter over MeepleCard, #2858)', () => {
   });
 
   describe('Wikidata attribution footer (rendered by MeepleCard for entity=game)', () => {
-    it('renders <footer> with license text when wikidataCoverLicense is provided', () => {
+    it('renders <footer> with license text when coverLicense is provided', () => {
       const { container } = render(
         <MeepleCardGame
           {...baseProps}
-          wikidataCoverLicense="CC BY-SA 4.0"
-          wikidataCoverAttribution="Doe, John"
-          wikidataCoverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
+          coverLicense="CC BY-SA 4.0"
+          coverAttribution="Doe, John"
+          coverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
         />
       );
       const footer = container.querySelector('footer');
@@ -136,12 +136,12 @@ describe('MeepleCardGame (adapter over MeepleCard, #2858)', () => {
       expect(footer).toHaveTextContent('CC BY-SA 4.0');
     });
 
-    it('renders a source link when wikidataCoverSourceUrl is provided', () => {
+    it('renders a source link when coverSourceUrl is provided', () => {
       const { container } = render(
         <MeepleCardGame
           {...baseProps}
-          wikidataCoverLicense="CC BY-SA 4.0"
-          wikidataCoverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
+          coverLicense="CC BY-SA 4.0"
+          coverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
         />
       );
       const link = container.querySelector('footer a');
@@ -151,7 +151,7 @@ describe('MeepleCardGame (adapter over MeepleCard, #2858)', () => {
       expect(link).toHaveAttribute('target', '_blank');
     });
 
-    it('renders no <footer> when wikidataCoverLicense is omitted', () => {
+    it('renders no <footer> when coverLicense is omitted', () => {
       const { container } = render(<MeepleCardGame {...baseProps} />);
       expect(container.querySelector('footer')).toBeNull();
     });

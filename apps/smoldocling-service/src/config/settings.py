@@ -36,9 +36,11 @@ class Settings(BaseSettings):
     # Crop-table discrimination (issue #3435 SP3 — Option B crop-discriminator)
     # The <otsl> gate is authoritative; these only contain cost / cap the degenerate loop.
     crop_prefilter_enabled: bool = True  # cheap colorfulness reject BEFORE the VLM
-    # Hasler-Süsstrunk colorfulness above which a crop is treated as an illustration and
-    # rejected without the VLM. Fail-open + uncalibrated: a conservative (high) default so a
-    # real table (even one with a tinted header) is never rejected on colour alone. Tunable.
+    # Hasler-Süsstrunk colorfulness above which a crop is rejected as an illustration WITHOUT
+    # running the VLM. Uncalibrated: a conservative (high) default keeps false-rejects of real
+    # tables (even ones with a tinted header) rare — but a sufficiently colourful table WILL be
+    # rejected here (the <otsl> gate only sees crops that reach the VLM). Tunable; the
+    # per-request `prefilter` flag disables it entirely.
     crop_prefilter_colorfulness_threshold: float = 40.0
     crop_max_new_tokens: int = 512  # crops are small (~76-300 tok); cap well below full-page 2048
     crop_rep_stop_window: int = 24  # trailing generated tokens inspected for the repetition early-stop

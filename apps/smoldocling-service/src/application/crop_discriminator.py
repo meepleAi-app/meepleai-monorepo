@@ -6,12 +6,15 @@ bbox in [0,1] top-left.
 
 Design (de-risked empirically on GPU; spec §5quinquies / memory "De-risk Opzione B"):
   1. Colorfulness pre-filter (CPU, ms): reject obviously-colorful illustrations BEFORE the
-     VLM to contain cost. Fail-open — the ``<otsl>`` gate below is authoritative, so the
-     threshold is conservative and a table is never rejected on colour alone.
+     VLM to contain cost. This is the ONE place colour alone decides (the VLM never runs for a
+     rejected crop), so the threshold is deliberately conservative to keep false-rejects of
+     real tables rare, and it is overridable per-request (``prefilter=False``). It is a cost
+     optimization, NOT a hard guarantee — a sufficiently colourful real table can be rejected
+     here.
   2. VLM plain mode + repetition early-stop (adapter.extract_crop): NO ``no_repeat_ngram_size``
      (it fabricates spurious tables from illustrations — a proven false positive).
-  3. ``<otsl>`` gate: only an OTSL table in the DocTags is authoritative. Illustrations do not
-     emit ``<otsl>``.
+  3. ``<otsl>`` gate: for every crop that REACHES the VLM, only an OTSL table in the DocTags is
+     authoritative. Illustrations do not emit ``<otsl>``.
 
 The heavy VLM/docling work lives in ``SmolDoclingAdapter``; this application service owns only
 the cheap pre-filter and the orchestration, so it stays trivially unit-testable with a fake
@@ -62,7 +65,9 @@ class CropDiscriminator:
         use_prefilter = self.settings.crop_prefilter_enabled if prefilter is None else prefilter
         crop_colorfulness = colorfulness(image)
 
-        # 1. Cheap colorfulness reject (fail-open; the <otsl> gate stays authoritative).
+        # 1. Cheap colorfulness reject: colour alone decides here (the VLM is skipped). A
+        #    conservative threshold + the per-request override keep false-rejects of real
+        #    tables rare; the <otsl> gate is authoritative only for crops that reach the VLM.
         if use_prefilter and crop_colorfulness > self.settings.crop_prefilter_colorfulness_threshold:
             logger.info(
                 "Crop rejected by colorfulness pre-filter (%.1f > %.1f) — VLM skipped",

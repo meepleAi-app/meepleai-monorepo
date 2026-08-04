@@ -129,3 +129,25 @@ def test_extract_image_service_unavailable_answers_200_non_table(monkeypatch):
     payload = r.json()
     assert payload["is_table"] is False
     assert payload["reason"] == "service-unavailable"
+
+
+def test_extract_image_init_failure_degrades_to_non_table(monkeypatch):
+    # A model-initialisation failure (GPU OOM / JIT — the #3556 class) must degrade to a 200
+    # non-table result (R5), NOT 500 through the endpoint's generic handler.
+    class _BoomAdapter:
+        _is_initialized = False
+
+        def initialize(self):
+            raise RuntimeError("cuda out of memory")
+
+    svc = PdfExtractionService()
+    svc.vlm_adapter = _BoomAdapter()
+    monkeypatch.setattr(main, "pdf_service", svc)
+
+    r = client.post("/api/v1/extract-image", files={"image": ("t.jpg", _jpeg(), "image/jpeg")})
+    assert r.status_code == 200, r.text
+    payload = r.json()
+    assert payload["is_table"] is False
+    assert payload["reason"] == "init-failed"
+    assert main.metrics["extract_image_requests_total"] == 1
+    assert main.metrics["extract_image_failures_total"] == 0  # a degraded 200, not a failure

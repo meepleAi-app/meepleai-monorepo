@@ -795,9 +795,13 @@ async def preprocess_photo(
 def _discriminate_crop(img: Image.Image, prefilter: Optional[bool]) -> CropExtractionResult:
     """Run the crop-discriminator (blocking; called via run_in_threadpool).
 
-    Lazily initialises the VLM, mirroring _extract_text_with_confidence. Returns a non-table
-    ``service-unavailable`` result when pdf_service is absent (unit-test env without lifespan)
-    so the endpoint still answers 200 with is_table=False.
+    Lazily initialises the VLM, mirroring _extract_text_with_confidence: BOTH an absent
+    pdf_service (unit-test env without lifespan) AND a model-initialisation failure (GPU OOM,
+    weight download / Triton-JIT failure — the #3556 class) degrade to a non-table result so
+    the endpoint answers 200 with is_table=False, honouring R5 ("extraction fails -> no error")
+    instead of 500ing. Init failure is logged at ERROR and carries a distinct ``reason`` so it
+    stays observable — a persistent init failure would otherwise silently return "no table" for
+    the whole batch (enable_model_warmup pins _is_initialized False after a failed warmup).
     """
     global pdf_service  # noqa: PLW0602
     if pdf_service is None or pdf_service.vlm_adapter is None:
@@ -808,7 +812,17 @@ def _discriminate_crop(img: Image.Image, prefilter: Optional[bool]) -> CropExtra
         )
     adapter = pdf_service.vlm_adapter
     if not adapter._is_initialized:
-        adapter.initialize()
+        try:
+            adapter.initialize()
+        except Exception as exc:
+            logger.error(
+                "VLM initialisation failed during extract-image: %s", exc, exc_info=True
+            )
+            return CropExtractionResult(
+                is_table=False, reason="init-failed", markdown="", bbox=None,
+                doctags="", confidence=0.0, prefiltered=False, degenerated=False,
+                colorfulness=0.0, duration_ms=0,
+            )
     return CropDiscriminator(adapter).discriminate(img, prefilter=prefilter)
 
 

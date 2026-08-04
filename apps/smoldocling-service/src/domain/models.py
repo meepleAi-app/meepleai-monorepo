@@ -61,6 +61,22 @@ class PageExtractionResult:
         return len(self.markdown_text.strip()) == 0
 
 
+# Canonical crop-discriminator outcome codes (issue #3435 SP3). Single source of truth for the
+# CropExtractionResult.reason field, referenced by the API schema description so the documented
+# contract cannot desync from the emitted literals (mirrors the STRUCTURE_TAGS consolidation
+# from #3538).
+CROP_REASONS = (
+    "table-otsl",            # kept: OTSL table rebuilt into markdown + bbox
+    "prefilter-colorful",    # discarded: rejected by the colorfulness pre-filter (VLM not run)
+    "no-otsl",               # discarded: VLM ran but emitted no <otsl>
+    "degenerate-earlystop",  # discarded: the repetition early-stop fired
+    "conversion-failed",     # discarded: <otsl> present but docling could not rebuild the table
+    "empty-output",          # discarded: VLM produced nothing usable
+    "service-unavailable",   # degraded: pdf_service absent (e.g. unit-test env without lifespan)
+    "init-failed",           # degraded: model initialisation failed (R5 clean degradation)
+)
+
+
 @dataclass
 class CropExtractionResult:
     """Result of running the crop-discriminator on a single image crop (issue #3435 SP3).
@@ -81,9 +97,7 @@ class CropExtractionResult:
     """
 
     is_table: bool
-    # table-otsl | prefilter-colorful | no-otsl | degenerate-earlystop | conversion-failed
-    # | empty-output | service-unavailable
-    reason: str
+    reason: str  # one of CROP_REASONS
     markdown: str  # rebuilt table markdown; "" when discarded
     bbox: Optional[Tuple[float, float, float, float]]  # [x0,y0,x1,y1] in [0,1] top-left; None when discarded/absent
     doctags: str  # raw cleaned DocTags (audit/debug)

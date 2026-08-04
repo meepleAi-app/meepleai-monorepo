@@ -3,6 +3,8 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
+from ..domain.models import CROP_REASONS
+
 
 # Response Schemas
 class PageResultSchema(BaseModel):
@@ -49,12 +51,7 @@ class ExtractImageResponse(BaseModel):
     """Response for POST /api/v1/extract-image (issue #3435 SP3 crop-discriminator)."""
 
     is_table: bool = Field(description="True if the crop is an OTSL table to keep")
-    reason: str = Field(
-        description=(
-            "table-otsl | prefilter-colorful | no-otsl | degenerate-earlystop | "
-            "conversion-failed | empty-output | service-unavailable"
-        )
-    )
+    reason: str = Field(description="One of: " + " | ".join(CROP_REASONS))
     markdown: str = Field(description="Rebuilt table markdown; empty when discarded")
     bbox: Optional[List[float]] = Field(
         default=None,

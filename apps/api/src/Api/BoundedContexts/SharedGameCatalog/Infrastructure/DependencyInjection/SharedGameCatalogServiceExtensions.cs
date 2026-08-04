@@ -1,3 +1,4 @@
+using Api.Observability;
 using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
@@ -401,7 +402,7 @@ internal static class SharedGameCatalogServiceExtensions
         {
             client.Timeout = TimeSpan.FromSeconds(10);
         })
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.BggCover);
 
     /// <summary>
     /// Issue #3495 fix 5/N — registers the hardened arbitrary-URL download client
@@ -414,7 +415,7 @@ internal static class SharedGameCatalogServiceExtensions
         {
             client.Timeout = TimeSpan.FromSeconds(30);
         })
-        .ConfigureSsrfPin(allowAutoRedirect: false);
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Manual, allowAutoRedirect: false);
 
     /// <summary>
     /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned BGG cover-download client so
@@ -516,7 +517,7 @@ internal static class SharedGameCatalogServiceExtensions
         // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
         // ConfigureSsrfPin uses ConfigurePrimaryHttpMessageHandler (innermost), so the circuit-breaker
         // delegating handler above stays outer (CB → pin), matching the Slack registration.
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikidata);
 
         // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
         // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
@@ -554,7 +555,7 @@ internal static class SharedGameCatalogServiceExtensions
         // holds — and each redirect hop's host is independently re-resolved and SSRF-validated by the
         // per-connection pin (upload.wikimedia.org is public → allowed). Do NOT add any other
         // ConfigurePrimaryHttpMessageHandler here: it would override the pin.
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikimedia);
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
@@ -563,7 +564,7 @@ internal static class SharedGameCatalogServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         })
         // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg);
 
         // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
         // and "bgg" (fallback) explicitly — avoids relying on registration order.

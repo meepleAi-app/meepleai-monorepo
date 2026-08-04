@@ -27,13 +27,18 @@ internal static class SsrfPinnedHttpClientBuilderExtensions
     /// redirects itself through an HTTPS-only scheme gate the connect-pin cannot express.
     /// </para>
     /// </summary>
-    public static IHttpClientBuilder ConfigureSsrfPin(this IHttpClientBuilder builder, bool allowAutoRedirect = true)
+    /// <param name="builder">The typed-client HTTP builder whose primary handler is being pinned.</param>
+    /// <param name="sink">A bounded <c>MeepleAiMetrics.EgressSinks</c> constant identifying this client
+    /// (a compile-time value, never a host/IP) — the label on the egress blocked/allowed counters (#3495 M2).</param>
+    /// <param name="allowAutoRedirect">See the summary — <see langword="false"/> only for the arbitrary-URL manual sink.</param>
+    public static IHttpClientBuilder ConfigureSsrfPin(
+        this IHttpClientBuilder builder, string sink, bool allowAutoRedirect = true)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
         return builder.ConfigurePrimaryHttpMessageHandler(sp => new SocketsHttpHandler
         {
-            ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>()),
+            ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>(), sink),
             AllowAutoRedirect = allowAutoRedirect,
             MaxAutomaticRedirections = 5,
         });

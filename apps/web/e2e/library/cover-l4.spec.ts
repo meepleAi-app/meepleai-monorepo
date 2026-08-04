@@ -10,11 +10,10 @@
  *     coverUrl and asserts the card <img> renders with that exact URL.
  *     Proves the FE mapper does not silently discard the field.
  *
- *  2. cover-strict-r2 (test.fixme): requires STORAGE_PROVIDER=s3 so the BE
- *     returns a real presigned URL. Disabled locally because local storage
- *     returns null from GetPresignedDownloadUrlAsync, causing the FE to fall
- *     back to the placeholder.
- *     TODO #1852: remove fixme once MinIO (or S3 emulator) is wired into CI.
+ *  2. cover-strict-r2 (#3498): the real-load, real-backend assertion now lives in
+ *     apps/web/e2e/smoke-real-backend/cover-r2-strict.spec.ts (run by the
+ *     e2e-cover-r2-strict job with MinIO + STORAGE_PROVIDER=s3). The old mocked
+ *     `test.fixme` false-green was removed from this suite.
  */
 
 import { test, expect } from '@playwright/test';
@@ -130,55 +129,8 @@ test.describe('L4 PDF cover propagation (#1852)', () => {
     // acceptable structure; the important thing is the page didn't crash.
   });
 
-  /**
-   * Strict R2 assertion — fixme until MinIO/S3 emulator is in CI.
-   *
-   * This test would verify that when STORAGE_PROVIDER=s3, the BE returns a
-   * real presigned URL (ending in .webp) for games with PdfCoverR2Key set,
-   * and the FE renders it.
-   *
-   * Local dev: IBlobStorageService.GetPresignedDownloadUrlAsync returns null
-   * → coverUrl is null in the API response → FE falls back to placeholder.
-   * Staging/prod (S3-backed): coverUrl is a presigned HTTPS URL → img.src
-   * matches /\.webp(\?|$)/.
-   *
-   * TODO #1852: Remove test.fixme once a storage emulator (MinIO) is
-   * provisioned in the E2E CI environment so this assertion can run
-   * consistently without requiring a live staging deployment.
-   */
-  test.fixme('cover-strict-r2: img src ends with .webp (S3 only — requires STORAGE_PROVIDER=s3)', async ({
-    page,
-  }) => {
-    // Override the library mock to simulate what staging returns when
-    // presigned URL generation succeeds.
-    const R2_PRESIGNED_URL =
-      'https://r2.example.com/pdf-covers/catan-abc123.webp?X-Amz-Signature=sig';
-
-    await page.route(`${API_BASE}/api/v1/library**`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          items: [{ ...MOCK_LIBRARY_ENTRY, coverUrl: R2_PRESIGNED_URL }],
-          totalCount: 1,
-          page: 1,
-          pageSize: 20,
-        }),
-      });
-    });
-
-    await page.goto('/library');
-    await page.waitForLoadState('networkidle');
-
-    const gameCard = page.getByText('Catan E2E Cover Test').first();
-    await expect(gameCard).toBeVisible({ timeout: 8000 });
-
-    const cardContainer = gameCard.locator('xpath=ancestor::*[self::article or self::div][1]');
-    const img = cardContainer.locator('img').first();
-    await expect(img).toBeVisible({ timeout: 5000 });
-
-    const src = await img.getAttribute('src');
-    expect(src).toBeTruthy();
-    expect(src).toMatch(/\.webp(\?|$)/);
-  });
+  // Issue #3498: the mocked `cover-strict-r2` fixme (a false-green `src.match(/\.webp/)` over a
+  // mocked coverUrl) is superseded by a REAL-LOAD assertion against a real backend + MinIO in
+  // `apps/web/e2e/smoke-real-backend/cover-r2-strict.spec.ts` (run by the e2e-cover-r2-strict job).
+  // Do NOT re-introduce a `test.fixme` cover-strict assertion here — `pnpm lint:no-cover-fixme` gates it.
 });

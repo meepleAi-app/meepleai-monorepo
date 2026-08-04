@@ -1,0 +1,81 @@
+# Issue #3498 — Cover R2-strict E2E (SCAFFOLD, needs CI iteration).
+#
+# Boots the real backend stack WITH MinIO (`--profile storage`) + the E2E storage override, seeds a
+# game whose cover lives in the MinIO bucket, and runs the real-load cover assertion
+# (apps/web/e2e/smoke-real-backend/cover-r2-strict.spec.ts). Isolated from e2e-smoke-real-backend.yml
+# so a wiring bug here NEVER breaks the working smoke job.
+#
+# UNVERIFIED (authored without the ability to run the E2E stack locally). Expected first-iteration
+# fixes, in likely order:
+#   1. api service must forward the S3_* env from compose.e2e-storage.yml (env passthrough in
+#      compose.dev.yml) and MINIO_ROOT_USER/PASSWORD must be present (make secrets-setup / CI env).
+#   2. the seed step (put a fixtured .webp into MinIO at the game's PdfCoverR2Key + insert the DB row)
+#      — CoverKeyBuilder.ForManual/Pdf key convention must match what the resolver reads.
+#   3. wait for MinIO healthy + bucket provisioned (minio-init) before the API resolves covers.
+name: E2E Cover R2-strict
+
+on:
+  workflow_dispatch: {} # start manual-only until the wiring is proven green, then add pull_request paths.
+
+jobs:
+  cover-r2-strict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      # TODO(#3498): provision MinIO credentials the same way the other real-backend jobs do
+      # (make secrets-setup, or a CI secret → infra/secrets/storage.secret). MINIO_ROOT_USER/PASSWORD
+      # are required by both the minio + minio-init services and by the S3_ACCESS_KEY/SECRET mapping.
+
+      - name: Boot stack with storage (postgres + redis + api + MinIO)
+        working-directory: infra
+        env:
+          DISABLE_RATE_LIMITING: "true"
+        run: |
+          # --profile storage brings up minio + minio-init (bucket auto-provision); the override
+          # publishes MinIO :9000 and points the API at S3 with a browser-reachable presign host.
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage up -d
+          for i in {1..40}; do
+            curl -fs http://localhost:8080/health >/dev/null 2>&1 && { echo "API up"; break; }
+            sleep 5
+          done
+          # Sanity: MinIO S3 port reachable from the runner host (== browser reachability).
+          curl -fs http://localhost:9000/minio/health/ready || echo "WARN: MinIO not reachable on :9000"
+
+      - name: Seed a game whose cover is served from MinIO
+        run: |
+          # TODO(#3498): (a) put a fixture WebP into the MinIO bucket at the deterministic cover key
+          #   (mc cp fixture.webp myminio/meepleai-uploads/<key>), and (b) insert a SharedGame +
+          #   UserLibraryEntry row whose PdfCoverR2Key == <key> (extend tests/fixtures with a
+          #   cover-r2-strict.sql). The key convention must match CoverKeyBuilder + CoverUrlResolver.
+          echo "TODO: seed MinIO object + DB row for the cover-r2-strict fixture"
+
+      - name: Dump stack logs on failure
+        if: failure()
+        working-directory: infra
+        run: docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml logs --tail=200 api minio minio-init || true
+
+      - uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d  # v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install web deps + Playwright
+        working-directory: apps/web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      - name: Run cover R2-strict spec
+        working-directory: apps/web
+        run: pnpm exec playwright test smoke-real-backend/cover-r2-strict.spec.ts --project=desktop-chrome --reporter=list
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-cover-r2-strict
+          path: apps/web/playwright-report

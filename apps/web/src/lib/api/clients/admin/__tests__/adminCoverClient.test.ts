@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   CoverCandidatesSchema,
   CoverAssignmentSchema,
+  ManualCoverResultSchema,
   type AssignCoverRequest,
+  type SetManualCoverRequest,
 } from '@/lib/api/schemas/admin/admin-cover.schemas';
 
 import { createAdminCoverClient } from '../adminCoverClient';
@@ -75,6 +77,30 @@ describe('adminCoverClient', () => {
       expect(http.delete).toHaveBeenCalledWith(
         `/api/v1/admin/shared-games/${GAME_ID}/cover-assignments/Card`
       );
+    });
+  });
+
+  describe('setManualCover', () => {
+    it('POSTs the manual-cover body to the manual-cover path with the ManualCoverResultSchema', async () => {
+      const http = makeHttp();
+      const body: SetManualCoverRequest = {
+        sourceUrl: 'https://commons.example.org/c.png',
+        license: 'CC0',
+        attribution: null,
+      };
+      const payload = { dbKey: 'covers/manual/x/cover', presignedUrl: 'https://r2.example/m.webp' };
+      http.post.mockResolvedValue(payload);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = createAdminCoverClient(http as any);
+      const result = await client.setManualCover(GAME_ID, body);
+
+      expect(http.post).toHaveBeenCalledWith(
+        `/api/v1/admin/shared-games/${GAME_ID}/manual-cover`,
+        body,
+        ManualCoverResultSchema
+      );
+      expect(result).toEqual(payload);
     });
   });
 });

@@ -26,8 +26,8 @@ describe('DiffViewModeToggle', () => {
     it('should have radiogroup role', () => {
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
-      // shadcn ToggleGroup uses "group" role, not "radiogroup"
-      expect(screen.getByRole('group')).toBeInTheDocument();
+      // ToggleGroup type="single" exposes role="radiogroup" (with role="radio" items)
+      expect(screen.getByRole('radiogroup')).toBeInTheDocument();
     });
 
     it('should display correct text and icons', () => {
@@ -126,7 +126,9 @@ describe('DiffViewModeToggle', () => {
     it('should handle rapid mode switching', async () => {
       const user = userEvent.setup();
 
-      const { rerender } = render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
+      const { rerender } = render(
+        <DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />
+      );
 
       const sideButton = screen.getByLabelText('Side-by-side view');
 
@@ -190,8 +192,8 @@ describe('DiffViewModeToggle', () => {
     it('should be keyboard navigable', () => {
       render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
-      // Radix ToggleGroup is keyboard navigable - verify group has tabindex
-      const toggleGroup = screen.getByRole('group');
+      // Radix ToggleGroup is keyboard navigable - verify the radiogroup has tabindex
+      const toggleGroup = screen.getByRole('radiogroup');
       expect(toggleGroup).toHaveAttribute('tabindex');
 
       // Verify buttons are focusable
@@ -243,9 +245,7 @@ describe('DiffViewModeToggle', () => {
     });
 
     it('should have toggle group items', () => {
-      render(
-        <DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />
-      );
+      render(<DiffViewModeToggle currentMode="list" onModeChange={mockOnModeChange} />);
 
       // shadcn ToggleGroup creates buttons, not custom class names
       const listButton = screen.getByLabelText('List view');

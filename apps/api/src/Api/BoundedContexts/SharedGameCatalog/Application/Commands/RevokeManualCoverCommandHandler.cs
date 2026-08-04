@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -53,8 +54,13 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
         var game = await _repository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("SharedGame", command.GameId.ToString());
 
-        // Capture the key BEFORE clearing so we can best-effort delete the object afterwards.
+        // Capture BEFORE clearing: the manual base object key + the rendered crop object keys of
+        // any Manual-pinned assignment, so we can best-effort delete them after the DB revoke.
         var keyToDelete = game.ManualCoverR2Key;
+        var manualCropKeys = game.CoverAssignments
+            .Where(a => a.Source == CoverAssignmentSource.Manual && !string.IsNullOrWhiteSpace(a.GeneratedR2Key))
+            .Select(a => a.GeneratedR2Key!)
+            .ToList();
 
         // Idempotent: nothing was set → no persistence, no R2 delete, no cache churn (204).
         if (!game.RevokeManualCover())
@@ -63,6 +69,10 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
         }
 
         _repository.Update(game);
+        // RevokeManualCover also removed any Manual-pinned assignment rows → reconcile the child
+        // collection so those deletes persist (Update maps scalars only). Update + Reconcile
+        // compose (disjoint DbSets); verified on Postgres by the reconcile integration suite.
+        await _repository.ReconcileCoverAssignmentsAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Best-effort R2 cleanup AFTER the authoritative DB revoke. The raw-key delete (#3384)
@@ -79,6 +89,21 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogWarning(ex, "Failed to delete manual cover R2 key {Key}; DB is already revoked", keyToDelete);
+            }
+        }
+
+        // Best-effort delete the rendered crop objects of the removed Manual assignments (each
+        // GeneratedR2Key is a full physical key). None exist today (no crop is rendered for a
+        // Manual assignment), so this is a forward-compatible no-op until crop generation lands.
+        foreach (var cropKey in manualCropKeys)
+        {
+            try
+            {
+                await _blobStorage.DeleteRawKeyAsync(cropKey, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Failed to delete manual cover crop R2 key {Key}; DB is already revoked", cropKey);
             }
         }
 

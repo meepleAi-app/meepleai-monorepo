@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.SharedKernel.Domain.Covers;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using FluentAssertions;
@@ -1483,6 +1484,39 @@ public sealed class SharedGameTests
 
         game.RevokeManualCover().Should().BeTrue();
         game.RevokeManualCover().Should().BeFalse("the manual cover is already cleared");
+    }
+
+    [Fact]
+    public void RevokeManualCover_RemovesManualSourcedAssignments_KeepsOthers()
+    {
+        // Revoking the manual source must also drop any per-context assignment pinned to Manual,
+        // so no phantom pin survives to auto-resurface a future manual cover. Non-Manual pins stay.
+        var game = NewManualCoverGame();
+        var admin = Guid.NewGuid();
+        game.SetManualCover("k", "CC0", null, "https://s", admin, DateTime.UtcNow);
+        game.AssignCover(CoverContext.Hero, CoverAssignmentSource.Manual, admin);
+        game.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, admin);
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeTrue();
+        game.CoverAssignments.Should().ContainSingle();
+        game.CoverAssignments.Single().Source.Should().Be(CoverAssignmentSource.Wikidata);
+        game.ManualCoverR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeManualCover_WithOnlyManualAssignment_RemovesItAndReturnsTrue()
+    {
+        // Even with no manual columns set, a lingering Manual assignment is cleaned up.
+        var game = NewManualCoverGame();
+        var admin = Guid.NewGuid();
+        game.AssignCover(CoverContext.Hero, CoverAssignmentSource.Manual, admin);
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeTrue();
+        game.CoverAssignments.Should().BeEmpty();
     }
 
     #endregion

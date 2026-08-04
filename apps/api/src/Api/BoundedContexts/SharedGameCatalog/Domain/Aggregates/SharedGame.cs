@@ -881,27 +881,32 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Epic #3470 Slice 3a-3 — revokes the admin-set manual cover by clearing the six manual
-    /// cover / attestation fields. Returns <c>true</c> when something was cleared, <c>false</c>
-    /// when there was no manual cover to revoke — an idempotent no-op the caller turns into a
-    /// 204 without persisting or evicting caches.
+    /// Epic #3470 Slice 3a-3 / 3f — revokes the admin-set manual cover: clears the six manual
+    /// cover / attestation fields AND drops any per-context assignment still pinned to the Manual
+    /// source (so no phantom pin survives to auto-resurface a future manual cover). Returns
+    /// <c>true</c> when anything was cleared, <c>false</c> when there was nothing to revoke — an
+    /// idempotent no-op the caller turns into a 204 without persisting or evicting caches.
     /// </summary>
     /// <remarks>
-    /// Follow-up (gated on per-context crop generation): once an <c>AssignCover</c> flow
-    /// populates a rendered <c>GeneratedR2Key</c> on a Manual-sourced assignment, revoke must
-    /// ALSO remove those assignments (and delete their crop objects), else the crop would keep
-    /// serving after revoke. Today no crop is generated for a Manual assignment, so a dangling
-    /// Manual assignment resolves to a null base key and falls through to the implicit
-    /// precedence — the revoked image genuinely stops serving.
+    /// The handler persists the removed assignments via <c>ReconcileCoverAssignmentsAsync</c> and
+    /// best-effort deletes each removed assignment's rendered crop object (<c>GeneratedR2Key</c>).
+    /// Today <c>AssignCover</c> renders no crop for a Manual assignment, so there is nothing to
+    /// delete yet — but removing the assignment row is still correct (a dangling Manual pin would
+    /// otherwise silently re-apply the next manual cover to that context).
     /// </remarks>
     public bool RevokeManualCover()
     {
-        if (_manualCoverR2Key is null
-            && _manualCoverLicense is null
-            && _manualCoverAttribution is null
-            && _manualCoverSourceUrl is null
-            && _manualCoverAttestedBy is null
-            && _manualCoverAttestedAt is null)
+        var hadColumns = _manualCoverR2Key is not null
+            || _manualCoverLicense is not null
+            || _manualCoverAttribution is not null
+            || _manualCoverSourceUrl is not null
+            || _manualCoverAttestedBy is not null
+            || _manualCoverAttestedAt is not null;
+
+        var removedAssignments =
+            _coverAssignments.RemoveAll(a => a.Source == CoverAssignmentSource.Manual) > 0;
+
+        if (!hadColumns && !removedAssignments)
         {
             return false;
         }

@@ -181,4 +181,43 @@ public sealed class SharedGameCoverAssignmentReconcileIntegrationTests : IAsyncL
         reloaded!.CoverAssignments.Should().HaveCount(2, "two collection includes must not duplicate via a cartesian product");
         reloaded.Designers.Should().HaveCount(2);
     }
+
+    [Fact]
+    public async Task RevokeManualCover_Cascades_NullsColumnsAndRemovesManualAssignment_OnPostgres()
+    {
+        // Slice 3f: revoking a manual cover must persist BOTH the nulled ManualCover* scalar
+        // columns (via Update) AND the removal of the Manual-pinned assignment row (via the
+        // child-safe Reconcile), while a non-Manual pin survives. Proves the Update + Reconcile
+        // composition on real Postgres (InMemory would hide a lost scalar write or child delete).
+        var gameId = await SeedGameAsync();
+
+        // Set a manual cover + pin Manual to Hero and Wikidata to Card.
+        var g1 = await _repository.GetByIdAsync(gameId);
+        g1!.SetManualCover("covers/manual/x/cover", "CC-BY-4.0", "Jane Artist", "https://s", AdminId, DateTime.UtcNow);
+        g1.AssignCover(CoverContext.Hero, CoverAssignmentSource.Manual, AdminId);
+        g1.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId);
+        _repository.Update(g1);
+        await _repository.ReconcileCoverAssignmentsAsync(g1);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var afterSet = await _repository.GetByIdAsync(gameId);
+        afterSet!.ManualCoverR2Key.Should().Be("covers/manual/x/cover");
+        afterSet.CoverAssignments.Should().HaveCount(2);
+
+        // Revoke: nulls the manual columns AND drops the Manual assignment (cascade).
+        var g2 = await _repository.GetByIdAsync(gameId);
+        g2!.RevokeManualCover().Should().BeTrue();
+        _repository.Update(g2);
+        await _repository.ReconcileCoverAssignmentsAsync(g2);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var afterRevoke = await _repository.GetByIdAsync(gameId);
+        afterRevoke!.ManualCoverR2Key.Should().BeNull("the scalar revoke persisted via Update");
+        afterRevoke.ManualCoverLicense.Should().BeNull();
+        afterRevoke.ManualCoverAttribution.Should().BeNull();
+        afterRevoke.CoverAssignments.Should().ContainSingle("the Manual pin was cascade-removed; Wikidata survives");
+        afterRevoke.CoverAssignments.Single().Source.Should().Be(CoverAssignmentSource.Wikidata);
+    }
 }

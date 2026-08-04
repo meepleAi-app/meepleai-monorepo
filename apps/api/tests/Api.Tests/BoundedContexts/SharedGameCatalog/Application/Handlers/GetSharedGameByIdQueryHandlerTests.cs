@@ -203,6 +203,63 @@ public class GetSharedGameByIdQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ManualCoverWinsHero_SurfacesLicenseAttributionSourceUrl()
+    {
+        // Epic #3470 Slice 3b/3f (copyright guard): a whitelist-admitted Manual cover that WINS
+        // the Hero context MUST surface its attested license + attribution + source URL on the
+        // detail DTO — a CC-BY/CC-BY-SA image cannot render creditless. End-to-end proof that a
+        // game with only ManualCover* columns + a Manual Hero pin flows the triple through the
+        // resolver -> CoverAttribution.ForWinningSource -> DTO.
+        var game = SharedGame.Create(
+            "Catan", 1995, "Description", 3, 4, 90, 10, 2.5m, 7.8m,
+            "https://example.com/catan.jpg", "https://example.com/thumb.jpg",
+            GameRules.Create("Rules content", "en"), Guid.NewGuid(), 13);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", null))
+            .ReturnsAsync("https://r2/manual-hero.webp");
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = game.Id,
+            Title = "Catan",
+            Description = "desc",
+            Status = 1,
+            ManualCoverR2Key = "manual-key",
+            ManualCoverLicense = "CC-BY-4.0",
+            ManualCoverAttribution = "Jane Artist",
+            ManualCoverSourceUrl = "https://commons.example.org/img",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Context = CoverContext.Hero,
+                    Source = CoverAssignmentSource.Manual,
+                    CreatedBy = Guid.NewGuid(),
+                },
+            },
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.ChangeTracker.Clear();
+
+        var handler = CreateHandler(db);
+
+        var result = await handler.Handle(new GetSharedGameByIdQuery(game.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.CoverUrl.Should().Be("https://r2/manual-hero.webp", "the Manual Hero pin wins");
+        result.CoverLicense.Should().Be("CC-BY-4.0");
+        result.CoverAttribution.Should().Be("Jane Artist");
+        result.CoverSourceUrl.Should().Be("https://commons.example.org/img");
+    }
+
+    [Fact]
     public async Task Handle_ResolvesSocialCover_IndependentlyOfHero()
     {
         // Epic #3470 Slice 2d AC-2: the detail DTO exposes a Social cover (for OG meta)

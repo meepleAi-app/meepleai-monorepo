@@ -128,6 +128,7 @@ internal sealed class RunTableExtractionBatchCommandHandler
             var regions = await _dbContext.PdfImageRegions
                 .AsNoTracking()
                 .Where(r => r.PdfDocumentId == candidate.PdfDocumentId)
+                .OrderBy(r => r.PageNumber).ThenBy(r => r.Y).ThenBy(r => r.X)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             if (regions.Count == 0)
@@ -299,11 +300,16 @@ internal sealed class RunTableExtractionBatchCommandHandler
                     // Isolate each region: detach any entity this item tracked/mutated so a failure
                     // can't be re-flushed by the next item's SaveChanges (#534 pattern).
                     _dbContext.ChangeTracker.Clear();
-                }
 
-                if (processed < regionBudget)
-                {
-                    await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+                    // Pace between regions HERE (in the finally) so it fires on EVERY outcome — the
+                    // not-table and not-retrievable `continue` paths above STILL called the VLM, so the
+                    // throttle must apply to them too, else a corpus of mostly-illustration regions
+                    // hammers the GPU inference service. recordMetric is false only on the cancellation
+                    // rethrow, where pacing must be skipped.
+                    if (recordMetric && processed < regionBudget)
+                    {
+                        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+                    }
                 }
             }
         }
@@ -351,7 +357,7 @@ internal sealed class RunTableExtractionBatchCommandHandler
         entity.TextChunkId = textChunkId;
         entity.LastError = null;
         entity.UpdatedAt = DateTime.UtcNow;
-        await SaveSidecarAsync(pdfId, ct).ConfigureAwait(false);
+        await SaveMarkerStateAsync(pdfId, ct).ConfigureAwait(false);
     }
 
     private async Task<string> RecordFailureAsync(
@@ -365,7 +371,7 @@ internal sealed class RunTableExtractionBatchCommandHandler
         entity.Status = deadLettered
             ? PdfTableExtractionEntity.StatusDeadLetter
             : PdfTableExtractionEntity.StatusFailed;
-        await SaveSidecarAsync(pdfId, ct).ConfigureAwait(false);
+        await SaveFailureStateAsync(pdfId, ct).ConfigureAwait(false);
         return deadLettered
             ? MeepleAiMetrics.TableVlmOutcomeDeadLetter
             : MeepleAiMetrics.TableVlmOutcomeFailed;
@@ -401,7 +407,27 @@ internal sealed class RunTableExtractionBatchCommandHandler
         return entity;
     }
 
-    private async Task SaveSidecarAsync(Guid pdfId, CancellationToken ct)
+    // Terminal/marker write (extracted / not_table): swallows ONLY a concurrency conflict (benign —
+    // reconciled next run). Any OTHER DbUpdateException is deliberately NOT caught here — it propagates
+    // to the per-item catch -> RecordFailureAsync, so a PERSISTENT marker-save failure counts toward the
+    // retry cap and dead-letters, instead of re-cropping + re-VLM'ing the region forever tagged as if it
+    // succeeded (the asymmetry PR #3547 fixed in the SP1 sibling).
+    private async Task SaveMarkerStateAsync(Guid pdfId, CancellationToken ct)
+    {
+        try
+        {
+            await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            _logger.LogWarning(ex,
+                "RunTableExtractionBatch: concurrency conflict persisting terminal state for PDF {PdfId}; deferred to next run", pdfId);
+        }
+    }
+
+    // Failure-recording write: per-item isolation — this must NEVER abort the batch, so swallow ANY save
+    // error. The attempt bump is lost and reconstructed on the next run (the region simply reprocesses).
+    private async Task SaveFailureStateAsync(Guid pdfId, CancellationToken ct)
     {
         try
         {
@@ -409,10 +435,8 @@ internal sealed class RunTableExtractionBatchCommandHandler
         }
         catch (DbUpdateException ex)
         {
-            // Per-item isolation: a sidecar write must never abort the batch. The state update is
-            // lost and reconstructed on the next run (the region simply reprocesses).
             _logger.LogWarning(ex,
-                "RunTableExtractionBatch: failed to persist table-extraction state for PDF {PdfId}", pdfId);
+                "RunTableExtractionBatch: failed to persist failure state for PDF {PdfId}", pdfId);
         }
     }
 

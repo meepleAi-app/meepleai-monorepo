@@ -76,21 +76,33 @@ internal sealed class TextChunkSearchService : ITextChunkSearchService
             var minIndex = chunkIndex - radius;
             var maxIndex = chunkIndex + radius;
 
-            var results = await _dbContext.TextChunks
+            // #3435 SP4: table chunks are appended PAST the narrative reading-order range
+            // (ChunkIndex = maxNarrative + 1), so they are NOT linear-adjacency neighbours. A table
+            // SEED has no narrative neighbours (return empty), and a table must never be pulled into a
+            // narrative chunk's window as if it were positionally adjacent (it would inject the last
+            // narrative chunk — often unrelated tail content — into the grounded answer + citations).
+            var window = await _dbContext.TextChunks
                 .AsNoTracking()
                 .Where(tc => tc.PdfDocumentId == pdfDocumentId
                     && tc.ChunkIndex >= minIndex
-                    && tc.ChunkIndex <= maxIndex
-                    && tc.ChunkIndex != chunkIndex) // Exclude the matched chunk itself
-                .OrderBy(tc => tc.ChunkIndex)
-                .Select(tc => new TextChunkMatch(
-                    tc.PdfDocumentId,
-                    tc.Content,
-                    tc.ChunkIndex,
-                    tc.PageNumber,
-                    0f))
+                    && tc.ChunkIndex <= maxIndex)
+                .Select(tc => new { tc.PdfDocumentId, tc.Content, tc.ChunkIndex, tc.PageNumber, tc.ElementType })
                 .ToListAsync(ct)
                 .ConfigureAwait(false);
+
+            var seedIsTable = window.Any(c => c.ChunkIndex == chunkIndex
+                && string.Equals(c.ElementType, "Table", StringComparison.Ordinal));
+            if (seedIsTable)
+            {
+                return [];
+            }
+
+            var results = window
+                .Where(c => c.ChunkIndex != chunkIndex // exclude the matched chunk itself
+                    && !string.Equals(c.ElementType, "Table", StringComparison.Ordinal))
+                .OrderBy(c => c.ChunkIndex)
+                .Select(c => new TextChunkMatch(c.PdfDocumentId, c.Content, c.ChunkIndex, c.PageNumber, 0f))
+                .ToList();
 
             return results;
         }

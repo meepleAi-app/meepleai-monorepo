@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Configuration;
+using Api.Observability;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -316,7 +317,7 @@ internal static class AdministrationServiceExtensions
             {
                 client.Timeout = TimeSpan.FromSeconds(10);
             })
-            .ConfigureSsrfPin();
+            .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Slack);
 
     /// <summary>
     /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned Slack webhook client so a

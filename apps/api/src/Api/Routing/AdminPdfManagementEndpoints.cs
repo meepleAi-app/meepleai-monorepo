@@ -51,6 +51,12 @@ internal static class AdminPdfManagementEndpoints
             .WithName("SeedImageRegionsBatch")
             .WithSummary("Run one batch of automatic image-region hi_res seeding (#3435, flag-gated)");
 
+        // #3435 (SP2 router, DC-B): list the PDFs that qualify for the Metà-C VLM enrichment pass —
+        // Ready, in-corpus, non-demo, with at least the configured image-region count. Read-only.
+        group.MapGet("/maintenance/table-region-candidates", GetTableRegionCandidates)
+            .WithName("GetTableRegionCandidates")
+            .WithSummary("List table-heavy PDFs (candidate image-table regions) for VLM enrichment (#3435 SP2)");
+
         // Phase 6: Analytics
         group.MapGet("/analytics/distribution", GetDistribution)
             .WithName("GetPdfStatusDistribution")
@@ -98,6 +104,18 @@ internal static class AdminPdfManagementEndpoints
     {
         var result = await mediator.Send(
             new RunImageRegionSeedBatchCommand(request?.BatchSize),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetTableRegionCandidates(
+        int? minImageRegions,
+        int? limit,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetTableRegionCandidatesQuery(minImageRegions, limit),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

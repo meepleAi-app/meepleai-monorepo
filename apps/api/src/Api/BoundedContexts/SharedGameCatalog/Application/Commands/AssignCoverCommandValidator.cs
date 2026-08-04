@@ -3,9 +3,10 @@ using FluentValidation;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
-/// Boundary validation for <see cref="AssignCoverCommand"/> — turns bad input into a
-/// 400 rather than letting the domain factory throw a 500. Mirrors the domain guards
-/// on <c>GameCoverAssignment.Create</c> (focal in [0,1], defined enums).
+/// Boundary validation for <see cref="AssignCoverCommand"/> — turns bad input into a 4xx
+/// client error (422 via the FluentValidation pipeline) rather than letting the domain factory
+/// throw a 500. Mirrors the domain guards on <c>GameCoverAssignment.Create</c> (focal in [0,1],
+/// defined enums).
 /// </summary>
 internal sealed class AssignCoverCommandValidator : AbstractValidator<AssignCoverCommand>
 {

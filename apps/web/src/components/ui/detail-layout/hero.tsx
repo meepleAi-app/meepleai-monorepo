@@ -67,6 +67,13 @@ export interface HeroProps {
    * a `group` so a hover-revealed affordance can react to cover hover.
    */
   readonly coverOverlay?: ReactNode;
+  /**
+   * Optional footer rendered directly BELOW the cover region (not overlaid on the image) —
+   * used for the winning cover source's attribution credit (#3470 Slice 3c). Kept generic so
+   * Hero stays domain-agnostic; the shared-games detail wires <MeepleCardAttributionFooter>
+   * into it. Renders nothing when absent, so other Hero consumers are unaffected.
+   */
+  readonly coverFooter?: ReactNode;
 }
 
 function Stars({
@@ -163,6 +170,7 @@ export function Hero({
   compact = false,
   className,
   coverOverlay,
+  coverFooter,
 }: HeroProps): JSX.Element {
   const coverH = compact ? 'h-[160px]' : 'h-[220px]';
   const titleSize = compact ? 'text-[22px]' : 'text-[30px]';
@@ -216,6 +224,9 @@ export function Hero({
         />
         {coverOverlay}
       </div>
+
+      {/* Attribution credit for the winning cover source (#3470 Slice 3c) — below the cover. */}
+      {coverFooter}
 
       {/* Body */}
       <div className="flex flex-col gap-3 p-4 md:p-5">

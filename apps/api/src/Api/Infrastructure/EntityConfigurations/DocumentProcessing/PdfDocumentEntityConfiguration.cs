@@ -286,6 +286,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("image_regions_seeded_at")
             .IsRequired(false);
 
+        // Issue #3435 (SP1 slice 2): failed hi_res-seed attempt counter (dead-letter cap).
+        builder.Property(e => e.ImageRegionSeedAttempts)
+            .IsRequired()
+            .HasColumnName("image_region_seed_attempts")
+            .HasDefaultValue(0);
+
         builder.HasIndex(e => e.CoverGenerationStatus)
             .HasDatabaseName("ix_pdf_documents_cover_generation_status");
     }

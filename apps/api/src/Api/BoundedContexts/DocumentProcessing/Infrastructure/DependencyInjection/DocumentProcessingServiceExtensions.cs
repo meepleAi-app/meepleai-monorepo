@@ -222,7 +222,43 @@ internal static class DocumentProcessingServiceExtensions
         // any SharedGame whose inline KB-flag projection was missed.
         RegisterKbFlagDriftAuditJob(services);
 
+        // Issue #3435 (SP1 slice 2): Register Quartz job for the automatic image-region hi_res seed.
+        RegisterSeedImageRegionsJob(services, configuration);
+
         return services;
+    }
+
+    /// <summary>
+    /// #3435 (SP1 slice 2) — registers <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.SeedImageRegionsJob"/>
+    /// with Quartz. Runs every <c>PdfProcessing:ImageRegionSeeding:IntervalMinutes</c> (default 30) to
+    /// drive the automatic image-region hi_res seed. The command handler is gated by
+    /// <c>PdfProcessing:ImageRegionSeeding:Enabled</c> (default false), so the job is a cheap no-op
+    /// (one config check) until the feature is turned on per-environment.
+    /// </summary>
+    private static void RegisterSeedImageRegionsJob(IServiceCollection services, IConfiguration configuration)
+    {
+        var intervalMinutes = configuration.GetValue<int?>("PdfProcessing:ImageRegionSeeding:IntervalMinutes") ?? 30;
+        if (intervalMinutes < 1)
+        {
+            intervalMinutes = 30;
+        }
+
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("SeedImageRegionsJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.SeedImageRegionsJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("SeedImageRegionsTrigger", "DocumentProcessing")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(intervalMinutes)
+                    .RepeatForever())
+                .WithDescription("Runs the automatic image-region hi_res seed batch (#3435, flag-gated)")
+            );
+        });
     }
 
     /// <summary>

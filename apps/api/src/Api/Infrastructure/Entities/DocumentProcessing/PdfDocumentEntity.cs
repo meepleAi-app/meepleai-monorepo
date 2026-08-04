@@ -188,4 +188,11 @@ public class PdfDocumentEntity
     // pre-filter (router = SP2, deferred), so text-only PDFs also get one pass and are marked even
     // when 0 regions were found, so they are not re-processed.
     public DateTime? ImageRegionsSeededAt { get; set; }
+
+    // Issue #3435 (SP1 slice 2): failed hi_res-seed attempts. Incremented on each failure; once it
+    // reaches RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts the selector stops picking the
+    // PDF up (dead-letter), so a persistently-failing document doesn't re-run the ~200s hi_res pass
+    // forever and starve newer PDFs (oldest-first). Reset implicitly by a successful seed (which sets
+    // ImageRegionsSeededAt and removes the PDF from the selector).
+    public int ImageRegionSeedAttempts { get; set; }
 }

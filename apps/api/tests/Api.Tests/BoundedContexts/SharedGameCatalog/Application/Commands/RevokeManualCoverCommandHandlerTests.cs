@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -78,6 +79,29 @@ public sealed class RevokeManualCoverCommandHandlerTests
         _blobStorage.Verify(b => b.DeleteRawKeyAsync(physicalKey, It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithManualPinnedToContext_DropsManualAssignment_Reconciles_KeepsOthers()
+    {
+        // Slice 3f: revoking the manual source cascades to its per-context pins — the Manual
+        // assignment is removed (and persisted via the child-safe reconcile) while a non-Manual
+        // pin survives, so no phantom Manual pin lingers to auto-resurface a future manual cover.
+        var game = GameWithManualCover();
+        game.AssignCover(CoverContext.Hero, CoverAssignmentSource.Manual, AdminId);
+        game.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId);
+        var physicalKey = $"covers/manual/{game.Id:D}/cover.webp";
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        _blobStorage
+            .Setup(b => b.DeleteRawKeyAsync(physicalKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await CreateHandler().Handle(new RevokeManualCoverCommand(game.Id, AdminId), CancellationToken.None);
+
+        game.CoverAssignments.Should().ContainSingle();
+        game.CoverAssignments.Single().Source.Should().Be(CoverAssignmentSource.Wikidata);
+        _repository.Verify(r => r.ReconcileCoverAssignmentsAsync(game, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

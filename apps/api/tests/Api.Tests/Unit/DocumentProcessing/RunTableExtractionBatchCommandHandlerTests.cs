@@ -234,11 +234,16 @@ public sealed class RunTableExtractionBatchCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TerminalRegion_IsSkipped()
+    public async Task Handle_ExtractedRegion_WithLiveChunk_IsSkipped()
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext($"tvlm_{Guid.NewGuid():N}");
         var pdf = SeedPdf(db);
         SeedRegion(db, pdf, page: 3, x: 0.1, y: 0.2, w: 0.8, h: 0.3);
+        var chunkId = Guid.NewGuid();
+        db.TextChunks.Add(new TextChunkEntity
+        {
+            Id = chunkId, PdfDocumentId = pdf, Content = "| t |", ChunkIndex = 5, ElementType = "Table",
+        });
         db.PdfTableExtractions.Add(new PdfTableExtractionEntity
         {
             Id = Guid.NewGuid(),
@@ -247,6 +252,8 @@ public sealed class RunTableExtractionBatchCommandHandlerTests
             PageNumber = 3,
             X = 0.1, Y = 0.2, Width = 0.8, Height = 0.3,
             Status = PdfTableExtractionEntity.StatusExtracted,
+            TextChunkId = chunkId, // the produced chunk is still live -> truly done
+            TableMarkdown = "| t |",
         });
         await db.SaveChangesAsync();
 
@@ -259,6 +266,71 @@ public sealed class RunTableExtractionBatchCommandHandlerTests
 
         result.Processed.Should().Be(0);
         cropper.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_TableButNotRetrievable_MarksFailed_NotExtracted()
+    {
+        // IndexTableAsync returns null (no game / vector document) -> transient, must NOT be marked
+        // terminal 'extracted' (findings #3/#4): it retries and eventually dead-letters.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"tvlm_{Guid.NewGuid():N}");
+        var pdf = SeedPdf(db);
+        SeedRegion(db, pdf);
+        await db.SaveChangesAsync();
+
+        var handler = Create(db, MediatorWithCandidates(pdf).Object, CropperReturning(new byte[] { 9 }).Object,
+            ExtractorReturning(Table()).Object, IndexerReturning(null).Object,
+            BlobReturning(new byte[] { 1 }).Object, Config(enabled: true));
+
+        var result = await handler.Handle(new RunTableExtractionBatchCommand(), CancellationToken.None);
+
+        result.Failed.Should().Be(1);
+        result.Extracted.Should().Be(0);
+        var state = await StateOf(db, pdf);
+        state!.Status.Should().Be(PdfTableExtractionEntity.StatusFailed);
+        state.Attempts.Should().Be(1);
+        state.TextChunkId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_ExtractedButChunkDeleted_ReindexesFromCachedMarkdown_WithoutVlm()
+    {
+        // Self-heal after a document reindex wiped the produced chunk (finding #1): the region is
+        // re-indexed from the cached markdown, without re-running crop/VLM.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"tvlm_{Guid.NewGuid():N}");
+        var pdf = SeedPdf(db);
+        SeedRegion(db, pdf, page: 3, x: 0.1, y: 0.2, w: 0.8, h: 0.3);
+        db.PdfTableExtractions.Add(new PdfTableExtractionEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdf,
+            RegionHash = TableRegionKey.ComputeRegionHash(pdf, 3, 0.1, 0.2, 0.8, 0.3),
+            PageNumber = 3,
+            X = 0.1, Y = 0.2, Width = 0.8, Height = 0.3,
+            Status = PdfTableExtractionEntity.StatusExtracted,
+            TextChunkId = Guid.NewGuid(), // dangling — no matching text_chunk row
+            TableMarkdown = "| cached |\n|---|\n| 1 |",
+        });
+        await db.SaveChangesAsync();
+
+        var newChunkId = Guid.NewGuid();
+        var cropper = new Mock<IPdfRegionCropper>(MockBehavior.Strict);         // must NOT crop
+        var extractor = new Mock<ISmolDoclingTableExtractor>(MockBehavior.Strict); // must NOT call VLM
+        var indexer = IndexerReturning(newChunkId);
+        var handler = Create(db, MediatorWithCandidates(pdf).Object, cropper.Object,
+            extractor.Object, indexer.Object, BlobReturning(new byte[] { 1 }).Object, Config(enabled: true));
+
+        var result = await handler.Handle(new RunTableExtractionBatchCommand(), CancellationToken.None);
+
+        result.Extracted.Should().Be(1);
+        cropper.VerifyNoOtherCalls();
+        extractor.VerifyNoOtherCalls();
+        indexer.Verify(i => i.IndexTableAsync(
+            It.IsAny<PdfDocumentEntity>(), 3, 0.1, 0.2, 0.8, 0.3,
+            "| cached |\n|---|\n| 1 |", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        var state = await StateOf(db, pdf);
+        state!.Status.Should().Be(PdfTableExtractionEntity.StatusExtracted);
+        state.TextChunkId.Should().Be(newChunkId);
     }
 
     [Fact]

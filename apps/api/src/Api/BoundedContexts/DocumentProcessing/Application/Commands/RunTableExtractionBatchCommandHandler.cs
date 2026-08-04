@@ -144,6 +144,25 @@ internal sealed class RunTableExtractionBatchCommandHandler
             // unique index, so a plain keyed dictionary is safe.
             var stateByHash = states.ToDictionary(s => s.RegionHash, StringComparer.Ordinal);
 
+            // A document reindex (ReindexDocumentCommandHandler / the pipeline) deletes this PDF's
+            // text_chunks + embeddings WITHOUT clearing this sidecar, so an 'extracted' region is only
+            // truly done if its produced chunk still exists. Load the still-live table-chunk ids so a
+            // wiped chunk is re-indexed (from cached markdown) instead of skipped forever (#3435 SP4 review).
+            var extractedChunkIds = states
+                .Where(s => string.Equals(s.Status, PdfTableExtractionEntity.StatusExtracted, StringComparison.Ordinal)
+                    && s.TextChunkId.HasValue)
+                .Select(s => s.TextChunkId!.Value)
+                .Distinct()
+                .ToList();
+            var liveChunkIds = extractedChunkIds.Count == 0
+                ? new HashSet<Guid>()
+                : (await _dbContext.TextChunks
+                    .AsNoTracking()
+                    .Where(tc => extractedChunkIds.Contains(tc.Id))
+                    .Select(tc => tc.Id)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false)).ToHashSet();
+
             byte[]? pdfBytes = null;
             var pdfBytesLoaded = false;
 
@@ -158,8 +177,10 @@ internal sealed class RunTableExtractionBatchCommandHandler
                 var regionHash = TableRegionKey.ComputeRegionHash(
                     pdf.Id, region.PageNumber, region.X, region.Y, region.Width, region.Height);
 
-                // Skip regions already in a terminal state or that exhausted their retry budget.
-                if (stateByHash.TryGetValue(regionHash, out var state) && IsTerminal(state, maxAttempts))
+                // Skip only regions that are terminal AND (for 'extracted') whose produced chunk still
+                // exists — a chunk wiped by a reindex must be re-indexed below, not skipped.
+                stateByHash.TryGetValue(regionHash, out var state);
+                if (state is not null && IsTerminalAndLive(state, maxAttempts, liveChunkIds))
                 {
                     continue;
                 }
@@ -170,52 +191,82 @@ internal sealed class RunTableExtractionBatchCommandHandler
 
                 try
                 {
-                    if (!pdfBytesLoaded)
-                    {
-                        pdfBytes = await LoadPdfBytesAsync(pdf.Id, pdf.FilePath, cancellationToken).ConfigureAwait(false);
-                        pdfBytesLoaded = true;
-                    }
-                    if (pdfBytes is null)
-                    {
-                        _logger.LogWarning(
-                            "RunTableExtractionBatch: PDF {PdfId} binary not found in blob storage; skipping (will retry)",
-                            pdf.Id);
-                        outcome = await RecordFailureAsync(pdf.Id, region, regionHash, "pdf binary not found", maxAttempts, cancellationToken)
-                            .ConfigureAwait(false);
-                        failed++;
-                        break; // a missing blob affects every region of this PDF
-                    }
+                    string markdown;
+                    double? confidence;
+                    string? reason;
 
-                    var cropBytes = _cropper.CropRegion(
-                        pdfBytes, region.PageNumber, region.X, region.Y, region.Width, region.Height, cancellationToken);
-                    if (cropBytes is null)
+                    // Self-heal: an 'extracted' region whose chunk was wiped by a reindex still has the
+                    // cached markdown — re-index it WITHOUT re-running crop/VLM (cheap, correct on bulk
+                    // reindex where re-running the VLM over the whole corpus would be wasteful).
+                    if (state is not null
+                        && string.Equals(state.Status, PdfTableExtractionEntity.StatusExtracted, StringComparison.Ordinal)
+                        && !string.IsNullOrEmpty(state.TableMarkdown))
                     {
-                        outcome = await RecordFailureAsync(pdf.Id, region, regionHash, "region crop failed", maxAttempts, cancellationToken)
-                            .ConfigureAwait(false);
-                        failed++;
-                        continue;
+                        markdown = state.TableMarkdown!;
+                        confidence = state.Confidence;
+                        reason = state.Reason;
                     }
-
-                    var vlm = await _extractor.ExtractTableAsync(cropBytes, prefilter: null, cancellationToken).ConfigureAwait(false);
-
-                    if (!vlm.IsTable)
+                    else
                     {
-                        await MarkTerminalAsync(
-                            pdf.Id, region, regionHash, PdfTableExtractionEntity.StatusNotTable,
-                            markdown: null, confidence: vlm.Confidence, reason: vlm.Reason, textChunkId: null, cancellationToken)
-                            .ConfigureAwait(false);
-                        outcome = MeepleAiMetrics.TableVlmOutcomeNotTable;
-                        notTable++;
-                        continue;
+                        if (!pdfBytesLoaded)
+                        {
+                            pdfBytes = await LoadPdfBytesAsync(pdf.Id, pdf.FilePath, cancellationToken).ConfigureAwait(false);
+                            pdfBytesLoaded = true;
+                        }
+                        if (pdfBytes is null)
+                        {
+                            _logger.LogWarning(
+                                "RunTableExtractionBatch: PDF {PdfId} binary not found in blob storage; skipping (will retry)",
+                                pdf.Id);
+                            outcome = await RecordFailureAsync(pdf.Id, region, regionHash, "pdf binary not found", maxAttempts, cancellationToken)
+                                .ConfigureAwait(false);
+                            failed++;
+                            break; // a missing blob affects every region of this PDF
+                        }
+
+                        var cropBytes = _cropper.CropRegion(
+                            pdfBytes, region.PageNumber, region.X, region.Y, region.Width, region.Height, cancellationToken);
+                        if (cropBytes is null)
+                        {
+                            outcome = await RecordFailureAsync(pdf.Id, region, regionHash, "region crop failed", maxAttempts, cancellationToken)
+                                .ConfigureAwait(false);
+                            failed++;
+                            continue;
+                        }
+
+                        var vlm = await _extractor.ExtractTableAsync(cropBytes, prefilter: null, cancellationToken).ConfigureAwait(false);
+                        if (!vlm.IsTable)
+                        {
+                            await MarkTerminalAsync(
+                                pdf.Id, region, regionHash, PdfTableExtractionEntity.StatusNotTable,
+                                markdown: null, confidence: vlm.Confidence, reason: vlm.Reason, textChunkId: null, cancellationToken)
+                                .ConfigureAwait(false);
+                            outcome = MeepleAiMetrics.TableVlmOutcomeNotTable;
+                            notTable++;
+                            continue;
+                        }
+                        markdown = vlm.Markdown;
+                        confidence = vlm.Confidence;
+                        reason = vlm.Reason;
                     }
 
                     var chunkId = await _indexer.IndexTableAsync(
                         pdf, region.PageNumber, region.X, region.Y, region.Width, region.Height,
-                        vlm.Markdown, regionHash, cancellationToken).ConfigureAwait(false);
+                        markdown, regionHash, cancellationToken).ConfigureAwait(false);
+                    if (chunkId is null)
+                    {
+                        // Confirmed a table but not retrievable yet (no game / vector document) — a transient
+                        // condition, so retry (and eventually dead-letter), NEVER mark terminal 'extracted'.
+                        outcome = await RecordFailureAsync(
+                            pdf.Id, region, regionHash, "table not retrievable (no game/vector document)", maxAttempts, cancellationToken)
+                            .ConfigureAwait(false);
+                        failed++;
+                        continue;
+                    }
 
                     await MarkTerminalAsync(
                         pdf.Id, region, regionHash, PdfTableExtractionEntity.StatusExtracted,
-                        markdown: vlm.Markdown, confidence: vlm.Confidence, reason: vlm.Reason, textChunkId: chunkId, cancellationToken)
+                        markdown: markdown, confidence: confidence, reason: reason, textChunkId: chunkId, cancellationToken)
                         .ConfigureAwait(false);
                     outcome = MeepleAiMetrics.TableVlmOutcomeExtracted;
                     extracted++;
@@ -271,6 +322,22 @@ internal sealed class RunTableExtractionBatchCommandHandler
             or PdfTableExtractionEntity.StatusDeadLetter
         || (string.Equals(state.Status, PdfTableExtractionEntity.StatusFailed, StringComparison.Ordinal)
             && state.Attempts >= maxAttempts);
+
+    // A region is only truly done if it is terminal AND — when it is 'extracted' — its produced chunk
+    // still exists. A document reindex wipes text_chunks/embeddings without clearing this sidecar, so an
+    // 'extracted' row whose chunk is gone must be re-indexed rather than skipped (#3435 SP4 review).
+    private static bool IsTerminalAndLive(PdfTableExtractionEntity state, int maxAttempts, HashSet<Guid> liveChunkIds)
+    {
+        if (!IsTerminal(state, maxAttempts))
+        {
+            return false;
+        }
+        if (string.Equals(state.Status, PdfTableExtractionEntity.StatusExtracted, StringComparison.Ordinal))
+        {
+            return state.TextChunkId is Guid chunkId && liveChunkIds.Contains(chunkId);
+        }
+        return true; // not_table / dead_letter / failed-at-cap remain terminal
+    }
 
     private async Task MarkTerminalAsync(
         Guid pdfId, PdfImageRegionEntity region, string regionHash, string status,

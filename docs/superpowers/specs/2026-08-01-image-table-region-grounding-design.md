@@ -249,9 +249,7 @@ Tutti indirizzati. Il più importante NON era P1/P2 ma un **blocker pre-esistent
   (`input_ids` solo con `text`; `batch_decode` funzione degli ids → trim/leak osservabili), + test text-only no-leak,
   fallback, confidence, `has_equations`. **Suite servizio verde: 29 passed, 1 skip.**
 
-> **⚠️ Limite noto**: l'inference **end-to-end reale** (VLM su GPU) NON è validata — SmolDocling su CPU è >95s/pagina
-> (impraticabile in sviluppo) e lo staging è saturo (DC-E). I test coprono la logica decode/clean/metadata con fake;
-> la validazione E2E resta parte di **SP3** (quando l'infra VLM è disponibile).
+> **✅ Inference GPU E2E VALIDATA (2026-08-04, SP3 groundwork, PR pending)** — su una **RTX 4070 (12GB)** locale, non su staging. La prima validazione reale ha scoperto **2 bug immagine bloccanti** (mai visti perché la spike girava su CPU, path senza Triton): l'immagine runtime non aveva né un **compilatore C** né gli **header dev Python**, quindi il JIT Triton di torch≥2.12 (`bmm_outer_product`) falliva su **ogni** `generate()` GPU → estrazione vuota (0 chunk) con HTTP 200. Fix: `gcc`+`libc6-dev`+`python3.11-dev` nel Dockerfile (`ptxas` è già bundled in triton). **Numeri reali** (agricola, 12 pag, quality 0.76): **~57 s/pagina** a regime dopo l'ottimizzazione `attn_implementation="sdpa"` (+31% vs eager; 25→33 tok/s isolato). Il README (0,5 s/pag) è **~100× ottimistico**; il DPI non aiuta (Idefics3 emette un numero fisso di image-token); `flash_attention_2` non installato. **Conseguenze**: (a) VLM su **pagina intera** (Opzione C) resta **impraticabile** per il corpus (~57 s/pag × ~20 pag × 52 PDF ≈ ore) **e** degrada il testo narrativo (errori OCR "szioni"/"usci", 0 tabelle su agricola); (b) **Opzione B (crop-tabella)** è la strada: un crop genera ~100-300 token (non ~1000) → pochi secondi/tabella, e SmolDocling tocca **solo** le tabelle (Unstructured resta primario sul testo). Overlay GPU opt-in: `infra/compose.smoldocling.gpu.local.yml`.
 
 ---
 

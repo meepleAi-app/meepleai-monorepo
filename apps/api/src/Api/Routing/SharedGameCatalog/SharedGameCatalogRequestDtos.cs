@@ -28,6 +28,14 @@ internal record SetManualCoverRequest(
     string License,
     string? Attribution = null);
 
+/// <summary>
+/// Optional request body for the manual cover revoke (#3495 H6). Carries the takedown reason, which
+/// is recorded in the <c>cover.manual.revoked</c> audit event. The body is optional so the existing
+/// no-body DELETE contract keeps working (reason is then null).
+/// </summary>
+internal record RevokeManualCoverRequest(
+    string? Reason = null);
+
 // ========================================
 // REQUEST DTOS
 // ========================================

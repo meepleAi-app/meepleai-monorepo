@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
@@ -5,6 +8,7 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Covers;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
 
@@ -32,6 +36,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHybridCacheService _cache;
     private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
+    private readonly ITransactionalAuditWriter _auditWriter;
     private readonly ILogger<SetManualCoverCommandHandler> _logger;
 
     public SetManualCoverCommandHandler(
@@ -42,6 +47,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
         IUnitOfWork unitOfWork,
         IHybridCacheService cache,
         ICacheInvalidationRetryPolicy cacheRetryPolicy,
+        ITransactionalAuditWriter auditWriter,
         ILogger<SetManualCoverCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -51,6 +57,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
+        _auditWriter = auditWriter ?? throw new ArgumentNullException(nameof(auditWriter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -60,6 +67,14 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
 
         var game = await _repository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("SharedGame", command.GameId.ToString());
+
+        // #3495 C6 — defense-in-depth mirror of the validator's ADR-059 §5 host ban, guarding against
+        // any path that reaches the handler without the FluentValidation pipeline. Reject BEFORE egress.
+        if (BggHostDenyList.IsBanned(command.SourceUrl))
+        {
+            throw new ArgumentException(
+                "SourceUrl host is banned by ADR-059 §5 (BGG/geekdo assets).", nameof(command));
+        }
 
         // SSRF-pinned, 10MB-capped, HTTPS-only-per-hop fetch of the admin-supplied URL (#3534 fix 5/N).
         var imageBytes = await _fetcher.DownloadImageAsync(command.SourceUrl, cancellationToken).ConfigureAwait(false);
@@ -93,6 +108,23 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
             DateTime.UtcNow);
 
         _repository.Update(game);
+
+        // #3495 H6 — immutable copyright evidence, committed in the SAME transaction as the write
+        // (evidence-or-nothing): SHA-256 of the RE-ENCODED WebP bytes actually stored in R2, plus the
+        // attested license + source URL + AdminId. The writer Adds to the ambient scoped DbContext, so
+        // the SaveChangesAsync below commits the shared_games row AND the security_audit_logs row atomically.
+        var sha256Hex = Convert.ToHexString(SHA256.HashData(webpBytes)).ToLowerInvariant();
+        _auditWriter.Append(
+            AuditEventType.ManualCoverSet,
+            actorUserId: command.AdminId,
+            metadata: JsonSerializer.Serialize(new
+            {
+                sha256 = sha256Hex,
+                license = LicenseValidator.Normalize(command.License),
+                sourceUrl = command.SourceUrl,
+                dbKey = coverKey.DbKey,
+            }));
+
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // The cover columns the read-model resolves changed → evict the list + detail caches (AC-6).

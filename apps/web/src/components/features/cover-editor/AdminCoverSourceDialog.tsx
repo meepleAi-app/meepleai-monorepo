@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useAssignCover } from '@/hooks/admin/useAssignCover';
 import { useCoverCandidates } from '@/hooks/admin/useCoverCandidates';
 import { useRemoveCoverAssignment } from '@/hooks/admin/useRemoveCoverAssignment';
+import { useSetManualCover } from '@/hooks/admin/useSetManualCover';
 import type {
   CoverAssignmentSource,
   CoverContext,
@@ -59,6 +60,10 @@ const ASSIGN_KEY: Record<CoverContext, 'card' | 'hero' | 'social'> = {
 
 const DEFAULT_FOCAL = { x: 0.5, y: 0.5 };
 
+// The DEC-3c whitelist the backend accepts (LicenseValidator). Constraining the select to these
+// keeps the copyright gate from being tripped by a typo; the server still re-validates (400).
+const MANUAL_LICENSES = ['CC0', 'CC-BY-4.0', 'CC-BY-SA-4.0', 'Public domain'] as const;
+
 export function AdminCoverSourceDialog({
   gameId,
   title,
@@ -69,10 +74,14 @@ export function AdminCoverSourceDialog({
   const { data, isLoading, isError } = useCoverCandidates(open ? gameId : '');
   const assign = useAssignCover();
   const remove = useRemoveCoverAssignment();
+  const setManual = useSetManualCover();
 
   const [activeContext, setActiveContext] = useState<CoverContext>('Card');
   const [pendingSource, setPendingSource] = useState<CoverAssignmentSource | null>(null);
   const [focal, setFocal] = useState(DEFAULT_FOCAL);
+  const [manualUrl, setManualUrl] = useState('');
+  const [manualLicense, setManualLicense] = useState<string>(MANUAL_LICENSES[0]);
+  const [manualAttribution, setManualAttribution] = useState('');
 
   const currentAssignment = data?.assignments[ASSIGN_KEY[activeContext]] ?? null;
   // Epic #3470 Slice 2e (AC-5): the read shape now carries the persisted focal, so the
@@ -131,6 +140,29 @@ export function AdminCoverSourceDialog({
     remove.mutate({ gameId, context: activeContext });
     setPendingSource(null);
     setFocal(DEFAULT_FOCAL);
+  };
+
+  const handleAddManual = () => {
+    const url = manualUrl.trim();
+    if (!url) return;
+    setManual.mutate(
+      {
+        gameId,
+        body: {
+          sourceUrl: url,
+          license: manualLicense,
+          attribution: manualAttribution.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          // The new Manual candidate arrives via the candidates refetch; clear the inputs so
+          // the form is ready for a re-try/replace without a stale URL lingering.
+          setManualUrl('');
+          setManualAttribution('');
+        },
+      }
+    );
   };
 
   return (
@@ -253,6 +285,70 @@ export function AdminCoverSourceDialog({
               </TabsContent>
             ))}
           </Tabs>
+        )}
+
+        {data && (
+          <section
+            aria-labelledby="manual-cover-heading"
+            className="space-y-2 border-t border-border pt-4"
+          >
+            <h3 id="manual-cover-heading" className="text-sm font-medium text-foreground">
+              Aggiungi copertina da URL
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Immagine con licenza libera (dominio pubblico / CC0 / CC-BY / CC-BY-SA); l&apos;URL
+              deve essere HTTPS. Dopo il caricamento la sorgente &laquo;Manuale&raquo; diventa
+              selezionabile qui sopra.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground sm:col-span-2">
+                URL immagine
+                <input
+                  type="url"
+                  value={manualUrl}
+                  onChange={e => setManualUrl(e.target.value)}
+                  placeholder="https://…"
+                  className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Licenza
+                <select
+                  value={manualLicense}
+                  onChange={e => setManualLicense(e.target.value)}
+                  className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+                >
+                  {MANUAL_LICENSES.map(l => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+                Attribuzione (facoltativa)
+                <input
+                  type="text"
+                  value={manualAttribution}
+                  onChange={e => setManualAttribution(e.target.value)}
+                  className="rounded border border-border bg-background px-2 py-1.5 text-sm text-foreground"
+                />
+              </label>
+            </div>
+            {setManual.isError && (
+              <p role="alert" className="text-xs text-destructive">
+                Impossibile aggiungere la copertina: verifica che l&apos;URL sia HTTPS e che la
+                licenza sia consentita.
+              </p>
+            )}
+            <Button
+              variant="outline"
+              onClick={handleAddManual}
+              disabled={!manualUrl.trim() || setManual.isPending}
+            >
+              {setManual.isPending ? 'Caricamento…' : 'Carica da URL'}
+            </Button>
+          </section>
         )}
       </DialogContent>
     </Dialog>

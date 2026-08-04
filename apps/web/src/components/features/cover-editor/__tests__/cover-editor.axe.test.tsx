@@ -12,10 +12,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('@/hooks/admin/useCoverCandidates', () => ({ useCoverCandidates: vi.fn() }));
 vi.mock('@/hooks/admin/useAssignCover', () => ({ useAssignCover: vi.fn() }));
 vi.mock('@/hooks/admin/useRemoveCoverAssignment', () => ({ useRemoveCoverAssignment: vi.fn() }));
+vi.mock('@/hooks/admin/useSetManualCover', () => ({ useSetManualCover: vi.fn() }));
 
 import { useCoverCandidates } from '@/hooks/admin/useCoverCandidates';
 import { useAssignCover } from '@/hooks/admin/useAssignCover';
 import { useRemoveCoverAssignment } from '@/hooks/admin/useRemoveCoverAssignment';
+import { useSetManualCover } from '@/hooks/admin/useSetManualCover';
 
 import { AdminCoverSourceDialog } from '../AdminCoverSourceDialog';
 import { CoverFocalPointPicker } from '../CoverFocalPointPicker';
@@ -30,6 +32,12 @@ beforeEach(() => {
   (useRemoveCoverAssignment as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
+  });
+  (useSetManualCover as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    mutate: vi.fn(),
+    isPending: false,
+    isError: false,
+    isSuccess: false,
   });
   (useCoverCandidates as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
     isLoading: false,

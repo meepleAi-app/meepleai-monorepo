@@ -72,13 +72,30 @@ class SmolDoclingAdapter:
                 self.settings.model_name, cache_dir=str(self.settings.model_cache_dir)
             )
 
-            # Load model with specified dtype
+            # Load model with specified dtype. Prefer SDPA attention: on this VLM it is
+            # ~30% faster than the default eager path at the long sequence lengths a full
+            # rulebook page produces (#3435 SP3 GPU benchmark: 25→33 tok/s on an RTX 4070),
+            # with no output change, and it needs no extra dependency (unlike
+            # flash_attention_2, which is not installed). Fall back to eager if the
+            # installed transformers/model can't wire SDPA.
             torch_dtype = getattr(torch, self.settings.torch_dtype)
-            self.model = AutoModelForImageTextToText.from_pretrained(
-                self.settings.model_name,
-                torch_dtype=torch_dtype,
-                cache_dir=str(self.settings.model_cache_dir),
-            ).to(self.device)
+            load_kwargs = {
+                "torch_dtype": torch_dtype,
+                "cache_dir": str(self.settings.model_cache_dir),
+            }
+            try:
+                self.model = AutoModelForImageTextToText.from_pretrained(
+                    self.settings.model_name,
+                    attn_implementation="sdpa",
+                    **load_kwargs,
+                ).to(self.device)
+            except (ValueError, ImportError) as exc:
+                logger.warning(
+                    "SDPA attention unavailable (%s); falling back to eager attention", exc
+                )
+                self.model = AutoModelForImageTextToText.from_pretrained(
+                    self.settings.model_name, **load_kwargs
+                ).to(self.device)
 
             # Set to eval mode
             self.model.eval()

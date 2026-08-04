@@ -305,4 +305,70 @@ public sealed class CopyrightTierResolverTests
             p => p.GetPdfCopyrightInfoAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    // ── #3435 §5quinquies: ResolveTierAsync (single-doc tier, same cascade) ──
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task ResolveTierAsync_CreativeCommons_ReturnsFull()
+    {
+        SetupProjection(MakeInfo(license: LicenseType.CreativeCommons, category: DocumentCategory.Rulebook));
+        SetupOwnership();
+
+        var tier = await _sut.ResolveTierAsync("doc-1", _userId, CancellationToken.None);
+
+        Assert.Equal(CopyrightTier.Full, tier);
+    }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task ResolveTierAsync_NonProtectedCategory_ReturnsFull()
+    {
+        SetupProjection(MakeInfo(license: LicenseType.Copyrighted, category: DocumentCategory.Other));
+
+        var tier = await _sut.ResolveTierAsync("doc-1", _userId, CancellationToken.None);
+
+        Assert.Equal(CopyrightTier.Full, tier);
+    }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task ResolveTierAsync_ProtectedRulebook_NotOwner_ReturnsProtected()
+    {
+        SetupProjection(MakeInfo(
+            license: LicenseType.Copyrighted, category: DocumentCategory.Rulebook,
+            uploadedBy: Guid.NewGuid(), gameId: _gameId));
+        SetupOwnership((_gameId, false));
+
+        var tier = await _sut.ResolveTierAsync("doc-1", _userId, CancellationToken.None);
+
+        Assert.Equal(CopyrightTier.Protected, tier);
+    }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task ResolveTierAsync_ProtectedRulebook_UploaderAndOwner_ReturnsFull()
+    {
+        SetupProjection(MakeInfo(
+            license: LicenseType.Copyrighted, category: DocumentCategory.Rulebook,
+            uploadedBy: _userId, gameId: _gameId));
+        SetupOwnership((_gameId, true));
+
+        var tier = await _sut.ResolveTierAsync("doc-1", _userId, CancellationToken.None);
+
+        Assert.Equal(CopyrightTier.Full, tier);
+    }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task ResolveTierAsync_UnknownDocument_ReturnsProtected()
+    {
+        _projection
+            .Setup(p => p.GetPdfCopyrightInfoAsync(It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, PdfCopyrightInfo>());
+
+        var tier = await _sut.ResolveTierAsync("unknown-doc", _userId, CancellationToken.None);
+
+        Assert.Equal(CopyrightTier.Protected, tier);
+    }
 }

@@ -1,9 +1,13 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Unit.DocumentProcessing;
@@ -28,6 +32,18 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
         });
     }
 
+    // #3435 §5quinquies: the handler now resolves the PDF copyright tier via IMediator and gates the
+    // region overlay to Full-tier. The KB resolution is mocked here (Full by default) so the existing
+    // owner/shared/admin SCOPING tests still exercise the return-regions path.
+    private static GetPdfImageRegionsQueryHandler Handler(MeepleAiDbContext db, CopyrightTier tier = CopyrightTier.Full)
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<ResolvePdfCopyrightTierQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(tier);
+        return new GetPdfImageRegionsQueryHandler(db, mediator.Object);
+    }
+
     [Fact]
     public async Task Handle_ReturnsRegionsForOwner_OrderedByPage()
     {
@@ -41,8 +57,7 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
             new PdfImageRegionEntity { PdfDocumentId = Guid.NewGuid(), PageNumber = 1, X = 0, Y = 0, Width = 1, Height = 1, ElementType = "Image" });
         await db.SaveChangesAsync();
 
-        var handler = new GetPdfImageRegionsQueryHandler(db);
-        var result = await handler.Handle(new GetPdfImageRegionsQuery(pdfId, ownerId, IsAdmin: false), CancellationToken.None);
+        var result = await Handler(db).Handle(new GetPdfImageRegionsQuery(pdfId, ownerId, IsAdmin: false), CancellationToken.None);
 
         result.Should().HaveCount(2);
         result.Select(r => r.Page).Should().ContainInOrder(4, 5); // ordered by page
@@ -53,8 +68,7 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
     public async Task Handle_UnknownPdf_ReturnsEmpty()
     {
         using var db = TestDbContextFactory.CreateInMemoryDbContext($"getimg_{Guid.NewGuid():N}");
-        var handler = new GetPdfImageRegionsQueryHandler(db);
-        var result = await handler.Handle(
+        var result = await Handler(db).Handle(
             new GetPdfImageRegionsQuery(Guid.NewGuid(), Guid.NewGuid(), IsAdmin: false), CancellationToken.None);
         result.Should().BeEmpty();
     }
@@ -68,8 +82,7 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
         db.PdfImageRegions.Add(new PdfImageRegionEntity { PdfDocumentId = pdfId, PageNumber = 1, X = 0, Y = 0, Width = 0.5, Height = 0.5, ElementType = "Image" });
         await db.SaveChangesAsync();
 
-        var handler = new GetPdfImageRegionsQueryHandler(db);
-        var result = await handler.Handle(
+        var result = await Handler(db).Handle(
             new GetPdfImageRegionsQuery(pdfId, Guid.NewGuid(), IsAdmin: false), CancellationToken.None);
 
         result.Should().BeEmpty(); // non-owner of a private PDF gets an empty overlay, no existence leak
@@ -84,11 +97,10 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
         db.PdfImageRegions.Add(new PdfImageRegionEntity { PdfDocumentId = pdfId, PageNumber = 1, X = 0, Y = 0, Width = 0.5, Height = 0.5, ElementType = "Image" });
         await db.SaveChangesAsync();
 
-        var handler = new GetPdfImageRegionsQueryHandler(db);
-        var result = await handler.Handle(
+        var result = await Handler(db).Handle(
             new GetPdfImageRegionsQuery(pdfId, Guid.NewGuid(), IsAdmin: false), CancellationToken.None);
 
-        result.Should().HaveCount(1); // shared-game PDFs are public (citation viewer)
+        result.Should().HaveCount(1); // shared-game PDFs are public (citation viewer) + Full tier here
     }
 
     [Fact]
@@ -100,10 +112,62 @@ public sealed class GetPdfImageRegionsQueryHandlerTests
         db.PdfImageRegions.Add(new PdfImageRegionEntity { PdfDocumentId = pdfId, PageNumber = 1, X = 0, Y = 0, Width = 0.5, Height = 0.5, ElementType = "Image" });
         await db.SaveChangesAsync();
 
-        var handler = new GetPdfImageRegionsQueryHandler(db);
-        var result = await handler.Handle(
+        var result = await Handler(db).Handle(
             new GetPdfImageRegionsQuery(pdfId, Guid.NewGuid(), IsAdmin: true), CancellationToken.None);
 
-        result.Should().HaveCount(1); // admin bypasses ownership
+        result.Should().HaveCount(1); // admin bypasses OWNERSHIP scoping (tier still Full here)
+    }
+
+    // ── #3435 §5quinquies: copyright-tier gate on the region overlay ──
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task Handle_ProtectedTier_ReturnsEmpty_NoRegionLeak()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"getimg_{Guid.NewGuid():N}");
+        var pdfId = Guid.NewGuid();
+        SeedPdf(db, pdfId, ownerId: Guid.NewGuid(), sharedGameId: Guid.NewGuid()); // scoping passes (public)
+        db.PdfImageRegions.Add(new PdfImageRegionEntity { PdfDocumentId = pdfId, PageNumber = 1, X = 0, Y = 0, Width = 0.5, Height = 0.5, ElementType = "Image" });
+        await db.SaveChangesAsync();
+
+        var result = await Handler(db, CopyrightTier.Protected).Handle(
+            new GetPdfImageRegionsQuery(pdfId, Guid.NewGuid(), IsAdmin: false), CancellationToken.None);
+
+        result.Should().BeEmpty(); // Protected region layout must not leak via the viewer overlay
+    }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task Handle_FullTier_ReturnsRegions()
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"getimg_{Guid.NewGuid():N}");
+        var pdfId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        SeedPdf(db, pdfId, ownerId);
+        db.PdfImageRegions.Add(new PdfImageRegionEntity { PdfDocumentId = pdfId, PageNumber = 1, X = 0, Y = 0, Width = 0.5, Height = 0.5, ElementType = "Image" });
+        await db.SaveChangesAsync();
+
+        var result = await Handler(db, CopyrightTier.Full).Handle(
+            new GetPdfImageRegionsQuery(pdfId, ownerId, IsAdmin: false), CancellationToken.None);
+
+        result.Should().HaveCount(1);
+    }
+
+    [Fact]
+    [Trait("Issue", "3435")]
+    public async Task Handle_ProtectedTier_NotBypassedByAdmin()
+    {
+        // The copyright tier is NOT admin-bypassed (copyright, not access-control) — consistent with
+        // the grounded-citation gate.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"getimg_{Guid.NewGuid():N}");
+        var pdfId = Guid.NewGuid();
+        SeedPdf(db, pdfId, ownerId: Guid.NewGuid(), sharedGameId: Guid.NewGuid());
+        db.PdfImageRegions.Add(new PdfImageRegionEntity { PdfDocumentId = pdfId, PageNumber = 1, X = 0, Y = 0, Width = 0.5, Height = 0.5, ElementType = "Image" });
+        await db.SaveChangesAsync();
+
+        var result = await Handler(db, CopyrightTier.Protected).Handle(
+            new GetPdfImageRegionsQuery(pdfId, Guid.NewGuid(), IsAdmin: true), CancellationToken.None);
+
+        result.Should().BeEmpty();
     }
 }

@@ -5,7 +5,7 @@ from typing import List, Optional
 from transformers import AutoProcessor, AutoModelForImageTextToText
 from docling_core.types.doc.document import DoclingDocument, DocTagsDocument
 
-from ..domain.models import PageImage, PageExtractionResult
+from ..domain.models import PageImage, PageExtractionResult, STRUCTURE_TAGS
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -29,17 +29,8 @@ class SmolDoclingAdapter:
     # Instruction handed to the VLM via the chat template (official SmolDocling recipe).
     _PROMPT_TEXT = "Convert this page to docling."
 
-    # Real DocTags structure tags — the ones docling-core actually parses into content
-    # (verified: <text>/<section_header_*> export to markdown; the vocab's <paragraph>/
-    # <list_item> do NOT). Matched as substrings, so tokenization is irrelevant. Used as a
-    # "page has structured layout" signal.
-    _STRUCTURE_TAGS = (
-        "<text>",
-        "<section_header",
-        "<list_item>",
-        "<caption>",
-        "<page_header>",
-    )
+    # "Page has structured layout" signal — single source of truth in domain.models.
+    _STRUCTURE_TAGS = STRUCTURE_TAGS
 
     def __init__(self):
         self.settings = settings
@@ -266,7 +257,7 @@ class SmolDoclingAdapter:
             doctags_text: Raw DocTags output from SmolDocling
 
         Returns:
-            Markdown-formatted text
+            Markdown-formatted text, or "" if conversion fails (never raw DocTags markup).
         """
         try:
             doctags_doc = DocTagsDocument.from_doctags_and_image_pairs(

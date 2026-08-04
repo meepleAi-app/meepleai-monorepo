@@ -2,7 +2,7 @@
 import logging
 from typing import List
 
-from ..domain.models import QualityScore, PageExtractionResult
+from ..domain.models import QualityScore, PageExtractionResult, STRUCTURE_TAGS
 from ..config import settings
 
 logger = logging.getLogger(__name__)
@@ -95,31 +95,37 @@ class QualityScoreCalculator:
         VLM-specific scoring based on detected elements:
         - Tables detected: +0.4
         - Equations detected: +0.3
-        - Structure (sections, paragraphs): +0.3
+        - Structure (text/section-header/caption/page-header DocTags): +0.3
         """
         if not page_results:
+            return 0.0
+
+        # Only pages that actually contributed content count — mirrors
+        # _calculate_average_confidence / _calculate_page_coverage. Without this, a page
+        # whose markdown conversion failed (is_empty, dropped from the corpus) would still
+        # inflate the layout score via its has_tables/doctags_text (issue #3435).
+        non_empty_pages = [page for page in page_results if not page.is_empty]
+        if not non_empty_pages:
             return 0.0
 
         score = 0.0
 
         # Tables detected
-        pages_with_tables = sum(1 for page in page_results if page.has_tables)
+        pages_with_tables = sum(1 for page in non_empty_pages if page.has_tables)
         if pages_with_tables > 0:
             score += 0.4
 
         # Equations detected
-        pages_with_equations = sum(1 for page in page_results if page.has_equations)
+        pages_with_equations = sum(1 for page in non_empty_pages if page.has_equations)
         if pages_with_equations > 0:
             score += 0.3
 
-        # Structure detected: match the DocTags tags docling actually parses into content
-        # (<text>/<section_header_*>/<caption>/...); the old </section>/</paragraph> checks
-        # never matched real SmolDocling output (issue #3435).
-        structure_tags = ("<text>", "<section_header", "<list_item>", "<caption>", "<page_header>")
+        # Structure detected: real DocTags tags docling parses into content (STRUCTURE_TAGS);
+        # the old </section>/</paragraph> checks never matched SmolDocling output (issue #3435).
         pages_with_structure = sum(
             1
-            for page in page_results
-            if any(tag in page.doctags_text for tag in structure_tags)
+            for page in non_empty_pages
+            if any(tag in page.doctags_text for tag in STRUCTURE_TAGS)
         )
         if pages_with_structure > 0:
             score += 0.3

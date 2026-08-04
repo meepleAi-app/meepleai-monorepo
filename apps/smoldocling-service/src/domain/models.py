@@ -5,6 +5,15 @@ from typing import List, Dict, Any, Optional
 from PIL import Image
 
 
+# DocTags structure tags used as a "page has structured layout" signal, matched as
+# substrings on the raw doctags_text (tokenization is irrelevant). Only tags that
+# docling-core actually parses into content are listed (verified: <text> and
+# <section_header_*> export to markdown; the vocab's <paragraph>/<list_item> do NOT).
+# Single source of truth, shared by SmolDoclingAdapter._estimate_confidence and
+# QualityScoreCalculator._calculate_layout_detection (was duplicated + drift-prone).
+STRUCTURE_TAGS = ("<text>", "<section_header", "<caption>", "<page_header>")
+
+
 @dataclass
 class PageImage:
     """Represents a single page converted to image"""

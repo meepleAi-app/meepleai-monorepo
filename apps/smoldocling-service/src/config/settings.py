@@ -33,6 +33,19 @@ class Settings(BaseSettings):
     quality_threshold: float = 0.70
     min_chars_per_page: int = 300  # VLM may extract less due to layout focus
 
+    # Crop-table discrimination (issue #3435 SP3 — Option B crop-discriminator)
+    # The <otsl> gate is authoritative; these only contain cost / cap the degenerate loop.
+    crop_prefilter_enabled: bool = True  # cheap colorfulness reject BEFORE the VLM
+    # Hasler-Süsstrunk colorfulness above which a crop is rejected as an illustration WITHOUT
+    # running the VLM. Uncalibrated: a conservative (high) default keeps false-rejects of real
+    # tables (even ones with a tinted header) rare — but a sufficiently colourful table WILL be
+    # rejected here (the <otsl> gate only sees crops that reach the VLM). Tunable; the
+    # per-request `prefilter` flag disables it entirely.
+    crop_prefilter_colorfulness_threshold: float = 40.0
+    crop_max_new_tokens: int = 512  # crops are small (~76-300 tok); cap well below full-page 2048
+    crop_rep_stop_window: int = 24  # trailing generated tokens inspected for the repetition early-stop
+    crop_rep_stop_max_distinct: int = 2  # <= this many distinct ids in the window => degenerate loop
+
     # Server Configuration
     host: str = "0.0.0.0"
     port: int = 8002

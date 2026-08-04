@@ -69,6 +69,7 @@ beforeEach(() => {
     isPending: false,
     isError: false,
     isSuccess: false,
+    reset: vi.fn(),
   });
   setCandidates();
 });
@@ -122,6 +123,56 @@ describe('AdminCoverSourceDialog', () => {
       target: { value: 'https://commons.example.org/img.png' },
     });
     expect(submit).toBeEnabled();
+  });
+
+  it('clears the manual-cover form fields when the dialog is closed and reopened', () => {
+    const { rerender } = renderDialog();
+    fireEvent.change(screen.getByLabelText(/URL immagine/i), {
+      target: { value: 'https://commons.example.org/img.png' },
+    });
+    expect(screen.getByLabelText(/URL immagine/i)).toHaveValue(
+      'https://commons.example.org/img.png'
+    );
+
+    // Close then reopen: a half-typed URL must not resurface (form state is reset on close).
+    rerender(<AdminCoverSourceDialog gameId={GID} title="Catan" open={false} onClose={vi.fn()} />);
+    rerender(<AdminCoverSourceDialog gameId={GID} title="Catan" open onClose={vi.fn()} />);
+
+    expect(screen.getByLabelText(/URL immagine/i)).toHaveValue('');
+  });
+
+  it('preserves a staged grid pick when the candidates reload after adding a manual cover', () => {
+    const { rerender } = renderDialog();
+    // Stage (do NOT apply) the Wikidata candidate.
+    fireEvent.click(screen.getByRole('button', { name: /Copertina Wikidata/i }));
+    expect(screen.getByRole('button', { name: /Copertina Wikidata/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+
+    // Simulate the candidates refetch after a Manual source is added (new candidate appended).
+    setCandidates({
+      data: {
+        ...candidatesData,
+        candidates: [
+          ...candidatesData.candidates,
+          {
+            source: 'Manual',
+            previewUrl: 'https://r2.example/manual.webp',
+            license: 'CC0',
+            attribution: null,
+            sourceUrl: null,
+          },
+        ],
+      },
+    });
+    rerender(<AdminCoverSourceDialog gameId={GID} title="Catan" open onClose={vi.fn()} />);
+
+    // The staged, un-applied pick must survive the refetch (not silently reset).
+    expect(screen.getByRole('button', { name: /Copertina Wikidata/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   it('renders a titled dialog when open', () => {

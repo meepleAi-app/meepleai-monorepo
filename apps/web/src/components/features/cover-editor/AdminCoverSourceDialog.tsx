@@ -96,26 +96,35 @@ export function AdminCoverSourceDialog({
   const dirty =
     selectedSource !== currentSource || focal.x !== baselineFocal.x || focal.y !== baselineFocal.y;
 
-  // Sync local edit state to the active context's persisted assignment whenever the
-  // context changes or the candidates reload (post-mutation): clear any pending pick and
-  // pre-fill the saved focal, so the picker opens showing the current state. `data` keeps
-  // a stable reference across no-op refetches (react-query structural sharing), so this
-  // does not clobber an in-progress edit.
+  // Clear a staged (un-applied) grid pick ONLY when the admin switches context — deliberately
+  // NOT on a candidates refetch. Adding a Manual source below reloads `data` (new candidate),
+  // which must not discard an in-progress grid selection: the two are independent concerns.
+  useEffect(() => {
+    setPendingSource(null);
+  }, [activeContext]);
+
+  // Pre-fill the focal from the active context's persisted assignment whenever it (re)loads, so
+  // the picker opens on the saved value and "dirty" is a genuine diff against that baseline.
   useEffect(() => {
     const assignment = data?.assignments[ASSIGN_KEY[activeContext]] ?? null;
-    setPendingSource(null);
     setFocal(assignment ? { x: assignment.focalX, y: assignment.focalY } : DEFAULT_FOCAL);
   }, [activeContext, data]);
 
-  // Reset to the default context when the dialog closes so it never resurfaces on the
-  // next open; the sync effect above re-derives the focal once data reloads.
+  // Reset ALL edit state when the dialog closes so nothing resurfaces on the next open — the
+  // grid pick + focal AND the manual-URL form fields + its mutation status (a stale error alert
+  // or a half-typed URL must not reappear). `reset` is a stable react-query callback.
+  const resetManual = setManual.reset;
   useEffect(() => {
     if (!open) {
       setActiveContext('Card');
       setPendingSource(null);
       setFocal(DEFAULT_FOCAL);
+      setManualUrl('');
+      setManualAttribution('');
+      setManualLicense(MANUAL_LICENSES[0]);
+      resetManual();
     }
-  }, [open]);
+  }, [open, resetManual]);
 
   const handleTabChange = (value: string) => setActiveContext(value as CoverContext);
 

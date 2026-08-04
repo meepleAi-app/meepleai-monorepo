@@ -38,6 +38,7 @@ beforeEach(() => {
     isPending: false,
     isError: false,
     isSuccess: false,
+    reset: vi.fn(),
   });
   (useCoverCandidates as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
     isLoading: false,

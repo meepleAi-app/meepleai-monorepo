@@ -4,7 +4,8 @@ using FluentValidation;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
-/// Boundary validation for <see cref="SetManualCoverCommand"/> — 400 (not 500) on bad input.
+/// Boundary validation for <see cref="SetManualCoverCommand"/> — a 4xx client error (422 via the
+/// FluentValidation pipeline), not a 500, on bad input.
 /// <para>
 /// The license MUST be on the DEC-3c whitelist (Public Domain / CC0 / CC-BY / CC-BY-SA). This is the
 /// primary copyright gate for the arbitrary-URL manual path (epic #3470 Slice 3a / ADR-059): it

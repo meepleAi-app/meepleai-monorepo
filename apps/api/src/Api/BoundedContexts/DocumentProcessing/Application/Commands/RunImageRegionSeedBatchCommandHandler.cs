@@ -90,7 +90,10 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
         // loop. Each item re-loads its PDF AsTracking and ChangeTracker.Clear()s in a finally, so a
         // failed item can't poison later items via the shared scoped DbContext (#534 / PR #2830).
         // Filter: Ready, never-seeded, in the current KB corpus (IndexerVersion set), excluding
-        // demo-mock shells — NFR1: never hi_res text-only/non-corpus PDFs, and never twice.
+        // demo-mock shells. NB: this slice has NO image-candidacy pre-filter (the Table-region router
+        // is SP2, deferred), so every corpus PDF — text-only included — gets ONE hi_res pass; the
+        // marker below guarantees "exactly once". True VLM cost-isolation (never on text-only, NFR1)
+        // lands with the router at SP2/SP3.
         var candidates = await _dbContext.PdfDocuments
             .AsNoTracking()
             .Where(p => p.ProcessingState == readyState

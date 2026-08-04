@@ -220,19 +220,18 @@ async def extract_pdf(
                     text=el.text,
                     page_number=getattr(getattr(el, "metadata", None), "page_number", 1) or 1,
                     category=getattr(el, "category", None),
-                    bbox=normalized_bbox(el),  # SP-B (#3406): normalized [0,1] bbox, None if absent
+                    bbox=bbox,  # SP-B (#3406): normalized [0,1] bbox, None if absent
                 )
-                for el in result.elements
+                # Compute the bbox once per element (double-binding), then reuse it in both the
+                # filter and the schema below.
+                for el, bbox in ((e, normalized_bbox(e)) for e in result.elements)
                 # Keep text-bearing elements AND bbox-bearing Image/FigureCaption regions
                 # (which have empty text): the latter are the image-table regions the
                 # backend's ImageRegionExtractor needs for hi_res region grounding (#3435).
                 # Normal text ingestion is unaffected — the C# MapStructuredElements still
                 # drops empty-text elements before chunking.
                 if getattr(el, "text", None)
-                or (
-                    getattr(el, "category", None) in ("Image", "FigureCaption")
-                    and normalized_bbox(el) is not None
-                )
+                or (getattr(el, "category", None) in ("Image", "FigureCaption") and bbox is not None)
             ],
             quality_score=result.quality_score.total_score,
             page_count=result.page_count,

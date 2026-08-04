@@ -107,10 +107,11 @@ class TestExtractEndpoint:
             )
 
         els = [
-            _el("Some narrative", "Title", 1, [(0, 0), (10, 10)], (100, 100)),  # text-bearing → kept
-            _el("", "Image", 4, [(10, 50), (90, 80)], (100, 100)),             # empty Image + bbox → kept
-            _el("", "Header", 2, [(0, 0), (5, 5)], (100, 100)),                # empty non-Image → dropped
-            _el("", "Image", 3, None, None),                                   # Image w/o bbox → dropped
+            _el("Some narrative", "Title", 1, [(0, 0), (10, 10)], (100, 100)),   # text-bearing → kept
+            _el("", "Image", 4, [(10, 50), (90, 80)], (100, 100)),              # empty Image + bbox → kept
+            _el("", "FigureCaption", 5, [(5, 5), (50, 20)], (100, 100)),        # empty FigureCaption + bbox → kept
+            _el("", "Header", 2, [(0, 0), (5, 5)], (100, 100)),                 # empty non-Image → dropped
+            _el("", "Image", 3, None, None),                                    # Image w/o bbox → dropped
         ]
         mock_extract.return_value = ExtractionResult(
             full_text="Some narrative",
@@ -131,10 +132,13 @@ class TestExtractEndpoint:
 
         assert response.status_code == 200
         elements = response.json()["elements"]
-        assert [e["category"] for e in elements] == ["Title", "Image"]  # empty Header + bbox-less Image dropped
+        # empty Header + bbox-less Image dropped; empty Image + FigureCaption WITH bbox kept
+        assert [e["category"] for e in elements] == ["Title", "Image", "FigureCaption"]
         image = next(e for e in elements if e["category"] == "Image")
         assert image["bbox"] is not None
         assert image["page_number"] == 4
+        caption = next(e for e in elements if e["category"] == "FigureCaption")
+        assert caption["bbox"] is not None
 
     def test_extract_missing_file(self, client):
         """Test extraction without file returns 422"""

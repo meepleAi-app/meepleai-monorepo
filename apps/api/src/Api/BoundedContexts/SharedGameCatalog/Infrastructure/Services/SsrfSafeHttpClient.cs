@@ -24,6 +24,7 @@ internal sealed class SsrfSafeHttpClient
 {
     private readonly HttpClient _httpClient;
     private const long MaxPdfSizeBytes = 100 * 1024 * 1024; // 100MB
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10MB (cover images)
     private const int MaxRedirectHops = 5;
 
     public SsrfSafeHttpClient(HttpClient httpClient)
@@ -48,6 +49,16 @@ internal sealed class SsrfSafeHttpClient
 
         return new MemoryStream(bytes, writable: false);
     }
+
+    /// <summary>
+    /// Epic #3470 Slice 3a — downloads an admin-supplied cover image through the hardened fetch path
+    /// (HTTPS-only per hop, bounded redirect follow, IP-pinned connection) under a 10MB streamed
+    /// ceiling. Returns the raw image bytes; the caller validates/re-encodes them.
+    /// </summary>
+    /// <exception cref="ArgumentException">The URL (or a redirect target) is not an absolute HTTPS URL.</exception>
+    /// <exception cref="InvalidOperationException">Redirect loop / too many hops, or oversize.</exception>
+    public Task<byte[]> DownloadImageAsync(string url, CancellationToken ct) =>
+        FetchWithLimitAsync(url, MaxImageSizeBytes, ct);
 
     /// <summary>
     /// Hardened fetch shared by every arbitrary-URL sink on this client: validates the scheme on

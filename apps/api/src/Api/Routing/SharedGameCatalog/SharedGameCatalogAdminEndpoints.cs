@@ -89,6 +89,17 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        // Manual cover from a URL (epic #3470 Slice 3a): admin supplies an HTTPS image URL + attested license.
+        group.MapPost("/admin/shared-games/{id:guid}/manual-cover", HandleSetManualCover)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SetManualCover")
+            .WithSummary("Set a manual cover from a URL (Admin/Editor)")
+            .WithDescription("Fetches an admin-supplied HTTPS image (SSRF-pinned, 10MB-capped), re-encodes to WebP, stores it in R2, and pins it as the game's manual cover with the attested (whitelisted) license.")
+            .Produces<ManualCoverResult>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
         // Submit game for approval (Draft → PendingApproval) - Issue #2514
         group.MapPost("/admin/shared-games/{id:guid}/submit-for-approval", HandleSubmitForApproval)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -935,6 +946,22 @@ internal static class SharedGameCatalogAdminEndpoints
         await mediator.Send(new RemoveCoverAssignmentCommand(id, context, session!.Principal!.Subject.Id), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleSetManualCover(
+        Guid id,
+        SetManualCoverRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new SetManualCoverCommand(
+            id, request.SourceUrl, request.License, request.Attribution, session!.Principal!.Subject.Id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetApprovalQueue(

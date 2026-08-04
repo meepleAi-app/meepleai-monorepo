@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.SharedKernel.Domain.Covers;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using FluentAssertions;
@@ -1381,6 +1382,141 @@ public sealed class SharedGameTests
 
         // Assert
         game.PdfCoverR2Key.Should().BeNull();
+    }
+
+    #endregion
+
+    #region SetManualCover (epic #3470 Slice 3a)
+
+    private static SharedGame NewManualCoverGame() => SharedGame.Create(
+        "Catan", 2010, "desc", 3, 4, 90, 10, 2.5m, 7.8m,
+        "https://example.com/c.jpg", "https://example.com/c-thumb.jpg", null, Guid.NewGuid());
+
+    [Fact]
+    public void SetManualCover_ValidInput_SetsAllFields()
+    {
+        var game = NewManualCoverGame();
+        var admin = Guid.NewGuid();
+        var attestedAt = DateTime.UtcNow;
+
+        game.SetManualCover("covers/manual/x/cover", "CC-BY-4.0", "Jane Artist", "https://example.com/src", admin, attestedAt);
+
+        game.ManualCoverR2Key.Should().Be("covers/manual/x/cover");
+        game.ManualCoverLicense.Should().Be("CC-BY-4.0");
+        game.ManualCoverAttribution.Should().Be("Jane Artist");
+        game.ManualCoverSourceUrl.Should().Be("https://example.com/src");
+        game.ManualCoverAttestedBy.Should().Be(admin);
+        game.ManualCoverAttestedAt.Should().Be(attestedAt);
+    }
+
+    [Fact]
+    public void SetManualCover_BlankAttribution_StoresNull()
+    {
+        var game = NewManualCoverGame();
+
+        game.SetManualCover("k", "CC0", "   ", "https://s", Guid.NewGuid(), DateTime.UtcNow);
+
+        game.ManualCoverAttribution.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("", "CC0", "https://s")]  // empty r2Key
+    [InlineData("k", "", "https://s")]    // empty license
+    [InlineData("k", "CC0", "")]          // empty sourceUrl
+    public void SetManualCover_MissingRequiredField_Throws(string r2Key, string license, string sourceUrl)
+    {
+        var game = NewManualCoverGame();
+
+        var act = () => game.SetManualCover(r2Key, license, null, sourceUrl, Guid.NewGuid(), DateTime.UtcNow);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void SetManualCover_EmptyAttestedBy_Throws()
+    {
+        var game = NewManualCoverGame();
+
+        var act = () => game.SetManualCover("k", "CC0", null, "https://s", Guid.Empty, DateTime.UtcNow);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    #endregion
+
+    #region RevokeManualCover (epic #3470 Slice 3a-3)
+
+    [Fact]
+    public void RevokeManualCover_WithManualCoverSet_ClearsAllFields_ReturnsTrue()
+    {
+        var game = NewManualCoverGame();
+        game.SetManualCover("covers/manual/x/cover", "CC-BY-4.0", "Jane Artist", "https://example.com/src", Guid.NewGuid(), DateTime.UtcNow);
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeTrue();
+        game.ManualCoverR2Key.Should().BeNull();
+        game.ManualCoverLicense.Should().BeNull();
+        game.ManualCoverAttribution.Should().BeNull();
+        game.ManualCoverSourceUrl.Should().BeNull();
+        game.ManualCoverAttestedBy.Should().BeNull();
+        game.ManualCoverAttestedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeManualCover_WhenNothingSet_ReturnsFalse_NoChange()
+    {
+        // Idempotent: revoking a game that never had a manual cover is a no-op the
+        // handler can turn into a 204 without persisting/evicting anything.
+        var game = NewManualCoverGame();
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeFalse();
+        game.ManualCoverR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeManualCover_SecondCall_ReturnsFalse()
+    {
+        var game = NewManualCoverGame();
+        game.SetManualCover("k", "CC0", null, "https://s", Guid.NewGuid(), DateTime.UtcNow);
+
+        game.RevokeManualCover().Should().BeTrue();
+        game.RevokeManualCover().Should().BeFalse("the manual cover is already cleared");
+    }
+
+    [Fact]
+    public void RevokeManualCover_RemovesManualSourcedAssignments_KeepsOthers()
+    {
+        // Revoking the manual source must also drop any per-context assignment pinned to Manual,
+        // so no phantom pin survives to auto-resurface a future manual cover. Non-Manual pins stay.
+        var game = NewManualCoverGame();
+        var admin = Guid.NewGuid();
+        game.SetManualCover("k", "CC0", null, "https://s", admin, DateTime.UtcNow);
+        game.AssignCover(CoverContext.Hero, CoverAssignmentSource.Manual, admin);
+        game.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, admin);
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeTrue();
+        game.CoverAssignments.Should().ContainSingle();
+        game.CoverAssignments.Single().Source.Should().Be(CoverAssignmentSource.Wikidata);
+        game.ManualCoverR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void RevokeManualCover_WithOnlyManualAssignment_RemovesItAndReturnsTrue()
+    {
+        // Even with no manual columns set, a lingering Manual assignment is cleaned up.
+        var game = NewManualCoverGame();
+        var admin = Guid.NewGuid();
+        game.AssignCover(CoverContext.Hero, CoverAssignmentSource.Manual, admin);
+
+        var changed = game.RevokeManualCover();
+
+        changed.Should().BeTrue();
+        game.CoverAssignments.Should().BeEmpty();
     }
 
     #endregion

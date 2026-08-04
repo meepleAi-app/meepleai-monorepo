@@ -74,4 +74,57 @@ public sealed class CoverAttributionTests
         attribution.Should().BeNull();
         sourceUrl.Should().BeNull();
     }
+
+    // ----- Epic #3470 Slice 3b: Manual cover attribution (copyright-critical) -----
+
+    private static SharedGameEntity EntityWithManual() => new()
+    {
+        ManualCoverLicense = "CC-BY-4.0",
+        ManualCoverAttribution = "<b>Jane Artist</b>",
+        ManualCoverSourceUrl = "https://commons.example.org/img",
+    };
+
+    [Fact]
+    public void ForWinningSource_ManualWins_ReturnsStrippedManualTriple()
+    {
+        // A CC-BY/CC-BY-SA manual cover MUST surface its attested license + attribution,
+        // else the whitelist-admitted image renders without the legally-required credit.
+        var (license, attribution, sourceUrl) = CoverAttribution.ForWinningSource(CoverKind.Manual, EntityWithManual());
+
+        license.Should().Be("CC-BY-4.0");
+        attribution.Should().Be("Jane Artist", "the attested attribution is HTML-stripped like Wikidata");
+        sourceUrl.Should().Be("https://commons.example.org/img");
+    }
+
+    [Fact]
+    public void ForWinningSource_ManualWinsButNoColumns_ReturnsNulls()
+    {
+        var (license, attribution, sourceUrl) = CoverAttribution.ForWinningSource(CoverKind.Manual, new SharedGameEntity());
+
+        license.Should().BeNull();
+        attribution.Should().BeNull();
+        sourceUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public void ForWinningSource_ManualWins_DoesNotLeakWikidata()
+    {
+        // Entity carries BOTH Wikidata and Manual columns; Manual is the winner → only the
+        // Manual triple surfaces (never a Wikidata credit over a Manual image).
+        var entity = new SharedGameEntity
+        {
+            WikidataCoverLicense = "CC BY-SA 4.0",
+            WikidataCoverAttribution = "Wiki Author",
+            WikidataCoverSourceUrl = "https://www.wikidata.org/wiki/Q1",
+            ManualCoverLicense = "CC0",
+            ManualCoverAttribution = "Manual Author",
+            ManualCoverSourceUrl = "https://commons.example.org/m",
+        };
+
+        var (license, attribution, sourceUrl) = CoverAttribution.ForWinningSource(CoverKind.Manual, entity);
+
+        license.Should().Be("CC0");
+        attribution.Should().Be("Manual Author");
+        sourceUrl.Should().Be("https://commons.example.org/m");
+    }
 }

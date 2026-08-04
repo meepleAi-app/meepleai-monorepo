@@ -18,6 +18,16 @@ internal record AssignCoverRequest(
     double FocalX = 0.5,
     double FocalY = 0.5);
 
+/// <summary>
+/// Request body for the manual cover set (epic #3470 Slice 3a). The admin supplies an HTTPS image
+/// URL plus the attested license (must be whitelisted) and optional attribution. The acting admin
+/// comes from the session, never the body.
+/// </summary>
+internal record SetManualCoverRequest(
+    string SourceUrl,
+    string License,
+    string? Attribution = null);
+
 // ========================================
 // REQUEST DTOS
 // ========================================

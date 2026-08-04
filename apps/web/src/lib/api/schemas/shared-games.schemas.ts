@@ -235,10 +235,10 @@ export const SharedGameSchema = z.object({
     .default([])
     .transform(v => v ?? []),
   // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
-  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
-  wikidataCoverLicense: z.string().nullable().default(null),
-  wikidataCoverAttribution: z.string().nullable().default(null),
-  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
+  // FE component <MeepleCardAttributionFooter> renders only when coverLicense is non-null.
+  coverLicense: z.string().nullable().default(null),
+  coverAttribution: z.string().nullable().default(null),
+  coverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
@@ -370,10 +370,10 @@ export const SharedGameDetailSchema = z.object({
     .default([])
     .transform(v => v ?? []),
   // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
-  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
-  wikidataCoverLicense: z.string().nullable().default(null),
-  wikidataCoverAttribution: z.string().nullable().default(null),
-  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
+  // FE component <MeepleCardAttributionFooter> renders only when coverLicense is non-null.
+  coverLicense: z.string().nullable().default(null),
+  coverAttribution: z.string().nullable().default(null),
+  coverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;

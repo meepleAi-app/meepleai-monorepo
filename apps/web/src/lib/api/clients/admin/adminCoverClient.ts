@@ -9,10 +9,13 @@
 import {
   CoverCandidatesSchema,
   CoverAssignmentSchema,
+  ManualCoverResultSchema,
   type CoverCandidates,
   type CoverAssignment,
   type CoverContext,
   type AssignCoverRequest,
+  type SetManualCoverRequest,
+  type ManualCoverResult,
 } from '../../schemas/admin/admin-cover.schemas';
 
 import type { HttpClient } from '../../core/httpClient';
@@ -50,6 +53,21 @@ export function createAdminCoverClient(http: HttpClient) {
     async removeCoverAssignment(gameId: string, context: CoverContext): Promise<void> {
       return http.delete(
         `/api/v1/admin/shared-games/${encodeURIComponent(gameId)}/cover-assignments/${encodeURIComponent(context)}`
+      );
+    },
+
+    /**
+     * POST: set a manual cover from an admin-supplied HTTPS image URL (epic #3470 Slice 3d).
+     * The server SSRF-fetches + re-encodes + stores it, then materializes a `Manual` candidate
+     * the picker surfaces after a candidates refetch. Returns the persisted DB key + a presigned
+     * R2 preview URL for the freshly-written object. Server 400s on a non-HTTPS URL or a
+     * non-whitelisted license; 404 on a missing game.
+     */
+    async setManualCover(gameId: string, body: SetManualCoverRequest): Promise<ManualCoverResult> {
+      return http.post(
+        `/api/v1/admin/shared-games/${encodeURIComponent(gameId)}/manual-cover`,
+        body,
+        ManualCoverResultSchema
       );
     },
   };

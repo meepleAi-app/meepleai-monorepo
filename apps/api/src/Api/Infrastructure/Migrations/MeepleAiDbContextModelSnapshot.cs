@@ -9419,6 +9419,16 @@ namespace Api.Infrastructure.Migrations
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("ImageRegionSeedAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("image_region_seed_attempts");
+
+                    b.Property<DateTime?>("ImageRegionsSeededAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("image_regions_seeded_at");
+
                     b.Property<string>("IndexerVersion")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")

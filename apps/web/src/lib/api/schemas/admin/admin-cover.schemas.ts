@@ -76,3 +76,27 @@ export const AssignCoverRequestSchema = z.object({
   focalY: z.number().min(0).max(1),
 });
 export type AssignCoverRequest = z.infer<typeof AssignCoverRequestSchema>;
+
+/**
+ * Request body for the manual (arbitrary-URL) cover set (SetManualCoverRequest, epic #3470
+ * Slice 3d). `sourceUrl` must be an absolute HTTPS URL and `license` must be on the DEC-3c
+ * whitelist (Public Domain / CC0 / CC-BY / CC-BY-SA) — both re-validated server-side (400 on
+ * bad input), so this is the FE-side shape, not the authoritative gate.
+ */
+export const SetManualCoverRequestSchema = z.object({
+  sourceUrl: z.string().url(),
+  license: z.string().min(1),
+  attribution: z.string().nullable().optional(),
+});
+export type SetManualCoverRequest = z.infer<typeof SetManualCoverRequestSchema>;
+
+/**
+ * The persisted manual cover returned by the write command (ManualCoverResult): the suffix-free
+ * DB key + a presigned R2 preview URL (may be empty but is always present). The picker refetches
+ * candidates on success, so the returned value is informational.
+ */
+export const ManualCoverResultSchema = z.object({
+  dbKey: z.string(),
+  presignedUrl: z.string(),
+});
+export type ManualCoverResult = z.infer<typeof ManualCoverResultSchema>;

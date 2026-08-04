@@ -45,6 +45,12 @@ internal static class AdminPdfManagementEndpoints
             .WithName("CleanupOrphans")
             .WithSummary("Delete orphaned text chunks referencing non-existent PDFs");
 
+        // #3435 (SP1): admin-triggered batch — runs a hi_res pass over Ready, never-seeded PDFs and
+        // seeds their image-table regions. Gated by PdfProcessing:ImageRegionSeeding:Enabled (default off).
+        group.MapPost("/maintenance/seed-image-regions-batch", SeedImageRegionsBatch)
+            .WithName("SeedImageRegionsBatch")
+            .WithSummary("Run one batch of automatic image-region hi_res seeding (#3435, flag-gated)");
+
         // Phase 6: Analytics
         group.MapGet("/analytics/distribution", GetDistribution)
             .WithName("GetPdfStatusDistribution")
@@ -83,6 +89,17 @@ internal static class AdminPdfManagementEndpoints
             new SeedPdfImageRegionsCommand(pdfId, request.HiResJson, request.MinAreaFraction),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(new { success = true, seeded = count });
+    }
+
+    private static async Task<IResult> SeedImageRegionsBatch(
+        SeedImageRegionsBatchRequest? request,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new RunImageRegionSeedBatchCommand(request?.BatchSize),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> PurgeStale(
@@ -125,3 +142,4 @@ internal static class AdminPdfManagementEndpoints
 internal record BulkDeletePdfsRequest(List<Guid> PdfIds);
 internal record ReindexDocumentRequest(string? IndexerVersion);
 internal record SeedImageRegionsRequest(string HiResJson, double? MinAreaFraction = null);
+internal record SeedImageRegionsBatchRequest(int? BatchSize = null);

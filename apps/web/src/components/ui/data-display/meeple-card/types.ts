@@ -175,17 +175,18 @@ export interface MeepleCardProps {
    */
   attribution?: CoverAttribution;
   /**
-   * Issue #2055 Phase G AC-G6 — Wikidata cover license + attribution rendered
-   * as a plain-text footer beneath the card. Activated only for
+   * Issue #2055 Phase G AC-G6 / epic #3470 Slice 3b — the WINNING cover source's
+   * license + attribution (Wikidata or admin-attested Manual) rendered as a
+   * plain-text footer beneath the card. Activated only for
    * `entity === 'game'`. All three fields are optional so the footer
-   * gracefully degrades; when `wikidataCoverLicense` is null/undefined the
+   * gracefully degrades; when `coverLicense` is null/undefined the
    * footer renders nothing. BE strips HTML upstream per DEC-G6-1 LOCKED
    * 2026-06-20 — render as plain text only, do NOT use
    * `dangerouslySetInnerHTML`.
    */
-  wikidataCoverLicense?: string | null;
-  wikidataCoverAttribution?: string | null;
-  wikidataCoverSourceUrl?: string | null;
+  coverLicense?: string | null;
+  coverAttribution?: string | null;
+  coverSourceUrl?: string | null;
 }
 
 /**

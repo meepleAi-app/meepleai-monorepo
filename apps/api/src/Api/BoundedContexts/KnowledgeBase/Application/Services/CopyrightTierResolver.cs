@@ -59,15 +59,41 @@ internal sealed class CopyrightTierResolver : ICopyrightTierResolver
         if (!pdfInfos.TryGetValue(citation.DocumentId, out var info))
             return citation with { CopyrightTier = CopyrightTier.Protected, IsPublic = false };
 
-        var isPublic = info.IsPublic;
+        var tier = ResolveTierCore(info, userId, ownership);
+        return citation with { CopyrightTier = tier, IsPublic = info.IsPublic };
+    }
 
+    /// <inheritdoc />
+    public async Task<CopyrightTier> ResolveTierAsync(string documentId, Guid userId, CancellationToken ct)
+    {
+        var pdfInfos = await _projection.GetPdfCopyrightInfoAsync(new[] { documentId }, ct).ConfigureAwait(false);
+        if (!pdfInfos.TryGetValue(documentId, out var info))
+        {
+            // Unknown / missing document -> safe fallback (no verbatim, no region highlight).
+            return CopyrightTier.Protected;
+        }
+
+        var gameId = info.GameId ?? info.PrivateGameId;
+        var ownership = userId != Guid.Empty && gameId.HasValue
+            ? await _projection.CheckOwnershipAsync(userId, new[] { gameId.Value }, ct).ConfigureAwait(false)
+            : new Dictionary<Guid, bool>();
+
+        return ResolveTierCore(info, userId, ownership);
+    }
+
+    // Tier cascade — single source of truth shared by ResolveSingle + ResolveTierAsync:
+    // 1. copyright-free license -> Full; 2. non-protected category -> Full; 3. uploader AND game
+    // owner -> Full; 4. otherwise Protected.
+    private static CopyrightTier ResolveTierCore(
+        PdfCopyrightInfo info, Guid userId, IReadOnlyDictionary<Guid, bool> ownership)
+    {
         // Rule 1: Copyright-free license (CreativeCommons, PublicDomain)
         if (info.LicenseType.IsCopyrightFree())
-            return citation with { CopyrightTier = CopyrightTier.Full, IsPublic = isPublic };
+            return CopyrightTier.Full;
 
         // Rule 2: Non-protected document category
         if (!ProtectedCategories.Contains(info.DocumentCategory))
-            return citation with { CopyrightTier = CopyrightTier.Full, IsPublic = isPublic };
+            return CopyrightTier.Full;
 
         // Rule 3: User uploaded AND owns the game (BOTH conditions required)
         if (userId != Guid.Empty)
@@ -78,11 +104,11 @@ internal sealed class CopyrightTierResolver : ICopyrightTierResolver
                 && ownership.TryGetValue(gameId.Value, out var isOwned)
                 && isOwned)
             {
-                return citation with { CopyrightTier = CopyrightTier.Full, IsPublic = isPublic };
+                return CopyrightTier.Full;
             }
         }
 
         // Default: Protected
-        return citation with { CopyrightTier = CopyrightTier.Protected, IsPublic = isPublic };
+        return CopyrightTier.Protected;
     }
 }

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -25,4 +26,12 @@ internal interface ICopyrightTierResolver
         IReadOnlyList<ChunkCitation> citations,
         Guid userId,
         CancellationToken ct);
+
+    /// <summary>
+    /// Resolves the copyright tier for a single document (same cascade as <see cref="ResolveAsync"/>).
+    /// Used to gate non-citation surfaces that must match citation copyright semantics — e.g. the
+    /// image-region viewer overlay, whose region boxes are <c>Full</c>-only (#3435 §5quinquies).
+    /// Returns <see cref="CopyrightTier.Protected"/> for an unknown document.
+    /// </summary>
+    Task<CopyrightTier> ResolveTierAsync(string documentId, Guid userId, CancellationToken ct);
 }

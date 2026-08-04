@@ -166,6 +166,18 @@ internal static class DocumentProcessingServiceExtensions
 
         services.AddScoped<IPhotoPreprocessor, SmoldoclingPhotoPreprocessor>();
 
+        // #3435 (SP4): smoldocling crop-discriminator client for POST /api/v1/extract-image (same
+        // app as the SmolDocling extractor, :8002). No Polly — a single crop is quick and the endpoint
+        // itself degrades init/non-table failures to a 200 (R5).
+        services.AddHttpClient(SmoldoclingTableExtractor.NamedClientKey, client =>
+        {
+            var baseUrl = configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"] ?? "http://smoldocling-service:8002";
+            client.BaseAddress = new Uri(baseUrl);
+            var timeoutSeconds = configuration.GetValue<int?>("PdfProcessing:TableExtraction:VlmTimeoutSeconds") ?? 120;
+            client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        });
+        services.AddScoped<ISmolDoclingTableExtractor, SmoldoclingTableExtractor>();
+
         // Libro Game AI Assistant MVP Phase 2 — Task 2.3a: KB Indexing Services
         services.AddScoped<IDocumentChunker, PageTextChunker>();
         services.AddScoped<IKnowledgeBaseIndexer, KnowledgeBaseIndexer>();
@@ -183,6 +195,10 @@ internal static class DocumentProcessingServiceExtensions
 
         // Issue #1831 (umbrella #1821 L4) — PDF first-page cover extraction
         services.AddScoped<IPdfCoverExtractor, PdfCoverExtractor>();
+
+        // #3435 (SP4): async VLM table-extraction — arbitrary-page region crop + RAG table-chunk indexing.
+        services.AddScoped<IPdfRegionCropper, PdfRegionCropper>();
+        services.AddScoped<ITableChunkIndexer, TableChunkIndexer>();
 
         // Cover-da-PDF plan Task 3 — MaterializePdfCover R2 upload pipeline.
         // Singleton because the underlying AmazonS3Client is thread-safe and
@@ -225,6 +241,9 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #3435 (SP1 slice 2): Register Quartz job for the automatic image-region hi_res seed.
         RegisterSeedImageRegionsJob(services, configuration);
 
+        // Issue #3435 (SP4): Register Quartz job for the async VLM table-extraction pass.
+        RegisterTableExtractionJob(services, configuration);
+
         return services;
     }
 
@@ -259,6 +278,39 @@ internal static class DocumentProcessingServiceExtensions
                     .WithIntervalInMinutes(intervalMinutes)
                     .RepeatForever())
                 .WithDescription("Runs the automatic image-region hi_res seed batch (#3435, flag-gated)")
+            );
+        });
+    }
+
+    /// <summary>
+    /// #3435 (SP4) — registers <see cref="Api.BoundedContexts.DocumentProcessing.Application.Jobs.RunTableExtractionJob"/>
+    /// with Quartz. Runs every <c>PdfProcessing:TableExtraction:IntervalMinutes</c> (default 30) to drive
+    /// the async VLM table-extraction batch. The command handler is gated by
+    /// <c>PdfProcessing:TableExtraction:Enabled</c> (default false), so the job is a cheap no-op (one
+    /// config check) until the feature is turned on per-environment.
+    /// </summary>
+    private static void RegisterTableExtractionJob(IServiceCollection services, IConfiguration configuration)
+    {
+        var intervalMinutes = configuration.GetValue<int?>("PdfProcessing:TableExtraction:IntervalMinutes") ?? 30;
+        if (intervalMinutes < 1)
+        {
+            intervalMinutes = 30;
+        }
+
+        services.AddQuartz(q =>
+        {
+            var jobKey = new Quartz.JobKey("RunTableExtractionJob", "DocumentProcessing");
+
+            q.AddJob<Api.BoundedContexts.DocumentProcessing.Application.Jobs.RunTableExtractionJob>(opts =>
+                opts.WithIdentity(jobKey));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("RunTableExtractionTrigger", "DocumentProcessing")
+                .WithSimpleSchedule(x => x
+                    .WithIntervalInMinutes(intervalMinutes)
+                    .RepeatForever())
+                .WithDescription("Runs the async VLM table-extraction batch (#3435 SP4, flag-gated)")
             );
         });
     }

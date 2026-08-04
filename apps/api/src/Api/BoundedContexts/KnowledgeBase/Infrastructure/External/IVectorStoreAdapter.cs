@@ -49,6 +49,15 @@ internal interface IVectorStoreAdapter
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes embeddings whose <c>source_chunk_id</c> is in <paramref name="sourceChunkIds"/>.
+    /// Scoped delete (a single chunk's embedding), used to replace one chunk's vector without
+    /// wiping the whole document — e.g. the #3435 SP4 per-region table-chunk re-index. No-op on empty.
+    /// </summary>
+    Task DeleteBySourceChunkIdsAsync(
+        IReadOnlyList<Guid> sourceChunkIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Performs vector similarity search and returns each result paired with its cosine-similarity
     /// score.  Additive method — does NOT replace <see cref="SearchAsync"/>.
     /// Issue #1653: F3-FU-4 — per-document scored similarity-search.

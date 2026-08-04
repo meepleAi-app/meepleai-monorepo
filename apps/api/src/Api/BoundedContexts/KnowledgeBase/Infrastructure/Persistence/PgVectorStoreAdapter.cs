@@ -450,6 +450,32 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         }
     }
 
+    public async Task DeleteBySourceChunkIdsAsync(
+        IReadOnlyList<Guid> sourceChunkIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (sourceChunkIds is null || sourceChunkIds.Count == 0)
+        {
+            return;
+        }
+
+        var connection = _context.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+
+        var command = (NpgsqlCommand)connection.CreateCommand();
+        await using (command.ConfigureAwait(false))
+        {
+            command.CommandText = $"DELETE FROM {TableName} WHERE source_chunk_id = ANY(@ids)";
+            command.Parameters.AddWithValue("@ids", sourceChunkIds.ToArray());
+
+            var deleted = await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogDebug(
+                "Deleted {DeletedCount} embedding(s) for {Count} source chunk id(s) from pgvector",
+                deleted, sourceChunkIds.Count);
+        }
+    }
+
     public async Task<bool> CollectionExistsAsync(
         Guid gameId,
         CancellationToken cancellationToken = default)

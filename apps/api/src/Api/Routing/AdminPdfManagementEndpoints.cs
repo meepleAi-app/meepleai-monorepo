@@ -57,6 +57,13 @@ internal static class AdminPdfManagementEndpoints
             .WithName("GetTableRegionCandidates")
             .WithSummary("List table-heavy PDFs (candidate image-table regions) for VLM enrichment (#3435 SP2)");
 
+        // #3435 (SP4): admin-triggered batch — runs one pass of the async VLM table-extraction over
+        // candidate regions (render + crop + /extract-image + persist table chunk). Gated by
+        // PdfProcessing:TableExtraction:Enabled (default off). Mirrors the SP1 seed-batch trigger.
+        group.MapPost("/maintenance/run-table-extraction-batch", RunTableExtractionBatch)
+            .WithName("RunTableExtractionBatch")
+            .WithSummary("Run one batch of the async VLM table-extraction pass (#3435 SP4, flag-gated)");
+
         // Phase 6: Analytics
         group.MapGet("/analytics/distribution", GetDistribution)
             .WithName("GetPdfStatusDistribution")
@@ -120,6 +127,17 @@ internal static class AdminPdfManagementEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> RunTableExtractionBatch(
+        RunTableExtractionBatchRequest? request,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new RunTableExtractionBatchCommand(request?.BatchSize),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     private static async Task<IResult> PurgeStale(
         IMediator mediator,
         CancellationToken cancellationToken)
@@ -161,3 +179,4 @@ internal record BulkDeletePdfsRequest(List<Guid> PdfIds);
 internal record ReindexDocumentRequest(string? IndexerVersion);
 internal record SeedImageRegionsRequest(string HiResJson, double? MinAreaFraction = null);
 internal record SeedImageRegionsBatchRequest(int? BatchSize = null);
+internal record RunTableExtractionBatchRequest(int? BatchSize = null);

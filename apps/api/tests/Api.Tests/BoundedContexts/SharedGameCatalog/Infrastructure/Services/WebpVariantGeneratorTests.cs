@@ -200,6 +200,42 @@ public class WebpVariantGeneratorTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Decoder hardening (#3495 M1) — decompression-bomb + non-raster coder defense
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GenerateWebpAsync_SourceExceedingDimensionCap_ThrowsImageProcessingException()
+    {
+        // Decompression-bomb defense: a source whose declared dimensions exceed the guard
+        // cap must be rejected at header-inspection (ping) time, before any full-raster
+        // allocation. A 20001x1 image is trivial to allocate here but trips the dimension cap.
+        var oversized = CreateSolidImagePng(width: 20001, height: 1, color: MagickColors.Red);
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(oversized, TargetWidth, TargetHeight, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ImageProcessingException>(
+            "sources beyond the dimension/megapixel cap must be rejected before decode (decompression-bomb defense)");
+    }
+
+    [Fact]
+    public async Task GenerateWebpAsync_SvgPayload_ThrowsImageProcessingException()
+    {
+        // Non-raster formats (SVG + delegate-backed coders) are an XXE / SSRF / RCE surface
+        // and must never reach Magick's coder — reject via the raster-only magic-byte allowlist
+        // before any decode.
+        var svg = System.Text.Encoding.UTF8.GetBytes(
+            "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\">" +
+            "<rect width=\"64\" height=\"64\" fill=\"red\"/></svg>");
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(svg, TargetWidth, TargetHeight, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ImageProcessingException>(
+            "vector/non-raster formats must be rejected by the raster-only allowlist");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Cancellation
     // ──────────────────────────────────────────────────────────────────────────
 

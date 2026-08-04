@@ -112,6 +112,10 @@ internal static class DocumentProcessingServiceExtensions
         // non-Unstructured providers (the extractor that reads it simply isn't constructed).
         services.AddScoped<IExtractionStrategySelector, ExtractionStrategySelector>();
 
+        // #3435 (SP1): register the hi_res region extractor + IRawHiResExtractor unconditionally
+        // (the seed-batch handler injects it under every provider — see method doc).
+        RegisterImageRegionHiResExtractor(services, configuration);
+
         if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
         {
             // BGAI-087 + ISSUE-1174: Register all extractors for orchestrator using keyed services
@@ -457,9 +461,44 @@ internal static class DocumentProcessingServiceExtensions
                 configuration.GetValue<int?>("PdfProcessing:Extractor:Unstructured:MaxRetries") ?? 3))
             .AddServiceCallLogging("UnstructuredService");
 
+        // NOTE (#3435): UnstructuredPdfTextExtractor + the hi_res region client + IRawHiResExtractor are
+        // registered UNCONDITIONALLY via RegisterImageRegionHiResExtractor in AddDocumentProcessingContext,
+        // so they must NOT be registered here (they'd be missing under non-Unstructured providers).
+        // IPdfExtractorHealthProbe is likewise registered unconditionally (see the #3269 note there).
+    }
+
+    /// <summary>
+    /// #3435 (SP1): registers the concrete <see cref="UnstructuredPdfTextExtractor"/>, its dedicated
+    /// long-timeout hi_res HttpClient, and <see cref="IRawHiResExtractor"/> UNCONDITIONALLY — mirroring
+    /// the #3269 <c>IPdfExtractorHealthProbe</c> fix. <c>RunImageRegionSeedBatchCommandHandler</c>
+    /// injects <see cref="IRawHiResExtractor"/>, so it must resolve under EVERY extractor provider,
+    /// otherwise the admin seed-batch endpoint 500s on MediatR activation on Docnet/SmolDocling. The
+    /// extractor depends only on <c>IHttpClientFactory</c> + the always-registered
+    /// <c>IExtractionStrategySelector</c>, so it constructs fine even when it isn't the active extractor.
+    /// </summary>
+    private static void RegisterImageRegionHiResExtractor(IServiceCollection services, IConfiguration configuration)
+    {
+        // Dedicated long-timeout client for the ~185-223s hi_res pass (exceeds the 120s ingest client).
+        // Deliberately NO retry policy — a single ~200s call must not be retried (the default
+        // GetRetryPolicy retries 3x on RequestTimeout, tripling an already-long call and stampeding the
+        // service). Retry is at batch granularity: a PDF whose pass fails is left unmarked
+        // (ImageRegionsSeededAt == null) and re-selected on the next SeedImageRegionsBatch run.
+        services.AddHttpClient(UnstructuredPdfTextExtractor.HiResClientName, client =>
+            {
+                var apiUrl = configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"]
+                             ?? "http://unstructured-service:8001";
+                client.BaseAddress = new Uri(apiUrl);
+
+                var hiResTimeoutSeconds = configuration.GetValue<int?>(
+                    "PdfProcessing:Extractor:Unstructured:HiResTimeoutSeconds") ?? 300;
+                client.Timeout = TimeSpan.FromSeconds(hiResTimeoutSeconds);
+
+                client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");
+            })
+            .AddServiceCallLogging("UnstructuredServiceHiRes");
+
         services.AddScoped<UnstructuredPdfTextExtractor>();
-        // IPdfExtractorHealthProbe is now registered unconditionally in AddDocumentProcessingContext
-        // (see the #3269 note there) so the bulk re-index gate resolves under every provider.
+        services.AddScoped<IRawHiResExtractor>(sp => sp.GetRequiredService<UnstructuredPdfTextExtractor>());
     }
 
     /// <summary>

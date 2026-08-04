@@ -181,4 +181,11 @@ public class PdfDocumentEntity
     // failure (R2/DB infra); at PdfCoverRetryPolicy.MaxAttempts the status becomes terminal
     // Failed instead of returning to Pending. 0 for never-failed / permanently-failed rows.
     public int CoverGenerationAttempts { get; set; }
+
+    // Issue #3435 (SP1): timestamp of the last automatic image-region hi_res seed pass.
+    // NULL = never seeded → the SeedImageRegionsBatch selector picks the PDF up exactly once and
+    // avoids re-running the ~200s hi_res pass on every run. This slice has no image-candidacy
+    // pre-filter (router = SP2, deferred), so text-only PDFs also get one pass and are marked even
+    // when 0 regions were found, so they are not re-processed.
+    public DateTime? ImageRegionsSeededAt { get; set; }
 }

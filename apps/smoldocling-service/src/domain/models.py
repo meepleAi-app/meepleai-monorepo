@@ -5,6 +5,15 @@ from typing import List, Dict, Any, Optional
 from PIL import Image
 
 
+# DocTags structure tags used as a "page has structured layout" signal, matched as
+# substrings on the raw doctags_text (tokenization is irrelevant). Only tags that
+# docling-core actually parses into content are listed (verified: <text> and
+# <section_header_*> export to markdown; the vocab's <paragraph>/<list_item> do NOT).
+# Single source of truth, shared by SmolDoclingAdapter._estimate_confidence and
+# QualityScoreCalculator._calculate_layout_detection (was duplicated + drift-prone).
+STRUCTURE_TAGS = ("<text>", "<section_header", "<caption>", "<page_header>")
+
+
 @dataclass
 class PageImage:
     """Represents a single page converted to image"""
@@ -41,8 +50,15 @@ class PageExtractionResult:
 
     @property
     def is_empty(self) -> bool:
-        """Check if page extraction is empty"""
-        return len(self.doctags_text.strip()) == 0
+        """Check if the page yields no usable text content.
+
+        Keyed on ``markdown_text`` (the rendered content that becomes RAG chunks), NOT
+        on ``doctags_text``: after issue #3435 the raw DocTags markup (``<doctag>``,
+        ``<loc_*>``, ``<otsl>``, ...) is retained in ``doctags_text``, so a
+        structural-wrapper-only page (e.g. a blank page emitting ``<doctag></doctag>``)
+        has non-empty DocTags but empty markdown and must still count as empty.
+        """
+        return len(self.markdown_text.strip()) == 0
 
 
 @dataclass

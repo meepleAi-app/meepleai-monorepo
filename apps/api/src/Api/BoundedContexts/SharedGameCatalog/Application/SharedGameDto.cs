@@ -62,13 +62,15 @@ public sealed record SharedGameDto(
     // Enriched by GameTitleResolver in list query handlers; raw list handlers may emit null when
     // the resolver is not on the pipeline (e.g. admin endpoints that don't surface translations).
     IReadOnlyList<SharedGameTranslationDto>? Translations = null,
-    // Issue #2055 Phase G AC-G6: Wikidata cover license + attribution (plain text,
-    // HTML-stripped upstream by AttributionTextExtractor per DEC-G6-1). Null when
-    // the game lacks a Wikidata cover or the attempt is pending. FE renders only
-    // when WikidataCoverLicense is non-null.
-    string? WikidataCoverLicense = null,
-    string? WikidataCoverAttribution = null,
-    string? WikidataCoverSourceUrl = null);
+    // Issue #2055 Phase G AC-G6 / epic #3470 Slice 3b: license + attribution + source URL of the
+    // WINNING cover source (Wikidata or admin-attested Manual), plain text (HTML-stripped by
+    // AttributionTextExtractor per DEC-G6-1). Source-neutral by design — the value follows
+    // whichever source won (CoverAttribution.ForWinningSource), never a fixed source. Null when
+    // the winner carries no license (PDF/BGG/user) or none won. FE renders the credit only when
+    // CoverLicense is non-null.
+    string? CoverLicense = null,
+    string? CoverAttribution = null,
+    string? CoverSourceUrl = null);
 
 /// <summary>
 /// Data transfer object for game rules.
@@ -239,13 +241,15 @@ public sealed record SharedGameDetailDto(
     bool IsNew = false,
     // Issue #1852 (Gap A): cover URL resolved via L4 → L2 priority; null when no cover available or storage unavailable.
     string? CoverUrl = null,
-    // Issue #2055 Phase G AC-G6: Wikidata cover license + attribution (plain text,
-    // HTML-stripped upstream by AttributionTextExtractor per DEC-G6-1). Null when
-    // the game lacks a Wikidata cover or the attempt is pending. FE renders only
-    // when WikidataCoverLicense is non-null.
-    string? WikidataCoverLicense = null,
-    string? WikidataCoverAttribution = null,
-    string? WikidataCoverSourceUrl = null,
+    // Issue #2055 Phase G AC-G6 / epic #3470 Slice 3b: license + attribution + source URL of the
+    // WINNING cover source (Wikidata or admin-attested Manual), plain text (HTML-stripped by
+    // AttributionTextExtractor per DEC-G6-1). Source-neutral by design — the value follows
+    // whichever source won (CoverAttribution.ForWinningSource), never a fixed source. Null when
+    // the winner carries no license (PDF/BGG/user) or none won. FE renders the credit only when
+    // CoverLicense is non-null.
+    string? CoverLicense = null,
+    string? CoverAttribution = null,
+    string? CoverSourceUrl = null,
     // Epic #3470 Slice 2d (AC-2): cover resolved for the Social (OpenGraph) context,
     // consumed by the FE OG meta (#3452). Falls through to the implicit precedence when
     // no Social override is pinned, so it is never worse than CoverUrl.

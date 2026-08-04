@@ -52,9 +52,9 @@ export interface MeepleCardGameProps {
    * Issue #2055 Phase 7 — Wikidata cover attribution fields. Forwarded to
    * MeepleCard, which renders MeepleCardAttributionFooter for entity=game.
    */
-  readonly wikidataCoverLicense?: string | null;
-  readonly wikidataCoverAttribution?: string | null;
-  readonly wikidataCoverSourceUrl?: string | null;
+  readonly coverLicense?: string | null;
+  readonly coverAttribution?: string | null;
+  readonly coverSourceUrl?: string | null;
   /**
    * Issue #3470 Slice 1d-c — optional admin cover-edit affordance forwarded to the
    * canonical MeepleCard cover slot (rendered outside the card anchor). Omitted for
@@ -75,9 +75,9 @@ export function MeepleCardGame({
   newThisWeekCount,
   labels,
   className,
-  wikidataCoverLicense = null,
-  wikidataCoverAttribution = null,
-  wikidataCoverSourceUrl = null,
+  coverLicense = null,
+  coverAttribution = null,
+  coverSourceUrl = null,
   coverEditSlot,
 }: MeepleCardGameProps): JSX.Element {
   const connections: ConnectionChipProps[] = [];
@@ -118,9 +118,9 @@ export function MeepleCardGame({
       connections={connections}
       className={className}
       data-testid="shared-games-card"
-      wikidataCoverLicense={wikidataCoverLicense}
-      wikidataCoverAttribution={wikidataCoverAttribution}
-      wikidataCoverSourceUrl={wikidataCoverSourceUrl}
+      coverLicense={coverLicense}
+      coverAttribution={coverAttribution}
+      coverSourceUrl={coverSourceUrl}
       coverEditSlot={coverEditSlot}
     />
   );

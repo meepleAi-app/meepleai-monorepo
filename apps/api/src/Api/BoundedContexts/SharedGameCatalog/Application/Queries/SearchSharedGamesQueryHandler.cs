@@ -462,9 +462,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 p.NewThisWeekCount >= IsNewMinThreshold,
                 CoverUrl: cover.Url,
                 // Epic #3470 Slice 1d-a — attribution follows the winning source.
-                WikidataCoverLicense: coverLicense,
-                WikidataCoverAttribution: coverAttribution,
-                WikidataCoverSourceUrl: coverSourceUrl));
+                CoverLicense: coverLicense,
+                CoverAttribution: coverAttribution,
+                CoverSourceUrl: coverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

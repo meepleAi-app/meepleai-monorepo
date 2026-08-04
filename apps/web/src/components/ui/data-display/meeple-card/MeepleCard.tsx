@@ -34,9 +34,9 @@ function MeepleCardImpl(props: MeepleCardProps) {
       <Renderer {...props} />
       {showAttributionFooter && (
         <MeepleCardAttributionFooter
-          license={props.wikidataCoverLicense ?? null}
-          attribution={props.wikidataCoverAttribution ?? null}
-          sourceUrl={props.wikidataCoverSourceUrl ?? null}
+          license={props.coverLicense ?? null}
+          attribution={props.coverAttribution ?? null}
+          sourceUrl={props.coverSourceUrl ?? null}
         />
       )}
     </>

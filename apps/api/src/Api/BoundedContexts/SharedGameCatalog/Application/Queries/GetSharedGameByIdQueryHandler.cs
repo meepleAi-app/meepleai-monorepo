@@ -463,9 +463,9 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             CoverUrl: coverUrl,
             // Epic #3470 Slice 1d-a — source-aware attribution (read from the entity, gated
             // on the winning cover source; was emitted unconditionally from the aggregate).
-            WikidataCoverLicense: coverLicense,
-            WikidataCoverAttribution: coverAttribution,
-            WikidataCoverSourceUrl: coverSourceUrl,
+            CoverLicense: coverLicense,
+            CoverAttribution: coverAttribution,
+            CoverSourceUrl: coverSourceUrl,
             SocialCoverUrl: socialCoverUrl);
     }
 }

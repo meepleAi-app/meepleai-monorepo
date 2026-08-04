@@ -7,11 +7,31 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
+/// Captures the RAW Unstructured hi_res wire JSON for a PDF — the response body that
+/// <see cref="Api.BoundedContexts.DocumentProcessing.Application.Services.ImageRegionExtractor"/>
+/// parses for Image/FigureCaption regions. The normal extraction path drops these
+/// (empty-text elements) so image-table region grounding (#3435) needs the raw body.
+/// </summary>
+internal interface IRawHiResExtractor
+{
+    /// <summary>
+    /// Runs a dedicated <c>strategy=hi_res</c> extraction on the long-timeout client and returns
+    /// the raw response body (matching the wire shape ImageRegionExtractor expects), or null.
+    /// Throws on HTTP failure/timeout — callers (batch runner) handle per-item failures.
+    /// </summary>
+    Task<string?> ExtractRawHiResAsync(Stream pdfStream, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Unstructured library adapter for PDF text extraction (Stage 1 of 3-stage pipeline)
 /// Calls Python FastAPI microservice running Unstructured library
 /// </summary>
-internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
+internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtractor
 {
+    /// <summary>Named HttpClient for the slow hi_res region pass (~200s, extended timeout,
+    /// no timeout-retry). Registered in DocumentProcessingServiceExtensions (#3435).</summary>
+    public const string HiResClientName = "UnstructuredServiceHiRes";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredPdfTextExtractor> _logger;
     private readonly IExtractionStrategySelector? _strategySelector;
@@ -117,7 +137,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
     /// <summary>
     /// Prepares multipart form data content for Unstructured API request.
     /// </summary>
-    private MultipartFormDataContent PrepareMultipartContent(Stream pdfStream)
+    private MultipartFormDataContent PrepareMultipartContent(Stream pdfStream, ExtractionStrategy? strategyOverride = null)
     {
         var content = new MultipartFormDataContent();
 #pragma warning disable CA2000 // Dispose objects before losing scope
@@ -127,8 +147,10 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         var streamContent = new StreamContent(pdfStream);
         // DC-2 (#3419): route table-heavy PDFs to hi_res per the pipeline's per-request decision on
         // the scoped selector. Null selector (DevTools/integration/fresh ingest) → historical "fast".
+        // #3435: strategyOverride forces hi_res for the dedicated region-seed pass regardless of the
+        // (inert-on-corpus) selector.
         var strategyContent = new StringContent(
-            (_strategySelector?.Current ?? ExtractionStrategy.Fast).ToWireString());
+            (strategyOverride ?? _strategySelector?.Current ?? ExtractionStrategy.Fast).ToWireString());
         var languageContent = new StringContent("ita");
 #pragma warning restore CA2000
 
@@ -282,6 +304,24 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
             return PagedTextExtractionResult.CreateFailure($"Unexpected error during PDF extraction: {ex.Message}");
         }
 #pragma warning restore CA1031
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> ExtractRawHiResAsync(
+        Stream pdfStream,
+        CancellationToken cancellationToken = default)
+    {
+        // Dedicated hi_res pass on the long-timeout client (#3435): forces strategy=hi_res
+        // (the selector is inert on the real corpus) and returns the RAW response body —
+        // the exact JSON discarded by ParseExtractionResponseAsync — so ImageRegionExtractor
+        // can parse Image/FigureCaption regions the normal path drops. Unlike the other methods
+        // here it does NOT swallow failures: the batch runner needs to see timeouts/HTTP errors
+        // to mark the item and continue (a swallowed "" would be indistinguishable from a
+        // genuinely region-free PDF and would wrongly stamp the seed marker).
+        var client = _httpClientFactory.CreateClient(HiResClientName);
+        using var content = PrepareMultipartContent(pdfStream, ExtractionStrategy.HiRes);
+        using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

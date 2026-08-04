@@ -281,6 +281,11 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnName("cover_generation_attempts")
             .HasDefaultValue(0);
 
+        // Issue #3435 (SP1): marker for the automatic image-region hi_res seed pass (NULL = never seeded).
+        builder.Property(e => e.ImageRegionsSeededAt)
+            .HasColumnName("image_regions_seeded_at")
+            .IsRequired(false);
+
         builder.HasIndex(e => e.CoverGenerationStatus)
             .HasDatabaseName("ix_pdf_documents_cover_generation_status");
     }

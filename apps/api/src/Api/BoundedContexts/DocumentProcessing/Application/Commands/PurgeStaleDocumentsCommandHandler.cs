@@ -37,7 +37,11 @@ internal sealed class PurgeStaleDocumentsCommandHandler
         // Active states (non-terminal, excluding Pending)
         var activeStates = new[] { "Uploading", "Extracting", "Chunking", "Embedding", "Indexing" };
 
+        // Issue #3564: the DbContext default is QueryTrackingBehavior.NoTracking (PERF-06), so
+        // without .AsTracking() the mutations below never reach the ChangeTracker and
+        // SaveChangesAsync is a silent no-op — while the handler still reports the selected count.
         var staleDocs = await _dbContext.PdfDocuments
+            .AsTracking()
             .Where(p => activeStates.Contains(p.ProcessingState))
             .Where(p => p.UploadedAt < threshold)
             .ToListAsync(cancellationToken)

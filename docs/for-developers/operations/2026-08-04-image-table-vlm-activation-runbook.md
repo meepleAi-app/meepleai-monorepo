@@ -48,9 +48,24 @@ wipes a produced chunk is self-healed on the next run (re-index from the cached 
   run smoldocling on a GPU box (dedicated node, or a local GPU during a batch window; DC-E).
 - [ ] **The corpus is indexed** (`IndexerVersion` set on Ready PDFs) — SP2's candidate selector
   requires it, and the RAG persistence reuses each PDF's existing `vector_documents` row.
-- [ ] **Backend deployed with the #3435 code** (SP1–SP4 + gate, all on `main-dev`). Verify the target
-  build actually contains it, e.g. `grep -c -a "run-table-extraction-batch" /app/Api.dll` in the API
-  container — **merge ≠ deploy**; a flag can only activate code that is actually in the running build.
+- [ ] **Backend deployed with the #3435 code** (SP1–SP4 + gate, all on `main-dev`) — **merge ≠ deploy**;
+  a flag can only activate code that is actually in the running build. The reliable check is a
+  functional one, because a route path is a .NET string **literal** and those are stored UTF-16 in the
+  assembly: a plain `grep -a "run-table-extraction-batch" /app/Api.dll` finds nothing even when the
+  code IS deployed (verified 2026-08-05 — it reports 0 while the endpoint answers 200). Either call
+  the read-only router endpoint, or grep the interleaved form:
+
+  ```bash
+  # functional (preferred): 200 means the code is there
+  docker exec meepleai-api curl -s -o /dev/null -w '%{http_code}\n' -b <admin-cookie> \
+    'http://localhost:8080/api/v1/admin/pdfs/maintenance/table-region-candidates?limit=1'
+
+  # binary check, if you must: match UTF-16 by letting . absorb the NUL bytes
+  docker exec meepleai-api grep -c -a "r.u.n.-.t.a.b.l.e" /app/Api.dll
+  ```
+
+  (Method *names* like `ResourceKeyFromPath` live in the UTF-8 metadata heap and DO grep normally —
+  which is why the naive check looks like it works until you try it on a route.)
 - [ ] **The SP4 migration is applied.** Staging does not auto-apply EF migrations, so
   `20260804173408_AddPdfTableExtractions` must be run manually (`pdf_table_extractions` + its two
   indexes + the `__EFMigrationsHistory` row). Check with

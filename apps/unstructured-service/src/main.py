@@ -225,13 +225,19 @@ async def extract_pdf(
                 # Compute the bbox once per element (double-binding), then reuse it in both the
                 # filter and the schema below.
                 for el, bbox in ((e, normalized_bbox(e)) for e in result.elements)
-                # Keep text-bearing elements AND bbox-bearing Image/FigureCaption regions
-                # (which have empty text): the latter are the image-table regions the
+                # Keep text-bearing elements AND bbox-bearing Image/FigureCaption/Table regions
+                # (which may have empty text): the latter are the image-table regions the
                 # backend's ImageRegionExtractor needs for hi_res region grounding (#3435).
                 # Normal text ingestion is unaffected — the C# MapStructuredElements still
                 # drops empty-text elements before chunking.
+                # #3565: Table is in the set because hi_res labels a graphics-drawn table as
+                # Table; one whose text OCR fails entirely would otherwise be dropped here and
+                # never reach the VLM pass.
                 if getattr(el, "text", None)
-                or (getattr(el, "category", None) in ("Image", "FigureCaption") and bbox is not None)
+                or (
+                    getattr(el, "category", None) in ("Image", "FigureCaption", "Table")
+                    and bbox is not None
+                )
             ],
             quality_score=result.quality_score.total_score,
             page_count=result.page_count,

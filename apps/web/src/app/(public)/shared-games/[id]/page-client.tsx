@@ -23,6 +23,7 @@ import { useSearchParams } from 'next/navigation';
 
 import { AdminCoverEditAffordance } from '@/components/features/cover-editor';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
+import { MeepleCardAttributionFooter } from '@/components/ui/data-display/meeple-card/MeepleCardAttributionFooter';
 import {
   AgentListItem,
   ContributorsStrip,
@@ -356,6 +357,16 @@ export function SharedGameDetailPageClient({
           // Self-gated via useAdminRole (renders null for non-admins), so the public
           // audience contract is untouched (#2118).
           coverOverlay={<AdminCoverEditAffordance gameId={game.id} title={resolvedTitle} />}
+          // #3470 Slice 3c — winning-source attribution credit under the hero cover. Renders
+          // null when the winning cover has no license (CoverAttribution.ForWinningSource);
+          // closes the copyright gap where a Manual/Wikidata CC-BY cover showed no credit.
+          coverFooter={
+            <MeepleCardAttributionFooter
+              license={game.coverLicense ?? null}
+              attribution={game.coverAttribution ?? null}
+              sourceUrl={game.coverSourceUrl ?? null}
+            />
+          }
         />
 
         <Tabs

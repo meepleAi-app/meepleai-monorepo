@@ -32,11 +32,23 @@ export const CoverCandidateSchema = z.object({
 });
 export type CoverCandidate = z.infer<typeof CoverCandidateSchema>;
 
-/** Which source is currently pinned per context; null = implicit precedence (CoverContextAssignmentsDto). */
+/**
+ * A single per-context admin assignment: the pinned source + the persisted focal point
+ * (CoverContextAssignmentDto, epic #3470 Slice 2e / AC-5). Exposing the focal lets the
+ * picker pre-fill the saved value instead of always starting at 0.5/0.5.
+ */
+export const CoverContextAssignmentSchema = z.object({
+  source: CoverAssignmentSourceSchema,
+  focalX: z.number(),
+  focalY: z.number(),
+});
+export type CoverContextAssignment = z.infer<typeof CoverContextAssignmentSchema>;
+
+/** Which assignment is currently pinned per context; null = implicit precedence (CoverContextAssignmentsDto). */
 export const CoverContextAssignmentsSchema = z.object({
-  card: CoverAssignmentSourceSchema.nullable().optional(),
-  hero: CoverAssignmentSourceSchema.nullable().optional(),
-  social: CoverAssignmentSourceSchema.nullable().optional(),
+  card: CoverContextAssignmentSchema.nullable().optional(),
+  hero: CoverContextAssignmentSchema.nullable().optional(),
+  social: CoverContextAssignmentSchema.nullable().optional(),
 });
 export type CoverContextAssignments = z.infer<typeof CoverContextAssignmentsSchema>;
 
@@ -64,3 +76,27 @@ export const AssignCoverRequestSchema = z.object({
   focalY: z.number().min(0).max(1),
 });
 export type AssignCoverRequest = z.infer<typeof AssignCoverRequestSchema>;
+
+/**
+ * Request body for the manual (arbitrary-URL) cover set (SetManualCoverRequest, epic #3470
+ * Slice 3d). `sourceUrl` must be an absolute HTTPS URL and `license` must be on the DEC-3c
+ * whitelist (Public Domain / CC0 / CC-BY / CC-BY-SA) — both re-validated server-side (400 on
+ * bad input), so this is the FE-side shape, not the authoritative gate.
+ */
+export const SetManualCoverRequestSchema = z.object({
+  sourceUrl: z.string().url(),
+  license: z.string().min(1),
+  attribution: z.string().nullable().optional(),
+});
+export type SetManualCoverRequest = z.infer<typeof SetManualCoverRequestSchema>;
+
+/**
+ * The persisted manual cover returned by the write command (ManualCoverResult): the suffix-free
+ * DB key + a presigned R2 preview URL (may be empty but is always present). The picker refetches
+ * candidates on success, so the returned value is informational.
+ */
+export const ManualCoverResultSchema = z.object({
+  dbKey: z.string(),
+  presignedUrl: z.string(),
+});
+export type ManualCoverResult = z.infer<typeof ManualCoverResultSchema>;

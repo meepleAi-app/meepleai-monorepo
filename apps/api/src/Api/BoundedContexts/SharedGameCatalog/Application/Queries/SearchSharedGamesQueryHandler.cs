@@ -8,6 +8,7 @@ using Api.Models;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -323,6 +324,12 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var projected = dbQuery.Select(g => new
         {
             Game = g,
+            // Epic #3470 Slice 2: project the per-context cover assignments explicitly.
+            // A bare `.Include(g => g.CoverAssignments)` is IGNORED once the query has a
+            // Select projection (EF Core "ignored includes"), so the Card resolver would
+            // never see the admin override. Projecting the collection here loads it; the
+            // materialization loop assigns it back onto `Game` before resolving.
+            Assignments = g.CoverAssignments.ToList(),
             // ToolkitsCount: per-user custom toolkits (excludes the read-only default
             // BR-02 from Issue #5144) for any approved Game linked to this SharedGame.
             ToolkitsCount = ctxToolkits.Count(t =>
@@ -412,8 +419,15 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         var games = new List<SharedGameDto>(projected2.Count);
         foreach (var p in projected2)
         {
+            // Attach the separately-projected assignments (AsNoTracking does no fixup)
+            // so the context resolver can read them off the entity.
+            p.Game.CoverAssignments = p.Assignments;
+
+            // Epic #3470 Slice 2 — catalog grid cards are the Card context: honor an
+            // admin per-context override, else fall through to implicit precedence.
+            // Source-aware so the card attribution follows the winning source.
             var cover = await CoverUrlResolver
-                .ResolvePublicWithSourceAsync(p.Game, _blobStorage)
+                .ResolveForContextWithSourceAsync(p.Game, CoverContext.Card, _blobStorage)
                 .ConfigureAwait(false);
             var (coverLicense, coverAttribution, coverSourceUrl) = CoverAttribution.ForWinningSource(cover.Kind, p.Game);
 
@@ -448,9 +462,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 p.NewThisWeekCount >= IsNewMinThreshold,
                 CoverUrl: cover.Url,
                 // Epic #3470 Slice 1d-a — attribution follows the winning source.
-                WikidataCoverLicense: coverLicense,
-                WikidataCoverAttribution: coverAttribution,
-                WikidataCoverSourceUrl: coverSourceUrl));
+                CoverLicense: coverLicense,
+                CoverAttribution: coverAttribution,
+                CoverSourceUrl: coverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

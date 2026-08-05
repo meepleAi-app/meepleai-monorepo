@@ -68,7 +68,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync("https://r2/custom.webp");
 
-        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         url.Should().Be("https://r2/custom.webp");
         _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", It.IsAny<int?>()), Times.Never);
@@ -82,7 +82,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
              .ReturnsAsync("https://r2/pdf.webp");
 
-        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         url.Should().Be("https://r2/pdf.webp");
     }
@@ -175,7 +175,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{customKey}.webp", null))
              .ReturnsAsync("https://r2/user-custom-cover.webp");
 
-        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         url.Should().Be("https://r2/user-custom-cover.webp");
     }
@@ -191,7 +191,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync("https://r2/custom.webp");
 
-        await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         capture.LongMeasurements.Should().ContainSingle(m =>
             m.Name == "meepleai.cover.resolution.total" &&
@@ -292,7 +292,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
              .ReturnsAsync("https://r2/wiki.webp");
 
-        await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         capture.LongMeasurements
             .Where(m => m.Name == "meepleai.cover.resolution.total")
@@ -317,7 +317,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
              .ReturnsAsync("https://r2/wiki.webp");
 
-        await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         var emissions = capture.LongMeasurements
             .Where(m => m.Name == "meepleai.cover.resolution.total")
@@ -337,7 +337,7 @@ public class CoverUrlResolverTests
         _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
              .ReturnsAsync((string?)null);
 
-        await CoverUrlResolver.ResolveForUserAsync(sg, entry, _blob.Object);
+        await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         var emissions = capture.LongMeasurements
             .Where(m => m.Name == "meepleai.cover.resolution.total")
@@ -657,5 +657,189 @@ public class CoverUrlResolverTests
         capture.LongMeasurements
             .Where(m => m.Name == "meepleai.cover.resolution.total")
             .Should().HaveCount(1);
+    }
+
+    // ----- Epic #3470 Slice 2: source-aware per-context resolution -----------
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_OverrideWins_ReturnsPinnedSourceKind()
+    {
+        // Admin pinned Wikidata for Hero; PDF would win the implicit chain. The
+        // per-context override must win AND report Wikidata as the winning Kind so
+        // the Hero attribution footer credits the correct source (Slice 2 AC-7).
+        var sg = new SharedGameEntity
+        {
+            PdfCoverR2Key = "pdf-key",
+            WikidataCoverR2Key = "wiki-key",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Hero, CoverAssignmentSource.Wikidata),
+            },
+        };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+
+        var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
+
+        result.Url.Should().Be("https://r2/wiki.webp");
+        result.Kind.Should().Be(CoverKind.Wikidata);
+        _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", It.IsAny<int?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_FallThrough_ReturnsImplicitWinningKind()
+    {
+        // Assignment pins Manual but no manual cover exists — resolution falls
+        // through to the implicit PDF layer and must report Pdf as the winning Kind
+        // (NOT the unresolved pinned Manual source), so attribution stays correct.
+        var sg = new SharedGameEntity
+        {
+            PdfCoverR2Key = "pdf-key",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Hero, CoverAssignmentSource.Manual),
+            },
+        };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
+
+        result.Url.Should().Be("https://r2/pdf.webp");
+        result.Kind.Should().Be(CoverKind.Pdf);
+    }
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_NoAssignment_ReturnsImplicitPrecedenceKind()
+    {
+        // No assignment for the resolved context → pure implicit precedence, and the
+        // winning Kind is reported so callers keep source-aware attribution.
+        var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+
+        var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Card, _blob.Object);
+
+        result.Url.Should().Be("https://r2/wiki.webp");
+        result.Kind.Should().Be(CoverKind.Wikidata);
+    }
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_AllMiss_ReturnsNullUrlAndKind()
+    {
+        var sg = new SharedGameEntity
+        {
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Hero, CoverAssignmentSource.Manual),
+            },
+        };
+
+        var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
+
+        result.Url.Should().BeNull();
+        result.Kind.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_OverrideWins_EmitsExactlyOneMetricTaggedPinnedSource()
+    {
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity
+        {
+            ManualCoverR2Key = "manual-key",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Hero, CoverAssignmentSource.Manual),
+            },
+        };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", null))
+             .ReturnsAsync("https://r2/manual.webp");
+
+        await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
+
+        capture.LongMeasurements
+            .Where(m => m.Name == "meepleai.cover.resolution.total")
+            .Should().ContainSingle()
+            .Which.Tags["source"].Should().Be("r2_manual");
+    }
+
+    [Fact]
+    public async Task ResolveForContextAsync_DelegatesToWithSource_ReturnsUrlAndEmitsOnce()
+    {
+        // The string overload must delegate to the source-aware variant, preserving
+        // the exactly-one-metric-per-call invariant (no double emission).
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity
+        {
+            WikidataCoverR2Key = "wiki-key",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata),
+            },
+        };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+
+        var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
+
+        url.Should().Be("https://r2/wiki.webp");
+        capture.LongMeasurements
+            .Where(m => m.Name == "meepleai.cover.resolution.total")
+            .Should().HaveCount(1);
+    }
+
+    // ----- Epic #3470 Slice 2c (AC-4): user library L3 layering --------------
+
+    [Fact]
+    public async Task ResolveForUserAsync_L3CustomCover_WinsOverAdminContextOverride()
+    {
+        // SD3 layering: the user's L3 custom cover must outrank an admin per-context
+        // (Card) override — the override sits BELOW L3.
+        var sg = new SharedGameEntity
+        {
+            PdfCoverR2Key = "pdf-key",
+            WikidataCoverR2Key = "wiki-key",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata),
+            },
+        };
+        var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
+             .ReturnsAsync("https://r2/custom.webp");
+
+        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
+
+        url.Should().Be("https://r2/custom.webp");
+        // Neither the admin override nor the implicit precedence must have been consulted.
+        _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", It.IsAny<int?>()), Times.Never);
+        _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", It.IsAny<int?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResolveForUserAsync_NoL3_UsesAdminContextOverride_OverImplicitPrecedence()
+    {
+        // No user custom cover: the admin per-context (Card) override must win over the
+        // implicit precedence (PDF is higher in the implicit chain). Proves the user path
+        // falls through to ResolveForContextAsync, not the context-blind ResolvePublicAsync.
+        var sg = new SharedGameEntity
+        {
+            PdfCoverR2Key = "pdf-key",
+            WikidataCoverR2Key = "wiki-key",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata),
+            },
+        };
+        var entry = new UserLibraryEntryEntity { CustomCoverR2Key = null };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+             .ReturnsAsync("https://r2/wiki.webp");
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
+
+        url.Should().Be("https://r2/wiki.webp");
     }
 }

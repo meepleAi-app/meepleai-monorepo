@@ -29,6 +29,9 @@ vi.mock('@/lib/api', () => ({
     },
     pdf: {
       getPdfDownloadUrl: (id: string) => `http://test/api/v1/pdfs/${id}/download`,
+      // #3453 added image-region fetch to PdfInlineViewer; mock it so the viewer mounts
+      // (an unmocked call threw "getImageRegions is not a function" and blocked rendering).
+      getImageRegions: vi.fn().mockResolvedValue([]),
     },
   },
 }));

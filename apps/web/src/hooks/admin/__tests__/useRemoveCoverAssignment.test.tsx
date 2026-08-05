@@ -37,7 +37,7 @@ function createWrapper() {
 const seededCandidates: CoverCandidates = {
   gameId: GAME_ID,
   candidates: [{ source: 'Wikidata', previewUrl: 'https://r2.example/w.webp' }],
-  assignments: { card: 'Wikidata', hero: null, social: null },
+  assignments: { card: { source: 'Wikidata', focalX: 0.5, focalY: 0.5 }, hero: null, social: null },
 };
 
 describe('useRemoveCoverAssignment', () => {
@@ -105,6 +105,6 @@ describe('useRemoveCoverAssignment', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     const cached = queryClient.getQueryData<CoverCandidates>(coverEditorKeys.candidates(GAME_ID));
-    expect(cached?.assignments.card).toBe('Wikidata');
+    expect(cached?.assignments.card).toEqual({ source: 'Wikidata', focalX: 0.5, focalY: 0.5 });
   });
 });

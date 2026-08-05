@@ -51,4 +51,42 @@ public static class PdfStorageKey
 
         return fileName[..underscoreIndex];
     }
+
+    /// <summary>
+    /// Extracts the <c>resourceKey</c> folder from a stored blob path of shape
+    /// <c>{category}/{resourceKey}/{fileId}_{sanitizedFileName}</c> — the segment between the last
+    /// two separators. Returns <c>null</c> for anything that does not match that layout.
+    /// </summary>
+    /// <remarks>
+    /// Issue #3568: like the fileId, the resourceKey used at write time can NOT be reconstructed from
+    /// the pdfId. <c>StoreAsync</c> is called with whatever key the upload path had at hand —
+    /// <c>UploadPdfCommandHandler</c> uses <c>gameId ?? privateGameId</c>,
+    /// <c>UploadSharedGamePdfCommandHandler</c> uses <c>shared-game-{id}</c>, the import wizard uses
+    /// <c>wizard-temp</c> — while the seeded corpus happens to use the pdfId. Both blob backends
+    /// resolve by exact <c>{category}/{resourceKey}/{fileId}_</c> prefix with no cross-folder search,
+    /// so a read that assumes the pdfId simply finds nothing for every other upload path.
+    /// The persisted <c>FilePath</c> is the only record of where the file actually went.
+    /// </remarks>
+    public static string? ResourceKeyFromPath(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return null;
+        }
+
+        var lastSeparator = filePath.AsSpan().LastIndexOfAny(PathSeparators);
+        if (lastSeparator <= 0)
+        {
+            return null;
+        }
+
+        var withoutFileName = filePath.AsSpan()[..lastSeparator];
+        var previousSeparator = withoutFileName.LastIndexOfAny(PathSeparators);
+        if (previousSeparator < 0 || previousSeparator == withoutFileName.Length - 1)
+        {
+            return null;
+        }
+
+        return withoutFileName[(previousSeparator + 1)..].ToString();
+    }
 }

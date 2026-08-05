@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Models;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -88,6 +89,10 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
         // Apply pagination — materialize entities first so we can call the async
         // CoverUrlResolver (EF expression trees cannot invoke async methods).
         var entities = await sortedQuery
+            // Epic #3470 Slice 2b: eager-load CoverAssignments so the per-context (Card)
+            // resolver honors an admin override. Entities are materialized directly (no
+            // Select projection), so the Include is honored — unlike the search handler.
+            .Include(g => g.CoverAssignments)
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(cancellationToken)
@@ -111,8 +116,9 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
 
         foreach (var g in entities)
         {
+            // Epic #3470 Slice 2b — the filtered/admin catalog list is a Card surface.
             var cover = await CoverUrlResolver
-                .ResolvePublicWithSourceAsync(g, _blobStorage)
+                .ResolveForContextWithSourceAsync(g, CoverContext.Card, _blobStorage)
                 .ConfigureAwait(false);
             var (coverLicense, coverAttribution, coverSourceUrl) = CoverAttribution.ForWinningSource(cover.Kind, g);
 
@@ -148,9 +154,9 @@ internal sealed class GetFilteredSharedGamesQueryHandler : IRequestHandler<GetFi
                 false,  // IsNew
                 CoverUrl: cover.Url,
                 // Epic #3470 Slice 1d-a — attribution follows the winning source.
-                WikidataCoverLicense: coverLicense,
-                WikidataCoverAttribution: coverAttribution,
-                WikidataCoverSourceUrl: coverSourceUrl));
+                CoverLicense: coverLicense,
+                CoverAttribution: coverAttribution,
+                CoverSourceUrl: coverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

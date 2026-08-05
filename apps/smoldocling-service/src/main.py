@@ -16,12 +16,13 @@ import cv2
 import numpy as np
 
 from .config import settings
-from .application import PdfExtractionService
-from .domain.models import PageImage
+from .application import PdfExtractionService, CropDiscriminator
+from .domain.models import PageImage, CropExtractionResult
 from .api.schemas import (
     PdfExtractionResponse,
     TextChunkSchema,
     PageResultSchema,
+    ExtractImageResponse,
     ErrorDetail,
     ErrorResponse,
     HealthCheckResponse,
@@ -43,6 +44,13 @@ metrics = {
     "extract_failures_total": 0,
     "extract_duration_ms_sum": 0.0,
     "extract_payload_bytes_sum": 0.0,
+    # Crop-discriminator (issue #3435 SP3) — §8 observability
+    "extract_image_requests_total": 0,
+    "extract_image_failures_total": 0,
+    "extract_image_tables_total": 0,
+    "extract_image_prefiltered_total": 0,
+    "extract_image_degenerated_total": 0,
+    "extract_image_duration_ms_sum": 0.0,
 }
 
 
@@ -503,6 +511,24 @@ async def metrics_endpoint():
             "# HELP extract_payload_bytes_sum Cumulative payload bytes processed",
             "# TYPE extract_payload_bytes_sum counter",
             f"extract_payload_bytes_sum {metrics['extract_payload_bytes_sum']}",
+            "# HELP extract_image_requests_total Total extract-image (crop-discriminator) requests",
+            "# TYPE extract_image_requests_total counter",
+            f"extract_image_requests_total {metrics['extract_image_requests_total']}",
+            "# HELP extract_image_failures_total Total extract-image failures",
+            "# TYPE extract_image_failures_total counter",
+            f"extract_image_failures_total {metrics['extract_image_failures_total']}",
+            "# HELP extract_image_tables_total Crops classified as tables (kept)",
+            "# TYPE extract_image_tables_total counter",
+            f"extract_image_tables_total {metrics['extract_image_tables_total']}",
+            "# HELP extract_image_prefiltered_total Crops rejected by the colorfulness pre-filter",
+            "# TYPE extract_image_prefiltered_total counter",
+            f"extract_image_prefiltered_total {metrics['extract_image_prefiltered_total']}",
+            "# HELP extract_image_degenerated_total Crops where the repetition early-stop fired",
+            "# TYPE extract_image_degenerated_total counter",
+            f"extract_image_degenerated_total {metrics['extract_image_degenerated_total']}",
+            "# HELP extract_image_duration_ms_sum Cumulative crop-discriminator latency in ms",
+            "# TYPE extract_image_duration_ms_sum counter",
+            f"extract_image_duration_ms_sum {metrics['extract_image_duration_ms_sum']}",
         ]
     return PlainTextResponse("\n".join(lines) + "\n")
 
@@ -751,6 +777,136 @@ async def preprocess_photo(
         orientation="portrait",
         is_blank=False,
         warnings=warnings,
+    )
+
+
+# ---------------------------------------------------------------------------
+# /api/v1/extract-image — Crop-table discriminator (issue #3435 SP3, Option B)
+# ---------------------------------------------------------------------------
+# Given a single hi_res image-region crop, decide table-vs-illustration and — for tables —
+# return rebuilt markdown + bbox [0,1] top-left. The <otsl> gate is authoritative; a cheap
+# colorfulness pre-filter and a repetition early-stop only contain the VLM cost on
+# illustrations (de-risk "Opzione B"). Copyright gating of the returned table content — ALL of
+# markdown, bbox AND the raw doctags (which carries the same table cell text) — is the
+# consumer's responsibility (spec §5quinquies open risk), not this service's.
+# ---------------------------------------------------------------------------
+
+
+def _discriminate_crop(img: Image.Image, prefilter: Optional[bool]) -> CropExtractionResult:
+    """Run the crop-discriminator (blocking; called via run_in_threadpool).
+
+    Lazily initialises the VLM, mirroring _extract_text_with_confidence: BOTH an absent
+    pdf_service (unit-test env without lifespan) AND a model-initialisation failure (GPU OOM,
+    weight download / Triton-JIT failure — the #3556 class) degrade to a non-table result so
+    the endpoint answers 200 with is_table=False, honouring R5 ("extraction fails -> no error")
+    instead of 500ing. Init failure is logged at ERROR and carries a distinct ``reason`` so it
+    stays observable — a persistent init failure would otherwise silently return "no table" for
+    the whole batch (enable_model_warmup pins _is_initialized False after a failed warmup).
+    """
+    global pdf_service  # noqa: PLW0602
+    if pdf_service is None or pdf_service.vlm_adapter is None:
+        return CropExtractionResult(
+            is_table=False, reason="service-unavailable", markdown="", bbox=None,
+            doctags="", confidence=0.0, prefiltered=False, degenerated=False,
+            colorfulness=0.0, duration_ms=0,
+        )
+    adapter = pdf_service.vlm_adapter
+    if not adapter._is_initialized:
+        try:
+            adapter.initialize()
+        except Exception as exc:
+            logger.error(
+                "VLM initialisation failed during extract-image: %s", exc, exc_info=True
+            )
+            return CropExtractionResult(
+                is_table=False, reason="init-failed", markdown="", bbox=None,
+                doctags="", confidence=0.0, prefiltered=False, degenerated=False,
+                colorfulness=0.0, duration_ms=0,
+            )
+    return CropDiscriminator(adapter).discriminate(img, prefilter=prefilter)
+
+
+@app.post(
+    "/api/v1/extract-image",
+    response_model=ExtractImageResponse,
+    summary="Extract a table from a single image crop (issue #3435)",
+    description=(
+        "Discriminates an hi_res image-region crop as table-vs-illustration. For tables, "
+        "returns the rebuilt markdown and the table bbox in [0,1] top-left; illustrations are "
+        "discarded (is_table=false). A colorfulness pre-filter (overridable via the `prefilter` "
+        "form field) and a repetition early-stop contain the VLM cost."
+    ),
+)
+async def extract_image(
+    image: UploadFile = File(..., description="Image crop (JPEG/PNG)"),
+    prefilter: Optional[bool] = Form(
+        default=None,
+        description="Override the colorfulness pre-filter; omit to use the service default",
+    ),
+) -> ExtractImageResponse:
+    request_id = str(uuid.uuid4())
+    logger.info(
+        "Extract-image request [%s]: file=%s prefilter=%s",
+        request_id, image.filename, prefilter,
+    )
+
+    img_bytes = await image.read()
+    if not img_bytes:
+        with metrics_lock:
+            metrics["extract_image_requests_total"] += 1
+            metrics["extract_image_failures_total"] += 1
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty image file")
+
+    try:
+        img = Image.open(io.BytesIO(img_bytes))
+        img.load()
+    except Exception as exc:
+        with metrics_lock:
+            metrics["extract_image_requests_total"] += 1
+            metrics["extract_image_failures_total"] += 1
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot open image: {exc}",
+        ) from exc
+
+    try:
+        result = await run_in_threadpool(_discriminate_crop, img, prefilter)
+    except Exception as exc:
+        logger.error("Extract-image failed [%s]: %s", request_id, exc, exc_info=True)
+        with metrics_lock:
+            metrics["extract_image_requests_total"] += 1
+            metrics["extract_image_failures_total"] += 1
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to extract table from image crop",
+        ) from exc
+
+    with metrics_lock:
+        metrics["extract_image_requests_total"] += 1
+        metrics["extract_image_duration_ms_sum"] += result.duration_ms
+        if result.prefiltered:
+            metrics["extract_image_prefiltered_total"] += 1
+        if result.degenerated:
+            metrics["extract_image_degenerated_total"] += 1
+        if result.is_table:
+            metrics["extract_image_tables_total"] += 1
+
+    logger.info(
+        "Extract-image done [%s]: is_table=%s reason=%s colorfulness=%.1f duration_ms=%d",
+        request_id, result.is_table, result.reason, result.colorfulness, result.duration_ms,
+    )
+
+    return ExtractImageResponse(
+        is_table=result.is_table,
+        reason=result.reason,
+        markdown=result.markdown,
+        bbox=list(result.bbox) if result.bbox is not None else None,
+        doctags=result.doctags,
+        confidence=result.confidence,
+        prefiltered=result.prefiltered,
+        degenerated=result.degenerated,
+        colorfulness=result.colorfulness,
+        duration_ms=result.duration_ms,
     )
 
 

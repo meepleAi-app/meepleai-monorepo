@@ -4,8 +4,8 @@ using System.Text.Json.Serialization;
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
-/// Image-table slice (#3447): extracts Image/FigureCaption regions (with bbox) from the raw Unstructured
-/// hi_res response. These are exactly the elements the normal pipeline drops (empty text) in
+/// Image-table slice (#3447): extracts Image/FigureCaption/Table regions (with bbox) from the raw
+/// Unstructured hi_res response. These are exactly the elements the normal pipeline drops (empty text) in
 /// <c>UnstructuredPdfTextExtractor.MapStructuredElements</c>, so we parse the wire format directly.
 /// Safe on null/empty/invalid input → empty. bbox clamped to [0,1].
 /// </summary>
@@ -15,8 +15,15 @@ public static class ImageRegionExtractor
     /// (Width*Height, fraction of page) is at least 3%. Filters out icons/glyphs.</summary>
     public const double DefaultMinAreaFraction = 0.03;
 
+    /// <summary>
+    /// Issue #3565: <c>Table</c> belongs here alongside the image categories. hi_res labels a table
+    /// that is drawn as graphics (the #3435 target) as <c>Table</c>, not <c>Image</c> — e.g. the
+    /// wingspan scorecard, whose extracted text is garbled because its labels are rotated. Excluding
+    /// it meant the VLM only ever saw illustrations and the pass extracted nothing on the real corpus.
+    /// False positives stay cheap: the crop-discriminator's <c>&lt;otsl&gt;</c> gate (SP3) still decides.
+    /// </summary>
     private static readonly HashSet<string> RegionCategories =
-        new(StringComparer.Ordinal) { "Image", "FigureCaption" };
+        new(StringComparer.Ordinal) { "Image", "FigureCaption", "Table" };
 
     public static IReadOnlyList<ExtractedImageRegion> FromHiResJson(
         string? hiResJson,

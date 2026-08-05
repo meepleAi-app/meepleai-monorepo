@@ -61,6 +61,14 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private string? _wikidataCoverAttribution;
     private string? _wikidataCoverSourceUrl;
     private DateTime? _wikidataQidLastVerifiedAt;
+    // Epic #3470 Slice 3a — admin manual cover (URL path): the pinned source's R2 key plus the
+    // attested license/attribution/source URL and who attested it, when.
+    private string? _manualCoverR2Key;
+    private string? _manualCoverLicense;
+    private string? _manualCoverAttribution;
+    private string? _manualCoverSourceUrl;
+    private Guid? _manualCoverAttestedBy;
+    private DateTime? _manualCoverAttestedAt;
     private bool _isDeleted;
     private Guid _createdBy;
     private Guid? _modifiedBy;
@@ -211,6 +219,24 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// (e.g. <c>https://www.wikidata.org/wiki/Q98056728</c>). Issue #1823.
     /// </summary>
     public string? WikidataCoverSourceUrl => _wikidataCoverSourceUrl;
+
+    /// <summary>Epic #3470 Slice 3a — suffix-free R2 key of the admin manual cover, or null.</summary>
+    public string? ManualCoverR2Key => _manualCoverR2Key;
+
+    /// <summary>Epic #3470 Slice 3a — attested license of the manual cover (whitelisted at set time).</summary>
+    public string? ManualCoverLicense => _manualCoverLicense;
+
+    /// <summary>Epic #3470 Slice 3a — attribution of the manual cover, or null.</summary>
+    public string? ManualCoverAttribution => _manualCoverAttribution;
+
+    /// <summary>Epic #3470 Slice 3a — source URL the manual cover was fetched from.</summary>
+    public string? ManualCoverSourceUrl => _manualCoverSourceUrl;
+
+    /// <summary>Epic #3470 Slice 3a — admin who attested the manual cover's license.</summary>
+    public Guid? ManualCoverAttestedBy => _manualCoverAttestedBy;
+
+    /// <summary>Epic #3470 Slice 3a — UTC instant the manual cover was attested.</summary>
+    public DateTime? ManualCoverAttestedAt => _manualCoverAttestedAt;
 
     /// <summary>
     /// Gets the timestamp of the last successful enrichment / re-verification of
@@ -379,7 +405,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
         string? wikidataCoverLicense = null,
         string? wikidataCoverAttribution = null,
         string? wikidataCoverSourceUrl = null,
-        DateTime? wikidataQidLastVerifiedAt = null) : base(id)
+        DateTime? wikidataQidLastVerifiedAt = null,
+        string? manualCoverR2Key = null,
+        string? manualCoverLicense = null,
+        string? manualCoverAttribution = null,
+        string? manualCoverSourceUrl = null,
+        Guid? manualCoverAttestedBy = null,
+        DateTime? manualCoverAttestedAt = null) : base(id)
     {
         _id = id;
         _title = title;
@@ -404,6 +436,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _wikidataCoverAttribution = wikidataCoverAttribution;
         _wikidataCoverSourceUrl = wikidataCoverSourceUrl;
         _wikidataQidLastVerifiedAt = wikidataQidLastVerifiedAt;
+        _manualCoverR2Key = manualCoverR2Key;
+        _manualCoverLicense = manualCoverLicense;
+        _manualCoverAttribution = manualCoverAttribution;
+        _manualCoverSourceUrl = manualCoverSourceUrl;
+        _manualCoverAttestedBy = manualCoverAttestedBy;
+        _manualCoverAttestedAt = manualCoverAttestedAt;
         _isDeleted = isDeleted;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
@@ -805,6 +843,81 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _wikidataCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
         _wikidataCoverSourceUrl = sourceUrl;
         _wikidataQidLastVerifiedAt = verifiedAt;
+    }
+
+    /// <summary>
+    /// Epic #3470 Slice 3a — pins an admin-supplied manual cover (fetched from a URL, re-encoded to
+    /// WebP, uploaded to R2). Captures the attested license/attribution/source URL and the attester
+    /// so the manual path carries its own copyright evidence (the caller MUST have validated the
+    /// license against the whitelist and persisted the R2 object before calling this).
+    /// </summary>
+    /// <exception cref="ArgumentException">Any required field is empty, or attestedBy is empty.</exception>
+    public void SetManualCover(
+        string r2Key,
+        string license,
+        string? attribution,
+        string sourceUrl,
+        Guid attestedBy,
+        DateTime attestedAt)
+    {
+        if (string.IsNullOrWhiteSpace(r2Key))
+            throw new ArgumentException("R2 key cannot be empty.", nameof(r2Key));
+
+        if (string.IsNullOrWhiteSpace(license))
+            throw new ArgumentException("License cannot be empty.", nameof(license));
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+            throw new ArgumentException("Source URL cannot be empty.", nameof(sourceUrl));
+
+        if (attestedBy == Guid.Empty)
+            throw new ArgumentException("AttestedBy cannot be empty.", nameof(attestedBy));
+
+        _manualCoverR2Key = r2Key;
+        _manualCoverLicense = license;
+        _manualCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
+        _manualCoverSourceUrl = sourceUrl;
+        _manualCoverAttestedBy = attestedBy;
+        _manualCoverAttestedAt = attestedAt;
+    }
+
+    /// <summary>
+    /// Epic #3470 Slice 3a-3 / 3f — revokes the admin-set manual cover: clears the six manual
+    /// cover / attestation fields AND drops any per-context assignment still pinned to the Manual
+    /// source (so no phantom pin survives to auto-resurface a future manual cover). Returns
+    /// <c>true</c> when anything was cleared, <c>false</c> when there was nothing to revoke — an
+    /// idempotent no-op the caller turns into a 204 without persisting or evicting caches.
+    /// </summary>
+    /// <remarks>
+    /// The handler persists the removed assignments via <c>ReconcileCoverAssignmentsAsync</c> and
+    /// best-effort deletes each removed assignment's rendered crop object (<c>GeneratedR2Key</c>).
+    /// Today <c>AssignCover</c> renders no crop for a Manual assignment, so there is nothing to
+    /// delete yet — but removing the assignment row is still correct (a dangling Manual pin would
+    /// otherwise silently re-apply the next manual cover to that context).
+    /// </remarks>
+    public bool RevokeManualCover()
+    {
+        var hadColumns = _manualCoverR2Key is not null
+            || _manualCoverLicense is not null
+            || _manualCoverAttribution is not null
+            || _manualCoverSourceUrl is not null
+            || _manualCoverAttestedBy is not null
+            || _manualCoverAttestedAt is not null;
+
+        var removedAssignments =
+            _coverAssignments.RemoveAll(a => a.Source == CoverAssignmentSource.Manual) > 0;
+
+        if (!hadColumns && !removedAssignments)
+        {
+            return false;
+        }
+
+        _manualCoverR2Key = null;
+        _manualCoverLicense = null;
+        _manualCoverAttribution = null;
+        _manualCoverSourceUrl = null;
+        _manualCoverAttestedBy = null;
+        _manualCoverAttestedAt = null;
+        return true;
     }
 
     /// <summary>

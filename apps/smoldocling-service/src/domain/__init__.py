@@ -2,6 +2,7 @@
 from .models import (
     PageImage,
     PageExtractionResult,
+    CropExtractionResult,
     QualityScore,
     TextChunk,
     ExtractionResult,
@@ -11,6 +12,7 @@ from .models import (
 __all__ = [
     "PageImage",
     "PageExtractionResult",
+    "CropExtractionResult",
     "QualityScore",
     "TextChunk",
     "ExtractionResult",

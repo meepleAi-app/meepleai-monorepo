@@ -49,9 +49,18 @@ internal static class CoverUrlResolver
     /// </summary>
     internal readonly record struct ResolvedCover(string? Url, CoverKind? Kind);
 
+    /// <summary>
+    /// Per-user resolution with the full layering (epic #3470 Slice 2c / SD3 / AC-4):
+    /// L3 user-custom cover → admin per-<paramref name="context"/> override → implicit
+    /// precedence. The user cover outranks the admin override; on an L3 miss the call
+    /// falls through to <see cref="ResolveForContextAsync"/> (which honors the admin
+    /// override then the implicit chain), NOT the context-blind <see cref="ResolvePublicAsync"/>.
+    /// Owns exactly one <see cref="MeepleAiMetrics.CoverResolution"/> emission per call.
+    /// </summary>
     public static async Task<string?> ResolveForUserAsync(
         SharedGameEntity sharedGame,
         UserLibraryEntryEntity? userEntry,
+        CoverContext context,
         IBlobStorageService blobStorage)
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
@@ -70,15 +79,17 @@ internal static class CoverUrlResolver
             }
             // L3 miss while the key was present (R2 unreachable in dev, blob
             // expired, etc.). Intentionally NO metric emission here — the
-            // recursive call to ResolvePublicAsync below emits exactly one
-            // CoverResolution event for the winning fallback layer (or
-            // "placeholder" if all layers miss), preserving the invariant that
-            // every public-facing resolution call increments the counter
-            // exactly once. The L3 miss itself is observable via the storage
-            // service's own logs / metrics, not duplicated here.
+            // ResolveForContextAsync call below emits exactly one CoverResolution
+            // event for the winning layer (admin override / implicit / "placeholder"),
+            // preserving the invariant that every public-facing resolution call
+            // increments the counter exactly once. The L3 miss itself is observable
+            // via the storage service's own logs / metrics, not duplicated here.
         }
 
-        return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);
+        // L3 absent/unresolvable → the admin per-context override sits BELOW L3 (SD3),
+        // so fall through to the context path (admin override → implicit precedence),
+        // NOT the context-blind ResolvePublicAsync.
+        return await ResolveForContextAsync(sharedGame, context, blobStorage).ConfigureAwait(false);
     }
 
     public static async Task<string?> ResolvePublicAsync(
@@ -167,8 +178,27 @@ internal static class CoverUrlResolver
     /// Metric invariant (Issue #2123): exactly one <see cref="MeepleAiMetrics.CoverResolution"/>
     /// event per call — the override emits its pinned-source tag on a win; on a
     /// fall-through the single event comes from <see cref="ResolvePublicAsync"/>.
+    ///
+    /// Epic #3470 (Slice 2): delegates to <see cref="ResolveForContextWithSourceAsync"/>
+    /// so per-context render surfaces that also need the winning source (attribution)
+    /// share one code path and one metric emission.
     /// </summary>
     public static async Task<string?> ResolveForContextAsync(
+        SharedGameEntity sharedGame,
+        CoverContext context,
+        IBlobStorageService blobStorage) =>
+        (await ResolveForContextWithSourceAsync(sharedGame, context, blobStorage).ConfigureAwait(false)).Url;
+
+    /// <summary>
+    /// Source-aware variant of <see cref="ResolveForContextAsync"/> (epic #3470 Slice 2):
+    /// returns both the URL and the winning <see cref="CoverKind"/> so per-context render
+    /// surfaces (e.g. the detail Hero, the catalog Card) can credit the correct source in
+    /// their attribution footer instead of the implicit-precedence winner. On an override
+    /// win the Kind is the pinned source's kind; on a fall-through it is the implicit
+    /// precedence winner from <see cref="ResolvePublicWithSourceAsync"/>. Owns exactly one
+    /// <see cref="MeepleAiMetrics.CoverResolution"/> emission per call.
+    /// </summary>
+    public static async Task<ResolvedCover> ResolveForContextWithSourceAsync(
         SharedGameEntity sharedGame,
         CoverContext context,
         IBlobStorageService blobStorage)
@@ -186,16 +216,16 @@ internal static class CoverUrlResolver
             if (overrideUrl is not null)
             {
                 EmitResolution(SourceTagFor(assignment.Source));
-                return overrideUrl;
+                return new ResolvedCover(overrideUrl, assignment.Source.ToCoverKind());
             }
             // Override present but unresolvable (crop stale AND base key
             // absent/unreachable). Intentionally NO metric emission here — the
-            // ResolvePublicAsync call below emits exactly one CoverResolution event
-            // for the winning implicit layer (or "placeholder"), preserving the
+            // ResolvePublicWithSourceAsync call below emits exactly one CoverResolution
+            // event for the winning implicit layer (or "placeholder"), preserving the
             // one-event-per-call invariant.
         }
 
-        return await ResolvePublicAsync(sharedGame, blobStorage).ConfigureAwait(false);
+        return await ResolvePublicWithSourceAsync(sharedGame, blobStorage).ConfigureAwait(false);
     }
 
     /// <summary>

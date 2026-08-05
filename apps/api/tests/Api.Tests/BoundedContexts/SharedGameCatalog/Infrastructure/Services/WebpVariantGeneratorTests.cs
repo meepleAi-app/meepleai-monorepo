@@ -120,6 +120,27 @@ public class WebpVariantGeneratorTests
         decoded.Height.Should().Be((uint)TargetHeight);
     }
 
+    [Theory]
+    [InlineData(MagickFormat.Gif)]
+    [InlineData(MagickFormat.Bmp)]
+    [InlineData(MagickFormat.Tiff)]
+    [InlineData(MagickFormat.WebP)]
+    public async Task GenerateWebpAsync_AllowlistedRasterSource_ProducesWebp(MagickFormat sourceFormat)
+    {
+        // #3495 M1 — the raster-only allowlist gates decode on a 6-branch magic-byte sniff.
+        // Prove each allow-listed source format (beyond PNG/JPEG) is correctly sniffed + decoded,
+        // so a typo'd offset/byte in the GIF/BMP/TIFF/WebP branch would fail CI, not ship silently.
+        var source = CreateSolidImage(width: 400, height: 400, MagickColors.Teal, sourceFormat);
+        var sut = CreateSut();
+
+        var output = await sut.GenerateWebpAsync(source, TargetWidth, TargetHeight, CancellationToken.None);
+
+        output.Should().NotBeNullOrEmpty();
+        System.Text.Encoding.ASCII.GetString(output, 0, 4).Should().Be("RIFF",
+            $"a {sourceFormat} source must be accepted by the allowlist and re-encoded to WebP");
+        System.Text.Encoding.ASCII.GetString(output, 8, 4).Should().Be("WEBP");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Input validation (ArgumentException)
     // ──────────────────────────────────────────────────────────────────────────
@@ -197,6 +218,42 @@ public class WebpVariantGeneratorTests
 
         await act.Should().ThrowAsync<ImageProcessingException>(
             "unreadable sources should surface as a typed domain exception, not raw Magick.NET errors");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Decoder hardening (#3495 M1) — decompression-bomb + non-raster coder defense
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GenerateWebpAsync_SourceExceedingDimensionCap_ThrowsImageProcessingException()
+    {
+        // Decompression-bomb defense: a source whose declared dimensions exceed the guard
+        // cap must be rejected at header-inspection (ping) time, before any full-raster
+        // allocation. A 20001x1 image is trivial to allocate here but trips the dimension cap.
+        var oversized = CreateSolidImagePng(width: 20001, height: 1, color: MagickColors.Red);
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(oversized, TargetWidth, TargetHeight, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ImageProcessingException>(
+            "sources beyond the dimension/megapixel cap must be rejected before decode (decompression-bomb defense)");
+    }
+
+    [Fact]
+    public async Task GenerateWebpAsync_SvgPayload_ThrowsImageProcessingException()
+    {
+        // Non-raster formats (SVG + delegate-backed coders) are an XXE / SSRF / RCE surface
+        // and must never reach Magick's coder — reject via the raster-only magic-byte allowlist
+        // before any decode.
+        var svg = System.Text.Encoding.UTF8.GetBytes(
+            "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\">" +
+            "<rect width=\"64\" height=\"64\" fill=\"red\"/></svg>");
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(svg, TargetWidth, TargetHeight, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ImageProcessingException>(
+            "vector/non-raster formats must be rejected by the raster-only allowlist");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -336,6 +393,15 @@ public class WebpVariantGeneratorTests
         using var image = new MagickImage(color, (uint)width, (uint)height);
         image.Format = MagickFormat.Jpeg;
         image.Quality = 90;
+        using var ms = new MemoryStream();
+        image.Write(ms);
+        return ms.ToArray();
+    }
+
+    private static byte[] CreateSolidImage(int width, int height, MagickColor color, MagickFormat format)
+    {
+        using var image = new MagickImage(color, (uint)width, (uint)height);
+        image.Format = format;
         using var ms = new MemoryStream();
         image.Write(ms);
         return ms.ToArray();

@@ -1,0 +1,39 @@
+# promtool test for egress-guard.yml (#3495 M2). NOT run in CI — on-demand only:
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/egress-guard.test.yml
+rule_files:
+  - egress-guard.yml
+evaluation_interval: 1m
+tests:
+  # 1) FIRES: a manual-sink private_ip block occurred.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_egress_blocked_total{sink="manual",reason="private_ip"}'
+        values: '0 0 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EgressBlockedManualSensitive
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              subsystem: egress-ssrf
+
+  # 2) DOES NOT FIRE on cold-start: only an unrelated sink series exists; `or vector(0)` keeps it silent.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_egress_blocked_total{sink="bgg_cover",reason="size_cap"}'
+        values: '0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EgressBlockedManualSensitive
+        exp_alerts: []
+
+  # 3) DOES NOT FIRE for a non-sensitive reason on the manual sink (size_cap is not private_ip/denylist_hit).
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_egress_blocked_total{sink="manual",reason="size_cap"}'
+        values: '1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EgressBlockedManualSensitive
+        exp_alerts: []

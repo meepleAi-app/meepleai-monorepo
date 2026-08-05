@@ -385,7 +385,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             wikidataCoverLicense: entity.WikidataCoverLicense,
             wikidataCoverAttribution: entity.WikidataCoverAttribution,
             wikidataCoverSourceUrl: entity.WikidataCoverSourceUrl,
-            wikidataQidLastVerifiedAt: entity.WikidataQidLastVerifiedAt);
+            wikidataQidLastVerifiedAt: entity.WikidataQidLastVerifiedAt,
+            manualCoverR2Key: entity.ManualCoverR2Key,
+            manualCoverLicense: entity.ManualCoverLicense,
+            manualCoverAttribution: entity.ManualCoverAttribution,
+            manualCoverSourceUrl: entity.ManualCoverSourceUrl,
+            manualCoverAttestedBy: entity.ManualCoverAttestedBy,
+            manualCoverAttestedAt: entity.ManualCoverAttestedAt);
 
         // Issue #2035: Hydrate designers from the M:N join — only when the caller
         // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
@@ -451,6 +457,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             WikidataCoverAttribution = game.WikidataCoverAttribution,
             WikidataCoverSourceUrl = game.WikidataCoverSourceUrl,
             WikidataQidLastVerifiedAt = game.WikidataQidLastVerifiedAt,
+            // Epic #3470 Slice 3a — manual cover columns (omitting them here would zero them on update).
+            ManualCoverR2Key = game.ManualCoverR2Key,
+            ManualCoverLicense = game.ManualCoverLicense,
+            ManualCoverAttribution = game.ManualCoverAttribution,
+            ManualCoverSourceUrl = game.ManualCoverSourceUrl,
+            ManualCoverAttestedBy = game.ManualCoverAttestedBy,
+            ManualCoverAttestedAt = game.ManualCoverAttestedAt,
             // SearchVector managed by PostgreSQL trigger
             CreatedBy = game.CreatedBy,
             ModifiedBy = game.ModifiedBy,

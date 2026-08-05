@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
@@ -11,20 +12,32 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// (<see cref="Domain.Aggregates.SharedGame.AssignCover"/>) and the child-safe
 /// <see cref="ISharedGameRepository.ReconcileCoverAssignmentsAsync"/>. Returns the
 /// persisted assignment so the picker can reflect the new state.
+///
+/// Slice 2 (AC-6): the cover columns the read-model resolves changed, so this handler
+/// evicts the SharedGameCatalog read caches (list <c>search-games</c> + detail
+/// <c>shared-game:{id}</c>) across replicas — otherwise the assignment stays invisible
+/// until the 15min–2h HybridCache TTL and the picker looks broken. Mirrors
+/// <see cref="EnrichCatalogCover.EnrichCatalogCoverCommandHandler"/>.
 /// </summary>
 internal sealed class AssignCoverCommandHandler : ICommandHandler<AssignCoverCommand, CoverAssignmentDto>
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
     private readonly ILogger<AssignCoverCommandHandler> _logger;
 
     public AssignCoverCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
+        IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy cacheRetryPolicy,
         ILogger<AssignCoverCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -42,6 +55,10 @@ internal sealed class AssignCoverCommandHandler : ICommandHandler<AssignCoverCom
 
         await _repository.ReconcileCoverAssignmentsAsync(game, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        await CoverCacheInvalidation
+            .EvictReadModelAsync(_cache, _cacheRetryPolicy, command.GameId, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Assigned {Source} cover to {Context} for game {GameId} by {AdminId}",

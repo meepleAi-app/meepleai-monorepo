@@ -235,10 +235,10 @@ export const SharedGameSchema = z.object({
     .default([])
     .transform(v => v ?? []),
   // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
-  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
-  wikidataCoverLicense: z.string().nullable().default(null),
-  wikidataCoverAttribution: z.string().nullable().default(null),
-  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
+  // FE component <MeepleCardAttributionFooter> renders only when coverLicense is non-null.
+  coverLicense: z.string().nullable().default(null),
+  coverAttribution: z.string().nullable().default(null),
+  coverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
@@ -323,6 +323,10 @@ export const SharedGameDetailSchema = z.object({
   // has been generated yet — consumers MUST fall back to the deterministic placeholder
   // via `lib/games/cover-utils.ts`.
   coverUrl: z.string().url().nullable().optional(),
+  // Epic #3470 Slice 2d (AC-2) — cover resolved for the Social (OpenGraph) context,
+  // consumed by the OG meta in `[id]/page.tsx`. Falls through to the implicit cover
+  // when no Social override is pinned, so it is never worse than `coverUrl`.
+  socialCoverUrl: z.string().url().nullable().optional(),
   rules: GameRulesSchema.nullable(),
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdBy: z.string().uuid(),
@@ -366,10 +370,10 @@ export const SharedGameDetailSchema = z.object({
     .default([])
     .transform(v => v ?? []),
   // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
-  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
-  wikidataCoverLicense: z.string().nullable().default(null),
-  wikidataCoverAttribution: z.string().nullable().default(null),
-  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
+  // FE component <MeepleCardAttributionFooter> renders only when coverLicense is non-null.
+  coverLicense: z.string().nullable().default(null),
+  coverAttribution: z.string().nullable().default(null),
+  coverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;

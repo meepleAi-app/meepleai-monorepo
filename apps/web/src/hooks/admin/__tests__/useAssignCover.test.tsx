@@ -97,7 +97,7 @@ describe('useAssignCover', () => {
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<CoverCandidates>(coverEditorKeys.candidates(GAME_ID));
-      expect(cached?.assignments.hero).toBe('Wikidata');
+      expect(cached?.assignments.hero).toEqual({ source: 'Wikidata', focalX: 0.5, focalY: 0.5 });
     });
 
     resolveAssign({ context: 'Hero', source: 'Wikidata', focalX: 0.5, focalY: 0.5 });

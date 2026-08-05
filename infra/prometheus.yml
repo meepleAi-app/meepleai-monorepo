@@ -32,6 +32,8 @@ rule_files:
   - '/etc/prometheus/wikidata-enrichment.yml'
   # Issue #3082 — BGG ToS-compliance SLO=0 alert (any nonzero render attempt = P1).
   - '/etc/prometheus/bgg-tos-compliance.yml'
+  # #3495 M2 — SSRF egress guard (manual-cover private_ip/denylist_hit SLO=0).
+  - '/etc/prometheus/egress-guard.yml'
   # Issue #3112 — OPS-02 Slack delivery observability alerts.
   - '/etc/prometheus/slack-delivery.yml'
   # Issue #3116 — SP5 Admin Security audit_outbox health alerts.

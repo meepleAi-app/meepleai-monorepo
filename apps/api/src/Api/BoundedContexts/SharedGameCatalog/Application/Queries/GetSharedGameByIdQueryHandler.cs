@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -387,25 +388,39 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // PdfCoverR2Key, so we load the entity here from the already-open DbContext.
         // _context.SharedGames is already queried above (aggregates query), so EF's
         // identity map will typically satisfy this from its first-level cache.
+        // Epic #3470 Slice 2: eager-load CoverAssignments so the per-context (Hero)
+        // resolver can honor an admin override; without the Include it silently falls
+        // through to the implicit precedence (the assignment appears ignored).
         var sharedGameEntity = await _context.SharedGames
             .AsNoTracking()
+            .Include(g => g.CoverAssignments)
             .Where(g => g.Id == gameId)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Epic #3470 Slice 1d-a — resolve the cover AND its winning source so the
-        // attribution footer follows the actual image (previously emitted Wikidata
-        // license/attribution unconditionally, even for a PDF/BGG-sourced cover).
+        // Epic #3470 Slice 2 — the detail page is the sole Hero surface, so resolve the
+        // cover for the Hero context (admin per-context override → implicit precedence
+        // fall-through) AND its winning source. Source-aware so the attribution footer
+        // follows the actual image (Slice 1d-a: previously emitted Wikidata license/
+        // attribution unconditionally, even for a PDF/BGG-sourced cover).
         string? coverUrl = null;
         string? coverLicense = null, coverAttribution = null, coverSourceUrl = null;
+        string? socialCoverUrl = null;
         if (sharedGameEntity is not null)
         {
             var cover = await CoverUrlResolver
-                .ResolvePublicWithSourceAsync(sharedGameEntity, _blobStorage)
+                .ResolveForContextWithSourceAsync(sharedGameEntity, CoverContext.Hero, _blobStorage)
                 .ConfigureAwait(false);
             coverUrl = cover.Url;
             (coverLicense, coverAttribution, coverSourceUrl) =
                 CoverAttribution.ForWinningSource(cover.Kind, sharedGameEntity);
+
+            // Epic #3470 Slice 2d (AC-2) — the Social-context cover feeds the FE OpenGraph
+            // meta (#3452). Independent of the Hero cover; falls through to the implicit
+            // precedence when no Social override is pinned.
+            socialCoverUrl = await CoverUrlResolver
+                .ResolveForContextAsync(sharedGameEntity, CoverContext.Social, _blobStorage)
+                .ConfigureAwait(false);
         }
 
         return new SharedGameDetailDto(
@@ -448,8 +463,9 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             CoverUrl: coverUrl,
             // Epic #3470 Slice 1d-a — source-aware attribution (read from the entity, gated
             // on the winning cover source; was emitted unconditionally from the aggregate).
-            WikidataCoverLicense: coverLicense,
-            WikidataCoverAttribution: coverAttribution,
-            WikidataCoverSourceUrl: coverSourceUrl);
+            CoverLicense: coverLicense,
+            CoverAttribution: coverAttribution,
+            CoverSourceUrl: coverSourceUrl,
+            SocialCoverUrl: socialCoverUrl);
     }
 }

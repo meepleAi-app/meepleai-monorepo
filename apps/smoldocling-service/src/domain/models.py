@@ -1,8 +1,17 @@
 """Domain models for SmolDocling PDF extraction"""
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 from PIL import Image
+
+
+# DocTags structure tags used as a "page has structured layout" signal, matched as
+# substrings on the raw doctags_text (tokenization is irrelevant). Only tags that
+# docling-core actually parses into content are listed (verified: <text> and
+# <section_header_*> export to markdown; the vocab's <paragraph>/<list_item> do NOT).
+# Single source of truth, shared by SmolDoclingAdapter._estimate_confidence and
+# QualityScoreCalculator._calculate_layout_detection (was duplicated + drift-prone).
+STRUCTURE_TAGS = ("<text>", "<section_header", "<caption>", "<page_header>")
 
 
 @dataclass
@@ -41,8 +50,62 @@ class PageExtractionResult:
 
     @property
     def is_empty(self) -> bool:
-        """Check if page extraction is empty"""
-        return len(self.doctags_text.strip()) == 0
+        """Check if the page yields no usable text content.
+
+        Keyed on ``markdown_text`` (the rendered content that becomes RAG chunks), NOT
+        on ``doctags_text``: after issue #3435 the raw DocTags markup (``<doctag>``,
+        ``<loc_*>``, ``<otsl>``, ...) is retained in ``doctags_text``, so a
+        structural-wrapper-only page (e.g. a blank page emitting ``<doctag></doctag>``)
+        has non-empty DocTags but empty markdown and must still count as empty.
+        """
+        return len(self.markdown_text.strip()) == 0
+
+
+# Canonical crop-discriminator outcome codes (issue #3435 SP3). Single source of truth for the
+# CropExtractionResult.reason field, referenced by the API schema description so the documented
+# contract cannot desync from the emitted literals (mirrors the STRUCTURE_TAGS consolidation
+# from #3538).
+CROP_REASONS = (
+    "table-otsl",            # kept: OTSL table rebuilt into markdown + bbox
+    "prefilter-colorful",    # discarded: rejected by the colorfulness pre-filter (VLM not run)
+    "no-otsl",               # discarded: VLM ran but emitted no <otsl>
+    "degenerate-earlystop",  # discarded: the repetition early-stop fired
+    "conversion-failed",     # discarded: <otsl> present but docling could not rebuild the table
+    "empty-output",          # discarded: VLM produced nothing usable
+    "service-unavailable",   # degraded: pdf_service absent (e.g. unit-test env without lifespan)
+    "init-failed",           # degraded: model initialisation failed (R5 clean degradation)
+)
+
+
+@dataclass
+class CropExtractionResult:
+    """Result of running the crop-discriminator on a single image crop (issue #3435 SP3).
+
+    The crop-discriminator decides whether an hi_res image region (an ``Image``/
+    ``FigureCaption`` crop) is a *table* worth extracting or a decorative *illustration* to
+    discard. Only the presence of an OTSL table (``<otsl>``) in the VLM's plain-mode DocTags
+    output is authoritative (spec §5quinquies): illustrations do not emit ``<otsl>``. A cheap
+    colorfulness pre-filter rejects obvious illustrations *before* the VLM to contain cost,
+    and a repetition early-stop caps the degenerate loop the VLM falls into on illustrations
+    (de-risk "Opzione B" — memory ``project_epic_3435_image_table_grounding``).
+
+    Field ownership: the ``SmolDoclingAdapter`` fills the VLM-side fields (``is_table``,
+    ``reason``, ``markdown``, ``bbox``, ``doctags``, ``confidence``, ``degenerated``,
+    ``duration_ms``) with ``prefiltered=False`` and ``colorfulness=0.0``; the
+    ``CropDiscriminator`` sets ``colorfulness`` (always) and builds the whole result itself on
+    the pre-filter-reject path.
+    """
+
+    is_table: bool
+    reason: str  # one of CROP_REASONS
+    markdown: str  # rebuilt table markdown; "" when discarded
+    bbox: Optional[Tuple[float, float, float, float]]  # [x0,y0,x1,y1] in [0,1] top-left; None when discarded/absent
+    doctags: str  # raw cleaned DocTags (audit/debug)
+    confidence: float  # heuristic VLM confidence (0-1)
+    prefiltered: bool  # True when rejected by the colorfulness pre-filter (VLM NOT run)
+    degenerated: bool  # True when the repetition early-stop fired
+    colorfulness: float  # Hasler-Süsstrunk colorfulness of the crop (0 = grayscale)
+    duration_ms: int
 
 
 @dataclass

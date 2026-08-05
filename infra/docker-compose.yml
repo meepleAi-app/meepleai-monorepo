@@ -355,6 +355,7 @@ services:
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       # Issue #3082 — BGG ToS-compliance SLO=0 alert (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      - ./prometheus/alerts/egress-guard.yml:/etc/prometheus/egress-guard.yml:ro
       # Issue #3112 — OPS-02 Slack delivery alerts (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/slack-delivery.yml:/etc/prometheus/slack-delivery.yml:ro
       - ./prometheus/alerts/audit-outbox.yml:/etc/prometheus/audit-outbox.yml:ro

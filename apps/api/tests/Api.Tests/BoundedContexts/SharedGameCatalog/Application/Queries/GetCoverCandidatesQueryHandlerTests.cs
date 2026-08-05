@@ -111,7 +111,7 @@ public sealed class GetCoverCandidatesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ReportsPerContextAssignments()
+    public async Task Handle_ReportsPerContextAssignments_WithSourceAndFocal()
     {
         using var ctx = TestDbContextFactory.CreateInMemoryDbContext();
         var game = SeedGame(ctx, g =>
@@ -119,7 +119,7 @@ public sealed class GetCoverCandidatesQueryHandlerTests
             g.WikidataCoverR2Key = "covers/y/cover";
             g.CoverAssignments = new List<GameCoverAssignmentEntity>
             {
-                new() { Id = Guid.NewGuid(), Context = CoverContext.Card, Source = CoverAssignmentSource.Wikidata, CreatedBy = Guid.NewGuid() },
+                new() { Id = Guid.NewGuid(), Context = CoverContext.Card, Source = CoverAssignmentSource.Wikidata, FocalX = 0.3, FocalY = 0.7, CreatedBy = Guid.NewGuid() },
                 new() { Id = Guid.NewGuid(), Context = CoverContext.Hero, Source = CoverAssignmentSource.Pdf, CreatedBy = Guid.NewGuid() },
             };
         });
@@ -129,8 +129,12 @@ public sealed class GetCoverCandidatesQueryHandlerTests
 
         var result = await handler.Handle(new GetCoverCandidatesQuery(game.Id), CancellationToken.None);
 
-        result!.Assignments.Card.Should().Be(CoverAssignmentSource.Wikidata);
-        result.Assignments.Hero.Should().Be(CoverAssignmentSource.Pdf);
+        // Epic #3470 Slice 2e (AC-5): each context carries source + the persisted focal so
+        // the FE picker can pre-fill the saved focal instead of always starting at 0.5/0.5.
+        result!.Assignments.Card!.Source.Should().Be(CoverAssignmentSource.Wikidata);
+        result.Assignments.Card.FocalX.Should().Be(0.3);
+        result.Assignments.Card.FocalY.Should().Be(0.7);
+        result.Assignments.Hero!.Source.Should().Be(CoverAssignmentSource.Pdf);
         result.Assignments.Social.Should().BeNull("no assignment pins the Social context");
     }
 }

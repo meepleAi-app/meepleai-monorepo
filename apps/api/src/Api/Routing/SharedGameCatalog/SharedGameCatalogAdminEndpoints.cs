@@ -89,6 +89,27 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
+        // Manual cover from a URL (epic #3470 Slice 3a): admin supplies an HTTPS image URL + attested license.
+        group.MapPost("/admin/shared-games/{id:guid}/manual-cover", HandleSetManualCover)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SetManualCover")
+            .WithSummary("Set a manual cover from a URL (Admin/Editor)")
+            .WithDescription("Fetches an admin-supplied HTTPS image (SSRF-pinned, 10MB-capped), re-encodes to WebP, stores it in R2, and pins it as the game's manual cover with the attested (whitelisted) license.")
+            .Produces<ManualCoverResult>()
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // Revoke a manual cover (epic #3470 Slice 3a-3): clears the manual cover + attestation.
+        group.MapDelete("/admin/shared-games/{id:guid}/manual-cover", HandleRevokeManualCover)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("RevokeManualCover")
+            .WithSummary("Revoke a game's manual cover (Admin/Editor)")
+            .WithDescription("Clears the manual cover columns + license attestation and best-effort deletes the R2 object. Idempotent: 204 whether or not a manual cover was set; 404 only if the game is missing.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound);
+
         // Submit game for approval (Draft → PendingApproval) - Issue #2514
         group.MapPost("/admin/shared-games/{id:guid}/submit-for-approval", HandleSubmitForApproval)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -933,6 +954,39 @@ internal static class SharedGameCatalogAdminEndpoints
         if (!authorized) return error!;
 
         await mediator.Send(new RemoveCoverAssignmentCommand(id, context, session!.Principal!.Subject.Id), ct)
+            .ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> HandleSetManualCover(
+        Guid id,
+        SetManualCoverRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var command = new SetManualCoverCommand(
+            id, request.SourceUrl, request.License, request.Attribution, session!.Principal!.Subject.Id);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleRevokeManualCover(
+        Guid id,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct,
+        [FromBody] RevokeManualCoverRequest? request = null)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        // #3495 H6 — optional takedown reason (null when the caller sends no body) → audit event.
+        await mediator.Send(
+                new RevokeManualCoverCommand(id, session!.Principal!.Subject.Id, request?.Reason), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
     }

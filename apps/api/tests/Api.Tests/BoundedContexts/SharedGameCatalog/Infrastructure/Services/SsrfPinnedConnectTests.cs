@@ -1,4 +1,5 @@
 using System.Net;
+using Api.Observability;
 using Api.SharedKernel.Infrastructure.Http;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -36,7 +37,7 @@ public class SsrfPinnedConnectTests
     {
         var dns = new FakeDnsResolver("8.8.8.8");
 
-        var pinned = await SsrfPinnedConnect.ResolveAndValidateAsync(dns, "cdn.example.com", CancellationToken.None);
+        var pinned = await SsrfPinnedConnect.ResolveAndValidateAsync(dns, "cdn.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None);
 
         pinned.Should().Be(IPAddress.Parse("8.8.8.8"));
         dns.ResolveCalls.Should().Be(1, "the pin must not re-resolve after validation");
@@ -47,7 +48,7 @@ public class SsrfPinnedConnectTests
     {
         var dns = new FakeDnsResolver("10.0.0.5");
 
-        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "evil.example.com", CancellationToken.None);
+        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "evil.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*blocked*");
     }
@@ -57,7 +58,7 @@ public class SsrfPinnedConnectTests
     {
         var dns = new FakeDnsResolver("169.254.169.254");
 
-        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "meta.example.com", CancellationToken.None);
+        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "meta.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -69,7 +70,7 @@ public class SsrfPinnedConnectTests
         // address must be rejected (never pin the public one and ignore the private).
         var dns = new FakeDnsResolver("8.8.8.8", "169.254.169.254");
 
-        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "rebind.example.com", CancellationToken.None);
+        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "rebind.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
@@ -79,7 +80,7 @@ public class SsrfPinnedConnectTests
     {
         var dns = new FakeDnsResolver();
 
-        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "void.example.com", CancellationToken.None);
+        var act = () => SsrfPinnedConnect.ResolveAndValidateAsync(dns, "void.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*resolve*");
     }

@@ -9419,6 +9419,16 @@ namespace Api.Infrastructure.Migrations
                     b.Property<long>("FileSizeBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<int>("ImageRegionSeedAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("image_region_seed_attempts");
+
+                    b.Property<DateTime?>("ImageRegionsSeededAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("image_regions_seeded_at");
+
                     b.Property<string>("IndexerVersion")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
@@ -9649,6 +9659,94 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_pdf_image_regions_pdf_document_id");
 
                     b.ToTable("pdf_image_regions", (string)null);
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.PdfTableExtractionEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<double?>("Confidence")
+                        .HasColumnType("double precision")
+                        .HasColumnName("confidence");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<double>("Height")
+                        .HasColumnType("double precision")
+                        .HasColumnName("height");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("last_error");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("page_number");
+
+                    b.Property<Guid>("PdfDocumentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pdf_document_id");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("RegionHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("region_hash");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("TableMarkdown")
+                        .HasColumnType("text")
+                        .HasColumnName("table_markdown");
+
+                    b.Property<Guid?>("TextChunkId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("text_chunk_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<double>("Width")
+                        .HasColumnType("double precision")
+                        .HasColumnName("width");
+
+                    b.Property<double>("X")
+                        .HasColumnType("double precision")
+                        .HasColumnName("x");
+
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision")
+                        .HasColumnName("y");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_pdf_table_extractions_status");
+
+                    b.HasIndex("PdfDocumentId", "RegionHash")
+                        .IsUnique()
+                        .HasDatabaseName("ux_pdf_table_extractions_pdf_region");
+
+                    b.ToTable("pdf_table_extractions", (string)null);
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PromptAuditLogEntity", b =>
@@ -17835,6 +17933,17 @@ namespace Api.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("Api.Infrastructure.Entities.PdfImageRegionEntity", b =>
+                {
+                    b.HasOne("Api.Infrastructure.Entities.PdfDocumentEntity", "PdfDocument")
+                        .WithMany()
+                        .HasForeignKey("PdfDocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PdfDocument");
+                });
+
+            modelBuilder.Entity("Api.Infrastructure.Entities.PdfTableExtractionEntity", b =>
                 {
                     b.HasOne("Api.Infrastructure.Entities.PdfDocumentEntity", "PdfDocument")
                         .WithMany()

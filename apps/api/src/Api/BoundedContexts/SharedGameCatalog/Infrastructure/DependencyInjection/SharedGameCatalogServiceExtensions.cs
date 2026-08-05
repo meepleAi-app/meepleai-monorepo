@@ -1,3 +1,4 @@
+using Api.Observability;
 using Api.SharedKernel.Constants;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
@@ -203,6 +204,12 @@ internal static class SharedGameCatalogServiceExtensions
         // request and each of the ≤5 auto-redirect hops).
         AddBggCoverDownloader(services);
 
+        // #3495 fix 5/N: the arbitrary-URL manual/PDF download client (SsrfSafeHttpClient) — the
+        // prerequisite egress client for #3470 Slice 3. Pinned like the cover clients, but with
+        // AllowAutoRedirect=false so the client follows redirects itself through an HTTPS-only
+        // per-hop scheme gate (the pin only re-checks the IP). 30s timeout accommodates larger PDFs.
+        AddSsrfSafeHttpClient(services);
+
         // Issue #1903 M5.2: register HttpClients, keyed catalog providers,
         // aggregator, and Quartz CatalogSeedFetchJob.
         RegisterCatalogSeedProviders(services);
@@ -395,7 +402,20 @@ internal static class SharedGameCatalogServiceExtensions
         {
             client.Timeout = TimeSpan.FromSeconds(10);
         })
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.BggCover);
+
+    /// <summary>
+    /// Issue #3495 fix 5/N — registers the hardened arbitrary-URL download client
+    /// (<see cref="SsrfSafeHttpClient"/>, the #3470 Slice 3 prerequisite) with the SSRF connect-pin.
+    /// <c>allowAutoRedirect: false</c> so the client follows redirects manually through an HTTPS-only
+    /// per-hop scheme gate — the connect-pin re-validates the IP of each hop but not the scheme.
+    /// </summary>
+    private static void AddSsrfSafeHttpClient(IServiceCollection services) =>
+        services.AddHttpClient<SsrfSafeHttpClient>(client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(30);
+        })
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Manual, allowAutoRedirect: false);
 
     /// <summary>
     /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned BGG cover-download client so
@@ -408,6 +428,19 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddLogging();
         services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
         AddBggCoverDownloader(services);
+    }
+
+    /// <summary>
+    /// Test seam (issue #3495 fix 5/N): registers ONLY the SSRF-pinned arbitrary-URL client
+    /// (<see cref="SsrfSafeHttpClient"/>) so a DI-resolution test can prove a private-resolving host
+    /// fails closed at the connect-pin. The caller MUST register an <see cref="IDnsResolver"/> on the
+    /// same collection before resolving to override the <c>TryAddSingleton</c> default.
+    /// </summary>
+    internal static void AddSsrfSafeHttpClientForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        AddSsrfSafeHttpClient(services);
     }
 
     private static BggCoverUploadPipeline BuildBggCoverUploadPipeline(
@@ -484,7 +517,7 @@ internal static class SharedGameCatalogServiceExtensions
         // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
         // ConfigureSsrfPin uses ConfigurePrimaryHttpMessageHandler (innermost), so the circuit-breaker
         // delegating handler above stays outer (CB → pin), matching the Slack registration.
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikidata);
 
         // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
         // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
@@ -522,7 +555,7 @@ internal static class SharedGameCatalogServiceExtensions
         // holds — and each redirect hop's host is independently re-resolved and SSRF-validated by the
         // per-connection pin (upload.wikimedia.org is public → allowed). Do NOT add any other
         // ConfigurePrimaryHttpMessageHandler here: it would override the pin.
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikimedia);
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
@@ -531,7 +564,7 @@ internal static class SharedGameCatalogServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         })
         // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
-        .ConfigureSsrfPin();
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg);
 
         // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
         // and "bgg" (fallback) explicitly — avoids relying on registration order.
@@ -737,7 +770,17 @@ internal static class SharedGameCatalogServiceExtensions
             .AddPolicy("AdminOrEditorPolicy", policy =>
                 policy.RequireRole("SuperAdmin", "Admin", "Editor"))
             .AddPolicy("AdminOnlyPolicy", policy =>
-                policy.RequireRole("SuperAdmin", "Admin"));
+                policy.RequireRole("SuperAdmin", "Admin"))
+            // Issue #3472: policy names referenced by endpoints via .RequireAuthorization("...")
+            // but previously never registered — an unregistered policy makes the authorization
+            // middleware throw "AuthorizationPolicy named 'X' was not found" → HTTP 500 at request
+            // time. "AdminPolicy" (GameToolkitRoutes review routes + RemoveRag full-cleanup) mirrors
+            // AdminOnlyPolicy; "EditorOnlyPolicy" (bulk approve/reject share-requests) mirrors
+            // AdminOrEditorPolicy (editor tier and above — admins are never below editors).
+            .AddPolicy("AdminPolicy", policy =>
+                policy.RequireRole("SuperAdmin", "Admin"))
+            .AddPolicy("EditorOnlyPolicy", policy =>
+                policy.RequireRole("SuperAdmin", "Admin", "Editor"));
 
         return services;
     }

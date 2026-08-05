@@ -118,7 +118,7 @@ const validCandidatesDto = {
   gameId: '550e8400-e29b-41d4-a716-446655440000',
   candidates: [validCandidate],
   assignments: {
-    card: 'Wikidata',
+    card: { source: 'Wikidata', focalX: 0.5, focalY: 0.5 },
     hero: null,
     social: null,
   },
@@ -129,7 +129,7 @@ describe('CoverCandidatesSchema', () => {
     const result = CoverCandidatesSchema.safeParse(validCandidatesDto);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.assignments.card).toBe('Wikidata');
+      expect(result.data.assignments.card?.source).toBe('Wikidata');
       expect(result.data.assignments.hero).toBeNull();
       expect(result.data.candidates).toHaveLength(1);
     }
@@ -162,7 +162,11 @@ describe('CoverCandidatesSchema', () => {
   it('rejects an invalid enum inside assignments', () => {
     const result = CoverCandidatesSchema.safeParse({
       ...validCandidatesDto,
-      assignments: { card: 'custom', hero: null, social: null },
+      assignments: {
+        card: { source: 'custom', focalX: 0.5, focalY: 0.5 },
+        hero: null,
+        social: null,
+      },
     });
     expect(result.success).toBe(false);
   });

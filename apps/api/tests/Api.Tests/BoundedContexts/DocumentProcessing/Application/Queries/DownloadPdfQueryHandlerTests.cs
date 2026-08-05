@@ -83,6 +83,43 @@ public class DownloadPdfQueryHandlerTests
         capturedResourceKey.Should().Be(bucketKey, "the resourceKey is still the pdfId-derived bucket");
     }
 
+    /// <summary>
+    /// Issue #3568: the resourceKey is not the pdfId either. `UploadPdfCommandHandler` stores under
+    /// `gameId ?? privateGameId`, `UploadSharedGamePdfCommandHandler` under `shared-game-{id}`, the
+    /// import wizard under `wizard-temp` — only the seeded corpus happens to use the pdfId. Both blob
+    /// backends resolve by exact `{category}/{resourceKey}/{fileId}_` prefix, so reading with the
+    /// pdfId-derived bucket looks in a folder that does not exist and 404s a file that is there.
+    /// </summary>
+    [Fact]
+    public async Task Handle_UsesResourceKeyFromFilePath_WhenItIsNotThePdfId()
+    {
+        var pdfId = Guid.NewGuid();
+        const string gameId = "7f3a1c2e-0000-4444-8888-abcdefabcdef"; // the upload-time resourceKey
+        const string storedFileId = "0123456789abcdef0123456789abcdef";
+
+        using var ctx = CreateDbContext();
+        SeedPdf(ctx, pdfId, $"pdfs/{gameId}/{storedFileId}_rulebook.pdf");
+
+        string? capturedFileId = null;
+        string? capturedResourceKey = null;
+        var blob = new Mock<IBlobStorageService>();
+        blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, BlobCategory, string, CancellationToken>((f, _, r, _) =>
+            {
+                capturedFileId = f;
+                capturedResourceKey = r;
+            })
+            .ReturnsAsync(() => new MemoryStream([1]));
+
+        var handler = new DownloadPdfQueryHandler(ctx, blob.Object, NullLogger<DownloadPdfQueryHandler>.Instance);
+
+        var result = await handler.Handle(new DownloadPdfQuery(pdfId, uploaderId, false), default);
+
+        result.Should().NotBeNull();
+        capturedFileId.Should().Be(storedFileId);
+        capturedResourceKey.Should().Be(gameId, "the file lives under the upload-time resourceKey, not under the pdfId");
+    }
+
     [Fact]
     public async Task Handle_WhenFilePathHasNoRecoverableFileId_FallsBackToBucketKey()
     {

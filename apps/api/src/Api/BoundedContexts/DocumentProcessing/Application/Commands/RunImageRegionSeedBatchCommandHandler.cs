@@ -213,8 +213,18 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
             catch (Exception ex)
 #pragma warning restore CA1031
             {
+                // Issue #3570: a client timeout arrives here as an OperationCanceledException whose
+                // token is NOT the caller's (the caller's case is handled above), and it means
+                // something different from a parse/HTTP failure: the pass was still running when the
+                // budget ran out, so it is load-dependent and worth retrying — whereas a malformed
+                // response will fail identically every time. Both still count toward MaxSeedAttempts
+                // (a PDF that always times out must not starve the batch), but the log has to tell
+                // them apart or an operator reads "seed failed" and goes looking for the wrong cause.
+                var timedOut = ex is OperationCanceledException;
                 _logger.LogWarning(ex,
-                    "RunImageRegionSeedBatch: hi_res region seed failed for PDF {PdfId}; skipping (will retry)",
+                    timedOut
+                        ? "RunImageRegionSeedBatch: hi_res region seed TIMED OUT for PDF {PdfId} (client budget exhausted; consider raising PdfProcessing:Extractor:Unstructured:HiResTimeoutSeconds or reducing concurrent load); skipping (will retry)"
+                        : "RunImageRegionSeedBatch: hi_res region seed failed for PDF {PdfId}; skipping (will retry)",
                     candidate.Id);
                 outcome = await RecordSeedFailureAsync(candidate.Id, cancellationToken).ConfigureAwait(false);
                 failed++;

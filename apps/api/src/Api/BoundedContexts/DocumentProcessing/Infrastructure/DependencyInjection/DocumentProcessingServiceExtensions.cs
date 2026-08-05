@@ -584,8 +584,16 @@ internal static class DocumentProcessingServiceExtensions
                              ?? "http://unstructured-service:8001";
                 client.BaseAddress = new Uri(apiUrl);
 
+                // Issue #3570: default raised from 300s. The timeout covers the WHOLE request, and
+                // 300s left no margin: on staging the seed batch lost descent, terraforming-mars and
+                // 7-wonders — the table-heavy rulebooks — all aborting at 302s while an unrelated
+                // reindex was competing for the same unstructured instance. Measured in isolation
+                // right after, 7-wonders completes its hi_res pass in 221s: the documents were not
+                // intrinsically too slow, the budget was simply too tight to absorb contention.
+                // A maintenance batch can afford to wait; being dead-lettered after 3 such aborts
+                // (MaxSeedAttempts) permanently excludes a PDF from the VLM pipeline, which is worse.
                 var hiResTimeoutSeconds = configuration.GetValue<int?>(
-                    "PdfProcessing:Extractor:Unstructured:HiResTimeoutSeconds") ?? 300;
+                    "PdfProcessing:Extractor:Unstructured:HiResTimeoutSeconds") ?? 900;
                 client.Timeout = TimeSpan.FromSeconds(hiResTimeoutSeconds);
 
                 client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI-Backend/1.0");

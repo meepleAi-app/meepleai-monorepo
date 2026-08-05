@@ -116,12 +116,17 @@ internal static class DocumentProcessingServiceExtensions
         // (the seed-batch handler injects it under every provider — see method doc).
         RegisterImageRegionHiResExtractor(services, configuration);
 
+        // #3569: same reasoning for the SmolDoclingService named client — GetPdfPageImageQueryHandler
+        // resolves it under every provider, so configuring it only for SmolDocling/Orchestrator left
+        // the default (Docnet) deployment with a BaseAddress-less client and a 500 on page-image.
+        RegisterSmolDoclingHttpClient(services, configuration);
+
         if (extractorProvider.Equals("Orchestrator", StringComparison.OrdinalIgnoreCase))
         {
             // BGAI-087 + ISSUE-1174: Register all extractors for orchestrator using keyed services
             // This prevents circular dependency: OrchestratedPdfTextExtractor → EnhancedPdfProcessingOrchestrator → IPdfTextExtractor[]
             RegisterUnstructuredExtractor(services, configuration);
-            RegisterSmolDoclingExtractor(services, configuration);
+            RegisterSmolDoclingExtractor(services);
             services.AddScoped<DocnetPdfTextExtractor>();
 
             // ISSUE-1174: Register stage extractors as keyed services (avoids circular DI dependency)
@@ -146,7 +151,7 @@ internal static class DocumentProcessingServiceExtensions
         }
         else if (extractorProvider.Equals("SmolDocling", StringComparison.OrdinalIgnoreCase))
         {
-            RegisterSmolDoclingExtractor(services, configuration);
+            RegisterSmolDoclingExtractor(services);
             services.AddScoped<IPdfTextExtractor, SmolDoclingPdfTextExtractor>();
         }
         else
@@ -592,9 +597,17 @@ internal static class DocumentProcessingServiceExtensions
     }
 
     /// <summary>
-    /// BGAI-087: Register SmolDocling extractor with new config
+    /// Issue #3569: configures the <c>SmolDoclingService</c> named client. Registered UNCONDITIONALLY
+    /// (see caller) because consumers outside the extractor chain resolve it under every provider —
+    /// <c>GetPdfPageImageQueryHandler</c> (import-wizard page preview) calls
+    /// <c>CreateClient("SmolDoclingService")</c> regardless of <c>PdfProcessing:Extractor:Provider</c>.
+    /// When this ran only for the SmolDocling/Orchestrator providers, the default (Docnet) config
+    /// handed the handler a client with no <c>BaseAddress</c> and the endpoint answered 500
+    /// ("An invalid request URI was provided"). Same class of defect as the DI pitfall in #2565.
+    /// Must be called exactly once: <c>AddHttpClient</c> accumulates configuration per name, so a
+    /// second call would stack a duplicate retry policy.
     /// </summary>
-    private static void RegisterSmolDoclingExtractor(IServiceCollection services, IConfiguration configuration)
+    private static void RegisterSmolDoclingHttpClient(IServiceCollection services, IConfiguration configuration)
     {
         services.AddHttpClient("SmolDoclingService", client =>
             {
@@ -610,7 +623,15 @@ internal static class DocumentProcessingServiceExtensions
             .AddPolicyHandler(GetRetryPolicy(
                 configuration.GetValue<int?>("PdfProcessing:Extractor:SmolDocling:MaxRetries") ?? 3))
             .AddServiceCallLogging("SmolDoclingService");
+    }
 
+    /// <summary>
+    /// BGAI-087: Register SmolDocling extractor with new config.
+    /// The HTTP client itself is registered unconditionally by
+    /// <see cref="RegisterSmolDoclingHttpClient"/> (#3569); this only adds the extractor.
+    /// </summary>
+    private static void RegisterSmolDoclingExtractor(IServiceCollection services)
+    {
         services.AddScoped<SmolDoclingPdfTextExtractor>();
     }
 

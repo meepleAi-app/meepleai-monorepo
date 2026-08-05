@@ -78,8 +78,16 @@ internal class DownloadPdfQueryHandler : IQueryHandler<DownloadPdfQuery, PdfDown
         // Step 3: Retrieve file stream from blob storage
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
         var bucketKey = PdfStorageKey.ForPdf(pdf.Id);
+
+        // Issue #3568: the fileId is NOT the pdfId. StoreAsync generates a random fileId and persists
+        // it inside FilePath ({category}/{resourceKey}/{fileId}_{name}), so the read path must recover
+        // it from there — passing bucketKey as fileId looks for pdfs/{pdfId}/{pdfId}_* and matches
+        // nothing, which surfaced as a 404 on files that exist (see PdfStorageKey remarks, #2671).
+        // Fallback to bucketKey when FilePath predates that layout, preserving the legacy lookup.
+        var fileId = PdfStorageKey.FileIdFromPath(pdf.FilePath) ?? bucketKey;
+
         var fileStream = await _blobStorageService
-            .RetrieveAsync(bucketKey, BlobCategory.Pdf, bucketKey, cancellationToken)
+            .RetrieveAsync(fileId, BlobCategory.Pdf, bucketKey, cancellationToken)
             .ConfigureAwait(false);
 
         if (fileStream == null)

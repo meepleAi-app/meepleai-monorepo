@@ -204,6 +204,9 @@ public sealed class SetManualCoverCommandHandlerTests
     {
         // Defence in depth: the validator rejects non-HTTPS at 400, but the SSRF-safe fetch path
         // ALSO re-validates the scheme, so a handler invoked directly still refuses egress.
+        // #3495 Slice D: that refusal is now a typed HardenedFetchException carrying a bounded
+        // reason (still mapped to 400 by ApiExceptionHandlerMiddleware) instead of a bare
+        // ArgumentException whose meaning had to be inferred from its message.
         var game = NewGame();
         _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
 
@@ -211,7 +214,8 @@ public sealed class SetManualCoverCommandHandlerTests
             Command(game.Id) with { SourceUrl = "http://commons.example.org/cover.png" },
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<ArgumentException>();
+        var thrown = await act.Should().ThrowAsync<Api.SharedKernel.Infrastructure.Http.HardenedFetchException>();
+        thrown.Which.Reason.Should().Be(Api.SharedKernel.Infrastructure.Http.HardenedFetchBlockReason.Scheme);
         _httpHandler.RequestCount.Should().Be(0);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

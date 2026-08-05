@@ -29,6 +29,8 @@ internal static partial class MeepleAiMetrics
     {
         public const string PrivateIp = "private_ip";
         public const string DenylistHit = "denylist_hit";
+        /// <summary>A hop targeted a non-default port — port-probing an internal service (#3495 H2).</summary>
+        public const string Port = "port";
         public const string RedirectExhausted = "redirect_exhausted";
         public const string SizeCap = "size_cap";
         public const string DecodeFail = "decode_fail";

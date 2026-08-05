@@ -1,4 +1,5 @@
-using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+using Api.Observability;
+using Api.SharedKernel.Infrastructure.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -34,20 +35,23 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
             return null;
         }
 
-        // SSRF guard: reject non-HTTPS / malformed URLs up front (fail-fast). The public-IP
+        // SSRF guard: reject non-HTTPS / non-default-port / malformed URLs up front (fail-fast),
+        // through the SAME validator the hardened fetch engine applies per hop (#3495 Slice D — one
+        // scheme/port rule for every sink, instead of a private copy that can drift). The public-IP
         // guarantee is enforced at connect time by the SSRF connect-pin on this client's handler
         // (ConfigureSsrfPin, #3495) — which, unlike a pre-connect DNS check, is not TOCTOU: every
         // connection (and each redirect hop) dials only a validated public address.
         try
         {
-            SsrfSafeHttpClient.ValidateUrlScheme(remoteImageUrl);
+            HardenedRedirectFetch.ResolveAndValidate(
+                remoteImageUrl, baseAddress: null, MeepleAiMetrics.EgressSinks.BggCover);
         }
-        catch (ArgumentException ex)
+        catch (HardenedFetchException ex)
         {
             _logger.LogWarning(
                 ex,
-                "BGG cover download blocked by SSRF guard: BggId={BggId}, Url={Url}",
-                bggId, remoteImageUrl);
+                "BGG cover download blocked by SSRF guard ({Reason}): BggId={BggId}, Url={Url}",
+                ex.Reason, bggId, remoteImageUrl);
             return null;
         }
 

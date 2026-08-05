@@ -414,6 +414,18 @@ internal class ApiExceptionHandlerMiddleware
                 "La copertina non è al momento disponibile per il rendering. Riprova più tardi."
             ),
 
+            // #3495 Slice D: the egress gate refused a caller-supplied URL (or its redirect chain).
+            // That is bad input, not a server bug — a 500 here would both mislead the caller and
+            // pollute the error-rate SLO. The deadline case is a gateway timeout. The message stays
+            // generic on purpose: the offending host/IP belongs in the log, never in the response.
+            Api.SharedKernel.Infrastructure.Http.HardenedFetchException fetchEx => (
+                fetchEx.Reason == Api.SharedKernel.Infrastructure.Http.HardenedFetchBlockReason.Timeout
+                    ? StatusCodes.Status504GatewayTimeout
+                    : StatusCodes.Status400BadRequest,
+                "egress_blocked",
+                "L'URL indicato non può essere scaricato in sicurezza."
+            ),
+
             // Domain exceptions (from SharedKernel)
             Api.SharedKernel.Domain.Exceptions.ValidationException validationEx => (
                 StatusCodes.Status400BadRequest,

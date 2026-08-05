@@ -539,14 +539,12 @@ internal static class SharedGameCatalogServiceExtensions
         // suppression below covers the public Commons API endpoint just like
         // the other catalog providers.
         //
-        // Issue #1823 M8 invariant: do NOT add a ConfigurePrimaryHttpMessageHandler
-        // that sets AllowAutoRedirect=false. FetchImageBytesAsync calls
-        // commons.wikimedia.org/wiki/Special:FilePath/{filename}, which returns
-        // a 302 redirect to upload.wikimedia.org/<cdn-url>. The default handler
-        // AllowAutoRedirect=true is what makes the image bytes accessible — a
-        // false setting would surface the 302 HTML body as bytes, which would
-        // then fail at WebP decoding (FailReasonImageProcessing) instead of the
-        // expected SkipReasonImageBytesNotAvailable on real 404s.
+        // #3495 Slice D (finding H1) — SUPERSEDES the #1823 M8 invariant "do NOT disable redirects".
+        // The Special:FilePath 302 → upload.wikimedia.org is STILL followed (the image bytes stay
+        // reachable), but by WikimediaCommonsClient through HardenedRedirectFetch instead of by the
+        // handler: every hop is re-validated (HTTPS-only, default port) and the body is read under a
+        // ceiling with a total wall-clock deadline. Auto-redirect must therefore be OFF, or the
+        // handler would follow a downgrade before the gate could refuse it.
 #pragma warning disable S1075 // URIs should not be hardcoded
         const string CommonsBaseUrl = "https://commons.wikimedia.org/";
 #pragma warning restore S1075
@@ -562,12 +560,11 @@ internal static class SharedGameCatalogServiceExtensions
         .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
             sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
             clientName: "commons-api"))
-        // #3495 follow-up: SSRF connect-pin. ConfigureSsrfPin sets AllowAutoRedirect=true, so the
-        // M8 invariant above (Special:FilePath 302 → upload.wikimedia.org MUST be auto-followed) still
-        // holds — and each redirect hop's host is independently re-resolved and SSRF-validated by the
-        // per-connection pin (upload.wikimedia.org is public → allowed). Do NOT add any other
+        // #3495 Slice D: the pin keeps owning the IP boundary per connection (each hop re-resolved,
+        // upload.wikimedia.org is public → allowed), and auto-redirect is now OFF so the 3xx surfaces
+        // in WikimediaCommonsClient and is followed through the hardened gate. Do NOT add any other
         // ConfigurePrimaryHttpMessageHandler here: it would override the pin.
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikimedia);
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikimedia, allowAutoRedirect: false);
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {

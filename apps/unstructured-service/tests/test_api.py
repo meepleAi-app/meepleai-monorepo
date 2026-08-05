@@ -140,6 +140,53 @@ class TestExtractEndpoint:
         caption = next(e for e in elements if e["category"] == "FigureCaption")
         assert caption["bbox"] is not None
 
+    @patch("src.main.pdf_service.extract")
+    def test_extract_keeps_bbox_bearing_table_regions(self, mock_extract, client, mock_pdf_content):
+        """#3565: a graphics-drawn table is labelled 'Table' by hi_res, and its text may be empty
+        (or garbled) when OCR cannot read rotated labels. It must survive the filter like the other
+        region categories, otherwise the image-table VLM pass (#3435) never sees a real table."""
+        from types import SimpleNamespace
+
+        def _el(text, category, page_number, points=None, system_wh=None):
+            coordinates = None
+            if points and system_wh:
+                coordinates = SimpleNamespace(
+                    points=points,
+                    system=SimpleNamespace(width=system_wh[0], height=system_wh[1]),
+                )
+            return SimpleNamespace(
+                text=text,
+                category=category,
+                metadata=SimpleNamespace(page_number=page_number, coordinates=coordinates),
+            )
+
+        els = [
+            _el("", "Table", 5, [(6, 76), (44, 95)], (100, 100)),  # empty Table + bbox → kept
+            _el("", "Table", 6, None, None),                       # Table w/o bbox → dropped
+        ]
+        mock_extract.return_value = ExtractionResult(
+            full_text="",
+            chunks=[TextChunk(text="c", page_number=1, element_type="CompositeElement")],
+            page_count=6,
+            elements=els,
+            tables=[],
+            detected_structures=["Table"],
+            extraction_duration_ms=1000,
+            quality_score=QualityScore(0.85, 0.40, 0.18, 0.15, 0.12),
+        )
+
+        response = client.post(
+            "/api/v1/extract",
+            files={"file": ("test.pdf", mock_pdf_content, "application/pdf")},
+            data={"strategy": "hi_res", "language": "ita"},
+        )
+
+        assert response.status_code == 200
+        elements = response.json()["elements"]
+        assert [e["category"] for e in elements] == ["Table"]
+        assert elements[0]["page_number"] == 5
+        assert elements[0]["bbox"] is not None
+
     def test_extract_missing_file(self, client):
         """Test extraction without file returns 422"""
         # Act

@@ -13,7 +13,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
 /// #3435 (SP1): batch runner for automatic image-region seeding. For each Ready, never-seeded PDF it
-/// runs a dedicated hi_res pass (long-timeout client) and persists Image/FigureCaption regions via
+/// runs a dedicated hi_res pass (long-timeout client) and persists Image/FigureCaption/Table regions via
 /// <see cref="SeedPdfImageRegionsCommand"/>, then stamps <c>ImageRegionsSeededAt</c> so the PDF is
 /// processed exactly once (NFR1). Mirrors <c>BackfillPdfCoversJob</c>: small batch, inter-item delay,
 /// per-item try/catch-continue. hi_res is ~200s and NOT reproducible in CI — unit tests drive this

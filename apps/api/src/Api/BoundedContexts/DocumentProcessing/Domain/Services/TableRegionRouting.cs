@@ -10,9 +10,14 @@ namespace Api.BoundedContexts.DocumentProcessing.Domain.Services;
 /// </summary>
 /// <remarks>
 /// This mirrors the static-decider shape of <see cref="ExtractionStrategyDecider"/> but deliberately
-/// does NOT reuse its <c>Table</c> predicate: <c>ElementType="Table"</c> is inert on the real corpus
-/// (0 Tables across 52 PDFs — spec §1), whereas hi_res reliably emits bbox-bearing <c>Image</c>/
-/// <c>FigureCaption</c> elements for the same table graphics. Rejected alternatives (spec §5quinquies):
+/// does NOT reuse its <c>Table</c> predicate: that predicate reads the extractor's own table count,
+/// which was inert on the sampled corpus (0 Tables across 52 PDFs — spec §1), whereas hi_res reliably
+/// emits bbox-bearing <c>Image</c>/<c>FigureCaption</c> elements for the same table graphics.
+/// #3565 refined that premise: hi_res DOES occasionally emit a bbox-bearing <c>Table</c> element
+/// (1 in 699 on wingspan — the scorecard), and those are now seeded as regions too. The router is
+/// unaffected because it counts rows in <c>pdf_image_regions</c> without looking at
+/// <c>ElementType</c> — a <c>Table</c> region simply counts toward candidacy like any other.
+/// Rejected alternatives (spec §5quinquies):
 /// a <c>has_tables</c> VLM sample (would couple the router to the blocked Metà-C — the router must
 /// GATE the VLM, not depend on it) and a per-game manual flag (toil across 52 games, does not scale).
 /// The threshold is the single tunable knob; the query handler may override the MVP default of

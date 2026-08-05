@@ -55,4 +55,24 @@ public sealed class PdfRegionCropperTests
     {
         PdfRegionCropper.DefaultRenderScale.Should().BeApproximately(300.0 / 72.0, 1e-9);
     }
+
+    /// <summary>
+    /// Issue #3571: the render scale is a memory multiplier — the whole page is rasterised into a
+    /// managed BGRA array plus a native SKBitmap before the crop is taken. The pixel budget exists so
+    /// an oversized page (fold-out boards are common in rulebooks) cannot turn the 300 DPI bump into
+    /// an OOM. This pins the intent of the chosen value: a normal page renders at full resolution,
+    /// an oversized one is scaled down instead of being rendered at any cost.
+    /// </summary>
+    [Theory]
+    [InlineData(595, 842, false)]   // A4 → 2479x3508 ≈ 8.7 MP, within budget
+    [InlineData(612, 792, false)]   // US Letter → 2550x3300 ≈ 8.4 MP, within budget
+    [InlineData(792, 1224, true)]   // Tabloid → 3300x5100 ≈ 16.8 MP, over budget
+    [InlineData(1684, 2384, true)]  // A1 fold-out → ~7017x9933 ≈ 69.7 MP, well over
+    public void MaxRenderPixels_ClampsOnlyOversizedPages(int nativeWidthPt, int nativeHeightPt, bool expectedOverBudget)
+    {
+        var scale = PdfRegionCropper.DefaultRenderScale;
+        var projected = nativeWidthPt * nativeHeightPt * scale * scale;
+
+        (projected > PdfRegionCropper.MaxRenderPixels).Should().Be(expectedOverBudget);
+    }
 }

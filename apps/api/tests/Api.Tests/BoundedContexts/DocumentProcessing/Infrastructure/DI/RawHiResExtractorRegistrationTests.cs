@@ -63,4 +63,61 @@ public sealed class RawHiResExtractorRegistrationTests
         extractor.Should().BeOfType<UnstructuredPdfTextExtractor>(
             "the seed-image-regions-batch endpoint injects IRawHiResExtractor regardless of the selected provider");
     }
+
+    /// <summary>
+    /// Issue #3570: the hi_res budget covers the whole request. At 300s it left no margin — on
+    /// staging the seed batch lost descent, terraforming-mars and 7-wonders (the table-heavy
+    /// rulebooks) at 302s under concurrent load, while 7-wonders measured 221s in isolation. Three
+    /// such aborts dead-letter a PDF out of the VLM pipeline for good, so the default must keep
+    /// headroom over the measured cost.
+    /// </summary>
+    [Fact]
+    public void HiResClient_DefaultTimeout_KeepsHeadroomOverMeasuredCost()
+    {
+        using var serviceProvider = BuildProviderWithoutTimeoutOverride();
+
+        var client = serviceProvider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient(UnstructuredPdfTextExtractor.HiResClientName);
+
+        client.Timeout.Should().Be(TimeSpan.FromSeconds(900));
+    }
+
+    [Fact]
+    public void HiResClient_Timeout_IsConfigurable()
+    {
+        using var serviceProvider = BuildProviderWithoutTimeoutOverride(hiResTimeoutSeconds: 1200);
+
+        var client = serviceProvider.GetRequiredService<IHttpClientFactory>()
+            .CreateClient(UnstructuredPdfTextExtractor.HiResClientName);
+
+        client.Timeout.Should().Be(TimeSpan.FromSeconds(1200));
+    }
+
+    private static ServiceProvider BuildProviderWithoutTimeoutOverride(int? hiResTimeoutSeconds = null)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddHttpClient();
+
+        var settings = new Dictionary<string, string>
+        {
+            ["PdfProcessing:Extractor:Unstructured:ApiUrl"] = "http://test:8001",
+            ["PdfProcessing:Extractor:SmolDocling:ApiUrl"] = "http://test:8002",
+            ["PdfProcessing:MaxFileSizeBytes"] = "104857600",
+            ["PdfProcessing:Quality:MinimumThreshold"] = "0.80",
+            ["PdfProcessing:Quality:MinCharsPerPage"] = "500"
+        };
+        if (hiResTimeoutSeconds is not null)
+        {
+            settings["PdfProcessing:Extractor:Unstructured:HiResTimeoutSeconds"] =
+                hiResTimeoutSeconds.Value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings!).Build();
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddScoped<ITextChunkingService, TextChunkingService>();
+
+        services.AddDocumentProcessingContext(configuration);
+        return services.BuildServiceProvider();
+    }
 }

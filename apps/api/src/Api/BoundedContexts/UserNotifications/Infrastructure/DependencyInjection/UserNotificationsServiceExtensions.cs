@@ -6,6 +6,8 @@ using Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
+using Api.Observability;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,17 +59,7 @@ internal static class UserNotificationsServiceExtensions
         services.AddSingleton<GenericEmailBuilder>();
         services.AddSingleton<EmailMessageBuilderFactory>();
 
-        // Named HttpClient for Slack API with 10s timeout and circuit breaker.
-        // Circuit breaker opens after 5 consecutive 5xx/timeout errors, stays open 2 minutes.
-        services.AddHttpClient("SlackApi", client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(10);
-        })
-        .AddPolicyHandler(HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: 5,
-                durationOfBreak: TimeSpan.FromMinutes(2)));
+        AddSlackApiClient(services);
 
         // Register services
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>(); // Multi-channel dispatch
@@ -200,5 +192,39 @@ internal static class UserNotificationsServiceExtensions
         // No need to duplicate - jobs from all contexts share the same Quartz scheduler
 
         return services;
+    }
+
+    /// <summary>
+    /// Named HttpClient for the Slack API with a 10s timeout and a circuit breaker (opens after 5
+    /// consecutive 5xx/timeout errors, stays open 2 minutes).
+    /// <para>
+    /// #3495 Slice E: the target URL comes from a stored Slack connection (webhook / API URL), so this
+    /// is user-influenced external egress and dials through the SSRF connect-pin. The pin is the
+    /// primary handler (innermost) and re-validates every auto-redirect hop; the circuit breaker sits
+    /// outside it and keeps its own per-sink state.
+    /// </para>
+    /// </summary>
+    private static void AddSlackApiClient(IServiceCollection services) =>
+        services.AddHttpClient("SlackApi", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(10);
+        })
+        .AddPolicyHandler(HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: 5,
+                durationOfBreak: TimeSpan.FromMinutes(2)))
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Slack);
+
+    /// <summary>
+    /// Test seam (#3495 Slice E): registers ONLY the Slack API named client so a DI-resolution test
+    /// can prove a Slack host resolving to a private address fails closed at the connect-pin. The
+    /// caller MUST register an <see cref="Api.SharedKernel.Infrastructure.Http.IDnsResolver"/> on the
+    /// same collection BEFORE calling this (the pin's own TryAdd default would otherwise win).
+    /// </summary>
+    internal static void AddSlackApiClientForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        AddSlackApiClient(services);
     }
 }

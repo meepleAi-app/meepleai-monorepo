@@ -22,7 +22,9 @@ using Api.Services.Providers.Probe;
 using Api.Services.Providers.Quota;
 using Api.Configuration;
 using Api.Models;
+using Api.Observability;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Infrastructure.Http;
 using Microsoft.Extensions.Options;
 using Pgvector.EntityFrameworkCore; // ISSUE-3493: pgvector support
 
@@ -486,58 +488,7 @@ internal static class InfrastructureServiceExtensions
             required: false
         ) ?? Environment.GetEnvironmentVariable("BGG_API_TOKEN");
 
-        services.AddHttpClient<Infrastructure.ExternalServices.BoardGameGeek.IBggApiClient,
-            Infrastructure.ExternalServices.BoardGameGeek.BggApiClient>(client =>
-        {
-#pragma warning disable S1075 // URIs should not be hardcoded - Official BGG API endpoint
-            client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2/");
-#pragma warning restore S1075
-            client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0");
-
-            // Add Bearer token if configured (REQUIRED as of Jan 2026)
-            if (!string.IsNullOrWhiteSpace(bggTokenForClient))
-            {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bggTokenForClient}");
-            }
-        })
-        .AddTransientHttpErrorPolicy(policy =>
-            policy.WaitAndRetryAsync(3, retryAttempt =>
-                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
-        .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
-            "BggApi", sp.GetService<ICircuitBreakerStateTracker>()))
-        .AddServiceCallLogging("BggApi")
-        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-            MaxConnectionsPerServer = 20,
-            EnableMultipleHttp2Connections = true
-        });
-
-        // Named HttpClient "BggApi" used by BggApiService and BggApiHealthCheck
-        // Must share the same Bearer token as the typed IBggApiClient above
-        services.AddHttpClient("BggApi", client =>
-        {
-#pragma warning disable S1075 // URIs should not be hardcoded - Official BGG API endpoint
-            client.BaseAddress = new Uri("https://boardgamegeek.com/xmlapi2/");
-#pragma warning restore S1075
-            client.Timeout = TimeSpan.FromSeconds(30);
-            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0");
-
-            if (!string.IsNullOrWhiteSpace(bggTokenForClient))
-            {
-                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bggTokenForClient}");
-            }
-        })
-        .AddServiceCallLogging("BggApi")
-        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
-        {
-            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
-            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-            MaxConnectionsPerServer = 20,
-            EnableMultipleHttp2Connections = true
-        });
+        AddBoardGameGeekClients(services, bggTokenForClient);
 
         // Configure BGG settings from appsettings.json
         services.Configure<BggConfiguration>(configuration.GetSection("Bgg"));
@@ -550,6 +501,72 @@ internal static class InfrastructureServiceExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Issue #3120 / #3495 Slice E — registers both BoardGameGeek egress clients (the typed
+    /// <c>IBggApiClient</c> and the named <c>BggApi</c> used by <c>BggApiService</c> and the health
+    /// check) behind the SSRF connect-pin. Extracted so production and the DI test seam
+    /// (<see cref="AddBoardGameGeekClientsForTests"/>) share the exact same pin wiring — drop the pin
+    /// here and both prod and the fail-closed test lose it.
+    /// </summary>
+    private static void AddBoardGameGeekClients(IServiceCollection services, string? bearerToken)
+    {
+#pragma warning disable S1075 // URIs should not be hardcoded - Official BGG API endpoint
+        const string BggApiBaseUrl = "https://boardgamegeek.com/xmlapi2/";
+#pragma warning restore S1075
+
+        void ConfigureClient(HttpClient client)
+        {
+            client.BaseAddress = new Uri(BggApiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "MeepleAI/1.0");
+
+            // Add Bearer token if configured (REQUIRED as of Jan 2026)
+            if (!string.IsNullOrWhiteSpace(bearerToken))
+            {
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bearerToken}");
+            }
+        }
+
+        // #3495 Slice E: boardgamegeek.com is external egress — dial through the SSRF connect-pin so
+        // a rebound or redirected BGG host cannot reach an internal address. The pooling tuning moves
+        // INTO the pinned handler; a second ConfigurePrimaryHttpMessageHandler would drop the pin.
+        static void ConfigurePinnedHandler(SocketsHttpHandler handler)
+        {
+            handler.PooledConnectionLifetime = TimeSpan.FromMinutes(5);
+            handler.PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2);
+            handler.MaxConnectionsPerServer = 20;
+            handler.EnableMultipleHttp2Connections = true;
+        }
+
+        services.AddHttpClient<Infrastructure.ExternalServices.BoardGameGeek.IBggApiClient,
+            Infrastructure.ExternalServices.BoardGameGeek.BggApiClient>(ConfigureClient)
+        .AddTransientHttpErrorPolicy(policy =>
+            policy.WaitAndRetryAsync(3, retryAttempt =>
+                TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))))
+        .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
+            "BggApi", sp.GetService<ICircuitBreakerStateTracker>()))
+        .AddServiceCallLogging("BggApi")
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg, configureHandler: ConfigurePinnedHandler);
+
+        // Named HttpClient "BggApi" used by BggApiService and BggApiHealthCheck
+        // Must share the same Bearer token as the typed IBggApiClient above
+        services.AddHttpClient("BggApi", ConfigureClient)
+        .AddServiceCallLogging("BggApi")
+        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg, configureHandler: ConfigurePinnedHandler);
+    }
+
+    /// <summary>
+    /// Test seam (#3495 Slice E): registers ONLY the BoardGameGeek egress clients so a DI-resolution
+    /// test can prove a BGG host resolving to a private address fails closed at the connect-pin. The
+    /// caller MUST register an <see cref="Api.SharedKernel.Infrastructure.Http.IDnsResolver"/> on the
+    /// same collection BEFORE calling this (the pin's own TryAdd default would otherwise win).
+    /// </summary>
+    internal static void AddBoardGameGeekClientsForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        AddBoardGameGeekClients(services, bearerToken: null);
     }
 
     private static AsyncCircuitBreakerPolicy<HttpResponseMessage> GetCircuitBreakerPolicy(

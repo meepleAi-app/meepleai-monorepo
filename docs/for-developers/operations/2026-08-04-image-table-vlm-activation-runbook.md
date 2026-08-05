@@ -118,6 +118,13 @@ PdfProcessing:ImageRegionSeeding:IntervalMinutes = 30 # Quartz auto-fire (or tri
 POST /api/v1/admin/pdfs/maintenance/seed-image-regions-batch   {"batchSize": 3}
 ```
 
+> **Call it from inside the network.** Both admin triggers run the whole batch synchronously inside
+> the HTTP request, and a single hi_res pass already takes minutes. Staging's public hostname is
+> fronted by Cloudflare, whose edge gives up on the origin after ~100s (524) — so the request dies
+> long before the first PDF finishes, even though the batch keeps running server-side. Trigger it
+> from within the container instead (`docker exec meepleai-api curl -X POST http://localhost:8080/...`),
+> or let the Quartz job fire on its interval and watch the tables in §6.
+
 hi_res is ~200-300s/PDF and memory-heavy — seed on a box with headroom, small batches. Verify:
 
 ```sql

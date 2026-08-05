@@ -9,7 +9,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// <summary>
 /// Captures the RAW Unstructured hi_res wire JSON for a PDF — the response body that
 /// <see cref="Api.BoundedContexts.DocumentProcessing.Application.Services.ImageRegionExtractor"/>
-/// parses for Image/FigureCaption regions. The normal extraction path drops these
+/// parses for Image/FigureCaption/Table regions. The normal extraction path drops these
 /// (empty-text elements) so image-table region grounding (#3435) needs the raw body.
 /// </summary>
 internal interface IRawHiResExtractor
@@ -314,7 +314,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
         // Dedicated hi_res pass on the long-timeout client (#3435): forces strategy=hi_res
         // (the selector is inert on the real corpus) and returns the RAW response body —
         // the exact JSON discarded by ParseExtractionResponseAsync — so ImageRegionExtractor
-        // can parse Image/FigureCaption regions the normal path drops. Unlike the other methods
+        // can parse Image/FigureCaption/Table regions the normal path drops. Unlike the other methods
         // here it does NOT swallow failures: the batch runner needs to see timeouts/HTTP errors
         // to mark the item and continue (a swallowed "" would be indistinguishable from a
         // genuinely region-free PDF and would wrongly stamp the seed marker).

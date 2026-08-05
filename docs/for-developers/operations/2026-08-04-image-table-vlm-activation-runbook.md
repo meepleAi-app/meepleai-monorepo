@@ -22,7 +22,7 @@ runbook. Design: [`docs/superpowers/specs/2026-08-01-image-table-region-groundin
 ## 1. What it does (pipeline recap)
 
 ```
-pdf_image_regions (hi_res Image/FigureCaption bboxes, SP1)
+pdf_image_regions (hi_res Image/FigureCaption/Table bboxes, SP1)
    → GetTableRegionCandidatesQuery  (router: PDFs with ≥ N regions, SP2)
    → RunTableExtractionJob  (Quartz, [DisallowConcurrentExecution], SP4)
        per candidate PDF, per pending region:
@@ -122,7 +122,7 @@ hi_res is ~200-300s/PDF and memory-heavy — seed on a box with headroom, small 
 
 ```sql
 SELECT COUNT(*) AS regions, COUNT(DISTINCT pdf_document_id) AS pdfs FROM pdf_image_regions;
-SELECT element_type, COUNT(*) FROM pdf_image_regions GROUP BY element_type;  -- 'Image' | 'FigureCaption'
+SELECT element_type, COUNT(*) FROM pdf_image_regions GROUP BY element_type;  -- 'Image' | 'FigureCaption' | 'Table'
 ```
 
 > **Reality check**: most detected regions are illustrations/photos/cards, NOT tables. The `<otsl>`

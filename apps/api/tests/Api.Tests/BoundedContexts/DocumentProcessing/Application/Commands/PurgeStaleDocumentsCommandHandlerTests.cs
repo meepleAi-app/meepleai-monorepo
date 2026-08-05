@@ -128,6 +128,74 @@ public class PurgeStaleDocumentsCommandHandlerTests
         persisted.ProcessingState.Should().Be("Embedding");
     }
 
+    /// <summary>
+    /// Issue #3572: the handler now saves one document per iteration and clears the ChangeTracker in
+    /// a finally block. This is the regression that refactor can introduce: if the candidates were
+    /// still loaded as a tracked list up front, the first Clear() would detach the rest and every
+    /// later mutation would be a silent no-op again — only the first document would persist.
+    /// </summary>
+    [Fact]
+    public async Task Handle_PersistsEveryDocumentInTheBatch_NotJustTheFirst()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var ctx = CreateDbContext(dbName);
+        var stale = Enumerable.Range(0, 5)
+            .Select(i => Pdf($"stuck-{i}.pdf", "Embedding", Now.UtcDateTime.AddDays(-10)))
+            .ToArray();
+        ctx.PdfDocuments.AddRange(stale);
+        await ctx.SaveChangesAsync();
+        ctx.ChangeTracker.Clear();
+
+        var result = await CreateHandler(ctx).Handle(new PurgeStaleDocumentsCommand(), default);
+
+        result.PurgedCount.Should().Be(5);
+
+        using var verifyCtx = CreateDbContext(dbName);
+        foreach (var doc in stale)
+        {
+            var persisted = await verifyCtx.PdfDocuments.SingleAsync(p => p.Id == doc.Id);
+            persisted.ProcessingState.Should().Be("Failed");
+            persisted.FailedAtState.Should().Be("Embedding");
+        }
+    }
+
+    /// <summary>
+    /// Issue #3572: the returned count must reflect what was WRITTEN. Here a document reaches a
+    /// terminal state before the handler runs, so it is neither purged nor counted.
+    /// NOTE the limit of this test: the transition happens before the call, so the document is
+    /// excluded by the candidate query itself — it does NOT exercise the tracked re-check inside the
+    /// loop (which covers a transition between the candidate query and that document's iteration).
+    /// That window, like the DbUpdateConcurrencyException branch, needs a real database with xmin
+    /// concurrency tokens: EF InMemory has no concurrency tokens, so neither is reachable here.
+    /// </summary>
+    [Fact]
+    public async Task Handle_DoesNotCountDocumentsThatLeftTheActiveStates()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var ctx = CreateDbContext(dbName);
+        var stale = Pdf("stuck.pdf", "Embedding", Now.UtcDateTime.AddDays(-10));
+        var alsoStale = Pdf("stuck-2.pdf", "Chunking", Now.UtcDateTime.AddDays(-10));
+        ctx.PdfDocuments.AddRange(stale, alsoStale);
+        await ctx.SaveChangesAsync();
+        ctx.ChangeTracker.Clear();
+
+        // Simulate the race: one candidate reaches a terminal state before the handler gets to it.
+        await using (var racingCtx = CreateDbContext(dbName))
+        {
+            var raced = await racingCtx.PdfDocuments.AsTracking().SingleAsync(p => p.Id == alsoStale.Id);
+            raced.ProcessingState = "Ready";
+            await racingCtx.SaveChangesAsync();
+        }
+
+        var result = await CreateHandler(ctx).Handle(new PurgeStaleDocumentsCommand(), default);
+
+        result.PurgedCount.Should().Be(1, "only the document still in an active state was purged");
+
+        using var verifyCtx = CreateDbContext(dbName);
+        (await verifyCtx.PdfDocuments.SingleAsync(p => p.Id == stale.Id)).ProcessingState.Should().Be("Failed");
+        (await verifyCtx.PdfDocuments.SingleAsync(p => p.Id == alsoStale.Id)).ProcessingState.Should().Be("Ready");
+    }
+
     [Fact]
     public async Task Handle_LeavesTerminalAndPendingStatesUntouched()
     {

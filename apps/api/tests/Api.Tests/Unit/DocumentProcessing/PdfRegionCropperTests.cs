@@ -43,4 +43,16 @@ public sealed class PdfRegionCropperTests
         var act = () => _sut.CropRegion(pdfMagic, 1, 0.1, 0.2, 0.5, 0.3, cts.Token);
         act.Should().Throw<OperationCanceledException>();
     }
+
+    /// <summary>
+    /// Issue #3571: the render DPI is a silent quality knob — the &lt;otsl&gt; gate fires either way,
+    /// so a regression back to 150 DPI would not show up in any metric, only in the text of the
+    /// persisted table chunk (measured: rows collapsed and characters corrupted at 150 DPI).
+    /// Pin it like the region area threshold is pinned.
+    /// </summary>
+    [Fact]
+    public void DefaultRenderScale_Is300Dpi()
+    {
+        PdfRegionCropper.DefaultRenderScale.Should().BeApproximately(300.0 / 72.0, 1e-9);
+    }
 }

@@ -16,9 +16,20 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// </summary>
 internal sealed class PdfRegionCropper : IPdfRegionCropper
 {
-    // Native-size scale factor for rendering. 150/72 ≈ 2.08 gives ~150 DPI — enough detail for the
-    // VLM to read a table crop without oversizing the raster.
-    private const double DefaultRenderScale = 150.0 / 72.0;
+    // Native-size scale factor for rendering: 300/72 ≈ 4.17 gives ~300 DPI.
+    //
+    // Issue #3571: this was 150 DPI, which is NOT enough for the VLM to transcribe a table crop.
+    // Measured on the wingspan scorecard (page 5, the region that motivated #3565), same model and
+    // same GPU, only the render DPI varying:
+    //   150 DPI → rows collapsed onto one line, characters corrupted ("OMUNIT", "10PONT EGF")
+    //   200 DPI → structure correct, one label per row
+    //   300 DPI → structure correct AND the trailing "TOTAL" row recovered
+    // The <otsl> gate fires in all three cases, so the loss is invisible in the metrics and shows up
+    // only in the content of the persisted chunk. Wall-clock was ~2.5-2.9s across all three: Idefics3
+    // consumes a fixed number of image tokens, so raising the DPI improves what the encoder sees
+    // without materially changing inference time. The cost is transient memory — the whole page is
+    // rasterised before cropping, so 300 DPI is ~4x the pixels of 150 (an A4 page is ~2480x3508).
+    internal const double DefaultRenderScale = 300.0 / 72.0;
 
     private readonly double _renderScale;
     private readonly ILogger<PdfRegionCropper> _logger;

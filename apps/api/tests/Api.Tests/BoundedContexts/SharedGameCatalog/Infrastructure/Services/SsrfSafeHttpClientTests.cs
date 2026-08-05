@@ -69,68 +69,67 @@ public class SsrfSafeHttpClientTests
         return r;
     }
 
-    private static HttpResponseMessage Pdf() => new(HttpStatusCode.OK)
+    private static HttpResponseMessage Payload() => new(HttpStatusCode.OK)
     {
-        Content = new ByteArrayContent(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\nok")),
+        Content = new ByteArrayContent(System.Text.Encoding.ASCII.GetBytes("image-bytes")),
     };
 
     [Fact]
-    public async Task DownloadPdfAsync_FollowsHttpsRedirect_ToFinalPayload()
+    public async Task DownloadImageAsync_FollowsHttpsRedirect_ToFinalPayload()
     {
         using var handler = new SequenceHttpMessageHandler(
-            _ => Redirect(HttpStatusCode.Found, "https://cdn.example/final.pdf"),
-            _ => Pdf());
+            _ => Redirect(HttpStatusCode.Found, "https://cdn.example/final.png"),
+            _ => Payload());
         using var httpClient = new HttpClient(handler);
         var sut = new SsrfSafeHttpClient(httpClient);
 
-        var result = await sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+        var result = await sut.DownloadImageAsync("https://example.com/cover.png", CancellationToken.None);
 
-        using var reader = new StreamReader(result);
-        (await reader.ReadToEndAsync()).Should().StartWith("%PDF");
+        System.Text.Encoding.ASCII.GetString(result).Should().Be("image-bytes");
         handler.RequestedUris.Should().HaveCount(2);
-        handler.RequestedUris[1].Should().Be(new Uri("https://cdn.example/final.pdf"));
+        handler.RequestedUris[1].Should().Be(new Uri("https://cdn.example/final.png"));
     }
 
     [Theory]
-    [InlineData("http://cdn.example/final.pdf")]     // https → http downgrade
+    [InlineData("http://cdn.example/final.png")]     // https → http downgrade
     [InlineData("file:///etc/passwd")]                // scheme downgrade to file
     [InlineData("gopher://internal/x")]               // exotic scheme
-    public async Task DownloadPdfAsync_RejectsSchemeDowngradeOnRedirect(string location)
+    public async Task DownloadImageAsync_RejectsSchemeDowngradeOnRedirect(string location)
     {
         using var handler = new SequenceHttpMessageHandler(_ => Redirect(HttpStatusCode.Found, location));
         using var httpClient = new HttpClient(handler);
         var sut = new SsrfSafeHttpClient(httpClient);
 
-        var act = () => sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+        var act = () => sut.DownloadImageAsync("https://example.com/cover.png", CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>()
             .WithMessage("Only HTTPS URLs are allowed*");
     }
 
     [Fact]
-    public async Task DownloadPdfAsync_RejectsRedirectLoop()
+    public async Task DownloadImageAsync_RejectsRedirectLoop()
     {
         using var handler = new SequenceHttpMessageHandler(
-            _ => Redirect(HttpStatusCode.Found, "https://example.com/rules.pdf")); // → itself
+            _ => Redirect(HttpStatusCode.Found, "https://example.com/cover.png")); // → itself
         using var httpClient = new HttpClient(handler);
         var sut = new SsrfSafeHttpClient(httpClient);
 
-        var act = () => sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+        var act = () => sut.DownloadImageAsync("https://example.com/cover.png", CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*loop*");
     }
 
     [Fact]
-    public async Task DownloadPdfAsync_RejectsTooManyRedirects()
+    public async Task DownloadImageAsync_RejectsTooManyRedirects()
     {
         var n = 0;
         using var handler = new SequenceHttpMessageHandler(
-            _ => Redirect(HttpStatusCode.Found, $"https://example.com/hop{++n}.pdf"));
+            _ => Redirect(HttpStatusCode.Found, $"https://example.com/hop{++n}.png"));
         using var httpClient = new HttpClient(handler);
         var sut = new SsrfSafeHttpClient(httpClient);
 
-        var act = () => sut.DownloadPdfAsync("https://example.com/rules.pdf", CancellationToken.None);
+        var act = () => sut.DownloadImageAsync("https://example.com/cover.png", CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*maximum*redirects*");
@@ -173,14 +172,13 @@ public class SsrfSafeHttpClientTests
 
     #endregion
 
-    #region DownloadPdfAsync Disposal Tests (Issue #3239)
+    #region DownloadImageAsync Disposal Tests (Issue #3239)
 
     [Fact]
-    public async Task DownloadPdfAsync_DisposesResponseContentStream()
+    public async Task DownloadImageAsync_DisposesResponseContentStream()
     {
-        // %PDF magic bytes so the download passes the PDF-signature validation.
-        var pdfBytes = System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\nfake-content");
-        var sourceStream = new DisposeTrackingStream(pdfBytes);
+        var payload = System.Text.Encoding.ASCII.GetBytes("fake-image-content");
+        var sourceStream = new DisposeTrackingStream(payload);
         using var handler = new StubHttpMessageHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StreamContent(sourceStream),
@@ -188,17 +186,16 @@ public class SsrfSafeHttpClientTests
         using var httpClient = new HttpClient(handler);
         var sut = new SsrfSafeHttpClient(httpClient);
 
-        // Host is a public IP literal: Dns.GetHostAddressesAsync short-circuits (no network call),
-        // and IsPrivateOrReserved(8.8.8.8) is false, so the SSRF guard passes hermetically.
-        var result = await sut.DownloadPdfAsync("https://8.8.8.8/rules.pdf", CancellationToken.None);
+        // The stub handler answers directly, so no connection (and no SSRF pin) is involved: this
+        // test is only about the response lifetime.
+        var result = await sut.DownloadImageAsync("https://8.8.8.8/cover.png", CancellationToken.None);
 
-        // The full payload is copied into an independent stream returned to the caller...
-        using var reader = new StreamReader(result);
-        (await reader.ReadToEndAsync()).Should().Be("%PDF-1.4\nfake-content");
+        // The full payload is returned to the caller as an independent buffer...
+        System.Text.Encoding.ASCII.GetString(result).Should().Be("fake-image-content");
 
         // ...and the source HttpResponseMessage content stream must be disposed (it was leaked before the fix).
         sourceStream.Disposed.Should().BeTrue(
-            "DownloadPdfAsync must dispose the HttpResponseMessage and its content stream");
+            "the hardened fetch must dispose the HttpResponseMessage and its content stream");
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

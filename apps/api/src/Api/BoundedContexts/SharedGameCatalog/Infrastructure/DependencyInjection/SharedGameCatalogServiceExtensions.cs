@@ -400,8 +400,20 @@ internal static class SharedGameCatalogServiceExtensions
     private static void AddBggCoverDownloader(IServiceCollection services) =>
         services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(10);
+            // Outer wall-clock ceiling for the whole exchange, INCLUDING the streamed 10MB body read
+            // (HttpClient.Timeout keeps running under ResponseHeadersRead). The tight budget on the
+            // connect + headers is the per-try timeout below.
+            client.Timeout = TimeSpan.FromSeconds(30);
         })
+        // #3495 H8/C3 (Slice E): per-sink budget + breaker. A BGG CDN outage degrades cover fetching
+        // alone — it cannot open the breaker of any other sink, and the pin below stays innermost.
+        .AddHttpMessageHandler(sp => new EgressResilienceHandler(
+            sp.GetRequiredService<ILogger<EgressResilienceHandler>>(),
+            sink: MeepleAiMetrics.EgressSinks.BggCover,
+            perTryTimeout: TimeSpan.FromSeconds(10),
+            failureThreshold: 3,
+            samplingWindow: TimeSpan.FromSeconds(60),
+            breakDuration: TimeSpan.FromMinutes(1)))
         .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.BggCover);
 
     /// <summary>

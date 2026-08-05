@@ -1,5 +1,6 @@
 using System.Net.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Api.SharedKernel.Infrastructure.Http;
 
@@ -31,16 +32,33 @@ internal static class SsrfPinnedHttpClientBuilderExtensions
     /// <param name="sink">A bounded <c>MeepleAiMetrics.EgressSinks</c> constant identifying this client
     /// (a compile-time value, never a host/IP) — the label on the egress blocked/allowed counters (#3495 M2).</param>
     /// <param name="allowAutoRedirect">See the summary — <see langword="false"/> only for the arbitrary-URL manual sink.</param>
+    /// <param name="configureHandler">Optional per-sink tuning of the pinned handler (connection pooling,
+    /// concurrency, HTTP/2). Runs BEFORE the pin fields are written, so a caller can never weaken the
+    /// SSRF guard: <see cref="SocketsHttpHandler.ConnectCallback"/>, <paramref name="allowAutoRedirect"/>
+    /// and the redirect cap are re-applied afterwards and always win (#3495 Slice E / finding C3 —
+    /// share the callback, not one handler, so each sink keeps its own pool and budgets).</param>
     public static IHttpClientBuilder ConfigureSsrfPin(
-        this IHttpClientBuilder builder, string sink, bool allowAutoRedirect = true)
+        this IHttpClientBuilder builder,
+        string sink,
+        bool allowAutoRedirect = true,
+        Action<SocketsHttpHandler>? configureHandler = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        return builder.ConfigurePrimaryHttpMessageHandler(sp => new SocketsHttpHandler
+        // The pin needs a resolver; registering it here means a new pinned sink cannot fail at
+        // runtime because its context forgot the TryAdd (contexts registering their own stub/impl
+        // BEFORE this call still win — TryAdd never overwrites).
+        builder.Services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+
+        return builder.ConfigurePrimaryHttpMessageHandler(sp =>
         {
-            ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>(), sink),
-            AllowAutoRedirect = allowAutoRedirect,
-            MaxAutomaticRedirections = 5,
+            var handler = new SocketsHttpHandler();
+            configureHandler?.Invoke(handler);
+
+            handler.ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>(), sink);
+            handler.AllowAutoRedirect = allowAutoRedirect;
+            handler.MaxAutomaticRedirections = 5;
+            return handler;
         });
     }
 }

@@ -23,7 +23,6 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 internal sealed class SsrfSafeHttpClient
 {
     private readonly HttpClient _httpClient;
-    private const long MaxPdfSizeBytes = 100 * 1024 * 1024; // 100MB
     private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10MB (cover images)
     private const int MaxRedirectHops = 5;
 
@@ -32,23 +31,9 @@ internal sealed class SsrfSafeHttpClient
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
-    /// <summary>
-    /// Downloads a PDF from the given URL through the hardened fetch path (HTTPS-only per hop,
-    /// bounded redirect follow, mid-stream 100MB ceiling, IP-pinned connection), then validates
-    /// the payload is a PDF.
-    /// </summary>
-    /// <exception cref="ArgumentException">The URL (or a redirect target) is not an absolute HTTPS URL.</exception>
-    /// <exception cref="InvalidOperationException">Redirect loop / too many hops, oversize, or non-PDF content.</exception>
-    public async Task<Stream> DownloadPdfAsync(string url, CancellationToken ct)
-    {
-        var bytes = await FetchWithLimitAsync(url, MaxPdfSizeBytes, ct).ConfigureAwait(false);
-
-        // Validate PDF magic bytes (%PDF).
-        if (bytes.Length < 4 || bytes[0] != 0x25 || bytes[1] != 0x50 || bytes[2] != 0x44 || bytes[3] != 0x46)
-            throw new InvalidOperationException("Downloaded content is not a valid PDF file");
-
-        return new MemoryStream(bytes, writable: false);
-    }
+    // #3495 Slice E: the PDF variant of this fetch (DownloadPdfAsync + its 100MB ceiling) was dead
+    // code — no production caller ever reached it, so it was an unreviewed second egress entry point
+    // whose only exercise came from its own tests. Removed; the arbitrary-URL sink is images only.
 
     /// <summary>
     /// Epic #3470 Slice 3a — downloads an admin-supplied cover image through the hardened fetch path

@@ -51,6 +51,10 @@ wipes a produced chunk is self-healed on the next run (re-index from the cached 
 - [ ] **Backend deployed with the #3435 code** (SP1–SP4 + gate, all on `main-dev`). Verify the target
   build actually contains it, e.g. `grep -c -a "run-table-extraction-batch" /app/Api.dll` in the API
   container — **merge ≠ deploy**; a flag can only activate code that is actually in the running build.
+- [ ] **The SP4 migration is applied.** Staging does not auto-apply EF migrations, so
+  `20260804173408_AddPdfTableExtractions` must be run manually (`pdf_table_extractions` + its two
+  indexes + the `__EFMigrationsHistory` row). Check with
+  `select to_regclass('pdf_table_extractions');` — a NULL means the batch will fail on every region.
 
 ---
 
@@ -111,7 +115,7 @@ PdfProcessing:ImageRegionSeeding:IntervalMinutes = 30 # Quartz auto-fire (or tri
 
 ```bash
 # manual trigger (admin session)
-POST /admin/pdfs/maintenance/seed-image-regions-batch   {"batchSize": 3}
+POST /api/v1/admin/pdfs/maintenance/seed-image-regions-batch   {"batchSize": 3}
 ```
 
 hi_res is ~200-300s/PDF and memory-heavy — seed on a box with headroom, small batches. Verify:
@@ -129,7 +133,7 @@ SELECT element_type, COUNT(*) FROM pdf_image_regions GROUP BY element_type;  -- 
 Confirm the router sees candidates (read-only, no side effects):
 
 ```
-GET /admin/pdfs/maintenance/table-region-candidates?minImageRegions=1&limit=50
+GET /api/v1/admin/pdfs/maintenance/table-region-candidates?minImageRegions=1&limit=50
 ```
 
 ---
@@ -148,7 +152,7 @@ PdfProcessing:TableExtraction:VlmTimeoutSeconds  = 120    # /extract-image HTTP 
 Trigger on demand (recommended for the first run so you can inspect the result immediately):
 
 ```
-POST /admin/pdfs/maintenance/run-table-extraction-batch   {"batchSize": 10}
+POST /api/v1/admin/pdfs/maintenance/run-table-extraction-batch   {"batchSize": 10}
 # -> { "enabled": true, "processed": N, "extracted": X, "notTable": Y, "failed": Z }
 ```
 
@@ -215,7 +219,7 @@ Turning the feature on only processes candidate PDFs going forward. To backfill 
 2. Re-extract the table-heavy PDFs (from the SP2 candidate list) via the reindex path — targeted, not
    the whole corpus:
    ```
-   POST /admin/pdfs/{pdfId}/reindex        # ReindexDocumentCommand, per candidate PDF
+   POST /api/v1/admin/pdfs/{pdfId}/reindex        # ReindexDocumentCommand, per candidate PDF
    ```
    or the corpus drain loop from the [corpus reindex runbook](./2026-07-26-corpus-reindex-runbook.md).
 3. The table-extraction job re-runs against the re-seeded regions. **Idempotency**: a reindex deletes a

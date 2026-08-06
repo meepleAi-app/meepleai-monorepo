@@ -26,23 +26,9 @@ internal static class BggHostDenyList
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && IsBannedHost(uri.Host);
 
     /// <summary>True when <paramref name="host"/> equals or is a sub-domain of a banned suffix.</summary>
-    public static bool IsBannedHost(string? host)
-    {
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            return false;
-        }
-
-        var normalized = host.Trim().TrimEnd('.').ToLowerInvariant();
-        foreach (var suffix in BannedSuffixes)
-        {
-            if (string.Equals(normalized, suffix, StringComparison.Ordinal) ||
-                normalized.EndsWith("." + suffix, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    /// <remarks>
+    /// The suffix-matching itself lives in <see cref="HostSuffixMatcher"/> since #3495 Slice F, shared
+    /// with the per-sink egress allow-lists so both sides of the host gate behave identically.
+    /// </remarks>
+    public static bool IsBannedHost(string? host) => HostSuffixMatcher.Matches(host, BannedSuffixes);
 }

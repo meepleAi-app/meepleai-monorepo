@@ -50,10 +50,11 @@ public sealed class BggCoverDownloaderPinIntegrationTests
 
         var downloader = provider.GetRequiredService<IBggCoverDownloader>();
 
-        // The host literal (8.8.8.8) is public, but the pinned resolver returns the metadata IP,
-        // so the pin throws at connect and the download aborts before any upload.
+        // The host is a real BGG image CDN (so it clears the #3495 M3 allow-list), but the pinned
+        // resolver returns the metadata IP, so the pin throws at connect and the download aborts
+        // before any upload.
         var result = await downloader.DownloadAndUploadAsync(
-            13, "https://8.8.8.8/cover.jpg", CancellationToken.None);
+            13, "https://cf.geekdo-images.com/cover.jpg", CancellationToken.None);
 
         result.Should().BeNull("the SSRF connect-pin must block a private-resolving cover host");
         pipeline.Verify(

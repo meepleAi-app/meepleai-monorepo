@@ -31,6 +31,10 @@ internal static partial class MeepleAiMetrics
         public const string DenylistHit = "denylist_hit";
         /// <summary>A hop targeted a non-default port — port-probing an internal service (#3495 H2).</summary>
         public const string Port = "port";
+        /// <summary>The host is outside the fixed-host sink's allow-list (#3495 M3).</summary>
+        public const string HostNotAllowed = "host_not_allowed";
+        /// <summary>The response was content-encoded, so the byte ceiling could not bound the decoded size (#3495 C5).</summary>
+        public const string ContentEncoding = "content_encoding";
         public const string RedirectExhausted = "redirect_exhausted";
         public const string SizeCap = "size_cap";
         public const string DecodeFail = "decode_fail";

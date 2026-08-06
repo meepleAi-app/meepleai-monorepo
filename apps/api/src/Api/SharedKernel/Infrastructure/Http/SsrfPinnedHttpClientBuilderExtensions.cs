@@ -37,11 +37,16 @@ internal static class SsrfPinnedHttpClientBuilderExtensions
     /// SSRF guard: <see cref="SocketsHttpHandler.ConnectCallback"/>, <paramref name="allowAutoRedirect"/>
     /// and the redirect cap are re-applied afterwards and always win (#3495 Slice E / finding C3 —
     /// share the callback, not one handler, so each sink keeps its own pool and budgets).</param>
+    /// <param name="allowedHostSuffixes">Defence in depth for FIXED-HOST sinks (#3495 M3): every
+    /// connection — initial request and each redirect hop — must target one of these registrable
+    /// domains (exact or sub-domain). Omit it ONLY for the arbitrary-URL manual sink, whose purpose is
+    /// to fetch a host chosen at call time.</param>
     public static IHttpClientBuilder ConfigureSsrfPin(
         this IHttpClientBuilder builder,
         string sink,
         bool allowAutoRedirect = true,
-        Action<SocketsHttpHandler>? configureHandler = null)
+        Action<SocketsHttpHandler>? configureHandler = null,
+        IReadOnlyCollection<string>? allowedHostSuffixes = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -55,7 +60,8 @@ internal static class SsrfPinnedHttpClientBuilderExtensions
             var handler = new SocketsHttpHandler();
             configureHandler?.Invoke(handler);
 
-            handler.ConnectCallback = SsrfPinnedConnect.Create(sp.GetRequiredService<IDnsResolver>(), sink);
+            handler.ConnectCallback = SsrfPinnedConnect.Create(
+                sp.GetRequiredService<IDnsResolver>(), sink, allowedHostSuffixes);
             handler.AllowAutoRedirect = allowAutoRedirect;
             handler.MaxAutomaticRedirections = 5;
             return handler;

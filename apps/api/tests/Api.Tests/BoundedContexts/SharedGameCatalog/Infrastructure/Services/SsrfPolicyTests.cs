@@ -53,6 +53,16 @@ public class SsrfPolicyTests
     [InlineData("2001::1")]           // Teredo 2001:0000::/32
     [InlineData("2001:db8::1")]       // documentation 2001:db8::/32
     [InlineData("2002::1")]           // 6to4 2002::/16
+    // ── Tunnelled IPv4 (#3495 Slice F, H3): blocked whether the EMBEDDED v4 is private or public.
+    // The DoD asked to decode the embedded address and recurse into the v4 rules, which would ADMIT
+    // the public-embedded cases below. We keep the wholesale block instead — 6to4/Teredo are
+    // deprecated and no sink needs NAT64 egress, so decode-and-allow would only widen the surface.
+    // These rows are the contract for that decision: if someone implements the decode, they fail.
+    [InlineData("64:ff9b::a00:1")]    // NAT64 -> 10.0.0.1 (private embedded)
+    [InlineData("64:ff9b::808:808")]  // NAT64 -> 8.8.8.8  (PUBLIC embedded, still blocked)
+    [InlineData("2002:0a00:0001::1")] // 6to4 -> 10.0.0.1  (private embedded)
+    [InlineData("2002:0808:0808::1")] // 6to4 -> 8.8.8.8   (PUBLIC embedded, still blocked)
+    [InlineData("2001:0:4136:e378::1")] // Teredo with a public server v4, still blocked
     [InlineData("fc00::1")]           // ULA fc00::/8
     [InlineData("fd00::1")]           // ULA fd00::/8
     [InlineData("fe80::1")]           // link-local

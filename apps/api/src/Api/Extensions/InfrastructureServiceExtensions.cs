@@ -548,13 +548,19 @@ internal static class InfrastructureServiceExtensions
         .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
             "BggApi", sp.GetService<ICircuitBreakerStateTracker>()))
         .AddServiceCallLogging("BggApi")
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg, configureHandler: ConfigurePinnedHandler);
+        .ConfigureSsrfPin(
+            MeepleAiMetrics.EgressSinks.Bgg,
+            configureHandler: ConfigurePinnedHandler,
+            allowedHostSuffixes: EgressAllowLists.Bgg);
 
         // Named HttpClient "BggApi" used by BggApiService and BggApiHealthCheck
         // Must share the same Bearer token as the typed IBggApiClient above
         services.AddHttpClient("BggApi", ConfigureClient)
         .AddServiceCallLogging("BggApi")
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg, configureHandler: ConfigurePinnedHandler);
+        .ConfigureSsrfPin(
+            MeepleAiMetrics.EgressSinks.Bgg,
+            configureHandler: ConfigurePinnedHandler,
+            allowedHostSuffixes: EgressAllowLists.Bgg);
     }
 
     /// <summary>

@@ -268,6 +268,39 @@ public sealed class SetManualCoverCommandHandlerTests
             .Should().NotBeEmpty("il rifiuto del decoder su un payload scaricato è un blocco di egress");
     }
 
+    [Fact]
+    public void Handle_BggHost_RecordsDenylistHit_AndNeverFetches()
+    {
+        // Gate difensivo (#3495 C6): raggiungibile solo saltando la pipeline FluentValidation, quindi
+        // qui si invoca l'handler direttamente. Deve rifiutare PRIMA di qualunque egress.
+        var game = NewGame();
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        var banned = Command(game.Id) with { SourceUrl = "https://cf.geekdo-images.com/abc/cover.jpg" };
+
+        var captured = Api.Tests.Observability.MetricCapture.Capture(
+            MeepleAiMetrics.EgressBlocked.Name,
+            () =>
+            {
+                try
+                {
+                    CreateHandler().Handle(banned, CancellationToken.None).GetAwaiter().GetResult();
+                    throw new Xunit.Sdk.XunitException(
+                        "expected the ADR-059 deny-list to reject the host");
+                }
+                catch (ArgumentException)
+                {
+                    // atteso
+                }
+            });
+
+        captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "manual")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "denylist_hit"))
+            .Should().NotBeEmpty("anche il gate difensivo deve essere visibile");
+
+        _httpHandler.RequestCount.Should().Be(0, "il rifiuto deve precedere qualunque fetch");
+    }
+
     private sealed class StubImageHandler : HttpMessageHandler
     {
         public byte[] ImageBytes { get; set; } = Array.Empty<byte>();

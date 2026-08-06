@@ -73,6 +73,11 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
         // any path that reaches the handler without the FluentValidation pipeline. Reject BEFORE egress.
         if (BggHostDenyList.IsBanned(command.SourceUrl))
         {
+            // #3583 — raggiungibile solo se un percorso salta la pipeline FluentValidation (il
+            // validator rifiuta prima). Mutuamente esclusivo con il gate del validator, quindi una
+            // richiesta conta una volta sola.
+            MeepleAiMetrics.RecordEgressBlocked(
+                MeepleAiMetrics.EgressSinks.Manual, MeepleAiMetrics.EgressBlockReasons.DenylistHit);
             throw new ArgumentException(
                 "SourceUrl host is banned by ADR-059 §5 (BGG/geekdo assets).", nameof(command));
         }

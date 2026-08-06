@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.Observability;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Xunit;
@@ -83,6 +84,24 @@ public sealed class SetManualCoverCommandValidatorTests
         // Each URL is absolute-HTTPS with a whitelisted license, so ONLY the new host rule can reject it.
         _validator.TestValidate(Valid() with { SourceUrl = url })
             .ShouldHaveValidationErrorFor(x => x.SourceUrl);
+    }
+
+    [Fact]
+    public void Validate_BggHost_RecordsDenylistHit_OnManualSink()
+    {
+        // NOTA: Fails_WhenSourceUrlIsBannedBggHost qui sopra ha 5 [InlineData], ognuna delle quali
+        // emette una misurazione {manual, denylist_hit}. La finestra di MetricCapture è process-wide:
+        // asserire la presenza, MAI un conteggio esatto.
+        var captured = Api.Tests.Observability.MetricCapture.Capture(
+            MeepleAiMetrics.EgressBlocked.Name,
+            () => _validator
+                .TestValidate(Valid() with { SourceUrl = "https://cf.geekdo-images.com/abc/cover.jpg" })
+                .ShouldHaveValidationErrorFor(x => x.SourceUrl));
+
+        captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "manual")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "denylist_hit"))
+            .Should().NotBeEmpty("un tentativo di aggirare il ban BGG deve essere visibile");
     }
 
     [Theory]

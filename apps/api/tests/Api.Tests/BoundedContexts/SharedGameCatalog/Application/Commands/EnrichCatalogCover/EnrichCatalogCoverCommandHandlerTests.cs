@@ -10,6 +10,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -399,6 +400,40 @@ public class EnrichCatalogCoverCommandHandlerTests
             Times.Never,
             "image-processing error short-circuits BEFORE R2 upload");
         harness.UowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public void Handle_ImageProcessingError_RecordsDecodeFail_OnWikimediaSink()
+    {
+        // Stesso arrangiamento di Handle_ImageProcessingError_ReturnsFailedImageProcessingError.
+        // L'harness monta il VERO WebpVariantGenerator: sono i byte corrotti scaricati da Commons a
+        // farlo fallire (DetectRasterFormat -> null), non un mock che lancia.
+        var harness = BuildHarness();
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC0");
+        harness.CommonsHandler.ImageBytes = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE };
+
+        EnrichCatalogCoverResult? result = null;
+        var captured = Api.Tests.Observability.MetricCapture.Capture(
+            MeepleAiMetrics.EgressBlocked.Name,
+            () => result = harness.Sut
+                .Handle(new EnrichCatalogCoverCommand(game.Id), CancellationToken.None)
+                .GetAwaiter().GetResult());
+
+        // L'handler CATTURA ImageProcessingException e ritorna Failed: nessuna eccezione esce,
+        // quindi qui NON serve try/catch (a differenza del path manuale).
+        result.Should().BeOfType<EnrichCatalogCoverResult.Failed>();
+
+        captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "wikimedia")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "decode_fail"))
+            .Should().NotBeEmpty("il rifiuto del decoder su un'immagine Commons è un blocco di egress");
     }
 
     [Fact]

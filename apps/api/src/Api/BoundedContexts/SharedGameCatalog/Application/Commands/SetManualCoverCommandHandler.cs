@@ -4,6 +4,7 @@ using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
@@ -81,9 +82,21 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
 
         // Re-encode to WebP: normalizes the format AND drops the original container/metadata. The
         // license was whitelisted by the validator, so we persist the attested value below.
-        var webpBytes = await _webpGenerator
-            .GenerateWebpAsync(imageBytes, WebpTargetWidth, WebpTargetHeight, cancellationToken)
-            .ConfigureAwait(false);
+        byte[] webpBytes;
+        try
+        {
+            webpBytes = await _webpGenerator
+                .GenerateWebpAsync(imageBytes, WebpTargetWidth, WebpTargetHeight, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (ImageProcessingException)
+        {
+            // #3583 — il payload scaricato è stato rifiutato dal decoder (decompression bomb o coder
+            // non-raster, #3495 M1). Il rifiuto è corretto: qui lo si rende visibile.
+            MeepleAiMetrics.RecordEgressBlocked(
+                MeepleAiMetrics.EgressSinks.Manual, MeepleAiMetrics.EgressBlockReasons.DecodeFail);
+            throw;
+        }
 
         // Write to the deterministic manual physical key via the RAW-KEY path (the categorized
         // StoreAsync would reject the slash-containing key + mint an unresolvable random key).

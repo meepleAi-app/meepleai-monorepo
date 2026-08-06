@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -233,6 +234,40 @@ public sealed class SetManualCoverCommandHandlerTests
     /// Minimal egress stub: returns the configured image bytes on the first (non-redirect) hop and
     /// counts requests so tests can assert "no download happened" on the short-circuit paths.
     /// </summary>
+    [Fact]
+    public void Handle_NonRasterPayload_RecordsDecodeFail_OnManualSink()
+    {
+        var game = NewGame();
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        // SVG: coder non-raster, rifiutato da DetectRasterFormat prima di raggiungere Magick (#3495 M1).
+        // Lo StubImageHandler dichiara Content-Type: image/png e il fetch non ispeziona i magic bytes,
+        // quindi il payload arriva davvero al decoder.
+        _httpHandler.ImageBytes = System.Text.Encoding.UTF8.GetBytes(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"10\" height=\"10\"/></svg>");
+
+        var captured = Api.Tests.Observability.MetricCapture.Capture(
+            MeepleAiMetrics.EgressBlocked.Name,
+            () =>
+            {
+                try
+                {
+                    CreateHandler().Handle(Command(game.Id), CancellationToken.None)
+                        .GetAwaiter().GetResult();
+                    throw new Xunit.Sdk.XunitException(
+                        "expected the decoder to reject the non-raster payload");
+                }
+                catch (ImageProcessingException)
+                {
+                    // atteso — l'handler registra e RILANCIA
+                }
+            });
+
+        captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "manual")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "decode_fail"))
+            .Should().NotBeEmpty("il rifiuto del decoder su un payload scaricato è un blocco di egress");
+    }
+
     private sealed class StubImageHandler : HttpMessageHandler
     {
         public byte[] ImageBytes { get; set; } = Array.Empty<byte>();

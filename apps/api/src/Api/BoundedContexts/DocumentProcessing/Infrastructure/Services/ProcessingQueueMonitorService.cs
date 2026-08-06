@@ -111,14 +111,23 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
     {
         var cutoff = DateTimeOffset.UtcNow - StuckJobTimeout;
 
+        // #3585: "stuck" means INACTIVE, not long-running. Measuring from StartedAt classified a
+        // perfectly healthy ingest as stuck — a 118-batch rulebook takes ~40 minutes of real work —
+        // and degraded it to Failed; it then restarted from zero and hit the same wall, so no
+        // document slower than the recovery timeout could ever complete. The pipeline reports
+        // forward progress in LastProgressAt, so the clock now starts from the last sign of life
+        // and falls back to StartedAt only for a job that has not reported yet.
         var stuckJobs = await db.Set<ProcessingJobEntity>()
-            .Where(j => j.Status == "Processing" && j.StartedAt != null && j.StartedAt < cutoff)
+            .Where(j => j.Status == "Processing"
+                     && j.StartedAt != null
+                     && (j.LastProgressAt ?? j.StartedAt) < cutoff)
             .Select(j => new
             {
                 j.Id,
                 j.PdfDocumentId,
                 FileName = j.PdfDocument.FileName,
                 j.StartedAt,
+                j.LastProgressAt,
             })
             .ToListAsync(ct)
             .ConfigureAwait(false);
@@ -127,7 +136,8 @@ internal sealed class ProcessingQueueMonitorService : BackgroundService
 
         foreach (var job in stuckJobs)
         {
-            var stuckMinutes = (DateTimeOffset.UtcNow - job.StartedAt!.Value).TotalMinutes;
+            var idleSince = job.LastProgressAt ?? job.StartedAt!.Value;
+            var stuckMinutes = (DateTimeOffset.UtcNow - idleSince).TotalMinutes;
 
             _logger.LogWarning(
                 "Stuck document detected: Job {JobId} (PDF: {FileName}) stuck for {Minutes:F1} minutes",

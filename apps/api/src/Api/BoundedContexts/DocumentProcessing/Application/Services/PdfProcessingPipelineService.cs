@@ -779,6 +779,33 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         return chunks.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text)).ToList();
     }
 
+    /// <summary>
+    /// #3585 — records forward progress on the active processing job for this PDF, so
+    /// <c>ProcessingQueueMonitorService</c> measures INACTIVITY rather than total elapsed time.
+    /// <para>
+    /// Written with <c>ExecuteUpdateAsync</c> on purpose: it is a direct UPDATE that bypasses the
+    /// change tracker, so a heartbeat can never flush unrelated pending pipeline state mid-ingest.
+    /// Best-effort — a failed heartbeat must never abort an otherwise healthy ingest (and the
+    /// InMemory provider used by some tests does not support ExecuteUpdate at all).
+    /// </para>
+    /// </summary>
+    private async Task ReportProgressAsync(Guid pdfDocumentId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var now = _timeProvider.GetUtcNow();
+            await _db.Set<Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity>()
+                .Where(j => j.PdfDocumentId == pdfDocumentId && j.Status == "Processing")
+                .ExecuteUpdateAsync(s => s.SetProperty(j => j.LastProgressAt, now), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex,
+                "[PdfPipeline] progress heartbeat failed for PDF {PdfId} (non-fatal)", pdfDocumentId);
+        }
+    }
+
     private async Task<List<float[]>> GenerateEmbeddingsAsync(
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> chunks,
@@ -827,6 +854,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             allEmbeddings.AddRange(batchResult.Embeddings);
+
+            // #3585: embedding is the long phase — a large rulebook runs >100 batches — and it is
+            // where the stuck-job monitor used to kill a healthy ingest. Report progress after every
+            // completed batch so "inactive" and "slow" stay distinguishable.
+            await ReportProgressAsync(pdfDoc.Id, cancellationToken).ConfigureAwait(false);
         }
 
         if (allEmbeddings.Count != chunks.Count)

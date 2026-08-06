@@ -405,6 +405,10 @@ public class UnstructuredPdfTextExtractorTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("Failed to connect");
+        // #3589: a genuine transport failure (no HTTP status was ever received) has no
+        // StatusCode on the exception, so this really is a connection failure, not a
+        // masked service response — must not be flagged permanent.
+        result.IsPermanentFailure.Should().BeFalse();
     }
 
     [Fact]
@@ -457,10 +461,20 @@ public class UnstructuredPdfTextExtractorTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
+        // #3589: the service answered (with a 4xx), so the message must not claim a
+        // connection failure — and a 400 is not the specific permanent condition (413).
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.IsPermanentFailure.Should().BeFalse();
     }
 
+    /// <summary>
+    /// #3589: reproduces the staging incident where Unstructured rejects an oversized
+    /// PDF with 413 and the extractor (a) blamed a connection failure that never
+    /// happened and (b) gave the pipeline no way to know the failure is permanent —
+    /// RetryFailedPdfsJob burned 3 full retries on a file that will never shrink.
+    /// </summary>
     [Fact]
-    public async Task ExtractTextAsync_FileTooLarge_ReturnsFailureResult()
+    public async Task ExtractTextAsync_FileTooLarge_IsPermanentFailure_AndDoesNotClaimConnectionFailure()
     {
         // Arrange
         var extractor = CreateExtractor();
@@ -475,7 +489,8 @@ public class UnstructuredPdfTextExtractorTests
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.RequestEntityTooLarge,
-                Content = new StringContent("{}")
+                Content = new StringContent(
+                    "{\"detail\":{\"error\":{\"code\":\"FILE_TOO_LARGE\",\"message\":\"File size 65824691 bytes exceeds maximum 52428800 bytes\"}}}")
             });
 
         // Act
@@ -483,6 +498,9 @@ public class UnstructuredPdfTextExtractorTests
 
         // Assert
         result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.ErrorMessage.Should().Contain("RequestEntityTooLarge");
+        result.IsPermanentFailure.Should().BeTrue();
     }
 
     [Fact]
@@ -703,6 +721,65 @@ public class UnstructuredPdfTextExtractorTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.IsPermanentFailure.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// #3589: same fix as <c>ExtractTextAsync_FileTooLarge_IsPermanentFailure_...</c> but
+    /// on the paged extraction path — <c>ExtractPagedTextAsync</c> has its own catch block.
+    /// </summary>
+    [Fact]
+    public async Task ExtractPagedTextAsync_FileTooLarge_IsPermanentFailure_AndDoesNotClaimConnectionFailure()
+    {
+        // Arrange
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.RequestEntityTooLarge,
+                Content = new StringContent("{\"detail\":{\"error\":{\"code\":\"FILE_TOO_LARGE\"}}}")
+            });
+
+        // Act
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.IsPermanentFailure.Should().BeTrue();
+    }
+
+    /// <summary>#3589: genuine transport failure on the paged path must stay non-permanent.</summary>
+    [Fact]
+    public async Task ExtractPagedTextAsync_ConnectionFailure_IsNotPermanent()
+    {
+        // Arrange
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("Connection refused"));
+
+        // Act
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Failed to connect");
+        result.IsPermanentFailure.Should().BeFalse();
     }
 
     [Fact]

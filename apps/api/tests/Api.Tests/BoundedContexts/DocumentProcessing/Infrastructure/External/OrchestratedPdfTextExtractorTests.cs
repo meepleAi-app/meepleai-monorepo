@@ -34,6 +34,16 @@ public class OrchestratedPdfTextExtractorTests
                 totalPages: 1, totalCharacters: 800, ocrTriggered: false, structuredElements: _elements));
     }
 
+    /// <summary>#3589 follow-up: every stage fails, the final (Stage 3) failure is permanent.</summary>
+    private sealed class AlwaysPermanentlyFailingExtractor : IPdfTextExtractor
+    {
+        public Task<TextExtractionResult> ExtractTextAsync(Stream s, bool ocr = true, CancellationToken ct = default) =>
+            Task.FromResult(TextExtractionResult.CreateFailure("permanent", isPermanentFailure: true));
+
+        public Task<PagedTextExtractionResult> ExtractPagedTextAsync(Stream s, bool ocr = true, CancellationToken ct = default) =>
+            Task.FromResult(PagedTextExtractionResult.CreateFailure("permanent", isPermanentFailure: true));
+    }
+
     private static Stream DummyPdf() =>
         new MemoryStream(System.Text.Encoding.ASCII.GetBytes("%PDF-1.4\ntest\n%%EOF"));
 
@@ -57,5 +67,52 @@ public class OrchestratedPdfTextExtractorTests
         result.Success.Should().BeTrue();
         result.StructuredElements.Should().NotBeNull();
         result.StructuredElements!.Single().Text.Should().Be("Preparazione");
+    }
+
+    /// <summary>
+    /// #3589 follow-up: IsPermanentFailure must survive the full Orchestrator round-trip
+    /// (IPdfTextExtractor → EnhancedPdfProcessingOrchestrator → OrchestratedPdfTextExtractor)
+    /// so a downstream PdfProcessingPipelineService.ExtractTextAsync sees the same signal it
+    /// gets from the direct (non-orchestrated) UnstructuredPdfTextExtractor.
+    /// </summary>
+    [Fact]
+    public async Task ExtractTextAsync_AllStagesPermanentlyFail_PropagatesIsPermanentFailure()
+    {
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            new AlwaysPermanentlyFailingExtractor(),
+            new AlwaysPermanentlyFailingExtractor(),
+            new AlwaysPermanentlyFailingExtractor(),
+            Mock.Of<ILogger<EnhancedPdfProcessingOrchestrator>>(),
+            new ConfigurationBuilder().Build(),
+            Options.Create(new PdfProcessingOptions { LargePdfThresholdBytes = 52428800, UseTempFileForLargePdfs = true }),
+            Mock.Of<ITextChunkingService>());
+        var adapter = new OrchestratedPdfTextExtractor(orchestrator);
+
+        await using var pdf = DummyPdf();
+        var result = await adapter.ExtractTextAsync(pdf, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeFalse();
+        result.IsPermanentFailure.Should().BeTrue();
+    }
+
+    /// <summary>Paged counterpart of <see cref="ExtractTextAsync_AllStagesPermanentlyFail_PropagatesIsPermanentFailure"/>.</summary>
+    [Fact]
+    public async Task ExtractPagedTextAsync_AllStagesPermanentlyFail_PropagatesIsPermanentFailure()
+    {
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            new AlwaysPermanentlyFailingExtractor(),
+            new AlwaysPermanentlyFailingExtractor(),
+            new AlwaysPermanentlyFailingExtractor(),
+            Mock.Of<ILogger<EnhancedPdfProcessingOrchestrator>>(),
+            new ConfigurationBuilder().Build(),
+            Options.Create(new PdfProcessingOptions { LargePdfThresholdBytes = 52428800, UseTempFileForLargePdfs = true }),
+            Mock.Of<ITextChunkingService>());
+        var adapter = new OrchestratedPdfTextExtractor(orchestrator);
+
+        await using var pdf = DummyPdf();
+        var result = await adapter.ExtractPagedTextAsync(pdf, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeFalse();
+        result.IsPermanentFailure.Should().BeTrue();
     }
 }

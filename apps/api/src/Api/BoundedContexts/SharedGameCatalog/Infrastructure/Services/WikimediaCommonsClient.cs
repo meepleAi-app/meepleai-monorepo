@@ -1,6 +1,9 @@
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Api.Observability;
+using Api.SharedKernel.Infrastructure.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
@@ -31,6 +34,18 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
 {
     private const string ApiPath = "w/api.php";
+
+    /// <summary>
+    /// #3495 Slice D (finding H1) — ceilings and budgets for the two Commons calls, enforced by
+    /// <see cref="HardenedRedirectFetch"/>. Before this slice the image download read the body with
+    /// no limit at all, so a hostile or accidental multi-GB file was an unbounded allocation.
+    /// The image cap is deliberately generous: Commons legitimately serves high-resolution
+    /// photographs, and the WebP re-encode downstream is what normalizes them.
+    /// </summary>
+    private const long MaxImageBytes = 32 * 1024 * 1024;
+    private const long MaxApiResponseBytes = 2 * 1024 * 1024;
+    private static readonly TimeSpan ImageDeadline = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ApiDeadline = TimeSpan.FromSeconds(15);
 
     /// <summary>
     /// Strips HTML tags from the Commons <c>Artist</c> field, which is returned
@@ -80,23 +95,28 @@ internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
         {
             var path = $"{ApiPath}?action=query&prop=imageinfo&iiprop=extmetadata&titles={Uri.EscapeDataString(title)}&format=json";
 
-            using var req = new HttpRequestMessage(HttpMethod.Get, path);
-            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            // #3495 Slice D: through the hardened gate — per-hop HTTPS/port re-validation, bounded
+            // redirect follow, capped body, total deadline (the API answers 200 directly, but a
+            // hijacked/misconfigured redirect must not be followed blindly either).
+            var body = await HardenedRedirectFetch.FetchAsync(
+                _http,
+                path,
+                MaxApiResponseBytes,
+                MeepleAiMetrics.EgressSinks.Wikimedia,
+                ApiDeadline,
+                configureRequest: req => req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json")),
+                ct).ConfigureAwait(false);
 
-            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
-
-            if (!resp.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "Commons imageinfo HTTP {Status} for file '{Filename}' (decoded='{Decoded}'). Caller decides retry.",
-                    (int)resp.StatusCode,
-                    filename,
-                    decoded);
-                return CommonsLicenseResult.NotAvailable();
-            }
-
-            var body = await resp.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            return ParseResponse(body, filename, decoded);
+            return ParseResponse(Encoding.UTF8.GetString(body), filename, decoded);
+        }
+        catch (HardenedFetchException ex)
+        {
+            _logger.LogWarning(ex,
+                "Commons imageinfo blocked by the egress gate ({Reason}) for file '{Filename}' (decoded='{Decoded}').",
+                ex.Reason,
+                filename,
+                decoded);
+            return CommonsLicenseResult.NotAvailable();
         }
         // Issue #2157: real caller cancellation propagates so the batch handler
         // can decide to abort. HttpClient.Timeout firing also raises
@@ -155,23 +175,21 @@ internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
 
         try
         {
-            using var req = new HttpRequestMessage(HttpMethod.Get, path);
-            // Accept any image content; Commons serves PNG/JPEG/GIF/WebP/SVG/TIFF.
-            req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
+            // #3495 Slice D (H1) — the Special:FilePath 302 to upload.wikimedia.org is now followed
+            // MANUALLY through the gate instead of by the handler: each hop is re-validated
+            // (HTTPS-only, default port) and the body is read under a ceiling with a total deadline.
+            // This REPLACES the #1823 M8 invariant "do NOT disable redirects": the redirect is still
+            // followed — the image bytes stay reachable — but through the guarded path.
+            var bytes = await HardenedRedirectFetch.FetchAsync(
+                _http,
+                path,
+                MaxImageBytes,
+                MeepleAiMetrics.EgressSinks.Wikimedia,
+                ImageDeadline,
+                // Accept any image content; Commons serves PNG/JPEG/GIF/WebP/SVG/TIFF.
+                configureRequest: req => req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*")),
+                ct).ConfigureAwait(false);
 
-            using var resp = await _http.SendAsync(req, ct).ConfigureAwait(false);
-
-            if (!resp.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "Commons FilePath HTTP {Status} for file '{Filename}' (decoded='{Decoded}'). Caller decides retry.",
-                    (int)resp.StatusCode,
-                    filename,
-                    decoded);
-                return null;
-            }
-
-            var bytes = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
             if (bytes.Length == 0)
             {
                 _logger.LogWarning(
@@ -182,6 +200,18 @@ internal sealed class WikimediaCommonsClient : IWikimediaCommonsClient
             }
 
             return bytes;
+        }
+        // #3495 Slice D: the gate refused a hop (scheme/port downgrade), the body blew the ceiling,
+        // or the total deadline elapsed. Same fail-soft contract as the other failures here — the M9
+        // scheduler records "image bytes not available" and moves on.
+        catch (HardenedFetchException ex)
+        {
+            _logger.LogWarning(ex,
+                "Commons FilePath blocked by the egress gate ({Reason}) for file '{Filename}' (decoded='{Decoded}').",
+                ex.Reason,
+                filename,
+                decoded);
+            return null;
         }
         // Issue #2157: real caller cancellation propagates so the batch handler
         // can decide to abort. HttpClient.Timeout firing also raises

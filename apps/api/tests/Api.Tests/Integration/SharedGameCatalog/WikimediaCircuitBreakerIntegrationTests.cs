@@ -42,9 +42,19 @@ public class WikimediaCircuitBreakerIntegrationTests
         Task<HttpResponseMessage> GetAsync(string path, CancellationToken ct);
     }
 
+    // #3495 Slice D — these two constructors are invoked ONLY by the typed-client factory, through
+    // reflection, so SonarAnalyzer S1144 reports them as unused and `dotnet format` (which applies
+    // analyzer fixes, not just whitespace) DELETES them. That is exactly what happened in 3cbec7f86
+    // ("chore(format): repo-wide whitespace drift cleanup", #2296): the field was left unassigned —
+    // CS0649 is a warning, not an error — and all three tests in this class have failed since with
+    // "A suitable constructor ... could not be located". They are Integration-category, so Backend
+    // Fast never ran them and the breakage stayed invisible. Restored AND pinned: without the
+    // suppression the next format sweep silently removes them again.
+#pragma warning disable S1144 // Constructor is resolved by the HttpClient typed-client factory
     private sealed class FakeWikidataClient : IFakeWikidataClient
     {
         private readonly HttpClient _client;
+        public FakeWikidataClient(HttpClient client) => _client = client;
         public Task<HttpResponseMessage> GetAsync(string path, CancellationToken ct) =>
             _client.GetAsync(path, ct);
     }
@@ -52,9 +62,11 @@ public class WikimediaCircuitBreakerIntegrationTests
     private sealed class FakeCommonsClient : IFakeCommonsClient
     {
         private readonly HttpClient _client;
+        public FakeCommonsClient(HttpClient client) => _client = client;
         public Task<HttpResponseMessage> GetAsync(string path, CancellationToken ct) =>
             _client.GetAsync(path, ct);
     }
+#pragma warning restore S1144
 
     private sealed class FixedResponseHandler : DelegatingHandler
     {

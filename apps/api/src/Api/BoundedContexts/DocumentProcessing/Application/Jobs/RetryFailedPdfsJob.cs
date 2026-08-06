@@ -54,11 +54,17 @@ internal sealed class RetryFailedPdfsJob : IJob
         {
             // Find failed PDFs with retriable errors that haven't exceeded max retries
             // Note: Using == instead of string.Equals in LINQ to Entities (EF Core limitation)
+            // #3454: an UNCATEGORISED failure counts as Unknown, which IS retriable. The previous
+            // `ErrorCategory != null` filter made those rows invisible to this job FOREVER — no
+            // automatic retry, and no operator path short of a per-id reindex. Staging had 13 such
+            // PDFs (transient Unstructured/embedding failures, retry_count=0) stuck since before
+            // the category column existed, which also kept their covers ungenerated.
+            // The deprecated MarkAsFailed(error) overload assigns Unknown for exactly this reason,
+            // so NULL and Unknown must be treated alike. The retry stays bounded by RetryCount < 3.
             var failedPdfs = await _dbContext.PdfDocuments
                 .Where(p => p.ProcessingState == PdfProcessingState.Failed.ToString()
                          && p.RetryCount < 3
-                         && p.ErrorCategory != null
-                         && RetriableCategories.Contains(p.ErrorCategory))
+                         && (p.ErrorCategory == null || RetriableCategories.Contains(p.ErrorCategory)))
                 .Select(p => new
                 {
                     p.Id,

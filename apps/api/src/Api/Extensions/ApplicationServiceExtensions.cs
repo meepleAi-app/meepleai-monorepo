@@ -129,6 +129,10 @@ internal static class ApplicationServiceExtensions
             Api.BoundedContexts.Administration.Infrastructure.Health.ImpersonationHealthTracker>();
         services.AddHostedService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.ImpersonationMetricsRefreshService>();
 
+        // #3383 (ADR-087 D4) — il gauge dead-letter deve essere DB-derivato per restare corretto
+        // sotto max() a più di un'istanza: l'incremento in memoria del runner divergeva per processo.
+        services.AddHostedService<Api.BoundedContexts.SharedGameCatalog.Infrastructure.BackgroundJobs.WikidataDeadLetterMetricsRefreshService>();
+
         return services;
     }
 

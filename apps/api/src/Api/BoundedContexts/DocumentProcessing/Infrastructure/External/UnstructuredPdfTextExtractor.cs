@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -89,6 +90,19 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
         }
         catch (HttpRequestException ex)
         {
+            if (ex.StatusCode.HasValue)
+            {
+                // #3589: the connection succeeded and the service responded with an error
+                // status (e.g. 413 payload too large) — ex.Message already carries the
+                // status + body, no "Failed to connect" wrapping needed.
+                _logger.LogError(ex,
+                    "Unstructured service returned an error response. RequestId: {RequestId}, StatusCode: {StatusCode}",
+                    requestId, ex.StatusCode);
+                return TextExtractionResult.CreateFailure(
+                    ex.Message,
+                    isPermanentFailure: ex.StatusCode == HttpStatusCode.RequestEntityTooLarge);
+            }
+
             _logger.LogError(ex,
                 "HTTP request to Unstructured service failed. RequestId: {RequestId}",
                 requestId);
@@ -180,8 +194,15 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
                 response.StatusCode,
                 errorContent);
 
+            // #3589: carry the actual status code on the exception so callers can tell "the
+            // service answered with an error" (StatusCode set) apart from "the connection
+            // never succeeded" (StatusCode null, thrown by the HTTP stack itself) — collapsing
+            // both into the same "Failed to connect" message sent staging diagnosis toward
+            // network/DNS causes for what was actually a 413 response.
             throw new HttpRequestException(
-                $"Unstructured extraction failed with status {response.StatusCode}: {errorContent}");
+                $"Unstructured extraction failed with status {response.StatusCode}: {errorContent}",
+                inner: null,
+                statusCode: response.StatusCode);
         }
 
         return response;
@@ -282,6 +303,17 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
         }
         catch (HttpRequestException ex)
         {
+            if (ex.StatusCode.HasValue)
+            {
+                // #3589: see ExtractTextAsync's mirrored catch block.
+                _logger.LogError(ex,
+                    "Unstructured service (paged) returned an error response. RequestId: {RequestId}, StatusCode: {StatusCode}",
+                    requestId, ex.StatusCode);
+                return PagedTextExtractionResult.CreateFailure(
+                    ex.Message,
+                    isPermanentFailure: ex.StatusCode == HttpStatusCode.RequestEntityTooLarge);
+            }
+
             _logger.LogError(ex, "HTTP request to Unstructured service (paged) failed. RequestId: {RequestId}", requestId);
             return PagedTextExtractionResult.CreateFailure($"Failed to connect to Unstructured service: {ex.Message}");
         }

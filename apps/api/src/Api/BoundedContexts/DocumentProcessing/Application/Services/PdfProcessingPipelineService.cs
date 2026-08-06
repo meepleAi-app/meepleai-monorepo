@@ -482,6 +482,20 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogWarning(ex, "[PdfPipeline] Processing cancelled for PDF {PdfId}", pdfId);
             throw; // Let caller handle cancellation
         }
+        catch (PdfExtractionFailedException ex)
+        {
+            // #3589: this is the path RetryFailedPdfsJob and manual retry drive (via
+            // EnqueuePdfCommand → PdfProcessingQuartzJob → ProcessAsync). Before this fix
+            // ErrorCategory was left NULL here regardless of cause, which RetryFailedPdfsJob
+            // treats as retriable — a permanent 413 burned 3 full automatic retries on a file
+            // that will never shrink. Only permanent failures get a non-retryable category;
+            // transient ones keep the pre-existing NULL/retriable behavior.
+            _logger.LogError(ex,
+                "[PdfPipeline] Text extraction failed for PDF {PdfId} (permanent={IsPermanentFailure})",
+                pdfId, ex.IsPermanentFailure);
+            var category = ex.IsPermanentFailure ? ErrorCategory.PayloadTooLarge : (ErrorCategory?)null;
+            await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
@@ -543,8 +557,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
             if (!extractResult.Success)
             {
-                throw new InvalidOperationException(
-                    $"Text extraction failed: {extractResult.ErrorMessage}");
+                // #3589: PdfExtractionFailedException carries IsPermanentFailure so the
+                // catch-all in ProcessAsync can set the correct ErrorCategory (see that
+                // catch block for why a plain InvalidOperationException lost this signal).
+                throw new PdfExtractionFailedException(
+                    $"Text extraction failed: {extractResult.ErrorMessage}",
+                    extractResult.IsPermanentFailure);
             }
 
             var fullText = string.Join("\n\n", extractResult.PageChunks
@@ -1179,7 +1197,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// Best-effort attempt to mark a PDF as failed. Used in catch blocks where
     /// the original DbContext may be in a bad state.
     /// </summary>
-    private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage)
+    /// <param name="pdfDocumentId">The PDF document to mark as failed.</param>
+    /// <param name="errorMessage">Persisted (truncated to 500 chars) as ProcessingError.</param>
+    /// <param name="category">
+    /// #3589: when provided, persisted as PdfDocument.ErrorCategory so RetryFailedPdfsJob can
+    /// exclude permanent failures from automatic retry. Omitted (null) preserves the
+    /// pre-#3589 behavior of leaving ErrorCategory untouched (NULL — treated as retriable).
+    /// </param>
+    private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
         try
         {
@@ -1196,6 +1221,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     ? errorMessage[..500]
                     : errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                if (category.HasValue)
+                {
+                    pdfDoc.ErrorCategory = category.Value.ToString();
+                }
                 await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             }
         }

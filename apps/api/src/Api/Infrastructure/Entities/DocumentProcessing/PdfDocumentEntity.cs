@@ -47,7 +47,7 @@ public class PdfDocumentEntity
 
     // Issue #4216: Retry mechanism tracking
     public int RetryCount { get; set; }
-    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, Unknown
+    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, Unknown
     public string? FailedAtState { get; set; } // PdfProcessingState where failure occurred
 
     // PDF-03: Structured data extraction fields

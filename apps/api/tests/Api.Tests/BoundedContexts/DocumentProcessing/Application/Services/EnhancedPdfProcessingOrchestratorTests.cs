@@ -179,6 +179,50 @@ public class EnhancedPdfProcessingOrchestratorTests
         stage3.CallCount.Should().Be(1);
     }
 
+    /// <summary>
+    /// #3589 follow-up: a review of the original fix flagged that IsPermanentFailure was
+    /// silently dropped by EnhancedExtractionResult/EnhancedPagedExtractionResult, which have
+    /// no such field. Mirrors ErrorMessage's existing behavior (only the FINAL surfaced
+    /// stage's message survives, not an aggregate of all 3 stages) — same convention, now
+    /// applied to IsPermanentFailure.
+    /// </summary>
+    [Fact]
+    public async Task AllStagesFail_Stage3Permanent_PropagatesIsPermanentFailure()
+    {
+        var stage1 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage1 error");
+        var stage2 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage2 error");
+        var stage3 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage3 error", isPermanentFailure: true);
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
+
+        await using var pdfStream = CreateDummyPdfStream();
+
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeFalse();
+        result.IsPermanentFailure.Should().BeTrue();
+    }
+
+    /// <summary>Paged counterpart of <see cref="AllStagesFail_Stage3Permanent_PropagatesIsPermanentFailure"/>.</summary>
+    [Fact]
+    public async Task AllStagesFailPaged_Stage3Permanent_PropagatesIsPermanentFailure()
+    {
+        var stage1 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage1 error");
+        var stage2 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage2 error");
+        var stage3 = new FakeExtractor(success: false, quality: ExtractionQuality.VeryLow, text: "", errorMsg: "Stage3 error", isPermanentFailure: true);
+
+        var orchestrator = new EnhancedPdfProcessingOrchestrator(
+            stage1, stage2, stage3, _logger, _configuration, _options, _chunkingService);
+
+        await using var pdfStream = CreateDummyPdfStream();
+
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeFalse();
+        result.IsPermanentFailure.Should().BeTrue();
+    }
+
     [Fact]
     public async Task Stage1Exception_CatchesAndFallsBackToStage2()
     {
@@ -527,6 +571,7 @@ public class EnhancedPdfProcessingOrchestratorTests
         private readonly bool _throwException;
         private readonly int _pageCount;
         private readonly int _charsPerPage;
+        private readonly bool _isPermanentFailure;
 
         public int CallCount { get; private set; }
         public int PagedCallCount { get; private set; }
@@ -538,7 +583,8 @@ public class EnhancedPdfProcessingOrchestratorTests
             string? errorMsg = null,
             bool throwException = false,
             int pageCount = 10,
-            int charsPerPage = 100)
+            int charsPerPage = 100,
+            bool isPermanentFailure = false)
         {
             _success = success;
             _quality = quality;
@@ -547,6 +593,7 @@ public class EnhancedPdfProcessingOrchestratorTests
             _throwException = throwException;
             _pageCount = pageCount;
             _charsPerPage = charsPerPage;
+            _isPermanentFailure = isPermanentFailure;
         }
 
         public Task<TextExtractionResult> ExtractTextAsync(
@@ -571,7 +618,7 @@ public class EnhancedPdfProcessingOrchestratorTests
                     quality: _quality));
             }
 
-            return Task.FromResult(TextExtractionResult.CreateFailure(_errorMsg ?? "Fake extraction failed"));
+            return Task.FromResult(TextExtractionResult.CreateFailure(_errorMsg ?? "Fake extraction failed", _isPermanentFailure));
         }
 
         public Task<PagedTextExtractionResult> ExtractPagedTextAsync(
@@ -604,7 +651,7 @@ public class EnhancedPdfProcessingOrchestratorTests
                     ocrTriggered: false));
             }
 
-            return Task.FromResult(PagedTextExtractionResult.CreateFailure(_errorMsg ?? "Fake paged extraction failed"));
+            return Task.FromResult(PagedTextExtractionResult.CreateFailure(_errorMsg ?? "Fake paged extraction failed", _isPermanentFailure));
         }
     }
     private static MemoryStream CreateDummyPdfStream()

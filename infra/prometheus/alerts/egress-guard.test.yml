@@ -1,6 +1,15 @@
-# promtool test for egress-guard.yml (#3495 M2). NOT run in CI — on-demand only:
-#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
-#     promtool test rules /work/egress-guard.test.yml
+# promtool test for egress-guard.yml (#3495 M2). NOT run in CI — on-demand only.
+#
+# L'immagine prom/prometheus ha `prometheus` come entrypoint, quindi promtool va invocato con
+# --entrypoint; su Git Bash serve anche MSYS_NO_PATHCONV=1, altrimenti /work viene riscritto in
+# C:/Program Files/Git/work (#3583 — il comando documentato in origine non funzionava):
+#   MSYS_NO_PATHCONV=1 docker run --rm --entrypoint promtool \
+#     -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     test rules /work/egress-guard.test.yml
+#
+# NOTA (#3583): exp_annotations è OBBLIGATORIO quando exp_alerts non è vuoto — promtool confronta
+# l'intero alert, annotazioni incluse. Questo file era l'unico dei nove a ometterlo, quindi il suo
+# test falliva fin dalla creazione; le annotazioni sotto devono restare allineate a egress-guard.yml.
 rule_files:
   - egress-guard.yml
 evaluation_interval: 1m
@@ -17,6 +26,10 @@ tests:
           - exp_labels:
               severity: critical
               subsystem: egress-ssrf
+            exp_annotations:
+              summary: "Manual-cover SSRF attempt blocked (sink=manual, private_ip)"
+              description: "meepleai_egress_blocked_total incremented for sink=manual with reason private_ip: an admin-supplied manual-cover URL resolved to an internal/reserved address. SLO for this metric is ZERO; any nonzero rate is a P1 SSRF incident (#3495)."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md"
 
   # 2) DOES NOT FIRE on cold-start: only an unrelated sink series exists; `or vector(0)` keeps it silent.
   - interval: 1m
@@ -28,7 +41,7 @@ tests:
         alertname: EgressBlockedManualSensitive
         exp_alerts: []
 
-  # 3) DOES NOT FIRE for a non-sensitive reason on the manual sink (size_cap is not private_ip/denylist_hit).
+  # 3) DOES NOT FIRE for a non-sensitive reason on the manual sink (size_cap is neither rule's reason).
   - interval: 1m
     input_series:
       - series: 'meepleai_egress_blocked_total{sink="manual",reason="size_cap"}'
@@ -36,4 +49,37 @@ tests:
     alert_rule_test:
       - eval_time: 5m
         alertname: EgressBlockedManualSensitive
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: EgressDenylistHit
+        exp_alerts: []
+
+  # 4) denylist_hit FIRES EgressDenylistHit at warning — and NOT the critical SSRF alert (#3583).
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_egress_blocked_total{sink="manual",reason="denylist_hit"}'
+        values: '0 0 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EgressDenylistHit
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: egress-policy
+            exp_annotations:
+              summary: "Manual-cover URL rejected by the ADR-059 BGG deny-list (sink=manual)"
+              description: "meepleai_egress_blocked_total incremented for sink=manual with reason denylist_hit: someone submitted a BGG/geekdo asset URL to the manual-cover field, which ADR-059 §5 bans. A one-off is an admin mistake; a sustained rate is an attempt to launder around the ban and warrants review of who is submitting it. The legitimate route for a BGG cover is the admin server-to-server re-upload path, never the arbitrary-URL field."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md"
+      - eval_time: 5m
+        alertname: EgressBlockedManualSensitive
+        exp_alerts: []
+
+  # 5) private_ip does NOT cross-trigger the policy alert (its own firing is covered by case 1).
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_egress_blocked_total{sink="manual",reason="private_ip"}'
+        values: '0 0 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EgressDenylistHit
         exp_alerts: []

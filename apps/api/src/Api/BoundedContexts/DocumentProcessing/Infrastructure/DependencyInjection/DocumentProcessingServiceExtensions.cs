@@ -217,6 +217,11 @@ internal static class DocumentProcessingServiceExtensions
         // Shared PDF processing pipeline (used by recovery job and future handler consolidation)
         services.AddScoped<IPdfProcessingPipelineService, PdfProcessingPipelineService>();
 
+        // Issue #3588: requeue processing_jobs orphaned by a restart. Registered BEFORE the stale-PDF
+        // recovery and with a shorter startup delay so orphans are back in the queue before that
+        // service starts reprocessing documents.
+        services.AddHostedService<OrphanedProcessingJobRecoveryService>();
+
         // Stale PDF recovery: runs once on startup to reprocess stuck PDFs
         services.AddHostedService<StalePdfRecoveryService>();
 

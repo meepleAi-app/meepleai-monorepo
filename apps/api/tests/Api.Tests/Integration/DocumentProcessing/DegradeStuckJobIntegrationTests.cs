@@ -245,4 +245,205 @@ public sealed class DegradeStuckJobIntegrationTests : IAsyncLifetime
         reloadedJob.CompletedAt.Should().NotBeNull(
             "CompletedAt written by job.Fail() via TimeProvider (DateTimeOffset.UtcNow) must persist without ArgumentException");
     }
+
+    /// <summary>
+    /// Regression guard for issue #3588: degrading a job that looks like a REAL one — five
+    /// pipeline steps, a non-null <c>CurrentStep</c>, and that step in <c>Running</c> — must
+    /// still persist Failed state.
+    ///
+    /// The sibling test above deliberately seeds <c>CurrentStep = null</c> and zero steps, so
+    /// <c>ProcessingJob.Fail()</c> skips the step-lookup branch. That is exactly the branch that
+    /// broke in production: failing the running step appends a brand-new <c>StepLogEntry</c>
+    /// (fresh <c>Guid</c>) to an ALREADY-PERSISTED step, and the repository's post-Update
+    /// reconciliation only flipped log entries of BRAND-NEW steps to <c>Added</c>. The new log row
+    /// therefore stayed <c>Modified</c> and EF emitted
+    /// <c>UPDATE step_log_entries … WHERE Id = &lt;never-inserted guid&gt;</c> → 0 rows affected →
+    /// <see cref="DbUpdateConcurrencyException"/>, caught by the handler and reported as a
+    /// "concurrency conflict". Every stuck job in staging hit this, every two minutes, forever.
+    ///
+    /// Note this is NOT an xmin/optimistic-concurrency failure: <c>processing_jobs</c> declares no
+    /// concurrency token at all.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "3588")]
+    public async Task Degrade_StuckJobWithRunningStep_PersistsFailedState_AndAppendsErrorLog()
+    {
+        // ── Arrange ──────────────────────────────────────────────────────────────
+        var pdfId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
+        var runningStepId = Guid.NewGuid();
+
+        _dbContext!.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "stuck-with-steps.pdf",
+            FilePath = $"/test/stuck-steps-{pdfId:N}.pdf",
+            FileSizeBytes = 2_048,
+            ContentType = "application/pdf",
+            UploadedByUserId = TestUserId,
+            SharedGameId = TestGameId,
+            ProcessingState = nameof(PdfProcessingState.Embedding),
+            UploadedAt = DateTime.UtcNow.AddHours(-2),
+        });
+
+        // A realistic job: Processing, stalled mid-Embed, with all five steps persisted.
+        _dbContext.ProcessingJobs.Add(new ProcessingJobEntity
+        {
+            Id = jobId,
+            PdfDocumentId = pdfId,
+            UserId = TestUserId,
+            Status = "Processing",
+            Priority = 0,
+            CurrentStep = nameof(ProcessingStepType.Embed),
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-2),
+            StartedAt = DateTimeOffset.UtcNow.AddMinutes(-90),
+            MaxRetries = 3,
+        });
+
+        var stepOrder = new[]
+        {
+            ProcessingStepType.Upload,
+            ProcessingStepType.Extract,
+            ProcessingStepType.Chunk,
+            ProcessingStepType.Embed,
+            ProcessingStepType.Index,
+        };
+
+        foreach (var stepType in stepOrder)
+        {
+            var isRunning = stepType == ProcessingStepType.Embed;
+            var isDone = stepType < ProcessingStepType.Embed;
+
+            _dbContext.ProcessingSteps.Add(new ProcessingStepEntity
+            {
+                Id = isRunning ? runningStepId : Guid.NewGuid(),
+                ProcessingJobId = jobId,
+                StepName = stepType.ToString(),
+                Status = isRunning
+                    ? nameof(StepStatus.Running)
+                    : isDone ? nameof(StepStatus.Completed) : nameof(StepStatus.Pending),
+                StartedAt = isRunning || isDone ? DateTimeOffset.UtcNow.AddMinutes(-90) : null,
+                CompletedAt = isDone ? DateTimeOffset.UtcNow.AddMinutes(-89) : null,
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // ── Act ───────────────────────────────────────────────────────────────────
+        using var scope = _serviceProvider!.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var result = await mediator.Send(
+            new DegradeStuckJobCommand(jobId, 90.0),
+            TestCancellationToken);
+
+        // ── Assert ────────────────────────────────────────────────────────────────
+        result.Degraded.Should().BeTrue(
+            "a job with a Running step must degrade — appending the step's error log must be an "
+            + "INSERT, not an UPDATE against a row that was never inserted (#3588)");
+
+        var reloadedJob = await _dbContext.ProcessingJobs.AsNoTracking()
+            .FirstAsync(j => j.Id == jobId, TestCancellationToken);
+        reloadedJob.Status.Should().Be("Failed", "the stuck job must reach a terminal state");
+
+        var reloadedStep = await _dbContext.ProcessingSteps.AsNoTracking()
+            .FirstAsync(s => s.Id == runningStepId, TestCancellationToken);
+        reloadedStep.Status.Should().Be(nameof(StepStatus.Failed),
+            "the step that was Running when the job stalled must be marked Failed");
+
+        var logEntries = await _dbContext.StepLogEntries.AsNoTracking()
+            .Where(l => l.ProcessingStepId == runningStepId)
+            .ToListAsync(TestCancellationToken);
+        logEntries.Should().ContainSingle(
+            "ProcessingStep.Fail() appends exactly one error log entry, which must be INSERTed")
+            .Which.Level.Should().Be(nameof(StepLogLevel.Error));
+
+        // The step count must be unchanged: reconciliation must not delete or duplicate steps.
+        var stepCount = await _dbContext.ProcessingSteps.AsNoTracking()
+            .CountAsync(s => s.ProcessingJobId == jobId, TestCancellationToken);
+        stepCount.Should().Be(5, "degrading a job must not add or remove pipeline steps");
+    }
+
+    /// <summary>
+    /// Guard for the round-trip loss that #3588 exposed: <c>last_progress_at</c> (#3585) is written
+    /// out-of-band by the pipeline heartbeat via <c>ExecuteUpdateAsync</c> and has no counterpart on
+    /// the <c>ProcessingJob</c> aggregate, so a detached <c>MapToPersistence</c> → <c>Update</c>
+    /// round-trip would silently blank it. Blanking it restarts the monitor's idle clock from
+    /// <c>StartedAt</c>, which is exactly the false-positive "stuck" classification #3585 removed.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "3588")]
+    public async Task Update_AfterHeartbeat_PreservesLastProgressAt()
+    {
+        // ── Arrange ──────────────────────────────────────────────────────────────
+        var pdfId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
+        var heartbeat = new DateTimeOffset(2026, 8, 6, 11, 30, 0, TimeSpan.Zero);
+
+        _dbContext!.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = "heartbeat.pdf",
+            FilePath = $"/test/heartbeat-{pdfId:N}.pdf",
+            FileSizeBytes = 512,
+            ContentType = "application/pdf",
+            UploadedByUserId = TestUserId,
+            SharedGameId = TestGameId,
+            ProcessingState = nameof(PdfProcessingState.Embedding),
+            UploadedAt = DateTime.UtcNow.AddHours(-1),
+        });
+
+        _dbContext.ProcessingJobs.Add(new ProcessingJobEntity
+        {
+            Id = jobId,
+            PdfDocumentId = pdfId,
+            UserId = TestUserId,
+            Status = "Processing",
+            Priority = 0,
+            CurrentStep = nameof(ProcessingStepType.Embed),
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-2),
+            StartedAt = DateTimeOffset.UtcNow.AddMinutes(-90),
+            LastProgressAt = heartbeat, // written by the pipeline heartbeat (#3585)
+            MaxRetries = 3,
+        });
+
+        var embedStepId = Guid.NewGuid();
+        _dbContext.ProcessingSteps.Add(new ProcessingStepEntity
+        {
+            Id = embedStepId,
+            ProcessingJobId = jobId,
+            StepName = nameof(ProcessingStepType.Embed),
+            Status = nameof(StepStatus.Running),
+            StartedAt = DateTimeOffset.UtcNow.AddMinutes(-90),
+        });
+
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // ── Act ───────────────────────────────────────────────────────────────────
+        // Load through the real repository and write it back — the detached round-trip that every
+        // ProcessingJob mutation goes through. AddStepLog is used because it leaves the job in
+        // Processing, which is the only state in which blanking the heartbeat can do damage.
+        using var scope = _serviceProvider!.CreateScope();
+        var jobRepository = scope.ServiceProvider.GetRequiredService<IProcessingJobRepository>();
+        var unitOfWork = scope.ServiceProvider
+            .GetRequiredService<Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork>();
+
+        var job = await jobRepository.GetByIdAsync(jobId, TestCancellationToken);
+        job.Should().NotBeNull();
+        job!.AddStepLog(ProcessingStepType.Embed, StepLogLevel.Info, "batch 42/118 embedded");
+        await jobRepository.UpdateAsync(job, TestCancellationToken);
+        await unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        // ── Assert ────────────────────────────────────────────────────────────────
+        var reloaded = await _dbContext.ProcessingJobs.AsNoTracking()
+            .FirstAsync(j => j.Id == jobId, TestCancellationToken);
+
+        var persistedLogs = await _dbContext.StepLogEntries.AsNoTracking()
+            .CountAsync(l => l.ProcessingStepId == embedStepId, TestCancellationToken);
+        persistedLogs.Should().Be(1, "the mutation under test must actually have been persisted");
+
+        reloaded.Status.Should().Be("Processing", "the job must still be in flight");
+        reloaded.LastProgressAt.Should().Be(heartbeat,
+            "an unrelated job mutation must not blank the progress heartbeat the monitor reads");
+    }
 }

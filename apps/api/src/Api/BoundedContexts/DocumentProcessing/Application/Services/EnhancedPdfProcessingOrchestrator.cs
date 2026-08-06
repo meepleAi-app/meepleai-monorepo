@@ -373,7 +373,9 @@ internal class EnhancedPdfProcessingOrchestrator
     }
 
     /// <summary>
-    /// Creates paged validation failure result
+    /// Creates paged validation failure result. Only caller is the pre-flight file-size
+    /// check, which is permanent by construction (#3589 follow-up — see the non-paged
+    /// CreateFailure for the same reasoning).
     /// </summary>
     private static EnhancedPagedExtractionResult CreatePagedValidationFailureResult(string errorMessage, TimeSpan duration)
     {
@@ -386,7 +388,8 @@ internal class EnhancedPdfProcessingOrchestrator
             StageUsed: 0,
             StageName: "Validation",
             TotalDurationMs: (int)duration.TotalMilliseconds,
-            ErrorMessage: errorMessage);
+            ErrorMessage: errorMessage,
+            IsPermanentFailure: true);
     }
 
     /// <summary>
@@ -459,7 +462,8 @@ internal class EnhancedPdfProcessingOrchestrator
             StageUsed: stageUsed,
             StageName: stageName,
             TotalDurationMs: (int)totalDuration.TotalMilliseconds,
-            ErrorMessage: extractionResult.ErrorMessage);
+            ErrorMessage: extractionResult.ErrorMessage,
+            IsPermanentFailure: extractionResult.IsPermanentFailure);
     }
     /// <summary>
     /// Extracts text page-by-page using 3-stage fallback pipeline
@@ -687,7 +691,8 @@ internal class EnhancedPdfProcessingOrchestrator
             StageName: stageName,
             TotalDurationMs: (int)totalDuration.TotalMilliseconds,
             ErrorMessage: pagedResult.ErrorMessage,
-            StructuredElements: pagedResult.StructuredElements);
+            StructuredElements: pagedResult.StructuredElements,
+            IsPermanentFailure: pagedResult.IsPermanentFailure);
     }
 
     /// <summary>
@@ -829,7 +834,12 @@ internal record EnhancedExtractionResult(
     int StageUsed,
     string StageName,
     int TotalDurationMs,
-    string? ErrorMessage = null)
+    string? ErrorMessage = null,
+    // #3589 follow-up: mirrors ErrorMessage's existing convention — only the FINAL surfaced
+    // stage's flag survives (not an aggregate of all 3 stages). Without this, a permanent
+    // Stage-1 413 that falls through to a (deterministically non-permanent) Stage-3 Docnet
+    // failure would silently lose the signal downstream callers rely on for retry decisions.
+    bool IsPermanentFailure = false)
 {
     /// <summary>
     /// Creates success result from stage extraction
@@ -850,11 +860,14 @@ internal record EnhancedExtractionResult(
             StageUsed: stageUsed,
             StageName: stageName,
             TotalDurationMs: totalDurationMs,
-            ErrorMessage: result.ErrorMessage);
+            ErrorMessage: result.ErrorMessage,
+            IsPermanentFailure: result.IsPermanentFailure);
     }
 
     /// <summary>
-    /// Creates failure result with error message (defense in depth validation)
+    /// Creates failure result with error message (defense in depth validation). Only caller
+    /// is the pre-flight file-size check, which is permanent by construction — a file that
+    /// exceeds PdfProcessing:MaxFileSizeBytes won't shrink on retry (#3589 follow-up).
     /// </summary>
     public static EnhancedExtractionResult CreateFailure(string errorMessage)
     {
@@ -868,7 +881,8 @@ internal record EnhancedExtractionResult(
             StageUsed: 0,
             StageName: "None",
             TotalDurationMs: 0,
-            ErrorMessage: errorMessage);
+            ErrorMessage: errorMessage,
+            IsPermanentFailure: true);
     }
 }
 
@@ -885,7 +899,9 @@ internal record EnhancedPagedExtractionResult(
     string StageName,
     int TotalDurationMs,
     string? ErrorMessage = null,
-    IReadOnlyList<ExtractedElement>? StructuredElements = null)
+    IReadOnlyList<ExtractedElement>? StructuredElements = null,
+    // #3589 follow-up: see EnhancedExtractionResult.IsPermanentFailure.
+    bool IsPermanentFailure = false)
 {
     /// <summary>
     /// Creates success result from stage extraction
@@ -906,7 +922,8 @@ internal record EnhancedPagedExtractionResult(
             StageName: stageName,
             TotalDurationMs: totalDurationMs,
             ErrorMessage: result.ErrorMessage,
-            StructuredElements: result.StructuredElements);
+            StructuredElements: result.StructuredElements,
+            IsPermanentFailure: result.IsPermanentFailure);
     }
 }
 

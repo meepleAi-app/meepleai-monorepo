@@ -31,6 +31,14 @@ public enum ErrorCategory
     Service = 4,
 
     /// <summary>
+    /// File exceeds the extraction service's size limit (e.g. HTTP 413).
+    /// Retry strategy: Never — permanent, the file will not shrink. Requires a capacity
+    /// decision (raise the service limit, split/compress the PDF) or operator action.
+    /// Issue #3589.
+    /// </summary>
+    PayloadTooLarge = 5,
+
+    /// <summary>
     /// Unclassified error: unexpected exception, unknown failure mode.
     /// Retry strategy: Treat as transient, allow retry with caution.
     /// </summary>

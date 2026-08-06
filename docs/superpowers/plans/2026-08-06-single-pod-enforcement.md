@@ -328,13 +328,30 @@ In `MeepleAiMetrics.WikidataEnrichment.cs` elimina `IncrementWikidataDeadLetterC
 
 Mantieni `SetWikidataDeadLetterCount` con l'`Interlocked.Exchange`: è ancora il punto di scrittura, chiamato sia dal refresh service sia dal retention job.
 
+- [ ] **Step 8b: aggiornare i due test che asserivano l'incremento ottimistico**
+
+Verificato: sono esattamente due, e **falliranno di proposito** dopo gli step 7-8. Non sono regressioni da mascherare — il comportamento è cambiato per progetto.
+
+1. `apps/api/tests/Api.Tests/Observability/WikidataEnrichmentMetricsTests.cs:113` —
+   `IncrementWikidataDeadLetterCount_FromAnchor_IncreasesByOnePerCall`: **eliminare il test**, testa un metodo che non esiste più (altrimenti non compila).
+
+2. `apps/api/tests/Api.Tests/BoundedContexts/SharedGameCatalog/Application/Services/WikidataCoverEnrichmentRunnerTests.cs:~256` — ancora il gauge a 5 e asserisce `Be(6)` con motivazione *«F1 hybrid update: runner increments by 1 per persisted DeadLetter attempt»*. Il runner non tocca più il gauge: l'asserzione diventa
+
+```csharp
+        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(5,
+            "#3383: il gauge è DB-derivato — il runner NON lo incrementa più; " +
+            "è WikidataDeadLetterMetricsRefreshService a ri-ancorarlo al COUNT reale");
+```
+
+Il test vicino (`~307`, che asserisce `Be(7)` per un Failed non terminale) **resta verde**: quel percorso non incrementava comunque. Aggiorna solo il commento che cita «F1» se menziona l'incremento del runner.
+
 - [ ] **Step 9: eseguire i test delle aree toccate**
 
 ```bash
-dotnet test tests/Api.Tests/Api.Tests.csproj --nologo -v q --filter "FullyQualifiedName~WikidataDeadLetter|FullyQualifiedName~WikidataCoverEnrichmentRunner|FullyQualifiedName~WikidataCoverDeadLetterRetentionJob"
+dotnet test tests/Api.Tests/Api.Tests.csproj --nologo -v q --filter "FullyQualifiedName~WikidataDeadLetter|FullyQualifiedName~WikidataCoverEnrichmentRunner|FullyQualifiedName~WikidataEnrichmentMetrics|FullyQualifiedName~WikidataCoverDeadLetterRetentionJob"
 ```
 
-Atteso: PASS. Se un test esistente asseriva l'incremento ottimistico, va aggiornato: il comportamento è cambiato di proposito, non è una regressione da mascherare.
+Atteso: PASS.
 
 - [ ] **Step 10: build e commit**
 
@@ -355,6 +372,60 @@ git commit -m "feat(enrichment): gauge dead-letter da COUNT DB invece che in mem
 
 ---
 
+### Task 2b: aggregare le regole del gauge dead-letter
+
+**Files:**
+- Modify: `infra/prometheus/alerts/wikidata-enrichment.yml:21-39`
+
+**Interfaces:**
+- Consumes: il gauge ora DB-derivato del Task 2.
+- Produces: `WikidataDeadLetterHigh` / `WikidataDeadLetterSpike` corrette a più istanze.
+
+**Perché il Task 2 da solo è incompleto:** la giustificazione del gauge DB-derivato è «così `max()` diventa corretto a più pod» — ma **le regole non usano `max()`**. Oggi sono `meepleai_wikidata_dead_letter_count > 100` e `delta(meepleai_wikidata_dead_letter_count[5m]) > 50`, senza aggregazione: a N istanze Prometheus vede N serie distinte (una per `instance`) e ciascuna fa scattare il proprio alert → **N notifiche duplicate** per lo stesso backlog. Con il gauge DB-derivato i valori sono identici, quindi `max()` è esatto e collassa i duplicati in uno.
+
+Nota sul comportamento di `delta()`: prima il runner incrementava in tempo reale, ora il valore si aggiorna ogni 60s dal `COUNT`. Su una finestra di 5 minuti restano ~5 punti di refresh, quindi uno spike di +50 viene ancora catturato, con al più 60s di ritardo. Accettabile per un alert con `for: 0m` su finestra di 5m — vale la pena saperlo, non richiede di cambiare la soglia.
+
+- [ ] **Step 1: aggiungere l'aggregazione alle due regole**
+
+In `wikidata-enrichment.yml`, sostituisci le due `expr:`:
+
+```yaml
+        expr: max(meepleai_wikidata_dead_letter_count) > 100
+```
+
+```yaml
+        expr: delta(max(meepleai_wikidata_dead_letter_count)[5m:]) > 50
+```
+
+e aggiungi sopra il gruppo un commento:
+
+```yaml
+# #3383 — le due regole dead-letter aggregano con max(): dal gauge DB-derivato ogni istanza riporta
+# lo stesso COUNT, quindi max() è esatto e collassa le N serie (una per instance) in un solo alert.
+# Senza aggregazione, a più di un'istanza lo stesso backlog notificherebbe N volte.
+```
+
+Attenzione alla sintassi del secondo: `delta()` vuole un range vector, e `max(...)` è un instant vector — serve la **subquery** `[5m:]`, non `[5m]`. Scriverlo come `delta(max(...)[5m])` è un errore di parsing che promtool intercetta.
+
+- [ ] **Step 2: validare con promtool**
+
+```bash
+MSYS_NO_PATHCONV=1 docker run --rm --entrypoint promtool \
+  -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+  test rules /work/wikidata-enrichment.test.yml
+```
+
+Atteso: `SUCCESS`. Le serie di test sono senza label (`meepleai_wikidata_dead_letter_count` nuda) e le `exp_labels` attese provengono dal blocco `labels:` della regola, quindi `max()` non le cambia: i casi esistenti devono restare verdi senza modifiche. **Se falliscono, non toccare i test per farli passare** — significa che l'espressione è sbagliata.
+
+- [ ] **Step 3: commit**
+
+```bash
+git add infra/prometheus/alerts/wikidata-enrichment.yml
+git commit -m "fix(observability): aggrega con max() le regole dead-letter (#3383)"
+```
+
+---
+
 ### Task 3: lease Redis fail-closed sul batch
 
 **Files:**
@@ -367,15 +438,17 @@ git commit -m "feat(enrichment): gauge dead-letter da COUNT DB invece che in mem
 
 **Perché riusare l'orchestrator invece di scrivere un lease nuovo:** `ExecuteWithDistributedLockAsync` fa già esattamente `SET NX PX` + rilascio verificato per valore (così un'istanza non rilascia il lease di un'altra), è già in uso da `AnalyzeRulebookCommandHandler.cs:218`, ed è già **fail-closed** nella sostanza: se il lock non si acquisisce ritorna `false` senza eseguire il task; se Redis è irraggiungibile logga e **rilancia** (`RedisBackgroundTaskOrchestrator.cs:258-263`), quindi il batch non gira comunque. Reimplementare un lease sarebbe duplicazione.
 
+**Verificato in review**: il rilascio è **atomico**, implementato con uno script Lua che confronta il valore prima di cancellare. Non c'è la race del GET+DEL, in cui un'istanza cancella il lease scaduto e riacquisito da un'altra.
+
+Poiché l'orchestrator **rilancia** su Redis irraggiungibile, l'eccezione risale a Quartz. È il comportamento voluto (il tick fallisce rumorosamente anziché girare senza protezione), ma va saputo: comparirà nei log come job fallito, non come tick saltato.
+
 **TTL:** il batch è fino a `BatchSize`=30 giochi con throttle di 1s ciascuno più il lavoro per gioco, quindi può durare minuti. TTL a **10 minuti**, molto sopra la durata attesa: se un'istanza muore a metà batch il lease blocca l'enrichment per al più quel tempo — accettabile, e comunque preferibile a due istanze che raddoppiano il rate verso Wikimedia.
 
-- [ ] **Step 1: individuare il file di test del job**
+- [ ] **Step 1: leggere il fixture del file di test**
 
-```bash
-find apps/api/tests -name "WikidataCoverEnrichmentJobTests.cs"
-```
+Il file è `apps/api/tests/Api.Tests/BoundedContexts/SharedGameCatalog/Application/Jobs/WikidataCoverEnrichmentJobTests.cs` (verificato). **Verificato anche l'assunto chiave**: i test esistenti chiamano `RunBatchAsync` 8 volte e `Execute` **zero** volte — quindi mettere il lease in `Execute` non ne rompe nessuno, e il seam di test resta intatto.
 
-Leggi come i test esistenti costruiscono il job (`new WikidataCoverEnrichmentJob(serviceProvider, timeProvider, logger)`) e se invocano `RunBatchAsync` direttamente o passano da `Execute`. I test che chiamano `RunBatchAsync` **non** devono cambiare: il lease va in `Execute`, sopra il batch, proprio per lasciare intatto il seam di test.
+Leggi come costruiscono il job e quali mock preparano, per riusare lo stesso stile nei due test nuovi (che invece devono passare da `Execute`, l'unico punto dove vive il lease).
 
 - [ ] **Step 2: scrivere i test che falliscono**
 

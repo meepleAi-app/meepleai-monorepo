@@ -259,6 +259,44 @@ public sealed class HardenedRedirectFetchTests
         seen[0].Should().Be(new Uri("https://commons.wikimedia.org/wiki/Special:FilePath/Cover.jpg"));
     }
 
+    [Theory]
+    [InlineData("gzip")]
+    [InlineData("br")]
+    [InlineData("deflate")]
+    public async Task ContentEncodedResponses_AreRefused(string encoding)
+    {
+        // #3495 C5/L3: our handlers do not auto-decompress, so the ceiling would be counting the
+        // COMPRESSED bytes — a small response could still expand into a huge allocation downstream.
+        // Refusing the encoding keeps maxBytes a bound on what the caller actually handles.
+        using var handler = new DelegateHandler(_ =>
+        {
+            var response = Ok(new byte[] { 1, 2, 3 });
+            response.Content.Headers.ContentEncoding.Add(encoding);
+            return response;
+        });
+        using var client = new HttpClient(handler);
+
+        var act = () => HardenedRedirectFetch.FetchAsync(
+            client, "https://example.com/blob", maxBytes: 1024, sink: Sink,
+            deadline: TimeSpan.FromSeconds(5), configureRequest: null, ct: CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<HardenedFetchException>();
+        thrown.Which.Reason.Should().Be(HardenedFetchBlockReason.ContentEncoding);
+    }
+
+    [Fact]
+    public async Task AnIdentityResponse_IsStillAccepted()
+    {
+        using var handler = new DelegateHandler(_ => Ok(new byte[] { 5, 6 }));
+        using var client = new HttpClient(handler);
+
+        var result = await HardenedRedirectFetch.FetchAsync(
+            client, "https://example.com/blob", maxBytes: 1024, sink: Sink,
+            deadline: TimeSpan.FromSeconds(5), configureRequest: null, ct: CancellationToken.None);
+
+        result.Should().Equal(new byte[] { 5, 6 });
+    }
+
     [Fact]
     public async Task RelativePathOnANonHttpsBaseAddress_IsDialled_ButItsRedirectsAreStillGated()
     {

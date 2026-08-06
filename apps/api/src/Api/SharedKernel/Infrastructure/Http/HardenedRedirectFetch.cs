@@ -90,6 +90,17 @@ internal static class HardenedRedirectFetch
                 {
                     response.EnsureSuccessStatusCode();
 
+                    // #3495 C5/L3: a content-encoded body makes the ceiling ambiguous — our handlers
+                    // do NOT enable automatic decompression, so the bytes we count are the COMPRESSED
+                    // ones and a small response could still expand into a huge allocation downstream.
+                    // Rather than guess, refuse the encoding: no sink here needs it, and this keeps
+                    // "maxBytes" a bound on the bytes the caller will actually handle.
+                    if (response.Content.Headers.ContentEncoding.Count > 0)
+                    {
+                        throw Blocked(sink, HardenedFetchBlockReason.ContentEncoding,
+                            "Content-encoded responses are not accepted on this sink");
+                    }
+
                     // Reject early on an advertised over-cap length; Content-Length is spoofable and
                     // absent on chunked bodies, so the ceiling is ALSO enforced during the read.
                     if (response.Content.Headers.ContentLength > maxBytes)
@@ -237,6 +248,7 @@ internal static class HardenedRedirectFetch
         HardenedFetchBlockReason.RedirectExhausted => MeepleAiMetrics.EgressBlockReasons.RedirectExhausted,
         HardenedFetchBlockReason.SizeCap => MeepleAiMetrics.EgressBlockReasons.SizeCap,
         HardenedFetchBlockReason.Timeout => MeepleAiMetrics.EgressBlockReasons.Timeout,
+        HardenedFetchBlockReason.ContentEncoding => MeepleAiMetrics.EgressBlockReasons.ContentEncoding,
         _ => MeepleAiMetrics.EgressBlockReasons.Scheme,
     };
 

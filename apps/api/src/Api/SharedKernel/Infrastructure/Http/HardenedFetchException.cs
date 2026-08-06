@@ -21,6 +21,10 @@ public enum HardenedFetchBlockReason
 
     /// <summary>The TOTAL wall-clock budget for the exchange elapsed (#3495 C4).</summary>
     Timeout,
+
+    /// <summary>The body was content-encoded, so the byte ceiling could not bound what the caller
+    /// would actually decode (#3495 C5/L3).</summary>
+    ContentEncoding,
 }
 
 /// <summary>

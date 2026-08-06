@@ -58,7 +58,7 @@ public sealed class BggCoverDownloaderResilienceTests
         for (var call = 0; call < BreakerThreshold; call++)
         {
             var result = await downloader.DownloadAndUploadAsync(
-                13, "https://8.8.8.8/cover.jpg", CancellationToken.None);
+                13, "https://cf.geekdo-images.com/cover.jpg", CancellationToken.None);
             result.Should().BeNull("the SSRF pin blocks every one of these dials");
         }
 
@@ -66,7 +66,7 @@ public sealed class BggCoverDownloaderResilienceTests
 
         // The circuit is open now: further calls must be rejected without another dial.
         var afterBreak = await downloader.DownloadAndUploadAsync(
-            13, "https://8.8.8.8/cover.jpg", CancellationToken.None);
+            13, "https://cf.geekdo-images.com/cover.jpg", CancellationToken.None);
 
         afterBreak.Should().BeNull("a rejected call still degrades gracefully to 'no cover'");
         dns.ResolveCalls.Should().Be(

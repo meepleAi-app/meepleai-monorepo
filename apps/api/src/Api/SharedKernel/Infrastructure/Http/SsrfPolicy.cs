@@ -10,6 +10,24 @@ namespace Api.SharedKernel.Infrastructure.Http;
 /// 224/4, reserved/class-E 240/4) that a naive private-only check leaves open. IPv4-mapped
 /// and the well-known IPv4-in-IPv6 tunneling prefixes are unwrapped/blocked so a private
 /// v4 cannot be smuggled through an IPv6 literal.
+/// <para>
+/// <b>Registry baseline</b> (#3495 Slice F): IANA IPv4 Special-Purpose Address Registry and IPv6
+/// Special-Purpose Address Registry, both as of the 2026-01 revision. When refreshing against a
+/// later revision, add the range here AND a matching in-range/adjacent pair to
+/// <c>SsrfPolicyTests</c> — the matrix is the contract, not this comment.
+/// </para>
+/// <para>
+/// <b>Tunnelled IPv4 (Slice F, H3) — deliberate deviation.</b> NAT64 <c>64:ff9b::/96</c>, 6to4
+/// <c>2002::/16</c> and Teredo <c>2001:0000::/32</c> each carry an IPv4 destination inside the v6
+/// address. The #3495 DoD asked to DECODE that address and recurse into the v4 rules, which would
+/// admit a tunnel address whose embedded v4 is public. We keep the prefixes blocked WHOLESALE
+/// instead, because decode-and-allow is strictly a relaxation here: 6to4 and Teredo are deprecated
+/// (RFC 7526, RFC 4380 sunset), no sink of ours has any reason to dial a NAT64 prefix, and the case
+/// the decode would protect against — a PRIVATE v4 smuggled inside a tunnel address — is already
+/// covered by the blanket block. Pinned by the test matrix: a tunnel address is blocked whether its
+/// embedded v4 is private or public. Revisit only if a deployment actually needs NAT64 egress; the
+/// decode would then have to come with the recursion, not instead of it.
+/// </para>
 /// </summary>
 internal static class SsrfPolicy
 {
@@ -70,17 +88,18 @@ internal static class SsrfPolicy
         // ::/96 low block: unspecified (::), loopback, IPv4-compatible ::a.b.c.d (first 96 bits zero).
         if (AllZero(b, 0, 12)) return true;
 
-        // NAT64 well-known prefix 64:ff9b::/96 (embeds a v4 destination).
+        // NAT64 well-known prefix 64:ff9b::/96 (carries a v4 destination).
         if (b[0] == 0x00 && b[1] == 0x64 && b[2] == 0xFF && b[3] == 0x9B && AllZero(b, 4, 8)) return true;
 
-        // 2001:0000::/32 Teredo and 2001:db8::/32 documentation (leave the rest of 2001::/16 public).
+        // 2001:0000::/32 Teredo (carries a v4) and 2001:db8::/32 documentation.
+        // The rest of 2001::/16 stays public.
         if (b[0] == 0x20 && b[1] == 0x01)
         {
             if (b[2] == 0x00 && b[3] == 0x00) return true; // Teredo
             if (b[2] == 0x0D && b[3] == 0xB8) return true; // documentation
         }
 
-        // 2002::/16 6to4 (deprecated; embeds a v4).
+        // 2002::/16 6to4 (deprecated; carries a v4).
         if (b[0] == 0x20 && b[1] == 0x02) return true;
 
         return false;

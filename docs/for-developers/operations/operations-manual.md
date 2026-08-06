@@ -3002,14 +3002,35 @@ Gauges report `0` when idle, so the expressions never fire on an idle queue.
 
 | Alert | Trigger | Sustained | Meaning / first action |
 |---|---|---|---|
-| `WikidataDeadLetterHigh` | `meepleai_wikidata_dead_letter_count > 100` | 1h | Operator triage backlog building. Investigate via the M13 admin dead-letter page — likely a license-whitelist or SPARQL schema drift. |
-| `WikidataDeadLetterSpike` | `delta(meepleai_wikidata_dead_letter_count[5m]) > 50` | — | A sudden burst of dead-letters: systemic upstream failure or license-whitelist drift. Cross-check `WikidataSparqlLatency` p95 and Wikidata/Commons endpoint health. |
+| `WikidataDeadLetterHigh` | `max(meepleai_wikidata_dead_letter_count) > 100` | 1h | Operator triage backlog building. Investigate via the M13 admin dead-letter page — likely a license-whitelist or SPARQL schema drift. |
+| `WikidataDeadLetterSpike` | `delta(max(meepleai_wikidata_dead_letter_count)[5m:]) > 50` | — | A sudden burst of dead-letters: systemic upstream failure or license-whitelist drift. Cross-check `WikidataSparqlLatency` p95 and Wikidata/Commons endpoint health. |
 | `WikidataQueueBacklogHigh` | `meepleai_wikidata_queue_depth > 5000` | 1h | Enrichment backlog building; scheduler under-provisioned relative to enrichment rate. Consider tuning batch size or the DEC-3e rate-limiter. |
+| `MultipleApiInstances` | `count(up{job="meepleai-api"}) > 1` | 5m | Il contratto single-pod (ADR-087 D4) è violato: due istanze raddoppiano il rate verso Wikidata/Commons (ToS). Riportare il servizio a una replica. Definito in `api-single-instance.yml` — **non caricato in alcun ambiente fino a #3383**. |
+
+> #3383: le due regole dead-letter aggregano con `max()`. Il gauge è DB-derivato (ogni istanza
+> riporta lo stesso `COUNT`), quindi `max()` è esatto e collassa le N serie in un solo alert; senza
+> aggregazione lo stesso backlog notificherebbe N volte. `delta()` richiede un range vector, da cui
+> la subquery `[5m:]`.
 
 ### Investigation steps
 
 1. **Dead-letter accumulation** (`WikidataDeadLetterHigh` / `WikidataDeadLetterSpike`): open the M13 admin dead-letter page. A steady climb usually means a license-whitelist entry went stale or the SPARQL query drifted; a sharp spike points at a Wikidata/Commons outage. Cross-check the enrichment attempt outcomes (`meepleai_wikidata_enrichment_attempts_total{outcome="dead_letter"}`).
 2. **Queue not draining** (`WikidataQueueBacklogHigh`): the M9 scheduler is enqueuing faster than the enrichment runner drains. Check the Quartz job health and the DEC-3e rate-limiter; consider raising the batch size if the SPARQL endpoint has headroom.
+
+### Enrichment Wikidata fermo senza errori applicativi
+
+Sintomo: `meepleai_wikidata_queue_depth` non cala, nessun nuovo attempt registrato, nessuna eccezione
+applicativa nei log dell'handler.
+
+**Causa da escludere per prima: Redis irraggiungibile.** Dal #3383 il batch di enrichment gira sotto
+un lease Redis **fail-closed** (`wikidata-cover-enrichment-batch`, TTL 10 min): se Redis non risponde
+il tick fallisce di proposito, perché due istanze che processano lo stesso batch raddoppierebbero il
+rate verso Wikidata/Commons (violazione ToS, DEC-3e). L'enrichment fermo è quindi un **sintomo
+atteso** di un'indisponibilità Redis, non un guasto della pipeline cover.
+
+Verifica: stato del container redis, poi cerca nei log dell'API
+`WikidataCoverEnrichmentJob: lease ... già detenuto`. Se il messaggio ricorre con una sola istanza
+attiva, il lease è orfano (istanza morta a metà batch) e scade da solo entro 10 minuti.
 
 Alert unit tests live in `infra/prometheus/alerts/wikidata-enrichment.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
 

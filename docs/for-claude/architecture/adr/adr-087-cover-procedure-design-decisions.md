@@ -43,6 +43,27 @@ The enrichment tier is single-instance **by contract**. The in-process `InMemory
 
 Rationale: staging is Compose single-instance with no HPA roadmap, so a distributed rate-limiter is YAGNI; but leaving the constraint incidental (pinned only by `container_name`) is unacceptable because it touches legal correctness (Wikimedia ToS) and would fail silently.
 
+> **Emendamento 2026-08-06 ([#3383](https://github.com/meepleAi-app/meepleai-monorepo/issues/3383)).** Due fatti hanno modificato questa decisione.
+>
+> 1. Il tripwire descritto sopra come «Now» **non era mai stato attivo**: il file
+>    `infra/prometheus/alerts/api-single-instance.yml` esisteva, con il suo test promtool, ma non era
+>    montato in alcun compose né referenziato in alcun `rule_files:`, **dev incluso**. Fra la ratifica
+>    di D4 e oggi il vincolo single-pod è stato presidiato **solo** da `container_name` — esattamente
+>    la situazione che il Rationale qui sopra dichiara inaccettabile. Wiring corretto in #3383.
+> 2. Di conseguenza il rinvio della hard-prevention, motivato dalla presenza del tripwire, non aveva
+>    più fondamento: il **lease Redis fail-closed** sul batch è stato implementato in #3383 e non è
+>    più «Deferred». Il gauge dead-letter è ora DB-derivato, e le regole Prometheus che lo leggono
+>    aggregano con `max()` — senza aggregazione un gauge corretto a N istanze avrebbe comunque
+>    prodotto N notifiche duplicate.
+>
+> **Costo del fail-closed, da conoscere prima di un incidente**: il lease non è opzionale, quindi
+> un'indisponibilità di Redis **ferma l'enrichment Wikidata**. È la semantica voluta — non arricchire
+> è preferibile a violare il rate cap Wikimedia — ma va cercata attivamente quando l'enrichment si
+> ferma senza altra spiegazione. Runbook: [Enrichment Wikidata fermo senza errori applicativi](../../../for-developers/operations/operations-manual.md#wikidata-enrichment-alerts).
+>
+> Il rate-limiter distribuito (Redis token bucket) resta in riserva per un'eventuale roadmap HPA:
+> lease e tripwire coprono la **correttezza** a una istanza, non il **throughput** a N.
+
 ### D5 — Executable writer↔resolver contract + generation telemetry
 
 - **D5-C — telemetry *(ratified — SHIPPED)***: `meepleai.cover.generation.total{source,outcome}` emitted at every terminal generation site across the three PDF producers. Shipped: #3378 / PR #3379.

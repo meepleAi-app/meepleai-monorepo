@@ -400,9 +400,23 @@ internal static class SharedGameCatalogServiceExtensions
     private static void AddBggCoverDownloader(IServiceCollection services) =>
         services.AddHttpClient<IBggCoverDownloader, BggCoverDownloader>(client =>
         {
-            client.Timeout = TimeSpan.FromSeconds(10);
+            // Outer wall-clock ceiling for the whole exchange, INCLUDING the streamed 10MB body read
+            // (HttpClient.Timeout keeps running under ResponseHeadersRead). The tight budget on the
+            // connect + headers is the per-try timeout below.
+            client.Timeout = TimeSpan.FromSeconds(30);
         })
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.BggCover);
+        // #3495 H8/C3 (Slice E): per-sink budget + breaker. A BGG CDN outage degrades cover fetching
+        // alone — it cannot open the breaker of any other sink, and the pin below stays innermost.
+        .AddHttpMessageHandler(sp => new EgressResilienceHandler(
+            sp.GetRequiredService<ILogger<EgressResilienceHandler>>(),
+            sink: MeepleAiMetrics.EgressSinks.BggCover,
+            perTryTimeout: TimeSpan.FromSeconds(10),
+            failureThreshold: 3,
+            samplingWindow: TimeSpan.FromSeconds(60),
+            breakDuration: TimeSpan.FromMinutes(1)))
+        .ConfigureSsrfPin(
+            MeepleAiMetrics.EgressSinks.BggCover,
+            allowedHostSuffixes: EgressAllowLists.BggCover);
 
     /// <summary>
     /// Issue #3495 fix 5/N — registers the hardened arbitrary-URL download client
@@ -517,7 +531,9 @@ internal static class SharedGameCatalogServiceExtensions
         // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
         // ConfigureSsrfPin uses ConfigurePrimaryHttpMessageHandler (innermost), so the circuit-breaker
         // delegating handler above stays outer (CB → pin), matching the Slack registration.
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikidata);
+        .ConfigureSsrfPin(
+            MeepleAiMetrics.EgressSinks.Wikidata,
+            allowedHostSuffixes: EgressAllowLists.Wikidata);
 
         // Issue #1823 M4 (ADR DEC-3b/3c/3e): Wikimedia Commons license fetcher.
         // Consumed by the M8 orchestrator AFTER the Wikidata SPARQL pass resolves
@@ -527,14 +543,12 @@ internal static class SharedGameCatalogServiceExtensions
         // suppression below covers the public Commons API endpoint just like
         // the other catalog providers.
         //
-        // Issue #1823 M8 invariant: do NOT add a ConfigurePrimaryHttpMessageHandler
-        // that sets AllowAutoRedirect=false. FetchImageBytesAsync calls
-        // commons.wikimedia.org/wiki/Special:FilePath/{filename}, which returns
-        // a 302 redirect to upload.wikimedia.org/<cdn-url>. The default handler
-        // AllowAutoRedirect=true is what makes the image bytes accessible — a
-        // false setting would surface the 302 HTML body as bytes, which would
-        // then fail at WebP decoding (FailReasonImageProcessing) instead of the
-        // expected SkipReasonImageBytesNotAvailable on real 404s.
+        // #3495 Slice D (finding H1) — SUPERSEDES the #1823 M8 invariant "do NOT disable redirects".
+        // The Special:FilePath 302 → upload.wikimedia.org is STILL followed (the image bytes stay
+        // reachable), but by WikimediaCommonsClient through HardenedRedirectFetch instead of by the
+        // handler: every hop is re-validated (HTTPS-only, default port) and the body is read under a
+        // ceiling with a total wall-clock deadline. Auto-redirect must therefore be OFF, or the
+        // handler would follow a downgrade before the gate could refuse it.
 #pragma warning disable S1075 // URIs should not be hardcoded
         const string CommonsBaseUrl = "https://commons.wikimedia.org/";
 #pragma warning restore S1075
@@ -550,12 +564,14 @@ internal static class SharedGameCatalogServiceExtensions
         .AddHttpMessageHandler(sp => new WikimediaCircuitBreakerHandler(
             sp.GetRequiredService<ILogger<WikimediaCircuitBreakerHandler>>(),
             clientName: "commons-api"))
-        // #3495 follow-up: SSRF connect-pin. ConfigureSsrfPin sets AllowAutoRedirect=true, so the
-        // M8 invariant above (Special:FilePath 302 → upload.wikimedia.org MUST be auto-followed) still
-        // holds — and each redirect hop's host is independently re-resolved and SSRF-validated by the
-        // per-connection pin (upload.wikimedia.org is public → allowed). Do NOT add any other
+        // #3495 Slice D: the pin keeps owning the IP boundary per connection (each hop re-resolved,
+        // upload.wikimedia.org is public → allowed), and auto-redirect is now OFF so the 3xx surfaces
+        // in WikimediaCommonsClient and is followed through the hardened gate. Do NOT add any other
         // ConfigurePrimaryHttpMessageHandler here: it would override the pin.
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Wikimedia);
+        .ConfigureSsrfPin(
+            MeepleAiMetrics.EgressSinks.Wikimedia,
+            allowAutoRedirect: false,
+            allowedHostSuffixes: EgressAllowLists.Wikimedia);
 
         services.AddHttpClient<BggCatalogProvider>(client =>
         {
@@ -564,7 +580,9 @@ internal static class SharedGameCatalogServiceExtensions
             client.Timeout = TimeSpan.FromSeconds(30);
         })
         // #3495 follow-up: SSRF connect-pin — defense-in-depth on a fixed public host (DNS-rebinding).
-        .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Bgg);
+        .ConfigureSsrfPin(
+            MeepleAiMetrics.EgressSinks.Bgg,
+            allowedHostSuffixes: EgressAllowLists.Bgg);
 
         // Keyed registration so CatalogSeedAggregator can resolve "wikidata" (primary)
         // and "bgg" (fallback) explicitly — avoids relying on registration order.

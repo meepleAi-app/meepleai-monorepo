@@ -77,15 +77,24 @@ public sealed class EgressMetricsTests
             }
         });
 
-        captured.Should().HaveCount(1);
-        var (value, tags) = captured[0];
+        // The MeterListener is process-wide and xUnit runs test classes in parallel, so the capture
+        // window can also see increments from other egress tests. Select this scenario's measurement
+        // by its tags instead of assuming the window is exclusively ours (#3495 Slice D: the new
+        // gate emits blocks from several sinks, which made the old HaveCount(1) flaky).
+        var mine = captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "manual")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "private_ip"))
+            .ToList();
+
+        mine.Should().NotBeEmpty("the guard must record the block before throwing");
+        var (value, tags) = mine[0];
         value.Should().Be(1);
         // Bounded cardinality: exactly {sink, reason}, both the intended constants.
         tags.Keys.Should().BeEquivalentTo("sink", "reason");
-        tags["sink"].Should().Be("manual");
-        tags["reason"].Should().Be("private_ip");
         // The host/IP must NEVER leak into a metric tag (unbounded cardinality + PII/SSRF-target leak).
         tags.Values.Should().NotContain("evil.example.com").And.NotContain("10.0.0.5");
+        // Every measurement in the window — whoever emitted it — must keep the tag set bounded.
+        captured.Should().AllSatisfy(c => c.Tags.Keys.Should().BeEquivalentTo("sink", "reason"));
     }
 
     [Fact]
@@ -98,10 +107,13 @@ public sealed class EgressMetricsTests
                     dns, "cdn.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None)
                 .GetAwaiter().GetResult());
 
-        captured.Should().HaveCount(1);
-        captured[0].Value.Should().Be(1);
-        captured[0].Tags.Keys.Should().BeEquivalentTo("sink");
-        captured[0].Tags["sink"].Should().Be("manual");
+        // Same parallel-capture caveat as the blocked counter above: select by tag, don't assume the
+        // window is exclusively ours.
+        var mine = captured.Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "manual")).ToList();
+
+        mine.Should().NotBeEmpty("a validated public address must count towards the allowed denominator");
+        mine[0].Value.Should().Be(1);
+        captured.Should().AllSatisfy(c => c.Tags.Keys.Should().BeEquivalentTo("sink"));
     }
 
     [Fact]

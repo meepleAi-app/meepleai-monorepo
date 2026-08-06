@@ -49,7 +49,7 @@ public sealed class SsrfSafeHttpClientPinIntegrationTests
 
         // The host literal (8.8.8.8) is public and passes the scheme check, but the pinned resolver
         // returns the metadata IP, so the pin throws at connect and the download aborts.
-        var act = () => client.DownloadPdfAsync("https://8.8.8.8/rules.pdf", CancellationToken.None);
+        var act = () => client.DownloadImageAsync("https://8.8.8.8/cover.jpg", CancellationToken.None);
 
         await act.Should().ThrowAsync<Exception>("the SSRF connect-pin must block a private-resolving host");
         // The stub is consulted ONLY by the pin's ConnectCallback — a non-zero count proves

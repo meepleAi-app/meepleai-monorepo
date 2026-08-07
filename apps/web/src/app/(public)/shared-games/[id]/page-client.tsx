@@ -342,6 +342,11 @@ export function SharedGameDetailPageClient({
         <Hero
           title={resolvedTitle}
           coverUrl={game.coverUrl ?? null}
+          coverFocal={
+            game.coverFocalX != null && game.coverFocalY != null
+              ? { x: game.coverFocalX, y: game.coverFocalY }
+              : undefined
+          }
           year={game.yearPublished > 0 ? game.yearPublished : null}
           minPlayers={game.minPlayers > 0 ? game.minPlayers : null}
           maxPlayers={game.maxPlayers > 0 ? game.maxPlayers : null}

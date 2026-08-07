@@ -50,6 +50,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
     // Issue #1852: L4 PDF cover key, denormalized from PdfDocumentEntity.CoverR2Key
     // via PdfCoverGeneratedEventHandler. Set via SetPdfCoverR2Key().
     private string? _pdfCoverR2Key;
+    // #3590 Slice B: L2.5 BGG cover key, ri-ospitata dal re-upload server-to-server admin
+    // (ADR-059 §2). Set via SetBggCover(). Prima di #3590 questa colonna NON era sull'aggregato:
+    // il mapper del repository non la leggeva né la scriveva, e siccome Update() rimappa un grafo
+    // detached (tutte le colonne Modified) ogni load-modify-save emetteva
+    // `SET bgg_cover_r2_key = NULL`, cancellando silenziosamente la cover.
+    private string? _bggCoverR2Key;
     // Issue #1823 Phase B M8: Wikidata cover state. Set via SetWikidataCover()
     // after successful enrichment orchestration (M3 SPARQL + M4 license + M6
     // WebP + M7 R2 upload). QID itself is set independently via
@@ -186,6 +192,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Issue #1852.
     /// </summary>
     public string? PdfCoverR2Key => _pdfCoverR2Key;
+
+    /// <summary>
+    /// Chiave R2 della cover BGG ri-ospitata (layer L2.5). Scritta dal re-upload
+    /// server-to-server admin, legittimo per ADR-059 §2; MAI da un URL arbitrario, path che
+    /// <see cref="Api.SharedKernel.Infrastructure.Http.BggHostDenyList"/> sbarra per il ban #2123.
+    /// </summary>
+    public string? BggCoverR2Key => _bggCoverR2Key;
 
     /// <summary>
     /// Gets the Wikidata QID identifying this game on Wikidata (e.g. <c>"Q98056728"</c>).
@@ -411,7 +424,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
         string? manualCoverAttribution = null,
         string? manualCoverSourceUrl = null,
         Guid? manualCoverAttestedBy = null,
-        DateTime? manualCoverAttestedAt = null) : base(id)
+        DateTime? manualCoverAttestedAt = null,
+        string? bggCoverR2Key = null) : base(id)
     {
         _id = id;
         _title = title;
@@ -430,6 +444,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _gameDataStatus = gameDataStatus;
         _hasUploadedPdf = hasUploadedPdf;
         _pdfCoverR2Key = pdfCoverR2Key;
+        _bggCoverR2Key = bggCoverR2Key;
         _wikidataQid = wikidataQid;
         _wikidataCoverR2Key = wikidataCoverR2Key;
         _wikidataCoverLicense = wikidataCoverLicense;
@@ -744,6 +759,27 @@ public sealed class SharedGame : AggregateRoot<Guid>
             return;
 
         _pdfCoverR2Key = coverR2Key;
+    }
+
+    /// <summary>
+    /// #3590 Slice B — registra la chiave R2 della cover BGG ri-ospitata (layer L2.5).
+    /// Idempotente: ritorna senza effetti se la chiave coincide con quella corrente.
+    /// <para>
+    /// La sorgente è l'immagine che BGG espone per il <c>BggId</c> del gioco, scaricata dal path
+    /// server-to-server admin (ADR-059 §2). Questo metodo NON è una via per aggirare
+    /// <see cref="Api.SharedKernel.Infrastructure.Http.BggHostDenyList"/>: quella deny-list
+    /// protegge il campo cover manuale a URL libero, dove un host geekdo resta bandito (#2123).
+    /// </para>
+    /// </summary>
+    public void SetBggCover(string coverR2Key)
+    {
+        if (string.IsNullOrWhiteSpace(coverR2Key))
+            throw new ArgumentException("Cover R2 key cannot be empty", nameof(coverR2Key));
+
+        if (string.Equals(_bggCoverR2Key, coverR2Key, StringComparison.Ordinal))
+            return;
+
+        _bggCoverR2Key = coverR2Key;
     }
 
     /// <summary>

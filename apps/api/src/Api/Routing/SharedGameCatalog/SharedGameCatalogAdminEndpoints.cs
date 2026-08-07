@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCo
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ReuploadBggCover;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCoverGap;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.ExportSharedGamesTracking;
@@ -91,6 +92,19 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status404NotFound);
 
         // Manual cover from a URL (epic #3470 Slice 3a): admin supplies an HTTPS image URL + attested license.
+        // #3590 Slice B — re-upload server-to-server della cover BGG per un gioco già a catalogo.
+        // Path legittimo per ADR-059 §2, distinto dal campo manuale a URL libero qui sotto: NON
+        // accetta un URL, la sorgente è l'immagine che BGG dichiara per il BggId del gioco.
+        group.MapPost("/admin/shared-games/{id:guid}/bgg-cover", HandleReuploadBggCover)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("ReuploadBggCover")
+            .WithSummary("Re-host the BGG cover for a catalog game (Admin/Editor)")
+            .WithDescription("Downloads the image BoardGameGeek exposes for the game's BggId and re-hosts it in R2 (ADR-059 §2 server-to-server path). Takes no URL: the arbitrary-URL manual-cover field stays barred from geekdo hosts by the ADR-059 §5 deny-list.")
+            .Produces<BggCoverResult>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
         group.MapPost("/admin/shared-games/{id:guid}/manual-cover", HandleSetManualCover)
             .RequireAuthorization("AdminOrEditorPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
@@ -966,6 +980,22 @@ internal static class SharedGameCatalogAdminEndpoints
         await mediator.Send(new RemoveCoverAssignmentCommand(id, context, session!.Principal!.Subject.Id), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    /// <summary>#3590 Slice B — re-upload della cover BGG. Solo IMediator: regola CQRS.</summary>
+    private static async Task<IResult> HandleReuploadBggCover(
+        Guid id,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var result = await mediator
+            .Send(new ReuploadBggCoverCommand(id, session!.Principal!.Subject.Id), ct)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleSetManualCover(

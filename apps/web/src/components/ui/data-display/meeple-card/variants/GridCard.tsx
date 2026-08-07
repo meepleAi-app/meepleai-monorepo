@@ -44,6 +44,7 @@ export function GridCard(props: MeepleCardProps) {
     className = '',
     attribution,
     coverEditSlot,
+    coverFocal,
   } = props;
   const testId = props['data-testid'];
 
@@ -68,6 +69,7 @@ export function GridCard(props: MeepleCardProps) {
           alt={title}
           gameId={id}
           coverEmoji={coverEmoji}
+          coverFocal={coverFocal}
         />
         {/* Top-left badge stack: EntityBadge only (StatusBadge moved to footer per #1856 DEC-5). */}
         <div

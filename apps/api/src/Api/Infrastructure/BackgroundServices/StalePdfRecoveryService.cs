@@ -195,13 +195,21 @@ internal sealed class StalePdfRecoveryService : BackgroundService
             // seeded in deliberate non-Ready states for the dashboard demo; force-processing them
             // would only fail on the missing blob and flip them to Failed (→ seed_state partial_failed).
             .Where(p => !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
-            // #3588: leave documents that are already waiting in the queue to the queue worker.
-            // OrphanedProcessingJobRecoveryService requeues restart-orphaned jobs just before this
-            // service runs; without this guard both would drive the same PDF, and this one would
-            // reset it to Pending mid-flight. Only Queued is excluded — a still-Processing row means
-            // that recovery did not run or failed, and this service stays the last line of defence.
+            // #3588: a document with an ACTIVE job row belongs to the queue worker, not to this
+            // service. Driving it here calls ResetToPendingAsync on it, which rewinds a document
+            // mid-flight — and that reset runs BEFORE the pipeline's atomic Pending-claim can refuse
+            // it, so the claim is not a sufficient defence on its own.
+            //
+            // Excluding only Queued was not enough (observed on staging 2026-08-07): a job requeued
+            // by OrphanedProcessingJobRecoveryService is picked up by the worker within seconds, so
+            // by the time this service runs it has already moved Queued → Processing. Both queue
+            // states mean "owned", so both are excluded.
+            //
+            // Terminal jobs (Completed/Failed/Cancelled) and documents with no job row have no owner
+            // and stay in scope — that is the case this service exists for.
             .Where(p => !db.Set<ProcessingJobEntity>()
-                .Any(j => j.PdfDocumentId == p.Id && j.Status == nameof(JobStatus.Queued)))
+                .Any(j => j.PdfDocumentId == p.Id
+                       && (j.Status == nameof(JobStatus.Queued) || j.Status == nameof(JobStatus.Processing))))
             .Where(p =>
                 (p.ProcessingState == pendingState && p.UploadedAt < pendingCutoff) ||
                 ((p.ProcessingState == uploadingState ||

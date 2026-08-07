@@ -622,9 +622,11 @@ const nextConfig = {
   // on staging (where `/manifest.json` is gated by Cloudflare Access). Prod
   // builds keep `manifest-src 'self'`. Flag: `NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS=true`.
   async headers() {
-    const { buildCspHeader, isCfAccessAllowed } = require('./lib/security/csp');
+    const { buildCspHeader, isCfAccessAllowed, isLocalBlobAllowed } = require('./lib/security/csp');
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
     const allowCfAccess = isCfAccessAllowed(process.env.NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS);
+    // #3498: E2E-only — lets the browser load MinIO presigned covers over http loopback.
+    const allowLocalBlobImages = isLocalBlobAllowed(process.env.NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB);
     return [
       {
         source: '/(.*)',
@@ -638,7 +640,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: buildCspHeader({ apiBaseUrl, allowCfAccess }),
+            value: buildCspHeader({ apiBaseUrl, allowCfAccess, allowLocalBlobImages }),
           },
         ],
       },

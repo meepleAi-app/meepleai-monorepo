@@ -26,6 +26,8 @@
  * @param {boolean} [opts.allowCfAccess=false] - When true, widen `manifest-src`
  *   to include `https://*.cloudflareaccess.com` (staging-only opt-in for the
  *   PWA manifest behind Cloudflare Access gateway).
+ * @param {boolean} [opts.allowLocalBlobImages=false] - When true, widen `img-src`
+ *   to include `http://localhost:9000` (E2E-only opt-in for MinIO presigned covers).
  * @returns {string} The full CSP header value (semicolon-separated directives).
  */
 function buildCspHeader(opts) {
@@ -40,11 +42,21 @@ function buildCspHeader(opts) {
     manifestSources.push('https://*.cloudflareaccess.com');
   }
 
+  // #3498 — the cover R2-strict E2E job serves presigned covers from a MinIO
+  // container published on http://localhost:9000. The default `img-src` allows
+  // only `https:` for remote hosts, so the browser blocks the image and the
+  // real-load assertion (naturalWidth > 0) can never pass. Opt-in ONLY from the
+  // E2E workflow's web.env.dev — prod/staging keep the closed default.
+  const imgSources = ["'self'", 'data:', 'https:'];
+  if (opts.allowLocalBlobImages === true) {
+    imgSources.push('http://localhost:9000');
+  }
+
   return [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
+    `img-src ${imgSources.join(' ')}`,
     "font-src 'self' data:",
     `manifest-src ${manifestSources.join(' ')}`,
     `connect-src 'self' ${apiBaseUrl}`,
@@ -66,7 +78,19 @@ function isCfAccessAllowed(envValue) {
   return envValue === 'true';
 }
 
+/**
+ * Resolve the #3498 E2E opt-in from a build-time env var. Same defensive parse
+ * as isCfAccessAllowed — only the literal "true" widens img-src.
+ *
+ * @param {string | undefined} envValue
+ * @returns {boolean}
+ */
+function isLocalBlobAllowed(envValue) {
+  return envValue === 'true';
+}
+
 module.exports = {
   buildCspHeader,
   isCfAccessAllowed,
+  isLocalBlobAllowed,
 };

@@ -153,6 +153,12 @@ jobs:
             -H 'Content-Type: application/json' \
             -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
             -o /dev/null -w 'login HTTP %{http_code}\n'
+          echo "--- contenuto reale del bucket (conferma chiave + prefissi) ---"
+          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.e2e-storage.yml \
+            --profile storage run --rm --entrypoint sh minio-init -c "
+              mc alias set myminio http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD >/dev/null
+              mc ls --recursive myminio/meepleai-uploads
+            " || echo "WARN: ls del bucket fallito"
           echo "--- /api/v1/library (voce seeded) ---"
           curl -sS -b "$COOKIE_JAR" 'http://localhost:8080/api/v1/library?page=1&pageSize=50' \
             | python3 -c "
@@ -216,6 +222,17 @@ jobs:
           # `next start` sulla stessa porta.
           PLAYWRIGHT_SKIP_WEB_SERVER: '1'
         run: pnpm exec playwright test smoke-real-backend/cover-r2-strict.spec.ts --project=desktop-chrome --reporter=list
+
+      # DOPO il test, non prima: posizionato a monte non veniva mai eseguito quando a fallire era
+      # lo spec (il job non era ancora in stato failure quando lo step veniva raggiunto), e i log
+      # dell'API — dove comparirebbe l'errore S3 del HEAD che fa cadere il resolver sul
+      # placeholder — restavano invisibili.
+      - name: Dump stack logs after a failed spec
+        if: failure()
+        working-directory: infra
+        run: |
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage logs --tail=300 api minio || true
 
       - uses: actions/upload-artifact@v7
         if: always()

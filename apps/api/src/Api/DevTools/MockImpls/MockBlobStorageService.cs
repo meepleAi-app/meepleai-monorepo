@@ -131,9 +131,13 @@ internal sealed class MockBlobStorageService : IBlobStorageService
     /// <inheritdoc />
     public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
     {
-        _ = (rawKey, ct);
-        // Mock does not host objects under raw R2-style keys (mirrors the
-        // "not supported" contract of BlobStorageService for this method).
-        return Task.FromResult<Stream?>(null);
+        _ = ct;
+        // Honors this mock's own in-memory _store (mirrors RetrieveAsync above), so a raw
+        // key written via StoreRawKeyAsync (e.g. a rendered cover crop) can be read back
+        // in DevTools/mock mode without R2. Unknown keys return null — unlike RetrieveAsync,
+        // there is no placeholder fallback here: callers of raw-key reads (cover resolution)
+        // treat null as "fall through to the next source", which is the behavior under test.
+        Stream? result = _store.TryGetValue(rawKey, out var bytes) ? new MemoryStream(bytes) : null;
+        return Task.FromResult(result);
     }
 }

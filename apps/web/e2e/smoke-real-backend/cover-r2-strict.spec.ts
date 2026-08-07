@@ -46,11 +46,29 @@ test.describe('cover R2-strict (real backend + MinIO)', () => {
 
     await page.goto('/library', { waitUntil: 'domcontentloaded' });
 
-    const card = page.getByText(SEEDED_GAME_TITLE).first();
+    // Selettore strutturale, non un xpath `ancestor::` — quello prendeva il primo div antenato del
+    // testo, che può essere il wrapper del solo titolo e non contenere la cover.
+    const card = page
+      .locator('[data-slot="library-grid-card"]')
+      .filter({ hasText: SEEDED_GAME_TITLE })
+      .first();
     await expect(card).toBeVisible({ timeout: 30_000 });
 
-    const cardContainer = card.locator('xpath=ancestor::*[self::article or self::div][1]');
-    const img = cardContainer.locator('img').first();
+    // Diagnostica prima dell'assert: quando `imageUrl` non arriva, MeepleCard rende un
+    // <div data-slot="cover-emoji-band"> al posto di <img> (parts/Cover.tsx). Senza questo
+    // controllo il test fallirebbe con «img non visibile» — il sintomo — nascondendo la causa
+    // vera, che è a monte: la cover non è stata risolta dal backend.
+    const placeholder = card.locator('[data-slot="cover-emoji-band"]');
+    if ((await placeholder.count()) > 0) {
+      throw new Error(
+        'La card mostra il placeholder emoji invece della cover: il backend non ha risolto una ' +
+          'coverUrl. Cause tipiche: oggetto MinIO assente alla chiave presignata (il resolver fa ' +
+          'HEAD prima di firmare e cade sul placeholder), credenziali di presign errate, o chiave ' +
+          'seeded col suffisso sbagliato. Vedi lo step "Verify the API resolves the cover from MinIO".'
+      );
+    }
+
+    const img = card.locator('img').first();
     await expect(img).toBeVisible({ timeout: 10_000 });
 
     // 1. Caricamento reale: il browser ha decodificato un'immagine non vuota, il che è vero solo se

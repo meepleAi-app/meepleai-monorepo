@@ -142,6 +142,29 @@ jobs:
               mc stat myminio/meepleai-uploads/${KEY}
             "
 
+      - name: Verify the API resolves the cover from MinIO (diagnostica pre-Playwright)
+        run: |
+          # Se questo step mostra un coverUrl vuoto o un placeholder, il problema è nella catena
+          # backend (chiave/presign) e NON nel test: MeepleCard rende un <div cover-emoji-band>
+          # invece di un <img> quando imageUrl manca, e lo spec fallirebbe con "img non visibile",
+          # che è il sintomo, non la causa.
+          COOKIE_JAR=$(mktemp)
+          curl -sS -c "$COOKIE_JAR" -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -o /dev/null -w 'login HTTP %{http_code}\n'
+          echo "--- /api/v1/library (voce seeded) ---"
+          curl -sS -b "$COOKIE_JAR" 'http://localhost:8080/api/v1/library?page=1&pageSize=50' \
+            | python3 -c "
+          import json,sys
+          data = json.load(sys.stdin)
+          items = data.get('items', data if isinstance(data, list) else [])
+          hit = [i for i in items if 'R2 Strict' in json.dumps(i)]
+          print('voci totali:', len(items), '| match fixture:', len(hit))
+          for i in hit:
+              print(json.dumps(i, indent=2)[:1200])
+          " || echo "WARN: parsing della risposta fallito"
+
       - name: Dump stack logs on failure
         if: failure()
         working-directory: infra
@@ -198,4 +221,10 @@ jobs:
         if: always()
         with:
           name: playwright-report-cover-r2-strict
-          path: apps/web/playwright-report
+          # `test-results` (screenshot, video, trace, error-context.md) e non `playwright-report`:
+          # con `--reporter=list` quest'ultima directory non viene generata, quindi l'upload
+          # produceva un artifact vuoto — nessun DOM da ispezionare proprio dopo un fallimento.
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+          if-no-files-found: warn

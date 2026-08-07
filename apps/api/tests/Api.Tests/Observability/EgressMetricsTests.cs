@@ -1,4 +1,3 @@
-using System.Diagnostics.Metrics;
 using System.Net;
 using Api.Observability;
 using Api.SharedKernel.Infrastructure.Http;
@@ -25,34 +24,12 @@ public sealed class EgressMetricsTests
             Task.FromResult(_addresses);
     }
 
-    private static List<(long Value, IReadOnlyDictionary<string, object?> Tags)> Capture(
-        string instrumentName, Action act)
+    private sealed class ThrowingDnsResolver : IDnsResolver
     {
-        var captured = new List<(long, IReadOnlyDictionary<string, object?>)>();
-        using var listener = new MeterListener
-        {
-            InstrumentPublished = (instrument, l) =>
-            {
-                if (instrument.Name == instrumentName)
-                {
-                    l.EnableMeasurementEvents(instrument);
-                }
-            },
-        };
-        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
-        {
-            var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
-            foreach (var t in tags)
-            {
-                dict[t.Key] = t.Value;
-            }
-            captured.Add((value, dict));
-        });
-        listener.Start();
-
-        act();
-
-        return captured;
+        private readonly Exception _toThrow;
+        public ThrowingDnsResolver(Exception toThrow) => _toThrow = toThrow;
+        public Task<IReadOnlyList<IPAddress>> ResolveAsync(string host, CancellationToken ct) =>
+            Task.FromException<IReadOnlyList<IPAddress>>(_toThrow);
     }
 
     [Fact]
@@ -60,7 +37,7 @@ public sealed class EgressMetricsTests
     {
         var dns = new FakeDnsResolver("10.0.0.5");
 
-        var captured = Capture(MeepleAiMetrics.EgressBlocked.Name, () =>
+        var captured = MetricCapture.Capture(MeepleAiMetrics.EgressBlocked.Name, () =>
         {
             // The guard records the block BEFORE it throws; swallow the expected throw so we can
             // assert the increment already happened.
@@ -102,7 +79,7 @@ public sealed class EgressMetricsTests
     {
         var dns = new FakeDnsResolver("8.8.8.8");
 
-        var captured = Capture(MeepleAiMetrics.EgressAllowed.Name, () =>
+        var captured = MetricCapture.Capture(MeepleAiMetrics.EgressAllowed.Name, () =>
             SsrfPinnedConnect.ResolveAndValidateAsync(
                     dns, "cdn.example.com", MeepleAiMetrics.EgressSinks.Manual, CancellationToken.None)
                 .GetAwaiter().GetResult());
@@ -117,9 +94,76 @@ public sealed class EgressMetricsTests
     }
 
     [Fact]
+    public void ResolveAndValidate_DnsThrows_IncrementsBlocked_WithDnsFailure_AndRethrows()
+    {
+        // Un NXDOMAIN / timeout del resolver: la connessione non avviene (fail-closed corretto), ma
+        // senza questo counter il sink degradato è indistinguibile da un sink inattivo (#3583).
+        var dns = new ThrowingDnsResolver(new System.Net.Sockets.SocketException(11001));
+
+        var captured = MetricCapture.Capture(MeepleAiMetrics.EgressBlocked.Name, () =>
+        {
+            try
+            {
+                SsrfPinnedConnect.ResolveAndValidateAsync(
+                        dns, "nxdomain.example.com", MeepleAiMetrics.EgressSinks.Wikidata, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                throw new Xunit.Sdk.XunitException("expected the DNS failure to propagate");
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                // atteso — il guard registra e RILANCIA senza alterare l'esito
+            }
+        });
+
+        var mine = captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "wikidata")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "dns_failure"))
+            .ToList();
+
+        mine.Should().NotBeEmpty("un fallimento DNS deve essere visibile sul counter di blocco");
+        mine[0].Value.Should().Be(1);
+        captured.Should().AllSatisfy(c => c.Tags.Keys.Should().BeEquivalentTo("sink", "reason"));
+    }
+
+    [Fact]
+    public void ResolveAndValidate_CallerCancellation_DoesNotIncrementBlocked()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        var dns = new ThrowingDnsResolver(new OperationCanceledException(cts.Token));
+
+        var captured = MetricCapture.Capture(MeepleAiMetrics.EgressBlocked.Name, () =>
+        {
+            try
+            {
+                SsrfPinnedConnect.ResolveAndValidateAsync(
+                        dns, "cancelled.example.com", MeepleAiMetrics.EgressSinks.Wikimedia, cts.Token)
+                    .GetAwaiter().GetResult();
+                throw new Xunit.Sdk.XunitException("expected the cancellation to propagate");
+            }
+            catch (OperationCanceledException)
+            {
+                // atteso
+            }
+        });
+
+        captured
+            .Where(c => Equals(c.Tags.GetValueOrDefault("sink"), "wikimedia")
+                && Equals(c.Tags.GetValueOrDefault("reason"), "dns_failure"))
+            .Should().BeEmpty("un abort del chiamante non è un fallimento DNS e non va contato");
+    }
+
+    [Fact]
     public void Counters_HaveStableBoundedNames()
     {
         MeepleAiMetrics.EgressBlocked.Name.Should().Be("meepleai.egress.blocked.total");
         MeepleAiMetrics.EgressAllowed.Name.Should().Be("meepleai.egress.allowed.total");
+
+        MeepleAiMetrics.EgressBlockReasons.DnsFailure.Should().Be("dns_failure");
+        // Pinnati perché sono il selettore delle regole in infra/prometheus/alerts/egress-guard.yml:
+        // rinominarli spegnerebbe gli alert senza rompere nulla in compilazione (#3583).
+        MeepleAiMetrics.EgressBlockReasons.PrivateIp.Should().Be("private_ip");
+        MeepleAiMetrics.EgressBlockReasons.DenylistHit.Should().Be("denylist_hit");
+        MeepleAiMetrics.EgressBlockReasons.DecodeFail.Should().Be("decode_fail");
     }
 }

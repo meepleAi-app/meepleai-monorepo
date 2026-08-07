@@ -27,7 +27,30 @@ internal static class SsrfPinnedConnect
         string sink,
         CancellationToken ct)
     {
-        IReadOnlyList<IPAddress> addresses = await dns.ResolveAsync(host, ct).ConfigureAwait(false);
+        IReadOnlyList<IPAddress> addresses;
+        try
+        {
+            addresses = await dns.ResolveAsync(host, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            // #3583 — l'esito era già fail-closed (la connessione non avviene), ma senza questo
+            // counter un sink che degrada per problemi DNS è indistinguibile da un sink inattivo su
+            // meepleai_egress_blocked_total. Registra e RILANCIA: nessun esito cambia.
+            //
+            // Il filtro esclude la cancellazione iniziata dal chiamante — che non è un guasto di
+            // egress — pur continuando a contare un timeout interno del resolver (che si presenta
+            // come OperationCanceledException con un CTS proprio, quindi con `ct` non cancellato).
+            //
+            // Due limiti noti e accettati:
+            //   - se il chiamante cancella e il resolver risponde con SocketException invece che
+            //     OperationCanceledException, il caso viene contato come dns_failure;
+            //   - questo guard gira dentro il ConnectCallback, quindi UNA VOLTA PER CONNESSIONE:
+            //     ogni hop di redirect e ogni nuova connessione del pool incrementa. Il counter va
+            //     letto come rate di fallimenti di dial, MAI come "richieste utente fallite".
+            MeepleAiMetrics.RecordEgressBlocked(sink, MeepleAiMetrics.EgressBlockReasons.DnsFailure);
+            throw;
+        }
 
         if (addresses.Count == 0)
         {

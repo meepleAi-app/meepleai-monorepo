@@ -10,6 +10,9 @@ import {
   CoverCandidatesSchema,
   CoverAssignmentSchema,
   ManualCoverResultSchema,
+  CoverGapPageSchema,
+  type CoverGapCause,
+  type CoverGapPage,
   type CoverCandidates,
   type CoverAssignment,
   type CoverContext,
@@ -68,6 +71,30 @@ export function createAdminCoverClient(http: HttpClient) {
         `/api/v1/admin/shared-games/${encodeURIComponent(gameId)}/manual-cover`,
         body,
         ManualCoverResultSchema
+      );
+    },
+
+    /**
+     * GET the catalog games that have NO cover at all, each with the cause the cover-from-PDF
+     * pipeline cannot cover it (#3590). Optional `cause` filters to one bounded value.
+     * Returns null on 401.
+     */
+    async getCoverGap(
+      params: {
+        cause?: CoverGapCause;
+        pageNumber?: number;
+        pageSize?: number;
+      } = {}
+    ): Promise<CoverGapPage | null> {
+      const search = new URLSearchParams();
+      if (params.cause) search.set('cause', params.cause);
+      if (params.pageNumber) search.set('pageNumber', String(params.pageNumber));
+      if (params.pageSize) search.set('pageSize', String(params.pageSize));
+      const qs = search.toString();
+
+      return http.get(
+        `/api/v1/admin/shared-games/cover-gap${qs ? `?${qs}` : ''}`,
+        CoverGapPageSchema
       );
     },
   };

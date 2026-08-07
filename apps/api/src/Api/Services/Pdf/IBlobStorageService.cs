@@ -190,11 +190,18 @@ internal interface IBlobStorageService
     Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default);
 
     /// <summary>
-    /// Legge un oggetto dalla sua chiave fisica ESATTA, senza la validazione categorizzata
-    /// (che rifiuta `/` e `.`). Speculare a <see cref="StoreRawKeyAsync"/> (#3611).
+    /// Reads an object by its EXACT physical storage key — the read-side counterpart
+    /// of <see cref="StoreRawKeyAsync"/>. Unlike <see cref="RetrieveAsync"/>, this does NOT
+    /// run <c>PathSecurity.ValidateIdentifier</c> (which rejects <c>/</c> and <c>.</c>) and
+    /// does NOT perform categorized prefix discovery — the caller is expected to have
+    /// already validated or otherwise trusted the key (e.g. a deterministic key composed
+    /// by business logic before being persisted to the DB). Slashes and dots are allowed
+    /// in <paramref name="rawKey"/> (#3611).
     /// </summary>
-    /// <remarks>IMPORTANT: il chiamante DEVE disporre lo stream restituito.</remarks>
-    /// <returns>Lo stream dell'oggetto, o null se assente o se il backend non ospita chiavi grezze.</returns>
+    /// <param name="rawKey">The exact physical storage object key to read.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The object's stream, or null if not found or if the backend does not host raw keys.</returns>
+    /// <remarks>IMPORTANT: the caller MUST dispose the returned stream.</remarks>
     Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default);
 }
 

@@ -543,11 +543,11 @@ internal sealed class S3BlobStorageService : IBlobStorageService
     }
 
     /// <summary>
-    /// Legge un oggetto dalla sua chiave fisica ESATTA, senza la validazione categorizzata
-    /// (che rifiuta `/` e `.`). Speculare a <see cref="StoreRawKeyAsync"/> (#3611).
+    /// Reads an object at an EXACT physical S3 key — the read-side counterpart of
+    /// <see cref="StoreRawKeyAsync"/>. Deliberately skips <c>PathSecurity.ValidateIdentifier</c>
+    /// and prefix discovery, mirroring <see cref="DeleteRawKeyAsync"/>'s raw-key contract.
+    /// Needed by the cover editor (#3611) to re-read a cover's bytes before cropping.
     /// </summary>
-    /// <remarks>IMPORTANT: il chiamante DEVE disporre lo stream restituito.</remarks>
-    /// <returns>Lo stream dell'oggetto, o null se assente o se il backend non ospita chiavi grezze.</returns>
     public async Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
     {
         try

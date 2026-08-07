@@ -327,14 +327,14 @@ export const SharedGameDetailSchema = z.object({
   // has been generated yet — consumers MUST fall back to the deterministic placeholder
   // via `lib/games/cover-utils.ts`.
   coverUrl: z.string().url().nullable().optional(),
-  // Epic #3470 Slice 2d (AC-2) — cover resolved for the Social (OpenGraph) context,
-  // consumed by the OG meta in `[id]/page.tsx`. Falls through to the implicit cover
-  // when no Social override is pinned, so it is never worse than `coverUrl`.
-  socialCoverUrl: z.string().url().nullable().optional(),
   // #3611 — punto focale del crop in [0,1]; il FE lo traduce in object-position.
   // Optional: le risposte servite dalla cache anteriore al deploy non lo contengono.
   coverFocalX: z.number().min(0).max(1).optional(),
   coverFocalY: z.number().min(0).max(1).optional(),
+  // Epic #3470 Slice 2d (AC-2) — cover resolved for the Social (OpenGraph) context,
+  // consumed by the OG meta in `[id]/page.tsx`. Falls through to the implicit cover
+  // when no Social override is pinned, so it is never worse than `coverUrl`.
+  socialCoverUrl: z.string().url().nullable().optional(),
   rules: GameRulesSchema.nullable(),
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdBy: z.string().uuid(),

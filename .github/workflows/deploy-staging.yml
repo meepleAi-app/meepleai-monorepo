@@ -198,6 +198,8 @@ jobs:
               - 'apps/reranker-service/**'
             orchestration:
               - 'apps/orchestration-service/**'
+            unstructured:
+              - 'apps/unstructured-service/**'
 
       - name: Determine what to deploy
         id: decision
@@ -239,22 +241,34 @@ jobs:
           EMB="${{ steps.changes.outputs.embedding }}"
           RRK="${{ steps.changes.outputs.reranker }}"
           ORC="${{ steps.changes.outputs.orchestration }}"
+          # #3590 — unstructured-service NON era in alcuna pipeline: non qui e non in un workflow
+          # di build/publish GHCR. Si ricostruiva solo a mano sul VPS, quindi andava alla deriva in
+          # silenzio: il 2026-08-07 staging girava un'immagine costruita un'ora PRIMA che il commit
+          # del limite 50->100MB atterrasse, e le mancavano anche i due commit di region-seeding RAG.
+          # Il servizio è build-from-source nel compose (nessuna immagine GHCR da pullare), quindi
+          # sotto viene ricostruito sul VPS invece che pullato.
+          UNS="${{ steps.changes.outputs.unstructured }}"
           if [ "$EVENT" = "workflow_dispatch" ] \
             || [ "$FORCE" = "true" ] \
             || [ "$BEFORE" = "$ZEROS" ] \
             || [ -z "$BEFORE" ]; then
-            EMB=true; RRK=true; ORC=true
+            EMB=true; RRK=true; ORC=true; UNS=true
           fi
           # paths-filter outputs are empty when the changes step is skipped
           # (workflow_dispatch). Normalize empties to false.
-          EMB="${EMB:-false}"; RRK="${RRK:-false}"; ORC="${ORC:-false}"
-          echo "ai_changed={\"embedding\":$EMB,\"reranker\":$RRK,\"orchestration\":$ORC}" >> $GITHUB_OUTPUT
+          EMB="${EMB:-false}"; RRK="${RRK:-false}"; ORC="${ORC:-false}"; UNS="${UNS:-false}"
+          echo "ai_changed={\"embedding\":$EMB,\"reranker\":$RRK,\"orchestration\":$ORC,\"unstructured\":$UNS}" >> $GITHUB_OUTPUT
+          # NOTA: `unstructured` è deliberatamente ESCLUSO da ai_any. ai_any gate il job di
+          # build+push su GHCR, la cui matrice è [embedding, reranker, orchestration];
+          # unstructured-service non ha un'immagine GHCR (è build-from-source nel compose) e viene
+          # ricostruito direttamente sul VPS nello step di deploy. Includerlo qui farebbe girare
+          # a vuoto il job GHCR.
           if [ "$EMB" = "true" ] || [ "$RRK" = "true" ] || [ "$ORC" = "true" ]; then
             echo "ai_any=true" >> $GITHUB_OUTPUT
           else
             echo "ai_any=false" >> $GITHUB_OUTPUT
           fi
-          echo "🤖 AI changed: embedding=$EMB reranker=$RRK orchestration=$ORC"
+          echo "🤖 AI changed: embedding=$EMB reranker=$RRK orchestration=$ORC unstructured=$UNS"
 
   # Lightweight pre-deploy validation (full CI already ran on main-dev PR)
   # Rationale: Code reaching main-staging has already passed the full ci.yml
@@ -1051,6 +1065,7 @@ jobs:
             EMB_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).embedding }}"
             RRK_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).reranker }}"
             ORC_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).orchestration }}"
+            UNS_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).unstructured }}"
 
             # Issue #1578 follow-up — free OLD AI images BEFORE the disk gate (disk-safe order).
             # The old image stays referenced by the running container while the new one is pulled
@@ -1122,6 +1137,34 @@ jobs:
             if [ "$ORC_CHANGED" = "true" ]; then
               docker pull "$ORCHESTRATION_IMAGE" || echo "⚠️ orchestration pull failed (non-blocking; not active in staging)"
               echo "📦 orchestration-service image cached (not started in staging)"
+            fi
+
+            # #3590 — unstructured-service è build-from-source nel compose (nessuna immagine GHCR
+            # da pullare), quindi si ricostruisce QUI sul VPS. Prima di #3590 non era in alcuna
+            # pipeline: si aggiornava solo a mano e andava alla deriva in silenzio.
+            #
+            # ORDINE OBBLIGATORIO — prune PRIMA del build, non dopo. L'immagine pesa ~10GB e il
+            # 2026-08-07 un rebuild manuale ha portato il disco dal 74% al 99% (873MB liberi).
+            # `docker builder prune` recupera ~6.5GB di cache: farlo dopo è troppo tardi.
+            if [ "$UNS_CHANGED" = "true" ]; then
+              echo "🧹 Pre-prune before unstructured-service rebuild (image is ~10GB)..."
+              docker builder prune -f || true
+              docker image prune -f || true
+
+              FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+              echo "💽 VPS disk before unstructured build: ${FREE_GB} GB free — gate ${AI_PULL_GATE_GB} GB"
+              if [ "$FREE_GB" -lt "$AI_PULL_GATE_GB" ]; then
+                echo "::error::Insufficient disk to rebuild unstructured-service: ${FREE_GB} GB free < ${AI_PULL_GATE_GB} GB"
+                echo "🚫 Aborting (fail-safe). Manual cleanup on the VPS:"
+                echo "  docker image prune -af && docker builder prune -af"
+                exit 1
+              fi
+
+              echo "🔨 Rebuilding unstructured-service from source on the VPS..."
+              docker compose -f docker-compose.yml -f compose.staging.yml --profile ai \
+                build unstructured-service
+              SERVICES="$SERVICES unstructured-service"
+              echo "📦 unstructured-service rebuilt"
             fi
 
             if [ -z "$SERVICES" ]; then

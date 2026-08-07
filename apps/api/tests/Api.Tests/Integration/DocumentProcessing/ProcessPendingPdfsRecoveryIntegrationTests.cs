@@ -65,7 +65,7 @@ public sealed class ProcessPendingPdfsRecoveryIntegrationTests : IAsyncLifetime
 
         _pipeline
             .Setup(p => p.ProcessAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(PdfPipelineOutcome.Processed);
         // Registered last so it wins over any real pipeline registration from CreateBase.
         services.AddScoped(_ => _pipeline.Object);
 

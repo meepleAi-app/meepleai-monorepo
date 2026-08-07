@@ -36,7 +36,7 @@ public sealed class ProcessPendingPdfsCommandHandlerTests : IAsyncLifetime
         _pipeline = new Mock<IPdfProcessingPipelineService>();
         _pipeline
             .Setup(p => p.ProcessAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(PdfPipelineOutcome.Processed);
         _handler = new ProcessPendingPdfsCommandHandler(
             _db, _pipeline.Object, NullLogger<ProcessPendingPdfsCommandHandler>.Instance);
         return ValueTask.CompletedTask;

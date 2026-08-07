@@ -6,9 +6,11 @@
  * invisible to non-admins, so the `(public)` audience contract stays intact (#2118).
  * Progressive enhancement only — the server re-authorizes every mutation.
  *
- * The button positions itself top-right of the (relative) cover slot and reveals on
- * hover/focus (mockup #1824 pattern); it opens the AdminCoverSourceDialog overlay
- * with no route/nav change.
+ * The button positions itself top-right of the (relative) cover slot and stays visible
+ * at rest — no hover-only reveal (#3611: hover discretion hid the control from admins
+ * too, not just non-admins). Resting tone is attenuated via semantic color tokens, never
+ * `opacity`, to keep AA contrast on the button and its optional `needsAttention` outline.
+ * It opens the AdminCoverSourceDialog overlay with no route/nav change.
  */
 
 'use client';
@@ -25,25 +27,45 @@ export interface AdminCoverEditAffordanceProps {
   gameId: string;
   title?: string;
   className?: string;
+  /**
+   * #3611 — la cover sottostante è un placeholder: l'azione qui serve davvero.
+   * Rende la matita piena da subito e disegna un contorno tratteggiato sul riquadro,
+   * senza richiedere modifiche ai contenitori (GridCard / Cover / hero).
+   */
+  needsAttention?: boolean;
 }
 
 export function AdminCoverEditAffordance({
   gameId,
   title,
   className,
+  needsAttention = false,
 }: AdminCoverEditAffordanceProps): React.JSX.Element | null {
   const { isEditorOrAbove } = useAdminRole();
   const [open, setOpen] = useState(false);
 
   if (!isEditorOrAbove) return null;
 
+  // L'attenuazione a riposo NON usa `opacity`: abbasserebbe il contrasto di testo e bordo
+  // sotto la soglia AA, e il gate di accessibilità è bloccante. Si attenua con i token.
+  const restingTone = needsAttention
+    ? 'border-border-strong bg-background text-foreground'
+    : 'border-border/60 bg-background/80 text-muted-foreground hover:text-foreground hover:bg-background';
+
   return (
     <>
+      {needsAttention && (
+        <span
+          data-testid="cover-needs-attention"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-10 rounded-md border-2 border-dashed border-border-strong"
+        />
+      )}
       <button
         type="button"
         aria-label="Modifica sorgente copertina"
         onClick={() => setOpen(true)}
-        className={`absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-md border border-border/50 bg-background/85 text-foreground shadow-sm backdrop-blur-md transition-opacity hover:bg-background focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:opacity-0 md:group-hover:opacity-100 ${
+        className={`absolute right-2 top-2 z-20 flex h-8 w-8 items-center justify-center rounded-md border shadow-sm backdrop-blur-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${restingTone} ${
           className ?? ''
         }`}
       >

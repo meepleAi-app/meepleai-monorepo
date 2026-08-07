@@ -43,11 +43,29 @@ internal static class CoverUrlResolver
 
     /// <summary>
     /// The outcome of a source-aware resolution: the presigned <see cref="Url"/>
-    /// (null on placeholder/miss) and the <see cref="Kind"/> of the layer that won
-    /// (null on placeholder). Lets the caller gate license/attribution on the actual
-    /// winning source rather than emitting it unconditionally (epic #3470 Slice 1d-a).
+    /// (null on placeholder/miss), the <see cref="Kind"/> of the layer that won
+    /// (null on placeholder), and the crop <see cref="FocalX"/>/<see cref="FocalY"/>
+    /// point (issue #3611) — an admin assignment's pinned focal point when it wins,
+    /// otherwise <see cref="DefaultFocalFor"/> for the winning <see cref="Kind"/>.
+    /// Lets the caller gate license/attribution on the actual winning source rather
+    /// than emitting it unconditionally (epic #3470 Slice 1d-a).
     /// </summary>
-    internal readonly record struct ResolvedCover(string? Url, CoverKind? Kind);
+    internal readonly record struct ResolvedCover(
+        string? Url,
+        CoverKind? Kind,
+        double FocalX = 0.5,
+        double FocalY = 0.5);
+
+    /// <summary>
+    /// Punto focale di default quando nessuna assegnazione admin lo fissa (#3611).
+    /// Le cover derivate da PDF portano titolo e illustrazione in alto e corpo del
+    /// testo al centro, quindi un crop centrato produce una banda di testo; le cover
+    /// d'artwork (BGG/Wikidata/Manual) hanno il soggetto al centro e vanno lasciate lì.
+    /// Funzione pura: nessuna riga scritta, nessun backfill, il valore si corregge
+    /// cambiando questa costante.
+    /// </summary>
+    internal static (double X, double Y) DefaultFocalFor(CoverKind kind) =>
+        kind == CoverKind.Pdf ? (0.5, 0.2) : (0.5, 0.5);
 
     /// <summary>
     /// Per-user resolution with the full layering (epic #3470 Slice 2c / SD3 / AC-4):
@@ -120,7 +138,8 @@ internal static class CoverUrlResolver
             if (url is not null)
             {
                 EmitResolution("r2_pdf");
-                return new ResolvedCover(url, CoverKind.Pdf);
+                var focal = DefaultFocalFor(CoverKind.Pdf);
+                return new ResolvedCover(url, CoverKind.Pdf, focal.X, focal.Y);
             }
         }
 
@@ -140,7 +159,8 @@ internal static class CoverUrlResolver
             if (url is not null)
             {
                 EmitResolution("r2_bgg");
-                return new ResolvedCover(url, CoverKind.Bgg);
+                var focal = DefaultFocalFor(CoverKind.Bgg);
+                return new ResolvedCover(url, CoverKind.Bgg, focal.X, focal.Y);
             }
         }
 
@@ -154,7 +174,8 @@ internal static class CoverUrlResolver
             if (url is not null)
             {
                 EmitResolution("r2_wikidata");
-                return new ResolvedCover(url, CoverKind.Wikidata);
+                var focal = DefaultFocalFor(CoverKind.Wikidata);
+                return new ResolvedCover(url, CoverKind.Wikidata, focal.X, focal.Y);
             }
         }
 
@@ -216,7 +237,11 @@ internal static class CoverUrlResolver
             if (overrideUrl is not null)
             {
                 EmitResolution(SourceTagFor(assignment.Source));
-                return new ResolvedCover(overrideUrl, assignment.Source.ToCoverKind());
+                return new ResolvedCover(
+                    overrideUrl,
+                    assignment.Source.ToCoverKind(),
+                    assignment.FocalX,
+                    assignment.FocalY);
             }
             // Override present but unresolvable (crop stale AND base key
             // absent/unreachable). Intentionally NO metric emission here — the

@@ -842,4 +842,76 @@ public class CoverUrlResolverTests
 
         url.Should().Be("https://r2/wiki.webp");
     }
+
+    // ----- Issue #3611: default focal point --------------------------------
+
+    // CoverKind is internal (SharedKernel/Domain/Covers/CoverKeyBuilder.cs) and this
+    // test class is public (required for xUnit v3 discovery — an internal test class
+    // silently collects zero tests in this project). A public Theory method cannot
+    // declare an internal type as a parameter (CS0051), so the enum crosses the
+    // InlineData boundary as its underlying int and is cast back inside the body.
+    [Theory]
+    [InlineData((int)CoverKind.Pdf, 0.5, 0.2)]
+    [InlineData((int)CoverKind.Bgg, 0.5, 0.5)]
+    [InlineData((int)CoverKind.Wikidata, 0.5, 0.5)]
+    [InlineData((int)CoverKind.Manual, 0.5, 0.5)]
+    [InlineData((int)CoverKind.User, 0.5, 0.5)]
+    public void DefaultFocalFor_AnchorsPdfHigh_CentersEveryOtherSource(
+        int kindValue, double expectedX, double expectedY)
+    {
+        var kind = (CoverKind)kindValue;
+        var focal = CoverUrlResolver.DefaultFocalFor(kind);
+
+        focal.X.Should().Be(expectedX);
+        focal.Y.Should().Be(expectedY);
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_PdfCover_CarriesTheHighAnchorDefault()
+    {
+        var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var cover = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        cover.Kind.Should().Be(CoverKind.Pdf);
+        cover.FocalY.Should().Be(0.2);
+    }
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_AssignmentFocal_BeatsTheHeuristic()
+    {
+        var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
+        sg.CoverAssignments.Add(new GameCoverAssignmentEntity
+        {
+            Context = CoverContext.Hero,
+            Source = CoverAssignmentSource.Pdf,
+            FocalX = 0.4,
+            FocalY = 0.75,
+        });
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var cover = await CoverUrlResolver
+            .ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
+
+        cover.FocalX.Should().Be(0.4);
+        cover.FocalY.Should().Be(0.75);
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_NoCover_EmitsPlaceholderOnceAndCentersFocal()
+    {
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity();
+
+        var cover = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        cover.Url.Should().BeNull();
+        cover.FocalX.Should().Be(0.5);
+        cover.FocalY.Should().Be(0.5);
+        capture.LongMeasurements.Should().ContainSingle()
+            .Which.Tags["source"].Should().Be("placeholder");
+    }
 }

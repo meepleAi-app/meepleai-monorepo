@@ -594,10 +594,18 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    # #3498 — senza queste il container non riceveva ALCUNA credenziale: le guard `:?` qui sotto
+    # fallivano a ogni avvio e il bucket NON veniva mai creato. Nota: `storage.secret` NON contiene
+    # MINIO_ROOT_USER/PASSWORD (ha solo le variabili R2), quindi un `env_file` non avrebbe aiutato —
+    # servono gli stessi default che il servizio `minio` usa in compose.dev.yml, altrimenti le
+    # credenziali di init e quelle del server divergono.
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     entrypoint: >
       /bin/sh -c "
-      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set in storage.secret — refusing to use insecure defaults'};
-      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set in storage.secret — refusing to use insecure defaults'};
+      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set — refusing to run with an empty credential'};
+      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set — refusing to run with an empty credential'};
       mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
       mc mb myminio/meepleai-uploads --ignore-existing;
       echo 'Bucket meepleai-uploads ready';

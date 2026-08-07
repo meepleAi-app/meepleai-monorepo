@@ -85,7 +85,19 @@ Regola d'oro (Nygard): **l'URL è input transiente, mai render-source**. Nuovo c
 2. download ≤10MB, validazione **reale** via `IWebpVariantGenerator` (throw su non-immagine, non fidarsi del Content-Type);
 3. **gate licenza**: l'admin dichiara una licenza da whitelist `LicenseValidator` (CC0/PD/CC-BY/CC-BY-SA) + attribution + fonte → 400 se non-whitelist; l'attestazione è dell'admin (registra `attestedBy`+timestamp per audit);
 4. re-encode WebP → upload R2 raw-key → persiste **solo** la R2 key + license/attribution (nuovo `CoverKind.Manual`, colonne `ManualCover*` a specchio di `WikidataCover*`).
-> Host BGG/geekdo: non bloccati nel fetch server-side (ADR-059 §2), ma di fatto rifiutati dal gate-licenza (non sono CC).
+> **Host BGG/geekdo — aggiornato 2026-08-07 (#3590 Slice B).** Il testo originale («non bloccati nel
+> fetch server-side, ma di fatto rifiutati dal gate-licenza») è **superato da #3495**. Oggi i due
+> path sono distinti e vanno tenuti tali:
+>
+> - **Cover manuale da URL arbitrario** (questo flusso): gli host geekdo sono **banditi**, prima di
+>   qualunque egress, da `BggHostDenyList` — nel validator e di nuovo nell'handler come difesa in
+>   profondità (ADR-059 §5 / ban #2123). Non è più il gate-licenza a fermarli "di fatto": è un
+>   rifiuto esplicito, e dal #3583 conta anche sul counter `meepleai_egress_blocked_total`
+>   con reason `denylist_hit`.
+> - **Re-upload BGG server-to-server** (`POST /admin/shared-games/{id}/bgg-cover`, #3590 Slice B):
+>   **consentito** per ADR-059 §2. Non accetta un URL — la sorgente è l'immagine che BGG dichiara
+>   per il `BggId` del gioco — quindi non è una via per aggirare la deny-list, ma un canale
+>   separato e sanzionato.
 
 ## 5. Slicing (decomposizione consigliata)
 

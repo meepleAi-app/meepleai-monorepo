@@ -132,19 +132,23 @@ internal static partial class MeepleAiMetrics
         description: "WikidataCoverEnrichmentJob tick wall-clock duration (#1823 Wave 3 M11)");
 
     /// <summary>
-    /// Issue #1823 Wave 3 F1 (M11 follow-up) — cumulative count of
+    /// Issue #1823 Wave 3 F1 (M11 follow-up) — count of
     /// <c>WikidataCoverEnrichmentAttempt</c> rows in <c>DeadLetter</c> state
     /// currently present in the table (i.e. NOT yet swept by the
-    /// <c>WikidataCoverDeadLetterRetentionJob</c>). Hybrid update strategy:
-    /// the retention job calls <see cref="SetWikidataDeadLetterCount(int)"/>
-    /// with a fresh repo COUNT after each sweep; the
-    /// <c>WikidataCoverEnrichmentRunner</c> calls
-    /// <see cref="IncrementWikidataDeadLetterCount"/> whenever it persists a
-    /// new dead-letter attempt. Drift between sweeps is bounded by the
-    /// 1-minute scheduler tick rate; the daily 03:00 UTC sweep re-anchors
-    /// the value to ground truth.
+    /// <c>WikidataCoverDeadLetterRetentionJob</c>).
+    /// <para>
+    /// #3383: il valore è <b>puramente DB-derivato</b>. Lo aggiornano il
+    /// <c>WikidataDeadLetterMetricsRefreshService</c> con un <c>COUNT</c> ogni
+    /// 60s e il retention job dopo ogni sweep, entrambi via
+    /// <see cref="SetWikidataDeadLetterCount(int)"/>. L'incremento ottimistico
+    /// in memoria del runner è stato rimosso: con un contatore per processo il
+    /// gauge divergeva a più di un'istanza (<c>sum()</c> raddoppiava,
+    /// <c>max()</c> derivava), che è esattamente il caso che il vincolo
+    /// single-pod di ADR-087 D4 deve poter osservare.
+    /// </para>
     ///
-    /// Suggested alerting:
+    /// Alerting (infra/prometheus/alerts/wikidata-enrichment.yml, aggregate con
+    /// <c>max()</c> perché a N istanze le serie sono N e identiche):
     ///   - count &gt; 100 sustained &gt; 1 hour → operator triage backlog
     ///     building; investigate via M13 admin dead-letter page.
     ///   - sudden jump &gt; 50 in &lt; 5 min → systemic upstream failure or
@@ -159,23 +163,19 @@ internal static partial class MeepleAiMetrics
         description: "Cumulative count of dead-letter WikidataCoverEnrichmentAttempt rows (#1823 Wave 3 F1)");
 
     /// <summary>
-    /// Re-anchors the gauge to a freshly-counted ground-truth value.
-    /// Uses <see cref="System.Threading.Interlocked.Exchange(ref int, int)"/>
-    /// so the re-anchor write is ordered atomically against concurrent
-    /// <see cref="IncrementWikidataDeadLetterCount"/> calls from the runner
-    /// (ARM64 memory model: a plain assignment could otherwise be reordered
-    /// past a subsequent Interlocked.Increment, producing a transient stale
-    /// gauge value).
+    /// Re-anchors the gauge to a freshly-counted ground-truth value. Unico punto
+    /// di scrittura, chiamato dal <c>WikidataDeadLetterMetricsRefreshService</c>
+    /// (ogni 60s) e dal retention job (dopo ogni sweep).
+    /// <para>
+    /// Usa <see cref="System.Threading.Interlocked.Exchange(ref int, int)"/> per
+    /// ordinare la scrittura contro i lettori concorrenti del gauge (ARM64 memory
+    /// model: una assegnazione semplice potrebbe essere riordinata e produrre un
+    /// valore transitoriamente stantio).
+    /// </para>
     /// </summary>
     public static void SetWikidataDeadLetterCount(int count)
     {
         System.Threading.Interlocked.Exchange(ref _wikidataDeadLetterCount, count < 0 ? 0 : count);
-    }
-
-    /// <summary>Atomically increments the gauge by 1 — call after persisting a new dead-letter attempt.</summary>
-    public static void IncrementWikidataDeadLetterCount()
-    {
-        System.Threading.Interlocked.Increment(ref _wikidataDeadLetterCount);
     }
 
     /// <summary>

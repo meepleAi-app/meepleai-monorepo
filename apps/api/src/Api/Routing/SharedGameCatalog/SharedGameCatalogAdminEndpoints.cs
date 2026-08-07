@@ -5,6 +5,8 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCo
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Commands.ReuploadBggCover;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCoverGap;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.ExportSharedGamesTracking;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSeedingStatus;
@@ -90,6 +92,19 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status404NotFound);
 
         // Manual cover from a URL (epic #3470 Slice 3a): admin supplies an HTTPS image URL + attested license.
+        // #3590 Slice B — re-upload server-to-server della cover BGG per un gioco già a catalogo.
+        // Path legittimo per ADR-059 §2, distinto dal campo manuale a URL libero qui sotto: NON
+        // accetta un URL, la sorgente è l'immagine che BGG dichiara per il BggId del gioco.
+        group.MapPost("/admin/shared-games/{id:guid}/bgg-cover", HandleReuploadBggCover)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("ReuploadBggCover")
+            .WithSummary("Re-host the BGG cover for a catalog game (Admin/Editor)")
+            .WithDescription("Downloads the image BoardGameGeek exposes for the game's BggId and re-hosts it in R2 (ADR-059 §2 server-to-server path). Takes no URL: the arbitrary-URL manual-cover field stays barred from geekdo hosts by the ADR-059 §5 deny-list.")
+            .Produces<BggCoverResult>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
         group.MapPost("/admin/shared-games/{id:guid}/manual-cover", HandleSetManualCover)
             .RequireAuthorization("AdminOrEditorPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
@@ -445,6 +460,15 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithName("GetSeedingStatus")
             .WithSummary("Get seeding/enrichment status for all games (Admin/Editor)")
             .Produces<List<SeedingGameDto>>();
+
+        // #3590 — i giochi senza alcuna cover, con la causa per cui la pipeline cover-da-PDF non
+        // li copre. La route costante non confligge con {id:guid}: il constraint disambigua.
+        group.MapGet("/admin/shared-games/cover-gap", HandleGetCoverGap)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetCoverGap")
+            .WithSummary("Get catalog games with no cover, grouped by cause (Admin/Editor)")
+            .WithDescription("Cause: pdf_too_large, heuristic_rejected, no_source, other.")
+            .Produces<PagedResult<CoverGapGameDto>>();
 
         // Export tracking spreadsheet (all shared games with progress status)
         group.MapGet("/admin/shared-games/tracking-export", HandleTrackingExport)
@@ -956,6 +980,22 @@ internal static class SharedGameCatalogAdminEndpoints
         await mediator.Send(new RemoveCoverAssignmentCommand(id, context, session!.Principal!.Subject.Id), ct)
             .ConfigureAwait(false);
         return Results.NoContent();
+    }
+
+    /// <summary>#3590 Slice B — re-upload della cover BGG. Solo IMediator: regola CQRS.</summary>
+    private static async Task<IResult> HandleReuploadBggCover(
+        Guid id,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var result = await mediator
+            .Send(new ReuploadBggCoverCommand(id, session!.Principal!.Subject.Id), ct)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleSetManualCover(
@@ -1561,6 +1601,20 @@ internal static class SharedGameCatalogAdminEndpoints
     {
         var result = await mediator.Send(
             new GetSeedingStatusQuery(),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>#3590 — i giochi senza cover, con la causa. Solo IMediator: regola CQRS.</summary>
+    private static async Task<IResult> HandleGetCoverGap(
+        IMediator mediator,
+        [FromQuery] string? cause = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await mediator.Send(
+            new GetCoverGapQuery(pageNumber, pageSize, cause),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

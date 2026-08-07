@@ -109,17 +109,9 @@ public class WikidataEnrichmentMetricsTests
             .Should().Be(0, "negative dead-letter counts are non-sensical — the setter MUST clamp");
     }
 
-    [Fact]
-    public void IncrementWikidataDeadLetterCount_FromAnchor_IncreasesByOnePerCall()
-    {
-        // Anchor to a known value, then increment twice; the gauge MUST report
-        // anchor+2 (atomic Interlocked.Increment, no Read-Modify-Write race).
-        MeepleAiMetrics.SetWikidataDeadLetterCount(10);
-        MeepleAiMetrics.IncrementWikidataDeadLetterCount();
-        MeepleAiMetrics.IncrementWikidataDeadLetterCount();
-
-        ReadObservableGaugeValue(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(12);
-    }
+    // #3383: il test IncrementWikidataDeadLetterCount_FromAnchor_IncreasesByOnePerCall è stato
+    // RIMOSSO insieme al metodo che copriva. Il gauge è ora puramente DB-derivato: l'unico punto
+    // di scrittura è SetWikidataDeadLetterCount, coperto dai due test qui sopra.
 
     [Fact]
     public void WikidataDeadLetterCount_Name_MatchesAdrConvention()

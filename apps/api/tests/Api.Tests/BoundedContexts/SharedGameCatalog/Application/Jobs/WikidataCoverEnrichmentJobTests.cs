@@ -2,10 +2,13 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCo
 using Api.BoundedContexts.SharedGameCatalog.Application.Jobs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure.BackgroundTasks;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
+using Quartz;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Jobs;
@@ -33,6 +36,84 @@ public class WikidataCoverEnrichmentJobTests
         Mock.Of<IServiceProvider>(),
         _time,
         NullLogger<WikidataCoverEnrichmentJob>.Instance);
+
+    /// <summary>
+    /// #3383 — i test del lease devono passare da <c>Execute</c> (l'unico punto dove vive), che
+    /// risolve i servizi da uno scope reale: il <c>Mock.Of&lt;IServiceProvider&gt;()</c> usato da
+    /// <see cref="Sut"/> non basta. Gli altri test continuano a usare <c>RunBatchAsync</c>.
+    /// </summary>
+    private WikidataCoverEnrichmentJob SutWithLease(IBackgroundTaskOrchestrator orchestrator)
+    {
+        var services = new ServiceCollection();
+        services.AddScoped(_ => _attempts.Object);
+        services.AddScoped(_ => _runner.Object);
+        services.AddScoped(_ => orchestrator);
+
+        return new WikidataCoverEnrichmentJob(
+            services.BuildServiceProvider(),
+            _time,
+            NullLogger<WikidataCoverEnrichmentJob>.Instance);
+    }
+
+    private static IJobExecutionContext JobContext()
+    {
+        var context = new Mock<IJobExecutionContext>();
+        context.SetupGet(c => c.CancellationToken).Returns(CancellationToken.None);
+        context.SetupGet(c => c.FireTimeUtc).Returns(DateTimeOffset.UtcNow);
+        return context.Object;
+    }
+
+    [Fact]
+    public async Task Execute_LeaseNotAcquired_SkipsTheBatch()
+    {
+        // Un'altra istanza tiene il lease: il tick non deve processare nulla (DEC-3e: due istanze
+        // raddoppierebbero il rate verso Wikimedia, violazione ToS).
+        var orchestrator = new Mock<IBackgroundTaskOrchestrator>();
+        orchestrator
+            .Setup(o => o.ExecuteWithDistributedLockAsync(
+                It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        await SutWithLease(orchestrator.Object).Execute(JobContext());
+
+        _runner.Verify(
+            r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _attempts.Verify(
+            r => r.GetGameIdsDueForEnrichmentAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "senza lease il batch non deve nemmeno interrogare il DB");
+    }
+
+    [Fact]
+    public async Task Execute_LeaseAcquired_RunsTheBatchUnderTheLock()
+    {
+        var orchestrator = new Mock<IBackgroundTaskOrchestrator>();
+        Func<CancellationToken, Task>? captured = null;
+        orchestrator
+            .Setup(o => o.ExecuteWithDistributedLockAsync(
+                It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<TimeSpan>(), It.IsAny<CancellationToken>()))
+            .Callback<string, Func<CancellationToken, Task>, TimeSpan, CancellationToken>(
+                (_, factory, _, _) => captured = factory)
+            .ReturnsAsync(true);
+
+        _attempts.Setup(r => r.GetGameIdsDueForEnrichmentAsync(
+                It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<Guid>());
+
+        await SutWithLease(orchestrator.Object).Execute(JobContext());
+
+        captured.Should().NotBeNull(
+            "il batch deve essere passato all'orchestrator, non eseguito fuori dal lock");
+
+        // Il batch gira davvero quando l'orchestrator invoca la factory.
+        await captured!(CancellationToken.None);
+        _attempts.Verify(
+            r => r.GetGameIdsDueForEnrichmentAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 
     [Fact]
     public async Task RunBatchAsync_NoGamesDue_NoOp()

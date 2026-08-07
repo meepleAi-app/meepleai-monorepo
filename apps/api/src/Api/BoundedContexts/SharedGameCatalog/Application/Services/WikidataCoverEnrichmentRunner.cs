@@ -112,14 +112,11 @@ internal sealed class WikidataCoverEnrichmentRunner : IWikidataCoverEnrichmentRu
         await _attempts.AddAsync(newAttempt, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Issue #1823 Wave 3 F1: increment the dead-letter gauge AFTER the
-        // SaveChanges commits — incrementing pre-save would leak the metric
-        // forward on a DB write failure. The retention job re-anchors the
-        // gauge daily so any drift between sweeps stays bounded.
-        if (newAttempt.Outcome == WikidataCoverEnrichmentOutcome.DeadLetter)
-        {
-            MeepleAiMetrics.IncrementWikidataDeadLetterCount();
-        }
+        // #3383: l'incremento ottimistico del gauge dead-letter che stava qui (issue #1823 Wave 3 F1)
+        // è stato RIMOSSO. Con un contatore in memoria per processo il gauge divergeva a più di
+        // un'istanza (sum() raddoppiava, max() derivava). Ora il valore è puramente DB-derivato:
+        // WikidataDeadLetterMetricsRefreshService esegue un COUNT ogni 60s, e il retention job
+        // ri-ancora dopo ogni sweep.
 
         // Issue #1823 Phase E F4: SSE broadcast for live admin dead-letter
         // page updates. Same post-SaveChanges placement as the F1 gauge — a

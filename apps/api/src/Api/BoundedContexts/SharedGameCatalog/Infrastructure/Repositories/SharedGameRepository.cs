@@ -391,7 +391,10 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             manualCoverAttribution: entity.ManualCoverAttribution,
             manualCoverSourceUrl: entity.ManualCoverSourceUrl,
             manualCoverAttestedBy: entity.ManualCoverAttestedBy,
-            manualCoverAttestedAt: entity.ManualCoverAttestedAt);
+            manualCoverAttestedAt: entity.ManualCoverAttestedAt,
+            // #3590 Slice B — senza questa lettura l'aggregato non conosce la cover BGG, quindi
+            // MapToEntity la riscriverebbe come NULL al primo Update() (grafo detached).
+            bggCoverR2Key: entity.BggCoverR2Key);
 
         // Issue #2035: Hydrate designers from the M:N join — only when the caller
         // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
@@ -450,6 +453,10 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             RulesExternalUrl = game.Rules?.ExternalUrl,
             HasUploadedPdf = game.HasUploadedPdf,
             PdfCoverR2Key = game.PdfCoverR2Key,
+            // #3590 Slice B — ometterla qui la azzerava a ogni Update(): l'update è su grafo
+            // detached, quindi marca OGNI colonna come Modified. Stessa ragione già annotata
+            // sotto per le colonne manual.
+            BggCoverR2Key = game.BggCoverR2Key,
             // Issue #1823 Phase B M8 — propagate Wikidata enrichment state.
             WikidataQid = game.WikidataQid,
             WikidataCoverR2Key = game.WikidataCoverR2Key,

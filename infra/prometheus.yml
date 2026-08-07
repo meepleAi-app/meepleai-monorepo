@@ -34,6 +34,10 @@ rule_files:
   - '/etc/prometheus/bgg-tos-compliance.yml'
   # #3495 M2 — SSRF egress guard (manual-cover private_ip/denylist_hit SLO=0).
   - '/etc/prometheus/egress-guard.yml'
+  # #3373 D4 / #3383 — tripwire single-pod: count(up{job="meepleai-api"}) > 1.
+  # Il file esisteva dal #3373 ma non era montato ne' referenziato in ALCUN ambiente,
+  # quindi l'alert non e' mai stato attivo: era il presupposto dichiarato di ADR-087 D4.
+  - '/etc/prometheus/api-single-instance.yml'
   # Issue #3112 — OPS-02 Slack delivery observability alerts.
   - '/etc/prometheus/slack-delivery.yml'
   # Issue #3116 — SP5 Admin Security audit_outbox health alerts.

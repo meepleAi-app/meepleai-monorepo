@@ -38,6 +38,8 @@ internal static partial class MeepleAiMetrics
         public const string RedirectExhausted = "redirect_exhausted";
         public const string SizeCap = "size_cap";
         public const string DecodeFail = "decode_fail";
+        /// <summary>La risoluzione DNS ha lanciato (NXDOMAIN, timeout del resolver, socket error) — #3583.</summary>
+        public const string DnsFailure = "dns_failure";
         public const string Timeout = "timeout";
         public const string BreakerOpen = "breaker_open";
         public const string Scheme = "scheme";

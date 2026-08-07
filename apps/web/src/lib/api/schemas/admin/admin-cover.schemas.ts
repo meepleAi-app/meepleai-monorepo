@@ -100,3 +100,45 @@ export const ManualCoverResultSchema = z.object({
   presignedUrl: z.string(),
 });
 export type ManualCoverResult = z.infer<typeof ManualCoverResultSchema>;
+
+/**
+ * #3590 — cover-gap: la causa per cui un gioco è privo di cover. Enum bounded, speculare a
+ * `CoverGapCauses` lato backend (`GetCoverGapQuery.cs`): cambiarne uno richiede di cambiare
+ * anche l'altro.
+ *
+ * - `pdf_too_large`      — il PDF eccede il limite del servizio di estrazione
+ * - `heuristic_rejected` — nessuna pagina è una cover accettabile (esito CORRETTO, non un guasto)
+ * - `no_source`          — nessun PDF collegato: non c'è nulla da cui generare
+ * - `other`              — PDF ancora in lavorazione o fallimenti non classificati
+ */
+export const CoverGapCauseSchema = z.enum([
+  'pdf_too_large',
+  'heuristic_rejected',
+  'no_source',
+  'other',
+]);
+export type CoverGapCause = z.infer<typeof CoverGapCauseSchema>;
+
+/**
+ * Un gioco senza alcuna cover. I campi PDF sono nullable perché il gruppo `no_source` non ha
+ * alcun documento collegato — non stringerli a required senza cambiare il DTO C#.
+ */
+export const CoverGapGameSchema = z.object({
+  gameId: z.string().uuid(),
+  title: z.string(),
+  bggId: z.number().nullable(),
+  cause: CoverGapCauseSchema,
+  pdfFileName: z.string().nullable(),
+  pdfSizeBytes: z.number().nullable(),
+  errorCategory: z.string().nullable(),
+});
+export type CoverGapGame = z.infer<typeof CoverGapGameSchema>;
+
+/** Pagina di risultati cover-gap (PagedResult&lt;CoverGapGameDto&gt; lato backend). */
+export const CoverGapPageSchema = z.object({
+  items: z.array(CoverGapGameSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+});
+export type CoverGapPage = z.infer<typeof CoverGapPageSchema>;

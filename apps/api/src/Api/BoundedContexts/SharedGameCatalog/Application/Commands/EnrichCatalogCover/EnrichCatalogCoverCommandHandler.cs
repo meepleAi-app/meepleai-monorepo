@@ -220,6 +220,10 @@ internal sealed class EnrichCatalogCoverCommandHandler
         }
         catch (ImageProcessingException ex)
         {
+            // #3583 — il payload scaricato da Commons è stato rifiutato dal decoder. L'esito
+            // (Failed/image_processing) resta invariato; qui si aggiunge la visibilità su egress.
+            MeepleAiMetrics.RecordEgressBlocked(
+                MeepleAiMetrics.EgressSinks.Wikimedia, MeepleAiMetrics.EgressBlockReasons.DecodeFail);
             EmitOutcomeMetric(OutcomeFailed, FailReasonImageProcessing);
             _logger.LogWarning(ex,
                 "SharedGame {GameId} QID {Qid} WebP encoding failed for file '{Filename}'.",

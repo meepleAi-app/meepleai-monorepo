@@ -44,6 +44,7 @@ import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useUrlHashState } from '@/hooks/useUrlHashState';
 import { type SharedGameDetail, type TopContributor } from '@/lib/api/shared-games';
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 import { useGameTitle } from '@/lib/i18n/use-game-title';
 
 const VALID_TAB_KEYS: ReadonlySet<TabKey> = new Set(TAB_KEYS);
@@ -361,7 +362,13 @@ export function SharedGameDetailPageClient({
           // #3470 Slice 1d-c — admin-only cover-source editor over the hero cover.
           // Self-gated via useAdminRole (renders null for non-admins), so the public
           // audience contract is untouched (#2118).
-          coverOverlay={<AdminCoverEditAffordance gameId={game.id} title={resolvedTitle} />}
+          coverOverlay={
+            <AdminCoverEditAffordance
+              gameId={game.id}
+              title={resolvedTitle}
+              needsAttention={shouldUsePlaceholder(game.coverUrl)}
+            />
+          }
           // #3470 Slice 3c — winning-source attribution credit under the hero cover. Renders
           // null when the winning cover has no license (CoverAttribution.ForWinningSource);
           // closes the copyright gap where a Manual/Wikidata CC-BY cover showed no credit.

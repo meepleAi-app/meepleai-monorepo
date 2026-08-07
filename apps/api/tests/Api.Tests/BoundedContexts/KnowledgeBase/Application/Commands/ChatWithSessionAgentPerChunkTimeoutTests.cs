@@ -119,11 +119,29 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
     [Fact(DisplayName = "T3-AC-2: slow-but-steady stream delivers full response even when total exceeds one chunk deadline")]
     public async Task Handle_SlowButSteadyStream_DeliversFullResponseWhenEachChunkArrrivesWithinDeadline()
     {
-        // per-chunk timeout = 200 ms; each chunk takes 80 ms.
-        // 3 chunks × 80 ms = 240 ms total > one 200 ms chunk-timeout.
-        // The disarm-between-chunks logic must reset the deadline after each received chunk.
-        const double perChunkTimeoutSeconds = 0.2; // 200 ms
-        const int chunkDelayMs = 80;               // each chunk arrives in 80 ms
+        // The invariant under test: TOTAL duration exceeds one chunk deadline, while EVERY
+        // individual chunk arrives within it — so the disarm-between-chunks logic must re-arm the
+        // deadline after each received chunk. Two constraints, both preserved below:
+        //   chunkCount × chunkDelay > perChunkTimeout   (total trips one deadline's worth)
+        //   chunkDelay              < perChunkTimeout   (no single chunk trips it)
+        //
+        // #3601: this is the only test in the class whose margin shrinks under CI load. The other
+        // two run the safe way round — they WANT a deadline to fire, and a loaded runner only makes
+        // the stall longer. Here load works against us: the original 200 ms deadline vs 80 ms chunks
+        // left just 120 ms of headroom, and a single GC pause or thread-pool scheduling delay was
+        // enough to trip a deadline that should never have fired (observed on PR #3591).
+        //
+        // Stalls of that kind cost roughly a fixed amount of wall-clock, not a proportional one, so
+        // the defence is a bigger ABSOLUTE margin rather than a bigger ratio: 975 ms of headroom per
+        // chunk instead of 120 ms (40× the deadline instead of 2.5×), for ~1.1 s of test time.
+        //
+        // Honest limit: this makes a spurious failure far less likely, it does not make it
+        // impossible — the deadline is still real wall-clock. Eliminating it outright means driving
+        // the handler's CancelAfter through an injected TimeProvider (see #3601), which is a
+        // refactor of a reliability-critical streaming path and is deliberately not done here.
+        const double perChunkTimeoutSeconds = 1.0; // 1000 ms
+        const int chunkDelayMs = 25;               // 975 ms of headroom per chunk
+        const int chunkCount = 45;                 // 45 × 25 ms = 1125 ms total > 1000 ms deadline
         const string expectedToken = "hello";
 
         var llmService = new Mock<ILlmService>();
@@ -131,7 +149,7 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
             .Setup(l => l.GenerateCompletionStreamAsync(
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(SlowButSteadyStream(delayPerChunkMs: chunkDelayMs, content: expectedToken, chunkCount: 3));
+            .Returns(SlowButSteadyStream(delayPerChunkMs: chunkDelayMs, content: expectedToken, chunkCount: chunkCount));
 
         var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds);
         var command = BuildCommand();

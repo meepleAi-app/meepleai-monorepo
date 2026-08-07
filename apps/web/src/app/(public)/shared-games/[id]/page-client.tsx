@@ -19,7 +19,7 @@
 
 import { useMemo, type JSX } from 'react';
 
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import { AdminCoverEditAffordance } from '@/components/features/cover-editor';
 import { ContributorsSection } from '@/components/shared-games/ContributorsSection';
@@ -114,7 +114,9 @@ export function SharedGameDetailPageClient({
   const { t, formatMessage } = useTranslation();
 
   const searchParams = useSearchParams();
+  const router = useRouter();
   const stateOverride = parseStateOverride(searchParams?.get('state') ?? null);
+  const coverEditRequested = searchParams.get('cover') === 'edit';
 
   const [activeTab, setActiveTab] = useUrlHashState<TabKey>('tab', 'overview', {
     serialize: tabSerialize,
@@ -367,6 +369,11 @@ export function SharedGameDetailPageClient({
               gameId={game.id}
               title={resolvedTitle}
               needsAttention={shouldUsePlaceholder(game.coverUrl)}
+              defaultOpen={coverEditRequested}
+              onDialogClose={() => {
+                if (coverEditRequested)
+                  router.replace(`/shared-games/${game.id}`, { scroll: false });
+              }}
             />
           }
           // #3470 Slice 3c — winning-source attribution credit under the hero cover. Renders

@@ -81,4 +81,16 @@ describe('AdminCoverEditAffordance', () => {
     render(<AdminCoverEditAffordance gameId={GID} title="Catan" />);
     expect(screen.queryByTestId('cover-needs-attention')).not.toBeInTheDocument();
   });
+
+  it('apre il dialog al mount con defaultOpen (deep-link da cover-gap)', () => {
+    setRole(true);
+    render(<AdminCoverEditAffordance gameId={GID} title="Catan" defaultOpen />);
+    expect(screen.getByTestId('cover-dialog')).toBeInTheDocument();
+  });
+
+  it('ignora defaultOpen per un non-admin', () => {
+    setRole(false);
+    const { container } = render(<AdminCoverEditAffordance gameId={GID} defaultOpen />);
+    expect(container).toBeEmptyDOMElement();
+  });
 });

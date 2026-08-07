@@ -33,6 +33,10 @@ export interface AdminCoverEditAffordanceProps {
    * senza richiedere modifiche ai contenitori (GridCard / Cover / hero).
    */
   needsAttention?: boolean;
+  /** #3611 — apre il dialog al mount (deep-link `?cover=edit` dalla vista cover-gap). */
+  defaultOpen?: boolean;
+  /** #3611 — invocata quando il dialog si chiude, per ripulire l'URL del deep-link. */
+  onDialogClose?: () => void;
 }
 
 export function AdminCoverEditAffordance({
@@ -40,9 +44,11 @@ export function AdminCoverEditAffordance({
   title,
   className,
   needsAttention = false,
+  defaultOpen,
+  onDialogClose,
 }: AdminCoverEditAffordanceProps): React.JSX.Element | null {
   const { isEditorOrAbove } = useAdminRole();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen ?? false);
 
   if (!isEditorOrAbove) return null;
 
@@ -75,7 +81,10 @@ export function AdminCoverEditAffordance({
         gameId={gameId}
         title={title}
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          onDialogClose?.();
+        }}
       />
     </>
   );

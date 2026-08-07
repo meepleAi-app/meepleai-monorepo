@@ -461,6 +461,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 // IsNew: derived from NewThisWeekCount per mockup sp3-shared-games.jsx:127.
                 p.NewThisWeekCount >= IsNewMinThreshold,
                 CoverUrl: cover.Url,
+                CoverFocalX: cover.FocalX,
+                CoverFocalY: cover.FocalY,
                 // Epic #3470 Slice 1d-a — attribution follows the winning source.
                 CoverLicense: coverLicense,
                 CoverAttribution: coverAttribution,

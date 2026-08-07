@@ -406,12 +406,15 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         string? coverUrl = null;
         string? coverLicense = null, coverAttribution = null, coverSourceUrl = null;
         string? socialCoverUrl = null;
+        double coverFocalX = 0.5, coverFocalY = 0.5;
         if (sharedGameEntity is not null)
         {
             var cover = await CoverUrlResolver
                 .ResolveForContextWithSourceAsync(sharedGameEntity, CoverContext.Hero, _blobStorage)
                 .ConfigureAwait(false);
             coverUrl = cover.Url;
+            coverFocalX = cover.FocalX;
+            coverFocalY = cover.FocalY;
             (coverLicense, coverAttribution, coverSourceUrl) =
                 CoverAttribution.ForWinningSource(cover.Kind, sharedGameEntity);
 
@@ -466,6 +469,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             CoverLicense: coverLicense,
             CoverAttribution: coverAttribution,
             CoverSourceUrl: coverSourceUrl,
-            SocialCoverUrl: socialCoverUrl);
+            SocialCoverUrl: socialCoverUrl,
+            CoverFocalX: coverFocalX,
+            CoverFocalY: coverFocalY);
     }
 }

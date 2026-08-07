@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure.BackgroundServices;
@@ -194,6 +195,13 @@ internal sealed class StalePdfRecoveryService : BackgroundService
             // seeded in deliberate non-Ready states for the dashboard demo; force-processing them
             // would only fail on the missing blob and flip them to Failed (→ seed_state partial_failed).
             .Where(p => !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
+            // #3588: leave documents that are already waiting in the queue to the queue worker.
+            // OrphanedProcessingJobRecoveryService requeues restart-orphaned jobs just before this
+            // service runs; without this guard both would drive the same PDF, and this one would
+            // reset it to Pending mid-flight. Only Queued is excluded — a still-Processing row means
+            // that recovery did not run or failed, and this service stays the last line of defence.
+            .Where(p => !db.Set<ProcessingJobEntity>()
+                .Any(j => j.PdfDocumentId == p.Id && j.Status == nameof(JobStatus.Queued)))
             .Where(p =>
                 (p.ProcessingState == pendingState && p.UploadedAt < pendingCutoff) ||
                 ((p.ProcessingState == uploadingState ||

@@ -257,8 +257,9 @@ public class WikidataCoverEnrichmentRunnerTests
 
         await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
-        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(6,
-            "F1 hybrid update: runner increments by 1 per persisted DeadLetter attempt");
+        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(5,
+            "#3383: il gauge è DB-derivato — il runner NON lo incrementa più; " +
+            "è WikidataDeadLetterMetricsRefreshService a ri-ancorarlo al COUNT reale");
     }
 
     [Fact]

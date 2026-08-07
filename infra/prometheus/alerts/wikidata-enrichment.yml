@@ -18,8 +18,12 @@
 groups:
   - name: meepleai_wikidata_enrichment_alerts
     rules:
+      # #3383 — le due regole dead-letter aggregano con max(): dal gauge DB-derivato ogni istanza
+      # riporta lo stesso COUNT, quindi max() e' esatto e collassa le N serie (una per instance) in
+      # un solo alert. Senza aggregazione, a piu' di un'istanza lo stesso backlog notificherebbe N
+      # volte. delta() vuole un range vector, e max(...) e' un instant vector: serve la subquery [5m:].
       - alert: WikidataDeadLetterHigh
-        expr: meepleai_wikidata_dead_letter_count > 100
+        expr: max(meepleai_wikidata_dead_letter_count) > 100
         for: 1h
         labels:
           severity: warning
@@ -29,7 +33,7 @@ groups:
           description: "meepleai_wikidata_dead_letter_count has stayed above 100 for 1h: an operator triage backlog is building. Investigate via the M13 admin dead-letter page — likely a license-whitelist drift or SPARQL schema drift in the enrichment pipeline."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
       - alert: WikidataDeadLetterSpike
-        expr: delta(meepleai_wikidata_dead_letter_count[5m]) > 50
+        expr: delta(max(meepleai_wikidata_dead_letter_count)[5m:]) > 50
         for: 0m
         labels:
           severity: warning

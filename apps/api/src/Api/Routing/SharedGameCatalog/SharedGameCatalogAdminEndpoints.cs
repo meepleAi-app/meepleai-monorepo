@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCo
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.RemoveRagFromSharedGame;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCoverGap;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetGameRagReadiness;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.ExportSharedGamesTracking;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSeedingStatus;
@@ -445,6 +446,15 @@ internal static class SharedGameCatalogAdminEndpoints
             .WithName("GetSeedingStatus")
             .WithSummary("Get seeding/enrichment status for all games (Admin/Editor)")
             .Produces<List<SeedingGameDto>>();
+
+        // #3590 — i giochi senza alcuna cover, con la causa per cui la pipeline cover-da-PDF non
+        // li copre. La route costante non confligge con {id:guid}: il constraint disambigua.
+        group.MapGet("/admin/shared-games/cover-gap", HandleGetCoverGap)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("GetCoverGap")
+            .WithSummary("Get catalog games with no cover, grouped by cause (Admin/Editor)")
+            .WithDescription("Cause: pdf_too_large, heuristic_rejected, no_source, other.")
+            .Produces<PagedResult<CoverGapGameDto>>();
 
         // Export tracking spreadsheet (all shared games with progress status)
         group.MapGet("/admin/shared-games/tracking-export", HandleTrackingExport)
@@ -1561,6 +1571,20 @@ internal static class SharedGameCatalogAdminEndpoints
     {
         var result = await mediator.Send(
             new GetSeedingStatusQuery(),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>#3590 — i giochi senza cover, con la causa. Solo IMediator: regola CQRS.</summary>
+    private static async Task<IResult> HandleGetCoverGap(
+        IMediator mediator,
+        [FromQuery] string? cause = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await mediator.Send(
+            new GetCoverGapQuery(pageNumber, pageSize, cause),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

@@ -56,7 +56,7 @@ export function AdminCoverEditAffordance({
   // sotto la soglia AA, e il gate di accessibilità è bloccante. Si attenua con i token.
   const restingTone = needsAttention
     ? 'border-border-strong bg-background text-foreground'
-    : 'border-border/60 bg-background/80 text-muted-foreground hover:text-foreground hover:bg-background';
+    : 'border-border/60 bg-background text-muted-foreground hover:text-foreground hover:bg-background focus-visible:text-foreground focus-visible:bg-background';
 
   return (
     <>
@@ -64,7 +64,7 @@ export function AdminCoverEditAffordance({
         <span
           data-testid="cover-needs-attention"
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-10 rounded-md border-2 border-dashed border-border-strong"
+          className="pointer-events-none absolute inset-0 z-10 rounded-2xl border-2 border-dashed border-border-strong"
         />
       )}
       <button

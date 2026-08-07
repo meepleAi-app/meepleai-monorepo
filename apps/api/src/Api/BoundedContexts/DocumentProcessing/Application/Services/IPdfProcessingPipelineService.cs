@@ -16,5 +16,9 @@ internal interface IPdfProcessingPipelineService
     /// <param name="filePath">Path to the PDF file on disk.</param>
     /// <param name="uploadedByUserId">The user who uploaded the PDF.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task ProcessAsync(Guid pdfDocumentId, string filePath, Guid uploadedByUserId, CancellationToken cancellationToken);
+    /// <returns>
+    /// What actually happened. Callers MUST NOT infer success from a normal return: several exits
+    /// (refused claim, concurrency abort, missing document) do no work at all. Issue #3592.
+    /// </returns>
+    Task<PdfPipelineOutcome> ProcessAsync(Guid pdfDocumentId, string filePath, Guid uploadedByUserId, CancellationToken cancellationToken);
 }

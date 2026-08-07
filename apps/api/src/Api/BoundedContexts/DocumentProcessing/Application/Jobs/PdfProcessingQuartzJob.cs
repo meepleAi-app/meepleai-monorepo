@@ -176,8 +176,30 @@ public sealed class PdfProcessingQuartzJob : IJob
             var pipelineService = _serviceProvider.GetRequiredService<IPdfProcessingPipelineService>();
 
             // Delegate to pipeline service: validate -> extract -> chunk -> embed -> index -> ready
-            await pipelineService.ProcessAsync(
+            var outcome = await pipelineService.ProcessAsync(
                 pdfDoc.Id, pdfDoc.FilePath, jobEntity.UserId, ct).ConfigureAwait(false);
+
+            // Issue #3592: only Processed means work was actually done. ProcessAsync returns
+            // normally on several no-op paths — a refused claim (the document is owned by another
+            // worker or already terminal), a vanished row, a concurrency abort. Treating that
+            // silence as success stamped Completed on the job AND all five steps, a terminal state
+            // no retry reclaims, and fed step metrics/ETA with durations for work never performed.
+            if (outcome != PdfPipelineOutcome.Processed)
+            {
+                _logger.LogWarning(
+                    "Job {JobId} did not process PDF {PdfId} (outcome: {Outcome}); not marking Completed",
+                    jobEntity.Id, pdfDoc.Id, outcome);
+
+                // Fail the job row rather than leaving it Processing: it did no work, and an
+                // abandoned Processing row holds a worker slot until the stuck-job monitor degrades
+                // it. FailJobAsync touches only the job — the document keeps whatever state its real
+                // owner (or the pipeline's own failure handling) already persisted.
+                await FailJobAsync(
+                    jobEntity,
+                    $"Pipeline did not process the document (outcome: {outcome}).",
+                    ct).ConfigureAwait(false);
+                return;
+            }
 
             // Fix: reload from DB to detect external cancellation during pipeline execution.
             // CancelJobCommand changes status to Cancelled in DB without stopping the worker,

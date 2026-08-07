@@ -128,7 +128,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _extractionStrategySelector = extractionStrategySelector;
     }
 
-    public async Task ProcessAsync(
+    public async Task<PdfPipelineOutcome> ProcessAsync(
         Guid pdfDocumentId,
         string filePath,
         Guid uploadedByUserId,
@@ -151,7 +151,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogInformation(
                     "[PdfPipeline] PDF {PdfId} not in Pending state (already claimed or terminal), skipping",
                     pdfId);
-                return;
+                return PdfPipelineOutcome.SkippedNotClaimed;
             }
 
             // Re-load with tracked entity for the rest of the pipeline.
@@ -162,7 +162,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             if (pdfDoc == null)
             {
                 _logger.LogError("[PdfPipeline] PDF document {PdfId} disappeared after claim", pdfId);
-                return;
+                return PdfPipelineOutcome.DocumentMissing;
             }
             // Refresh tracked entity to reflect the UPDATE we just executed.
             await _db.Entry(pdfDoc).ReloadAsync(cancellationToken).ConfigureAwait(false);
@@ -201,7 +201,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             // Step 3: Chunk text
@@ -217,7 +219,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 _logger.LogWarning("[PdfPipeline] No chunks produced for {PdfId}, marking as failed", pdfId);
                 await MarkFailedAsync(pdfDoc, "Text extraction produced no usable chunks").ConfigureAwait(false);
-                return;
+                return PdfPipelineOutcome.Failed;
             }
 
             // Dual-language indexing: translate non-English chunks to English
@@ -411,7 +413,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             // Step 4a: Generate embeddings (for all chunks: original + translated)
@@ -433,7 +437,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             // Step 4b: Index in pgvector.
@@ -470,11 +476,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             _logger.LogInformation("[PdfPipeline] Successfully processed PDF {PdfId}: {Pages} pages, {Chunks} chunks (incl. translations)",
                 pdfId, pdfDoc.PageCount ?? 0, translatedChunks.Count);
+
+            return PdfPipelineOutcome.Processed;
         }
 #pragma warning disable CA1031 // Background pipeline must catch all to mark status
         catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
@@ -495,11 +505,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 pdfId, ex.IsPermanentFailure);
             var category = ex.IsPermanentFailure ? ErrorCategory.PayloadTooLarge : (ErrorCategory?)null;
             await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
             await TryMarkFailedAsync(pdfDocumentId, ex.Message).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
         }
 #pragma warning restore CA1031
     }

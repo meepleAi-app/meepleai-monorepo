@@ -77,7 +77,7 @@ public sealed class StalePdfRecoveryServiceTests
         pipelineMock
             .Setup(p => p.ProcessAsync(
                 It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .ReturnsAsync(PdfPipelineOutcome.Processed);
 
         var scopeFactory = BuildScopeFactory(dbName, pipelineMock.Object);
         var sut = new StalePdfRecoveryService(
@@ -119,6 +119,7 @@ public sealed class StalePdfRecoveryServiceTests
                     entity.ProcessingState = "Ready";
                     await db.SaveChangesAsync(ct);
                 }
+                return PdfPipelineOutcome.Processed;
             });
 
         var scopeFactory = BuildScopeFactory(dbName, pipelineMock.Object);
@@ -160,6 +161,7 @@ public sealed class StalePdfRecoveryServiceTests
                     entity.ProcessingState = "Failed";
                     await db.SaveChangesAsync(ct);
                 }
+                return PdfPipelineOutcome.Failed;
             });
 
         var scopeFactory = BuildScopeFactory(dbName, pipelineMock.Object);

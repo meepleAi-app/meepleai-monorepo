@@ -542,6 +542,48 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         }
     }
 
+    /// <summary>
+    /// Legge un oggetto dalla sua chiave fisica ESATTA, senza la validazione categorizzata
+    /// (che rifiuta `/` e `.`). Speculare a <see cref="StoreRawKeyAsync"/> (#3611).
+    /// </summary>
+    /// <remarks>IMPORTANT: il chiamante DEVE disporre lo stream restituito.</remarks>
+    /// <returns>Lo stream dell'oggetto, o null se assente o se il backend non ospita chiavi grezze.</returns>
+    public async Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        try
+        {
+            var getRequest = new GetObjectRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey
+            };
+
+            var response = await _s3Client.GetObjectAsync(getRequest, ct).ConfigureAwait(false);
+
+            _logger.LogInformation("Retrieved file from S3 (raw key): {Key}", rawKey);
+
+            // Return the response stream (caller must dispose)
+            return response.ResponseStream;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning(ex, "Raw key not found in S3: {Key}", rawKey);
+            return null;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // SERVICE BOUNDARY PATTERN: S3 storage service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that retrieves files from S3 storage. Network and
+            // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
+            // We must catch all exceptions to return null instead of crashing the service.
+            // Context: S3 operations can fail in unpredictable ways across different network conditions
+            _logger.LogError(ex, "Error retrieving raw key {Key}", rawKey);
+            return null;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

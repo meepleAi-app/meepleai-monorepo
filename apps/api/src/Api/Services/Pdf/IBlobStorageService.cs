@@ -188,6 +188,14 @@ internal interface IBlobStorageService
     /// <param name="ct">Cancellation token.</param>
     /// <returns>True if the object was written successfully; false on failure or when the backend does not host raw keys (local storage).</returns>
     Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default);
+
+    /// <summary>
+    /// Legge un oggetto dalla sua chiave fisica ESATTA, senza la validazione categorizzata
+    /// (che rifiuta `/` e `.`). Speculare a <see cref="StoreRawKeyAsync"/> (#3611).
+    /// </summary>
+    /// <remarks>IMPORTANT: il chiamante DEVE disporre lo stream restituito.</remarks>
+    /// <returns>Lo stream dell'oggetto, o null se assente o se il backend non ospita chiavi grezze.</returns>
+    Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default);
 }
 
 /// <summary>

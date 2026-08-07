@@ -127,4 +127,13 @@ internal sealed class MockBlobStorageService : IBlobStorageService
         // "Everything succeeds" mock semantics (mirrors StoreAsync).
         return true;
     }
+
+    /// <inheritdoc />
+    public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct);
+        // Mock does not host objects under raw R2-style keys (mirrors the
+        // "not supported" contract of BlobStorageService for this method).
+        return Task.FromResult<Stream?>(null);
+    }
 }

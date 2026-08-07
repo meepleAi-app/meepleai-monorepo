@@ -219,6 +219,19 @@ internal static class CoverUrlResolver
     /// precedence winner from <see cref="ResolvePublicWithSourceAsync"/>. Owns exactly one
     /// <see cref="MeepleAiMetrics.CoverResolution"/> emission per call.
     /// </summary>
+    /// <remarks>
+    /// Double-crop pitfall: when the winning URL is an already-rendered per-context crop
+    /// (<c>assignment.GeneratedR2Key</c>, e.g. the Social crop this affordance can now
+    /// produce), the returned <see cref="ResolvedCover.FocalX"/>/<see cref="ResolvedCover.FocalY"/>
+    /// still reflect the assignment's pinned focal point — the point used to PRODUCE that crop,
+    /// not a point meant to be re-applied to it. Today this is harmless: the only context that
+    /// renders a crop (<see cref="CoverContext.Social"/>) has a single caller, and that caller
+    /// uses the source-blind <see cref="ResolveForContextAsync"/> overload, which never exposes
+    /// the focal point. A future caller that passes <see cref="CoverContext.Social"/> to THIS
+    /// overload and applies <c>object-position</c> from the returned focal point would double-crop
+    /// the image. Callers of this overload must check whether the resolved URL is a rendered
+    /// crop before treating the focal point as a CSS crop hint.
+    /// </remarks>
     public static async Task<ResolvedCover> ResolveForContextWithSourceAsync(
         SharedGameEntity sharedGame,
         CoverContext context,

@@ -84,8 +84,9 @@ internal static class CoverKeyBuilder
     }
 
     /// <summary>
-    /// Crop per contesto renderizzato dal punto focale (#3611): <c>covers/crops/{gameId:D}/{context}.webp</c>.
-    /// È già una chiave FISICA — il resolver la usa verbatim da <c>GeneratedR2Key</c>, senza suffissi.
+    /// Per-context crop rendered from the pinned focal point (#3611):
+    /// <c>covers/crops/{gameId:D}/{context}.webp</c>. Already a PHYSICAL key — the resolver
+    /// uses it verbatim from <c>GeneratedR2Key</c>, with no suffix applied.
     /// </summary>
     public static string ContextCropPhysicalKey(Guid gameId, CoverContext context) =>
         $"covers/crops/{gameId:D}/{context.ToString().ToLowerInvariant()}.webp";

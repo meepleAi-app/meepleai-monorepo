@@ -129,4 +129,29 @@ public sealed class AssignCoverSocialCropTests
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         game.CoverAssignments.Single(a => a.Context == CoverContext.Social).GeneratedR2Key.Should().BeNull();
     }
+
+    [Fact]
+    public async Task Handle_EmptySourceBlob_StillPersistsTheAssignment()
+    {
+        // A non-null but empty stream (base cover present in R2 but zero-length/corrupted)
+        // must not reach GenerateWebpAsync — it throws ArgumentException on empty bytes,
+        // which would otherwise propagate out of Handle() and block SaveChangesAsync.
+        var game = NewGameWithPdfCover();
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        _blob.Setup(b => b.RetrieveRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+             .ReturnsAsync(() => new MemoryStream(Array.Empty<byte>()));
+
+        var handler = CreateHandler();
+
+        var dto = await handler.Handle(
+            new AssignCoverCommand(game.Id, CoverContext.Social, CoverAssignmentSource.Pdf, AdminId, 0.5, 0.2),
+            CancellationToken.None);
+
+        dto.Context.Should().Be(CoverContext.Social);
+        _webp.Verify(w => w.GenerateWebpAsync(
+            It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        game.CoverAssignments.Single(a => a.Context == CoverContext.Social).GeneratedR2Key.Should().BeNull();
+    }
 }

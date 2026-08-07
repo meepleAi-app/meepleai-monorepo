@@ -136,6 +136,14 @@ internal sealed class AssignCoverCommandHandler : ICommandHandler<AssignCoverCom
                 using var buffer = new MemoryStream();
                 await source.CopyToAsync(buffer, ct).ConfigureAwait(false);
 
+                // Mirrors EnrichCatalogCoverCommandHandler's guard: un blob base vuoto/corrotto
+                // farebbe lanciare GenerateWebpAsync un ArgumentException — meglio arrendersi
+                // qui che farlo emergere come eccezione non gestita.
+                if (buffer.Length == 0)
+                {
+                    return null;
+                }
+
                 var cropped = await _webpGenerator
                     .GenerateWebpAsync(
                         buffer.ToArray(), SocialWidth, SocialHeight,
@@ -151,7 +159,10 @@ internal sealed class AssignCoverCommandHandler : ICommandHandler<AssignCoverCom
                 return stored ? key : null;
             }
         }
-        catch (Exception ex) when (ex is ImageProcessingException or IOException or HttpRequestException)
+        // Best-effort render (mirrors RevokeManualCoverCommandHandler): la cattura non deve
+        // MAI bloccare il salvataggio dell'assegnazione, quindi copre qualunque eccezione
+        // imprevista tranne la cancellazione, che deve continuare a propagare.
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             _logger.LogWarning(ex,
                 "Render del crop Social fallito per {GameId}: la cover base resta servita", game.Id);

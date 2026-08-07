@@ -229,6 +229,11 @@ export function SharedGamesPageClient({
       title: g.title,
       // #3449 — use the R2-resolved coverUrl; imageUrl is a #2123 tombstone (always empty).
       coverUrl: g.coverUrl ?? null,
+      // #3611 — flat DTO focal point; SharedGamesGrid converts it to the `coverFocal`
+      // object at its own call-site. Optional: absent on cache responses served before
+      // the backend started returning it.
+      coverFocalX: g.coverFocalX,
+      coverFocalY: g.coverFocalY,
       year: g.yearPublished > 0 ? g.yearPublished : null,
       // Backend `averageRating` is on a 0..10 scale (BGG-style). Convert to 0..5.
       rating: g.averageRating != null ? g.averageRating / 2 : 0,

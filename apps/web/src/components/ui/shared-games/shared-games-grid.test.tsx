@@ -140,6 +140,25 @@ describe('SharedGamesGrid (v2)', () => {
     );
   });
 
+  it('inoltra il punto focale del crop fino alla cover renderizzata (#3611)', () => {
+    const { container } = render(
+      <SharedGamesGrid
+        {...build({
+          games: [
+            {
+              ...games[0],
+              coverUrl: 'https://r2.example/c.webp',
+              coverFocalX: 0.3,
+              coverFocalY: 0.7,
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(container.querySelector('img')).toHaveStyle({ objectPosition: '30% 70%' });
+  });
+
   it('emits data-state matching the state prop', () => {
     const { container, rerender } = render(<SharedGamesGrid {...build({ state: 'default' })} />);
     expect(container.querySelector('[data-slot="shared-games-grid"]')).toHaveAttribute(

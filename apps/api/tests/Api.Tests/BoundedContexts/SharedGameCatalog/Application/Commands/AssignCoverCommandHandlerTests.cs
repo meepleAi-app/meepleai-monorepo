@@ -2,8 +2,10 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
@@ -30,6 +32,10 @@ public sealed class AssignCoverCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    // #3611 — unused by these Card-context tests (the Social-only render path is
+    // covered by AssignCoverSocialCropTests), but required by the constructor.
+    private readonly Mock<IWebpVariantGenerator> _webpGenerator = new();
+    private readonly Mock<IBlobStorageService> _blobStorage = new();
 
     public AssignCoverCommandHandlerTests()
     {
@@ -41,7 +47,14 @@ public sealed class AssignCoverCommandHandlerTests
     }
 
     private AssignCoverCommandHandler CreateAssignHandler() =>
-        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object, NullLogger<AssignCoverCommandHandler>.Instance);
+        new(
+            _repository.Object,
+            _unitOfWork.Object,
+            _cache.Object,
+            _cacheRetryPolicy.Object,
+            _webpGenerator.Object,
+            _blobStorage.Object,
+            NullLogger<AssignCoverCommandHandler>.Instance);
 
     private RemoveCoverAssignmentCommandHandler CreateRemoveHandler() =>
         new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);

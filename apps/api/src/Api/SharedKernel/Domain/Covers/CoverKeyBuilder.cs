@@ -84,6 +84,13 @@ internal static class CoverKeyBuilder
     }
 
     /// <summary>
+    /// Crop per contesto renderizzato dal punto focale (#3611): <c>covers/crops/{gameId:D}/{context}.webp</c>.
+    /// È già una chiave FISICA — il resolver la usa verbatim da <c>GeneratedR2Key</c>, senza suffissi.
+    /// </summary>
+    public static string ContextCropPhysicalKey(Guid gameId, CoverContext context) =>
+        $"covers/crops/{gameId:D}/{context.ToString().ToLowerInvariant()}.webp";
+
+    /// <summary>
     /// Normalizes a BGG source image extension to a supported, dot-prefixed,
     /// lowercase form; unsupported or empty extensions fall back to <c>.jpg</c>.
     /// Exposed so <c>BggCoverUploadPipeline</c> can derive the matching

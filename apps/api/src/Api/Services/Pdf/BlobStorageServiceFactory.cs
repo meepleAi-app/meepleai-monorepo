@@ -54,7 +54,8 @@ internal static class BlobStorageServiceFactory
         {
             ServiceURL = options.Endpoint,
             ForcePathStyle = options.ForcePathStyle,
-            AuthenticationRegion = options.Region
+            AuthenticationRegion = options.Region,
+            UseHttp = UsesPlainHttp(options.Endpoint)
         };
 
         // Handle region configuration
@@ -87,7 +88,11 @@ internal static class BlobStorageServiceFactory
             {
                 ServiceURL = options.PublicEndpoint,
                 ForcePathStyle = options.ForcePathStyle,
-                AuthenticationRegion = options.Region
+                AuthenticationRegion = options.Region,
+                // #3498: the SDK picks a presigned URL's protocol from UseHttp, NOT from the scheme
+                // in ServiceURL. Without this a plain-HTTP endpoint still presigns as https://, and
+                // the browser dies on a TLS handshake against a cleartext server.
+                UseHttp = UsesPlainHttp(options.PublicEndpoint)
             };
             if (!string.Equals(options.Region, "auto", StringComparison.Ordinal) && RegionEndpoint.GetBySystemName(options.Region) != null)
             {
@@ -102,6 +107,23 @@ internal static class BlobStorageServiceFactory
 
         return new S3BlobStorageService(s3Client, options, logger, presignClient);
     }
+
+    /// <summary>
+    /// Issue #3498 — true when <paramref name="endpoint"/> is an absolute <c>http://</c> URL.
+    ///
+    /// The AWS SDK decides both the request protocol and the PRESIGNED URL's protocol from
+    /// <c>AmazonS3Config.UseHttp</c>, not from the scheme embedded in <c>ServiceURL</c>. Left at its
+    /// default (false), a <c>ServiceURL</c> of <c>http://localhost:9000</c> still presigns as
+    /// <c>https://localhost:9000</c> — the browser then opens a TLS handshake against a cleartext
+    /// MinIO and the image silently falls back to a placeholder.
+    ///
+    /// Anything unparseable or scheme-less returns false: opting into cleartext must be explicit,
+    /// never a side effect of a malformed value. Production endpoints (R2/AWS) are https, so this
+    /// returns false there and nothing changes.
+    /// </summary>
+    internal static bool UsesPlainHttp(string? endpoint) =>
+        Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Issue #1357: removes S3 extension headers that Cloudflare R2 does not implement.

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
 
@@ -22,6 +23,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// below a cache TTL, both trip it. See the "before/after" evidence for an induced
 /// failure in <c>issue-3620-report.md</c>.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 public class CoverPresignCacheInvariantTests
 {
     [Fact]

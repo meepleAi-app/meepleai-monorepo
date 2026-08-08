@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities.UserLibrary;
 using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -20,6 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// <see cref="CoverUrlResolverPresignExpiryTests"/>, which also emits on the same
 /// shared meter.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 [Collection("CoverResolutionMetrics")]
 public class CoverUrlResolverTests
 {

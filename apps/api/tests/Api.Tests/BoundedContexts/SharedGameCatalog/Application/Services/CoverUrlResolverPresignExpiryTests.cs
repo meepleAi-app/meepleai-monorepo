@@ -4,6 +4,7 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
 using Xunit;
@@ -26,6 +27,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// <see cref="CoverUrlResolverTests"/>'s <c>CoverMetricsCapture</c> asserts against, so
 /// the two classes must not run in parallel with each other.
 /// </summary>
+[Trait("Category", TestCategories.Unit)]
 [Collection("CoverResolutionMetrics")]
 public class CoverUrlResolverPresignExpiryTests
 {

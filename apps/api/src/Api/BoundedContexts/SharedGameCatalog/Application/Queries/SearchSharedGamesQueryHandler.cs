@@ -45,6 +45,24 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
     /// </summary>
     private const int IsNewMinThreshold = 2;
 
+    /// <summary>
+    /// L1 (in-process Memory) cache lifetime for a search results page.
+    /// </summary>
+    internal static readonly TimeSpan SearchCacheL1Expiration = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// L2 (Redis) cache lifetime for a search results page. Issue #3620: each cached
+    /// page's <see cref="SharedGameDto"/> items carry a resolved cover presigned URL
+    /// (<c>ExecuteSearchAsync</c> resolves via <c>CoverUrlResolver</c> INSIDE the
+    /// cache's <c>GetOrCreateAsync</c> factory), so
+    /// <c>CoverUrlResolver.CoverPresignExpirySeconds</c> must exceed this TTL with an
+    /// explicit margin — mechanically enforced by
+    /// <c>CoverPresignCacheInvariantTests</c> against
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameByIdQueryHandler.DetailCacheL2Expiration"/>
+    /// (the longer of the two) rather than left as an implicit assumption.
+    /// </summary>
+    internal static readonly TimeSpan SearchCacheL2Expiration = TimeSpan.FromHours(1);
+
     private readonly MeepleAiDbContext _context;
     private readonly IBlobStorageService _blobStorage;
     private readonly HybridCache _cache;
@@ -103,8 +121,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             async cancel => await ExecuteSearchAsync(query, cancel).ConfigureAwait(false),
             new HybridCacheEntryOptions
             {
-                LocalCacheExpiration = TimeSpan.FromMinutes(15),  // L1
-                Expiration = TimeSpan.FromHours(1)  // L2
+                LocalCacheExpiration = SearchCacheL1Expiration,  // L1
+                Expiration = SearchCacheL2Expiration  // L2
             },
             tags: _searchGamesTags,
             cancellationToken: cancellationToken).ConfigureAwait(false);

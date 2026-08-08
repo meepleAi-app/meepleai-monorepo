@@ -42,6 +42,37 @@ internal static class CoverUrlResolver
     private const string SourceTag = "source";
 
     /// <summary>
+    /// Issue #3620 — presigned URL lifetime used for EVERY cover resolution this
+    /// resolver performs. The resolved URL is baked verbatim into the DTOs cached by
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameByIdQueryHandler"/>
+    /// (L2 Redis: 2h) and
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.SearchSharedGamesQueryHandler"/>
+    /// (L2 Redis: 1h) — the factory that resolves the cover runs INSIDE the cache's
+    /// <c>GetOrCreateAsync</c>, so the presign is resolved once and reused for the
+    /// entire cache entry lifetime. Before this fix the resolver always passed a null
+    /// <c>expirySeconds</c>, so every call fell back to
+    /// <see cref="S3StorageOptions.PresignedUrlExpirySeconds"/> (1h default) — shorter
+    /// than the 2h detail-cache TTL, so up to 1h of every 2h cache window served an
+    /// already-expired presigned URL (silently: <c>Cover.tsx</c>'s <c>onError</c> just
+    /// swaps in the placeholder, no error surfaces).
+    ///
+    /// Sized at 4h: 2h of explicit margin above the longest cache TTL today (the 2h
+    /// detail L2 TTL). The margin is deliberate, not a coincidence of rounding — a
+    /// future cache-TTL bump that eats into it should be a conscious trade-off, not a
+    /// silent regression. <c>CoverPresignCacheInvariantTests</c> asserts the numeric
+    /// relationship mechanically (reading both sides from their named constants) so the
+    /// invariant survives someone changing one file without knowing about the other.
+    ///
+    /// Covers are public, non-sensitive content, so widening only their presign
+    /// validity does not change the security posture of PDFs/backups/other artifacts,
+    /// which stay on the shorter <see cref="S3StorageOptions.PresignedUrlExpirySeconds"/>
+    /// (1h) — this constant is passed explicitly to every
+    /// <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/> call below instead
+    /// of relying on that shared default.
+    /// </summary>
+    internal const int CoverPresignExpirySeconds = 4 * 60 * 60; // 4 hours
+
+    /// <summary>
     /// The outcome of a source-aware resolution: the presigned <see cref="Url"/>
     /// (null on placeholder/miss), the <see cref="Kind"/> of the layer that won
     /// (null on placeholder), and the crop <see cref="FocalX"/>/<see cref="FocalY"/>
@@ -88,7 +119,8 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, userEntry.CustomCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, userEntry.CustomCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -133,7 +165,8 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, sharedGame.PdfCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, sharedGame.PdfCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -154,7 +187,8 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Bgg, sharedGame.BggCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Bgg, sharedGame.BggCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -169,7 +203,8 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Wikidata, sharedGame.WikidataCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Wikidata, sharedGame.WikidataCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -282,7 +317,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(assignment.GeneratedR2Key))
         {
             var cropUrl = await blobStorage
-                .GetPresignedUrlForRawKeyAsync(assignment.GeneratedR2Key)
+                .GetPresignedUrlForRawKeyAsync(assignment.GeneratedR2Key, CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (cropUrl is not null)
             {
@@ -301,7 +336,7 @@ internal static class CoverUrlResolver
         }
 
         return await blobStorage
-            .GetPresignedUrlForRawKeyAsync(CoverKeyBuilder.PhysicalKeyFor(kind, baseKey))
+            .GetPresignedUrlForRawKeyAsync(CoverKeyBuilder.PhysicalKeyFor(kind, baseKey), CoverPresignExpirySeconds)
             .ConfigureAwait(false);
     }
 

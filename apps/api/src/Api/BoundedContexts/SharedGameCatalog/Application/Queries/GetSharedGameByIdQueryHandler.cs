@@ -61,6 +61,23 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
     /// </summary>
     private const int ApprovedStatus = 2;
 
+    /// <summary>
+    /// L1 (in-process Memory) cache lifetime for a single game detail entry.
+    /// </summary>
+    internal static readonly TimeSpan DetailCacheL1Expiration = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// L2 (Redis) cache lifetime for a single game detail entry. Issue #3620: this is
+    /// the longest-lived surface that caches a resolved cover presigned URL (the DTO
+    /// returned by <see cref="FetchGameDetailsAsync"/>, including
+    /// <c>CoverUrlResolver</c>'s output, is baked into the cache entry for this whole
+    /// window) — <c>CoverUrlResolver.CoverPresignExpirySeconds</c> must exceed it with
+    /// an explicit margin, mechanically enforced by
+    /// <c>CoverPresignCacheInvariantTests</c> rather than left as two numbers in two
+    /// files that happen to agree today.
+    /// </summary>
+    internal static readonly TimeSpan DetailCacheL2Expiration = TimeSpan.FromHours(2);
+
     private readonly ISharedGameRepository _repository;
     private readonly MeepleAiDbContext _context;
     private readonly IBlobStorageService _blobStorage;
@@ -119,8 +136,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                 },
                 new HybridCacheEntryOptions
                 {
-                    LocalCacheExpiration = TimeSpan.FromMinutes(30),  // L1
-                    Expiration = TimeSpan.FromHours(2)                // L2
+                    LocalCacheExpiration = DetailCacheL1Expiration,  // L1
+                    Expiration = DetailCacheL2Expiration              // L2
                 },
                 tags: new[] { cacheTag },
                 cancellationToken: cancellationToken).ConfigureAwait(false);

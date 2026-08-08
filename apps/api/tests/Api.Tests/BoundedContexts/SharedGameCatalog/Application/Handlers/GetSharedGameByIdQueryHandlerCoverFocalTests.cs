@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -111,11 +112,11 @@ public class GetSharedGameByIdQueryHandlerCoverFocalTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        // CoverUrlResolver calls GetPresignedUrlForRawKeyAsync("{key}-preview.webp", null)
+        // CoverUrlResolver calls GetPresignedUrlForRawKeyAsync("{key}-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds)
         _blobStorageMock
             .Setup(b => b.GetPresignedUrlForRawKeyAsync(
                 $"{pdfKey}-preview.webp",
-                null))
+                CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync(expectedUrl);
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();

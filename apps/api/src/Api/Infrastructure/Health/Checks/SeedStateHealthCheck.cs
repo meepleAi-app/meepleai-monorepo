@@ -141,7 +141,7 @@ public sealed class SeedStateHealthCheck : IHealthCheck
         catch (Exception ex)
         {
             _logger.LogError(ex, "SeedStateHealthCheck failed to query DB counts");
-            return HealthCheckResult.Unhealthy("Failed to query seed-state counts", ex);
+            return HealthCheckResult.Degraded("Failed to query seed-state counts", ex);
         }
     }
 

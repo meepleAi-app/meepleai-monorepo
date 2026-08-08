@@ -55,12 +55,12 @@ public class RerankerHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Reranker service health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Reranker service unavailable", ex);
+            return HealthCheckResult.Degraded("Reranker service unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Reranker service health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Reranker service check failed", ex);
+            return HealthCheckResult.Degraded("Reranker service check failed", ex);
         }
     }
 }

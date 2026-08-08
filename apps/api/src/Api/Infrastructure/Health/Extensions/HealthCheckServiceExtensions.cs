@@ -23,6 +23,24 @@ public static class HealthCheckServiceExtensions
     /// registered at all — this prevents the global /health endpoint from reporting Degraded for
     /// services that are intentionally not deployed (avoiding alert fatigue and SLA noise).
     /// </remarks>
+    /// <remarks>
+    /// 🔴 INVARIANT (#3618): a check registered <c>NonCritical</c> MUST NOT return
+    /// <see cref="HealthCheckResult.Unhealthy"/> — it must return <c>Degraded</c> instead.
+    /// <para>
+    /// The <c>failureStatus</c> argument below is NOT a cap on the reported status: ASP.NET Core
+    /// applies it only when a check throws an unhandled exception. A check that catches its own
+    /// exception and returns <c>HealthCheckResult.Unhealthy(...)</c> bypasses it entirely, and that
+    /// value propagates to the aggregate report. Since <c>/health</c> (Program.cs) uses the default
+    /// <c>ResultStatusCodes</c> — Healthy/Degraded → 200, Unhealthy → 503 — a single NonCritical
+    /// check returning Unhealthy 503s the whole endpoint. That was the root cause behind #3339
+    /// (orchestrator) and the reason the staging smoke gate had to tolerate a 503.
+    /// </para>
+    /// <para>
+    /// Returning Degraded does NOT lose the alerting signal: <c>HealthStateMachine</c> treats every
+    /// non-Healthy result as a failure and runs its own Healthy → Degraded → Unhealthy escalation
+    /// on consecutive-failure counts. Only checks tagged <c>Critical</c> may produce a 503.
+    /// </para>
+    /// </remarks>
     public static IHealthChecksBuilder AddComprehensiveHealthChecks(
         this IHealthChecksBuilder builder,
         IConfiguration configuration)

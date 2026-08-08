@@ -51,12 +51,12 @@ public class PrometheusHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Prometheus health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Prometheus unavailable", ex);
+            return HealthCheckResult.Degraded("Prometheus unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Prometheus health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Prometheus connectivity check failed", ex);
+            return HealthCheckResult.Degraded("Prometheus connectivity check failed", ex);
         }
     }
 }

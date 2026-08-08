@@ -47,12 +47,12 @@ public class BggApiHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "BGG API health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("BGG API unavailable", ex);
+            return HealthCheckResult.Degraded("BGG API unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "BGG API health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("BGG API connectivity check failed", ex);
+            return HealthCheckResult.Degraded("BGG API connectivity check failed", ex);
         }
     }
 }

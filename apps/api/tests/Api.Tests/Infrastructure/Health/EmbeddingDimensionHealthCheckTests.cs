@@ -39,11 +39,17 @@ public sealed class EmbeddingDimensionHealthCheckTests
         result.Status.Should().Be(HealthStatus.Healthy);
     }
 
+    /// <summary>
+    /// #3618: a dimension mismatch is a real misconfiguration and is logged at Error level,
+    /// but this check is registered NonCritical — returning Unhealthy would take the aggregate
+    /// /health to 503. The signal is preserved via Degraded: HealthStateMachine treats any
+    /// non-Healthy result as a failure and escalates on consecutive failures.
+    /// </summary>
     [Theory]
     [InlineData(1536, "OpenRouterSmall")]
     [InlineData(1024, "External/HuggingFace")]
     [InlineData(3072, "OpenRouterLarge")]
-    public async Task Should_Return_Unhealthy_When_Dimensions_Mismatch(
+    public async Task Should_Return_Degraded_When_Dimensions_Mismatch(
         int providerDimensions, string scenario)
     {
         // Arrange
@@ -59,8 +65,9 @@ public sealed class EmbeddingDimensionHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy,
-            because: $"provider returns {providerDimensions} dims but schema expects 768 ({scenario})");
+        result.Status.Should().Be(HealthStatus.Degraded,
+            because: $"provider returns {providerDimensions} dims but schema expects 768 ({scenario}); " +
+                     "NonCritical checks must never report Unhealthy (#3618)");
         result.Description.Should().Contain("768");
         result.Description.Should().Contain(providerDimensions.ToString());
     }

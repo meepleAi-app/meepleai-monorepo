@@ -54,6 +54,11 @@ jobs:
           NEXT_PUBLIC_HYPERDX_API_KEY=demo
           PLAYWRIGHT_AUTH_BYPASS=true
           NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
+          # La CSP di default è `img-src 'self' data: https:`: l'URL presignato di MinIO è
+          # http://localhost:9000 — non 'self' (che è :3000), non data:, non https: — quindi il
+          # browser lo BLOCCA e naturalWidth resta 0 anche con l'oggetto regolarmente servito.
+          # Opt-in spento per default, acceso solo qui (apps/web/lib/security/csp.js).
+          NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=true
           WEBENV
           cat > api.env.dev <<'APIENV'
           POSTGRES_HOST=postgres

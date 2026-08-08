@@ -21,7 +21,16 @@ services:
       S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
       S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin123}"
       S3_BUCKET_NAME: "meepleai-uploads"
-      S3_REGION: "us-east-1"
+      # 🔴 DEVE restare "auto". BlobStorageServiceFactory fa:
+      #     if (Region != "auto" && RegionEndpoint.GetBySystemName(Region) != null)
+      #         s3Config.RegionEndpoint = ...
+      # e nell'SDK AWS .NET impostare RegionEndpoint DOPO ServiceURL fa prevalere il primo:
+      # il client smette di parlare con http://minio:9000 e va su AWS S3 vero, dove le
+      # credenziali minioadmin danno 403 Forbidden. Il sintomo è fuorviante — coverUrl null,
+      # come se l'oggetto non ci fosse — perché GetPresignedUrlForRawKeyAsync fa una HEAD
+      # prima di firmare e cattura il 403 nel catch esterno ritornando null.
+      # "auto" è anche il valore che usa la produzione (R2), quindi questo path è quello provato.
+      S3_REGION: "auto"
       S3_FORCE_PATH_STYLE: "true"                 # bucket.localhost:9000 non risolverebbe
       S3_DISABLE_ENCRYPTION: "true"               # MinIO dev: niente SSE
     depends_on:

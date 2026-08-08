@@ -19,7 +19,14 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// this one, someone could remove the argument entirely (reverting every call to the
 /// implicit 1h <see cref="S3StorageOptions.PresignedUrlExpirySeconds"/> default) and
 /// the invariant test would stay green while the underlying bug came back.
+///
+/// Code review follow-up: joins the <c>CoverResolutionMetrics</c> collection (see
+/// <see cref="CoverResolutionMetricsCollection"/>) — every test here calls
+/// <c>CoverUrlResolver.Resolve*</c>, which emits on the same process-wide meter that
+/// <see cref="CoverUrlResolverTests"/>'s <c>CoverMetricsCapture</c> asserts against, so
+/// the two classes must not run in parallel with each other.
 /// </summary>
+[Collection("CoverResolutionMetrics")]
 public class CoverUrlResolverPresignExpiryTests
 {
     private readonly Mock<IBlobStorageService> _blob = new();

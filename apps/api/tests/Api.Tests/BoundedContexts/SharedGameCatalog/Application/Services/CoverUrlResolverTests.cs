@@ -13,6 +13,14 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 
+/// <summary>
+/// Issue #3620 (code review follow-up) — joins the <c>CoverResolutionMetrics</c>
+/// collection (see <see cref="CoverResolutionMetricsCollection"/>) so this class's
+/// <c>CoverMetricsCapture</c>-based assertions don't race against
+/// <see cref="CoverUrlResolverPresignExpiryTests"/>, which also emits on the same
+/// shared meter.
+/// </summary>
+[Collection("CoverResolutionMetrics")]
 public class CoverUrlResolverTests
 {
     private readonly Mock<IBlobStorageService> _blob = new();

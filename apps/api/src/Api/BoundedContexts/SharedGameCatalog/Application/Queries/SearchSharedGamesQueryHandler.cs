@@ -113,7 +113,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             query.MechanicIds?.Count ?? 0,
             query.PageNumber);
 
-        // Try cache first (L1: 15min, L2: 1h).
+        // Try cache first (see SearchCacheL1Expiration / SearchCacheL2Expiration).
         // Tagged "search-games" so event handlers (e.g. VectorDocumentIndexedForKbFlagHandler)
         // can invalidate the whole namespace on relevant domain events.
         return await _cache.GetOrCreateAsync<PagedResult<SharedGameDto>>(

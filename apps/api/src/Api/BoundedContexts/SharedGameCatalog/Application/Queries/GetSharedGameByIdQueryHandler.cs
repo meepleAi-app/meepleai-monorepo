@@ -123,7 +123,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             var cacheKey = $"shared-game:{query.GameId}";
             var cacheTag = $"shared-game:{query.GameId}";
 
-            // Try cache first (L1: 30min, L2: 2h).
+            // Try cache first (see DetailCacheL1Expiration / DetailCacheL2Expiration).
             // Tagged with the per-game key so toolkit/agent/KB event handlers can
             // invalidate this entry without touching the whole search-games namespace.
             var dto = await _cache.GetOrCreateAsync<SharedGameDetailDto?>(

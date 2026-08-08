@@ -51,12 +51,12 @@ public class GrafanaHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Grafana health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Grafana unavailable", ex);
+            return HealthCheckResult.Degraded("Grafana unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Grafana health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Grafana connectivity check failed", ex);
+            return HealthCheckResult.Degraded("Grafana connectivity check failed", ex);
         }
     }
 }

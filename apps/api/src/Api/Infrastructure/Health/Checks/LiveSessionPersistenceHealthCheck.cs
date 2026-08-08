@@ -70,7 +70,7 @@ internal sealed class LiveSessionPersistenceHealthCheck : IHealthCheck
         {
             sw.Stop();
             _logger.LogError(ex, "LiveSessionPersistenceHealthCheck failed (latency {LatencyMs:F0} ms)", sw.Elapsed.TotalMilliseconds);
-            return HealthCheckResult.Unhealthy(
+            return HealthCheckResult.Degraded(
                 "live_game_sessions table unreachable",
                 exception: ex);
         }

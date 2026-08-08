@@ -64,7 +64,7 @@ internal sealed class S3StorageHealthCheck : IHealthCheck
         catch (Exception ex)
         {
             _logger.LogError(ex, "S3 health check failed");
-            return HealthCheckResult.Unhealthy($"S3 storage unreachable: {ex.Message}", ex);
+            return HealthCheckResult.Degraded($"S3 storage unreachable: {ex.Message}", ex);
         }
 #pragma warning restore CA1031
     }

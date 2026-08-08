@@ -1432,24 +1432,47 @@ jobs:
           }
 
           # Critical smoke tests (failure = deployment issue).
-          # #2655 — /health returns 503 when the overall status is Degraded (e.g. a non-critical
-          # slack_queue backlog); the API is still up and serving, so accept 200 OR 503 for the
-          # two /health reachability probes. A truly-down API yields 000/timeout, which still fails.
+          # These two probes assert REACHABILITY only, hence the 503 tolerance: a 503 still
+          # proves the origin answered, whereas a truly-down API yields 000/timeout and fails.
+          # The actual health verdict is asserted below, against the JSON body — see #3618.
           smoke_test "API Health" "https://meepleai.app/health" "200 503"
           smoke_test "Web Root" "https://meepleai.app" "200"
           smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-games?pageNumber=1&pageSize=1" "200"
           smoke_test "API Direct Health" "https://api.meepleai.app/health" "200 503"
 
-          # Health endpoint JSON validation
-          echo "  Validating health response structure..."
-          HEALTH_JSON=$(curl -sf --max-time 10 \
+          # Health verdict — BLOCKING (#3618).
+          # Historically this block was non-blocking and the 503 above was tolerated outright,
+          # so a genuinely Unhealthy deploy shipped silently (that is how #3339 stayed hidden).
+          # Note: no `-f` on curl — with -f the body is discarded on 503, i.e. exactly the case
+          # we need to inspect.
+          echo "  Validating health verdict..."
+          HEALTH_JSON=$(curl -s --max-time 10 \
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
             https://meepleai.app/health 2>/dev/null || true)
-          if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
-            echo "  ✅ Health JSON: valid structure"
+          if [ -z "$HEALTH_JSON" ] || ! echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
+            echo "  ❌ Health JSON: empty or unparseable body — cannot verify deploy health"
+            RESULTS="${RESULTS}| Health verdict | unparseable | ❌ |\n"
+            FAIL=1
           else
-            echo "  ⚠️ Health JSON: unexpected format (non-blocking)"
+            HEALTH_STATUS=$(echo "$HEALTH_JSON" | jq -r '.status')
+            UNHEALTHY=$(echo "$HEALTH_JSON" | jq -r '[.checks[]? | select(.status == "Unhealthy") | .name] | join(", ")')
+            DEGRADED=$(echo "$HEALTH_JSON" | jq -r '[.checks[]? | select(.status == "Degraded") | .name] | join(", ")')
+
+            if [ -n "$DEGRADED" ]; then
+              echo "  ⚠️ Degraded (non-blocking): $DEGRADED"
+            fi
+
+            if [ -n "$UNHEALTHY" ]; then
+              # A NonCritical check must never report Unhealthy (#3618 invariant). Anything
+              # Unhealthy here is either a real outage or a regression of that invariant.
+              echo "  ❌ Health verdict: $HEALTH_STATUS — Unhealthy checks: $UNHEALTHY"
+              RESULTS="${RESULTS}| Health verdict | Unhealthy: $UNHEALTHY | ❌ |\n"
+              FAIL=1
+            else
+              echo "  ✅ Health verdict: $HEALTH_STATUS (no Unhealthy checks)"
+              RESULTS="${RESULTS}| Health verdict | $HEALTH_STATUS | ✅ |\n"
+            fi
           fi
 
           # Response time check

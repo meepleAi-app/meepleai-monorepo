@@ -62,8 +62,13 @@ public class SlackQueueHealthCheckTests
         result.Description!.Should().Contain("50");
     }
 
+    /// <summary>
+    /// #3618: a backlog degrades, it does not 503. This check is registered NonCritical, and a
+    /// NonCritical check returning Unhealthy takes the aggregate /health to 503 (the
+    /// failureStatus argument at registration does NOT cap an explicitly-returned status).
+    /// </summary>
     [Fact]
-    public async Task CheckHealthAsync_PendingAboveThreshold_ReturnsUnhealthy()
+    public async Task CheckHealthAsync_PendingAboveThreshold_ReturnsDegraded()
     {
         // Arrange
         SetupSlackPendingCount(150);
@@ -73,7 +78,7 @@ public class SlackQueueHealthCheckTests
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Status.Should().Be(HealthStatus.Degraded);
         result.Description!.Should().Contain("150");
         result.Description!.Should().Contain("backlog");
     }
@@ -93,7 +98,7 @@ public class SlackQueueHealthCheckTests
     }
 
     [Fact]
-    public async Task CheckHealthAsync_RepositoryThrows_ReturnsUnhealthy()
+    public async Task CheckHealthAsync_RepositoryThrows_ReturnsDegraded()
     {
         // Arrange
         _repositoryMock.Setup(r => r.GetPendingCountByChannelsAsync(
@@ -104,8 +109,8 @@ public class SlackQueueHealthCheckTests
         var result = await _healthCheck.CheckHealthAsync(
             new HealthCheckContext(), CancellationToken.None);
 
-        // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy);
+        // Assert — Degraded, not Unhealthy: NonCritical checks must not 503 /health (#3618)
+        result.Status.Should().Be(HealthStatus.Degraded);
         result.Description!.Should().Contain("Failed to check");
     }
 

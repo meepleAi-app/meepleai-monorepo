@@ -19,7 +19,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// <summary>
 /// Handler for searching shared games with full-text search and filtering.
 /// Uses PostgreSQL full-text search for optimal Italian language support.
-/// Uses HybridCache (L1: 15min, L2: 1h) with query parameter hashing.
+/// Uses HybridCache (see <see cref="SearchCacheL1Expiration"/> / <see cref="SearchCacheL2Expiration"/>) with query parameter hashing.
 /// Issue #2371 Phase 2
 /// </summary>
 internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchSharedGamesQuery, PagedResult<SharedGameDto>>
@@ -491,8 +491,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         // for the page. Batch one round-trip via IGameTitleResolver.GetByGameIdsAsync.
         // Enrichment lives inside ExecuteSearchAsync so cached payloads include the
         // translations — invalidation is governed by the `search-games` cache tag and
-        // the 1h L2 TTL, both acceptable given translations are admin-curated and
-        // change rarely.
+        // the SearchCacheL2Expiration TTL, both acceptable given translations are
+        // admin-curated and change rarely.
         var enriched = await _titleResolver
             .EnrichAsync(games, cancellationToken)
             .ConfigureAwait(false);

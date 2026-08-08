@@ -17,7 +17,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 
 /// <summary>
 /// Handler for getting a shared game by ID.
-/// Uses HybridCache (L1: Memory 30min, L2: Redis 2h) for performance.
+/// Uses HybridCache (see <see cref="DetailCacheL1Expiration"/> / <see cref="DetailCacheL2Expiration"/>) for performance.
 /// Tagged with <c>shared-game:{id}</c> so cross-BC event handlers (toolkit/agent/KB
 /// changes) can invalidate a single detail entry surgically rather than flushing
 /// the whole search namespace. Issue #2371 Phase 2, extended #2373 Phase 4, #603 Wave A.4.

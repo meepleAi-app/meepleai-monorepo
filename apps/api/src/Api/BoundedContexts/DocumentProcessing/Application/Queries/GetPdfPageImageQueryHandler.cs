@@ -83,14 +83,60 @@ internal sealed class GetPdfPageImageQueryHandler : IQueryHandler<GetPdfPageImag
             "Calling SmolDocling page-image: PdfDocumentId=..., page={Page}",
             pageNumber);
 
-        using var response = await client.PostAsync(url, form, cancellationToken).ConfigureAwait(false);
+        HttpResponseMessage response;
+        try
+        {
+            response = await client.PostAsync(url, form, cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex)
+        {
+            // Issue #3578: the container is simply not deployed here (staging omits smoldocling —
+            // the 256M model is impractical on CPU). A transport failure is not a server bug.
+            throw ServiceUnavailable(ex);
+        }
+        catch (TaskCanceledException ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            // HttpClient surfaces its own timeout as TaskCanceledException. The `when` guard is what
+            // keeps a genuinely cancelled caller (client disconnected) from being reported as an
+            // outage — that case must keep propagating as cancellation.
+            throw ServiceUnavailable(ex);
+        }
 
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            throw new NotFoundException($"Page {pageNumber} not found in PDF");
+        using (response)
+        {
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                throw new NotFoundException($"Page {pageNumber} not found in PDF");
 
-        response.EnsureSuccessStatusCode();
+            // Upstream 5xx: the dependency is reachable but broken — still "unavailable" to the caller.
+            // Upstream 4xx deliberately falls through to EnsureSuccessStatusCode: it means WE sent a
+            // bad request, which is a real bug and must not be buried under a 503.
+            if ((int)response.StatusCode >= 500)
+                throw ServiceUnavailable(null, response.StatusCode);
 
-        return await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Issue #3578 — 503 instead of 500 when the page-image dependency cannot serve the request.
+    /// The message names the missing service so whoever hits it does not have to read container
+    /// logs to find out a container is absent.
+    /// </summary>
+    private ExternalServiceException ServiceUnavailable(
+        Exception? inner,
+        System.Net.HttpStatusCode? upstreamStatus = null)
+    {
+        _logger.LogWarning(
+            inner,
+            "SmolDocling page-image unavailable (upstreamStatus={UpstreamStatus})",
+            upstreamStatus);
+
+        return new ExternalServiceException(
+            "Page preview requires the SmolDocling service, which is not available in this environment.",
+            "page_image_service_unavailable",
+            inner);
     }
 
     private static string ExtractFileIdFromPath(string filePath)

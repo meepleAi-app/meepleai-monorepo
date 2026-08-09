@@ -67,15 +67,16 @@ jobs:
   # NON è esistito alcun esito per i ~3000 test Category=Integration — né verde né rosso — e i
   # [FAIL] reali nel log non hanno mai prodotto un segnale.
   #
-  # La causa non era la quantità di test: in ci.yml gli stessi test girano in 1.9 / 2.1 / 4.1 minuti
-  # per shard. Era che qui ogni fixture avviava Testcontainers da zero, mentre ci.yml passa
-  # TEST_POSTGRES_CONNSTRING / TEST_REDIS_CONNSTRING e SharedTestcontainersFixture salta del tutto
-  # l'avvio dei container. Questo job è ora allineato a quel percorso.
+  # La causa non era il timeout in sé: questo job divergeva da ci.yml su tutto ciò che rende gli
+  # integration test eseguibili in tempi sani. Ogni fixture avviava Testcontainers da zero (ci.yml
+  # passa TEST_POSTGRES_CONNSTRING / TEST_REDIS_CONNSTRING e SharedTestcontainersFixture li salta),
+  # mancavano libgdiplus e i file secret, e non c'era sharding. Ora il percorso è lo stesso.
   backend-integration:
     name: Backend Integration (${{ matrix.shard.name }})
     runs-on: ubuntu-latest
-    # 50 min per shard, allineato a ci.yml (45) più margine per build Release + setup, che qui sono
-    # nel job mentre ci.yml scarica un artifact già costruito.
+    # 60 min per shard: i 45 del TestSessionTimeout più build Release, apt-get e setup, che qui
+    # sono dentro il job mentre ci.yml scarica un artifact già costruito. A 50 il job moriva prima
+    # che la sessione arrivasse a 45 — ai test restavano ~44 min — e si tornava a un `cancelled`.
     #
     # Il numero NON è una stima: `integration.runsettings` documenta da PR #1505 che «each shard
     # runs ~29-30 min of real work», ed è per questo che dichiara TestSessionTimeout=45. Due
@@ -85,7 +86,7 @@ jobs:
     # Resta la RETE DI SICUREZZA: a scattare per primo dev'essere il TestSessionTimeout (45),
     # perché produce un riepilogo leggibile, mentre il timeout del job dà un `cancelled` muto —
     # che è il difetto da cui parte questa issue.
-    timeout-minutes: 50
+    timeout-minutes: 60
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -133,6 +134,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+
+      # libgdiplus: senza, i test che toccano il rendering PDF non falliscono subito ma dopo un
+      # timeout, e il costo si somma su tutta la suite. È una delle differenze che rendevano questo
+      # job molto più lento di ci.yml a parità di test.
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus redis-tools
+
       - uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
@@ -142,6 +150,26 @@ jobs:
       - name: Build (Release)
         working-directory: apps/api
         run: dotnet build --no-restore --configuration Release
+
+      # I service container sono dichiarati `healthy` da Docker prima di accettare davvero
+      # connessioni applicative: attendere qui evita che i primi test paghino retry di connessione.
+      - name: Wait for Services
+        timeout-minutes: 3
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          until redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; do sleep 1; done
+          echo "postgres + redis ready"
+
+      # Stessi file di ci.yml: senza, i percorsi che leggono i secret cadono su path di errore
+      # lenti invece di partire configurati.
+      - name: Create CI Secret Files
+        run: |
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 
       - name: Integration tests
         working-directory: apps/api

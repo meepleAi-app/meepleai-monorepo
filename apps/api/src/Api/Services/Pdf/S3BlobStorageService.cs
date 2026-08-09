@@ -307,6 +307,58 @@ internal sealed class S3BlobStorageService : IBlobStorageService
     }
 
     /// <summary>
+    /// Issue #3498 — realigns a presigned URL's scheme with that of the configured presign endpoint.
+    ///
+    /// <para>
+    /// The AWS SDK always emits <c>https://</c> for a presigned URL, even when the client is built
+    /// against a cleartext <c>ServiceURL</c> and <c>UseHttp</c> is set. Verified against AWSSDK.S3
+    /// 3.7.413: every config permutation (with/without <c>UseHttp</c>, <c>AuthenticationRegion</c>,
+    /// <c>ForcePathStyle</c>, trailing slash) still signed <c>https</c>. Pointed at a plain-HTTP
+    /// MinIO the browser then opens a TLS handshake against a cleartext server, the image never
+    /// loads, and the card falls back to its emoji placeholder — a symptom that reads as a missing
+    /// object rather than a scheme mismatch.
+    /// </para>
+    /// <para>
+    /// Rewriting the scheme keeps the signature valid: SigV4 signs host, path and query, never the
+    /// protocol. Verified end-to-end against a real MinIO — the rewritten URL returns 200 where the
+    /// as-signed one dies on the TLS handshake.
+    /// </para>
+    /// <para>
+    /// The downgrade happens ONLY when the operator explicitly configured a cleartext endpoint
+    /// (MinIO in dev/E2E). Production endpoints (R2/AWS) are https, so the URL is returned untouched.
+    /// </para>
+    /// </summary>
+    private string AlignSchemeWithPresignEndpoint(string url)
+    {
+        // The presign client is built against PublicEndpoint when set, and falls back to Endpoint
+        // otherwise (see BlobStorageServiceFactory) — the scheme must follow the same source.
+        var presignEndpoint = string.IsNullOrWhiteSpace(_options.PublicEndpoint)
+            ? _options.Endpoint
+            : _options.PublicEndpoint;
+
+        if (!BlobStorageServiceFactory.UsesPlainHttp(presignEndpoint) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var signed) ||
+            !string.Equals(signed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return url;
+        }
+
+        var builder = new UriBuilder(signed) { Scheme = Uri.UriSchemeHttp };
+
+        // An explicit port (MinIO's :9000) is part of the signed Host header and must survive; an
+        // IMPLICIT one must not become literal. UriBuilder materialises the original scheme's default
+        // port (443), which is not http's default and would otherwise be emitted as ":443",
+        // changing the Host header and invalidating the signature. Test on the ORIGINAL Uri: 443 is
+        // only recognisable as a default while the scheme is still https.
+        if (signed.IsDefaultPort)
+        {
+            builder.Port = -1;
+        }
+
+        return builder.Uri.ToString();
+    }
+
+    /// <summary>
     /// Generates a pre-signed URL for secure, temporary file downloads.
     /// </summary>
     /// <param name="fileId">File ID to generate URL for.</param>
@@ -339,7 +391,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Verb = HttpVerb.GET
             };
 
-            var url = await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false);
+            var url = AlignSchemeWithPresignEndpoint(
+                await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false));
 
             _logger.LogInformation(
                 "Generated pre-signed URL for {Key} (expires in {Expiry}s)",
@@ -403,7 +456,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Verb = HttpVerb.GET
             };
 
-            var url = await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false);
+            var url = AlignSchemeWithPresignEndpoint(
+                await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false));
 
             _logger.LogInformation(
                 "Generated pre-signed URL for raw key {Key} (expires in {Expiry}s)",

@@ -54,7 +54,8 @@ internal static class BlobStorageServiceFactory
         {
             ServiceURL = options.Endpoint,
             ForcePathStyle = options.ForcePathStyle,
-            AuthenticationRegion = options.Region
+            AuthenticationRegion = options.Region,
+            UseHttp = UsesPlainHttp(options.Endpoint)
         };
 
         // Handle region configuration
@@ -87,7 +88,12 @@ internal static class BlobStorageServiceFactory
             {
                 ServiceURL = options.PublicEndpoint,
                 ForcePathStyle = options.ForcePathStyle,
-                AuthenticationRegion = options.Region
+                AuthenticationRegion = options.Region,
+                // #3498: declares the endpoint's protocol for the paths that derive a URL from the
+                // config (i.e. when no ServiceURL is set). It does NOT govern the presigned URL:
+                // AWSSDK.S3 3.7.413 signs https regardless of this flag, so the scheme is realigned
+                // afterwards in S3BlobStorageService.AlignSchemeWithPresignEndpoint.
+                UseHttp = UsesPlainHttp(options.PublicEndpoint)
             };
             if (!string.Equals(options.Region, "auto", StringComparison.Ordinal) && RegionEndpoint.GetBySystemName(options.Region) != null)
             {
@@ -102,6 +108,23 @@ internal static class BlobStorageServiceFactory
 
         return new S3BlobStorageService(s3Client, options, logger, presignClient);
     }
+
+    /// <summary>
+    /// Issue #3498 — true when <paramref name="endpoint"/> is an absolute <c>http://</c> URL, i.e.
+    /// the operator explicitly opted into a cleartext object store (MinIO in dev/E2E).
+    ///
+    /// Sole gate for the presigned-URL scheme downgrade in
+    /// <c>S3BlobStorageService.AlignSchemeWithPresignEndpoint</c>: the AWS SDK signs <c>https</c>
+    /// even against a cleartext <c>ServiceURL</c>, so the scheme has to be realigned afterwards, and
+    /// that must never happen unless cleartext was configured on purpose.
+    ///
+    /// Anything unparseable or scheme-less returns false: opting into cleartext must be explicit,
+    /// never a side effect of a malformed value. Production endpoints (R2/AWS) are https, so this
+    /// returns false there and nothing changes.
+    /// </summary>
+    internal static bool UsesPlainHttp(string? endpoint) =>
+        Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Issue #1357: removes S3 extension headers that Cloudflare R2 does not implement.

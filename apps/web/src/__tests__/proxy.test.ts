@@ -131,3 +131,53 @@ describe('proxy() admin-role resolution under the E2E auth bypass (#2784)', () =
     expect(res.headers.get('location')).toContain('/login');
   });
 });
+
+/**
+ * #3498 — this middleware emits its own CSP alongside the one from next.config.js, and a browser
+ * enforces the INTERSECTION of every policy it receives. The cover R2-strict E2E burned a full CI
+ * run on exactly that: next.config.js had already been widened, this header had not, so the MinIO
+ * presigned cover stayed blocked and the card fell back to its emoji placeholder — a symptom
+ * indistinguishable from a missing object. These tests pin both directions.
+ */
+describe('proxy() CSP img-src — MinIO presign opt-in (#3498)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  /** Returns the `img-src` directive of the response's CSP header. */
+  async function imgSrcDirective(optIn: string | undefined): Promise<string> {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('PLAYWRIGHT_AUTH_BYPASS', 'true');
+    vi.stubEnv('NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED', '');
+    vi.stubEnv('NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB', optIn ?? '');
+
+    const { proxy } = await import('@/proxy');
+    const res = await proxy(
+      makeRequest({ meepleai_session: 'fixture-token', meepleai_user_role: 'admin' })
+    );
+
+    const csp = res.headers.get('content-security-policy') ?? '';
+    return csp.split('; ').find(directive => directive.startsWith('img-src')) ?? '';
+  }
+
+  it('widens img-src to the MinIO presign host when the opt-in is on', async () => {
+    expect(await imgSrcDirective('true')).toBe("img-src 'self' data: https: http://localhost:9000");
+  });
+
+  it.each([
+    ['unset', undefined],
+    ['false', 'false'],
+    // Only the literal "true" opts in — anything else keeps the closed default, so a stray or
+    // half-configured value can never widen the policy in prod.
+    ['a non-literal truthy value', '1'],
+  ])('keeps the closed default when the opt-in is %s', async (_label, value) => {
+    expect(await imgSrcDirective(value)).toBe("img-src 'self' data: https:");
+  });
+});

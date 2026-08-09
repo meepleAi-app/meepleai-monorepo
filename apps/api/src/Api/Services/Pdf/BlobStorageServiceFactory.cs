@@ -89,9 +89,10 @@ internal static class BlobStorageServiceFactory
                 ServiceURL = options.PublicEndpoint,
                 ForcePathStyle = options.ForcePathStyle,
                 AuthenticationRegion = options.Region,
-                // #3498: the SDK picks a presigned URL's protocol from UseHttp, NOT from the scheme
-                // in ServiceURL. Without this a plain-HTTP endpoint still presigns as https://, and
-                // the browser dies on a TLS handshake against a cleartext server.
+                // #3498: declares the endpoint's protocol for the paths that derive a URL from the
+                // config (i.e. when no ServiceURL is set). It does NOT govern the presigned URL:
+                // AWSSDK.S3 3.7.413 signs https regardless of this flag, so the scheme is realigned
+                // afterwards in S3BlobStorageService.AlignSchemeWithPresignEndpoint.
                 UseHttp = UsesPlainHttp(options.PublicEndpoint)
             };
             if (!string.Equals(options.Region, "auto", StringComparison.Ordinal) && RegionEndpoint.GetBySystemName(options.Region) != null)
@@ -109,13 +110,13 @@ internal static class BlobStorageServiceFactory
     }
 
     /// <summary>
-    /// Issue #3498 — true when <paramref name="endpoint"/> is an absolute <c>http://</c> URL.
+    /// Issue #3498 — true when <paramref name="endpoint"/> is an absolute <c>http://</c> URL, i.e.
+    /// the operator explicitly opted into a cleartext object store (MinIO in dev/E2E).
     ///
-    /// The AWS SDK decides both the request protocol and the PRESIGNED URL's protocol from
-    /// <c>AmazonS3Config.UseHttp</c>, not from the scheme embedded in <c>ServiceURL</c>. Left at its
-    /// default (false), a <c>ServiceURL</c> of <c>http://localhost:9000</c> still presigns as
-    /// <c>https://localhost:9000</c> — the browser then opens a TLS handshake against a cleartext
-    /// MinIO and the image silently falls back to a placeholder.
+    /// Sole gate for the presigned-URL scheme downgrade in
+    /// <c>S3BlobStorageService.AlignSchemeWithPresignEndpoint</c>: the AWS SDK signs <c>https</c>
+    /// even against a cleartext <c>ServiceURL</c>, so the scheme has to be realigned afterwards, and
+    /// that must never happen unless cleartext was configured on purpose.
     ///
     /// Anything unparseable or scheme-less returns false: opting into cleartext must be explicit,
     /// never a side effect of a malformed value. Production endpoints (R2/AWS) are https, so this

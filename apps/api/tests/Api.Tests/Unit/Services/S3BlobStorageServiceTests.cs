@@ -944,6 +944,29 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         result.Subject.Should().BeNull();
     }
 
+    // ── #3611: RetrieveRawKeyAsync ───────────────────────────────────────────
+    // Read-side counterpart of StoreRawKeyAsync: reads an object by its EXACT
+    // physical key, skipping PathSecurity.ValidateIdentifier (which rejects '/'
+    // and '.') — needed to re-read a cover's bytes before cropping (Task 10).
+
+    [Fact]
+    public async Task RetrieveRawKeyAsync_MissingObject_ReturnsNull()
+    {
+        // Arrange: a slash-containing key that PathSecurity.ValidateIdentifier would reject.
+        var rawKey = "covers/pdf/does-not-exist/cover-preview.webp";
+
+        _mockS3Client.Setup(x => x.GetObjectAsync(
+            It.IsAny<GetObjectRequest>(),
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("Not found") { StatusCode = HttpStatusCode.NotFound });
+
+        // Act
+        var stream = await _sut.RetrieveRawKeyAsync(rawKey);
+
+        // Assert
+        stream.Should().BeNull();
+    }
+
     /// <summary>
     /// Simulates an HTTP request body or a forward-only stream. Throws on Length
     /// and Position to surface the AWS SDK's "Could not determine content length"

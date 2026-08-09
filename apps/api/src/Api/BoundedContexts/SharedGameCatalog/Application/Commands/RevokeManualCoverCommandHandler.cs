@@ -106,8 +106,8 @@ internal sealed class RevokeManualCoverCommandHandler : ICommandHandler<RevokeMa
         }
 
         // Best-effort delete the rendered crop objects of the removed Manual assignments (each
-        // GeneratedR2Key is a full physical key). None exist today (no crop is rendered for a
-        // Manual assignment), so this is a forward-compatible no-op until crop generation lands.
+        // GeneratedR2Key is a full physical key). Manual assignments can carry a rendered crop
+        // since #3611 (Social context); this loop cleans it up alongside the base key above.
         foreach (var cropKey in manualCropKeys)
         {
             try

@@ -25,6 +25,11 @@ interface CoverProps {
    * blocked. Falls back to `entityIcon[entity]`. See #1856 DEC-2/DEC-3.
    */
   coverEmoji?: string;
+  /**
+   * #3611 — punto focale del crop, componenti in [0,1]. Quando è assente NON viene
+   * emesso alcuno stile: il rendering resta byte-identico al comportamento precedente.
+   */
+  coverFocal?: { x: number; y: number };
 }
 
 const aspectRatioClass: Record<MeepleCardVariant, string> = {
@@ -35,7 +40,7 @@ const aspectRatioClass: Record<MeepleCardVariant, string> = {
   hero: 'aspect-video',
 };
 
-export function Cover({ entity, variant, imageUrl, alt, coverEmoji }: CoverProps) {
+export function Cover({ entity, variant, imageUrl, alt, coverEmoji, coverFocal }: CoverProps) {
   const gradientColor = entityHsl(entity, 0.15);
   const bandGradient = `linear-gradient(135deg, ${entityHsl(entity, 0.35)} 0%, ${entityHsl(entity, 0.55)} 100%)`;
 
@@ -73,6 +78,11 @@ export function Cover({ entity, variant, imageUrl, alt, coverEmoji }: CoverProps
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
           loading="lazy"
           onError={() => setHasImgError(true)}
+          style={
+            coverFocal
+              ? { objectPosition: `${coverFocal.x * 100}% ${coverFocal.y * 100}%` }
+              : undefined
+          }
         />
       )}
       {/* Shimmer overlay */}

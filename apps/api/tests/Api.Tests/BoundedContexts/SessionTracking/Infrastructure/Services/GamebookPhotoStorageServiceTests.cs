@@ -83,6 +83,12 @@ public sealed class GamebookPhotoStorageServiceTests
             _ = (rawKey, expirySeconds);
             return Task.FromResult<string?>(null);
         }
+
+        public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+        {
+            _ = (rawKey, ct);
+            return Task.FromResult<Stream?>(null);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

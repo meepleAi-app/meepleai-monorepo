@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -163,10 +164,10 @@ public class GetSharedGameByIdQueryHandlerTests
             .ReturnsAsync(game);
 
         _blobStorageMock
-            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync("https://r2/wiki-hero.webp");
         _blobStorageMock
-            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync("https://r2/pdf.webp");
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -220,7 +221,7 @@ public class GetSharedGameByIdQueryHandlerTests
             .ReturnsAsync(game);
 
         _blobStorageMock
-            .Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", null))
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync("https://r2/manual-hero.webp");
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -276,10 +277,10 @@ public class GetSharedGameByIdQueryHandlerTests
             .ReturnsAsync(game);
 
         _blobStorageMock
-            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync("https://r2/wiki-social.webp");
         _blobStorageMock
-            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync("https://r2/pdf.webp");
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -407,11 +408,11 @@ public class GetSharedGameByIdQueryHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        // CoverUrlResolver calls GetPresignedUrlForRawKeyAsync("{key}-preview.webp", null)
+        // CoverUrlResolver calls GetPresignedUrlForRawKeyAsync("{key}-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds)
         _blobStorageMock
             .Setup(b => b.GetPresignedUrlForRawKeyAsync(
                 $"{pdfKey}-preview.webp",
-                null))
+                CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync(expectedUrl);
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();

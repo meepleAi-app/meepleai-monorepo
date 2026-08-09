@@ -13,18 +13,32 @@ vi.mock('@/hooks/admin/useCoverCandidates', () => ({ useCoverCandidates: vi.fn()
 vi.mock('@/hooks/admin/useAssignCover', () => ({ useAssignCover: vi.fn() }));
 vi.mock('@/hooks/admin/useRemoveCoverAssignment', () => ({ useRemoveCoverAssignment: vi.fn() }));
 vi.mock('@/hooks/admin/useSetManualCover', () => ({ useSetManualCover: vi.fn() }));
+vi.mock('@/hooks/useAdminRole', () => ({ useAdminRole: vi.fn() }));
 
 import { useCoverCandidates } from '@/hooks/admin/useCoverCandidates';
 import { useAssignCover } from '@/hooks/admin/useAssignCover';
 import { useRemoveCoverAssignment } from '@/hooks/admin/useRemoveCoverAssignment';
 import { useSetManualCover } from '@/hooks/admin/useSetManualCover';
+import { useAdminRole } from '@/hooks/useAdminRole';
 
+import { AdminCoverEditAffordance } from '../AdminCoverEditAffordance';
 import { AdminCoverSourceDialog } from '../AdminCoverSourceDialog';
 import { CoverFocalPointPicker } from '../CoverFocalPointPicker';
 
 const GID = '550e8400-e29b-41d4-a716-446655440000';
 
 beforeEach(() => {
+  // AdminCoverEditAffordance gates on isEditorOrAbove — an unmocked/false value renders
+  // `null`, which would let an axe run "pass" on nothing. Mock the same editor-or-above
+  // shape used by AdminCoverEditAffordance.test.tsx so the button is actually in the DOM.
+  (useAdminRole as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    user: null,
+    isSuperAdmin: false,
+    isAdminOrAbove: true,
+    isEditorOrAbove: true,
+    hasRole: () => false,
+    isLoading: false,
+  });
   (useAssignCover as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
     mutate: vi.fn(),
     isPending: false,
@@ -85,6 +99,26 @@ describe('cover-editor a11y (axe AA)', () => {
         />
       </div>
     );
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('AdminCoverEditAffordance has no violations at rest (#3611)', async () => {
+    const { container } = render(
+      <div className="relative">
+        <AdminCoverEditAffordance gameId={GID} title="Catan" />
+      </div>
+    );
+    expect(container.querySelector('button')).not.toBeNull();
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it('AdminCoverEditAffordance has no violations with needsAttention (#3611)', async () => {
+    const { container } = render(
+      <div className="relative">
+        <AdminCoverEditAffordance gameId={GID} title="Catan" needsAttention />
+      </div>
+    );
+    expect(container.querySelector('button')).not.toBeNull();
     expect(await axe(container)).toHaveNoViolations();
   });
 });

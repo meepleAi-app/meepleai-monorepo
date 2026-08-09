@@ -68,9 +68,9 @@ public sealed class GetPendingApprovalGamesQueryHandlerTests
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         db.ChangeTracker.Clear();
 
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki-card.webp");
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var handler = new GetPendingApprovalGamesQueryHandler(db, _blob.Object, _logger.Object, _titleResolver.Object);

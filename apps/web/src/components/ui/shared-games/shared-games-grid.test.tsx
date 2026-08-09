@@ -27,8 +27,20 @@ vi.mock('next/link', () => ({
 
 vi.mock('@/hooks/useAdminRole', () => ({ useAdminRole: vi.fn() }));
 vi.mock('@/components/features/cover-editor', () => ({
-  AdminCoverEditAffordance: ({ gameId }: { gameId: string }) => (
-    <div data-testid="cover-affordance" data-game-id={gameId} />
+  AdminCoverEditAffordance: ({
+    gameId,
+    needsAttention,
+  }: {
+    gameId: string;
+    needsAttention?: boolean;
+  }) => (
+    <button
+      type="button"
+      data-testid={`cover-edit-${gameId}`}
+      data-needs-attention={needsAttention ? 'true' : 'false'}
+    >
+      edit
+    </button>
   ),
 }));
 
@@ -95,16 +107,56 @@ describe('SharedGamesGrid (v2)', () => {
   it('does not render cover-edit affordances for a non-admin', () => {
     setRole(false);
     render(<SharedGamesGrid {...build()} />);
-    expect(screen.queryAllByTestId('cover-affordance')).toHaveLength(0);
+    expect(screen.queryAllByTestId(/^cover-edit-/)).toHaveLength(0);
   });
 
   it('renders a role-gated cover-edit affordance per card for an editor-or-above', () => {
     setRole(true);
     render(<SharedGamesGrid {...build()} />);
-    const affordances = screen.getAllByTestId('cover-affordance');
-    expect(affordances).toHaveLength(2);
-    expect(affordances[0]).toHaveAttribute('data-game-id', games[0].id);
-    expect(affordances[1]).toHaveAttribute('data-game-id', games[1].id);
+    expect(screen.getByTestId(`cover-edit-${games[0].id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`cover-edit-${games[1].id}`)).toBeInTheDocument();
+  });
+
+  it('segnala come da sistemare le card senza cover (#3611)', () => {
+    setRole(true);
+    render(
+      <SharedGamesGrid
+        {...build({
+          games: [
+            { ...games[0], coverUrl: 'https://r2.example/c.webp' },
+            { ...games[1], coverUrl: null },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByTestId(`cover-edit-${games[0].id}`)).toHaveAttribute(
+      'data-needs-attention',
+      'false'
+    );
+    expect(screen.getByTestId(`cover-edit-${games[1].id}`)).toHaveAttribute(
+      'data-needs-attention',
+      'true'
+    );
+  });
+
+  it('inoltra il punto focale del crop fino alla cover renderizzata (#3611)', () => {
+    const { container } = render(
+      <SharedGamesGrid
+        {...build({
+          games: [
+            {
+              ...games[0],
+              coverUrl: 'https://r2.example/c.webp',
+              coverFocalX: 0.3,
+              coverFocalY: 0.7,
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(container.querySelector('img')).toHaveStyle({ objectPosition: '30% 70%' });
   });
 
   it('emits data-state matching the state prop', () => {

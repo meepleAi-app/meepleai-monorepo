@@ -70,7 +70,13 @@ public sealed record SharedGameDto(
     // CoverLicense is non-null.
     string? CoverLicense = null,
     string? CoverAttribution = null,
-    string? CoverSourceUrl = null);
+    string? CoverSourceUrl = null,
+    // Issue #3611 — punto focale del crop, in [0,1]. Deriva dall'assegnazione admin quando
+    // esiste, altrimenti dall'euristica per sorgente (CoverUrlResolver.DefaultFocalFor).
+    // Il FE lo traduce in object-position; assente dalle voci di cache pre-#3611, che si
+    // deserializzano al centro e mantengono il comportamento precedente fino alla scadenza.
+    double CoverFocalX = 0.5,
+    double CoverFocalY = 0.5);
 
 /// <summary>
 /// Data transfer object for game rules.
@@ -253,7 +259,13 @@ public sealed record SharedGameDetailDto(
     // Epic #3470 Slice 2d (AC-2): cover resolved for the Social (OpenGraph) context,
     // consumed by the FE OG meta (#3452). Falls through to the implicit precedence when
     // no Social override is pinned, so it is never worse than CoverUrl.
-    string? SocialCoverUrl = null);
+    string? SocialCoverUrl = null,
+    // Issue #3611 — punto focale del crop, in [0,1]. Deriva dall'assegnazione admin quando
+    // esiste, altrimenti dall'euristica per sorgente (CoverUrlResolver.DefaultFocalFor).
+    // Il FE lo traduce in object-position; assente dalle voci di cache pre-#3611, che si
+    // deserializzano al centro e mantengono il comportamento precedente fino alla scadenza.
+    double CoverFocalX = 0.5,
+    double CoverFocalY = 0.5);
 
 /// <summary>
 /// Data transfer object for approval queue items.

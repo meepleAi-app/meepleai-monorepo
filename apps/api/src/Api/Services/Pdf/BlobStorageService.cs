@@ -270,6 +270,17 @@ internal class BlobStorageService : IBlobStorageService
         return Task.FromResult(false);
     }
 
+    /// <summary>
+    /// Local storage does not host objects under raw R2-style keys (mirrors
+    /// <see cref="StoreRawKeyAsync"/>/<see cref="DeleteRawKeyAsync"/>). No-op
+    /// returning null so callers treat it as "not found" rather than throwing.
+    /// </summary>
+    public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct); // Local storage: raw keys are not supported
+        return Task.FromResult<Stream?>(null);
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

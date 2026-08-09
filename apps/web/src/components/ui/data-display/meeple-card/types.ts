@@ -163,6 +163,8 @@ export interface MeepleCardProps {
    * so existing consumers are unaffected.
    */
   coverEditSlot?: ReactNode;
+  /** #3611 — punto focale del crop, inoltrato a `Cover`. Assente = comportamento invariato. */
+  coverFocal?: { x: number; y: number };
   /**
    * Issue #1823 Wave 3 M14 — license + attribution metadata for the cover
    * image. Renders a small footer chip under the title when present

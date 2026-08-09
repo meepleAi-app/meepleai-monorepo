@@ -46,6 +46,13 @@ export interface HeroProps {
   readonly title: string;
   readonly emoji?: string;
   readonly coverUrl?: string | null;
+  /**
+   * Crop focal point for the cover image, in `[0,1]` fractional coordinates
+   * (0,0 = top-left). Converted to a CSS `object-position` percentage so the
+   * PDF-derived 2:3 portrait cover keeps title/illustration in the 16:9 hero
+   * frame instead of a centered crop landing on body text (#3611).
+   */
+  readonly coverFocal?: { x: number; y: number };
   readonly authorName?: string | null;
   readonly year?: number | null;
   readonly minPlayers?: number | null;
@@ -156,6 +163,7 @@ export function Hero({
   title,
   emoji = '🎲',
   coverUrl,
+  coverFocal,
   authorName,
   year,
   minPlayers,
@@ -212,7 +220,16 @@ export function Hero({
       >
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <img
+            src={coverUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            style={
+              coverFocal
+                ? { objectPosition: `${coverFocal.x * 100}% ${coverFocal.y * 100}%` }
+                : undefined
+            }
+          />
         ) : (
           <span aria-hidden="true" className={clsx(emojiSize, 'drop-shadow-lg')}>
             {emoji}

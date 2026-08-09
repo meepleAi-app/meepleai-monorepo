@@ -7,12 +7,22 @@ using Api.Infrastructure.Entities.UserLibrary;
 using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 
+/// <summary>
+/// Issue #3620 (code review follow-up) — joins the <c>CoverResolutionMetrics</c>
+/// collection (see <see cref="CoverResolutionMetricsCollection"/>) so this class's
+/// <c>CoverMetricsCapture</c>-based assertions don't race against
+/// <see cref="CoverUrlResolverPresignExpiryTests"/>, which also emits on the same
+/// shared meter.
+/// </summary>
+[Trait("Category", TestCategories.Unit)]
+[Collection("CoverResolutionMetrics")]
 public class CoverUrlResolverTests
 {
     private readonly Mock<IBlobStorageService> _blob = new();
@@ -65,7 +75,7 @@ public class CoverUrlResolverTests
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/custom.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -79,7 +89,7 @@ public class CoverUrlResolverTests
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = null };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -91,7 +101,7 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicAsync_L4WinsOverL2()
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -103,7 +113,7 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicAsync_NoL4_FallsBackToL2()
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = null, WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -145,7 +155,7 @@ public class CoverUrlResolverTests
         // called with the exact physical key including the "-preview.webp" suffix.
         var pdfKey = $"covers/{Guid.NewGuid():D}/pdf-cover-pending";
         var sg = new SharedGameEntity { PdfCoverR2Key = pdfKey };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{pdfKey}-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{pdfKey}-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf-cover.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -158,7 +168,7 @@ public class CoverUrlResolverTests
     {
         var wikidataKey = $"covers/{Guid.NewGuid():D}/wikidata-cover";
         var sg = new SharedGameEntity { WikidataCoverR2Key = wikidataKey };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{wikidataKey}.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{wikidataKey}.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wikidata-cover.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -172,7 +182,7 @@ public class CoverUrlResolverTests
         var customKey = $"covers/{Guid.NewGuid():D}/user-custom-cover";
         var sg = new SharedGameEntity();
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = customKey };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{customKey}.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync($"{customKey}.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/user-custom-cover.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -188,7 +198,7 @@ public class CoverUrlResolverTests
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity();
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/custom.webp");
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -204,7 +214,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -220,7 +230,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { BggCoverR2Key = "bgg-covers/13/cover.jpg" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("bgg-covers/13/cover.jpg", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("bgg-covers/13/cover.jpg", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/bgg.jpg");
 
         await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -240,7 +250,7 @@ public class CoverUrlResolverTests
         // GetPresignedDownloadUrlAsync path (PathSecurity.ValidateIdentifier)
         // would have rejected the '/' and '.'.
         var sg = new SharedGameEntity { BggCoverR2Key = "bgg-covers/42/cover.png" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("bgg-covers/42/cover.png", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("bgg-covers/42/cover.png", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/bgg-42.png");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -255,7 +265,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -289,7 +299,7 @@ public class CoverUrlResolverTests
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = null };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -312,9 +322,9 @@ public class CoverUrlResolverTests
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
 
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync((string?)null);
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -334,7 +344,7 @@ public class CoverUrlResolverTests
         var sg = new SharedGameEntity(); // no R2 keys at all
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
 
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync((string?)null);
 
         await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -373,7 +383,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata, "covers/card/crop.webp"),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/card/crop.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/card/crop.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/card-crop.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -397,7 +407,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -417,7 +427,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Hero, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/manual/game/cover.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/manual/game/cover.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/manual.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Hero, _blob.Object);
@@ -440,9 +450,9 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata, "covers/card/stale.webp"),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/card/stale.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/card/stale.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync((string?)null);
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -464,7 +474,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -486,9 +496,9 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync((string?)null);
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -509,7 +519,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Hero, CoverAssignmentSource.Wikidata, "covers/hero/crop.webp"),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -530,9 +540,9 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Hero, CoverAssignmentSource.Manual, "covers/hero/crop.webp"),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/card/crop.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/card/crop.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/card.webp");
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/hero/crop.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("covers/hero/crop.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/hero.webp");
 
         (await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object))
@@ -553,7 +563,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/manual.webp");
 
         await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -579,7 +589,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -597,7 +607,7 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicWithSourceAsync_PdfWins_ReturnsPdfKind()
     {
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key", WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var result = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
@@ -610,7 +620,7 @@ public class CoverUrlResolverTests
     public async Task ResolvePublicWithSourceAsync_WikidataWins_ReturnsWikidataKind()
     {
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var result = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
@@ -633,7 +643,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
@@ -648,7 +658,7 @@ public class CoverUrlResolverTests
     {
         using var capture = new CoverMetricsCapture();
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolvePublicAsync(sg, _blob.Object);
@@ -676,7 +686,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Hero, CoverAssignmentSource.Wikidata),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
@@ -700,7 +710,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Hero, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
@@ -715,7 +725,7 @@ public class CoverUrlResolverTests
         // No assignment for the resolved context → pure implicit precedence, and the
         // winning Kind is reported so callers keep source-aware attribution.
         var sg = new SharedGameEntity { WikidataCoverR2Key = "wiki-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var result = await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Card, _blob.Object);
@@ -753,7 +763,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Hero, CoverAssignmentSource.Manual),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/manual.webp");
 
         await CoverUrlResolver.ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
@@ -778,7 +788,7 @@ public class CoverUrlResolverTests
                 Assignment(CoverContext.Card, CoverAssignmentSource.Wikidata),
             },
         };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
 
         var url = await CoverUrlResolver.ResolveForContextAsync(sg, CoverContext.Card, _blob.Object);
@@ -806,7 +816,7 @@ public class CoverUrlResolverTests
             },
         };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = "custom-key" };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("custom-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/custom.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
@@ -833,13 +843,85 @@ public class CoverUrlResolverTests
             },
         };
         var entry = new UserLibraryEntryEntity { CustomCoverR2Key = null };
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/wiki.webp");
-        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", null))
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
              .ReturnsAsync("https://r2/pdf.webp");
 
         var url = await CoverUrlResolver.ResolveForUserAsync(sg, entry, CoverContext.Card, _blob.Object);
 
         url.Should().Be("https://r2/wiki.webp");
+    }
+
+    // ----- Issue #3611: default focal point --------------------------------
+
+    // CoverKind is internal (SharedKernel/Domain/Covers/CoverKeyBuilder.cs) and this
+    // test class is public (required for xUnit v3 discovery — an internal test class
+    // silently collects zero tests in this project). A public Theory method cannot
+    // declare an internal type as a parameter (CS0051), so the enum crosses the
+    // InlineData boundary as its underlying int and is cast back inside the body.
+    [Theory]
+    [InlineData((int)CoverKind.Pdf, 0.5, 0.2)]
+    [InlineData((int)CoverKind.Bgg, 0.5, 0.5)]
+    [InlineData((int)CoverKind.Wikidata, 0.5, 0.5)]
+    [InlineData((int)CoverKind.Manual, 0.5, 0.5)]
+    [InlineData((int)CoverKind.User, 0.5, 0.5)]
+    public void DefaultFocalFor_AnchorsPdfHigh_CentersEveryOtherSource(
+        int kindValue, double expectedX, double expectedY)
+    {
+        var kind = (CoverKind)kindValue;
+        var focal = CoverUrlResolver.DefaultFocalFor(kind);
+
+        focal.X.Should().Be(expectedX);
+        focal.Y.Should().Be(expectedY);
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_PdfCover_CarriesTheHighAnchorDefault()
+    {
+        var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var cover = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        cover.Kind.Should().Be(CoverKind.Pdf);
+        cover.FocalY.Should().Be(0.2);
+    }
+
+    [Fact]
+    public async Task ResolveForContextWithSourceAsync_AssignmentFocal_BeatsTheHeuristic()
+    {
+        var sg = new SharedGameEntity { PdfCoverR2Key = "pdf-key" };
+        sg.CoverAssignments.Add(new GameCoverAssignmentEntity
+        {
+            Context = CoverContext.Hero,
+            Source = CoverAssignmentSource.Pdf,
+            FocalX = 0.4,
+            FocalY = 0.75,
+        });
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+             .ReturnsAsync("https://r2/pdf.webp");
+
+        var cover = await CoverUrlResolver
+            .ResolveForContextWithSourceAsync(sg, CoverContext.Hero, _blob.Object);
+
+        cover.FocalX.Should().Be(0.4);
+        cover.FocalY.Should().Be(0.75);
+    }
+
+    [Fact]
+    public async Task ResolvePublicWithSourceAsync_NoCover_EmitsPlaceholderOnceAndCentersFocal()
+    {
+        using var capture = new CoverMetricsCapture();
+        var sg = new SharedGameEntity();
+
+        var cover = await CoverUrlResolver.ResolvePublicWithSourceAsync(sg, _blob.Object);
+
+        cover.Url.Should().BeNull();
+        cover.FocalX.Should().Be(0.5);
+        cover.FocalY.Should().Be(0.5);
+        capture.LongMeasurements.Should().ContainSingle()
+            .Which.Tags["source"].Should().Be("placeholder");
     }
 }

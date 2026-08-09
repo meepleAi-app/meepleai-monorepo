@@ -43,12 +43,12 @@ public class OpenRouterHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "OpenRouter health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("OpenRouter API unavailable", ex);
+            return HealthCheckResult.Degraded("OpenRouter API unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "OpenRouter health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("OpenRouter connectivity check failed", ex);
+            return HealthCheckResult.Degraded("OpenRouter connectivity check failed", ex);
         }
     }
 }

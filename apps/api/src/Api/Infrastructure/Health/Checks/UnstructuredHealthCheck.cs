@@ -30,9 +30,11 @@ public class UnstructuredHealthCheck : IHealthCheck
         var unstructuredUrl = _configuration["PdfProcessing:Extractor:Unstructured:ApiUrl"];
         if (string.IsNullOrWhiteSpace(unstructuredUrl))
         {
-            // Provider selected but URL missing — real misconfiguration, surface as Unhealthy
-            // so monitoring catches it (consistent with OllamaHealthCheck handling).
-            return HealthCheckResult.Unhealthy("Unstructured API URL missing — provider selected but PdfProcessing:Extractor:Unstructured:ApiUrl unset");
+            // Provider selected but URL missing — real misconfiguration. Surface Degraded,
+            // not Unhealthy: this check is NonCritical/Optional and must not 503 the
+            // aggregate /health (#3618). Monitoring still catches it — HealthStateMachine
+            // treats any non-Healthy result as a failure (consistent with OllamaHealthCheck).
+            return HealthCheckResult.Degraded("Unstructured API URL missing — provider selected but PdfProcessing:Extractor:Unstructured:ApiUrl unset");
         }
 
         try
@@ -57,12 +59,12 @@ public class UnstructuredHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Unstructured API health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Unstructured API unavailable", ex);
+            return HealthCheckResult.Degraded("Unstructured API unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unstructured API health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Unstructured API check failed", ex);
+            return HealthCheckResult.Degraded("Unstructured API check failed", ex);
         }
     }
 }

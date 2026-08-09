@@ -42,12 +42,61 @@ internal static class CoverUrlResolver
     private const string SourceTag = "source";
 
     /// <summary>
-    /// The outcome of a source-aware resolution: the presigned <see cref="Url"/>
-    /// (null on placeholder/miss) and the <see cref="Kind"/> of the layer that won
-    /// (null on placeholder). Lets the caller gate license/attribution on the actual
-    /// winning source rather than emitting it unconditionally (epic #3470 Slice 1d-a).
+    /// Issue #3620 — presigned URL lifetime used for EVERY cover resolution this
+    /// resolver performs. The resolved URL is baked verbatim into the DTOs cached by
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameByIdQueryHandler"/>
+    /// (L2 Redis: 2h) and
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.SearchSharedGamesQueryHandler"/>
+    /// (L2 Redis: 1h) — the factory that resolves the cover runs INSIDE the cache's
+    /// <c>GetOrCreateAsync</c>, so the presign is resolved once and reused for the
+    /// entire cache entry lifetime. Before this fix the resolver always passed a null
+    /// <c>expirySeconds</c>, so every call fell back to
+    /// <see cref="S3StorageOptions.PresignedUrlExpirySeconds"/> (1h default) — shorter
+    /// than the 2h detail-cache TTL, so up to 1h of every 2h cache window served an
+    /// already-expired presigned URL (silently: <c>Cover.tsx</c>'s <c>onError</c> just
+    /// swaps in the placeholder, no error surfaces).
+    ///
+    /// Sized at 4h: 2h of explicit margin above the longest cache TTL today (the 2h
+    /// detail L2 TTL). The margin is deliberate, not a coincidence of rounding — a
+    /// future cache-TTL bump that eats into it should be a conscious trade-off, not a
+    /// silent regression. <c>CoverPresignCacheInvariantTests</c> asserts the numeric
+    /// relationship mechanically (reading both sides from their named constants) so the
+    /// invariant survives someone changing one file without knowing about the other.
+    ///
+    /// Covers are public, non-sensitive content, so widening only their presign
+    /// validity does not change the security posture of PDFs/backups/other artifacts,
+    /// which stay on the shorter <see cref="S3StorageOptions.PresignedUrlExpirySeconds"/>
+    /// (1h) — this constant is passed explicitly to every
+    /// <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/> call below instead
+    /// of relying on that shared default.
     /// </summary>
-    internal readonly record struct ResolvedCover(string? Url, CoverKind? Kind);
+    internal const int CoverPresignExpirySeconds = 4 * 60 * 60; // 4 hours
+
+    /// <summary>
+    /// The outcome of a source-aware resolution: the presigned <see cref="Url"/>
+    /// (null on placeholder/miss), the <see cref="Kind"/> of the layer that won
+    /// (null on placeholder), and the crop <see cref="FocalX"/>/<see cref="FocalY"/>
+    /// point (issue #3611) — an admin assignment's pinned focal point when it wins,
+    /// otherwise <see cref="DefaultFocalFor"/> for the winning <see cref="Kind"/>.
+    /// Lets the caller gate license/attribution on the actual winning source rather
+    /// than emitting it unconditionally (epic #3470 Slice 1d-a).
+    /// </summary>
+    internal readonly record struct ResolvedCover(
+        string? Url,
+        CoverKind? Kind,
+        double FocalX = 0.5,
+        double FocalY = 0.5);
+
+    /// <summary>
+    /// Punto focale di default quando nessuna assegnazione admin lo fissa (#3611).
+    /// Le cover derivate da PDF portano titolo e illustrazione in alto e corpo del
+    /// testo al centro, quindi un crop centrato produce una banda di testo; le cover
+    /// d'artwork (BGG/Wikidata/Manual) hanno il soggetto al centro e vanno lasciate lì.
+    /// Funzione pura: nessuna riga scritta, nessun backfill, il valore si corregge
+    /// cambiando questa costante.
+    /// </summary>
+    internal static (double X, double Y) DefaultFocalFor(CoverKind kind) =>
+        kind == CoverKind.Pdf ? (0.5, 0.2) : (0.5, 0.5);
 
     /// <summary>
     /// Per-user resolution with the full layering (epic #3470 Slice 2c / SD3 / AC-4):
@@ -70,7 +119,8 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, userEntry.CustomCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.User, userEntry.CustomCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
@@ -115,12 +165,14 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, sharedGame.PdfCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, sharedGame.PdfCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
                 EmitResolution("r2_pdf");
-                return new ResolvedCover(url, CoverKind.Pdf);
+                var focal = DefaultFocalFor(CoverKind.Pdf);
+                return new ResolvedCover(url, CoverKind.Pdf, focal.X, focal.Y);
             }
         }
 
@@ -135,12 +187,14 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Bgg, sharedGame.BggCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Bgg, sharedGame.BggCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
                 EmitResolution("r2_bgg");
-                return new ResolvedCover(url, CoverKind.Bgg);
+                var focal = DefaultFocalFor(CoverKind.Bgg);
+                return new ResolvedCover(url, CoverKind.Bgg, focal.X, focal.Y);
             }
         }
 
@@ -149,12 +203,14 @@ internal static class CoverUrlResolver
         {
             var url = await blobStorage
                 .GetPresignedUrlForRawKeyAsync(
-                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Wikidata, sharedGame.WikidataCoverR2Key))
+                    CoverKeyBuilder.PhysicalKeyFor(CoverKind.Wikidata, sharedGame.WikidataCoverR2Key),
+                    CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (url is not null)
             {
                 EmitResolution("r2_wikidata");
-                return new ResolvedCover(url, CoverKind.Wikidata);
+                var focal = DefaultFocalFor(CoverKind.Wikidata);
+                return new ResolvedCover(url, CoverKind.Wikidata, focal.X, focal.Y);
             }
         }
 
@@ -198,6 +254,19 @@ internal static class CoverUrlResolver
     /// precedence winner from <see cref="ResolvePublicWithSourceAsync"/>. Owns exactly one
     /// <see cref="MeepleAiMetrics.CoverResolution"/> emission per call.
     /// </summary>
+    /// <remarks>
+    /// Double-crop pitfall: when the winning URL is an already-rendered per-context crop
+    /// (<c>assignment.GeneratedR2Key</c>, e.g. the Social crop this affordance can now
+    /// produce), the returned <see cref="ResolvedCover.FocalX"/>/<see cref="ResolvedCover.FocalY"/>
+    /// still reflect the assignment's pinned focal point — the point used to PRODUCE that crop,
+    /// not a point meant to be re-applied to it. Today this is harmless: the only context that
+    /// renders a crop (<see cref="CoverContext.Social"/>) has a single caller, and that caller
+    /// uses the source-blind <see cref="ResolveForContextAsync"/> overload, which never exposes
+    /// the focal point. A future caller that passes <see cref="CoverContext.Social"/> to THIS
+    /// overload and applies <c>object-position</c> from the returned focal point would double-crop
+    /// the image. Callers of this overload must check whether the resolved URL is a rendered
+    /// crop before treating the focal point as a CSS crop hint.
+    /// </remarks>
     public static async Task<ResolvedCover> ResolveForContextWithSourceAsync(
         SharedGameEntity sharedGame,
         CoverContext context,
@@ -216,7 +285,11 @@ internal static class CoverUrlResolver
             if (overrideUrl is not null)
             {
                 EmitResolution(SourceTagFor(assignment.Source));
-                return new ResolvedCover(overrideUrl, assignment.Source.ToCoverKind());
+                return new ResolvedCover(
+                    overrideUrl,
+                    assignment.Source.ToCoverKind(),
+                    assignment.FocalX,
+                    assignment.FocalY);
             }
             // Override present but unresolvable (crop stale AND base key
             // absent/unreachable). Intentionally NO metric emission here — the
@@ -244,7 +317,7 @@ internal static class CoverUrlResolver
         if (!string.IsNullOrWhiteSpace(assignment.GeneratedR2Key))
         {
             var cropUrl = await blobStorage
-                .GetPresignedUrlForRawKeyAsync(assignment.GeneratedR2Key)
+                .GetPresignedUrlForRawKeyAsync(assignment.GeneratedR2Key, CoverPresignExpirySeconds)
                 .ConfigureAwait(false);
             if (cropUrl is not null)
             {
@@ -263,7 +336,7 @@ internal static class CoverUrlResolver
         }
 
         return await blobStorage
-            .GetPresignedUrlForRawKeyAsync(CoverKeyBuilder.PhysicalKeyFor(kind, baseKey))
+            .GetPresignedUrlForRawKeyAsync(CoverKeyBuilder.PhysicalKeyFor(kind, baseKey), CoverPresignExpirySeconds)
             .ConfigureAwait(false);
     }
 

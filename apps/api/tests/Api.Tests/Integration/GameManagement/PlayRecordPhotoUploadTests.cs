@@ -101,6 +101,9 @@ public sealed class PlayRecordPhotoUploadTests : IAsyncLifetime
 
         public Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
             => Task.FromResult(true);
+
+        public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+            => Task.FromResult<Stream?>(null);
     }
 
     // ---------------------------------------------------------------------------

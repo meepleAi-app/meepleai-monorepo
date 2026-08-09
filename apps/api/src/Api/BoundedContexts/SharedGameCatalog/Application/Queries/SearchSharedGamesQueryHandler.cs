@@ -19,7 +19,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// <summary>
 /// Handler for searching shared games with full-text search and filtering.
 /// Uses PostgreSQL full-text search for optimal Italian language support.
-/// Uses HybridCache (L1: 15min, L2: 1h) with query parameter hashing.
+/// Uses HybridCache (see <see cref="SearchCacheL1Expiration"/> / <see cref="SearchCacheL2Expiration"/>) with query parameter hashing.
 /// Issue #2371 Phase 2
 /// </summary>
 internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchSharedGamesQuery, PagedResult<SharedGameDto>>
@@ -44,6 +44,24 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
     /// <c>sp3-shared-games.jsx:127</c> uses <c>newWeek &gt;= 2</c>.
     /// </summary>
     private const int IsNewMinThreshold = 2;
+
+    /// <summary>
+    /// L1 (in-process Memory) cache lifetime for a search results page.
+    /// </summary>
+    internal static readonly TimeSpan SearchCacheL1Expiration = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// L2 (Redis) cache lifetime for a search results page. Issue #3620: each cached
+    /// page's <see cref="SharedGameDto"/> items carry a resolved cover presigned URL
+    /// (<c>ExecuteSearchAsync</c> resolves via <c>CoverUrlResolver</c> INSIDE the
+    /// cache's <c>GetOrCreateAsync</c> factory), so
+    /// <c>CoverUrlResolver.CoverPresignExpirySeconds</c> must exceed this TTL with an
+    /// explicit margin — mechanically enforced by
+    /// <c>CoverPresignCacheInvariantTests</c> against
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetSharedGameByIdQueryHandler.DetailCacheL2Expiration"/>
+    /// (the longer of the two) rather than left as an implicit assumption.
+    /// </summary>
+    internal static readonly TimeSpan SearchCacheL2Expiration = TimeSpan.FromHours(1);
 
     private readonly MeepleAiDbContext _context;
     private readonly IBlobStorageService _blobStorage;
@@ -95,7 +113,7 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             query.MechanicIds?.Count ?? 0,
             query.PageNumber);
 
-        // Try cache first (L1: 15min, L2: 1h).
+        // Try cache first (see SearchCacheL1Expiration / SearchCacheL2Expiration).
         // Tagged "search-games" so event handlers (e.g. VectorDocumentIndexedForKbFlagHandler)
         // can invalidate the whole namespace on relevant domain events.
         return await _cache.GetOrCreateAsync<PagedResult<SharedGameDto>>(
@@ -103,8 +121,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             async cancel => await ExecuteSearchAsync(query, cancel).ConfigureAwait(false),
             new HybridCacheEntryOptions
             {
-                LocalCacheExpiration = TimeSpan.FromMinutes(15),  // L1
-                Expiration = TimeSpan.FromHours(1)  // L2
+                LocalCacheExpiration = SearchCacheL1Expiration,  // L1
+                Expiration = SearchCacheL2Expiration  // L2
             },
             tags: _searchGamesTags,
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -461,6 +479,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 // IsNew: derived from NewThisWeekCount per mockup sp3-shared-games.jsx:127.
                 p.NewThisWeekCount >= IsNewMinThreshold,
                 CoverUrl: cover.Url,
+                CoverFocalX: cover.FocalX,
+                CoverFocalY: cover.FocalY,
                 // Epic #3470 Slice 1d-a — attribution follows the winning source.
                 CoverLicense: coverLicense,
                 CoverAttribution: coverAttribution,
@@ -471,8 +491,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         // for the page. Batch one round-trip via IGameTitleResolver.GetByGameIdsAsync.
         // Enrichment lives inside ExecuteSearchAsync so cached payloads include the
         // translations — invalidation is governed by the `search-games` cache tag and
-        // the 1h L2 TTL, both acceptable given translations are admin-curated and
-        // change rarely.
+        // the SearchCacheL2Expiration TTL, both acceptable given translations are
+        // admin-curated and change rarely.
         var enriched = await _titleResolver
             .EnrichAsync(games, cancellationToken)
             .ConfigureAwait(false);

@@ -215,9 +215,21 @@ jobs:
         working-directory: apps/api
         run: dotnet build --no-restore --configuration Release
 
-      - name: Unit tests
+      # Issue #3622: deny-list, NON `Category=Unit`. Con la allow-list un test privo di
+      # `[Trait("Category", …)]` non finiva in alcun filtro e quindi non veniva eseguito da NESSUN
+      # workflow — non falliva e non risultava saltato: semplicemente non esisteva per la CI (1326
+      # test, 82 file). La dimenticanza era silenziosa in entrambe le direzioni: chi scriveva un
+      # test nuovo non riceveva alcun segnale che non sarebbe mai stato eseguito.
+      #
+      # Invertendo il default il comportamento predefinito diventa sicuro: si esegue tutto tranne
+      # ciò che è esplicitamente marcato come lento o infra-dipendente. Le categorie escluse sono
+      # pinnate da TestCategoryGateArchitectureTests, che fallisce se ne compare una nuova — senza
+      # quel guard la deny-list tornerebbe incompleta al primo `Category` inedito.
+      - name: Unit tests (everything not explicitly slow/infra — #3622)
         working-directory: apps/api/tests/Api.Tests
-        run: dotnet test --no-build --configuration Release --filter "Category=Unit" --verbosity quiet
+        run: |
+          dotnet test --no-build --configuration Release --verbosity quiet \
+            --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow"
 
   migration-safety:
     # Issue #1087: block PRs that introduce forbidden migration patterns per

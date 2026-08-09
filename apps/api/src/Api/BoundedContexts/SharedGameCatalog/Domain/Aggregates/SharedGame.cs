@@ -759,6 +759,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
             return;
 
         _pdfCoverR2Key = coverR2Key;
+        InvalidateCropsDerivedFrom(CoverAssignmentSource.Pdf);
     }
 
     /// <summary>
@@ -780,6 +781,29 @@ public sealed class SharedGame : AggregateRoot<Guid>
             return;
 
         _bggCoverR2Key = coverR2Key;
+        InvalidateCropsDerivedFrom(CoverAssignmentSource.Bgg);
+    }
+
+    /// <summary>
+    /// Issue #3615 — drops the rendered per-context crops pinned to <paramref name="source"/>,
+    /// because the base image they were derived from has just been replaced.
+    ///
+    /// <para>
+    /// Called from the base-cover setters AFTER their idempotency guard, so a re-write of the same
+    /// key changes nothing. Only assignments pinned to that exact source are touched: a Social crop
+    /// of the Wikidata cover is unaffected by the PDF pipeline regenerating its own image.
+    /// </para>
+    /// <para>
+    /// Without this the crop keeps serving the OLD image indefinitely — nothing regenerates it, and
+    /// the staleness is invisible because the assignment row still looks perfectly valid.
+    /// </para>
+    /// </summary>
+    private void InvalidateCropsDerivedFrom(CoverAssignmentSource source)
+    {
+        foreach (var assignment in _coverAssignments.Where(a => a.Source == source))
+        {
+            assignment.InvalidateGeneratedCrop();
+        }
     }
 
     /// <summary>
@@ -874,11 +898,21 @@ public sealed class SharedGame : AggregateRoot<Guid>
         if (string.IsNullOrWhiteSpace(sourceUrl))
             throw new ArgumentException("Source URL cannot be empty.", nameof(sourceUrl));
 
+        // #3615: unlike SetPdfCoverR2Key/SetBggCover this method has no idempotency guard — the
+        // quarterly re-verification calls it with the SAME key just to refresh verifiedAt. Compare
+        // before writing so a no-op re-verification does not throw away a perfectly valid crop.
+        var coverImageChanged = !string.Equals(_wikidataCoverR2Key, r2Key, StringComparison.Ordinal);
+
         _wikidataCoverR2Key = r2Key;
         _wikidataCoverLicense = license;
         _wikidataCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
         _wikidataCoverSourceUrl = sourceUrl;
         _wikidataQidLastVerifiedAt = verifiedAt;
+
+        if (coverImageChanged)
+        {
+            InvalidateCropsDerivedFrom(CoverAssignmentSource.Wikidata);
+        }
     }
 
     /// <summary>
@@ -908,12 +942,21 @@ public sealed class SharedGame : AggregateRoot<Guid>
         if (attestedBy == Guid.Empty)
             throw new ArgumentException("AttestedBy cannot be empty.", nameof(attestedBy));
 
+        // #3615: as in SetWikidataCover, compare before writing — a re-attestation that keeps the
+        // same image must not discard a crop rendered from it.
+        var coverImageChanged = !string.Equals(_manualCoverR2Key, r2Key, StringComparison.Ordinal);
+
         _manualCoverR2Key = r2Key;
         _manualCoverLicense = license;
         _manualCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
         _manualCoverSourceUrl = sourceUrl;
         _manualCoverAttestedBy = attestedBy;
         _manualCoverAttestedAt = attestedAt;
+
+        if (coverImageChanged)
+        {
+            InvalidateCropsDerivedFrom(CoverAssignmentSource.Manual);
+        }
     }
 
     /// <summary>

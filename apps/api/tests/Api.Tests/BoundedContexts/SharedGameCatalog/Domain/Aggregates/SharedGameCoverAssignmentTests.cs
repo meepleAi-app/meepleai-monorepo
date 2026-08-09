@@ -162,4 +162,121 @@ public sealed class SharedGameCoverAssignmentTests
         a.GeneratedR2Key.Should().BeNull("moving the focal point invalidates the stale crop");
         a.UpdatedBy.Should().Be(Admin2Id);
     }
+
+    // ── #3615: the base cover changing underneath a rendered crop ────────────────────────
+    //
+    // ChangeSource/SetFocalPoint cover «the admin changed their mind». The opposite direction —
+    // nobody touches the assignment, but the pipeline regenerates the base image — left the crop
+    // pointing at the old picture indefinitely, because nothing regenerates it. Clearing the key
+    // makes the resolver fall back to the NEW base cover instead of serving a stale crop.
+
+    [Fact]
+    public void SetPdfCoverR2Key_NewKey_InvalidatesCropsPinnedToPdf()
+    {
+        var game = NewGame();
+        game.SetPdfCoverR2Key("covers/g/cover-preview");
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Pdf, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetPdfCoverR2Key("covers/g/cover-preview-v2");
+
+        a.GeneratedR2Key.Should().BeNull("the image the crop was rendered from no longer exists");
+    }
+
+    [Fact]
+    public void SetBggCover_NewKey_InvalidatesCropsPinnedToBgg()
+    {
+        var game = NewGame();
+        game.SetBggCover("covers/g/bgg");
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Bgg, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetBggCover("covers/g/bgg-v2");
+
+        a.GeneratedR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetPdfCoverR2Key_SameKey_KeepsTheCrop()
+    {
+        // Re-writing the identical key is a no-op upstream (the event handler is idempotent):
+        // discarding a valid crop there would degrade the Social rendering for nothing.
+        var game = NewGame();
+        game.SetPdfCoverR2Key("covers/g/cover-preview");
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Pdf, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetPdfCoverR2Key("covers/g/cover-preview");
+
+        a.GeneratedR2Key.Should().Be("covers/crops/g/social.webp");
+    }
+
+    [Fact]
+    public void SetPdfCoverR2Key_DoesNotTouchCropsPinnedToAnotherSource()
+    {
+        // The PDF pipeline regenerating its own image says nothing about a crop rendered from the
+        // Wikidata cover: invalidating it would throw away a perfectly current file.
+        var game = NewGame();
+        game.SetWikidataCover("covers/g/cover", "CC BY-SA 4.0", null, "https://www.wikidata.org/entity/Q1", DateTime.UtcNow);
+        var wikidataCrop = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Wikidata, AdminId);
+        wikidataCrop.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetPdfCoverR2Key("covers/g/cover-preview");
+
+        wikidataCrop.GeneratedR2Key.Should().Be("covers/crops/g/social.webp");
+    }
+
+    [Fact]
+    public void SetWikidataCover_SameImageReVerified_KeepsTheCrop()
+    {
+        // SetWikidataCover has no idempotency guard: the quarterly re-verification calls it with
+        // the same key just to refresh verifiedAt. That must not cost the crop.
+        var game = NewGame();
+        game.SetWikidataCover("covers/g/cover", "CC BY-SA 4.0", null, "https://www.wikidata.org/entity/Q1", DateTime.UtcNow);
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Wikidata, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetWikidataCover("covers/g/cover", "CC BY-SA 4.0", null, "https://www.wikidata.org/entity/Q1", DateTime.UtcNow.AddDays(90));
+
+        a.GeneratedR2Key.Should().Be("covers/crops/g/social.webp", "only a NEW image invalidates the crop");
+    }
+
+    [Fact]
+    public void SetWikidataCover_NewImage_InvalidatesTheCrop()
+    {
+        var game = NewGame();
+        game.SetWikidataCover("covers/g/cover", "CC BY-SA 4.0", null, "https://www.wikidata.org/entity/Q1", DateTime.UtcNow);
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Wikidata, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetWikidataCover("covers/g/cover-v2", "CC BY-SA 4.0", null, "https://www.wikidata.org/entity/Q1", DateTime.UtcNow);
+
+        a.GeneratedR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetManualCover_NewImage_InvalidatesTheCrop()
+    {
+        var game = NewGame();
+        game.SetManualCover("covers/g/manual", "CC0", null, "https://example.com/a", AdminId, DateTime.UtcNow);
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Manual, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetManualCover("covers/g/manual-v2", "CC0", null, "https://example.com/b", AdminId, DateTime.UtcNow);
+
+        a.GeneratedR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public void SetManualCover_SameImageReAttested_KeepsTheCrop()
+    {
+        var game = NewGame();
+        game.SetManualCover("covers/g/manual", "CC0", null, "https://example.com/a", AdminId, DateTime.UtcNow);
+        var a = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Manual, AdminId);
+        a.SetGeneratedKey("covers/crops/g/social.webp");
+
+        game.SetManualCover("covers/g/manual", "CC BY 4.0", "Artist", "https://example.com/a", Admin2Id, DateTime.UtcNow);
+
+        a.GeneratedR2Key.Should().Be("covers/crops/g/social.webp");
+    }
 }

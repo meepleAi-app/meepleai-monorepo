@@ -1,4 +1,5 @@
 using Amazon.S3;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
@@ -293,6 +294,14 @@ internal sealed class EnrichCatalogCoverCommandHandler
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             game = fresh;
         }
+
+        // #3615: the Wikidata base image was replaced, so a Social crop rendered from the previous
+        // one now shows the wrong picture and nothing regenerates it. Clearing the key falls back
+        // to the new base cover. Placed after BOTH persistence paths (first attempt and the
+        // concurrency retry) so it runs exactly once, on a committed change.
+        await _repository
+            .InvalidateGeneratedCropsAsync(game.Id, CoverAssignmentSource.Wikidata, cancellationToken)
+            .ConfigureAwait(false);
 
         // Issue #3138: the cover columns changed — evict the SharedGameCatalog read-model
         // caches so /shared-games (list) and /shared-games/{id} (detail) reflect the new

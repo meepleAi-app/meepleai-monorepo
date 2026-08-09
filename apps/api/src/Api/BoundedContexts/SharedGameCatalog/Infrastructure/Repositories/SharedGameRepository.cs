@@ -281,6 +281,25 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         }
     }
 
+    public async Task<int> InvalidateGeneratedCropsAsync(
+        Guid gameId,
+        CoverAssignmentSource source,
+        CancellationToken cancellationToken = default)
+    {
+        // Filtered on GeneratedR2Key != null so the statement is a no-op (0 rows) for the common
+        // case of a game with no rendered crop — which is every game until an admin pins a Social
+        // assignment. Cheaper than loading the collection to find out there was nothing to do.
+        return await DbContext.Set<GameCoverAssignmentEntity>()
+            .Where(a => a.SharedGameId == gameId
+                        && a.Source == source
+                        && a.GeneratedR2Key != null)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(a => a.GeneratedR2Key, (string?)null)
+                      .SetProperty(a => a.UpdatedAt, DateTime.UtcNow),
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<bool> ExistsByBggIdAsync(int bggId, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<SharedGameEntity>()

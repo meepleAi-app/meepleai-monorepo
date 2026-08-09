@@ -1,17 +1,18 @@
-using System.Security.Cryptography;
-using System.Text.Json;
 using Api.BoundedContexts.SecurityAudit.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Observability;
-using Api.Services;
 using Api.Services.Pdf;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -144,6 +145,13 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
             }));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #3615: replacing the manual image leaves any crop rendered from the previous one stale,
+        // and nothing regenerates it. Clearing the key falls back to the new base cover. Targeted
+        // UPDATE after the save — see ISharedGameRepository.InvalidateGeneratedCropsAsync.
+        await _repository
+            .InvalidateGeneratedCropsAsync(game.Id, CoverAssignmentSource.Manual, cancellationToken)
+            .ConfigureAwait(false);
 
         // The cover columns the read-model resolves changed → evict the list + detail caches (AC-6).
         await CoverCacheInvalidation

@@ -10,7 +10,28 @@
 name: E2E Cover R2-strict
 
 on:
-  workflow_dispatch: {} # manuale finché il wiring non è provato verde, poi aggiungere pull_request paths.
+  workflow_dispatch: {}
+  # Provato verde il 2026-08-09 (run 31288477838), quindi da manuale a gate reale: un job che gira
+  # solo su richiesta non protegge nulla. `paths` limita il costo (~10 min, build Docker completa)
+  # ai soli file che possono rompere la catena cover → presign → CSP → caricamento nel browser.
+  pull_request:
+    paths:
+      # Presign e risoluzione della cover lato backend.
+      - 'apps/api/src/Api/Services/Pdf/**'
+      - 'apps/api/src/Api/SharedKernel/Domain/Covers/**'
+      - 'apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/CoverUrlResolver.cs'
+      # CSP: due sorgenti indipendenti che il browser interseca — entrambe possono bloccare
+      # l'immagine presignata senza che nulla lo segnali fuori da questo job.
+      - 'apps/web/src/proxy.ts'
+      - 'apps/web/lib/security/csp.js'
+      - 'apps/web/next.config.js'
+      # L'opt-in CSP passa da un build arg: una modifica qui lo può far sparire silenziosamente.
+      - 'apps/web/Dockerfile'
+      - 'infra/compose.e2e-storage.yml'
+      # Lo spec, la fixture e il workflow stesso.
+      - 'apps/web/e2e/smoke-real-backend/**'
+      - 'tests/fixtures/cover-r2-strict.sql'
+      - '.github/workflows/e2e-cover-r2-strict.yml'
 
 concurrency:
   group: e2e-cover-r2-strict-${{ github.ref }}

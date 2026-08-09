@@ -62,12 +62,54 @@ jobs:
             orchestration:
               - 'apps/orchestration-service/**'
 
+  # Issue #3629: questo job andava in timeout su 18 run su 20 e GitHub lo marcava `cancelled`.
+  # Un `cancelled` si legge come «annullato», non come «fallito», quindi per settimane su main-dev
+  # NON è esistito alcun esito per i ~3000 test Category=Integration — né verde né rosso — e i
+  # [FAIL] reali nel log non hanno mai prodotto un segnale.
+  #
+  # La causa non era la quantità di test: in ci.yml gli stessi test girano in 1.9 / 2.1 / 4.1 minuti
+  # per shard. Era che qui ogni fixture avviava Testcontainers da zero, mentre ci.yml passa
+  # TEST_POSTGRES_CONNSTRING / TEST_REDIS_CONNSTRING e SharedTestcontainersFixture salta del tutto
+  # l'avvio dei container. Questo job è ora allineato a quel percorso.
   backend-integration:
     name: Backend Integration (Testcontainers)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 30 min: ~8 min di test (somma misurata degli shard ci.yml) + build Release + setup, con
+    # margine per la varianza del runner. È la RETE DI SICUREZZA, non il limite operativo: quello è
+    # il TestSessionTimeout sotto, deliberatamente più basso perché a sforare sia un errore di test
+    # esplicito e non di nuovo un job ucciso in silenzio.
+    timeout-minutes: 30
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+
+    # Stessi service container di ci.yml: sostituiscono i Testcontainers avviati per-fixture, che
+    # erano il vero costo.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16  # Issue #3547: pgvector per le colonne Vector
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --shm-size=256mb
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 6379:6379
+
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-backend
@@ -81,5 +123,34 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Integration tests
-        working-directory: apps/api/tests/Api.Tests
-        run: dotnet test --no-build --configuration Release --filter "Category=Integration" --verbosity quiet
+        working-directory: apps/api
+        env:
+          # MaxPoolSize=2 + ClearAllPools() nel teardown: evita l'accumulo contro max_connections.
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
+          # Queste due sono il punto: SharedTestcontainersFixture le legge e NON avvia i container.
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
+          TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
+          REDIS_URL: localhost:6379,allowAdmin=true
+          OPENROUTER_API_KEY: test-key
+          CI: true
+          DISABLE_RATE_LIMITING: "true"  # Issue #3102: evita i 429 nei test di integrazione
+        run: |
+          # Target esplicito del .csproj (PR #1505): `dotnet test` sulla solution invocherebbe anche
+          # Api.Analyzers.Tests.dll, che non ha test Category=Integration, e vstest tratta il
+          # no-match su un assembly non vuoto come exit 1.
+          #
+          # Stesse esclusioni per nome di ci.yml, così i due gate misurano lo stesso insieme: una
+          # divergenza qui riporterebbe il difetto di #3622 (test che nessun gate esegue) su un
+          # altro asse.
+          #
+          # TestSessionTimeout sovrascritto a 20 min (il runsettings condiviso dichiara 45, tarato
+          # sugli shard di ci.yml): deve scattare PRIMA del timeout-minutes: 30 del job, altrimenti
+          # si torna a un `cancelled` muto invece di un errore leggibile.
+          dotnet test tests/Api.Tests/Api.Tests.csproj \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent" \
+            --settings tests/Api.Tests/integration.runsettings \
+            --no-build \
+            --configuration Release \
+            --logger "console;verbosity=minimal" \
+            --blame-hang-timeout 5min \
+            -- RunConfiguration.TestSessionTimeout=1200000

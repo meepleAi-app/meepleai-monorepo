@@ -575,9 +575,12 @@ jobs:
         run: |
           echo "🧪 Running unit tests with dotnet-coverage..."
           mkdir -p coverage
+          # Issue #3622: deny-list anziché `Category=Unit` — un test privo di trait non finiva in
+          # alcun filtro e non veniva eseguito da NESSUN workflow. Tenere allineata a dev-fast.yml;
+          # le categorie escluse sono pinnate da TestCategoryGateArchitectureTests.
           dotnet-coverage collect \
             "dotnet test MeepleAI.Api.sln \
-              --filter Category=Unit \
+              --filter \"Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow\" \
               --settings tests/Api.Tests/unit.runsettings \
               --no-build \
               --configuration Release \

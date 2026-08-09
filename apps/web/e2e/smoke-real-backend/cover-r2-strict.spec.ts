@@ -23,6 +23,15 @@ import { smokeLogin, applySessionToPage } from './_helpers/auth';
 /** Titolo del gioco seeded da tests/fixtures/cover-r2-strict.sql. */
 const SEEDED_GAME_TITLE = process.env.E2E_COVER_GAME_TITLE ?? 'Catan R2 Strict';
 const MINIO_PRESIGN_HOST = 'localhost:9000';
+/**
+ * Origin ATTESO del presign, non solo l'host: deve combaciare con `S3_PUBLIC_ENDPOINT` in
+ * `infra/compose.e2e-storage.yml`. Lo schema fa parte dell'invariante perché l'SDK AWS sceglie il
+ * protocollo di un URL presignato da `AmazonS3Config.UseHttp`, NON dallo schema di `ServiceURL`:
+ * un endpoint cleartext può quindi presignare `https://` verso un MinIO in chiaro. Quel caso ha
+ * host corretto e schema sbagliato, quindi un assert sul solo host lo lascia passare e il test
+ * muore più avanti su `naturalWidth = 0` — il sintomo, non la causa.
+ */
+const MINIO_PRESIGN_ORIGIN = `http://${MINIO_PRESIGN_HOST}`;
 
 test.describe('cover R2-strict (real backend + MinIO)', () => {
   test('the library cover loads from MinIO and never from the input host', async ({
@@ -71,18 +80,21 @@ test.describe('cover R2-strict (real backend + MinIO)', () => {
     const img = card.locator('img').first();
     await expect(img).toBeVisible({ timeout: 10_000 });
 
-    // 1. Caricamento reale: il browser ha decodificato un'immagine non vuota, il che è vero solo se
+    // 1. L'origin risolto è quello di MinIO (l'host R2/allow-list), mai quello di input — schema
+    //    incluso. Asserito PRIMA del caricamento: uno schema sbagliato impedisce al browser di
+    //    scaricare l'immagine, quindi invertendo l'ordine questo test morirebbe su `naturalWidth = 0`
+    //    («nessun pixel») nascondendo la catena di presign, che è dove il difetto vive davvero.
+    const src = await img.getAttribute('src');
+    expect(src).toBeTruthy();
+    expect(new URL(src!).origin).toBe(MINIO_PRESIGN_ORIGIN);
+
+    // 2. Caricamento reale: il browser ha decodificato un'immagine non vuota, il che è vero solo se
     //    l'URL presigned era davvero raggiungibile e ha servito byte.
     await expect
       .poll(async () => img.evaluate((el: HTMLImageElement) => el.naturalWidth), {
         timeout: 15_000,
       })
       .toBeGreaterThan(0);
-
-    // 2. L'host risolto è MinIO (l'host R2/allow-list), mai quello di input.
-    const src = await img.getAttribute('src');
-    expect(src).toBeTruthy();
-    expect(new URL(src!).host).toBe(MINIO_PRESIGN_HOST);
 
     // 3. MinIO ha risposto 200 almeno una volta: un 403 (presign firmato con credenziali vuote) o
     //    un 404 (oggetto alla chiave sbagliata) sarebbero altrimenti invisibili se il browser

@@ -74,13 +74,18 @@ jobs:
   backend-integration:
     name: Backend Integration (${{ matrix.shard.name }})
     runs-on: ubuntu-latest
-    # 30 min per shard. Misurato sul primo tentativo di fix (run 31333585706): in un job UNICO
-    # passavano 924 test in 19m42s prima che il TestSessionTimeout abortisse — cioè circa il
-    # contenuto di un solo shard. Con ~1000 test per shard il lavoro sta dentro la soglia; senza
-    # shard non ci starebbe mai, e alzare ancora il timeout avrebbe solo spostato il muro.
-    # Resta la RETE DI SICUREZZA: il limite operativo è il TestSessionTimeout sotto, più basso, così
-    # uno sforamento è un errore di test leggibile e non un job ucciso in silenzio.
-    timeout-minutes: 30
+    # 50 min per shard, allineato a ci.yml (45) più margine per build Release + setup, che qui sono
+    # nel job mentre ci.yml scarica un artifact già costruito.
+    #
+    # Il numero NON è una stima: `integration.runsettings` documenta da PR #1505 che «each shard
+    # runs ~29-30 min of real work», ed è per questo che dichiara TestSessionTimeout=45. Due
+    # tentativi con soglie più basse (30 min job / 20 min sessione) hanno abortito ogni shard a
+    # metà — 625/910, 423/1123, 558/929 test — confermando quel numero invece di smentirlo.
+    #
+    # Resta la RETE DI SICUREZZA: a scattare per primo dev'essere il TestSessionTimeout (45),
+    # perché produce un riepilogo leggibile, mentre il timeout del job dà un `cancelled` muto —
+    # che è il difetto da cui parte questa issue.
+    timeout-minutes: 50
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -166,14 +171,13 @@ jobs:
           # divergenza qui riporterebbe il difetto di #3622 (test che nessun gate esegue) su un
           # altro asse.
           #
-          # TestSessionTimeout sovrascritto a 20 min (il runsettings condiviso dichiara 45, tarato
-          # sugli shard di ci.yml): deve scattare PRIMA del timeout-minutes: 30 del job, altrimenti
-          # si torna a un `cancelled` muto invece di un errore leggibile.
+          # NESSUN override di TestSessionTimeout: valgono i 45 min del runsettings condiviso, che
+          # sono tarati sul lavoro reale di uno shard (~29-30 min, PR #1505). Un override più basso
+          # è già stato provato e abortiva ogni shard a metà.
           dotnet test tests/Api.Tests/Api.Tests.csproj \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \
             --no-build \
             --configuration Release \
             --logger "console;verbosity=minimal" \
-            --blame-hang-timeout 5min \
-            -- RunConfiguration.TestSessionTimeout=1200000
+            --blame-hang-timeout 5min

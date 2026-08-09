@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -85,6 +86,14 @@ internal sealed class ReuploadBggCoverCommandHandler : ICommandHandler<ReuploadB
         game.SetBggCover(r2Key);
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #3615: un crop Social renderizzato dalla vecchia cover BGG resterebbe puntato a
+        // quell'immagine per sempre — niente lo rigenera. Azzerata la chiave, il resolver ricade
+        // sulla cover base nuova. Dopo il save: ExecuteUpdate è immediato, e invalidare prima di
+        // un salvataggio poi fallito butterebbe via un crop ancora valido.
+        await _repository
+            .InvalidateGeneratedCropsAsync(game.Id, CoverAssignmentSource.Bgg, cancellationToken)
+            .ConfigureAwait(false);
 
         // La colonna che il read-model risolve è cambiata → evict lista + dettaglio.
         await CoverCacheInvalidation

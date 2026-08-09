@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -66,6 +67,19 @@ internal sealed class PdfCoverGeneratedEventHandler : INotificationHandler<PdfCo
         game.SetPdfCoverR2Key(notification.CoverR2Key);
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #3615: the base image just changed, so any Social crop rendered from the PDF cover now
+        // shows the OLD picture — nothing regenerates it. Clearing the key makes the resolver fall
+        // back to the new base cover.
+        //
+        // A targeted UPDATE, not a reconcile: reconciliation treats the in-memory collection as the
+        // desired state, so a caller that loaded the aggregate without its assignments would delete
+        // every row. AFTER the save, because ExecuteUpdate runs immediately: invalidating first and
+        // then failing to persist the cover would drop a crop that is still perfectly valid.
+        // Reached only after the real key change (the early returns above are no-ops).
+        await _repository
+            .InvalidateGeneratedCropsAsync(sharedGameId, CoverAssignmentSource.Pdf, cancellationToken)
+            .ConfigureAwait(false);
 
         // Issue #3143: the PDF-extracted cover (which OUTRANKS the Wikidata cover in
         // CoverUrlResolver precedence) changed on an existing game — evict the catalog

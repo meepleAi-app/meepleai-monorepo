@@ -220,4 +220,56 @@ public sealed class SharedGameCoverAssignmentReconcileIntegrationTests : IAsyncL
         afterRevoke.CoverAssignments.Should().ContainSingle("the Manual pin was cascade-removed; Wikidata survives");
         afterRevoke.CoverAssignments.Single().Source.Should().Be(CoverAssignmentSource.Wikidata);
     }
+
+    /// <summary>
+    /// #3615 — the crop invalidation must reach the DATABASE, not just the in-memory aggregate.
+    ///
+    /// The regeneration paths call <c>Update()</c>, which maps scalars only, so an invalidation
+    /// applied to the child collection would be silently dropped: the domain would look right and
+    /// the stale crop would keep being served. Only a round-trip through real Postgres proves it.
+    /// </summary>
+    [Fact]
+    public async Task InvalidateGeneratedCrops_ClearsOnlyTheMatchingSource_OnPostgres()
+    {
+        var gameId = await SeedGameAsync();
+
+        var g = await _repository.GetByIdAsync(gameId);
+        var pdfPin = g!.AssignCover(CoverContext.Social, CoverAssignmentSource.Pdf, AdminId);
+        pdfPin.SetGeneratedKey($"covers/crops/{gameId}/social.webp");
+        var wikidataPin = g.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId);
+        wikidataPin.SetGeneratedKey($"covers/crops/{gameId}/card.webp");
+        await _repository.ReconcileCoverAssignmentsAsync(g);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var cleared = await _repository.InvalidateGeneratedCropsAsync(gameId, CoverAssignmentSource.Pdf);
+
+        // ExecuteUpdate runs server-side and needs no SaveChanges — assert on a fresh read.
+        cleared.Should().Be(1);
+        _dbContext.ChangeTracker.Clear();
+        var after = await _repository.GetByIdAsync(gameId);
+        after!.CoverAssignments.Single(a => a.Source == CoverAssignmentSource.Pdf)
+            .GeneratedR2Key.Should().BeNull("the PDF base image was replaced");
+        after.CoverAssignments.Single(a => a.Source == CoverAssignmentSource.Wikidata)
+            .GeneratedR2Key.Should().Be($"covers/crops/{gameId}/card.webp",
+                "a crop rendered from another source is still current");
+    }
+
+    [Fact]
+    public async Task InvalidateGeneratedCrops_NoCropToClear_IsANoOp_OnPostgres()
+    {
+        // The overwhelmingly common case: a game with no rendered crop at all. The statement is
+        // filtered on GeneratedR2Key != null so it touches zero rows rather than rewriting them
+        // with a fresh UpdatedAt.
+        var gameId = await SeedGameAsync();
+        var g = await _repository.GetByIdAsync(gameId);
+        g!.AssignCover(CoverContext.Social, CoverAssignmentSource.Pdf, AdminId);
+        await _repository.ReconcileCoverAssignmentsAsync(g);
+        await _dbContext.SaveChangesAsync();
+        _dbContext.ChangeTracker.Clear();
+
+        var cleared = await _repository.InvalidateGeneratedCropsAsync(gameId, CoverAssignmentSource.Pdf);
+
+        cleared.Should().Be(0);
+    }
 }

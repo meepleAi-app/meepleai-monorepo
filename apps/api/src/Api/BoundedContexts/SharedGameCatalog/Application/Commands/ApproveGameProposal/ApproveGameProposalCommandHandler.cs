@@ -229,6 +229,16 @@ internal sealed class ApproveGameProposalCommandHandler : ICommandHandler<Approv
         sharedGame.SetPdfCoverR2Key(shareRequest.PendingCoverR2Key);
         _sharedGameRepository.Update(sharedGame);
 
+        // #3615: this branch retargets an EXISTING game's cover, so it can carry a Social crop
+        // rendered from the previous image — stale from here on, with nothing to regenerate it.
+        // Unlike the other regeneration paths this method does not own the transaction (the caller
+        // commits), so the targeted UPDATE lands before that commit: should the commit then fail,
+        // a valid crop is lost and simply falls back to the base cover until reassigned. Preferred
+        // over leaving a crop of an image the game no longer uses.
+        await _sharedGameRepository
+            .InvalidateGeneratedCropsAsync(targetId, CoverAssignmentSource.Pdf, cancellationToken)
+            .ConfigureAwait(false);
+
         return targetId;
     }
 

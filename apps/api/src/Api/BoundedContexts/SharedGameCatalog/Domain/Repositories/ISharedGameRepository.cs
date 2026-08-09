@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -98,6 +99,29 @@ public interface ISharedGameRepository
     /// <param name="sharedGame">The aggregate whose <c>CoverAssignments</c> are the desired state.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     Task ReconcileCoverAssignmentsAsync(SharedGame sharedGame, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #3615 — clears the rendered per-context crops pinned to <paramref name="source"/> for
+    /// one game, because the base image they were derived from has just been replaced.
+    ///
+    /// <para>
+    /// A targeted UPDATE rather than <see cref="ReconcileCoverAssignmentsAsync"/>: reconciliation
+    /// treats the in-memory collection as the desired state, so calling it from a handler that
+    /// loaded the aggregate WITHOUT its assignments would delete every row. The cover-regeneration
+    /// paths do not all load them, and a silent data loss is a far worse failure than a stale crop.
+    /// </para>
+    /// <para>
+    /// Does NOT call <c>SaveChanges</c> — it executes immediately, server-side, and bypasses the
+    /// change tracker, so an entity already tracked in this context keeps its stale in-memory value
+    /// (harmless in these write-then-finish paths; the aggregate mirrors the same invalidation
+    /// in-memory anyway).
+    /// </para>
+    /// </summary>
+    /// <returns>Number of assignments whose crop was cleared.</returns>
+    Task<int> InvalidateGeneratedCropsAsync(
+        Guid gameId,
+        CoverAssignmentSource source,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a game with the given BGG ID already exists.

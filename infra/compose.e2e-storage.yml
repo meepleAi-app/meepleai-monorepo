@@ -40,3 +40,17 @@ services:
       # richieste prima che `mc mb` abbia creato meepleai-uploads, e il primo presign fallisce.
       minio-init:
         condition: service_completed_successfully
+
+  web:
+    build:
+      args:
+        # La CSP di default è `img-src 'self' data: https:`: l'URL presignato di MinIO è
+        # http://localhost:9000 — non 'self' (che è :3000), non data:, non https: — quindi il
+        # browser lo BLOCCA e naturalWidth resta 0 anche con l'oggetto regolarmente servito.
+        #
+        # 🔴 Deve stare fra i `build.args`, NON fra le `environment`/`env_file`: `headers()` in
+        # next.config.js viene valutata durante `next build` e congelata in routes-manifest.json,
+        # quindi un valore fornito solo a runtime arriva dopo che l'header è già stato deciso e la
+        # riga non ha alcun effetto. Sintomo: cover presignata correttamente, immagine bloccata dal
+        # browser, card sul placeholder — cioè identico a un oggetto mancante.
+        NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB: "true"

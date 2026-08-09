@@ -46,7 +46,9 @@ function buildCspHeader(opts) {
   // container published on http://localhost:9000. The default `img-src` allows
   // only `https:` for remote hosts, so the browser blocks the image and the
   // real-load assertion (naturalWidth > 0) can never pass. Opt-in ONLY from the
-  // E2E workflow's web.env.dev — prod/staging keep the closed default.
+  // E2E job, via the NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB *build arg* (Dockerfile +
+  // compose.e2e-storage.yml): next.config.js `headers()` runs during `next build`, so a
+  // runtime-only env var never reaches this code. Prod/staging keep the closed default.
   const imgSources = ["'self'", 'data:', 'https:'];
   if (opts.allowLocalBlobImages === true) {
     imgSources.push('http://localhost:9000');

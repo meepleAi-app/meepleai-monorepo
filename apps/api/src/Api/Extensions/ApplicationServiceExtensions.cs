@@ -7,14 +7,15 @@ using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
 using Api.Infrastructure;
-using Api.Services;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.Services.Rag;
-using Api.Observability;
+using Api.Services;
 using Api.SharedKernel.Application;
 using FluentValidation;
 
@@ -95,6 +96,11 @@ internal static class ApplicationServiceExtensions
 
         // AI-06: RAG offline evaluation service
         services.AddScoped<IRagEvaluationService, RagEvaluationService>();
+
+        // #3438: sandboxes the dataset paths accepted by the admin eval endpoints against a
+        // configured root. Singleton — it only normalises the root once from IConfiguration and
+        // holds no per-request state.
+        services.AddSingleton<IEvalDatasetPathResolver, EvalDatasetPathResolver>();
 
         // AI-07: Prompt versioning and management service
 

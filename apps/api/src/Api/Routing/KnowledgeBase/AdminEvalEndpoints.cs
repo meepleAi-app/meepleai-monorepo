@@ -40,24 +40,25 @@ internal static class AdminEvalEndpoints
     private static async Task<IResult> HandleRunRetrievalEvaluation(
         RunRetrievalEvaluationRequest request,
         IMediator mediator,
+        IEvalDatasetPathResolver pathResolver,
         CancellationToken ct)
     {
-        // NOTE: this only rejects a missing/non-existent datasetPath with a 4xx before
-        // dispatching any command. Full path sandboxing (restricting datasetPath to an
-        // allowlisted root directory) is tracked in issue #3438.
-        var pathError = ValidateDatasetPath(request.DatasetPath);
+        // #3438: datasetPath is resolved against the configured root BEFORE any command sees it.
+        // Commands downstream call File.ReadAllTextAsync on whatever they are given, so this
+        // endpoint is the trust boundary: everything past it works on an already-sandboxed path.
+        var (datasetPath, pathError) = ResolveDatasetForRead(pathResolver, request.DatasetPath);
         if (pathError is not null)
         {
             return pathError;
         }
 
         var dataset = await mediator.Send(
-            new LoadDatasetCommand { FilePath = request.DatasetPath }, ct).ConfigureAwait(false);
+            new LoadDatasetCommand { FilePath = datasetPath! }, ct).ConfigureAwait(false);
 
         var result = await mediator.Send(
             new RunEvaluationCommand
             {
-                DatasetPath = request.DatasetPath,
+                DatasetPath = datasetPath!,
                 MaxSamples = request.MaxSamples,
                 Enhancements = request.Enhancements
             },
@@ -72,19 +73,17 @@ internal static class AdminEvalEndpoints
     private static async Task<IResult> HandleGenerateLabelingCandidates(
         GenerateLabelingCandidatesRequest request,
         IMediator mediator,
+        IEvalDatasetPathResolver pathResolver,
         CancellationToken ct)
     {
-        // NOTE: this only rejects a missing/non-existent datasetPath with a 4xx before
-        // dispatching any command. Full path sandboxing (restricting datasetPath to an
-        // allowlisted root directory) is tracked in issue #3438.
-        var pathError = ValidateDatasetPath(request.DatasetPath);
+        var (datasetPath, pathError) = ResolveDatasetForRead(pathResolver, request.DatasetPath);
         if (pathError is not null)
         {
             return pathError;
         }
 
         var review = await mediator.Send(
-            new GenerateLabelingCandidatesCommand(request.DatasetPath, request.TopN ?? 10),
+            new GenerateLabelingCandidatesCommand(datasetPath!, request.TopN ?? 10),
             ct).ConfigureAwait(false);
 
         return Results.Ok(review);
@@ -93,12 +92,10 @@ internal static class AdminEvalEndpoints
     private static async Task<IResult> HandleMergeLabels(
         MergeLabelsRequest request,
         IMediator mediator,
+        IEvalDatasetPathResolver pathResolver,
         CancellationToken ct)
     {
-        // NOTE: this only rejects a missing/non-existent datasetPath with a 4xx before
-        // dispatching any command. Full path sandboxing (restricting datasetPath to an
-        // allowlisted root directory) is tracked in issue #3438.
-        var pathError = ValidateDatasetPath(request.DatasetPath);
+        var (datasetPath, pathError) = ResolveDatasetForRead(pathResolver, request.DatasetPath);
         if (pathError is not null)
         {
             return pathError;
@@ -111,29 +108,82 @@ internal static class AdminEvalEndpoints
             return Results.BadRequest(new { error = "review with items is required" });
         }
 
-        // OutputPath defaults to the source dataset (apply labels in-place); callers may target a
-        // separate file. Path sandboxing of the output path is deferred to #3438 alongside datasetPath.
+        // #3438: outputPath is the WRITE side and the more dangerous of the two — an unfiltered
+        // value here means writing an attacker-shaped JSON document anywhere the process can write.
+        // Sandboxed against the same root; unlike the read side the file need not already exist,
+        // since targeting a new labelled dataset is the normal use.
+        string outputPath;
+        if (request.OutputPath is null)
+        {
+            // Defaults to applying labels in place, which is already inside the root.
+            outputPath = datasetPath!;
+        }
+        else
+        {
+            var resolvedOutput = pathResolver.ResolveForWrite(request.OutputPath);
+            if (!resolvedOutput.IsSuccess)
+            {
+                return PathErrorResult(resolvedOutput.Error!.Value, "outputPath");
+            }
+
+            outputPath = resolvedOutput.FullPath!;
+        }
+
         var merged = await mediator.Send(
-            new MergeLabelsCommand(request.DatasetPath, request.Review, request.OutputPath ?? request.DatasetPath),
+            new MergeLabelsCommand(datasetPath!, request.Review, outputPath),
             ct).ConfigureAwait(false);
 
         return Results.Text(merged.ToJson(), "application/json");
     }
 
-    private static IResult? ValidateDatasetPath(string? datasetPath)
+    /// <summary>
+    /// Resolves a read path against the sandbox root and maps the failure to an HTTP result.
+    /// Existence is checked here rather than in the resolver so that a 404 can only ever be
+    /// returned for a path already proven to be inside the root — otherwise the endpoint would
+    /// answer "does this file exist?" for arbitrary paths, which is half the leak it is closing.
+    /// </summary>
+    private static (string? Path, IResult? Error) ResolveDatasetForRead(
+        IEvalDatasetPathResolver resolver,
+        string? requestedPath)
     {
-        if (string.IsNullOrWhiteSpace(datasetPath))
+        var resolved = resolver.ResolveForRead(requestedPath);
+        if (!resolved.IsSuccess)
         {
-            return Results.BadRequest(new { error = "datasetPath is required" });
+            return (null, PathErrorResult(resolved.Error!.Value, "datasetPath"));
         }
 
-        if (!File.Exists(datasetPath))
+        if (!File.Exists(resolved.FullPath))
         {
-            return Results.NotFound(new { error = $"dataset not found: {datasetPath}" });
+            return (null, Results.NotFound(new { error = $"dataset not found: {requestedPath}" }));
         }
 
-        return null;
+        return (resolved.FullPath, null);
     }
+
+    /// <summary>
+    /// Maps a refusal to a response. The message never echoes the resolved absolute path: it would
+    /// disclose the server's layout to a caller who just tried to escape it.
+    /// </summary>
+    private static IResult PathErrorResult(EvalDatasetPathError error, string field) => error switch
+    {
+        // Server misconfiguration, not a bad request: the subsystem is unavailable until an
+        // operator declares where datasets live.
+        EvalDatasetPathError.RootNotConfigured => Results.Problem(
+            detail: $"Evaluation dataset root is not configured. Set '{EvalDatasetPathResolver.RootConfigKey}' " +
+                    $"(or {EvalDatasetPathResolver.RootEnvAlias}) to enable the evaluation endpoints.",
+            statusCode: StatusCodes.Status503ServiceUnavailable),
+
+        EvalDatasetPathError.Empty => Results.BadRequest(new { error = $"{field} is required" }),
+
+        EvalDatasetPathError.OutsideRoot => Results.BadRequest(new
+        {
+            error = $"{field} must be a relative path inside the configured evaluation dataset root"
+        }),
+
+        EvalDatasetPathError.NotJson => Results.BadRequest(new { error = $"{field} must be a .json file" }),
+
+        _ => Results.BadRequest(new { error = $"{field} is invalid" }),
+    };
 }
 
 // #3390 Slice 4 Step 1: Enhancements null → legacy hybrid eval; non-null (incl. empty) → grounded seam

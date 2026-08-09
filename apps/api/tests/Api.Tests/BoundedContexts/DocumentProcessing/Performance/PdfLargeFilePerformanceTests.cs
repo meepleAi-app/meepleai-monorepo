@@ -14,11 +14,17 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Performance;
 
 /// <summary>
-/// Performance tests for large PDF handling, temp file strategy, and memory management.
+/// Size-threshold tests for large PDF handling and temp file strategy selection.
 /// Validates the BGAI-087 optimization (temp file for PDFs ≥50MB).
 /// Issue #4143: Performance Testing - PDF Wizard
+///
+/// <para>
+/// Categorised <c>Unit</c>, not <c>Performance</c> (#3625): the PDFs are synthetic byte buffers and
+/// the extractors are mocked, so these assert which strategy the size threshold selects, not memory
+/// behaviour under real load. See <see cref="PdfExtractionPerformanceTests"/>.
+/// </para>
 /// </summary>
-[Trait("Category", TestCategories.Performance)]
+[Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "4143")]
 public class PdfLargeFilePerformanceTests

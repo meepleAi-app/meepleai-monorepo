@@ -19,11 +19,18 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
 /// <summary>
-/// Concurrency and performance tests for the wizard workflow.
+/// Concurrency tests for the wizard workflow.
 /// Validates parallel session handling, race conditions, and large file processing.
 /// Issue #4160: Backend - Wizard Integration Tests
+///
+/// <para>
+/// Categorised <c>Unit</c>, not <c>Performance</c> (#3625): blob storage, extraction and the LLM are
+/// all mocked, so these are handler-level concurrency assertions. While the class sat outside every
+/// gate, <c>Upload_CancellationRequested_RespectsToken</c> silently rotted — its Moq callback still
+/// had the four-parameter <c>StoreAsync</c> signature from before <c>BlobCategory</c> was added.
+/// </para>
 /// </summary>
-[Trait("Category", TestCategories.Performance)]
+[Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 [Trait("Issue", "4160")]
 public class WizardConcurrencyAndPerformanceTests
@@ -377,7 +384,7 @@ public class WizardConcurrencyAndPerformanceTests
 
         blobMock
             .Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.Pdf, "wizard-temp", It.IsAny<CancellationToken>()))
-            .Returns<Stream, string, string, CancellationToken>(async (_, _, _, ct) =>
+            .Returns<Stream, string, BlobCategory, string, CancellationToken>(async (_, _, _, _, ct) =>
             {
                 await Task.Delay(5000, ct); // Simulate slow storage
                 return new BlobStorageResult(true, "file-cancel", "path", 1000);

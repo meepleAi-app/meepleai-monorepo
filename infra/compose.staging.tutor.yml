@@ -1,0 +1,29 @@
+# Issue #3617 — override staging attivo SOLO insieme al profilo `tutor-agents`.
+#
+# ## Perché un file separato invece di una riga in compose.staging.yml
+#
+# L'health check `orchestrator` viene registrato solo se `ORCHESTRATION_SERVICE_URL` è valorizzata
+# (`HealthCheckServiceExtensions.cs`). È la condizione che ha chiuso #3339: in staging standard
+# orchestration NON è deployato, e registrare il check per un servizio deliberatamente assente
+# produceva un Degraded permanente — rumore che a lungo andare insegna a ignorare il report.
+#
+# Ma le env var di compose non sono condizionabili per profilo: metterla in `compose.staging.yml`
+# la applicherebbe anche allo staging standard, riaprendo esattamente #3339. Da qui l'override, che
+# `make staging-with-tutor` aggiunge e gli altri target no.
+#
+# ## Il requisito che l'issue lasciava aperto
+#
+# «Un servizio opt-in, quando è attivo, deve essere osservabile?» — sì. Un servizio che gira e che
+# può degradare durante una sessione tutor senza che `/health` lo dica è indistinguibile da uno
+# funzionante: è il caso peggiore, perché il monitoraggio sembra esserci. La condizione corretta
+# non è «l'ambiente è staging» ma «il servizio è attivo», ed è ciò che questo file esprime.
+#
+# ## Simmetria obbligatoria
+#
+# `make staging-tutor-down` DEVE ricreare `api` senza questo override. Fermare orchestration
+# lasciando la variabile sul container significa check registrato + servizio assente, cioè di nuovo
+# #3339 — con l'aggravante di essere transitorio e quindi più difficile da diagnosticare.
+services:
+  api:
+    environment:
+      ORCHESTRATION_SERVICE_URL: http://orchestration-service:8004

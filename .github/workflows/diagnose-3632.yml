@@ -44,8 +44,28 @@ jobs:
           echo "--- libxml2 ---";       ldconfig -p | grep -c libxml2 || echo "assente"
           echo "--- glibc ---";         ldd --version | head -1
 
+      # Il primo giro di questo workflow aveva `--no-restore` senza restore: il build usciva con
+      # "4 Error(s)", il `| tail -3` nascondeva gli errori e il pipe mascherava l'exit code.
+      # Difetto mio — ma ha riprodotto il sintomo di #3632: con i binari assenti, `dotnet test
+      # --no-build` esce 0 in meno di un secondo SENZA stampare nulla. È il meccanismo del verde.
+      - name: Restore
+        run: dotnet restore
+
       - name: Build
-        run: dotnet build --no-restore --configuration Release 2>&1 | tail -3
+        run: |
+          set -o pipefail
+          dotnet build --no-restore --configuration Release 2>&1 | tail -3
+
+      # Cosa esiste davvero prima dei test: è la differenza che conta rispetto a ci.yml, dove i
+      # binari non vengono costruiti qui ma estratti da un artifact.
+      - name: 'Inventario binari di test'
+        run: |
+          echo "--- tests/Api.Tests/bin/Release ---"
+          ls -la tests/Api.Tests/bin/Release/net9.0/Api.Tests.dll 2>&1 | tail -2 || echo "ASSENTE"
+          echo "--- conteggio dll ---"
+          find tests/Api.Tests/bin -name "*.dll" 2>/dev/null | wc -l
+          echo "--- obj/project.assets.json ---"
+          ls -la tests/Api.Tests/obj/project.assets.json 2>&1 | tail -1 || echo "ASSENTE"
 
       - name: Install dotnet-coverage
         run: |

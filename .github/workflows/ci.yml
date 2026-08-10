@@ -580,37 +580,6 @@ jobs:
           dotnet tool install --global dotnet-coverage
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
-      # #3632 — diagnostica temporanea: il gate esce verde in ~5s senza eseguire test. Verificato
-      # che il comando è corretto (su un runner con binari buildati in loco esegue 22 538 test) e
-      # che `dotnet-coverage` non c'entra. Resta da stabilire se gli assembly ci sono davvero dopo
-      # l'estrazione dell'artifact: `dotnet test --no-build` senza binari esce 0 in silenzio.
-      - name: '#3632 — inventario binari dopo estrazione artifact'
-        run: |
-          echo "--- Api.Tests.dll ---"
-          ls -la tests/Api.Tests/bin/Release/net9.0/Api.Tests.dll 2>&1 | tail -1 || echo "ASSENTE"
-          echo "--- dll totali sotto tests/ ---"
-          find tests -name '*.dll' 2>/dev/null | wc -l
-          echo "--- project.assets.json ---"
-          ls -la tests/Api.Tests/obj/project.assets.json 2>&1 | tail -1 || echo "ASSENTE"
-          echo "--- solution ---"
-          ls -la MeepleAI.Api.sln 2>&1 | tail -1 || echo "ASSENTE"
-          echo "--- dimensione albero estratto ---"
-          du -sh src tests 2>/dev/null || true
-
-      # #3632 — diagnostica temporanea. I binari ci sono (Api.Tests.dll 28 MB, 921 dll, assets e
-      # solution presenti) e lo stesso comando su binari buildati in loco esegue 22 538 test: qui
-      # invece esce in 6s senza output. Verbosity normale per far dire a MSBuild cosa decide.
-      - name: '#3632 — dotnet test con verbosity normale (senza wrapper)'
-        continue-on-error: true
-        run: |
-          set +e
-          dotnet test MeepleAI.Api.sln \
-            --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow&FullyQualifiedName~TestCategoryGateArchitecture" \
-            --no-build \
-            --configuration Release \
-            -v n 2>&1 | tail -40
-          echo "### EXIT=${PIPESTATUS[0]}"
-
       - name: Run Unit Tests with Coverage
         timeout-minutes: 30
         env:

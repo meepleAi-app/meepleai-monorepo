@@ -568,6 +568,23 @@ jobs:
           dotnet tool install --global dotnet-coverage
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
+      # #3632 — diagnostica temporanea: il gate esce verde in ~5s senza eseguire test. Verificato
+      # che il comando è corretto (su un runner con binari buildati in loco esegue 22 538 test) e
+      # che `dotnet-coverage` non c'entra. Resta da stabilire se gli assembly ci sono davvero dopo
+      # l'estrazione dell'artifact: `dotnet test --no-build` senza binari esce 0 in silenzio.
+      - name: '#3632 — inventario binari dopo estrazione artifact'
+        run: |
+          echo "--- Api.Tests.dll ---"
+          ls -la tests/Api.Tests/bin/Release/net9.0/Api.Tests.dll 2>&1 | tail -1 || echo "ASSENTE"
+          echo "--- dll totali sotto tests/ ---"
+          find tests -name '*.dll' 2>/dev/null | wc -l
+          echo "--- project.assets.json ---"
+          ls -la tests/Api.Tests/obj/project.assets.json 2>&1 | tail -1 || echo "ASSENTE"
+          echo "--- solution ---"
+          ls -la MeepleAI.Api.sln 2>&1 | tail -1 || echo "ASSENTE"
+          echo "--- dimensione albero estratto ---"
+          du -sh src tests 2>/dev/null || true
+
       - name: Run Unit Tests with Coverage
         timeout-minutes: 30
         env:
@@ -584,10 +601,36 @@ jobs:
               --settings tests/Api.Tests/unit.runsettings \
               --no-build \
               --configuration Release \
-              --blame-hang-timeout 5min" \
+              --blame-hang-timeout 5min \
+              --logger \"trx;LogFileName=unit.trx\"" \
             -f cobertura \
             -o coverage/unit-coverage.xml
-          echo "✅ Unit tests passed"
+
+      # #3632 — il verde va misurato, non dichiarato.
+      #
+      # Qui c'era `echo "✅ Unit tests passed"`, che affermava un esito che lo script non aveva
+      # verificato. `dotnet test --no-build` esce 0 SENZA STAMPARE NULLA quando gli assembly non
+      # ci sono: non lo segnala come errore e non distingue «nessun test eseguito» da «tutti
+      # passati». Con quell'echo subito dopo, il gate era verde per costruzione — misurato: 5,7s
+      # per 22 589 test attesi.
+      #
+      # Il guard non dipende dalla causa a monte: qualunque cosa impedisca l'esecuzione (binari
+      # mancanti, filtro che non matcha, wrapper che fallisce), un conteggio a zero diventa rosso.
+      - name: 'Guard: i test sono stati davvero eseguiti (#3632)'
+        run: |
+          trx=$(find . -name 'unit.trx' -print -quit 2>/dev/null)
+          if [ -z "$trx" ]; then
+            echo "::error::Nessun file .trx prodotto: dotnet test non ha eseguito alcun test."
+            exit 1
+          fi
+          total=$(sed -n 's/.*<Counters[^>]* total="\([0-9]*\)".*/\1/p' "$trx" | head -1)
+          executed=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]*\)".*/\1/p' "$trx" | head -1)
+          echo "trx: $trx — total=${total:-?} executed=${executed:-?}"
+          if [ -z "$total" ] || [ "$total" -eq 0 ]; then
+            echo "::error::Il .trx riporta 0 test: il gate sarebbe stato verde senza eseguire nulla (#3632)."
+            exit 1
+          fi
+          echo "✅ Unit tests eseguiti: $total"
 
       - name: Upload Coverage
         if: always()

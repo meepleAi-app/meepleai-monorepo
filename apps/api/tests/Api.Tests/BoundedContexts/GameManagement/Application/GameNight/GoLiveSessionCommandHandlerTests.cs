@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -32,6 +33,8 @@ public class GoLiveSessionCommandHandlerTests
         _mockRepository = new Mock<IGameNightEventRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        // #3636: senza questo setup il mock non esegue il delegate della transazione.
+        _mockUnitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
         _handler = new GoLiveSessionCommandHandler(
             _mockRepository.Object,
             _mockMediator.Object,

@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -34,6 +35,9 @@ public class CompleteGameNightSessionCommandHandlerTests
 
     public CompleteGameNightSessionCommandHandlerTests()
     {
+        // #3636: l'handler consegna il lavoro alla UoW invece di pilotare Begin/Commit.
+        // Senza questo setup il mock non esegue il delegate e nulla accade.
+        _uow.SetupExecuteInTransaction();
         _handler = new CompleteGameNightSessionCommandHandler(
             _gameNightRepo.Object, _sessionRepo.Object, _mediator.Object, _uow.Object, _autoSave.Object);
         _mediator.Setup(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()))
@@ -116,9 +120,14 @@ public class CompleteGameNightSessionCommandHandlerTests
             new CompleteGameNightSessionCommand(night.Id, winner.Id, organizerId), CancellationToken.None);
 
         night.Sessions[0].WinnerId.Should().Be(winner.Id);
-        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // #3636: Begin/Commit sono interni alla UoW. Si verifica che il lavoro sia passato da UNA
+        // transazione e che l'handler non ne apra di proprie.
+        _uow.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
         _mediator.Verify(m => m.Send(
             It.Is<FinalizeSessionCommand>(c =>
                 c.SessionId == session.Id &&
@@ -149,14 +158,16 @@ public class CompleteGameNightSessionCommandHandlerTests
     {
         var organizerId = Guid.NewGuid();
         var (night, _) = StartedNightWithTwoPlayers(organizerId);
-        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        // #3636: il fallimento emerge dal SaveChanges interno alla UoW.
+        _uow.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException());
 
         var act = () => _handler.Handle(
             new CompleteGameNightSessionCommand(night.Id, null, organizerId), CancellationToken.None);
 
         await act.Should().ThrowAsync<ConflictException>();
-        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Il rollback è responsabilità della UoW: qui conta la mappatura dell'eccezione.
     }
 }

@@ -69,12 +69,14 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
             }
         }
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        var commitStarted = false;
-        try
+        // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
+        // attiva fuori da Testing. Il commit e il rollback sono ora della UoW, quindi il flag
+        // `commitStarted` non serve più: non esiste una finestra in cui il chiamante debba
+        // decidere chi possiede il rollback.
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            await _repo.AddAsync(session, cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _repo.AddAsync(session, ct).ConfigureAwait(false);
+            await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
 
             await _mediator.Send(new CreateSessionCommand(
                 cmd.OwnerUserId,
@@ -86,17 +88,8 @@ public class CreateGamebookCampaignHandler : IRequestHandler<CreateGamebookCampa
                 GuestNames: cmd.GuestNames,
                 GamebookCampaignId: session.Id,
                 SkipGameNightEnvelope: true,
-                SkipKbReadinessGate: true), cancellationToken).ConfigureAwait(false);
-
-            commitStarted = true;
-            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception)
-        {
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
-            throw;
-        }
+                SkipKbReadinessGate: true), ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
         // Issue #1292 (AC-6.2): notify gamebook index cache so the new campaign appears within
         // 500ms on the next GET /api/v1/gamebooks. Published AFTER commit so cache-invalidation

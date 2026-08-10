@@ -115,6 +115,17 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // MockEmbeddingService produces deterministic 768-dim embeddings (matches pgvector schema).
         services.AddSingleton<IEmbeddingService>(new MockEmbeddingService(dimensions: 768));
 
+        // #3633: senza questa registrazione il test fallisce con «Unable to resolve service for
+        // type 'IGameTitleResolver'». In produzione è registrata da
+        // SharedGameCatalogServiceExtensions (#2339 batch translation enricher); questa fixture
+        // costruisce il DI a mano e non carica quel bounded context.
+        services.AddScoped<
+            Api.BoundedContexts.SharedGameCatalog.Application.Services.IGameTitleResolver,
+            Api.BoundedContexts.SharedGameCatalog.Application.Services.GameTitleResolver>();
+        services.AddScoped<
+            Api.BoundedContexts.SharedGameCatalog.Domain.Repositories.ISharedGameTranslationRepository,
+            Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories.SharedGameTranslationRepository>();
+
         // Mock IPdfTextExtractor: paged result with single page of valid text
         var extractorMock = new Mock<IPdfTextExtractor>();
         extractorMock

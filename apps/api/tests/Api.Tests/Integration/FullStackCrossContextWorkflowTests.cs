@@ -16,9 +16,11 @@ using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using Api.Infrastructure.DomainEventOutbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using Xunit;
 using Api.Tests.Constants;
@@ -58,6 +60,13 @@ public sealed class FullStackCrossContextWorkflowTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+
+        // #3633: come DomainEventDispatcherIntegrationTests, questa classe asserisce invocazioni di
+        // handler dopo SaveChangesAsync. Il default DI è OutboxOnly (cutover T9 di #1535): gli
+        // eventi vanno in domain_event_outbox e NON vengono pubblicati inline via MediatR, quindi
+        // gli handler non partono — nessuna eccezione, solo zero dispatch.
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ISessionRepository, SessionRepository>();

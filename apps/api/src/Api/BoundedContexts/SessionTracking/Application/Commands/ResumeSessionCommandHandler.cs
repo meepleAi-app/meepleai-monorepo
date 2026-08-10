@@ -72,13 +72,18 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
         // index (the first flush clears sibling InProgress rows before the second flush
         // sets this session's row to InProgress), but both live inside a single
         // transaction — if the second save fails, the first is rolled back too.
-        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-
         // Collect diary entities for SSE publishing after successful commit.
         var diaryEntities = new List<SessionEventEntity>();
 
-        try
+        // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
+        // attiva fuori da Testing. Il rollback è ora della UoW, quindi il catch che esisteva solo
+        // per farlo sparisce.
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
+            // La strategy può rieseguire l'intero delegate: senza questo Clear, un retry
+            // pubblicherebbe gli eventi diario due volte per la stessa ripresa.
+            diaryEntities.Clear();
+            {
             // Invariant guard: free every other "InProgress" link slot in the same GameNight
             // BEFORE flipping our own row to InProgress, so the partial unique index from T1
             // never sees two InProgress rows at commit time.
@@ -158,14 +163,9 @@ internal sealed class ResumeSessionCommandHandler : ICommandHandler<ResumeSessio
             _db.SessionEvents.Add(resumeDiary);
             diaryEntities.Add(resumeDiary);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
-            throw;
-        }
+            await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+            }
+        }, cancellationToken).ConfigureAwait(false);
 
         // Publish all diary events after successful commit (best-effort, fire-and-forget).
         foreach (var de in diaryEntities)

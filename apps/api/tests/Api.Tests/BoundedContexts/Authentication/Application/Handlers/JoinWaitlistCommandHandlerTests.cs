@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.Authentication.Application.Commands.Waitlist;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
@@ -27,6 +28,9 @@ public class JoinWaitlistCommandHandlerTests
     {
         _mockRepository = new Mock<IWaitlistEntryRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        // #3636: l'handler consegna il lavoro alla UoW; senza questo setup il mock non eseguirebbe
+        // il delegate e l'insert non avverrebbe.
+        _mockUnitOfWork.SetupExecuteInTransaction<JoinWaitlistResult>();
         _mockLogger = new Mock<ILogger<JoinWaitlistCommandHandler>>();
 
         _handler = new JoinWaitlistCommandHandler(
@@ -66,7 +70,13 @@ public class JoinWaitlistCommandHandlerTests
                 e.GamePreferenceId == "g-azul"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // #3636: il SaveChanges è dentro ExecuteInTransactionAsync — si verifica che l'insert sia
+        // passato dalla transazione, non una chiamata che l'handler non fa più.
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<JoinWaitlistResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -111,7 +121,12 @@ public class JoinWaitlistCommandHandlerTests
         _mockRepository.Verify(
             r => r.AddAsync(It.IsAny<WaitlistEntry>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Nessuna transazione aperta: il duplicato esce prima di toccare il DB.
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<JoinWaitlistResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

@@ -66,64 +66,53 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
         // ambient tx (same scoped DbContext) instead of committing on its own, so if the aggregate
         // save loses the xmin race — or any guard trips — the whole thing rolls back and no orphan
         // Session is left behind.
-        CreateSessionResult createResult;
+        CreateSessionResult createResult = null!;
         StartGameNightSessionResult result;
-        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
-        // Once CommitTransactionAsync starts, it owns rollback-on-failure (it self-rolls-back and
-        // disposes the tx); the catch blocks must not roll back a second time.
-        var commitStarted = false;
+        // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
+        // attiva fuori da Testing (questo handler rispondeva 500 in ambiente reale). Il rollback è
+        // ora della UoW su QUALUNQUE eccezione, quindi il flag `commitStarted` e i tre rollback
+        // manuali spariscono: i catch restano solo per mappare l'eccezione, che è il loro scopo.
+        // I side effect non transazionali (live mode, autosave, toolbox) erano già fuori e tali
+        // restano — la strategy può rieseguire il delegate, loro no.
         try
         {
-            // WS1 DEC-3: SkipGameNightEnvelope=true — the GameNightEvent aggregate (AddSession
-            // below) is the SOLE linker against command.GameNightId, so CreateSessionCommand does
-            // NOT mint a phantom ad-hoc night that would double-link the session.
-            createResult = await _mediator.Send(new CreateSessionCommand(
-                command.UserId,
-                command.GameId,
-                "GameSpecific",
-                DateTime.UtcNow,
-                null,
-                participants,
-                StateTier: command.StateTier,
-                SkipGameNightEnvelope: true), cancellationToken).ConfigureAwait(false);
+            result = await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                // WS1 DEC-3: SkipGameNightEnvelope=true — the GameNightEvent aggregate (AddSession
+                // below) is the SOLE linker against command.GameNightId, so CreateSessionCommand does
+                // NOT mint a phantom ad-hoc night that would double-link the session.
+                createResult = await _mediator.Send(new CreateSessionCommand(
+                    command.UserId,
+                    command.GameId,
+                    "GameSpecific",
+                    DateTime.UtcNow,
+                    null,
+                    participants,
+                    StateTier: command.StateTier,
+                    SkipGameNightEnvelope: true), ct).ConfigureAwait(false);
 
-            var gns = gameNight.AddSession(createResult.SessionId, command.GameId, command.GameTitle);
-            gameNight.StartCurrentSession();
+                var gns = gameNight.AddSession(createResult.SessionId, command.GameId, command.GameTitle);
+                gameNight.StartCurrentSession();
 
-            await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
-            // The xmin race is detected here (aggregate UPDATE with a stale row version), while the
-            // tx is still open, so the catch below can roll the Session INSERT back with it.
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
+                // The xmin race is detected by the SaveChanges inside ExecuteInTransactionAsync
+                // (aggregate UPDATE with a stale row version) while the tx is still open, so the
+                // Session INSERT is rolled back with it.
 
-            commitStarted = true;
-            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
-
-            result = new StartGameNightSessionResult(
-                createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
+                return new StartGameNightSessionResult(
+                    createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
         {
-            // WS1 DEC-5: the xmin loser rolls the whole tx (incl. the Session INSERT) back — no
-            // orphan — then maps to the same blocked-modal 409 instead of an uncaught 500.
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
+            // WS1 DEC-5: the xmin loser has had the whole tx (incl. the Session INSERT) rolled
+            // back — no orphan — and maps to the same blocked-modal 409 instead of an uncaught 500.
             throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
         catch (InvalidOperationException ex)
         {
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw new ConflictException(ex.Message);
-        }
-        catch (Exception)
-        {
-            // Any other post-INSERT failure (incl. MaxLiveSessionsExceededException from
-            // StartCurrentSession's #10 guard) rolls back so the Session is never orphaned;
-            // the original exception then propagates unchanged.
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
-            throw;
         }
 
         // WS1 DEC-1 (#2647): open live mode LAST — AFTER the session↔night link is

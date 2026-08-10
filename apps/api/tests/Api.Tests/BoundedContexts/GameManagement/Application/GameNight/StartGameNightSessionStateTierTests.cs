@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
@@ -29,6 +30,8 @@ public class StartGameNightSessionStateTierTests
         _mockRepository = new Mock<IGameNightEventRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        // #3636: senza questo setup il mock non esegue il delegate della transazione.
+        _mockUnitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
         _mockAutoSaveScheduler = new Mock<IAutoSaveSchedulerService>();
         _handler = new StartGameNightSessionCommandHandler(
             _mockRepository.Object,

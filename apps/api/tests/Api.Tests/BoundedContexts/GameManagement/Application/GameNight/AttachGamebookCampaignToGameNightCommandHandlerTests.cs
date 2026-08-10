@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
@@ -36,6 +37,9 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
 
     public AttachGamebookCampaignToGameNightCommandHandlerTests()
     {
+        // #3636: l'handler consegna il lavoro alla UoW invece di pilotare Begin/Commit.
+        // Senza questo setup il mock non esegue il delegate e nulla accade.
+        _uow.SetupExecuteInTransaction<AttachGamebookCampaignToGameNightResult>();
         _handler = new AttachGamebookCampaignToGameNightCommandHandler(
             _repo.Object, _mediator.Object, _uow.Object, _autoSave.Object);
     }
@@ -114,7 +118,11 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
         gameNight.Sessions.Should().ContainSingle();
         gameNight.Sessions[0].Status.Should().Be(GameNightSessionStatus.InProgress);
         _repo.Verify(r => r.UpdateAsync(gameNight, It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _uow.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<AttachGamebookCampaignToGameNightResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -159,9 +167,15 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
             new AttachGamebookCampaignToGameNightCommand(gameNight.Id, campaignId, organizer),
             TestContext.Current.CancellationToken);
 
-        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // #3636: Begin/Commit non sono più dell'handler — la sequenza è interna alla UoW e
+        // coperta dai suoi test. Qui conta che il lavoro sia passato da UNA transazione e che
+        // l'handler non ne apra di proprie (fallirebbero sotto la retry strategy).
+        _uow.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<AttachGamebookCampaignToGameNightResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -176,7 +190,11 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
         SetupCreateSession(Guid.NewGuid());
         SetupUser(organizer, "Marco Rossi");
         _repo.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>())).ReturnsAsync(gameNight);
-        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        // #3636: il conflitto emerge dal SaveChanges interno alla UoW → si simula facendo fallire
+        // ExecuteInTransactionAsync; mockare SaveChangesAsync non avrebbe più effetto.
+        _uow.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<AttachGamebookCampaignToGameNightResult>>>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException());
 
         var act = () => _handler.Handle(
@@ -184,9 +202,7 @@ public class AttachGamebookCampaignToGameNightCommandHandlerTests
             TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<MaxLiveSessionsExceededException>();
-        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Il rollback è responsabilità della UoW: qui conta la mappatura a 409.
         _mediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }

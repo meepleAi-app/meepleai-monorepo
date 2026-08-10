@@ -42,23 +42,23 @@ internal class SlackApiHealthCheck : IHealthCheck
                 "Slack API health check returned {StatusCode}",
                 (int)response.StatusCode);
 
-            return HealthCheckResult.Unhealthy(
+            return HealthCheckResult.Degraded(
                 $"Slack API returned HTTP {(int)response.StatusCode}");
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogWarning(ex, "Slack API health check timed out (>5s)");
-            return HealthCheckResult.Unhealthy("Slack API health check timed out");
+            return HealthCheckResult.Degraded("Slack API health check timed out");
         }
         catch (HttpRequestException ex)
         {
             _logger.LogWarning(ex, "Slack API health check failed - HTTP error");
-            return HealthCheckResult.Unhealthy("Slack API unreachable", ex);
+            return HealthCheckResult.Degraded("Slack API unreachable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Slack API health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Slack API health check failed", ex);
+            return HealthCheckResult.Degraded("Slack API health check failed", ex);
         }
     }
 }

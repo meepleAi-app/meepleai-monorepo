@@ -58,12 +58,12 @@ public class EmailSmtpHealthCheck : IHealthCheck
         {
             var maskedServer = DataMasking.MaskString(smtpServer);
             _logger.LogError(ex, "SMTP health check failed - socket error for {Server}:{Port}", maskedServer, smtpPort);
-            return HealthCheckResult.Unhealthy($"SMTP server {maskedServer}:{smtpPort} unavailable", ex);
+            return HealthCheckResult.Degraded($"SMTP server {maskedServer}:{smtpPort} unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SMTP health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("SMTP connectivity check failed", ex);
+            return HealthCheckResult.Degraded("SMTP connectivity check failed", ex);
         }
     }
 }

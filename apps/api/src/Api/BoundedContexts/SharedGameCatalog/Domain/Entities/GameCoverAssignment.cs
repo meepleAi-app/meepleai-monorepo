@@ -174,6 +174,42 @@ public sealed class GameCoverAssignment : Entity<Guid>
         _updatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>
+    /// Issue #3615 — drops the rendered crop because the BASE cover it was derived from changed
+    /// underneath it (the pipeline regenerated the PDF/BGG/Wikidata image, or an admin replaced the
+    /// manual one).
+    ///
+    /// <para>
+    /// <see cref="ChangeSource"/> and <see cref="SetFocalPoint"/> already cover the «the admin
+    /// changed their mind» case. This covers the opposite direction, where nobody touched the
+    /// assignment at all: without it the crop keeps pointing at the old image indefinitely, since
+    /// nothing regenerates it.
+    /// </para>
+    /// <para>
+    /// Clearing the key is enough — the resolver falls back to the base cover when it is null, so
+    /// the game shows the NEW image uncropped rather than a stale crop of the old one. The R2
+    /// object is deliberately left in place: its key is deterministic
+    /// (<c>covers/crops/{gameId}/social.webp</c>), so the next assignment overwrites it, and while
+    /// unreferenced it costs storage but can never be served.
+    /// </para>
+    /// <para>
+    /// A system operation like <see cref="SetGeneratedKey"/>: stamps the timestamp but leaves
+    /// <see cref="UpdatedBy"/> on the last human change.
+    /// </para>
+    /// </summary>
+    /// <returns><see langword="true"/> when a crop was actually dropped.</returns>
+    internal bool InvalidateGeneratedCrop()
+    {
+        if (_generatedR2Key is null)
+        {
+            return false;
+        }
+
+        _generatedR2Key = null;
+        _updatedAt = DateTime.UtcNow;
+        return true;
+    }
+
     private void Touch(Guid updatedBy)
     {
         _updatedAt = DateTime.UtcNow;

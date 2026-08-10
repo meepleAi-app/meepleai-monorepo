@@ -117,6 +117,8 @@ internal sealed class GetAllSharedGamesQueryHandler : IRequestHandler<GetAllShar
                 false,  // IsTopRated
                 false,  // IsNew
                 CoverUrl: cover.Url,
+                CoverFocalX: cover.FocalX,
+                CoverFocalY: cover.FocalY,
                 // Epic #3470 Slice 1d-a — attribution follows the WINNING source (was
                 // emitted unconditionally); all-null unless the Wikidata cover won.
                 CoverLicense: coverLicense,

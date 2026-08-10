@@ -62,14 +62,85 @@ jobs:
             orchestration:
               - 'apps/orchestration-service/**'
 
+  # Issue #3629: questo job andava in timeout su 18 run su 20 e GitHub lo marcava `cancelled`.
+  # Un `cancelled` si legge come «annullato», non come «fallito», quindi per settimane su main-dev
+  # NON è esistito alcun esito per i ~3000 test Category=Integration — né verde né rosso — e i
+  # [FAIL] reali nel log non hanno mai prodotto un segnale.
+  #
+  # La causa non era il timeout in sé: questo job divergeva da ci.yml su tutto ciò che rende gli
+  # integration test eseguibili in tempi sani. Ogni fixture avviava Testcontainers da zero (ci.yml
+  # passa TEST_POSTGRES_CONNSTRING / TEST_REDIS_CONNSTRING e SharedTestcontainersFixture li salta),
+  # mancavano libgdiplus e i file secret, e non c'era sharding. Ora il percorso è lo stesso.
   backend-integration:
-    name: Backend Integration (Testcontainers)
+    name: Backend Integration (${{ matrix.shard.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 60 min per shard: i 45 del TestSessionTimeout più build Release, apt-get e setup, che qui
+    # sono dentro il job mentre ci.yml scarica un artifact già costruito. A 50 il job moriva prima
+    # che la sessione arrivasse a 45 — ai test restavano ~44 min — e si tornava a un `cancelled`.
+    #
+    # Il numero NON è una stima: `integration.runsettings` documenta da PR #1505 che «each shard
+    # runs ~29-30 min of real work», ed è per questo che dichiara TestSessionTimeout=45. Due
+    # tentativi con soglie più basse (30 min job / 20 min sessione) hanno abortito ogni shard a
+    # metà — 625/910, 423/1123, 558/929 test — confermando quel numero invece di smentirlo.
+    #
+    # Resta la RETE DI SICUREZZA: a scattare per primo dev'essere il TestSessionTimeout (45),
+    # perché produce un riepilogo leggibile, mentre il timeout del job dà un `cancelled` muto —
+    # che è il difetto da cui parte questa issue.
+    timeout-minutes: 60
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
+
+    strategy:
+      fail-fast: false  # uno shard rosso non deve nascondere l'esito degli altri
+      matrix:
+        # Stessa ripartizione di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
+        # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
+        # asse. Misurati 2950 test totali (esclusioni incluse): 910 / 1123 / 929.
+        shard:
+          - name: "KnowledgeBase"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
+          - name: "Games"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
+          - name: "Core"
+            filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+
+    # Stessi service container di ci.yml: sostituiscono i Testcontainers avviati per-fixture, che
+    # erano il vero costo.
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16  # Issue #3547: pgvector per le colonne Vector
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: meepleai_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+          --shm-size=256mb
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 10
+        ports:
+          - 6379:6379
+
     steps:
       - uses: actions/checkout@v6
+
+      # libgdiplus: senza, i test che toccano il rendering PDF non falliscono subito ma dopo un
+      # timeout, e il costo si somma su tutta la suite. È una delle differenze che rendevano questo
+      # job molto più lento di ci.yml a parità di test.
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus redis-tools
+
       - uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
@@ -80,6 +151,61 @@ jobs:
         working-directory: apps/api
         run: dotnet build --no-restore --configuration Release
 
+      # I service container sono dichiarati `healthy` da Docker prima di accettare davvero
+      # connessioni applicative: attendere qui evita che i primi test paghino retry di connessione.
+      - name: Wait for Services
+        timeout-minutes: 3
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done
+          until redis-cli -h localhost -p 6379 ping > /dev/null 2>&1; do sleep 1; done
+          echo "postgres + redis ready"
+
+      # Stessi file di ci.yml: senza, i percorsi che leggono i secret cadono su path di errore
+      # lenti invece di partire configurati.
+      - name: Create CI Secret Files
+        run: |
+          mkdir -p infra/secrets
+          printf 'POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=testpass\nPOSTGRES_DB=meepleai_test\n' > infra/secrets/database.secret
+          printf 'REDIS_PASSWORD=redis-ci-test\n' > infra/secrets/redis.secret
+          printf 'JWT_SECRET_KEY=ci-test-jwt-secret-key-minimum-32-chars-long\nJWT_ISSUER=meepleai-ci-test\nJWT_AUDIENCE=meepleai-ci-test\n' > infra/secrets/jwt.secret
+          printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
+          printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
+
       - name: Integration tests
-        working-directory: apps/api/tests/Api.Tests
-        run: dotnet test --no-build --configuration Release --filter "Category=Integration" --verbosity quiet
+        working-directory: apps/api
+        env:
+          # MaxPoolSize=2 + ClearAllPools() nel teardown: evita l'accumulo contro max_connections.
+          ConnectionStrings__Postgres: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
+          # Queste due sono il punto: SharedTestcontainersFixture le legge e NON avvia i container.
+          TEST_POSTGRES_CONNSTRING: Host=localhost;Port=5432;Database=meepleai_test;Username=postgres;Password=testpass;MaxPoolSize=2;Timeout=30;Command Timeout=60
+          TEST_REDIS_CONNSTRING: localhost:6379,allowAdmin=true
+          REDIS_URL: localhost:6379,allowAdmin=true
+          OPENROUTER_API_KEY: test-key
+          CI: true
+          DISABLE_RATE_LIMITING: "true"  # Issue #3102: evita i 429 nei test di integrazione
+          # Passate anche singolarmente come in ci.yml: alcuni percorsi le leggono direttamente
+          # invece della connection string completa.
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_DB: meepleai_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+        run: |
+          # Target esplicito del .csproj (PR #1505): `dotnet test` sulla solution invocherebbe anche
+          # Api.Analyzers.Tests.dll, che non ha test Category=Integration, e vstest tratta il
+          # no-match su un assembly non vuoto come exit 1.
+          #
+          # Stesse esclusioni per nome di ci.yml, così i due gate misurano lo stesso insieme: una
+          # divergenza qui riporterebbe il difetto di #3622 (test che nessun gate esegue) su un
+          # altro asse.
+          #
+          # NESSUN override di TestSessionTimeout: valgono i 45 min del runsettings condiviso, che
+          # sono tarati sul lavoro reale di uno shard (~29-30 min, PR #1505). Un override più basso
+          # è già stato provato e abortiva ogni shard a metà.
+          dotnet test tests/Api.Tests/Api.Tests.csproj \
+            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
+            --settings tests/Api.Tests/integration.runsettings \
+            --no-build \
+            --configuration Release \
+            --logger "console;verbosity=minimal" \
+            --blame-hang-timeout 5min

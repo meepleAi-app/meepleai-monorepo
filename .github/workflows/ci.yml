@@ -383,6 +383,12 @@ jobs:
       - name: BGG ToS compliance gate (#2123)
         run: pnpm lint:bgg
 
+      # Issue #3498 — impedisce che gli assert R2-strict sulle cover tornino `test.fixme`.
+      # Lo script esisteva dal #3536 ma non era agganciato ad alcun job: il gate che il commento
+      # in cover-l4.spec.ts prometteva non è mai girato.
+      - name: Cover R2-strict fixme gate (#3498)
+        run: pnpm lint:no-cover-fixme
+
       # ADR-075 short-term (#2383 brainstorm 2026-06-16):
       # Cross-language constants drift detection. Auto-discovers paired files
       # under `apps/api/src/Api/**/Constants/*Routes.cs` and
@@ -569,9 +575,12 @@ jobs:
         run: |
           echo "🧪 Running unit tests with dotnet-coverage..."
           mkdir -p coverage
+          # Issue #3622: deny-list anziché `Category=Unit` — un test privo di trait non finiva in
+          # alcun filtro e non veniva eseguito da NESSUN workflow. Tenere allineata a dev-fast.yml;
+          # le categorie escluse sono pinnate da TestCategoryGateArchitectureTests.
           dotnet-coverage collect \
             "dotnet test MeepleAI.Api.sln \
-              --filter Category=Unit \
+              --filter \"Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow\" \
               --settings tests/Api.Tests/unit.runsettings \
               --no-build \
               --configuration Release \

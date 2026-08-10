@@ -30,9 +30,11 @@ public class SmolDoclingHealthCheck : IHealthCheck
         var smoldoclingUrl = _configuration["PdfProcessing:Extractor:SmolDocling:ApiUrl"];
         if (string.IsNullOrWhiteSpace(smoldoclingUrl))
         {
-            // Provider selected but URL missing — real misconfiguration, surface as Unhealthy
-            // so monitoring catches it (consistent with OllamaHealthCheck handling).
-            return HealthCheckResult.Unhealthy("SmolDocling API URL missing — provider selected but PdfProcessing:Extractor:SmolDocling:ApiUrl unset");
+            // Provider selected but URL missing — real misconfiguration. Surface Degraded,
+            // not Unhealthy: this check is NonCritical/Optional and must not 503 the
+            // aggregate /health (#3618). Monitoring still catches it — HealthStateMachine
+            // treats any non-Healthy result as a failure (consistent with OllamaHealthCheck).
+            return HealthCheckResult.Degraded("SmolDocling API URL missing — provider selected but PdfProcessing:Extractor:SmolDocling:ApiUrl unset");
         }
 
         try
@@ -56,12 +58,12 @@ public class SmolDoclingHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "SmolDocling health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("SmolDocling service unavailable", ex);
+            return HealthCheckResult.Degraded("SmolDocling service unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SmolDocling health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("SmolDocling service check failed", ex);
+            return HealthCheckResult.Degraded("SmolDocling service check failed", ex);
         }
     }
 }

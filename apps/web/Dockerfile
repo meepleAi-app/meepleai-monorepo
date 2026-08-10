@@ -52,10 +52,17 @@ ARG NEXT_PUBLIC_API_BASE=http://localhost:8080
 ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
 ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ARG NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=false
+# Issue #3498: widens `img-src` to http://localhost:9000 so the cover R2-strict E2E can load MinIO
+# presigned covers. MUST be a build arg, not just a runtime env: `headers()` in next.config.js is
+# evaluated during `next build` and frozen into routes-manifest.json, so a value supplied only via
+# compose `env_file` arrives too late and the header ships with the closed default. Defaults to
+# false — prod/staging images are unaffected.
+ARG NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=false
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=$NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED
+ENV NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=$NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB
 
 # Ensure public directory exists (Next.js may need it)
 RUN mkdir -p public

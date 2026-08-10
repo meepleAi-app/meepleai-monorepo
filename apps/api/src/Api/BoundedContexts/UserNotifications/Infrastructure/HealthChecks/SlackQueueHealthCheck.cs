@@ -6,12 +6,17 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
 
 /// <summary>
 /// Health check that monitors the Slack notification queue depth.
-/// Returns Unhealthy if the pending count exceeds the threshold (100),
+/// Returns Degraded if the pending count exceeds the threshold (100),
 /// indicating a potential processing bottleneck or Slack API issues.
+/// <para>
+/// Degraded, not Unhealthy: this check is registered NonCritical, and a NonCritical check
+/// returning Unhealthy 503s the aggregate /health endpoint (#3618). Alerting is unaffected —
+/// HealthStateMachine escalates on consecutive non-Healthy results.
+/// </para>
 /// </summary>
 internal class SlackQueueHealthCheck : IHealthCheck
 {
-    private const int UnhealthyThreshold = 100;
+    private const int BacklogThreshold = 100;
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<SlackQueueHealthCheck> _logger;
@@ -35,7 +40,7 @@ internal class SlackQueueHealthCheck : IHealthCheck
 
             // Scope the backlog count to the Slack channels only: an unrelated backlog on
             // another channel (e.g. email) must not trip this Slack-specific health check
-            // and mis-attribute an aggregate /health 503 to Slack.
+            // and mis-attribute a Degraded aggregate /health to Slack.
             var pendingCount = await repository.GetPendingCountByChannelsAsync(
                 new[] { NotificationChannelType.SlackUser, NotificationChannelType.SlackTeam },
                 cancellationToken).ConfigureAwait(false);
@@ -43,17 +48,17 @@ internal class SlackQueueHealthCheck : IHealthCheck
             var data = new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 ["pending_count"] = pendingCount,
-                ["threshold"] = UnhealthyThreshold
+                ["threshold"] = BacklogThreshold
             };
 
-            if (pendingCount > UnhealthyThreshold)
+            if (pendingCount > BacklogThreshold)
             {
                 _logger.LogWarning(
                     "Slack queue health check: {PendingCount} pending items exceeds threshold of {Threshold}",
-                    pendingCount, UnhealthyThreshold);
+                    pendingCount, BacklogThreshold);
 
-                return HealthCheckResult.Unhealthy(
-                    $"Slack notification queue backlog: {pendingCount} pending (threshold: {UnhealthyThreshold})",
+                return HealthCheckResult.Degraded(
+                    $"Slack notification queue backlog: {pendingCount} pending (threshold: {BacklogThreshold})",
                     data: data);
             }
 
@@ -64,7 +69,7 @@ internal class SlackQueueHealthCheck : IHealthCheck
         catch (Exception ex)
         {
             _logger.LogError(ex, "Slack queue health check failed");
-            return HealthCheckResult.Unhealthy("Failed to check Slack queue health", ex);
+            return HealthCheckResult.Degraded("Failed to check Slack queue health", ex);
         }
     }
 }

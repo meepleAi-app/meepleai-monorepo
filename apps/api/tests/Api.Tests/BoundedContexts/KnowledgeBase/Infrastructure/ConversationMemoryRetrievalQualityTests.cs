@@ -29,8 +29,17 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// Targets:
 /// - Retrieval nDCG &gt; 0.8
 /// - Latency &lt; 200ms P95
+///
+/// <para>
+/// Carries <c>Category=Integration</c> as well as <c>Performance</c> (#3625): the class needs the
+/// PostgreSQL container and already sits in <c>Integration-GroupA</c>, but only the <c>Category</c>
+/// trait is read by the CI filters, so while <c>Performance</c> was its only category no gate ever
+/// selected it. The 200ms bound is wide enough for a containerised query on a shared runner; the
+/// nDCG and ordering assertions are deterministic.
+/// </para>
 /// </summary>
 [Collection("Integration-GroupA")]
+[Trait("Category", TestCategories.Integration)]
 [Trait("Category", TestCategories.Performance)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]
@@ -337,14 +346,21 @@ public sealed class ConversationMemoryRetrievalQualityTests : IAsyncLifetime
         // Act - Retrieve all memories for session
         var memories = await _repository!.GetBySessionIdAsync(sessionId, limit: 100, TestCancellationToken);
 
-        // Assert - All messages should be returned in chronological order
+        // Assert - All messages should be returned newest-first
         memories.Should().NotBeEmpty("session should have seeded messages");
 
-        // Verify chronological ordering (ascending by timestamp)
+        // Reverse-chronological, per the IConversationMemoryRepository contract ("ordered by
+        // timestamp descending"): the query is Take(limit), so descending is what makes the cut
+        // keep the most recent turns instead of the oldest ones.
+        //
+        // #3625: this loop asserted ascending order and had been red since it was written — the
+        // class carried only Category=Performance, which no gate selected. It also contradicted
+        // TemporalRetrieval_RecentMemoriesRankedHigher_ValidatesNdcgAbove08 two tests above, which
+        // scores the same retrieval as recent-first.
         for (int i = 0; i < memories.Count - 1; i++)
         {
-            memories[i].Timestamp.Should().BeOnOrBefore(memories[i + 1].Timestamp,
-                "memories should be ordered chronologically");
+            memories[i].Timestamp.Should().BeOnOrAfter(memories[i + 1].Timestamp,
+                "memories should be ordered newest-first");
         }
 
         // Verify alternating user/assistant pattern (from seeding)

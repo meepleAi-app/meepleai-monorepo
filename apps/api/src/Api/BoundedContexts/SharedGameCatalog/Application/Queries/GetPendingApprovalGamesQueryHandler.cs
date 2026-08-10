@@ -104,6 +104,8 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
                 false,  // IsTopRated
                 false,  // IsNew
                 CoverUrl: cover.Url,
+                CoverFocalX: cover.FocalX,
+                CoverFocalY: cover.FocalY,
                 // Epic #3470 Slice 1d-a — attribution follows the winning source.
                 CoverLicense: coverLicense,
                 CoverAttribution: coverAttribution,

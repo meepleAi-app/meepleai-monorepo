@@ -64,12 +64,22 @@ staging-minimal: ## Deploy staging single-tester profile (~3GB RAM) — edge via
 		--profile ai-essential --profile monitoring-essential up -d
 
 staging-with-tutor: ## Deploy staging single-tester + orchestration-service for tutor agents (~5GB RAM)
-	$(COMPOSE) -f compose.staging.yml \
+	# Issue #3617: compose.staging.tutor.yml valorizza ORCHESTRATION_SERVICE_URL sull'api, così
+	# l'health check `orchestrator` viene registrato quando il servizio gira davvero. Va aggiunto
+	# QUI e non in compose.staging.yml: le env var non sono condizionabili per profilo, e settarla
+	# per lo staging standard (dove orchestration non è deployato) riaprirebbe #3339.
+	$(COMPOSE) -f compose.staging.yml -f compose.staging.tutor.yml \
 		--profile ai-essential --profile monitoring-essential --profile tutor-agents up -d
 
 staging-tutor-down: ## Stop only orchestration-service (keep rest of staging running)
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents stop orchestration-service
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents rm -f orchestration-service
+	# Issue #3617: ricrea l'api SENZA l'override del tutor. Senza questo passo il container
+	# conserva ORCHESTRATION_SERVICE_URL dall'avvio precedente: il check resta registrato mentre
+	# orchestration non c'è più → Degraded permanente, cioè #3339 di nuovo, e per giunta in una
+	# forma transitoria che non si spiega leggendo compose.staging.yml.
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai-essential --profile monitoring-essential up -d --force-recreate api
 
 staging-core: ## (Deprecated, use staging-minimal) Deploy staging core only — no AI services
 	$(COMPOSE) -f compose.staging.yml \

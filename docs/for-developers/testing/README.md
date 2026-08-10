@@ -83,6 +83,7 @@ cd apps/web && pnpm test:e2e
 - [Frontend Testing](../testing/frontend/) - Vitest patterns
 - [E2E Testing](../testing/e2e/) - Playwright guides
 - [API Smoke Tests (Bruno)](./api-smoke/README.md) - HTTP contract smoke per CRUD 4 domini. Trigger CI: PR `main-dev → main-staging`. Persona: `smoke-aaron@meepleai.test` (free-tier).
+- [Mappa categorie → gate CI](./test-category-gate-map.md) - Quale workflow esegue quali `Category`, e la regola che impedisce a una classe di finire fuori da tutti i gate (#3625).
 
 ---
 

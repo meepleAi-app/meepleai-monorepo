@@ -61,6 +61,8 @@ export interface MeepleCardGameProps {
    * non-admins so the tile renders unchanged.
    */
   readonly coverEditSlot?: ReactNode;
+  /** #3611 — punto focale del crop, inoltrato a `MeepleCard`. Assente = comportamento invariato. */
+  readonly coverFocal?: { x: number; y: number };
 }
 
 export function MeepleCardGame({
@@ -79,6 +81,7 @@ export function MeepleCardGame({
   coverAttribution = null,
   coverSourceUrl = null,
   coverEditSlot,
+  coverFocal,
 }: MeepleCardGameProps): JSX.Element {
   const connections: ConnectionChipProps[] = [];
   if (toolkitsCount > 0) {
@@ -122,6 +125,7 @@ export function MeepleCardGame({
       coverAttribution={coverAttribution}
       coverSourceUrl={coverSourceUrl}
       coverEditSlot={coverEditSlot}
+      coverFocal={coverFocal}
     />
   );
 }

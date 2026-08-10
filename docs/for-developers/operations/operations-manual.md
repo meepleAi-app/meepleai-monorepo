@@ -1737,6 +1737,36 @@ cd infra
 docker compose -f docker-compose.yml -f compose.dev.yml --profile monitoring up -d
 ```
 
+### Health checks of opt-in services (#3339, #3617)
+
+**Regola: un servizio opt-in va monitorato quando è attivo, e solo allora.**
+
+Alcuni health check sono registrati condizionalmente, in base alla presenza della URL del servizio
+in configurazione (`HealthCheckServiceExtensions`): `orchestrator` su `ORCHESTRATION_SERVICE_URL`,
+`ollama` su `OLLAMA_URL`. Il motivo è che le due condizioni sbagliate falliscono entrambe, in
+direzioni opposte:
+
+- registrare il check per un servizio **non deployato** produce un Degraded permanente — rumore che
+  insegna a ignorare il report (era #3339);
+- non registrarlo per un servizio **che gira** lascia un servizio non monitorato che sembra
+  monitorato: se degrada durante una sessione, `/health` non lo dice (era #3617).
+
+La condizione corretta non è «quale ambiente» ma «il servizio è attivo». Poiché le env var di
+compose non sono condizionabili per profilo, l'attivazione passa da un file di override applicato
+solo dal target che avvia il profilo.
+
+| Comando | orchestration gira | `ORCHESTRATION_SERVICE_URL` | check `orchestrator` |
+|---|---|---|---|
+| `make staging-minimal` | no | non settata | non registrato |
+| `make staging-with-tutor` | sì | `compose.staging.tutor.yml` | registrato |
+| `make staging-tutor-down` | no (rimosso) | rimossa ricreando `api` | non registrato |
+| dev / prod | sì | `compose.dev.yml` / `compose.prod.yml` | registrato |
+
+> ⚠️ `staging-tutor-down` deve ricreare il container `api`, non solo fermare orchestration: un
+> container avviato con l'override conserva la variabile finché vive, e il check resterebbe
+> registrato su un servizio ormai assente — di nuovo #3339, per giunta in una forma transitoria che
+> non si spiega leggendo `compose.staging.yml`.
+
 ### Prometheus
 
 #### Configuration

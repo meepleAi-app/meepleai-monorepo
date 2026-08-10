@@ -45,12 +45,12 @@ public class EmbeddingServiceHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Embedding service health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Embedding service unavailable", ex);
+            return HealthCheckResult.Degraded("Embedding service unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Embedding service health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Embedding service check failed", ex);
+            return HealthCheckResult.Degraded("Embedding service check failed", ex);
         }
     }
 }

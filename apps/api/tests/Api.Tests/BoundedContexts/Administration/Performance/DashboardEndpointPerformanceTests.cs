@@ -53,7 +53,11 @@ namespace Api.Tests.BoundedContexts.Administration.Performance;
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "3981")]
 [Trait("Epic", "3901")]
-[Trait("Skip", "CI")] // Run separately in performance suite
+// #3625: a [Trait("Skip", "CI")] used to sit here, annotated "run separately in performance
+// suite". No CI filter reads a Skip trait, and this class declares Category=Integration, so it has
+// always run inside the Administration shard of dev-async and ci — the annotation described a
+// separate suite that does not exist. Removed rather than honoured: the thresholds below are
+// already calibrated for a CI runner, so the gate it actually runs in is the right one.
 [Collection("Performance")] // Isolated collection to avoid interference
 public class DashboardEndpointPerformanceTests : IAsyncLifetime
 {

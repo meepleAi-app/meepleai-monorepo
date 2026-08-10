@@ -29,11 +29,19 @@ import {
 } from '@/components/ui/shared-games/meeple-card-game';
 import { SkeletonCard } from '@/components/ui/shared-games/skeleton-card';
 import { useAdminRole } from '@/hooks/useAdminRole';
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 export type SharedGamesGridState =
   'default' | 'loading' | 'error' | 'empty-search' | 'filtered-empty';
 
-export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'className'>;
+export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'className'> & {
+  /**
+   * #3611 — punto focale piatto come lo espone il DTO (dominio [0,1]); questo
+   * componente lo converte nell'oggetto `coverFocal` richiesto da `MeepleCardGame`.
+   */
+  readonly coverFocalX?: number;
+  readonly coverFocalY?: number;
+};
 
 export interface SharedGamesGridProps {
   readonly state: SharedGamesGridState;
@@ -100,11 +108,21 @@ export function SharedGamesGrid({
           key={game.id}
           {...game}
           labels={cardLabels}
+          coverFocal={
+            game.coverFocalX != null && game.coverFocalY != null
+              ? { x: game.coverFocalX, y: game.coverFocalY }
+              : undefined
+          }
           coverEditSlot={
             // Title is intentionally omitted here: useGameTitle is a hook (illegal in
             // this map callback), and the picker dialog identifies the game by the card
             // the admin clicked. The hero surface passes the locale-resolved title.
-            isEditorOrAbove ? <AdminCoverEditAffordance gameId={game.id} /> : undefined
+            isEditorOrAbove ? (
+              <AdminCoverEditAffordance
+                gameId={game.id}
+                needsAttention={shouldUsePlaceholder(game.coverUrl)}
+              />
+            ) : undefined
           }
         />
       ))}

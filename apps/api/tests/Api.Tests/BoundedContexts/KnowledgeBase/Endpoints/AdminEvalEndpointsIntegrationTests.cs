@@ -12,6 +12,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
@@ -46,6 +47,7 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
     private string _userSessionToken = null!;
     private string _datasetPath = null!;
     private string _mergeOutputPath = null!;
+    private string _datasetRoot = null!;
 
     public AdminEvalEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
     {
@@ -71,10 +73,22 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
                 snippets: [new Snippet(text: "Setup rules...", source: "chunk-1", page: 3, line: 1, score: 0.9f)],
                 confidence: 0.8));
 
+        // #3438: the endpoints now resolve datasetPath against a configured root and refuse
+        // anything outside it. The tests get their own throwaway root, so they exercise the
+        // sandboxed behaviour instead of the absolute temp paths they used before.
+        _datasetRoot = Path.Combine(Path.GetTempPath(), $"eval-root-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_datasetRoot);
+
         _factory = IntegrationWebApplicationFactory
             .Create(connectionString)
             .WithWebHostBuilder(builder =>
             {
+                builder.ConfigureAppConfiguration((_, cfg) => cfg.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["Evaluation:DatasetRoot"] = _datasetRoot
+                    }));
+
                 builder.ConfigureTestServices(services =>
                 {
                     services.RemoveAll<IRagService>();
@@ -104,10 +118,11 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
             Language = "en"
         });
 
-        _datasetPath = Path.Combine(Path.GetTempPath(), $"eval-dataset-{Guid.NewGuid():N}.json");
-        await File.WriteAllTextAsync(_datasetPath, dataset.ToJson());
+        // Names are now RELATIVE to the configured root — that is what the API accepts.
+        _datasetPath = $"eval-dataset-{Guid.NewGuid():N}.json";
+        await File.WriteAllTextAsync(Path.Combine(_datasetRoot, _datasetPath), dataset.ToJson());
 
-        _mergeOutputPath = Path.Combine(Path.GetTempPath(), $"eval-merged-{Guid.NewGuid():N}.json");
+        _mergeOutputPath = $"eval-merged-{Guid.NewGuid():N}.json";
     }
 
     public async ValueTask DisposeAsync()
@@ -116,14 +131,9 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
         await _factory.DisposeAsync();
         await _fixture.DropIsolatedDatabaseAsync(_testDbName);
 
-        if (File.Exists(_datasetPath))
+        if (Directory.Exists(_datasetRoot))
         {
-            File.Delete(_datasetPath);
-        }
-
-        if (File.Exists(_mergeOutputPath))
-        {
-            File.Delete(_mergeOutputPath);
+            Directory.Delete(_datasetRoot, recursive: true);
         }
     }
 
@@ -189,7 +199,8 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
     public async Task RunRetrievalEvaluation_WithNonExistentDatasetPath_Returns404()
     {
         // Arrange
-        var missingDatasetPath = Path.Combine(Path.GetTempPath(), $"missing-dataset-{Guid.NewGuid():N}.json");
+        // Relativo e dentro la root: prova il 404 "non esiste", non il 400 "fuori dal sandbox".
+        var missingDatasetPath = $"missing-dataset-{Guid.NewGuid():N}.json";
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
             RetrievalEndpoint,
@@ -251,8 +262,9 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        File.Exists(_mergeOutputPath).Should().BeTrue("the endpoint persists the merged dataset to the output path");
-        var persisted = EvaluationDataset.FromJson(await File.ReadAllTextAsync(_mergeOutputPath));
+        var mergeOutputFullPath = Path.Combine(_datasetRoot, _mergeOutputPath);
+        File.Exists(mergeOutputFullPath).Should().BeTrue("the endpoint persists the merged dataset to the output path");
+        var persisted = EvaluationDataset.FromJson(await File.ReadAllTextAsync(mergeOutputFullPath));
         persisted.Samples.Should().ContainSingle()
             .Which.RelevantChunkIds.Should().BeEquivalentTo(new[] { "chunk-1" });
     }
@@ -261,7 +273,8 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
     public async Task MergeLabels_WithNonExistentDatasetPath_Returns404()
     {
         // Arrange
-        var missingDatasetPath = Path.Combine(Path.GetTempPath(), $"missing-dataset-{Guid.NewGuid():N}.json");
+        // Relativo e dentro la root: prova il 404 "non esiste", non il 400 "fuori dal sandbox".
+        var missingDatasetPath = $"missing-dataset-{Guid.NewGuid():N}.json";
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
             MergeLabelsEndpoint,
@@ -324,5 +337,69 @@ public sealed class AdminEvalEndpointsIntegrationTests : IAsyncLifetime
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    // ── #3438: the sandbox, proven from the attacker's side ──────────────────────────────
+    //
+    // The unit tests pin the resolver; these pin that the ENDPOINTS actually go through it. An
+    // authenticated admin is the threat model here: admin-gating narrows who can try, it does not
+    // make arbitrary file read/write acceptable.
+
+    [Theory]
+    [InlineData("../../../etc/passwd.json")]
+    [InlineData("subdir/../../../../secrets.json")]
+    public async Task RunRetrievalEvaluation_WithTraversalPath_Returns400AndNeverReads(string traversalPath)
+    {
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            RetrievalEndpoint,
+            _adminSessionToken,
+            new { datasetPath = traversalPath });
+
+        var response = await _client.SendAsync(request);
+
+        // 400, not 404: a 404 would confirm whether the target exists, turning the endpoint into a
+        // file-existence oracle for paths outside the root.
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("passwd", "the error must not echo back the attacker's path");
+    }
+
+    [Fact]
+    public async Task RunRetrievalEvaluation_WithAbsolutePath_Returns400()
+    {
+        // The dataset genuinely exists — but by absolute path, which the sandbox refuses. Proves
+        // the refusal is about containment, not about the file being missing.
+        var absolutePath = Path.Combine(_datasetRoot, _datasetPath);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            RetrievalEndpoint,
+            _adminSessionToken,
+            new { datasetPath = absolutePath });
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task MergeLabels_WithOutputPathOutsideRoot_Returns400AndWritesNothing()
+    {
+        // The write side is the more dangerous one: an unfiltered outputPath means dropping an
+        // attacker-shaped JSON document anywhere the process can write.
+        var escapeTarget = Path.Combine(Path.GetTempPath(), $"pwned-{Guid.NewGuid():N}.json");
+        var relativeEscape = $"../{Path.GetFileName(escapeTarget)}";
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            MergeLabelsEndpoint,
+            _adminSessionToken,
+            BuildMergeReviewBody(_datasetPath, relativeEscape));
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        File.Exists(escapeTarget).Should().BeFalse("nothing may be written outside the dataset root");
     }
 }

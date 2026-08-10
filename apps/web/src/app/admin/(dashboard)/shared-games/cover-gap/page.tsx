@@ -8,8 +8,8 @@
  * ma non c'era modo di TROVARLI — l'unico accesso all'editor era l'affordance a matita in hover
  * sulla griglia pubblica, quindi bisognava scorrerla a occhio. Questa pagina chiude quel buco.
  *
- * Fuori scope: l'editing della cover. Ogni riga porta al gioco su /shared-games, dove vive
- * l'editor esistente (`AdminCoverEditAffordance`) — non duplicarlo qui.
+ * Fuori scope: l'editing della cover. Ogni riga porta al gioco su /shared-games con l'editor
+ * (`AdminCoverEditAffordance`) già aperto via deep-link `?cover=edit` (#3611) — non duplicarlo qui.
  */
 
 'use client';
@@ -61,8 +61,8 @@ export default function CoverGapPage() {
         <h1 className="text-2xl font-semibold text-foreground">Giochi senza cover</h1>
         <p className="text-sm text-muted-foreground">
           Giochi del catalogo privi di qualunque cover (PDF, BGG, Wikidata, manuale), con la causa
-          per cui la pipeline cover-da-PDF non li copre. Per risolvere, apri il gioco e usa
-          l&apos;editor cover.
+          per cui la pipeline cover-da-PDF non li copre. Per risolvere, usa il collegamento in fondo
+          a ogni riga: apre il gioco con l&apos;editor cover già pronto.
         </p>
       </header>
 
@@ -140,10 +140,10 @@ export default function CoverGapPage() {
                   <td className="py-2 pr-4 text-muted-foreground">{formatMb(game.pdfSizeBytes)}</td>
                   <td className="py-2">
                     <a
-                      href={`/shared-games?highlight=${encodeURIComponent(game.gameId)}`}
+                      href={`/shared-games/${game.gameId}?cover=edit`}
                       className="text-primary underline underline-offset-2"
                     >
-                      Apri nel catalogo
+                      Assegna cover
                     </a>
                   </td>
                 </tr>

@@ -2,8 +2,10 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Services;
+using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
@@ -30,6 +32,10 @@ public sealed class AssignCoverCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    // #3611 — unused by these Card-context tests (the Social-only render path is
+    // covered by AssignCoverSocialCropTests), but required by the constructor.
+    private readonly Mock<IWebpVariantGenerator> _webpGenerator = new();
+    private readonly Mock<IBlobStorageService> _blobStorage = new();
 
     public AssignCoverCommandHandlerTests()
     {
@@ -41,10 +47,20 @@ public sealed class AssignCoverCommandHandlerTests
     }
 
     private AssignCoverCommandHandler CreateAssignHandler() =>
-        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object, NullLogger<AssignCoverCommandHandler>.Instance);
+        new(
+            _repository.Object,
+            _unitOfWork.Object,
+            _cache.Object,
+            _cacheRetryPolicy.Object,
+            _webpGenerator.Object,
+            _blobStorage.Object,
+            NullLogger<AssignCoverCommandHandler>.Instance);
 
+    // #3615: the remove path deletes the removed assignment's rendered crop from R2, so it now
+    // takes the blob storage too (shared with the assign handler above).
     private RemoveCoverAssignmentCommandHandler CreateRemoveHandler() =>
-        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
+        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object,
+            _blobStorage.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
 
     private static SharedGame NewGame() => SharedGame.Create(
         "Catan", 1995, "desc", 3, 4, 90, 10, 2.5m, 7.8m,
@@ -165,5 +181,63 @@ public sealed class AssignCoverCommandHandlerTests
 
         await act.Should().ThrowAsync<NotFoundException>();
         _cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ── #3615: removing an assignment must not orphan its rendered crop ──────────────────
+    //
+    // RevokeManualCoverCommandHandler already deleted the crop objects of the assignments it
+    // removed; this path did not. Since #3611 those crops actually exist, so a removed Social
+    // assignment left `covers/crops/{gameId}/social.webp` behind with nothing referencing it.
+
+    [Fact]
+    public async Task Remove_DeletesTheRenderedCropObject()
+    {
+        var game = NewGame();
+        var assignment = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Wikidata, AdminId);
+        assignment.SetGeneratedKey($"covers/crops/{game.Id}/social.webp");
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        var handler = CreateRemoveHandler();
+
+        await handler.Handle(new RemoveCoverAssignmentCommand(game.Id, CoverContext.Social, AdminId), CancellationToken.None);
+
+        _blobStorage.Verify(
+            b => b.DeleteRawKeyAsync($"covers/crops/{game.Id}/social.webp", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Remove_AssignmentWithoutCrop_DeletesNothing()
+    {
+        // Card/Hero are framed client-side and never render a file: a delete call here would be
+        // a pointless round-trip against a key that was never written.
+        var game = NewGame();
+        game.AssignCover(CoverContext.Card, CoverAssignmentSource.Wikidata, AdminId);
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        var handler = CreateRemoveHandler();
+
+        await handler.Handle(new RemoveCoverAssignmentCommand(game.Id, CoverContext.Card, AdminId), CancellationToken.None);
+
+        _blobStorage.Verify(b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Remove_BlobDeleteFails_StillSucceeds()
+    {
+        // The DB removal is authoritative: a failed R2 delete leaves an unreferenced object, which
+        // is a storage cost, not a correctness problem. It must never surface as a failed request.
+        var game = NewGame();
+        var assignment = game.AssignCover(CoverContext.Social, CoverAssignmentSource.Wikidata, AdminId);
+        assignment.SetGeneratedKey($"covers/crops/{game.Id}/social.webp");
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        _blobStorage
+            .Setup(b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("R2 unavailable"));
+        var handler = CreateRemoveHandler();
+
+        var act = () => handler.Handle(
+            new RemoveCoverAssignmentCommand(game.Id, CoverContext.Social, AdminId), CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

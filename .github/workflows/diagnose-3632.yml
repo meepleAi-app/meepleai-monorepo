@@ -1,0 +1,109 @@
+# TEMPORANEO — issue #3632. Da cancellare una volta identificata la causa.
+#
+# I gate Backend Unit e Integration di ci.yml escono verdi senza eseguire test. Il wrapper
+# `dotnet-coverage collect "<comando>"` è stato scagionato in locale: su Linux (container
+# mcr.microsoft.com/dotnet/sdk:9.0, stessa versione 18.9.0 del runner) esegue il comando annidato,
+# ne propaga stdout e restituisce l'exit code corretto — anche con `--settings` e
+# `--blame-hang-timeout`, e anche con `&` nel filtro.
+#
+# Resta quindi una differenza dell'ambiente reale che in locale non si riproduce. Questo workflow
+# la isola variando una cosa alla volta, con lo STESSO runner e lo STESSO artifact di ci.yml.
+name: Diagnose 3632
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    name: Diagnose empty gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install PDF Dependencies
+        run: sudo apt-get update && sudo apt-get install -y libgdiplus
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Environment
+        run: |
+          echo "--- dotnet ---";        dotnet --version
+          echo "--- runtimes ---";      dotnet --list-runtimes | head -5
+          echo "--- arch ---";          uname -m
+          echo "--- libxml2 ---";       ldconfig -p | grep -c libxml2 || echo "assente"
+          echo "--- glibc ---";         ldd --version | head -1
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release 2>&1 | tail -3
+
+      - name: Install dotnet-coverage
+        run: |
+          dotnet tool install --global dotnet-coverage
+          echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: dotnet-coverage version
+        run: dotnet-coverage --version
+
+      # A — baseline senza wrapper. Se questo non esegue i test, il problema non è dotnet-coverage.
+      - name: 'A: dotnet test diretto (filtro piccolo)'
+        continue-on-error: true
+        run: |
+          set +e
+          dotnet test tests/Api.Tests/Api.Tests.csproj \
+            --filter "FullyQualifiedName~TestCategoryGateArchitecture" \
+            --no-build --configuration Release
+          echo "### EXIT_A=$?"
+
+      # B — stesso filtro piccolo, dentro il wrapper. Isola il wrapper a parità di comando.
+      - name: 'B: dotnet-coverage + filtro piccolo'
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p coverage
+          dotnet-coverage collect \
+            "dotnet test tests/Api.Tests/Api.Tests.csproj \
+              --filter \"FullyQualifiedName~TestCategoryGateArchitecture\" \
+              --no-build \
+              --configuration Release" \
+            -f cobertura \
+            -o coverage/diag-b.xml
+          echo "### EXIT_B=$?"
+          echo "### dimensione report:"; wc -c coverage/diag-b.xml 2>/dev/null || echo "nessun file"
+
+      # C — il comando ESATTO del gate unit di ci.yml (solution + deny-list + runsettings + blame).
+      #     Se A e B eseguono e C no, la causa è in una di queste tre differenze.
+      - name: 'C: comando identico a ci.yml backend-unit'
+        continue-on-error: true
+        run: |
+          set +e
+          mkdir -p coverage
+          dotnet-coverage collect \
+            "dotnet test MeepleAI.Api.sln \
+              --filter \"Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow\" \
+              --settings tests/Api.Tests/unit.runsettings \
+              --no-build \
+              --configuration Release \
+              --blame-hang-timeout 5min" \
+            -f cobertura \
+            -o coverage/diag-c.xml
+          echo "### EXIT_C=$?"
+          echo "### dimensione report:"; wc -c coverage/diag-c.xml 2>/dev/null || echo "nessun file"
+
+      # D — come C ma senza wrapper: distingue "è il wrapper" da "è il comando".
+      - name: 'D: comando di ci.yml SENZA wrapper'
+        continue-on-error: true
+        run: |
+          set +e
+          timeout 600 dotnet test MeepleAI.Api.sln \
+            --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow" \
+            --settings tests/Api.Tests/unit.runsettings \
+            --no-build \
+            --configuration Release \
+            --blame-hang-timeout 5min 2>&1 | tail -25
+          echo "### EXIT_D=${PIPESTATUS[0]}"

@@ -11,6 +11,11 @@
 name: Diagnose 3632
 
 on:
+  # workflow_dispatch da solo non basta: GitHub lo espone solo per i workflow presenti sul branch
+  # di default, e questo file vive solo qui. Il trigger push limitato al branch di diagnosi lo fa
+  # partire da sé, senza toccare main.
+  push:
+    branches: [feature/issue-3632-ci-empty-gate]
   workflow_dispatch:
 
 jobs:

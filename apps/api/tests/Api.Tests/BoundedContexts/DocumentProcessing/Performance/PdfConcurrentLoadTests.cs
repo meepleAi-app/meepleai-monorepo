@@ -14,11 +14,17 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Performance;
 
 /// <summary>
-/// Load testing for PDF extraction pipeline under concurrent access.
-/// Validates no degradation, no deadlocks, and correct isolation between sessions.
+/// Isolation testing for the PDF extraction pipeline under concurrent access.
+/// Validates absence of deadlocks and no cross-contamination between parallel sessions.
 /// Issue #4143: Performance Testing - PDF Wizard
+///
+/// <para>
+/// Categorised <c>Unit</c>, not <c>Performance</c> (#3625): the extractors are mocked, so what is
+/// actually asserted is that N parallel calls keep their results separate — a correctness property,
+/// reproducible off any real timing. See <see cref="PdfExtractionPerformanceTests"/>.
+/// </para>
 /// </summary>
-[Trait("Category", TestCategories.Performance)]
+[Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "4143")]
 public class PdfConcurrentLoadTests

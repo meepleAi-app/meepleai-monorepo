@@ -14,11 +14,19 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Performance;
 
 /// <summary>
-/// Performance tests for the 3-stage PDF extraction pipeline.
-/// Measures extraction timing, quality distribution, and timeout behavior.
+/// Stage-selection tests for the 3-stage PDF extraction pipeline.
+/// Covers quality-driven fallback, quality distribution, and timeout configuration.
 /// Issue #4143: Performance Testing - PDF Wizard
+///
+/// <para>
+/// Categorised <c>Unit</c>, not <c>Performance</c> (#3625): every collaborator here is a
+/// <see cref="Moq.Mock"/>, so the whole class runs in about a second and asserts which stage was
+/// chosen — not how fast the real extractors are. The elapsed-time assertions are upper bounds
+/// wide enough to be slack on a shared runner (the tightest is 1s on a path that rejects the file
+/// before any work), kept as a guard against an accidental sleep or retry loop.
+/// </para>
 /// </summary>
-[Trait("Category", TestCategories.Performance)]
+[Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "4143")]
 public class PdfExtractionPerformanceTests

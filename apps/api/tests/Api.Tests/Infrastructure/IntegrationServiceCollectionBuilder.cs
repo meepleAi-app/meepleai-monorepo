@@ -67,11 +67,27 @@ internal static class IntegrationServiceCollectionBuilder
     /// to true for any test whose whole point is proving persistence of field mutations after a
     /// plain (non-<c>.AsTracking()</c>) query. See issue #3269 follow-up (NoTracking gotcha).
     /// </param>
+    /// <param name="useRetryOnFailure">
+    /// Quando false disattiva <c>EnableRetryOnFailure</c> sul DbContext di test (#3633).
+    ///
+    /// <para>
+    /// La retry strategy rende ILLEGALE <c>BeginTransactionAsync</c> esplicito: EF Core lancia
+    /// «The configured execution strategy 'NpgsqlRetryingExecutionStrategy' does not support
+    /// user-initiated transactions». Serve quindi disattivarla nei test la cui materia È la
+    /// semantica transazionale (commit, rollback, deadlock, isolamento).
+    /// </para>
+    /// <para>
+    /// Non basta avvolgerli in <c>CreateExecutionStrategy().ExecuteAsync</c> come fa il codice di
+    /// produzione (#3636 / PR #3644): la strategy può RIESEGUIRE il delegate, e un test che
+    /// verifica un rollback verrebbe rieseguito dopo il rollback stesso, misurando altro.
+    /// </para>
+    /// </param>
     /// <returns>A ServiceCollection ready for test-specific repository registrations.</returns>
     public static ServiceCollection CreateBase(
         string connectionString,
         bool useHybridCachePassthrough = false,
-        bool useNoTrackingDefault = false)
+        bool useNoTrackingDefault = false,
+        bool useRetryOnFailure = true)
     {
         var services = new ServiceCollection();
 
@@ -95,7 +111,16 @@ internal static class IntegrationServiceCollectionBuilder
                 // transient EndOfStreamException/Npgsql connection drops under load. Without
                 // EnableRetryOnFailure, those surface as test failures instead of being retried.
                 // Pattern mirrors FrontendSdkTestFactory (PR #1684).
-                o.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+                //
+                // #3633: ora opzionale. Introdotto il 2026-05-30 (77c4709ab), rende illegale
+                // BeginTransactionAsync esplicito e ha rotto i TransactionScenarioTests — invisibile
+                // per due mesi e mezzo perché dal 2026-05-25 nessun gate eseguiva più i test di
+                // integrazione (#3632 ci.yml vuoto, #3629 dev-async in timeout). Resta attivo per
+                // default: la flakiness di connessione che cura è reale.
+                if (useRetryOnFailure)
+                {
+                    o.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorCodesToAdd: null);
+                }
             });
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));

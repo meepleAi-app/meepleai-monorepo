@@ -45,7 +45,13 @@ public sealed class TransactionScenarioTests : IAsyncLifetime
         _databaseName = $"test_transactions_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+        // #3633: senza `useRetryOnFailure: false` ogni test di questa classe fallisce con «The
+        // configured execution strategy 'NpgsqlRetryingExecutionStrategy' does not support
+        // user-initiated transactions» — qui `BeginTransactionAsync` esplicito non è un dettaglio
+        // implementativo, è l'oggetto stesso del test (commit, rollback, deadlock, isolamento).
+        var services = IntegrationServiceCollectionBuilder.CreateBase(
+            _isolatedDbConnectionString,
+            useRetryOnFailure: false);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();

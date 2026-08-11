@@ -4,6 +4,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -16,6 +17,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Api.Tests.Integration.DomainEvents;
@@ -54,6 +56,23 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
+
+        // #3633: senza questo override ogni assert su audit_outbox trova 0 righe. Il default DI è
+        // OutboxOnly (cutover T9 di #1535): gli eventi vengono accodati in domain_event_outbox e
+        // NON pubblicati inline via MediatR, quindi DomainEventAuditHandler — che è ciò che scrive
+        // audit_outbox — non viene mai invocato. Nessuna eccezione, solo zero dispatch: è il
+        // fallimento silenzioso che il commento in MeepleAiDbContext prevedeva.
+        //
+        // È la via documentata dal builder stesso e già usata da PlayerStatisticsCacheTests,
+        // FinalizeSessionSingleDispatchIntegrationTests e altre. Queste due classi
+        // (qui e FullStackCrossContextWorkflowTests) erano rimaste indietro rispetto al cutover, e
+        // nessuno se n'era accorto perché nessun gate le eseguiva (#3629, #3632).
+        //
+        // ⚠️ Limite dichiarato: così questi test coprono il percorso Hybrid, non l'OutboxOnly che
+        // gira in produzione. Riscriverli sulla catena reale (domain_event_outbox → processor →
+        // audit_logs) è il lavoro corretto, ma è una riscrittura di semantica, non un fix: #3633.
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         _serviceProvider = services.BuildServiceProvider();
         _eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();

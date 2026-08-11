@@ -60,6 +60,17 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
         // which needs to update consuming agents' KbCardIds).
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
 
+        // #3633: senza questa registrazione il test fallisce con «Unable to resolve service for
+        // type 'IProcessingJobRepository'». In produzione è registrata da
+        // DocumentProcessingServiceExtensions (#4731 queue commands); questa fixture costruisce il
+        // DI a mano e non carica quel bounded context, quindi la dipendenza va aggiunta qui.
+        services.AddScoped<
+            Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IProcessingJobRepository,
+            Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence.ProcessingJobRepository>();
+        services.AddScoped<
+            Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IPdfDocumentRepository,
+            Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence.PdfDocumentRepository>();
+
         // Blob storage — best-effort in DeleteKbDocumentCommandHandler; mock so no physical I/O.
         var blobMock = new Mock<IBlobStorageService>();
         blobMock.Setup(b => b.DeleteAsync(

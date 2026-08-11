@@ -20,7 +20,9 @@ on:
       - 'global.json'
       - '.github/workflows/dev-fast.yml'
       - '.github/actions/**'
-      - 'infra/scripts/check-migration-safety.py'
+      - 'infra/scripts/**'
+      - 'infra/seed-schema.version'
+      - 'infra/fixtures/**'
   workflow_dispatch:
 
 concurrency:
@@ -40,6 +42,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       orchestration: ${{ steps.filter.outputs.orchestration }}
       migrations: ${{ steps.filter.outputs.migrations }}
+      infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v6
       - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d  # v4
@@ -74,6 +77,20 @@ jobs:
               - 'apps/api/src/Api/Infrastructure/Migrations/**/*.cs'
               - 'infra/scripts/check-migration-safety.py'
               - 'infra/scripts/test_check_migration_safety.py'
+              - '.github/workflows/dev-fast.yml'
+            infra:
+              # Issue #3665: the bats suites under infra/scripts/tests/ ran in
+              # NO workflow. ci.yml covers only the Python script tests, and it
+              # triggers on PRs to main/main-staging — not main-dev. Result: a
+              # PR touching only infra/ had practically no CI, and
+              # snapshot-verify.bats stayed red for two months unnoticed.
+              # Scope is infra/scripts/** (not infra/**) so docker-compose,
+              # monitoring and secrets templates don't wake the hot path: the
+              # bats suites assert on scripts, their fixtures and the seed
+              # schema counter, and nothing else.
+              - 'infra/scripts/**'
+              - 'infra/seed-schema.version'
+              - 'infra/fixtures/**'
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min
@@ -316,3 +333,45 @@ jobs:
           name: migration-safety-report
           path: ${{ runner.temp }}/migration-safety-report.json
           retention-days: 90  # Aligned with audit/compliance retention window.
+
+  infra-scripts:
+    # Issue #3665: infra/scripts/tests/ holds four bats suites that no workflow
+    # ran. snapshot-verify.bats had been red since 2026-06-11 — not because it
+    # was hard to fix, but because nobody executed it.
+    name: Infra Scripts (bats)
+    runs-on: ubuntu-latest
+    # The four suites finish in seconds; the budget covers npx fetching bats on
+    # a cold npm cache, not the tests themselves.
+    timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify the suite is non-empty
+        # Deliberate guard, not ceremony: `bats` on a directory with no .bats
+        # file prints "1..0" and exits 0. A moved or renamed tests/ directory
+        # would leave this gate green while examining nothing — the same failure
+        # mode as #3622/#3629/#3632, where a green check stopped meaning
+        # "passed" and started meaning "ran nothing". Fail when there is
+        # nothing to examine.
+        run: |
+          if [ ! -d infra/scripts/tests ]; then
+            echo "::error:: infra/scripts/tests/ does not exist — the suite was moved or deleted; point this gate at its new home"
+            exit 1
+          fi
+          count=$(find infra/scripts/tests -name '*.bats' -type f | wc -l)
+          echo "Discovered ${count} .bats suite(s) under infra/scripts/tests/"
+          if [ "$count" -eq 0 ]; then
+            echo "::error:: no .bats suite found — this gate would report success while checking nothing"
+            exit 1
+          fi
+
+      - name: Run bats suites
+        # Version pinned so a bats major bump cannot silently change semantics.
+        # jq and bash are preinstalled on ubuntu-latest; both scripts need them.
+        # --print-output-on-failure surfaces the failing script's stderr in the
+        # job log, so a red check is diagnosable without a local repro.
+        run: npx --yes bats@1.13.0 --print-output-on-failure infra/scripts/tests/

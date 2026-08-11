@@ -310,7 +310,7 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             Version = toolkit.Version,
 #pragma warning restore CS0618
 #pragma warning disable S1135 // TODO: architectural breadcrumb — mitigated footgun: see comment below.
-            // TODO(#1458): VersionSemver already has a real producer.
+            // TODO(#3670): VersionSemver already has a real producer.
             // PublishToolkitVersionCommandHandler.cs:137 writes the user-input
             // semver and DELIBERATELY bypasses GameToolkitRepository.UpdateAsync
             // (see handler comment at lines 131-136) precisely because this
@@ -319,8 +319,8 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             // AddAsync (brand-new toolkit → seed "0.1.0"): UpdateAsync now excludes
             // VersionSemver (and Description/License) from the Update() so no
             // non-publish update path clobbers the published marketplace pointer.
-            // Full fix: surface VersionSemver on the domain aggregate (separate
-            // epic — original paired-write context shipped in #1144 2026-05-14)
+            // Full fix: surface VersionSemver on the domain aggregate (#3670 —
+            // original paired-write context shipped in #1144 2026-05-14)
             // so MapToPersistence can read it directly and the synthesis goes away.
             VersionSemver = $"0.{toolkit.Version}.0",
 #pragma warning restore S1135

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Queries.AdminEvents;
 using Api.Extensions;
@@ -297,8 +298,17 @@ internal static class AdminEventsEndpoints
     /// </remarks>
     private static int ExtractStatusCode(IResult? result)
     {
-        if (result is IStatusCodeHttpResult sc) return sc.StatusCode ?? 401;
-        return 401; // safe default for null or non-status results
+        if (result is IStatusCodeHttpResult sc && sc.StatusCode.HasValue) return sc.StatusCode.Value;
+
+        // #3633: `Results.Forbid()` produce un ForbidHttpResult, che NON implementa
+        // IStatusCodeHttpResult — delega lo status allo schema di autenticazione invece di
+        // dichiararlo. Senza questo ramo cadeva nel default e lo stream rispondeva 401 a un utente
+        // autenticato ma senza i permessi: il chiamante non poteva distinguere «sessione scaduta,
+        // rifai login» da «non hai i permessi», mentre gli altri due endpoint della stessa famiglia
+        // (GET /admin/events e /types, che restituiscono l'IResult direttamente) rispondevano 403.
+        if (result is ForbidHttpResult) return StatusCodes.Status403Forbidden;
+
+        return StatusCodes.Status401Unauthorized; // default per null o risultati senza status
     }
 
     /// <summary>

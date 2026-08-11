@@ -10,6 +10,13 @@ namespace Api.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Migration Safety Gate (#1087, rollback-runbook §8.2): il DROP COLUMN qui sotto è
+            // rollback-safe perché la colonna è già di fatto morta — contiene NULL su ogni riga da
+            // quando #2305 ha rimosso il trigger `ef_update_row_version()` che la popolava, e
+            // nessun codice la legge (la proprietà non è esposta da alcun DTO). Non c'è quindi
+            // alcun dato da preservare, e il Down() la ricrea identica.
+            migrationBuilder.Sql("-- safe: drop dead bytea concurrency column, NULL on every row since #2305 removed its trigger; replaced by the xmin system column (§8.3)");
+
             // #3651: rimuove la colonna `RowVersion` (bytea), residuo del meccanismo pre-#2305.
             // Era popolata dal trigger `ef_update_row_version()`, rimosso da #2305 quando le altre
             // entità sono passate a xmin: da allora restava NULL e la concorrenza ottimistica su

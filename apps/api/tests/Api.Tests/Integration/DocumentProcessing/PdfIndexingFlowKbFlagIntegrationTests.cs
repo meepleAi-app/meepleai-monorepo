@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -8,6 +9,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
@@ -504,6 +506,16 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // `.Contains(...)` dentro l'espressione LINQ viene tradotto in `LIKE`, che per Postgres non
         // esiste su quel tipo: la query moriva con `42883: operator does not exist: jsonb ~~ jsonb`
         // prima di qualunque assert. Il filtro su `EventType` (text) resta invece nel database.
+        // #3633: gli alias arrivano da EventTypeRegistry, non scritti a mano. La colonna
+        // `EventType` NON contiene il nome CLR: `MeepleAiDbContext.EnqueueOutboxRows` la
+        // popola con `EventTypeRegistry.ResolveOrFullName(...)`, che per questi due eventi
+        // restituisce gli alias stabili «pdf.state.changed» e «kb.doc.indexed» (#661).
+        // I filtri precedenti cercavano «PdfStateChanged» e «KbDocIndexed» e non potevano
+        // matchare nulla: il test contava 0 e 0, e falliva sul primo assert facendo sembrare
+        // regredita la pipeline mentre a essere sbagliata era l'interrogazione.
+        var pdfStateChangedAlias = EventTypeRegistry.AliasByType[typeof(PdfStateChangedEvent)];
+        var kbDocIndexedAlias = EventTypeRegistry.AliasByType[typeof(KbDocIndexedEvent)];
+
         var pdfIdString = pdfDocId.ToString();
         var outboxRows = await _dbContext.DomainEventOutbox
             .AsNoTracking()
@@ -511,7 +523,7 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
             .ToListAsync(TestCancellationToken);
 
         var pdfStateChangedCount = outboxRows.Count(
-            e => e.EventType.Contains("PdfStateChanged", StringComparison.Ordinal)
+            e => string.Equals(e.EventType, pdfStateChangedAlias, StringComparison.Ordinal)
                  && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
         pdfStateChangedCount.Should().Be(6,
             "pipeline must raise PdfStateChangedEvent for EVERY state transition " +
@@ -520,7 +532,7 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
             "If this counts 1, the bridge-save shortcut from PR #2295 has regressed.");
 
         var kbDocIndexedCount = outboxRows.Count(
-            e => e.EventType.Contains("KbDocIndexed", StringComparison.Ordinal)
+            e => string.Equals(e.EventType, kbDocIndexedAlias, StringComparison.Ordinal)
                  && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
         kbDocIndexedCount.Should().Be(1,
             "KbDocIndexedEvent must fire exactly once per upload, raised by " +

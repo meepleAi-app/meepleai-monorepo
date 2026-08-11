@@ -39,34 +39,29 @@ internal class PublishEmailTemplateCommandHandler : ICommandHandler<PublishEmail
             return false;
         }
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        try
+        // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
+        // attiva fuori da Testing. Il delegate è idempotente: rilegge le versioni e riapplica le
+        // stesse mutazioni di dominio, quindi un retry produce lo stesso stato finale.
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
             // Deactivate all other versions of the same (name, locale)
-            var allVersions = await _repository.GetByNameAsync(template.Name, cancellationToken).ConfigureAwait(false);
+            var allVersions = await _repository.GetByNameAsync(template.Name, ct).ConfigureAwait(false);
             foreach (var version in allVersions.Where(v => string.Equals(v.Locale, template.Locale, StringComparison.Ordinal) && v.Id != template.Id && v.IsActive))
             {
                 version.Deactivate();
-                await _repository.UpdateAsync(version, cancellationToken).ConfigureAwait(false);
+                await _repository.UpdateAsync(version, ct).ConfigureAwait(false);
             }
 
             // Activate the target version
             template.Activate();
-            await _repository.UpdateAsync(template, cancellationToken).ConfigureAwait(false);
+            await _repository.UpdateAsync(template, ct).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
+        // Fuori dalla transazione: un log emesso dentro il delegate verrebbe ripetuto a ogni retry.
+        _logger.LogInformation(
+            "Published email template '{Name}' locale '{Locale}' version {Version} (ID: {Id})",
+            template.Name, template.Locale, template.Version, template.Id);
 
-            _logger.LogInformation(
-                "Published email template '{Name}' locale '{Locale}' version {Version} (ID: {Id})",
-                template.Name, template.Locale, template.Version, template.Id);
-
-            return true;
-        }
-        catch
-        {
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
-            throw;
-        }
+        return true;
     }
 }

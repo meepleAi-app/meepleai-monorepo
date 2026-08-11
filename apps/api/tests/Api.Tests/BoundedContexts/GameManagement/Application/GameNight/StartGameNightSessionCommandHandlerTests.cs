@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
@@ -36,6 +37,9 @@ public class StartGameNightSessionCommandHandlerTests
         _mockRepository = new Mock<IGameNightEventRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        // #3636: l'handler consegna il lavoro alla UoW invece di pilotare Begin/Commit. Senza
+        // questo setup il mock non eseguirebbe il delegate e l'handler vedrebbe solo null.
+        _mockUnitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
         _mockAutoSaveScheduler = new Mock<IAutoSaveSchedulerService>();
         _handler = new StartGameNightSessionCommandHandler(
             _mockRepository.Object,
@@ -111,7 +115,14 @@ public class StartGameNightSessionCommandHandlerTests
         Assert.Single(gameNight.Sessions);
 
         _mockRepository.Verify(r => r.UpdateAsync(gameNight, It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // #3636: il SaveChanges è ora dentro ExecuteInTransactionAsync (lo esegue la UoW insieme al
+        // commit), quindi l'handler non lo chiama più direttamente. Si verifica che il lavoro sia
+        // passato dalla transazione, che è il contratto vero.
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -360,10 +371,17 @@ public class StartGameNightSessionCommandHandlerTests
         // Act
         await _handler.Handle(command, CancellationToken.None);
 
-        // Assert — begun + committed exactly once, never rolled back.
-        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Assert — #3636: il lavoro passa da UN SOLO ExecuteInTransactionAsync. Verificare
+        // "Begin una volta, Commit una volta" non direbbe più nulla: quella sequenza è interna alla
+        // UoW ed è coperta dai suoi test. Qui conta che l'handler non apra transazioni per conto
+        // suo (lo farebbe fallire sotto la retry strategy) e che il lavoro sia avvenuto.
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -382,7 +400,12 @@ public class StartGameNightSessionCommandHandlerTests
             .ReturnsAsync(new CreateSessionResult(
                 Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
                 GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
-        _mockUnitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        // #3636: il conflitto xmin emerge dal SaveChanges che ora è DENTRO la UoW, quindi si simula
+        // facendo fallire ExecuteInTransactionAsync. Mockare SaveChangesAsync non avrebbe più
+        // effetto: l'handler non lo chiama più direttamente.
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()))
             .ThrowsAsync(new DbUpdateConcurrencyException());
 
         var command = new StartGameNightSessionCommand(
@@ -392,9 +415,8 @@ public class StartGameNightSessionCommandHandlerTests
         await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
             () => _handler.Handle(command, CancellationToken.None));
 
-        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // Il rollback è responsabilità della UoW (e testato lì): qui conta che l'handler mappi
+        // l'eccezione al 409 e non prosegua con gli effetti post-commit.
         // The blocked start must NOT open live mode on a rolled-back session.
         _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
             Times.Never);

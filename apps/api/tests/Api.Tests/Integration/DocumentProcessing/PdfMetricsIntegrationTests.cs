@@ -296,6 +296,18 @@ public sealed class PdfMetricsIntegrationTests : IAsyncLifetime
         pdf.Retry();
         pdf.RetryCount.Should().Be(1);
 
+        // #3633: `Retry()` riporta a Pending, non allo stato in cui si era fallito. È deliberato
+        // (#3269, bug-hunt B11): la pipeline non ha un resume a metà — `ProcessAsync` riparte
+        // sempre da Extract — e solo un PDF Pending è reclamabile da `TryClaimPendingAsync`, quindi
+        // il vecchio «resume from FailedAtState ?? Extracting» lasciava il documento in uno stato
+        // che nessun binario runtime poteva prendere in carico e il retry non riprocessava mai.
+        //
+        // Il test proseguiva da Chunking come se il retry riprendesse da Extracting, e falliva con
+        // «Invalid state transition: Pending → Chunking». Ora ripercorre il ciclo dall'inizio, che
+        // è ciò che accade davvero in produzione dopo un retry.
+        pdf.TransitionTo(PdfProcessingState.Uploading);
+        pdf.TransitionTo(PdfProcessingState.Extracting);
+
         // Complete successfully
         pdf.TransitionTo(PdfProcessingState.Chunking);
         pdf.TransitionTo(PdfProcessingState.Embedding);

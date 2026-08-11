@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -42,6 +43,9 @@ public sealed class CreateGamebookCampaignHandlerTests
 
     public CreateGamebookCampaignHandlerTests()
     {
+        // #3636: l'handler consegna il lavoro alla UoW invece di pilotare Begin/Commit.
+        // Senza questo setup il mock non esegue il delegate e nulla accade.
+        _uow.SetupExecuteInTransaction();
         // #2917: the handler dispatches CreateSessionCommand for the roster. Default to a
         // standalone (night-less) result so the happy-path tests don't need per-test setup.
         _mediator
@@ -129,9 +133,14 @@ public sealed class CreateGamebookCampaignHandlerTests
 
         await handler.Handle(cmd, CancellationToken.None);
 
-        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        // #3636: Begin/Commit sono interni alla UoW e coperti dai suoi test. Qui conta che il
+        // lavoro sia passato da UNA transazione e che l'handler non ne apra di proprie.
+        _uow.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _uow.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -145,9 +154,10 @@ public sealed class CreateGamebookCampaignHandlerTests
 
         var act = () => handler.Handle(cmd, CancellationToken.None);
 
+        // #3636: il rollback è responsabilità della UoW (e testato lì). Il contratto dell'handler
+        // è che l'eccezione della sessione propaghi invariata invece di essere inghiottita — se il
+        // commit avvenisse comunque, la campagna resterebbe orfana di sessione.
         await act.Should().ThrowAsync<InvalidOperationException>();
-        _uow.Verify(u => u.RollbackTransactionAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _uow.Verify(u => u.CommitTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

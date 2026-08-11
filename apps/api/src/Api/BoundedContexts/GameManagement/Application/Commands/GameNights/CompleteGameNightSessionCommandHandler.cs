@@ -68,51 +68,41 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
             p => p.Id,
             p => command.WinnerId.HasValue && p.Id == command.WinnerId.Value ? 1 : 2);
 
-        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
-        // Once CommitTransactionAsync starts it owns rollback-on-failure; the catch blocks must not
-        // roll back a second time (mirrors StartGameNightSessionCommandHandler).
-        var commitStarted = false;
+        // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
+        // attiva fuori da Testing. Rollback e commit sono ora della UoW, quindi `commitStarted` e i
+        // rollback manuali spariscono; i catch restano solo per mappare l'eccezione.
         try
         {
-            gameNight.CompleteCurrentSession(command.WinnerId);
-            await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                gameNight.CompleteCurrentSession(command.WinnerId);
+                await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
+                await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
 
             // Cross-BC: finalize the tracking Session in the SAME transaction. Session.Finalize
             // enforces Active/Paused; its inner SaveChangesAsync enlists in this ambient tx, so the
             // DB changes (GameNightSession complete + tracking Session finalize) roll back together.
             // KNOWN RISK (accepted, → SI-3-proper): FinalizeSessionCommandHandler's SSE side-effects
-            // (_diaryStream.Publish + _syncService.PublishEventAsync) fire before CommitTransactionAsync,
-            // so a rare commit failure leaves phantom broadcasts — clients self-correct on the next
-            // poll. See must-fix #5 in the C4 spec (2026-07-05-issue-2634-c4-winner-completa-design.md).
+            // (_diaryStream.Publish + _syncService.PublishEventAsync) fire before the commit, so a
+            // rare commit failure leaves phantom broadcasts — clients self-correct on the next poll.
+            // See must-fix #5 in the C4 spec (2026-07-05-issue-2634-c4-winner-completa-design.md).
+            // #3636 amplia leggermente quella finestra già accettata: sotto la retry strategy il
+            // delegate può essere rieseguito, quindi i broadcast possono ripetersi. Stesso effetto
+            // (i client si riallineano), stessa mitigazione; spostarli fuori è SI-3-proper.
             // RequestedBy = session.UserId: this is a trusted internal orchestration path. The caller's
             // authority was already enforced above (organizer check, line 49) — the FinalizeSessionCommand
             // IDOR guard targets direct HTTP callers, so we finalize on behalf of the tracking session's
             // owner to avoid spuriously blocking a legitimate game-night completion.
-            await _mediator.Send(new FinalizeSessionCommand(trackingSessionId, finalRanks, session.UserId), cancellationToken).ConfigureAwait(false);
-
-            commitStarted = true;
-            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
+                await _mediator.Send(new FinalizeSessionCommand(trackingSessionId, finalRanks, session.UserId), ct).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw new ConflictException("The session was modified concurrently. Please retry.");
         }
         catch (InvalidOperationException ex)
         {
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
             throw new ConflictException(ex.Message);
-        }
-        catch (Exception)
-        {
-            // ConflictException from FinalizeSessionCommand (wrong status / rank mismatch) and any
-            // other failure roll back atomically, then propagate unchanged.
-            if (!commitStarted)
-                await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
-            throw;
         }
 
         await _autoSaveScheduler.RemoveAsync(trackingSessionId, cancellationToken).ConfigureAwait(false);

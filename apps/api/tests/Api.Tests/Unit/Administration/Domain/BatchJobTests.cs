@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Domain.Entities;
+using Api.Middleware.Exceptions;
 using Api.BoundedContexts.Administration.Domain.Enums;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -359,7 +360,7 @@ public sealed class BatchJobTests
     }
 
     [Fact]
-    public void Cancel_WhenCompleted_ShouldThrowInvalidOperationException()
+    public void Cancel_WhenCompleted_ShouldThrowConflictException()
     {
         // Arrange
         var job = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
@@ -370,12 +371,12 @@ public sealed class BatchJobTests
         var act = () => job.Cancel();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("Cannot cancel completed or failed jobs");
     }
 
     [Fact]
-    public void Cancel_WhenFailed_ShouldThrowInvalidOperationException()
+    public void Cancel_WhenFailed_ShouldThrowConflictException()
     {
         // Arrange
         var job = BatchJob.Create(JobType.DataCleanup, "{}", TestUserId);
@@ -386,7 +387,7 @@ public sealed class BatchJobTests
         var act = () => job.Cancel();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("Cannot cancel completed or failed jobs");
     }
 
@@ -417,7 +418,7 @@ public sealed class BatchJobTests
     }
 
     [Fact]
-    public void Retry_WhenQueued_ShouldThrowInvalidOperationException()
+    public void Retry_WhenQueued_ShouldThrowConflictException()
     {
         // Arrange
         var job = BatchJob.Create(JobType.ResourceForecast, "{}", TestUserId);
@@ -426,12 +427,12 @@ public sealed class BatchJobTests
         var act = () => job.Retry();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("Only failed jobs can be retried");
     }
 
     [Fact]
-    public void Retry_WhenRunning_ShouldThrowInvalidOperationException()
+    public void Retry_WhenRunning_ShouldThrowConflictException()
     {
         // Arrange
         var job = BatchJob.Create(JobType.CostAnalysis, "{}", TestUserId);
@@ -441,12 +442,12 @@ public sealed class BatchJobTests
         var act = () => job.Retry();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("Only failed jobs can be retried");
     }
 
     [Fact]
-    public void Retry_WhenCompleted_ShouldThrowInvalidOperationException()
+    public void Retry_WhenCompleted_ShouldThrowConflictException()
     {
         // Arrange
         var job = BatchJob.Create(JobType.DataCleanup, "{}", TestUserId);
@@ -457,12 +458,12 @@ public sealed class BatchJobTests
         var act = () => job.Retry();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("Only failed jobs can be retried");
     }
 
     [Fact]
-    public void Retry_WhenCancelled_ShouldThrowInvalidOperationException()
+    public void Retry_WhenCancelled_ShouldThrowConflictException()
     {
         // Arrange
         var job = BatchJob.Create(JobType.BggSync, "{}", TestUserId);
@@ -472,7 +473,7 @@ public sealed class BatchJobTests
         var act = () => job.Retry();
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<ConflictException>()
             .WithMessage("Only failed jobs can be retried");
     }
 

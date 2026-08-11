@@ -36,7 +36,11 @@ public sealed class BatchJobE2ETests : E2ETestBase
             await DbContext.SaveChangesAsync();
         }
 
-        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        // #3662: l'API autentica a sessione con cookie (`meepleai_session`), non con Bearer.
+        // L'header Bearer non veniva semplicemente ignorato: faceva fallire l'autenticazione
+        // con 401 anche quando il cookie di sessione era presente. Si usa l'helper della base
+        // class, che è il meccanismo che gli altri test E2E già usano.
+        SetSessionCookie(token);
     }
 
     #region Create Batch Job Tests
@@ -52,7 +56,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -82,7 +86,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -99,14 +103,14 @@ public sealed class BatchJobE2ETests : E2ETestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task CreateBatchJob_WithEmptyParameters_ReturnsBadRequest()
+    public async Task CreateBatchJob_WithEmptyParameters_ReturnsUnprocessableEntity()
     {
         // Arrange
         var payload = new
@@ -116,10 +120,12 @@ public sealed class BatchJobE2ETests : E2ETestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", payload);
 
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // Assert — #3662: FluentValidation mappa a 422 per design
+        // (ApiExceptionHandlerMiddleware.cs:179), non a 400. Il nome del test è stato
+        // allineato: si chiamava ...ReturnsBadRequest e asseriva un contratto mai esistito.
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
     }
 
     #endregion
@@ -134,7 +140,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         await CreateTestJobAsync(JobType.CostAnalysis);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/admin/batch-jobs");
+        var response = await Client.GetAsync("/api/v1/admin/operations/batch-jobs");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -158,7 +164,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var response = await Client.GetAsync("/api/v1/admin/batch-jobs?status=Queued");
+        var response = await Client.GetAsync("/api/v1/admin/operations/batch-jobs?status=Queued");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -178,8 +184,8 @@ public sealed class BatchJobE2ETests : E2ETestBase
         }
 
         // Act
-        var page1Response = await Client.GetAsync("/api/v1/admin/batch-jobs?page=1&pageSize=2");
-        var page2Response = await Client.GetAsync("/api/v1/admin/batch-jobs?page=2&pageSize=2");
+        var page1Response = await Client.GetAsync("/api/v1/admin/operations/batch-jobs?page=1&pageSize=2");
+        var page2Response = await Client.GetAsync("/api/v1/admin/operations/batch-jobs?page=2&pageSize=2");
 
         // Assert
         page1Response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -204,7 +210,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var jobId = await CreateTestJobAsync(JobType.DataCleanup);
 
         // Act
-        var response = await Client.GetAsync($"/api/v1/admin/batch-jobs/{jobId}");
+        var response = await Client.GetAsync($"/api/v1/admin/operations/batch-jobs/{jobId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -222,7 +228,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var response = await Client.GetAsync($"/api/v1/admin/batch-jobs/{nonExistentId}");
+        var response = await Client.GetAsync($"/api/v1/admin/operations/batch-jobs/{nonExistentId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -239,10 +245,10 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var jobId = await CreateTestJobAsync(JobType.ResourceForecast);
 
         // Act
-        var response = await Client.PostAsync($"/api/v1/admin/batch-jobs/{jobId}/cancel", null);
+        var response = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{jobId}/cancel", null);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);  // #3662: il contratto dichiara 204 NoContent
 
         // Verify in database
         var job = await DbContext.BatchJobs.FindAsync(jobId);
@@ -261,7 +267,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var response = await Client.PostAsync($"/api/v1/admin/batch-jobs/{jobId}/cancel", null);
+        var response = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{jobId}/cancel", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -274,7 +280,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var response = await Client.PostAsync($"/api/v1/admin/batch-jobs/{nonExistentId}/cancel", null);
+        var response = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{nonExistentId}/cancel", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -295,10 +301,16 @@ public sealed class BatchJobE2ETests : E2ETestBase
         await DbContext.SaveChangesAsync();
 
         // Act
-        var response = await Client.PostAsync($"/api/v1/admin/batch-jobs/{jobId}/retry", null);
+        var response = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{jobId}/retry", null);
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);  // #3662: il contratto dichiara 204 NoContent
+        // #3662: l'API scrive su un ALTRO DbContext (gira dentro la WebApplicationFactory).
+        // Senza svuotare il change tracker, FindAsync restituisce l'istanza già tracciata da
+        // questo contesto -- lo stato pre-chiamata -- e l'assert fallisce pur essendo la riga
+        // aggiornata sul database.
+        DbContext.ChangeTracker.Clear();
+
 
         // Verify in database
         var retrieved = await DbContext.BatchJobs.FindAsync(jobId);
@@ -315,7 +327,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var jobId = await CreateTestJobAsync(JobType.BggSync);
 
         // Act
-        var response = await Client.PostAsync($"/api/v1/admin/batch-jobs/{jobId}/retry", null);
+        var response = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{jobId}/retry", null);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -332,7 +344,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var jobId = await CreateTestJobAsync(JobType.ResourceForecast);
 
         // Act
-        var response = await Client.DeleteAsync($"/api/v1/admin/batch-jobs/{jobId}");
+        var response = await Client.DeleteAsync($"/api/v1/admin/operations/batch-jobs/{jobId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -349,7 +361,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var response = await Client.DeleteAsync($"/api/v1/admin/batch-jobs/{nonExistentId}");
+        var response = await Client.DeleteAsync($"/api/v1/admin/operations/batch-jobs/{nonExistentId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -368,7 +380,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
             type = "ResourceForecast",
             parameters = "{\"days\":30}"
         };
-        var createResponse = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", createPayload);
+        var createResponse = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", createPayload);
         createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var createResult = await createResponse.Content.ReadFromJsonAsync<CreateBatchJobResponse>();
         var jobId = createResult!.JobId;
@@ -377,7 +389,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         await Task.Delay(100);
 
         // Act - Get job details
-        var getResponse = await Client.GetAsync($"/api/v1/admin/batch-jobs/{jobId}");
+        var getResponse = await Client.GetAsync($"/api/v1/admin/operations/batch-jobs/{jobId}");
 
         // Assert
         getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -394,11 +406,11 @@ public sealed class BatchJobE2ETests : E2ETestBase
         var jobId = await CreateTestJobAsync(JobType.CostAnalysis);
 
         // Act - Cancel job
-        var cancelResponse = await Client.PostAsync($"/api/v1/admin/batch-jobs/{jobId}/cancel", null);
-        cancelResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var cancelResponse = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{jobId}/cancel", null);
+        cancelResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);  // #3662: il contratto dichiara 204 NoContent
 
         // Act - Delete job
-        var deleteResponse = await Client.DeleteAsync($"/api/v1/admin/batch-jobs/{jobId}");
+        var deleteResponse = await Client.DeleteAsync($"/api/v1/admin/operations/batch-jobs/{jobId}");
 
         // Assert
         deleteResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -419,12 +431,18 @@ public sealed class BatchJobE2ETests : E2ETestBase
         await DbContext.SaveChangesAsync();
 
         // Act - Retry job
-        var retryResponse = await Client.PostAsync($"/api/v1/admin/batch-jobs/{jobId}/retry", null);
+        var retryResponse = await Client.PutAsync($"/api/v1/admin/operations/batch-jobs/{jobId}/retry", null);
 
         // Assert
-        retryResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        retryResponse.StatusCode.Should().Be(HttpStatusCode.NoContent);  // #3662: il contratto dichiara 204 NoContent
 
         // Verify requeued
+        // #3662: l'API scrive su un ALTRO DbContext (gira dentro la WebApplicationFactory).
+        // Senza svuotare il change tracker, FindAsync restituisce l'istanza già tracciata da
+        // questo contesto -- lo stato pre-chiamata -- e l'assert fallisce pur essendo la riga
+        // aggiornata sul database.
+        DbContext.ChangeTracker.Clear();
+
         var retrieved = await DbContext.BatchJobs.FindAsync(jobId);
         retrieved.Should().NotBeNull();
         retrieved!.Status.Should().Be(JobStatus.Queued);
@@ -439,10 +457,10 @@ public sealed class BatchJobE2ETests : E2ETestBase
     public async Task GetAllBatchJobs_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange - Clear authentication
-        Client.DefaultRequestHeaders.Authorization = null;
+        ClearAuthentication();  // #3662: la sessione è nel cookie, non nell'header Authorization
 
         // Act
-        var response = await Client.GetAsync("/api/v1/admin/batch-jobs");
+        var response = await Client.GetAsync("/api/v1/admin/operations/batch-jobs");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -452,7 +470,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
     public async Task CreateBatchJob_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        Client.DefaultRequestHeaders.Authorization = null;
+        ClearAuthentication();  // #3662: la sessione è nel cookie, non nell'header Authorization
         var payload = new
         {
             type = "ResourceForecast",
@@ -460,7 +478,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -478,7 +496,7 @@ public sealed class BatchJobE2ETests : E2ETestBase
             parameters = "{}"
         };
 
-        var response = await Client.PostAsJsonAsync("/api/v1/admin/batch-jobs", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/admin/operations/batch-jobs", payload);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<CreateBatchJobResponse>();
         return result!.JobId;

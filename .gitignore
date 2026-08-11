@@ -241,6 +241,11 @@ tests/llm-eval/ocr-validation/manuals/*
 # Golden set contractor CSV uploads (before JSONL conversion)
 tests/llm-eval/golden-set/*.csv
 
+# Golden dataset RAG: generato da tools/golden-dataset-generator, non committato (#3655).
+# tests/data/README.md lo dichiarava già "git-ignored", ma la regola non esisteva: il file
+# era committabile per sbaglio (26.658 righe rigenerabili in due secondi).
+tests/data/golden_dataset.json
+
 # Page catalog (generated screenshots and static site)
 docs/pages/screenshots/
 docs/pages/dist/

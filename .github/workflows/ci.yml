@@ -102,6 +102,11 @@ jobs:
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          # #3632: senza questo, `cache-version` resta al default 'v1' mentre i job che consumano
+          # l'artifact passano `vars.CACHE_VERSION`. Al primo uso di quella repo variable il job che
+          # POPOLA la cache userebbe una chiave diversa da quelli che la leggono → restore NuGet a
+          # freddo su ogni run. L'action documenta questo input come contratto del chiamante.
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Build Solution (Release)
         run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
@@ -607,25 +612,46 @@ jobs:
       # verificato. `dotnet test --no-build` esce 0 SENZA STAMPARE NULLA quando gli assembly non
       # ci sono: non lo segnala come errore e non distingue «nessun test eseguito» da «tutti
       # passati». Con quell'echo subito dopo, il gate era verde per costruzione — misurato: 5,7s
-      # per 22 589 test attesi.
+      # a fronte dei ~22 5xx test attesi.
       #
-      # Il guard non dipende dalla causa a monte: qualunque cosa impedisca l'esecuzione (binari
-      # mancanti, filtro che non matcha, wrapper che fallisce), un conteggio a zero diventa rosso.
-      - name: 'Guard: i test sono stati davvero eseguiti (#3632)'
+      # Tre dettagli che rendono il guard efficace invece che decorativo:
+      #
+      # 1. SOMMA su tutti i .trx, non il primo trovato. `dotnet test MeepleAI.Api.sln` esegue DUE
+      #    progetti — Api.Tests e Api.Analyzers.Tests — e `unit.runsettings` risolve
+      #    ResultsDirectory per progetto, quindi i file `unit.trx` sono due. Un `find -print -quit`
+      #    ne prendeva uno arbitrario: pescando quello degli analyzer (~36 test) il guard avrebbe
+      #    certificato un verde con Api.Tests a zero, cioè esattamente la regressione da impedire.
+      #
+      # 2. Soglia MINIMA, non `> 0`. 36 > 0: solo un floor vicino al conteggio reale distingue
+      #    «la suite è girata» da «è girato qualcos'altro». Il valore è volutamente sotto il
+      #    conteggio atteso, così non va aggiornato a ogni test aggiunto.
+      #
+      # 3. `executed`, non `total`. `total` conta anche skipped e not-run: se una collection
+      #    fixture esplode e nessun test parte, `total` resta alto ed `executed` va a zero.
+      - name: 'Guard: assert unit tests actually ran (#3632)'
         run: |
-          trx=$(find . -name 'unit.trx' -print -quit 2>/dev/null)
-          if [ -z "$trx" ]; then
-            echo "::error::Nessun file .trx prodotto: dotnet test non ha eseguito alcun test."
+          set -euo pipefail
+          mapfile -t trx_files < <(find . -name 'unit.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::No .trx produced: dotnet test executed no tests at all."
             exit 1
           fi
-          total=$(sed -n 's/.*<Counters[^>]* total="\([0-9]*\)".*/\1/p' "$trx" | head -1)
-          executed=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]*\)".*/\1/p' "$trx" | head -1)
-          echo "trx: $trx — total=${total:-?} executed=${executed:-?}"
-          if [ -z "$total" ] || [ "$total" -eq 0 ]; then
-            echo "::error::Il .trx riporta 0 test: il gate sarebbe stato verde senza eseguire nulla (#3632)."
+          sum=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: unreadable 'executed' counter (malformed trx?)."
+              exit 1
+            fi
+            echo "  $f → executed=$n"
+            sum=$((sum + n))
+          done
+          echo "Total executed across ${#trx_files[@]} trx file(s): $sum"
+          if [ "$sum" -lt 20000 ]; then
+            echo "::error::Only $sum unit tests executed (expected ~22.5k). The gate would have been green without running the suite (#3632)."
             exit 1
           fi
-          echo "✅ Unit tests eseguiti: $total"
+          echo "✅ Unit tests executed: $sum"
 
       - name: Upload Coverage
         if: always()
@@ -855,28 +881,47 @@ jobs:
               --no-build \
               --configuration Release \
               --blame-hang-timeout 5min \
-              --blame-hang-dump-type mini \
-              --logger \"trx;LogFileName=integration-${{ matrix.shard.name }}.trx\"" \
+              --blame-hang-dump-type mini" \
             -f cobertura \
             -o coverage/${{ matrix.shard.coverage_file }}
 
       # #3632 — stesso guard del gate unit: il verde va misurato, non dichiarato. Qui c'era
       # `echo "✅ Integration tests passed"`, che affermava un esito che lo script non aveva
       # verificato — e infatti lo shard usciva verde in 3-7 secondi senza eseguire nulla.
-      - name: 'Guard: i test sono stati davvero eseguiti (#3632)'
+      #
+      # Legge il .trx che `integration.runsettings` produce già (`integration-test-results.trx`,
+      # riga 52-54 di quel file). Una prima versione aggiungeva un `--logger trx` da riga di
+      # comando con un nome per shard: duplicava il logger dichiarato nel runsettings, e quale dei
+      # due LogFileName prevalga non è garantito — un guard che cerca un file che potrebbe non
+      # esistere mai sarebbe rosso al 100% invece che vigile.
+      #
+      # Qui il target è il csproj esplicito, quindi c'è un solo .trx; la somma resta per simmetria
+      # col gate unit e per non dipendere da quel dettaglio. La soglia è bassa (100) perché gli
+      # shard hanno conteggi diversi e mobili — serve a distinguere «è girato» da «zero», non a
+      # pinnare un numero.
+      - name: 'Guard: assert integration tests actually ran (#3632)'
         run: |
-          trx=$(find . -name 'integration-${{ matrix.shard.name }}.trx' -print -quit 2>/dev/null)
-          if [ -z "$trx" ]; then
-            echo "::error::Nessun .trx per lo shard ${{ matrix.shard.name }}: nessun test eseguito."
+          set -euo pipefail
+          mapfile -t trx_files < <(find . -name 'integration-test-results.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::No .trx for shard ${{ matrix.shard.name }}: no test executed."
             exit 1
           fi
-          total=$(sed -n 's/.*<Counters[^>]* total="\([0-9]*\)".*/\1/p' "$trx" | head -1)
-          echo "trx: $trx — total=${total:-?}"
-          if [ -z "$total" ] || [ "$total" -eq 0 ]; then
-            echo "::error::Lo shard ${{ matrix.shard.name }} riporta 0 test: sarebbe stato verde senza eseguire nulla (#3632)."
+          sum=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: unreadable 'executed' counter (malformed trx?)."
+              exit 1
+            fi
+            echo "  $f → executed=$n"
+            sum=$((sum + n))
+          done
+          if [ "$sum" -lt 100 ]; then
+            echo "::error::Shard ${{ matrix.shard.name }}: only $sum tests executed — would have been green without running anything (#3632)."
             exit 1
           fi
-          echo "✅ Integration tests eseguiti (${{ matrix.shard.name }}): $total"
+          echo "✅ Integration tests executed (${{ matrix.shard.name }}): $sum"
 
       - name: Upload Coverage
         if: always()

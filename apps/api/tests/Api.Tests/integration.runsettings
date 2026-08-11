@@ -8,7 +8,19 @@
          aborted the run with exit 134 ("test run timeout of 1800000 milliseconds
          exceeded") even though every test passed. Kept in sync with the GHA
          step `timeout-minutes: 45` in ci.yml. -->
-    <TestSessionTimeout>2700000</TestSessionTimeout>
+    <!-- #3634: 45 → 75 min. I 45 troncavano la sessione a metà: nel primo run in cui il gate ha
+         davvero eseguito (#3629 + #3632) i tre shard si sono fermati a 44m19s-44m31s con
+         `Test Run Aborted.`, avendo eseguito 2148 test sui ~2962 selezionati — circa 800 non
+         raggiunti, su TUTTI e tre gli shard.
+
+         Il numero è calcolato, non stimato: 2148 test in 44 minuti danno ~61 minuti per l'intera
+         selezione; 75 lascia margine per la varianza del runner senza diventare una soglia che non
+         scatta mai. Il vecchio riferimento di «~29-30 min di lavoro reale per shard» (PR #1505) non
+         è utilizzabile: veniva da `ci.yml`, che in quel periodo non eseguiva alcun test (#3632).
+
+         Resta il principio di #3629: questo timeout deve scattare PRIMA di quello del job, perché
+         produce un riepilogo leggibile mentre il job timeout dà un `cancelled` muto. -->
+    <TestSessionTimeout>4500000</TestSessionTimeout>
 
     <!-- Results directory -->
     <ResultsDirectory>./TestResults</ResultsDirectory>

@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.GameToolkit.Application.Commands.PublishToolkitVer
 /// <remarks>
 /// <para>Pipeline (spec-panel §6 Gherkin):</para>
 /// <list type="number">
-///   <item>Load tracked toolkit row — return <c>null</c> if missing (404).</item>
+///   <item>Load the toolkit aggregate through <c>IGameToolkitRepository</c> — <c>null</c> if missing (404).</item>
 ///   <item>Owner check (<c>CreatedByUserId == ViewerId</c>) — throw <c>ForbiddenException</c>.</item>
 ///   <item>Uniqueness check — throw <c>ConflictException</c> if <c>(ToolkitId, VersionNumber)</c> exists
 ///         (covers yanked numbers per §1 — permanently retired).</item>

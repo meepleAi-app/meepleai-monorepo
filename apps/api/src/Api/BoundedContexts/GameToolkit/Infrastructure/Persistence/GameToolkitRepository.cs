@@ -136,6 +136,14 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         var entity = MapToPersistence(toolkit);
         var entry = DbContext.Set<GameToolkitEntity>().Update(entity);
 
+        // Hand EF the real xmin as the ORIGINAL value (#3670). MapToPersistence builds a fresh
+        // detached entity, so without this the token's original value is 0 and the statement
+        // becomes `WHERE "Id" = @p AND xmin = 0`, which matches no live tuple: SaveChanges then
+        // raised DbUpdateConcurrencyException for EVERY write in this bounded context on
+        // Postgres — rename, dice tools, presets — while the InMemory tests stayed green
+        // because that provider has no xmin column. Same pattern as AlertChannelRepository:78.
+        entry.Property(e => e.Xmin).OriginalValue = toolkit.Xmin;
+
         // The aggregate still carries no Description/License, so MapToPersistence leaves them
         // null. Update() marks every column Modified, which would null both on every unrelated
         // update. Exclude them so their persisted values survive.
@@ -184,10 +192,13 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         SetPrivateProperty(toolkit, "Name", entity.Name);
         SetPrivateProperty(toolkit, "CreatedByUserId", entity.CreatedByUserId);
         SetPrivateProperty(toolkit, "Version", entity.Version);
+        SetPrivateProperty(toolkit, "Xmin", entity.Xmin);
         // #3670: MUST be loaded. UpdateAsync now writes VersionSemver from the aggregate, so an
         // aggregate that doesn't know the persisted value would clobber the published marketplace
         // pointer on any unrelated update (a rename, say). Guarded by
         // GameToolkitRepositoryUpdatePreservationTests.
+        // The ?? is defensive only: the column is NOT NULL with default "0.1.0"
+        // (GameToolkitEntityConfiguration:33), so materialisation cannot yield null.
         SetPrivateProperty(toolkit, "VersionSemver", entity.VersionSemver ?? Domain.Entities.GameToolkit.SeedSemver);
         SetPrivateProperty(toolkit, "IsPublished", entity.IsPublished);
         SetPrivateProperty(toolkit, "OverridesTurnOrder", entity.OverridesTurnOrder);
@@ -311,7 +322,10 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
             OverridesTurnOrder = toolkit.OverridesTurnOrder,
             OverridesScoreboard = toolkit.OverridesScoreboard,
             OverridesDiceSet = toolkit.OverridesDiceSet,
-#pragma warning disable CS0618 // Issue #1144 / spec D-5: paired write — legacy int + new semver in same MapToPersistence call.
+#pragma warning disable CS0618 // GameToolkitEntity.Version's setter is [Obsolete], but the column still
+                               // backs the (GameId, Version) / (PrivateGameId, Version) unique indexes,
+                               // so the write cannot be dropped until that column is retired. Not to be
+                               // confused with the #3670 breadcrumb, which is gone.
             Version = toolkit.Version,
 #pragma warning restore CS0618
             // #3670: read from the aggregate. This was synthesised as "0.{Version}.0" until

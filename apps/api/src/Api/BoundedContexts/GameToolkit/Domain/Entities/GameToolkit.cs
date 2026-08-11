@@ -34,6 +34,18 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     /// </remarks>
     public string VersionSemver { get; private set; } = SeedSemver;
 
+    /// <summary>
+    /// Postgres <c>xmin</c> concurrency token (ADR-060). Carried by the aggregate so the
+    /// repository can hand EF the real original value when persisting a detached entity.
+    /// </summary>
+    /// <remarks>
+    /// Without it, <c>UpdateAsync</c> attaches an entity whose <c>Xmin</c> is 0 and EF emits
+    /// <c>WHERE "Id" = @p AND xmin = 0</c>, which matches no live tuple: every update raised
+    /// DbUpdateConcurrencyException on Postgres while the InMemory tests stayed green.
+    /// Same pattern as <c>AlertChannel</c> (#2690).
+    /// </remarks>
+    public uint Xmin { get; private set; }
+
     /// <summary>Semver assigned to a toolkit that has never been published to the marketplace.</summary>
     /// <remarks>
     /// Matches what the old <c>MapToPersistence</c> synthesis produced for a brand-new toolkit
@@ -109,6 +121,11 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         Name = name.Trim();
         Version = 1;
         VersionSemver = SeedSemver;
+        // A toolkit that has never been persisted has no xmin yet — Postgres assigns it on
+        // INSERT. Stated explicitly rather than left to the type default: the setter is
+        // otherwise only reached by MapToDomain's reflection, and S1144 reads it as dead code
+        // (the analyzer has already had DI constructors deleted out from under it, #2296).
+        Xmin = 0;
         CreatedByUserId = createdByUserId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;

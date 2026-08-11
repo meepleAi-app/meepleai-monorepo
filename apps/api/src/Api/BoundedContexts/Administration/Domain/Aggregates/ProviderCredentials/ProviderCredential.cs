@@ -23,11 +23,26 @@ public sealed class ProviderCredential
     public DateTime RotatedAt { get; private set; }
     public Guid RotatedByUserId { get; private set; }
     public Guid? PreviousCredentialId { get; private set; }
-    // Nullable so the Npgsql provider can omit the store-generated row_version from the
-    // INSERT (a NOT NULL bytea column raised a 23502 violation on the first insert).
-    // Get-only: EF Core populates it via reflection. The token is not populated on this table
-    // (no trigger/xmin), so the 1-active-row guard is the ux_provider_credentials_active_one index.
-    public byte[]? RowVersion { get; }
+    // #3651: token di concorrenza ottimistica sulla colonna di sistema `xmin`, come le entità
+    // migrate da #2305.
+    //
+    // Prima era `byte[]? RowVersion` su una colonna `bytea`, e il commento qui dichiarava che il
+    // token «non è popolato su questa tabella» accettandolo come normale: la protezione era
+    // dichiarata dalla configurazione EF ma non esisteva, perché Postgres non valorizza una
+    // `bytea` da solo e il trigger che lo faceva è stato rimosso da #2305. Restava NULL su ogni
+    // riga, EF confrontava NULL = NULL e ogni update passava.
+    //
+    // L'indice parziale ux_provider_credentials_active_one continua a garantire l'invariante
+    // «una sola riga attiva per provider», ma copre l'INSERT della nuova credenziale, non
+    // l'UPDATE che disattiva la precedente: due rotazioni concorrenti disattivavano entrambe la
+    // stessa riga senza che nulla lo segnalasse.
+    //
+    // `uint` e non `byte[]`: xmin è di tipo `xid`. La proprietà non è esposta da alcun DTO.
+    //
+    // Get-only come lo era RowVersion: il dominio non deve mai assegnarla, la scrive solo EF Core
+    // sul backing field. Un `private set` qui verrebbe segnalato da S1144 come setter inutilizzato,
+    // perché l'unico scrittore è la reflection.
+    public uint Xmin { get; }
 
     public IReadOnlyCollection<INotification> DomainEvents => _domainEvents.AsReadOnly();
     public void ClearDomainEvents() => _domainEvents.Clear();

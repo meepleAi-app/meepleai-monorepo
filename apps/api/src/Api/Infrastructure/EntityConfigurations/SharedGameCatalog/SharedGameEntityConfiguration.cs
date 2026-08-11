@@ -122,10 +122,19 @@ internal class SharedGameEntityConfiguration : IEntityTypeConfiguration<SharedGa
             .IsRequired()
             .HasDefaultValue(false);
 
-        // Optimistic concurrency (spec-panel C-3)
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // Optimistic concurrency (spec-panel C-3) — #3651: ora sulla colonna di sistema `xmin`.
+        //
+        // Era `.Property(e => e.RowVersion).HasColumnName("row_version").IsRowVersion()` su una
+        // `bytea`: Postgres non la valorizza da sé, e il trigger `ef_update_row_version()` che lo
+        // faceva è stato rimosso da #2305 quando le altre entità sono passate a xmin. Da allora il
+        // token restava NULL su ogni riga e la protezione non scattava mai.
+        //
+        // Stesso pattern di LiveGameSessionEntityConfiguration:148-152 e GameNightPlaylist.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Issue #1823 (umbrella #1821 L2) — Wikidata cover columns.
         builder.Property(e => e.WikidataCoverR2Key)

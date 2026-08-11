@@ -114,12 +114,20 @@ public class PdfDocumentEntity
     // Nullable for backwards compat — backfilled to 'v0' on migration.
     public string? IndexerVersion { get; set; }
 
-    // Issue #1802: Optimistic concurrency control via PostgreSQL xmin system column.
-    // Auto-mapped to xmin by Npgsql when configured with .IsRowVersion(). Nullable
-    // to avoid PhotoBatchUpload landmine (migration 20260524190307: NOT NULL caused
-    // InsertCommand double-mapping bug under Npgsql).
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    // Issue #1802: concorrenza ottimistica. #3651: ora sulla colonna di sistema `xmin`, come le
+    // altre entità migrate da #2305.
+    //
+    // Prima era `[Timestamp] byte[]? RowVersion` su una colonna `bytea`. Quel meccanismo funzionava
+    // grazie al trigger `ef_update_row_version()`, che #2305 ha rimosso migrando a xmin — ma questa
+    // entità è rimasta indietro. Senza trigger Postgres non valorizza una `bytea`: il token restava
+    // NULL, non cambiava mai fra un update e l'altro, e nessun conflitto veniva rilevato. Misurato:
+    // `Reindex_RacesWithDelete_FirstWinsSecondGets409` osservava successCount=2 dove il dominio ne
+    // prevede 1 — due operazioni che devono escludersi riuscivano entrambe.
+    //
+    // `uint` e non `byte[]`: xmin è di tipo `xid`. La proprietà non è esposta da alcun DTO (a
+    // differenza di RuleSpec, dove RowVersion diventa un ETag base64 in GameDto), quindi il cambio
+    // di tipo non tocca contratti pubblici.
+    public uint Xmin { get; set; }
 
     // Issue #1687: User-editable display title (distinct from immutable FileName).
     public string? Title { get; set; }

@@ -9,7 +9,9 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Api.Infrastructure.DomainEventOutbox;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
@@ -44,6 +46,17 @@ public sealed class PdfCoverPropagationIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
+
+        // #3633: prerequisito necessario ma NON sufficiente — il test resta rosso anche con questo
+        // override, la causa residua non è ancora stata isolata (vedi #3633).
+        //
+        // Serve comunque: il default DI è OutboxOnly (cutover T9 di #1535), quindi gli eventi vanno
+        // in domain_event_outbox e NON sono pubblicati inline via MediatR — senza l'override
+        // PdfCoverGeneratedEventHandler non verrebbe invocato in nessun caso. È la terza classe
+        // rimasta indietro rispetto al cutover, dopo DomainEventDispatcherIntegrationTests e
+        // FullStackCrossContextWorkflowTests (#3647).
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         // PdfCoverGeneratedEventHandler depends on ISharedGameRepository, which is not
         // registered in the base builder (it lives in SharedGameCatalogServiceExtensions).

@@ -39,7 +39,7 @@ internal static class BatchJobEndpoints
             .WithName("CreateBatchJob")
             .WithSummary("Create a new batch job")
             .Produces<CreateBatchJobResponse>(StatusCodes.Status201Created)
-            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status409Conflict)  // #3662: stato non valido -> 409, non 400
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
@@ -49,7 +49,7 @@ internal static class BatchJobEndpoints
             .WithSummary("Cancel a running or queued batch job")
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status409Conflict)  // #3662: stato non valido -> 409, non 400
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 

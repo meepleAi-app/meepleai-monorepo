@@ -1,5 +1,22 @@
 name: Backend E2E Tests
 
+# RUNNER — #3662: questi job girano su `ubuntu-latest` FISSO, deliberatamente, e non
+# sull'indirezione `${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}` usata
+# altrove nel repo.
+#
+# `vars.RUNNER` puntava al runner self-hosted CO-LOCATO sul VPS di staging
+# (`self-hosted,linux,ARM64`), dove questo build competeva per la RAM con i servizi in
+# esecuzione. Il 2026-06-22 lo step *Build Solution* è morto con
+# `System.OutOfMemoryException` dentro l'analyzer Roslyn, e quel run è rimasto l'ULTIMO
+# per sette settimane. #3331 ha poi ritirato quel runner («co-located CI runner is the
+# structural disk/RAM driver»), e da allora il build passa in ~6 min su GitHub-hosted.
+#
+# Il README documenta però una «Rollback Procedure» per re-introdurre il self-hosted
+# ricreando la variabile `RUNNER`. Se qualcuno la esegue per i workflow di DEPLOY --
+# che quel runner ce l'hanno per un motivo, ci deployano sopra -- un workflow di TEST
+# come questo lo seguirebbe silenziosamente e l'OOM tornerebbe identico.
+# Un gate di test non ha ragione di girare sul runner di deploy: qui il legame è tagliato.
+
 on:
   pull_request:
     # Scope to prod-promotion only (main-staging → main). Real-API E2E checks
@@ -8,7 +25,10 @@ on:
     branches: [main]
     paths:
       - 'apps/api/**'
-      - 'tests/Api.Tests/E2E/**'
+      # #3662: era `tests/Api.Tests/E2E/**`, che NON esiste -- i test E2E stanno sotto
+      # `apps/api/tests/`. Innocuo solo perché `apps/api/**` copre già tutto, ma un
+      # filtro che non corrisponde a nulla è indistinguibile da uno che funziona.
+      - 'apps/api/tests/Api.Tests/E2E/**'
   workflow_dispatch:
 
 # Cancel in-progress runs for same PR/branch
@@ -27,7 +47,7 @@ jobs:
   # Quick path filtering
   changes:
     name: Detect Changes
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest  # NON usare vars.RUNNER qui -- vedi commento in testa al file (#3662)
     outputs:
       e2e-needed: ${{ steps.filter.outputs.e2e }}
     steps:
@@ -39,13 +59,13 @@ jobs:
           filters: |
             e2e:
               - 'apps/api/**'
-              - 'tests/Api.Tests/E2E/**'
+              - 'apps/api/tests/Api.Tests/E2E/**'  # #3662: era `tests/…`, path inesistente
               - '.github/workflows/backend-e2e-tests.yml'
 
   # Backend E2E Tests with Testcontainers
   backend-e2e-tests:
     name: Backend E2E Tests
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest  # NON usare vars.RUNNER qui -- vedi commento in testa al file (#3662)
     needs: changes
     if: needs.changes.outputs.e2e-needed == 'true' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 20
@@ -113,7 +133,7 @@ jobs:
   # Quality Gate
   backend-e2e-quality-gate:
     name: Backend E2E Quality Gate
-    runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest  # NON usare vars.RUNNER qui -- vedi commento in testa al file (#3662)
     needs: backend-e2e-tests
     if: always()
     steps:

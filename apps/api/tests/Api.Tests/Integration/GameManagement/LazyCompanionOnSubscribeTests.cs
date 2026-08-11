@@ -368,7 +368,16 @@ public sealed class LazyCompanionOnSubscribeTests : IAsyncLifetime
             CurrentPhaseIndex = 0,
             TurnAdvancePolicy = 0,  // Manual
             AgentMode = 0,           // None
-            ScoringConfigJson = """{"type":0,"dimensions":[{"name":"Points","unit":null,"scoreType":0}]}""",
+            // #3633: qui c'era `{"type":0,"dimensions":[…]}`, un formato che l'applicazione non
+            // produce e non ha mai prodotto — `LiveGameSessionMapper.SerializeScoringConfig` scrive
+            // `enabledDimensions` / `dimensionUnits`. Quel JSON deserializzava in un DTO con
+            // entrambi i campi a null e il costruttore di SessionScoringConfig lanciava
+            // ArgumentNullException, che il middleware traduce in 400: tutti e quattro i test di
+            // questa classe fallivano sulla `GET /stream` prima ancora di arrivare alla logica del
+            // companion, con un messaggio («Invalid request parameters») che non diceva nulla.
+            //
+            // Formato reale, prodotto dal serializzatore del mapper:
+            ScoringConfigJson = """{"enabledDimensions":["Points"],"dimensionUnits":{"Points":"pt"}}""",
             TrackingSessionId = trackingSessionId
         };
     }

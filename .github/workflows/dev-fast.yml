@@ -22,7 +22,6 @@ on:
       - '.github/actions/**'
       - 'infra/scripts/**'
       - 'infra/seed-schema.version'
-      - 'infra/fixtures/**'
   workflow_dispatch:
 
 concurrency:
@@ -85,12 +84,15 @@ jobs:
               # PR touching only infra/ had practically no CI, and
               # snapshot-verify.bats stayed red for two months unnoticed.
               # Scope is infra/scripts/** (not infra/**) so docker-compose,
-              # monitoring and secrets templates don't wake the hot path: the
-              # bats suites assert on scripts, their fixtures and the seed
-              # schema counter, and nothing else.
+              # monitoring and secrets templates don't wake the hot path.
+              # infra/fixtures/** is deliberately NOT here: rag-smoke-assert.bats
+              # writes its own copies of the canonical-queries and golden-baseline
+              # files into a temp tree (lines 20-51) rather than reading the repo
+              # ones, so a PR editing infra/fixtures/ would boot a gate that
+              # cannot observe the change. infra/seed-schema.version IS here —
+              # snapshot-verify.bats reads the live counter.
               - 'infra/scripts/**'
               - 'infra/seed-schema.version'
-              - 'infra/fixtures/**'
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min

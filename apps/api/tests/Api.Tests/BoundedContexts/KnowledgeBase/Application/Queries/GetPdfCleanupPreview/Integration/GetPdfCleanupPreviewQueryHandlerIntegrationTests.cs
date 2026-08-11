@@ -71,6 +71,16 @@ public sealed class GetPdfCleanupPreviewQueryHandlerIntegrationTests : IAsyncLif
 
         _dbContext.Users.Add(CreateUser(userId));
 
+        // #3633: le RaptorSummaries seedate più sotto hanno una FK verso shared_games
+        // (FK_RaptorSummaries_shared_games_GameId), ma il gioco non veniva mai creato: il
+        // SaveChanges falliva con 23503 prima ancora di arrivare alle assert. Va inserito qui,
+        // prima delle righe che lo referenziano.
+        _dbContext.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Cleanup Preview Test Game",
+        });
+
         _dbContext.PdfDocuments.AddRange(
             CreatePdfDocument(targetPdfId, userId, fileSize),
             CreatePdfDocument(unrelatedPdfId, userId, 999L));

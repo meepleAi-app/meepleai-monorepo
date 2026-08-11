@@ -340,9 +340,19 @@ jobs:
     # was hard to fix, but because nobody executed it.
     name: Infra Scripts (bats)
     runs-on: ubuntu-latest
-    # The four suites finish in seconds; the budget covers npx fetching bats on
-    # a cold npm cache, not the tests themselves.
-    timeout-minutes: 10
+    # Measured on the first run (PR #3677): checkout 9m39s, bats 6s, total
+    # 9m49s. Nearly all of it is `actions/checkout` on a large monorepo, NOT
+    # the suites — so the budget has to cover checkout variance, and a 10m
+    # budget cleared it by 11 seconds. Left at 20m (same as migration-safety)
+    # so a slower-than-usual checkout reports a slow gate instead of a red one;
+    # a gate that goes red without anything being broken is how this suite got
+    # ignored in the first place.
+    #
+    # Sparse-checking out only infra/ would cut this to seconds but was
+    # rejected: snapshot-verify.sh reads apps/api/... at lines 37 and 106 with
+    # `2>/dev/null` fallbacks, so a partial tree would silently empty those
+    # values and the checks would stop asserting without failing.
+    timeout-minutes: 20
     needs: changes
     if: needs.changes.outputs.infra == 'true' || github.event_name == 'workflow_dispatch'
     permissions:

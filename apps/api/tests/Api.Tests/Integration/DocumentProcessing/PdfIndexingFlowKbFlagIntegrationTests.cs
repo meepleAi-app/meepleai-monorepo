@@ -500,23 +500,28 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // outbox row schema does not store an AggregateId column, so the test filters
         // on the serialised event body. Acceptable in test scope because the only PDF in
         // play is the one this test seeded.
+        // #3633: il filtro sul payload va fatto in memoria. `PayloadJson` è mappato a jsonb, e un
+        // `.Contains(...)` dentro l'espressione LINQ viene tradotto in `LIKE`, che per Postgres non
+        // esiste su quel tipo: la query moriva con `42883: operator does not exist: jsonb ~~ jsonb`
+        // prima di qualunque assert. Il filtro su `EventType` (text) resta invece nel database.
         var pdfIdString = pdfDocId.ToString();
-        var pdfStateChangedCount = await _dbContext.DomainEventOutbox
+        var outboxRows = await _dbContext.DomainEventOutbox
             .AsNoTracking()
-            .CountAsync(
-                e => e.EventType.Contains("PdfStateChanged") && e.PayloadJson.Contains(pdfIdString),
-                TestCancellationToken);
+            .Select(e => new { e.EventType, e.PayloadJson })
+            .ToListAsync(TestCancellationToken);
+
+        var pdfStateChangedCount = outboxRows.Count(
+            e => e.EventType.Contains("PdfStateChanged", StringComparison.Ordinal)
+                 && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
         pdfStateChangedCount.Should().Be(6,
             "pipeline must raise PdfStateChangedEvent for EVERY state transition " +
             "(Pending→Uploading + Uploading→Extracting + Extracting→Chunking + " +
             "Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
             "If this counts 1, the bridge-save shortcut from PR #2295 has regressed.");
 
-        var kbDocIndexedCount = await _dbContext.DomainEventOutbox
-            .AsNoTracking()
-            .CountAsync(
-                e => e.EventType.Contains("KbDocIndexed") && e.PayloadJson.Contains(pdfIdString),
-                TestCancellationToken);
+        var kbDocIndexedCount = outboxRows.Count(
+            e => e.EventType.Contains("KbDocIndexed", StringComparison.Ordinal)
+                 && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
         kbDocIndexedCount.Should().Be(1,
             "KbDocIndexedEvent must fire exactly once per upload, raised by " +
             "PdfDocument.TransitionTo(Ready) (PdfDocument.cs:435-442).");

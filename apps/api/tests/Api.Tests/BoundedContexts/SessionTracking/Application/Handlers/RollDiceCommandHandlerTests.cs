@@ -34,7 +34,7 @@ public class RollDiceCommandHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        var command = new RollDiceCommand(Guid.NewGuid(), Guid.NewGuid(), "2d6");
+        var command = new RollDiceCommand(Guid.NewGuid(), Guid.NewGuid(), "2d6", null, Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -45,13 +45,14 @@ public class RollDiceCommandHandlerTests
     public async Task Handle_FinalizedSession_ThrowsConflictException()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         session.Finalize();
 
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new RollDiceCommand(session.Id, session.Participants.First().Id, "1d20");
+        var command = new RollDiceCommand(session.Id, session.Participants.First().Id, "1d20", null, userId);
 
         // Act & Assert
         await Assert.ThrowsAsync<ConflictException>(
@@ -62,11 +63,12 @@ public class RollDiceCommandHandlerTests
     public async Task Handle_ParticipantNotInSession_ThrowsNotFoundException()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new RollDiceCommand(session.Id, Guid.NewGuid(), "1d6");
+        var command = new RollDiceCommand(session.Id, Guid.NewGuid(), "1d6", null, userId);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -84,7 +86,7 @@ public class RollDiceCommandHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new RollDiceCommand(session.Id, participantId, "2d6", "Attack roll");
+        var command = new RollDiceCommand(session.Id, participantId, "2d6", "Attack roll", userId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -95,5 +97,25 @@ public class RollDiceCommandHandlerTests
         Assert.Equal(2, result.Rolls.Length);
         _diceRollRepoMock.Verify(r => r.AddAsync(It.IsAny<DiceRoll>(), It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CallerNotOwnerOrParticipant_ThrowsForbiddenException()
+    {
+        // Arrange — session owned by someone else; caller is neither owner nor participant (IDOR).
+        var ownerId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new RollDiceCommand(
+            session.Id, session.Participants.First().Id, "1d6", null, attackerId);
+
+        // Act & Assert — IDOR guard rejects before any dice roll is persisted.
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(command, CancellationToken.None));
+        _diceRollRepoMock.Verify(r => r.AddAsync(It.IsAny<DiceRoll>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

@@ -11,8 +11,11 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from './_helpers/backendGuard';
+
 test.describe('Admin Games Management Dashboard', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('[name="email"]', 'admin@meepleai.com');

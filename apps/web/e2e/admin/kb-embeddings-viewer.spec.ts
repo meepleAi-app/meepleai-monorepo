@@ -19,6 +19,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -142,6 +144,10 @@ async function mockSearchChunks(page: Page) {
 
 test.describe('Admin KB · Per-doc embeddings viewer (#1674)', () => {
   test.skip(SKIP_E2E, 'KB_EMBEDDINGS_E2E_SKIP=true — e2e disabled');
+
+  test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
+  });
 
   test('EM-01 happy path: open drawer → meta strip + semantic search', async ({ page }) => {
     await mockAdminAuth(page);

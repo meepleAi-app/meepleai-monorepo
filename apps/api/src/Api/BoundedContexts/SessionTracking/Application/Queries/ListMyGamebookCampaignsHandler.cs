@@ -41,6 +41,16 @@ public class ListMyGamebookCampaignsHandler : IRequestHandler<ListMyGamebookCamp
             dtos.Add(CreateGamebookCampaignHandler.MapToDto(session, progress));
         }
 
-        return dtos;
+        // Resume-picker recency (#2619, gap report p.10): order by the genuine
+        // "last played" signal — LastReadAt (= SessionBookProgress.LastVisitedAt,
+        // falling back to UpdatedAt for never-played campaigns) — NOT the repo's
+        // UpdatedAt ordering, which is dirtied by rename/glossary edits (a campaign
+        // you just renamed but did not play must NOT jump to the resume hero slot).
+        // In-memory sort is fine for bounded per-user campaign counts (~5-10; see the
+        // N+1 PERF note above). CreatedAt is the deterministic tiebreak.
+        return dtos
+            .OrderByDescending(d => d.LastReadAt)
+            .ThenByDescending(d => d.CreatedAt)
+            .ToList();
     }
 }

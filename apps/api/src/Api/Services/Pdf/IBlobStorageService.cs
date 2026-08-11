@@ -43,6 +43,10 @@ public enum BlobCategory
     /// <summary>Photos attached to a PlayRecord (scoreboard captures, party shots).
     /// Target prefix <c>play-record-photos/{playRecordId}/</c>.</summary>
     PlayRecordPhoto,
+
+    /// <summary>Photos attached to a GameNight (recap gallery: scoreboard captures, party shots).
+    /// Target prefix <c>game-night-photos/{gameNightId}/</c>. Issue #2724.</summary>
+    GameNightPhoto,
 }
 
 internal static class BlobCategoryExtensions
@@ -62,6 +66,7 @@ internal static class BlobCategoryExtensions
         BlobCategory.GamebookPhoto => "gamebook-photos",
         BlobCategory.PhotoBatch => "photo-batches",
         BlobCategory.PlayRecordPhoto => "play-record-photos",
+        BlobCategory.GameNightPhoto => "game-night-photos",
         _ => throw new ArgumentOutOfRangeException(nameof(category), category, null),
     };
 }
@@ -137,6 +142,67 @@ internal interface IBlobStorageService
     /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value).</param>
     /// <returns>Pre-signed download URL, or null if not supported or file not found.</returns>
     Task<string?> GetPresignedDownloadUrlAsync(string fileId, BlobCategory category, string resourceKey, int? expirySeconds = null);
+
+    /// <summary>
+    /// Generates a pre-signed GET URL for an EXACT physical storage object key.
+    /// Unlike <see cref="GetPresignedDownloadUrlAsync"/>, this does NOT run
+    /// <c>PathSecurity.ValidateIdentifier</c> on the key and does NOT perform
+    /// prefix-based discovery — the caller is expected to have already validated
+    /// or otherwise trusted the key (e.g. a deterministic key composed by
+    /// business logic before being persisted to the DB). Slashes and dots are
+    /// allowed in <paramref name="rawKey"/>.
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key.</param>
+    /// <param name="expirySeconds">URL expiration time (optional, defaults to configured value).</param>
+    /// <returns>Pre-signed GET URL, or null if the object does not exist or the operation is not supported.</returns>
+    Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null);
+
+    /// <summary>
+    /// Deletes an object at an EXACT physical storage key. Unlike
+    /// <see cref="DeleteAsync"/>, this does NOT run <c>PathSecurity.ValidateIdentifier</c>
+    /// and does NOT perform categorized prefix discovery — the caller is expected
+    /// to have already validated or otherwise trusted the key (e.g. a deterministic
+    /// key composed by business logic before being persisted to the DB). Slashes
+    /// and dots are allowed in <paramref name="rawKey"/>.
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key to delete.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if the delete request was issued successfully (best-effort; local storage returns false as it does not host raw keys).</returns>
+    Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default);
+
+    /// <summary>
+    /// Stores an object at an EXACT physical storage key — the write-side counterpart
+    /// of <see cref="GetPresignedUrlForRawKeyAsync"/> / <see cref="DeleteRawKeyAsync"/>.
+    /// Unlike <see cref="StoreAsync"/>, this does NOT run
+    /// <c>PathSecurity.ValidateIdentifier</c> and does NOT prepend a category folder
+    /// or a random file-id segment — the object is written verbatim to
+    /// <paramref name="rawKey"/> (slashes and dots allowed). Required by the
+    /// deterministic cover keys (#3384) so the write key and the resolver's raw-key
+    /// read coincide by construction; the categorized <see cref="StoreAsync"/> would
+    /// reject the slash-containing cover key AND generate a random-id key the resolver
+    /// cannot reconstruct.
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key to write.</param>
+    /// <param name="stream">The content to store.</param>
+    /// <param name="contentType">MIME content type of the stored object.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>True if the object was written successfully; false on failure or when the backend does not host raw keys (local storage).</returns>
+    Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default);
+
+    /// <summary>
+    /// Reads an object by its EXACT physical storage key — the read-side counterpart
+    /// of <see cref="StoreRawKeyAsync"/>. Unlike <see cref="RetrieveAsync"/>, this does NOT
+    /// run <c>PathSecurity.ValidateIdentifier</c> (which rejects <c>/</c> and <c>.</c>) and
+    /// does NOT perform categorized prefix discovery — the caller is expected to have
+    /// already validated or otherwise trusted the key (e.g. a deterministic key composed
+    /// by business logic before being persisted to the DB). Slashes and dots are allowed
+    /// in <paramref name="rawKey"/> (#3611).
+    /// </summary>
+    /// <param name="rawKey">The exact physical storage object key to read.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>The object's stream, or null if not found or if the backend does not host raw keys.</returns>
+    /// <remarks>IMPORTANT: the caller MUST dispose the returned stream.</remarks>
+    Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default);
 }
 
 /// <summary>

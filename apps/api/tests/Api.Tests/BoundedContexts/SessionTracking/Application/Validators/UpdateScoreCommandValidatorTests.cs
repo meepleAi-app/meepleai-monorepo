@@ -20,7 +20,8 @@ public class UpdateScoreCommandValidatorTests
             ParticipantId: Guid.NewGuid(),
             RoundNumber: 1,
             Category: "Main",
-            ScoreValue: 50
+            ScoreValue: 50,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -39,7 +40,8 @@ public class UpdateScoreCommandValidatorTests
             ParticipantId: Guid.NewGuid(),
             RoundNumber: null,
             Category: null,
-            ScoreValue: 50
+            ScoreValue: 50,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -59,7 +61,8 @@ public class UpdateScoreCommandValidatorTests
             ParticipantId: Guid.NewGuid(),
             RoundNumber: null,
             Category: null,
-            ScoreValue: 100000 // exceeds max
+            ScoreValue: 100000, // exceeds max
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -79,7 +82,8 @@ public class UpdateScoreCommandValidatorTests
             ParticipantId: Guid.NewGuid(),
             RoundNumber: 0, // invalid
             Category: null,
-            ScoreValue: 50
+            ScoreValue: 50,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act
@@ -99,7 +103,8 @@ public class UpdateScoreCommandValidatorTests
             ParticipantId: Guid.NewGuid(),
             RoundNumber: null,
             Category: new string('A', 51), // exceeds 50 chars
-            ScoreValue: 50
+            ScoreValue: 50,
+            RequestedBy: Guid.NewGuid()
         );
 
         // Act

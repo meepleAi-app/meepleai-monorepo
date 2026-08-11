@@ -1,8 +1,8 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCoverBatch;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
-using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -11,38 +11,43 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Commands;
 
 /// <summary>
 /// Issue #2123 — TDD unit tests for the batch wrapper around the M8 single-entry
-/// orchestrator. The batch dispatches one <see cref="EnrichCatalogCoverCommand"/>
-/// per game id through <see cref="IMediator"/> and aggregates the discriminated
-/// results into total counters + per-game outcomes.
+/// orchestrator. Issue #3369: the batch now delegates each game to the
+/// <see cref="IWikidataCoverEnrichmentRunner"/> (the SSOT that records an attempt
+/// row, applies the DEC-3j retry/dead-letter policy and broadcasts SSE) instead
+/// of dispatching the raw <see cref="EnrichCatalogCoverCommand"/> via IMediator.
+/// The batch still aggregates the discriminated results into total counters +
+/// per-game outcomes and keeps its own per-game exception hierarchy.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class EnrichCatalogCoverBatchCommandHandlerTests
 {
-    private readonly Mock<IMediator> _mediator = new();
+    private readonly Mock<IWikidataCoverEnrichmentRunner> _runner = new();
 
     private EnrichCatalogCoverBatchCommandHandler CreateHandler() =>
-        new(_mediator.Object, NullLogger<EnrichCatalogCoverBatchCommandHandler>.Instance);
+        new(_runner.Object, NullLogger<EnrichCatalogCoverBatchCommandHandler>.Instance);
 
     [Fact]
-    public async Task Handle_DispatchesOneSingleEntryCommandPerGameId()
+    public async Task Handle_DelegatesEachGameToTheRunner_ForceRefreshFalse()
     {
         var ids = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
-        _mediator
-            .Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Skipped("qid-missing"));
 
         var result = await CreateHandler().Handle(
             new EnrichCatalogCoverBatchCommand(ids), CancellationToken.None);
 
         result.TotalRequested.Should().Be(3);
-        _mediator.Verify(m => m.Send(
-            It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+        _runner.Verify(r => r.EnrichAndRecordAsync(
+            It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
         foreach (var id in ids)
         {
-            _mediator.Verify(m => m.Send(
-                It.Is<EnrichCatalogCoverCommand>(c => c.GameId == id), It.IsAny<CancellationToken>()),
-                Times.Once);
+            // #3369: each game must go through the runner (attempt-log + retry +
+            // dead-letter + SSE parity with the M9/M12 triggers), with forceRefresh
+            // false and no admin trigger id — matching the previous raw-command semantics.
+            _runner.Verify(r => r.EnrichAndRecordAsync(
+                id, false, null, It.IsAny<CancellationToken>()), Times.Once);
         }
     }
 
@@ -53,14 +58,14 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
         var skipped = Guid.NewGuid();
         var failed = Guid.NewGuid();
 
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == success), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(success, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC BY-SA 4.0", "Author", "https://w/Q1"));
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == skipped), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(skipped, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Skipped("qid-missing"));
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == failed), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(failed, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Failed("r2-upload-error", "S3 503"));
 
         var result = await CreateHandler().Handle(
@@ -77,11 +82,11 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
     {
         var a = Guid.NewGuid();
         var b = Guid.NewGuid();
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == a), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(a, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("ka", "CC0", null, "https://w/Qa"));
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == b), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(b, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Skipped("license-not-whitelisted"));
 
         var result = await CreateHandler().Handle(
@@ -96,19 +101,19 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TreatsHandlerExceptionAsFailed_DoesNotPropagate()
+    public async Task Handle_TreatsRunnerExceptionAsFailed_DoesNotPropagate()
     {
-        // Defensive: an unhandled exception inside the M8 handler MUST NOT
+        // Defensive: an unhandled exception leaking from the runner MUST NOT
         // abort the batch — each game's outcome is independent. The batch
         // catches and records as "Failed(unhandled-exception)" so ops can
         // still see partial progress on the other games.
         var ok = Guid.NewGuid();
         var bad = Guid.NewGuid();
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == ok), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(ok, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == bad), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(bad, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("boom"));
 
         var result = await CreateHandler().Handle(
@@ -127,8 +132,8 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
         var ids = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
         using var cts = new CancellationTokenSource();
         var callCount = 0;
-        _mediator
-            .Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
@@ -145,7 +150,7 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
     [Fact]
     public async Task Handle_TreatsTaskCanceledFromTimeoutAsFailed_ContinuesNotPropagates()
     {
-        // Issue #2157: defense-in-depth. Even if a provider somehow leaks
+        // Issue #2157: defense-in-depth. Even if the runner leaks a
         // TaskCanceledException (e.g. HttpClient.Timeout above the provider
         // guard, or any future code path bypassing the M3/M4 fix), the batch
         // handler MUST distinguish it from a real caller cancellation and
@@ -154,11 +159,11 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
         // per-game Failed("child-timeout") entry; if cancelled, it propagates.
         var ok = Guid.NewGuid();
         var timedOut = Guid.NewGuid();
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == ok), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(ok, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == timedOut), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(timedOut, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new TaskCanceledException("simulated HTTP timeout leak"));
 
         using var cts = new CancellationTokenSource(); // NOT cancelled
@@ -182,19 +187,18 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
     [Fact]
     public async Task Handle_TreatsHttpRequestExceptionAsFailed_RecordsExceptionType()
     {
-        // Issue #2157: any HttpRequestException leaked from the M8 single-entry
-        // handler (e.g. DNS error, connection refused, 5xx that bypasses the
-        // provider's catch) maps to a per-game Failed("http-error") entry with
-        // a FailedDetail payload carrying the exception type and (sanitised)
-        // message so the admin UI can drill down into transient vs permanent
-        // failures.
+        // Issue #2157: any HttpRequestException leaked from the runner (e.g. DNS
+        // error, connection refused, 5xx that bypasses the provider's catch)
+        // maps to a per-game Failed("http-error") entry with a FailedDetail
+        // payload carrying the exception type and (sanitised) message so the
+        // admin UI can drill down into transient vs permanent failures.
         var ok = Guid.NewGuid();
         var httpFail = Guid.NewGuid();
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == ok), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(ok, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
-        _mediator
-            .Setup(m => m.Send(It.Is<EnrichCatalogCoverCommand>(c => c.GameId == httpFail), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(httpFail, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("DNS resolution failed", null, System.Net.HttpStatusCode.ServiceUnavailable));
 
         var result = await CreateHandler().Handle(
@@ -216,6 +220,40 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_TreatsBrokenCircuitExceptionAsFailed_RecordsCircuitOpen()
+    {
+        // Issue #2157 + #3369: when the M10 circuit breaker is OPEN the runner
+        // leaks a Polly BrokenCircuitException. This is the most frequent failure
+        // during a prolonged Wikimedia outage — exactly the scenario a 200-item
+        // batch hits — so it must map to a per-game Failed("circuit-open") entry
+        // (detected via reflection by CircuitBreakerExceptionDetector), NOT the
+        // generic "unhandled-exception" bucket, and must not abort the batch.
+        var ok = Guid.NewGuid();
+        var breakerOpen = Guid.NewGuid();
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(ok, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(breakerOpen, It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Polly.CircuitBreaker.BrokenCircuitException("circuit OPEN"));
+
+        var result = await CreateHandler().Handle(
+            new EnrichCatalogCoverBatchCommand(new[] { ok, breakerOpen }), CancellationToken.None);
+
+        result.TotalRequested.Should().Be(2);
+        result.SuccessCount.Should().Be(1);
+        result.FailedCount.Should().Be(1);
+        var entry = result.PerGame.Single(p => p.GameId == breakerOpen);
+        entry.Outcome.Should().Be("failed");
+        entry.Reason.Should().Be("circuit-open");
+
+        result.FailedDetails.Should().NotBeNull();
+        result.FailedDetails!.Should().ContainSingle(d => d.GameId == breakerOpen);
+        var detail = result.FailedDetails!.Single(d => d.GameId == breakerOpen);
+        detail.ExceptionType.Should().Be("BrokenCircuitException");
+    }
+
+    [Fact]
     public async Task Handle_FailedDetailsIsNull_WhenNoFailuresOccur()
     {
         // Backward-compat: existing callers MUST observe FailedDetails == null
@@ -224,8 +262,8 @@ public sealed class EnrichCatalogCoverBatchCommandHandlerTests
         // (JSON to admin UI, audit log) does not change shape on the green path.
         var a = Guid.NewGuid();
         var b = Guid.NewGuid();
-        _mediator
-            .Setup(m => m.Send(It.IsAny<EnrichCatalogCoverCommand>(), It.IsAny<CancellationToken>()))
+        _runner
+            .Setup(r => r.EnrichAndRecordAsync(It.IsAny<Guid>(), It.IsAny<bool>(), It.IsAny<Guid?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EnrichCatalogCoverResult.Success("k", "CC0", null, "https://w/Q"));
 
         var result = await CreateHandler().Handle(

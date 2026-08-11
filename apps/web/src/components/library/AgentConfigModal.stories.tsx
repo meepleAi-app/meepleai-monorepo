@@ -26,7 +26,7 @@ const createMockQueryClient = (hasConfig = true) => {
   if (hasConfig) {
     queryClient.setQueryData(['agent-config', 'game-123'], {
       ...DEFAULT_AGENT_CONFIG,
-      customInstructions: 'Spiega sempre le regole come se fossi principiante',
+      personalNotes: 'Spiega sempre le regole come se fossi principiante',
     });
   }
 
@@ -72,7 +72,7 @@ export const Default: Story = {
     onClose: fn(),
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -88,7 +88,7 @@ export const NoExistingConfig: Story = {
     onClose: fn(),
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(false)}>
         <Story />
       </QueryClientProvider>
@@ -104,7 +104,7 @@ export const LoadingConfig: Story = {
     onClose: fn(),
   },
   decorators: [
-    (Story) => {
+    Story => {
       const loadingClient = new QueryClient({
         defaultOptions: {
           queries: { retry: false, staleTime: Infinity },
@@ -128,7 +128,7 @@ export const ModelDropdownOpen: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -151,7 +151,7 @@ export const TemperatureHigh: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
@@ -171,7 +171,7 @@ export const TemperatureLow: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
@@ -195,11 +195,11 @@ export const PersonalityFriendly: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        personality: 'friendly',
+        personality: 'Amichevole',
       });
       return (
         <QueryClientProvider client={client}>
@@ -215,11 +215,11 @@ export const PersonalityProfessional: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        personality: 'professional',
+        personality: 'Professionale',
       });
       return (
         <QueryClientProvider client={client}>
@@ -235,11 +235,11 @@ export const PersonalityEnthusiastic: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        personality: 'enthusiastic',
+        personality: 'Umoristico',
       });
       return (
         <QueryClientProvider client={client}>
@@ -259,11 +259,11 @@ export const DetailBrief: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        detailLevel: 'brief',
+        detailLevel: 'Breve',
       });
       return (
         <QueryClientProvider client={client}>
@@ -279,11 +279,11 @@ export const DetailDetailed: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        detailLevel: 'detailed',
+        detailLevel: 'Dettagliato',
       });
       return (
         <QueryClientProvider client={client}>
@@ -303,11 +303,11 @@ export const WithCustomInstructions: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        customInstructions:
+        personalNotes:
           'Spiega sempre le regole come se fossi principiante. Usa esempi pratici per chiarire concetti complessi.',
       });
       return (
@@ -324,11 +324,11 @@ export const CustomInstructionsNearLimit: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => {
+    Story => {
       const client = createMockQueryClient(true);
       client.setQueryData(['agent-config', 'game-123'], {
         ...DEFAULT_AGENT_CONFIG,
-        customInstructions: 'A'.repeat(950), // 950 chars, 50 remaining
+        personalNotes: 'A'.repeat(950), // 950 chars, 50 remaining
       });
       return (
         <QueryClientProvider client={client}>
@@ -348,7 +348,7 @@ export const HoverResetButton: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -367,7 +367,7 @@ export const HoverTestButton: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -386,7 +386,7 @@ export const HoverSaveButton: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -409,7 +409,7 @@ export const Mobile: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -430,7 +430,7 @@ export const Tablet: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>
@@ -451,7 +451,7 @@ export const Desktop: Story = {
     ...Default.args,
   },
   decorators: [
-    (Story) => (
+    Story => (
       <QueryClientProvider client={createMockQueryClient(true)}>
         <Story />
       </QueryClientProvider>

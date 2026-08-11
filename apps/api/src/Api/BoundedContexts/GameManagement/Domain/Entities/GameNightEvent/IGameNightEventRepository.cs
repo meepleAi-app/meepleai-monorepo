@@ -46,4 +46,40 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// the parent game night when a Session transitions to live mode.
     /// </remarks>
     Task<GameNightEvent?> FindByLinkedSessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds the GameNightEvent aggregate that owns a linked Session
+    /// (matched via <c>GameNightSession.SessionId</c>), loaded <b>detached</b> (AsNoTracking).
+    /// Returns null if the Session is not linked to any GameNight.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="FindByLinkedSessionIdAsync"/> (which loads TRACKED for the
+    /// invariante #15 mutate-in-place flow): the go-live orchestrator
+    /// (<c>GoLiveSessionCommandHandler</c>, epic #3188 Slice 2) mutates the aggregate and persists
+    /// via the detached <c>UpdateAsync</c> full-remap + <c>.Update()</c> pattern (same as
+    /// <c>GetByIdAsync</c> feeding <c>StartGameNightSessionCommandHandler</c>). A tracked load
+    /// would collide with that fresh-entity <c>.Update()</c> on the same key.
+    /// </remarks>
+    Task<GameNightEvent?> GetByLinkedSessionIdAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
+    // ── Candidate voting (approval model) — Issue #2700 ──────────────────────
+    // Votes are immutable append/remove children persisted with tracked Add/Remove.
+    // They deliberately bypass the aggregate's detached-Update full-remap: EF's
+    // Update() marks a brand-new PK-set child as Modified → 0-row UPDATE. Loading the
+    // event (which Includes Votes) still preserves existing votes across an event edit.
+
+    /// <summary>Inserts a single approval vote (tracked Add → INSERT).</summary>
+    Task AddVoteAsync(GameNightVote vote, CancellationToken cancellationToken = default);
+
+    /// <summary>Removes a single approval vote by its id (tracked delete). No-op when absent.</summary>
+    Task RemoveVoteAsync(Guid voteId, CancellationToken cancellationToken = default);
+
+    /// <summary>Persists the organiser's resolved tie-break winner on the event row.</summary>
+    Task SetVotingWinnerAsync(Guid eventId, Guid? winnerGameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds a shared game night by its summary share token — Issue #2702. Returns null when the
+    /// token is unknown or sharing was revoked. Possession of the token is the authorisation.
+    /// </summary>
+    Task<GameNightEvent?> GetByShareTokenAsync(string shareToken, CancellationToken cancellationToken = default);
 }

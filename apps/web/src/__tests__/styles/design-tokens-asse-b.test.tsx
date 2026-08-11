@@ -34,9 +34,12 @@ describe('Asse B token additions (MAJ-9 gap #37/#38)', () => {
   });
 
   describe('Gap #37 — --c-warning-ink', () => {
-    it('defines --c-warning-ink for light theme (HSL 38 92% 32%, ~5.2:1 on cream)', () => {
+    // #3010 FU2: 38 92% 32% measured ~4.40:1 vs the literal mockup cream
+    // (#f7f3ee) — below the 4.5:1 AA floor. Darkened to 38 92% 30%, which
+    // clears AA with margin: ~5.07:1 vs --background, ~4.89:1 vs #f7f3ee.
+    it('defines --c-warning-ink for light theme (HSL 38 92% 30%, ~4.89:1 on mockup cream)', () => {
       const lightBlock = lightBlockMatch?.[1] ?? '';
-      expect(lightBlock).toMatch(/--c-warning-ink:\s*38\s+92%\s+32%\s*;/);
+      expect(lightBlock).toMatch(/--c-warning-ink:\s*38\s+92%\s+30%\s*;/);
     });
 
     it('defines --c-warning-ink for dark theme (HSL 38 92% 60%, ~10.4:1 on dark)', () => {

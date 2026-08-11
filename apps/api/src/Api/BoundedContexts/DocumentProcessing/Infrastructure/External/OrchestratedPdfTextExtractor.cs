@@ -40,7 +40,8 @@ internal class OrchestratedPdfTextExtractor : IPdfTextExtractor
             CharacterCount: enhancedResult.CharacterCount,
             OcrTriggered: enhancedResult.OcrTriggered,
             Quality: enhancedResult.Quality,
-            ErrorMessage: enhancedResult.ErrorMessage);
+            ErrorMessage: enhancedResult.ErrorMessage,
+            IsPermanentFailure: enhancedResult.IsPermanentFailure);
     }
 
     /// <summary>
@@ -60,7 +61,9 @@ internal class OrchestratedPdfTextExtractor : IPdfTextExtractor
             TotalPages: enhancedResult.TotalPages,
             TotalCharacters: enhancedResult.TotalCharacters,
             OcrTriggered: enhancedResult.OcrTriggered,
-            ErrorMessage: enhancedResult.ErrorMessage);
+            ErrorMessage: enhancedResult.ErrorMessage,
+            StructuredElements: enhancedResult.StructuredElements,
+            IsPermanentFailure: enhancedResult.IsPermanentFailure);
     }
 }
 

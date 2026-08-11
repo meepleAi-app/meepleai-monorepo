@@ -2,13 +2,19 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -34,8 +40,9 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<VectorSearchDomainService> _vectorSearchServiceMock;
     private readonly Mock<RrfFusionDomainService> _rrfFusionServiceMock;
     private readonly Mock<IEmbeddingService> _embeddingServiceMock;
-    private readonly Mock<IHybridSearchService> _hybridSearchServiceMock;
+    private readonly Mock<IKeywordSearchService> _keywordSearchServiceMock;
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<QualityTrackingDomainService> _qualityTrackingServiceMock;
     private readonly Mock<ChatContextDomainService> _chatContextServiceMock;
     private readonly Mock<IChatThreadRepository> _chatThreadRepositoryMock;
@@ -44,6 +51,8 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
+    private readonly Mock<IIntentClassifierService> _intentClassifierMock;
+    private readonly Mock<ICopyrightTierResolver> _copyrightTierResolverMock;
     private readonly Mock<ILogger<StreamQaQueryHandler>> _loggerMock;
     private readonly FakeTimeProvider _fakeTimeProvider;
     private readonly StreamQaQueryHandler _handler;
@@ -55,7 +64,7 @@ public class StreamQaQueryHandlerTests
         _vectorSearchServiceMock = new Mock<VectorSearchDomainService>();
         _rrfFusionServiceMock = new Mock<RrfFusionDomainService>();
         _embeddingServiceMock = new Mock<IEmbeddingService>();
-        _hybridSearchServiceMock = new Mock<IHybridSearchService>();
+        _keywordSearchServiceMock = new Mock<IKeywordSearchService>();
         var searchLoggerMock = new Mock<ILogger<SearchQueryHandler>>();
 
         // Create real SearchQueryHandler instance for testing
@@ -64,10 +73,21 @@ public class StreamQaQueryHandlerTests
             _vectorSearchServiceMock.Object,
             _rrfFusionServiceMock.Object,
             _embeddingServiceMock.Object,
-            _hybridSearchServiceMock.Object,
+            _keywordSearchServiceMock.Object,
             CreatePermissiveRagAccessServiceMock(),
             searchLoggerMock.Object
         );
+
+        // Default: reranker preserves order (passthrough) so existing assertions are unaffected.
+        _rerankerMock = new Mock<ICrossEncoderReranker>();
+        _rerankerMock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
 
         _qualityTrackingServiceMock = new Mock<QualityTrackingDomainService>();
         _chatContextServiceMock = new Mock<ChatContextDomainService>();
@@ -77,12 +97,33 @@ public class StreamQaQueryHandlerTests
         _llmServiceMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
+        _intentClassifierMock = new Mock<IIntentClassifierService>();
+        _intentClassifierMock
+            .Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.None);
+        // SP-C (#3407): default permissive resolver — echoes citations resolved to Full so existing
+        // tests keep their verbatim snippet text (pre-SP-C behavior = no gate = everything verbatim).
+        // Gate tests override this with a Protected-tier resolver.
+        _copyrightTierResolverMock = new Mock<ICopyrightTierResolver>();
+        _copyrightTierResolverMock
+            .Setup(x => x.ResolveAsync(It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ChunkCitation> cits, Guid _, CancellationToken _) =>
+                cits.Select(c => c with { CopyrightTier = CopyrightTier.Full }).ToList());
         _loggerMock = new Mock<ILogger<StreamQaQueryHandler>>();
         _fakeTimeProvider = new FakeTimeProvider();
         _fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
+        // Issue #2884: PR #2833 added GetByGameIdAsync in PerformSearchAndBuildCitationsAsync to
+        // resolve VectorDocumentId -> PdfDocumentId for citations. Default to an empty list so
+        // citation building falls back to the vector id (pre-#2833 behavior) instead of throwing
+        // ArgumentNullException on ToDictionary(null) when the mock is otherwise unconfigured.
+        _vectorDocumentRepositoryMock
+            .Setup(x => x.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<VectorDocument>());
+
         _handler = new StreamQaQueryHandler(
             _searchQueryHandler,
+            _rerankerMock.Object,
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
@@ -92,10 +133,105 @@ public class StreamQaQueryHandlerTests
             _cacheMock.Object,
             _promptTemplateServiceMock.Object,
             new InlineCitationMatcherService(),
+            _intentClassifierMock.Object,
+            CreatePermissiveRagAccessServiceMock(),
+            _copyrightTierResolverMock.Object,
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,
             _fakeTimeProvider
         );
     }
+    // ─── Bug B5: streaming QA per-game RAG access enforcement (IDOR + KB confidentiality) ───
+
+    [Fact]
+    public async Task Handle_AuthenticatedNonOwner_ThrowsForbidden_AndSkipsRetrievalAndLlm()
+    {
+        // Arrange — an authenticated user with NO RAG access to this (non-public) game.
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(
+            gameId.ToString(), "How do I win?", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null,
+            UserId: userId, UserRole: "User");
+
+        var denyRagAccess = new Mock<IRagAccessService>();
+        denyRagAccess
+            .Setup(s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var handler = CreateHandlerWith(denyRagAccess.Object);
+
+        // Configure the full happy path so that, WERE the guard missing, retrieval + LLM would run —
+        // making a RED failure unambiguous.
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+
+        // Act
+        Func<Task> act = async () =>
+        {
+            await foreach (var _ in handler.Handle(query, TestContext.Current.CancellationToken))
+            {
+            }
+        };
+
+        // Assert — denial surfaces as ForbiddenException (mirrors non-stream AskQuestion) and NO
+        // retrieval or LLM work happens.
+        await act.Should().ThrowAsync<ForbiddenException>();
+
+        denyRagAccess.Verify(
+            s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "no LLM call must happen when RAG access is denied");
+
+        _keywordSearchServiceMock.Verify(
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "no KB retrieval must happen when RAG access is denied");
+
+        _cacheMock.Verify(
+            x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "not even the cache should be consulted when RAG access is denied");
+    }
+
+    [Fact]
+    public async Task Handle_AuthenticatedOwner_AllowsStreaming()
+    {
+        // Arrange — an authenticated user WITH RAG access proceeds normally.
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(
+            gameId.ToString(), "How do I win?", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null,
+            UserId: userId, UserRole: "User");
+
+        var allowRagAccess = new Mock<IRagAccessService>();
+        allowRagAccess
+            .Setup(s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var handler = CreateHandlerWith(allowRagAccess.Object);
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert — the stream completes with no ForbiddenException / error event.
+        allowRagAccess.Verify(
+            s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Error);
+    }
+
     [Fact]
     public async Task Handle_ValidQuery_StreamsCorrectEvents()
     {
@@ -137,6 +273,134 @@ public class StreamQaQueryHandlerTests
         var complete = completeEvent.Data.Should().BeOfType<StreamingComplete>().Which;
         (complete.totalTokens > 0).Should().BeTrue();
         complete.confidence.HasValue.Should().BeTrue();
+    }
+
+    // ─── SP-C (#3407): citation region grounding + copyright gate ───
+
+    [Fact]
+    public async Task Handle_FullTierCitation_EmitsRegions_AndVerbatimText()
+    {
+        // Arrange: fused result carries a bbox + char offsets; default resolver resolves to Full.
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "how do I score?", null);
+        SetupHappyPathMocks(gameId, query.Query);
+        SetupFusedResultWithRegion();
+
+        // Act
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Assert: region overlay + verbatim snippet are surfaced for Full-tier content.
+        snippet.regions.Should().NotBeNull();
+        snippet.regions!.Should().ContainSingle();
+        snippet.regions![0].Page.Should().Be(2);
+        snippet.regions![0].X.Should().BeApproximately(0.1, 1e-9);
+        snippet.charStart.Should().Be(100);
+        snippet.charEnd.Should().Be(250);
+        snippet.text.Should().Be("Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_ProtectedTierCitation_NullsRegions_ButKeepsVerbatimTextForGrounding()
+    {
+        // Arrange: same bbox-carrying result, but the resolver resolves to Protected.
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "how do I score?", null);
+        SetupHappyPathMocks(gameId, query.Query);
+        SetupFusedResultWithRegion();
+        _copyrightTierResolverMock
+            .Setup(x => x.ResolveAsync(It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ChunkCitation> cits, Guid _, CancellationToken _) =>
+                cits.Select(c => c with { CopyrightTier = CopyrightTier.Protected }).ToList());
+
+        // Act
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Assert: the verbatim region highlight is withheld for Protected content (DA-4)...
+        snippet.regions.Should().BeNull();
+        snippet.charStart.Should().BeNull();
+        snippet.charEnd.Should().BeNull();
+        // ...but the verbatim snippet text is PRESERVED — the same list grounds the LLM prompt, so
+        // redacting it would starve the model of retrieved context (SP-C review regression guard).
+        snippet.text.Should().Be("Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_CachedResponseWithRegions_StripsRegionsOnReplay()
+    {
+        // SP-C review (DA-4): the QA cache key is (game, query) only — NOT user/tier. A Full-tier
+        // user's cached regions must NOT be replayed to a later Protected-tier user on a cache hit,
+        // so cache-served citations strip regions/char offsets (fallback to the text-quote highlight).
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "cached with regions?", null);
+        var cachedResponse = new QaResponse(
+            answer: "cached answer",
+            snippets: new List<Snippet>
+            {
+                new Snippet("verbatim rule text", "PDF:doc-1", 2, 0, 0.9f)
+                {
+                    regions = new[] { new CitationRegion(2, 0.1, 0.2, 0.3, 0.4) },
+                    charStart = 100,
+                    charEnd = 250,
+                },
+            },
+            promptTokens: 10, completionTokens: 5, totalTokens: 15, confidence: 0.85, metadata: null);
+
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+
+        var snippet = FirstCitation(await CollectEventsAsync(query));
+
+        // Text is still served from cache (pre-existing behavior); regions are stripped (no cross-tier leak).
+        snippet.text.Should().Be("verbatim rule text");
+        snippet.regions.Should().BeNull();
+        snippet.charStart.Should().BeNull();
+        snippet.charEnd.Should().BeNull();
+    }
+
+    private void SetupFusedResultWithRegion()
+    {
+        var fusedResult = new DomainSearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "Sample rule text",
+            pageNumber: 2,
+            relevanceScore: new Confidence(0.9),
+            rank: 1,
+            searchMethod: "hybrid",
+            boundingBoxesJson: "[{\"page\":2,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]",
+            charStart: 100,
+            charEnd: 250);
+
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
+            .Returns(new List<DomainSearchResult> { fusedResult });
+    }
+
+    private async Task<List<RagStreamingEvent>> CollectEventsAsync(StreamQaQuery query)
+    {
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+        return events;
+    }
+
+    private static Snippet FirstCitation(List<RagStreamingEvent> events)
+    {
+        var citationsEvent = events.First(e => e.Type == StreamingEventType.Citations);
+        var citations = citationsEvent.Data.Should().BeOfType<StreamingCitations>().Which;
+        citations.citations.Should().NotBeEmpty();
+        return citations.citations[0];
     }
 
     [Fact]
@@ -249,8 +513,8 @@ public class StreamQaQueryHandlerTests
         complete.confidence.Should().Be(0.85);
 
         // Should NOT call search or LLM
-        _hybridSearchServiceMock.Verify(
-            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+        _keywordSearchServiceMock.Verify(
+            x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
         _llmServiceMock.Verify(
@@ -447,9 +711,9 @@ public class StreamQaQueryHandlerTests
                 Embeddings = new List<float[]> { new float[] { 0.1f, 0.2f } }
             });
 
-        _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>()); // Empty results
+        _keywordSearchServiceMock
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>()); // Empty results
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -598,6 +862,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new ScoredEmbedding(embedding, 0.55) });
 
         // Low relevance score (0.55)
         var lowScoreResult = new DomainSearchResult(
@@ -614,12 +882,12 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
             .Returns(new List<DomainSearchResult> { lowScoreResult });
 
-        _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>());
+        _keywordSearchServiceMock
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>());
 
         _rrfFusionServiceMock
-            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>()))
+            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
             .Returns(new List<DomainSearchResult> { lowScoreResult });
 
         SetupPromptMocks(QuestionType.General);
@@ -710,17 +978,21 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddings.Select((e, i) => new ScoredEmbedding(e, 0.95 - i * 0.03)).ToList());
 
         _vectorSearchServiceMock
             .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
             .Returns(highQualityResults);
 
-        _hybridSearchServiceMock
-            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), SearchMode.Keyword, It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>());
+        _keywordSearchServiceMock
+            .Setup(x => x.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>());
 
         _rrfFusionServiceMock
-            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>()))
+            .Setup(x => x.FuseResults(It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
             .Returns(highQualityResults);
 
         SetupPromptMocks(QuestionType.General);
@@ -786,6 +1058,7 @@ public class StreamQaQueryHandlerTests
         var gameId = Guid.NewGuid().ToString();
         var docId1 = Guid.NewGuid();
         var docId2 = Guid.NewGuid();
+        var outOfScopeDocId = Guid.NewGuid();
         var documentIds = new List<Guid> { docId1, docId2 };
 
         var query = new StreamQaQuery(gameId, "Question for specific documents?", ThreadId: null, DocumentIds: documentIds);
@@ -799,6 +1072,59 @@ public class StreamQaQueryHandlerTests
         SetupLlmStreamingMock(new[] { "Filtered", " answer" });
         SetupQualityTrackingMocks();
 
+        // Issue #3270 (Task 6): IKeywordSearchService.SearchAsync no longer accepts a documentIds
+        // parameter — the RAW keyword arm returns everything, and SearchQueryHandler applies the
+        // documentIds post-filter itself (reproducing the old HybridSearchService(Keyword) behavior).
+        // Return an in-scope + an out-of-scope PdfDocumentId to prove the filter is still applied.
+        _keywordSearchServiceMock
+            .Setup(x => x.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(),
+                It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<KeywordSearchResult>
+            {
+                new()
+                {
+                    ChunkId = "in-scope",
+                    Content = "In scope chunk content.",
+                    PdfDocumentId = docId1.ToString(),
+                    GameId = Guid.Parse(gameId),
+                    ChunkIndex = 0,
+                    PageNumber = 1,
+                    RelevanceScore = 0.2f
+                },
+                new()
+                {
+                    ChunkId = "out-of-scope",
+                    Content = "Out of scope chunk content.",
+                    PdfDocumentId = outOfScopeDocId.ToString(),
+                    GameId = Guid.Parse(gameId),
+                    ChunkIndex = 0,
+                    PageNumber = 1,
+                    RelevanceScore = 0.3f
+                }
+            });
+
+        var fusedResult = new DomainSearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "Filtered content",
+            pageNumber: 1,
+            relevanceScore: new Confidence(0.9),
+            rank: 1,
+            searchMethod: "hybrid");
+
+        List<DomainSearchResult>? capturedKeywordArm = null;
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
+            .Callback<List<DomainSearchResult>, List<DomainSearchResult>, int, GameBookRole, IReadOnlyList<string>?>(
+                (_, keywordArm, _, _, _) => capturedKeywordArm = keywordArm)
+            .Returns(new List<DomainSearchResult> { fusedResult });
+
         // Act
         var events = new List<RagStreamingEvent>();
         await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
@@ -807,34 +1133,80 @@ public class StreamQaQueryHandlerTests
         }
 
         // Assert
-        // Verify hybrid search was called with documentIds filter (Issue #2051)
-        _hybridSearchServiceMock.Verify(
-            x => x.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                SearchMode.Keyword,
-                It.IsAny<int>(),
-                It.Is<List<Guid>?>(docIds =>
-                    docIds != null &&
-                    docIds.Count == 2 &&
-                    docIds.Contains(docId1) &&
-                    docIds.Contains(docId2)
-                ),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
-                It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
-                It.IsAny<CancellationToken>()
-            ),
-            Times.Once,
-            "SearchAsync should be called with matching documentIds list for filtering"
-        );
+        // Issue #2051: only the in-scope chunk should reach fusion — the out-of-scope one was
+        // filtered out by SearchQueryHandler's documentIds post-filter.
+        capturedKeywordArm.Should().NotBeNull();
+        capturedKeywordArm!.Should().ContainSingle(
+            "the out-of-scope PdfDocumentId must be filtered out before reaching RRF fusion");
+        capturedKeywordArm![0].PdfDocumentId.Should().Be(docId1);
 
         // Verify response completed successfully
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);
         completeEvent.Should().NotBeNull();
 
         // Verify no errors
+        var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
+        errorEvent.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task StreamQa_SetsQueryRoleHint_FromIntentClassifier()
+    {
+        // Issue #3270 (Task 7): StreamQa must classify intent and forward QueryRoleHint through
+        // SearchQuery so the hybrid re-ranker can apply the role-match boost (parity with
+        // AskQuestionQueryHandler). Verified indirectly via the GameBookRole argument that
+        // SearchQueryHandler forwards from SearchQuery.QueryRoleHint into RrfFusionDomainService.FuseResults.
+
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var userQuery = "How do I set up the game?";
+        var query = new StreamQaQuery(gameId, userQuery, null);
+
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((QaResponse?)null);
+
+        SetupSearchMocks(gameId, userQuery);
+        SetupPromptMocks(QuestionType.General);
+        SetupLlmStreamingMock(new[] { "Setup", " answer" });
+        SetupQualityTrackingMocks();
+
+        _intentClassifierMock
+            .Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Setup);
+
+        GameBookRole? capturedRoleHint = null;
+        var fusedResult = new DomainSearchResult(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "Setup rule text",
+            pageNumber: 1,
+            relevanceScore: new Confidence(0.9),
+            rank: 1,
+            searchMethod: "hybrid");
+
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
+            .Callback<List<DomainSearchResult>, List<DomainSearchResult>, int, GameBookRole, IReadOnlyList<string>?>(
+                (_, _, _, roleHint, _) => capturedRoleHint = roleHint)
+            .Returns(new List<DomainSearchResult> { fusedResult });
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        _intentClassifierMock.Verify(x => x.ClassifyIntent(userQuery), Times.Once);
+        capturedRoleHint.Should().Be(GameBookRole.Setup);
+
         var errorEvent = events.FirstOrDefault(e => e.Type == StreamingEventType.Error);
         errorEvent.Should().BeNull();
     }
@@ -906,6 +1278,109 @@ public class StreamQaQueryHandlerTests
             "Cache should not store partial responses after errors"
         );
     }
+    // ─── R1 (issue #3416, ADR-088): MechanicCard claim injection into the streaming path ───
+
+    private static PublishedMechanicCardDto CardWithSetupClaim(Guid gameId, Guid pdfId) =>
+        new(
+            CardId: Guid.NewGuid(), SharedGameId: gameId, Title: "T", Version: 1, PublishedAt: DateTime.UtcNow,
+            GameName: "Terraforming Mars", Publisher: null, Language: "it",
+            Sections: new[]
+            {
+                new PublishedMechanicCardSectionDto("Setup", new[]
+                {
+                    new PublishedMechanicCardClaimDto(
+                        Guid.NewGuid(),
+                        "In una partita a 3 giocatori si usa la plancia standard.",
+                        new[] { new PublishedMechanicCardCitationDto(pdfId, 3, "3-player uses the standard board") }),
+                }),
+            },
+            SourceAnalysisId: Guid.NewGuid(), PublicationYear: null, DocumentName: null);
+
+    private void ForceEmptyRetrieval() =>
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(), It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
+            .Returns(new List<DomainSearchResult>());
+
+    [Fact]
+    public async Task Handle_FlagOnWithCard_InjectsVerifiedRules_WhenRetrievalEmpty()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId.ToString(), "Setup per 3 giocatori", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null, UserId: userId, UserRole: "User");
+
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+        ForceEmptyRetrieval(); // the retrieval-miss case R1 targets (e.g. Catan/TM "Setup per N")
+        // This class uses a MOCKED intent classifier (unlike Phase2Tests' real one) → configure it.
+        _intentClassifierMock.Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Tutorial | GameBookRole.Setup);
+        // SetupPromptMocks stubs RenderUserPrompt to a fixed string that DISCARDS the context; echo the
+        // context instead so the injected [Verified Rules] block (prepended to context) is observable.
+        _promptTemplateServiceMock
+            .Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((PromptTemplate _, string context, string q) => $"Question: {q}\n\nContext:\n{context}");
+
+        string? capturedUserPrompt = null;
+        _llmServiceMock
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedUserPrompt = user)
+            .Returns(StreamTokensAsync(new[] { "In", " una", " partita", " a", " 3." }));
+
+        var provider = new Mock<IMechanicCardProvider>();
+        provider.Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithSetupClaim(gameId, Guid.NewGuid()));
+        var flag = new Mock<IFeatureFlagService>();
+        flag.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(true);
+
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), provider.Object, flag.Object);
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+            events.Add(e);
+
+        // The NO_RESULTS exit was bypassed → the LLM ran, with the injected block in its prompt.
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        capturedUserPrompt.Should().NotBeNull();
+        capturedUserPrompt.Should().Contain("[Verified Rules — human-approved]");
+        capturedUserPrompt.Should().Contain("## Setup");
+        // Verbatim Quote must NOT be in the prompt body (copyright §7.2).
+        capturedUserPrompt.Should().NotContain("3-player uses the standard board");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOff_EmitsNoResults_WhenRetrievalEmpty()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId.ToString(), "Setup per 3 giocatori", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null, UserId: userId, UserRole: "User");
+
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+        ForceEmptyRetrieval();
+        _intentClassifierMock.Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Tutorial | GameBookRole.Setup);
+
+        // A card IS available and the intent DOES map to Setup — the ONLY thing withholding injection is
+        // the disabled flag (CreateHandlerWith's default feature-flag mock returns false). Proves the gate.
+        var provider = new Mock<IMechanicCardProvider>();
+        provider.Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithSetupClaim(gameId, Guid.NewGuid()));
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), provider.Object);
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+            events.Add(e);
+
+        _llmServiceMock.Verify(
+            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private void SetupHappyPathMocks(string gameId, string userQuery)
     {
         _cacheMock
@@ -947,6 +1422,10 @@ public class StreamQaQueryHandlerTests
         _embeddingRepositoryMock
             .Setup(x => x.SearchByVectorAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding> { embedding });
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync (real cosine score).
+        _embeddingRepositoryMock
+            .Setup(x => x.SearchByVectorWithScoresAsync(It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ScoredEmbedding> { new ScoredEmbedding(embedding, 0.85) });
 
         // Setup vector search domain service to return results
         var vectorSearchResult = new DomainSearchResult(
@@ -963,10 +1442,10 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.Search(It.IsAny<Vector>(), It.IsAny<List<Embedding>>(), It.IsAny<int>(), It.IsAny<double>()))
             .Returns(new List<DomainSearchResult> { vectorSearchResult });
 
-        // Setup hybrid search results for keyword search
-        var keywordSearchResults = new List<HybridSearchResult>
+        // Setup raw keyword search results (issue #3270 Task 6: IKeywordSearchService, not IHybridSearchService)
+        var keywordSearchResults = new List<KeywordSearchResult>
         {
-            new HybridSearchResult
+            new()
             {
                 ChunkId = Guid.NewGuid().ToString(),
                 Content = "Sample rule text",
@@ -974,25 +1453,20 @@ public class StreamQaQueryHandlerTests
                 GameId = Guid.Parse(gameId),
                 ChunkIndex = 0,
                 PageNumber = 1,
-                HybridScore = 0.75f,
-                KeywordScore = 0.75f,
-                KeywordRank = 1,
-                Mode = SearchMode.Keyword,
+                RelevanceScore = 0.75f,
                 MatchedTerms = new List<string> { "rule", "text" }
             }
         };
 
-        _hybridSearchServiceMock
+        _keywordSearchServiceMock
             .Setup(x => x.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<Guid>(),
-                SearchMode.Keyword,
                 It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
+                It.IsAny<bool>(),
+                It.IsAny<List<string>?>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(keywordSearchResults);
 
@@ -1011,7 +1485,9 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.FuseResults(
                 It.IsAny<List<DomainSearchResult>>(),
                 It.IsAny<List<DomainSearchResult>>(),
-                It.IsAny<int>()))  // rrfK parameter
+                It.IsAny<int>(),  // rrfK parameter
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
             .Returns(new List<DomainSearchResult> { fusedResult });
     }
 
@@ -1116,5 +1592,35 @@ public class StreamQaQueryHandlerTests
         var mock = new Mock<IRagAccessService>();
         mock.Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
         return mock.Object;
+    }
+
+    /// <summary>
+    /// Builds a StreamQaQueryHandler reusing the shared field mocks but with a caller-supplied
+    /// IRagAccessService — used by the Bug B5 access-enforcement tests.
+    /// </summary>
+    private StreamQaQueryHandler CreateHandlerWith(
+        IRagAccessService ragAccessService,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
+        Api.Services.IFeatureFlagService? featureFlags = null)
+    {
+        return new StreamQaQueryHandler(
+            _searchQueryHandler,
+            _rerankerMock.Object,
+            _qualityTrackingServiceMock.Object,
+            _chatContextServiceMock.Object,
+            _chatThreadRepositoryMock.Object,
+            _pdfDocumentRepositoryMock.Object,
+            _vectorDocumentRepositoryMock.Object,
+            _llmServiceMock.Object,
+            _cacheMock.Object,
+            _promptTemplateServiceMock.Object,
+            new InlineCitationMatcherService(),
+            _intentClassifierMock.Object,
+            ragAccessService,
+            _copyrightTierResolverMock.Object,
+            mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
+            _loggerMock.Object,
+            _fakeTimeProvider);
     }
 }

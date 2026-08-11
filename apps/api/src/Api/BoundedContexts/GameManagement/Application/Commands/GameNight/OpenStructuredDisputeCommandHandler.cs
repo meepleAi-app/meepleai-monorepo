@@ -50,7 +50,7 @@ internal sealed class OpenStructuredDisputeCommandHandler
 
         if (!isEnabled)
         {
-            throw new InvalidOperationException("Feature Arbitro.StructuredDisputes is disabled");
+            throw new ConflictException("Feature Arbitro.StructuredDisputes is disabled");
         }
 
         // 2. Get session
@@ -59,10 +59,12 @@ internal sealed class OpenStructuredDisputeCommandHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
-        // 3. Verify session has a GameId
+        // 3. Verify session has a GameId. A free-form session (no GameId) cannot
+        // host a dispute — that is a precondition conflict (409), not an unhandled
+        // InvalidOperationException (500). (#3263 discovery)
         if (session.GameId is null)
         {
-            throw new InvalidOperationException("Session has no associated game");
+            throw new ConflictException("Session has no associated game");
         }
 
         // 4. Create dispute via factory method

@@ -14,7 +14,7 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -32,7 +32,6 @@ import {
 } from '@/components/features/games';
 import {
   AdvancedFiltersDrawer,
-  BulkSelectionBar,
   CrossEntityFilters,
   EmptyLibrary,
   LibraryHeroDesktop,
@@ -41,21 +40,18 @@ import {
   RecentActivityRail,
   countActiveFilters,
   type ActivityItem,
-  type BulkSelectionBarLabels,
   type EmptyLibraryLabels,
   type GameStateFilter,
   type LibraryFilters,
   type LibraryHeroDesktopLabels,
   type LibraryHeroStat,
-  type LibrarySelectionMode,
   type LibraryTabConfig,
   type LibraryViewMode,
 } from '@/components/features/library';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useHybridHubItems } from '@/hooks/queries/useHybridHubItems';
-import { useLibrary, useRemoveGameFromLibrary } from '@/hooks/queries/useLibrary';
+import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
-import { useAdminRole } from '@/hooks/useAdminRole';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import { deriveGamesTabEntries } from '@/lib/library/games-tab-filters';
@@ -114,14 +110,8 @@ export function LibraryHub(): ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  // F2 (#1975): BGG import is admin-only (BGG ToS — see AddGameDrawer.tsx:18 note).
-  // Gate the CTA visibility behind admin role; non-admins get `undefined` callbacks
-  // which collapse the CTA buttons in LibraryHeroDesktop + EmptyLibrary.
-  const { isAdminOrAbove } = useAdminRole();
 
   const [tab, setTab] = useState<HybridHubTab>('all');
-  const [selectionMode, setSelectionMode] = useState<LibrarySelectionMode>('browse');
-  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [query, setQuery] = useState('');
   // SORT chip is currently a non-interactive visual stub (mockup admin-mockups/
   // design_files/sp4-library-desktop.jsx:213). Until the chip-popover lands
@@ -181,16 +171,7 @@ export function LibraryHub(): ReactElement {
   const gamesEffectiveKind: GamesEmptyKind | 'default' =
     (stateOverride as GamesEmptyKind | null) ?? gamesKind;
 
-  const removeMutation = useRemoveGameFromLibrary();
   const activityQuery = useActivityFeed(20);
-
-  // Selection mode is game-scoped — force browse when leaving the games tab.
-  useEffect(() => {
-    if (tab !== 'games' && selectionMode === 'select') {
-      setSelectionMode('browse');
-      setSelected(new Set());
-    }
-  }, [tab, selectionMode]);
 
   // Apply game-state filters (ex-loaned/kb tabs) to the games source before merge.
   const filteredSources = useMemo<HybridHubSources>(() => {
@@ -233,7 +214,8 @@ export function LibraryHub(): ReactElement {
       subtitle: t('pages.library.hero.subtitle'),
       eyebrow: t('pages.library.hero.eyebrow'),
       ctaAdd: t('pages.library.hero.cta.add'),
-      // F2: label kept (i18n stable) — visibility gated by `onImportBgg` prop in hero.
+      // BGG import CTA removed from /library (BGG user-side ban #2123). The label is required by
+      // LibraryHeroDesktopLabels but the CTA no longer renders (onImportBgg intentionally omitted).
       ctaImportBgg: t('pages.library.hero.cta.importBgg'),
       ctaExportAriaLabel: t('pages.library.hero.cta.exportAriaLabel'),
     }),
@@ -294,8 +276,6 @@ export function LibraryHub(): ReactElement {
         title: t('pages.library.emptyState.empty.title'),
         subtitle: t('pages.library.emptyState.empty.subtitle'),
         cta: t('pages.library.emptyState.empty.cta'),
-        // F2 (#1975): only render the BGG secondary CTA for admin users.
-        ctaImportBgg: isAdminOrAbove ? t('pages.library.emptyState.empty.ctaImportBgg') : undefined,
         suggestions: {
           heading: t('pages.library.emptyState.empty.suggestions.heading'),
         },
@@ -311,25 +291,8 @@ export function LibraryHub(): ReactElement {
         cta: t('pages.library.emptyState.error.cta'),
       },
     }),
-    [t, isAdminOrAbove]
+    [t]
   );
-
-  const bulkLabels = useMemo<BulkSelectionBarLabels>(() => {
-    const count = selected.size;
-    return {
-      regionLabel: t('pages.library.selectionMode.selectedCount', { count }),
-      counter: t('pages.library.bulk.counter', { count }),
-      counterCompact: t('pages.library.bulk.counterCompact'),
-      closeAriaLabel: t('pages.library.bulk.closeAriaLabel'),
-      archive: t('pages.library.bulk.actions.archive'),
-      tag: t('pages.library.bulk.actions.tag'),
-      exportLabel: t('pages.library.bulk.actions.export'),
-      confirmTitle: t('pages.library.bulk.confirm.deleteTitle', { count }),
-      confirmDescription: t('pages.library.bulk.confirm.deleteMessage'),
-      confirmCta: t('pages.library.bulk.confirm.confirmCta'),
-      cancelCta: t('pages.library.bulk.confirm.cancelCta'),
-    };
-  }, [t, selected]);
 
   const gamesFiltersLabels = useMemo<GamesFiltersInlineLabels>(
     () => ({
@@ -403,53 +366,14 @@ export function LibraryHub(): ReactElement {
 
   // ─── Callbacks ───
   const handleAddGame = useCallback(() => router.push('/library?action=add'), [router]);
-  const handleImportBgg = useCallback(() => router.push('/library?action=import-bgg'), [router]);
 
   const handleCardClick = useCallback(
     (itemId: string) => {
-      if (selectionMode === 'select') {
-        setSelected(prev => {
-          const n = new Set(prev);
-          if (n.has(itemId)) n.delete(itemId);
-          else n.add(itemId);
-          return n;
-        });
-        return;
-      }
       const item = merged.find(i => i.id === itemId);
       if (item) router.push(item.href);
     },
-    [router, selectionMode, merged]
+    [router, merged]
   );
-
-  const handleEnterSelectMode = useCallback(
-    (itemId?: string) => {
-      if (tab !== 'games') return; // game-scoped guard
-      setSelectionMode('select');
-      if (itemId)
-        setSelected(prev => {
-          const n = new Set(prev);
-          n.add(itemId);
-          return n;
-        });
-    },
-    [tab]
-  );
-
-  const handleExitSelectMode = useCallback(() => {
-    setSelectionMode('browse');
-    setSelected(new Set());
-  }, []);
-
-  // #1566: retained for re-wiring (spec §3.5) — unreachable until enter-select-mode is restored.
-  const handleBulkDelete = useCallback(async () => {
-    const ids = Array.from(selected);
-    if (ids.length === 0) return;
-    // ids are HybridHubItem ids in the games tab; the games source id IS the library entry id.
-    await Promise.allSettled(ids.map(id => removeMutation.mutateAsync(id)));
-    setSelected(new Set());
-    setSelectionMode('browse');
-  }, [selected, removeMutation]);
 
   const handleRetry = useCallback(() => {
     /* per-source refetch handled by TanStack; no-op surfaces retry CTA */
@@ -479,12 +403,7 @@ export function LibraryHub(): ReactElement {
       data-state={effectiveKind}
       className="gap-6 p-6 pb-24 sm:p-7"
     >
-      <LibraryHeroDesktop
-        labels={heroLabels}
-        stats={heroStatRows}
-        onAddGame={handleAddGame}
-        onImportBgg={isAdminOrAbove ? handleImportBgg : undefined}
-      />
+      <LibraryHeroDesktop labels={heroLabels} stats={heroStatRows} onAddGame={handleAddGame} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex flex-1 flex-col gap-4">
           <LibraryTabs<HybridHubTab> tabs={tabsConfig} active={tab} onChange={setTab} />
@@ -534,17 +453,13 @@ export function LibraryHub(): ReactElement {
                 <LibraryHybridGrid
                   items={merged}
                   view={view as LibraryViewMode}
-                  selectionMode={selectionMode}
-                  selected={selected}
                   onCardClick={handleCardClick}
-                  onLongPressEnter={handleEnterSelectMode}
                 />
               ) : (
                 <EmptyLibrary
                   kind={effectiveKind}
                   labels={emptyLabels}
                   onAddGame={handleAddGame}
-                  onImportBgg={isAdminOrAbove ? handleImportBgg : undefined}
                   onClearFilters={handleClearFilters}
                   onRetry={handleRetry}
                 />
@@ -558,15 +473,6 @@ export function LibraryHub(): ReactElement {
           error={activityQuery.error}
         />
       </div>
-      {tab === 'games' && selectionMode === 'select' ? (
-        <BulkSelectionBar
-          selectedCount={selected.size}
-          labels={bulkLabels}
-          onExitSelectMode={handleExitSelectMode}
-          onArchive={handleBulkDelete}
-          disabled={selected.size === 0 || removeMutation.isPending}
-        />
-      ) : null}
       <AdvancedFiltersDrawer
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

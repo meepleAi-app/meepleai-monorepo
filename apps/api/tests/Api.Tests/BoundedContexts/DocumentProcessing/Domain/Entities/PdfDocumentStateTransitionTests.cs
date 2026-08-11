@@ -191,7 +191,7 @@ public class PdfDocumentStateTransitionTests
     }
 
     [Fact]
-    public void TransitionTo_Failed_To_Extracting_Succeeds_DuringRetry()
+    public void TransitionTo_Failed_To_Pending_Succeeds_DuringRetry()
     {
         // Arrange
         var document = CreateTestDocument();
@@ -199,11 +199,11 @@ public class PdfDocumentStateTransitionTests
         document.TransitionTo(PdfProcessingState.Extracting);
         document.MarkAsFailed("Network error", ErrorCategory.Network, PdfProcessingState.Extracting);
 
-        // Act - Retry should allow transition from Failed
+        // Act - Retry resets to Pending (Failed → Pending is permitted; B11 #3269)
         document.Retry();
 
         // Assert
-        document.ProcessingState.Should().Be(PdfProcessingState.Extracting);
+        document.ProcessingState.Should().Be(PdfProcessingState.Pending);
     }
 
     // ===== Invalid Transitions Tests =====

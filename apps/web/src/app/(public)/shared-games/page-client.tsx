@@ -51,6 +51,7 @@ import {
 
 const SEARCH_DEBOUNCE_MS = 300;
 const VALID_CHIP_KEYS: ReadonlySet<ChipKey> = new Set([
+  'with-kb',
   'with-toolkit',
   'with-agent',
   'top-rated',
@@ -226,7 +227,13 @@ export function SharedGamesPageClient({
     return items.map(g => ({
       id: g.id,
       title: g.title,
-      coverUrl: g.imageUrl && g.imageUrl.length > 0 ? g.imageUrl : null,
+      // #3449 — use the R2-resolved coverUrl; imageUrl is a #2123 tombstone (always empty).
+      coverUrl: g.coverUrl ?? null,
+      // #3611 — flat DTO focal point; SharedGamesGrid converts it to the `coverFocal`
+      // object at its own call-site. Optional: absent on cache responses served before
+      // the backend started returning it.
+      coverFocalX: g.coverFocalX,
+      coverFocalY: g.coverFocalY,
       year: g.yearPublished > 0 ? g.yearPublished : null,
       // Backend `averageRating` is on a 0..10 scale (BGG-style). Convert to 0..5.
       rating: g.averageRating != null ? g.averageRating / 2 : 0,
@@ -235,9 +242,9 @@ export function SharedGamesPageClient({
       kbsCount: g.kbsCount,
       newThisWeekCount: g.newThisWeekCount,
       // Issue #2055 Phase 7 — Wikidata cover attribution pass-through.
-      wikidataCoverLicense: g.wikidataCoverLicense ?? null,
-      wikidataCoverAttribution: g.wikidataCoverAttribution ?? null,
-      wikidataCoverSourceUrl: g.wikidataCoverSourceUrl ?? null,
+      coverLicense: g.coverLicense ?? null,
+      coverAttribution: g.coverAttribution ?? null,
+      coverSourceUrl: g.coverSourceUrl ?? null,
     }));
   }, [data]);
 

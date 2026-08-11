@@ -1,10 +1,13 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import 'react-pdf/dist/Page/TextLayer.css';
 
+import { makeQuoteTextRenderer } from '@/components/pdf/pdf-quote-highlight';
+import { PdfBBoxOverlay } from '@/components/pdf/PdfBBoxOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
@@ -56,6 +59,31 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
 
   // Reset state when citation changes (different document/page)
   const pdfUrl = api.pdf.getPdfDownloadUrl(citation.documentId);
+
+  // SP0 (#3404) follow-up: highlight della regione citata sulla PAGINA citata.
+  // Gating copyright: highlight verbatim SOLO per tier "full" (ADR-059/#447);
+  // per "protected" nessun highlight (lo snippet parafrasato non è verbatim).
+  const highlightQuote =
+    citation.copyrightTier === 'protected' ? undefined : citation.snippet || undefined;
+  const isCitedPage = currentPage === citation.pageNumber;
+
+  // SP-D (#3408): overlay bbox della regione (Pattern B), gated su copyright come l'highlight
+  // verbatim. Le regions sono già Full-gated dal BE; qui belt-and-suspenders per "protected".
+  const regions =
+    citation.copyrightTier === 'protected' ? undefined : (citation.regions ?? undefined);
+  const hasRects = (regions?.length ?? 0) > 0;
+  const pageRects = useMemo(
+    () => (regions ?? []).filter(r => r.page === currentPage),
+    [regions, currentPage]
+  );
+
+  // Pattern B (overlay) ha precedenza su Pattern A (quote text-layer): se ci sono regions,
+  // niente customTextRenderer.
+  const quoteRenderer = useMemo(
+    () =>
+      highlightQuote && isCitedPage && !hasRects ? makeQuoteTextRenderer(highlightQuote) : null,
+    [highlightQuote, isCitedPage, hasRects]
+  );
 
   const handleDocumentLoad = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -123,9 +151,14 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
                     620,
                     typeof window !== 'undefined' ? window.innerWidth - 80 : 620
                   )}
-                  renderTextLayer={false}
+                  renderTextLayer={!!quoteRenderer}
                   renderAnnotationLayer={false}
-                />
+                  customTextRenderer={
+                    quoteRenderer ? ({ str }) => quoteRenderer.render({ str }) : undefined
+                  }
+                >
+                  {pageRects.length > 0 ? <PdfBBoxOverlay rects={pageRects} /> : null}
+                </PdfPage>
               </PdfDocument>
             </div>
           )}

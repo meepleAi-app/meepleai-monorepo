@@ -49,6 +49,12 @@ public sealed class ExportSessionPdfQueryHandler : IRequestHandler<ExportSession
             throw new NotFoundException($"Session {request.SessionId} not found.");
         }
 
+        // #3119: PDF export is owner/participant-only.
+        if (!session.IsAccessibleBy(request.RequestedBy))
+        {
+            throw new ForbiddenException("You do not have access to this session.");
+        }
+
         // Get related data
         var scores = await _scoreEntryRepository.GetBySessionIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var diceRolls = request.IncludeDiceHistory
@@ -327,9 +333,8 @@ public sealed class GenerateSessionShareLinkQueryHandler : IRequestHandler<Gener
             throw new NotFoundException($"Session {request.SessionId} not found.");
         }
 
-        // Verify user has access to the session
-        if (session.UserId != request.RequestedBy &&
-            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        // Verify user has access to the session (#3119: shared IsAccessibleBy predicate).
+        if (!session.IsAccessibleBy(request.RequestedBy))
         {
             throw new ForbiddenException("You do not have access to this session.");
         }

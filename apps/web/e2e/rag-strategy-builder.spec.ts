@@ -16,6 +16,8 @@
 
 import { test, expect, type Page, type Locator } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from './_helpers/backendGuard';
+
 // Test configuration
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -93,6 +95,9 @@ async function dragBlockToCanvas(
 
 test.describe('RAG Visual Strategy Builder', () => {
   test.beforeEach(async ({ page }) => {
+    // Every test performs a real UI login via loginAsAdmin — skip without a
+    // reachable backend (local E2E bypass has no backend at :8080). See #2784.
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Skip login for mock tests, use auth in real E2E
     test.skip(process.env.CI === 'true', 'Requires running backend');
   });
@@ -227,7 +232,9 @@ test.describe('RAG Visual Strategy Builder', () => {
       await dragBlockToCanvas(page, 'cross-encoder-reranking', 400, 200);
 
       // Get output handle of first block and input handle of second
-      const outputHandle = page.locator('[data-testid^="node-"] [data-handletype="source"]').first();
+      const outputHandle = page
+        .locator('[data-testid^="node-"] [data-handletype="source"]')
+        .first();
       const inputHandle = page.locator('[data-testid^="node-"] [data-handletype="target"]').last();
 
       const outputBox = await outputHandle.boundingBox();
@@ -255,7 +262,9 @@ test.describe('RAG Visual Strategy Builder', () => {
       await dragBlockToCanvas(page, 'vector-search', 400, 200);
 
       // Try to connect (hallucination detection can't connect to vector search)
-      const outputHandle = page.locator('[data-testid^="node-"] [data-handletype="source"]').first();
+      const outputHandle = page
+        .locator('[data-testid^="node-"] [data-handletype="source"]')
+        .first();
       const inputHandle = page.locator('[data-testid^="node-"] [data-handletype="target"]').last();
 
       const outputBox = await outputHandle.boundingBox();
@@ -280,7 +289,9 @@ test.describe('RAG Visual Strategy Builder', () => {
       await dragBlockToCanvas(page, 'vector-search', 100, 200);
       await dragBlockToCanvas(page, 'cross-encoder-reranking', 400, 200);
 
-      const outputHandle = page.locator('[data-testid^="node-"] [data-handletype="source"]').first();
+      const outputHandle = page
+        .locator('[data-testid^="node-"] [data-handletype="source"]')
+        .first();
       const outputBox = await outputHandle.boundingBox();
 
       if (outputBox) {
@@ -408,7 +419,9 @@ test.describe('RAG Visual Strategy Builder', () => {
       await dragBlockToCanvas(page, 'confidence-scoring', 400, 200);
 
       // Connect them
-      const outputHandle = page.locator('[data-testid^="node-"] [data-handletype="source"]').first();
+      const outputHandle = page
+        .locator('[data-testid^="node-"] [data-handletype="source"]')
+        .first();
       const inputHandle = page.locator('[data-testid^="node-"] [data-handletype="target"]').last();
 
       const outputBox = await outputHandle.boundingBox();
@@ -541,7 +554,9 @@ test.describe('RAG Visual Strategy Builder', () => {
       await dragBlockToCanvas(page, 'confidence-scoring', 400, 200);
 
       // Connect them
-      const outputHandle = page.locator('[data-testid^="node-"] [data-handletype="source"]').first();
+      const outputHandle = page
+        .locator('[data-testid^="node-"] [data-handletype="source"]')
+        .first();
       const inputHandle = page.locator('[data-testid^="node-"] [data-handletype="target"]').last();
 
       const outputBox = await outputHandle.boundingBox();
@@ -621,7 +636,9 @@ test.describe('RAG Visual Strategy Builder', () => {
       await dragBlockToCanvas(page, 'confidence-scoring', 400, 200);
 
       // Connect
-      const outputHandle = page.locator('[data-testid^="node-"] [data-handletype="source"]').first();
+      const outputHandle = page
+        .locator('[data-testid^="node-"] [data-handletype="source"]')
+        .first();
       const inputHandle = page.locator('[data-testid^="node-"] [data-handletype="target"]').last();
 
       const outputBox = await outputHandle.boundingBox();

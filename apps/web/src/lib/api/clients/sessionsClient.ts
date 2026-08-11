@@ -5,6 +5,8 @@
  * Covers: Game sessions management (active, history, CRUD, lifecycle)
  */
 
+import { z } from 'zod';
+
 import {
   GameSessionDtoSchema,
   PaginatedSessionsResponseSchema,
@@ -31,16 +33,6 @@ export interface SessionHistoryFilters {
   endDate?: string;
   limit?: number;
   offset?: number;
-}
-
-export interface StartSessionRequest {
-  gameId: string;
-  players: Array<{
-    playerName: string;
-    playerOrder: number;
-    color?: string | null;
-  }>;
-  notes?: string | null;
 }
 
 export interface CompleteSessionRequest {
@@ -95,14 +87,21 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
       if (filters?.limit) params.append('limit', filters.limit.toString());
       if (filters?.offset) params.append('offset', filters.offset.toString());
 
-      const response = await httpClient.get(
+      const limit = filters?.limit || 20;
+      const offset = filters?.offset || 0;
+
+      // Issue #2848 (#Z): GET /api/v1/sessions/history returns a BARE array
+      // (`.Produces<List<GameSessionDto>>`), unlike /sessions/active which
+      // returns a paginated envelope. Validate the array (previously this used
+      // PaginatedSessionsResponseSchema and threw "Response validation failed"
+      // on the array) and wrap it into the PaginatedSessionsResponse callers
+      // expect. The BE does not return a total count, so total = page length.
+      const sessions = await httpClient.get(
         `/api/v1/sessions/history?${params}`,
-        PaginatedSessionsResponseSchema
+        z.array(GameSessionDtoSchema)
       );
 
-      if (!response) {
-        const limit = filters?.limit || 20;
-        const offset = filters?.offset || 0;
+      if (!sessions) {
         return {
           sessions: [],
           total: 0,
@@ -111,7 +110,12 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
         };
       }
 
-      return response;
+      return {
+        sessions,
+        total: sessions.length,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit,
+      };
     },
 
     // ========== Session CRUD ==========
@@ -122,14 +126,6 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
      */
     async getById(id: string): Promise<GameSessionDto | null> {
       return httpClient.get(`/api/v1/sessions/${encodeURIComponent(id)}`, GameSessionDtoSchema);
-    },
-
-    /**
-     * Start a new game session
-     * @param request Session start request with game ID and players
-     */
-    async start(request: StartSessionRequest): Promise<GameSessionDto> {
-      return httpClient.post('/api/v1/sessions', request, GameSessionDtoSchema);
     },
 
     // ========== Session Lifecycle ==========

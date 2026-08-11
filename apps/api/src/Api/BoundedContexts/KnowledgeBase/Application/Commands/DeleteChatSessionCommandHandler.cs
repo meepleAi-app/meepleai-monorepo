@@ -46,6 +46,13 @@ internal sealed class DeleteChatSessionCommandHandler : IRequestHandler<DeleteCh
             throw new NotFoundException("ChatSession", request.SessionId.ToString());
         }
 
+        // Ownership check (IDOR): a non-owner gets the same 404 as a non-existent
+        // session, so deletion of another user's chat is impossible and undetectable.
+        if (session.UserId != request.UserId)
+        {
+            throw new NotFoundException("ChatSession", request.SessionId.ToString());
+        }
+
         await _sessionRepository.DeleteAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

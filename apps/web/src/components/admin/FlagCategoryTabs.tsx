@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 
 export type FlagCategory = 'all' | 'features' | 'ai' | 'integrations' | 'security';
 
-export const FLAG_CATEGORIES: readonly FlagCategory[] = [
+const FLAG_CATEGORIES: readonly FlagCategory[] = [
   'all',
   'features',
   'ai',
@@ -56,7 +56,7 @@ export function detectFlagCategory(key: string): Exclude<FlagCategory, 'all'> {
   // Order matters: integrations must run before security because "oauth"
   // contains the substring "auth". A bare-word boundary on "auth" inside
   // the security regex would still fire on "oauth" without lookbehind.
-  if (/oauth|webhook|integration|n8n|external|connector|sso|saml/.test(lower)) {
+  if (/oauth|webhook|integration|external|connector|sso|saml/.test(lower)) {
     return 'integrations';
   }
   if (

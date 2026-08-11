@@ -19,13 +19,13 @@ describe('StepProgress', () => {
     expect(screen.getByText('Step 3')).toBeInTheDocument();
   });
 
-  it('completed steps have completed styling (inline background color)', () => {
+  it('completed steps use the entity-colored fill (default entity=game)', () => {
     const { container } = render(<StepProgress steps={makeSteps(4)} currentIndex={2} />);
     const completed = container.querySelector('[data-step-status="completed"]');
     expect(completed).toBeInTheDocument();
-    // Check data-step-circle child has inline style
     const circle = completed?.querySelector('[data-step-circle]') as HTMLElement | null;
-    expect(circle?.style.backgroundColor).toMatch(/hsl/i);
+    expect(circle?.className).toMatch(/bg-entity-game/);
+    expect(circle?.className).not.toMatch(/bg-primary/);
   });
 
   it('current step has current styling (ring and scale)', () => {
@@ -69,22 +69,72 @@ describe('StepProgress', () => {
     expect(items[3]?.getAttribute('data-step-status')).toBe('pending');
   });
 
-  it('entity prop applies correct HSL inline to completed circles', () => {
+  it('completed circles use the entity-colored fill (entity=session)', () => {
     const { container } = render(
       <StepProgress steps={makeSteps(3)} currentIndex={2} entity="session" />
     );
     const completed = container.querySelector(
       '[data-step-status="completed"] [data-step-circle]'
     ) as HTMLElement | null;
-    expect(completed?.style.backgroundColor).toContain('var(--e-session)');
+    expect(completed?.className).toMatch(/bg-entity-session/);
+    expect(completed?.className).not.toMatch(/bg-primary/);
   });
 
-  it('default entity (no prop) uses --e-game brand color', () => {
+  it('current + completed circles are branded with the entity fill (default game)', () => {
     const { container } = render(<StepProgress steps={makeSteps(3)} currentIndex={2} />);
     const completed = container.querySelector(
       '[data-step-status="completed"] [data-step-circle]'
     ) as HTMLElement | null;
-    expect(completed?.style.backgroundColor).toContain('var(--e-game)');
+    expect(completed?.className).toMatch(/bg-entity-game/);
+    const current = container.querySelector(
+      '[data-step-status="current"] [data-step-circle]'
+    ) as HTMLElement | null;
+    expect(current?.className).toMatch(/bg-entity-game/);
+  });
+
+  it('current step ring uses the entity ring utility, not ring-primary', () => {
+    const { container } = render(
+      <StepProgress steps={makeSteps(3)} currentIndex={1} entity="event" />
+    );
+    const current = container.querySelector(
+      '[data-step-status="current"] [data-step-circle]'
+    ) as HTMLElement | null;
+    expect(current?.className).toMatch(/ring-entity-event/);
+    expect(current?.className).not.toMatch(/ring-primary/);
+  });
+
+  it('filled connector uses the entity fill, not bg-primary', () => {
+    const { container } = render(
+      <StepProgress steps={makeSteps(3)} currentIndex={2} entity="agent" />
+    );
+    const filled = container.querySelector(
+      '[data-step-connector-filled="true"]'
+    ) as HTMLElement | null;
+    expect(filled).toBeInTheDocument();
+    expect(filled?.className).toMatch(/bg-entity-agent/);
+    expect(filled?.className).not.toMatch(/bg-primary/);
+  });
+
+  it('uses the registered -kb (teal) utilities for kb, not the unregistered document slate', () => {
+    const { container } = render(
+      <StepProgress steps={makeSteps(3)} currentIndex={2} entity="kb" />
+    );
+    const completed = container.querySelector(
+      '[data-step-status="completed"] [data-step-circle]'
+    ) as HTMLElement | null;
+    expect(completed?.className).toMatch(/bg-entity-kb/);
+    const current = container.querySelector(
+      '[data-step-status="current"] [data-step-circle]'
+    ) as HTMLElement | null;
+    expect(current?.className).toMatch(/bg-entity-kb/);
+    expect(current?.className).toMatch(/ring-entity-kb/);
+    const filled = container.querySelector(
+      '[data-step-connector-filled="true"]'
+    ) as HTMLElement | null;
+    expect(filled?.className).toMatch(/bg-entity-kb/);
+    // the whole progressbar must never reference the unregistered slate token
+    const root = container.querySelector('[role="progressbar"]') as HTMLElement | null;
+    expect(root?.innerHTML).not.toMatch(/entity-document/);
   });
 
   it('sets role="progressbar" and aria-valuenow reflects currentIndex+1', () => {
@@ -118,14 +168,12 @@ describe('StepProgress', () => {
     expect(bar?.className).toMatch(/custom-xyz/);
   });
 
-  it('handles kb entity mapping to --e-document', () => {
+  it('sets data-entity="kb" on the progressbar root', () => {
     const { container } = render(
       <StepProgress steps={makeSteps(3)} currentIndex={2} entity="kb" />
     );
-    const completed = container.querySelector(
-      '[data-step-status="completed"] [data-step-circle]'
-    ) as HTMLElement | null;
-    expect(completed?.style.backgroundColor).toContain('var(--e-document)');
+    const bar = container.querySelector('[role="progressbar"]');
+    expect(bar).toHaveAttribute('data-entity', 'kb');
   });
 
   it('handles 2 steps (min edge)', () => {

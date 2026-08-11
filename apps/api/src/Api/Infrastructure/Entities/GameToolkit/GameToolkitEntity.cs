@@ -72,8 +72,9 @@ public class GameToolkitEntity
     /// <summary>SemVer-shaped version string (e.g. "2.0.0"). Source of truth for the marketplace surface. Default "0.1.0". Max 50 chars.</summary>
     public string VersionSemver { get; set; } = "0.1.0";
 
-    // Concurrency
-    public byte[] RowVersion { get; set; } = default!;
+    // Concurrency — PostgreSQL xmin system column (ADR-060 pattern).
+    // Read-only, auto-populated by Postgres on every insert/update. No real column.
+    public uint Xmin { get; set; }
 
     // Navigation properties
     public SharedGameEntity? Game { get; set; }

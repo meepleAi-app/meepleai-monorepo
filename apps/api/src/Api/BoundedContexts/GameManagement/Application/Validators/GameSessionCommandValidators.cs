@@ -13,6 +13,9 @@ internal sealed class PauseGameSessionCommandValidator : AbstractValidator<Pause
     {
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
+
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
     }
 }
 
@@ -26,6 +29,9 @@ internal sealed class ResumeGameSessionCommandValidator : AbstractValidator<Resu
     {
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
+
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
     }
 }
 

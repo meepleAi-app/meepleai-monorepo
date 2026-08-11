@@ -139,7 +139,7 @@ function SlackPanel({
         body: {
           configJson: JSON.stringify(config),
           isEnabled: true,
-          rowVersion: channel?.rowVersion ?? null,
+          xmin: channel?.xmin ?? null,
         },
       });
       toast.success('Canale Slack salvato');
@@ -299,7 +299,7 @@ function EmailPanel({
         body: {
           configJson: JSON.stringify(config),
           isEnabled: true,
-          rowVersion: channel?.rowVersion ?? null,
+          xmin: channel?.xmin ?? null,
         },
       });
       toast.success('Canale Email salvato');

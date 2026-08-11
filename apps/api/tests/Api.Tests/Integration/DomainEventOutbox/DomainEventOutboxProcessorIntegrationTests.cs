@@ -1,8 +1,10 @@
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundJobs;
 using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities.DomainEventOutbox;
+using Api.Observability;
 using Api.SharedKernel.Domain.Interfaces;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -183,6 +185,86 @@ public sealed class DomainEventOutboxProcessorIntegrationTests : IAsyncLifetime
             t => t.RecordSnapshot(It.IsAny<long>(), It.IsAny<double>(), It.IsAny<long>()),
             Times.AtLeastOnce,
             "the processor must refresh the health snapshot after the batch");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────────────────────
+    // #2923 — dispatched counter emits one series per event_type (cardinality parity)
+    // ─────────────────────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RunOnceAsync_EmitsDispatchedCounter_PerEventType()
+    {
+        // Arrange: two Pending rows carrying DISTINCT event_type aliases mapped to the same CLR
+        // fixture (the counter tags on row.EventType, not the CLR type). #2923: this proves the
+        // processor emits meepleai.domain_event_outbox.dispatched.total once PER event_type, so
+        // dispatched label cardinality tracks enqueued cardinality — the "partial coverage"
+        // reported in #2923 is a low-volume observability artefact, not a code defect.
+        const string aliasAlpha = "test.fake.event.alpha.2923";
+        const string aliasBeta = "test.fake.event.beta.2923";
+
+        var resolverMock = Mock.Get(_serviceProvider!.GetRequiredService<IDomainEventTypeResolver>());
+        resolverMock.Setup(r => r.Resolve(aliasAlpha)).Returns(typeof(FakeEvent));
+        resolverMock.Setup(r => r.Resolve(aliasBeta)).Returns(typeof(FakeEvent));
+
+        var now = DateTimeOffset.UtcNow;
+        await using (var scope = _serviceProvider!.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var i = 0;
+            foreach (var alias in new[] { aliasAlpha, aliasBeta })
+            {
+                var ev = new FakeEvent(Marker: i);
+                var row = DomainEventOutboxEntity.Enqueue(
+                    ev,
+                    alias,
+                    JsonSerializer.Serialize(ev, DomainEventJsonOptions.Default),
+                    payloadVersion: 1,
+                    correlationId: null,
+                    now: now.AddSeconds(i));
+                db.DomainEventOutbox.Add(row);
+                i++;
+            }
+            await db.SaveChangesAsync(TestCancellationToken);
+        }
+
+        var dispatched = new List<(long Value, KeyValuePair<string, object?>[] Tags)>();
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (string.Equals(instrument.Meter.Name, MeepleAiMetrics.MeterName, StringComparison.Ordinal) &&
+                    string.Equals(instrument.Name, "meepleai.domain_event_outbox.dispatched.total", StringComparison.Ordinal))
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((inst, value, tags, state) =>
+            dispatched.Add((value, tags.ToArray())));
+        listener.Start();
+
+        // Act
+        var processor = _serviceProvider!.GetRequiredService<DomainEventOutboxProcessor>();
+        var processed = await processor.RunOnceAsync(batchSize: 100, cancellationToken: TestCancellationToken);
+
+        // Assert
+        processed.Should().Be(2);
+
+        var dispatchedEventTypes = dispatched
+            .Select(m => m.Tags.SingleOrDefault(t =>
+                string.Equals(t.Key, "event_type", StringComparison.Ordinal)).Value as string)
+            .ToList();
+
+        dispatchedEventTypes.Should().Contain(aliasAlpha,
+            "the dispatched counter must fire with event_type=alpha (#2923 cardinality parity)");
+        dispatchedEventTypes.Should().Contain(aliasBeta,
+            "the dispatched counter must fire with event_type=beta (#2923 cardinality parity)");
+        dispatched
+            .Where(m => m.Tags.Any(t =>
+                string.Equals(t.Key, "event_type", StringComparison.Ordinal) &&
+                (t.Value as string) is aliasAlpha or aliasBeta))
+            .Should().AllSatisfy(m => m.Value.Should().Be(1,
+                because: "each dispatched row emits exactly one counter tick"));
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────────────

@@ -120,6 +120,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<ChatThreadEntity> ChatThreads => Set<ChatThreadEntity>(); // DDD-PHASE3: KnowledgeBase ChatThread aggregate
     public DbSet<ChatLogEntity> ChatLogs => Set<ChatLogEntity>();
     public DbSet<PdfDocumentEntity> PdfDocuments => Set<PdfDocumentEntity>();
+    public DbSet<PdfImageRegionEntity> PdfImageRegions => Set<PdfImageRegionEntity>(); // #3447: image-table regions
+    public DbSet<PdfTableExtractionEntity> PdfTableExtractions => Set<PdfTableExtractionEntity>(); // #3435 SP4: VLM table-extraction state
     public DbSet<ProcessingMetricEntity> ProcessingMetrics => Set<ProcessingMetricEntity>(); // ISSUE-4212: Historical metrics storage
     public DbSet<ProcessingJobEntity> ProcessingJobs => Set<ProcessingJobEntity>(); // ISSUE-4730: Processing queue management
     public DbSet<ProcessingStepEntity> ProcessingSteps => Set<ProcessingStepEntity>(); // ISSUE-4730: Processing queue steps
@@ -146,7 +148,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<AiRequestLogEntity> AiRequestLogs => Set<AiRequestLogEntity>();
     public DbSet<AgentFeedbackEntity> AgentFeedbacks => Set<AgentFeedbackEntity>();
     public DbSet<AgentSessionEntity> AgentSessions => Set<AgentSessionEntity>(); // ISSUE-3183: Agent session state persistence
-    public DbSet<N8NConfigEntity> N8NConfigs => Set<N8NConfigEntity>();
     public DbSet<RuleSpecCommentEntity> RuleSpecComments => Set<RuleSpecCommentEntity>();
     public DbSet<PromptTemplateEntity> PromptTemplates => Set<PromptTemplateEntity>();
     public DbSet<PromptVersionEntity> PromptVersions => Set<PromptVersionEntity>();
@@ -155,7 +156,6 @@ public class MeepleAiDbContext : DbContext
     public DbSet<EmailVerificationEntity> EmailVerifications => Set<EmailVerificationEntity>(); // ISSUE-3071: Email verification
     public DbSet<CacheStatEntity> CacheStats => Set<CacheStatEntity>();
     public DbSet<SystemConfigurationEntity> SystemConfigurations => Set<SystemConfigurationEntity>();
-    public DbSet<WorkflowErrorLogEntity> WorkflowErrorLogs => Set<WorkflowErrorLogEntity>(); // N8N-05
     // ADMIN-01 Phase 4: Prompt Evaluation Results
     public DbSet<PromptEvaluationResultEntity> PromptEvaluationResults => Set<PromptEvaluationResultEntity>();
     // BGAI-039: Validation Accuracy Baseline Tracking
@@ -195,6 +195,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameCategoryEntity> GameCategories => Set<GameCategoryEntity>(); // ISSUE-2370: Game categories taxonomy
     public DbSet<GameMechanicEntity> GameMechanics => Set<GameMechanicEntity>(); // ISSUE-2370: Game mechanics taxonomy
     public DbSet<GameFaqEntity> GameFaqs => Set<GameFaqEntity>(); // ISSUE-2370: Game FAQs
+    public DbSet<GameCoverAssignmentEntity> GameCoverAssignments => Set<GameCoverAssignmentEntity>(); // #3470: admin per-context cover editor
     public DbSet<GameErrataEntity> GameErrata => Set<GameErrataEntity>(); // ISSUE-2370: Game errata
     public DbSet<SharedGameDeleteRequestEntity> SharedGameDeleteRequests => Set<SharedGameDeleteRequestEntity>(); // ISSUE-2370: Delete requests
     public DbSet<SharedGameDocumentEntity> SharedGameDocuments => Set<SharedGameDocumentEntity>(); // ISSUE-2391: Sprint 1 - PDF association
@@ -202,12 +203,14 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BggTosHashEntity> BggTosHashes => Set<BggTosHashEntity>(); // ISSUE-1903: Admin catalog seed workflow M7.1 (BGG ToS hash watcher)
     public DbSet<GameStateTemplateEntity> GameStateTemplates => Set<GameStateTemplateEntity>(); // ISSUE-2400: Sprint 3 - Game state templates
     public DbSet<RulebookAnalysisEntity> RulebookAnalyses => Set<RulebookAnalysisEntity>(); // ISSUE-2402: Sprint 3 - Rulebook analysis service
-    public DbSet<MechanicDraftEntity> MechanicDrafts => Set<MechanicDraftEntity>(); // Mechanic Extractor: Variant C draft workspace
     public DbSet<MechanicAnalysisEntity> MechanicAnalyses => Set<MechanicAnalysisEntity>(); // ISSUE-523: Mechanic Extractor M1.1 — AI-first analysis aggregate
     public DbSet<MechanicClaimEntity> MechanicClaims => Set<MechanicClaimEntity>(); // ISSUE-523: Child of MechanicAnalysis
     public DbSet<MechanicCitationEntity> MechanicCitations => Set<MechanicCitationEntity>(); // ISSUE-523: Child of MechanicClaim (ADR-051 T1 quote cap)
     public DbSet<MechanicStatusAuditEntity> MechanicStatusAudits => Set<MechanicStatusAuditEntity>(); // ISSUE-523: T6 audit trail for lifecycle transitions
     public DbSet<MechanicSuppressionAuditEntity> MechanicSuppressionAudits => Set<MechanicSuppressionAuditEntity>(); // ISSUE-523: T5 audit trail for suppressions
+    public DbSet<MechanicCardEntity> MechanicCards => Set<MechanicCardEntity>(); // #527: Mechanic Extractor M1.5 — published user-facing card
+    public DbSet<MechanicCardAuditLogEntity> MechanicCardAuditLog => Set<MechanicCardAuditLogEntity>(); // #527: card lifecycle audit trail
+    public DbSet<MechanicCardFeedbackEntity> MechanicCardFeedback => Set<MechanicCardFeedbackEntity>(); // #533: per-user per-claim card feedback
     public DbSet<MechanicAnalysisSectionRunEntity> MechanicAnalysisSectionRuns => Set<MechanicAnalysisSectionRunEntity>(); // ISSUE-524: M1.2 per-section provider/token tracking (B6=C)
     public DbSet<MechanicGoldenClaimEntity> MechanicGoldenClaims => Set<MechanicGoldenClaimEntity>(); // ADR-051 Sprint 1 / M2.0: golden-set claims
     public DbSet<MechanicGoldenBggTagEntity> MechanicGoldenBggTags => Set<MechanicGoldenBggTagEntity>(); // ADR-051 Sprint 1 / M2.0: BGG mechanic tags
@@ -293,6 +296,8 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightEventEntity> GameNightEvents => Set<GameNightEventEntity>(); // ISSUE-42: Game Night Event
     public DbSet<GameNightRsvpEntity> GameNightRsvps => Set<GameNightRsvpEntity>(); // ISSUE-42: Game Night RSVP
     public DbSet<GameNightSessionEntity> GameNightSessions => Set<GameNightSessionEntity>(); // Game Night Sessions
+    public DbSet<GameNightVoteEntity> GameNightVotes => Set<GameNightVoteEntity>(); // ISSUE-2700: Candidate voting
+    public DbSet<GameNightPhotoEntity> GameNightPhotos => Set<GameNightPhotoEntity>(); // ISSUE-2724: Recap photo gallery
     public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
     public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory

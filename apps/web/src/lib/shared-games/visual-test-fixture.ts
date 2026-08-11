@@ -29,7 +29,7 @@ import type { SharedGameDetail, TopContributor } from '@/lib/api/shared-games';
  * for human-debuggability. Recognized by `loadInitialData` only when the
  * fixture flag is enabled at build time.
  */
-export const VISUAL_TEST_FIXTURE_ID = '00000000-0000-4000-8000-000000000603' as const;
+const VISUAL_TEST_FIXTURE_ID = '00000000-0000-4000-8000-000000000603' as const;
 
 /**
  * True only when the build was produced by the visual-regression CI workflow
@@ -128,9 +128,9 @@ const FIXTURE_DETAIL: SharedGameDetail = {
   isNew: false,
   translations: [],
   // Issue #2055 Phase G AC-G6 — fixture intentionally null (no Wikidata cover for this synthetic game).
-  wikidataCoverLicense: null,
-  wikidataCoverAttribution: null,
-  wikidataCoverSourceUrl: null,
+  coverLicense: null,
+  coverAttribution: null,
+  coverSourceUrl: null,
 };
 
 const FIXTURE_CONTRIBUTORS: readonly TopContributor[] = [

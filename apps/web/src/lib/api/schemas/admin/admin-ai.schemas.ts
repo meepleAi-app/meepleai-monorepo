@@ -7,12 +7,14 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from '../common.schemas';
+
 // ========== AI Request Logs & Stats ==========
 
 export const AiRequestSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid().nullable(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   endpoint: z.string(),
   query: z.string().nullable(),
   responseSnippet: z.string().nullable(),

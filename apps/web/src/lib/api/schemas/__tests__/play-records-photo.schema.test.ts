@@ -47,6 +47,8 @@ describe('PlayRecordPhotoSchema', () => {
       location: null,
       createdAt: '2026-06-20T10:00:00Z',
       updatedAt: '2026-06-20T10:00:00Z',
+      winnerPlayerIds: [],
+      outcomeType: 'none' as const,
     };
     expect(PlayRecordDtoSchema.parse(base).photos).toBeUndefined();
     expect(PlayRecordDtoSchema.parse({ ...base, photos: [] }).photos).toEqual([]);

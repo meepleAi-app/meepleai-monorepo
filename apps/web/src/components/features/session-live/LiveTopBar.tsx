@@ -34,6 +34,8 @@ export interface LiveTopBarLabels {
   readonly exitAriaLabel: string;
   /** G4 (Issue #2352) — aria-label for the elapsed-time chip. Required when elapsedMs is provided. */
   readonly elapsedTimeAriaLabel?: string;
+  /** SI-4 (#2635) — aria-label for the read-only "Ora di inizio · derivata" chip. */
+  readonly startedAtChipAriaLabel?: string;
   /** G4 (Issue #2352) — aria-label per connection-state pip. Required when connectionState is provided. */
   readonly connectionStateAriaLabels?: {
     readonly connected: string;
@@ -61,6 +63,12 @@ export interface LiveTopBarProps {
    */
   readonly elapsedMs?: number;
   /**
+   * SI-4 (#2635) — pre-formatted read-only start-time chip text
+   * ("▶ Ora di inizio {local date+time} · derivata"). Derived from the session's `startedAt`
+   * (Invariante 5: never user-editable). Omit to hide the chip.
+   */
+  readonly startedAtLabel?: string;
+  /**
    * G4 (Issue #2352) — SSE connection state.
    * Omit to hide the inline pip (default behavior pre-G4; the standalone
    * `ConnectionLostBanner` remains the actionable surface for `failed`).
@@ -87,6 +95,7 @@ export function LiveTopBar({
   onExit,
   labels,
   elapsedMs,
+  startedAtLabel,
   connectionState,
 }: LiveTopBarProps): ReactElement {
   const isHost = viewerRole === 'Host';
@@ -125,8 +134,12 @@ export function LiveTopBar({
         >
           {statusLabel}
         </span>
+        {/* #3146 Slice 1: the turn/elapsed/start-time chips are gated `lg:inline`
+            — they belong to the desktop layer (lg+). Below lg they move to the
+            always-visible LiveMobileMetaStrip so the cramped h-14 topbar stays
+            legible on phones. */}
         {labels.turnLabelResolved && (
-          <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+          <span className="hidden shrink-0 text-xs text-muted-foreground lg:inline">
             {labels.turnLabelResolved}
           </span>
         )}
@@ -137,9 +150,21 @@ export function LiveTopBar({
             data-slot="session-live-top-bar-timer"
             aria-label={labels.elapsedTimeAriaLabel}
             className="hidden shrink-0 rounded-md bg-card/60 px-2 py-0.5 font-mono text-xs
-              tabular-nums text-foreground/90 sm:inline"
+              tabular-nums text-foreground/90 lg:inline"
           >
             {elapsedFormatted}
+          </span>
+        )}
+
+        {/* SI-4 (#2635) — read-only derived start-time chip (Invariante 5: never editable) */}
+        {startedAtLabel && (
+          <span
+            data-slot="session-live-top-bar-started-at"
+            aria-label={labels.startedAtChipAriaLabel}
+            className="hidden shrink-0 rounded-md bg-card/60 px-2 py-0.5 text-xs
+              text-muted-foreground lg:inline"
+          >
+            {startedAtLabel}
           </span>
         )}
 

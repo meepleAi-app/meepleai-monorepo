@@ -21,7 +21,10 @@ import { LiveScoreboard } from '@/components/game-night/LiveScoreboard';
 import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboard';
 import { Button } from '@/components/ui/primitives/button';
 import { GlassCard } from '@/components/ui/surfaces/GlassCard';
-import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import {
+  PublicLiveSessionDtoSchema,
+  type PublicLiveSessionDto,
+} from '@/lib/api/schemas/live-sessions.schemas';
 import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 
 // ========== Types ==========
@@ -38,7 +41,7 @@ export interface GuestSessionViewProps {
 
 export function GuestSessionView({ code }: GuestSessionViewProps) {
   const [viewState, setViewState] = useState<ViewState>('loading');
-  const [session, setSession] = useState<LiveSessionDto | null>(null);
+  const [session, setSession] = useState<PublicLiveSessionDto | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const loadSession = useCallback(async () => {
@@ -47,14 +50,16 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-      const res = await fetch(`${baseUrl}/api/v1/live-sessions/code/${encodeURIComponent(code)}`);
+      const res = await fetch(
+        `${baseUrl}/api/v1/live-sessions/code/${encodeURIComponent(code)}/public`
+      );
       if (!res.ok) {
         setErrorMessage('Sessione non trovata o codice non valido.');
         setViewState('error');
         return;
       }
 
-      const data = (await res.json()) as LiveSessionDto;
+      const data = PublicLiveSessionDtoSchema.parse(await res.json());
       setSession(data);
       setViewState('loaded');
     } catch {
@@ -89,9 +94,7 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
           <div className="h-16 w-16 mx-auto rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
             <Users className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-quicksand font-bold text-foreground">
-            Sessione non trovata
-          </h1>
+          <h1 className="text-xl font-quicksand font-bold text-foreground">Sessione non trovata</h1>
           <p className="text-sm font-nunito text-muted-foreground">
             {errorMessage ?? 'Il codice potrebbe essere scaduto o non valido.'}
           </p>
@@ -134,9 +137,7 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
           <div className="h-14 w-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-3">
             <Gamepad2 className="h-7 w-7 text-amber-600 dark:text-amber-400" />
           </div>
-          <h1 className="text-2xl font-quicksand font-bold text-foreground">
-            {session.gameName}
-          </h1>
+          <h1 className="text-2xl font-quicksand font-bold text-foreground">{session.gameName}</h1>
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full text-xs font-medium">
               <Clock className="h-3 w-3" />

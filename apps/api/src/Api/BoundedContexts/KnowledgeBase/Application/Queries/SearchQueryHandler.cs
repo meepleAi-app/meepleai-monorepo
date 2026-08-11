@@ -23,7 +23,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
     private readonly VectorSearchDomainService _vectorSearchService;
     private readonly RrfFusionDomainService _rrfFusionService;
     private readonly IEmbeddingService _embeddingService;
-    private readonly IHybridSearchService _hybridSearchService;
+    private readonly IKeywordSearchService _keywordSearchService;
     private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<SearchQueryHandler> _logger;
 
@@ -32,7 +32,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         VectorSearchDomainService vectorSearchService,
         RrfFusionDomainService rrfFusionService,
         IEmbeddingService embeddingService,
-        IHybridSearchService hybridSearchService,
+        IKeywordSearchService keywordSearchService,
         IRagAccessService ragAccessService,
         ILogger<SearchQueryHandler> logger)
     {
@@ -40,7 +40,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         _vectorSearchService = vectorSearchService ?? throw new ArgumentNullException(nameof(vectorSearchService));
         _rrfFusionService = rrfFusionService ?? throw new ArgumentNullException(nameof(rrfFusionService));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
-        _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
+        _keywordSearchService = keywordSearchService ?? throw new ArgumentNullException(nameof(keywordSearchService));
         _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -120,7 +120,10 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             PageNumber: sr.PageNumber,
             RelevanceScore: sr.RelevanceScore.Value,
             Rank: sr.Rank,
-            SearchMethod: sr.SearchMethod
+            SearchMethod: sr.SearchMethod,
+            BoundingBoxesJson: sr.BoundingBoxesJson,   // SP-C (#3407)
+            CharStart: sr.CharStart,
+            CharEnd: sr.CharEnd
         )).ToList();
 
         _logger.LogInformation(
@@ -138,39 +141,39 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         IReadOnlyList<Guid>? documentIds,
         CancellationToken cancellationToken)
     {
-        // Get candidate embeddings from repository (already filtered and ranked by pgvector)
-        var embeddings = await _embeddingRepository.SearchByVectorAsync(
-            gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
-
-        if (embeddings == null)
-        {
-            _logger.LogWarning("Vector search returned null for gameId={GameId}", gameId);
-            embeddings = new List<Domain.Entities.Embedding>();
-        }
+        // Issue #2712: use SearchByVectorWithScoresAsync so each result carries the REAL cosine
+        // similarity computed by pgvector in SQL (1 - (vector <=> query)). The previous call
+        // (SearchByVectorAsync) returned placeholder vectors and forced a rank-based score
+        // (1.0 - index*0.05), which made the downstream confidence degenerate (always ≈0.53) and
+        // hid grounded answers behind the "Non sono certo" card.
+        var scoredEmbeddings = await _embeddingRepository.SearchByVectorWithScoresAsync(
+            gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false)
+            ?? (IReadOnlyList<Domain.Entities.ScoredEmbedding>)Array.Empty<Domain.Entities.ScoredEmbedding>();
 
         _logger.LogInformation(
-            "Vector search returned {Count} embeddings for gameId={GameId}",
-            embeddings.Count, gameId);
+            "Vector search returned {Count} scored embeddings for gameId={GameId}",
+            scoredEmbeddings.Count, gameId);
 
-        // Convert embeddings to SearchResults directly
-        // Note: pgvector already scored and filtered results by minScore, so we use rank-based scoring
-        // This avoids recalculating cosine similarity with placeholder vectors (which would always be 0)
-        var results = embeddings.Select((embedding, index) =>
+        // Results come pre-ordered by pgvector (ORDER BY distance), so the list index is the rank.
+        var results = scoredEmbeddings.Select((scored, index) =>
         {
-            // Calculate a score based on rank (first result gets highest score, decays with rank)
-            // This preserves pgvector's ranking while providing a meaningful confidence value
-            var rankBasedScore = 1.0 - (index * 0.05); // First = 1.0, Second = 0.95, etc.
-            var clampedScore = Math.Max(minScore, Math.Min(1.0, rankBasedScore));
-            var confidence = new Confidence(clampedScore);
+            var cosine = Math.Clamp(scored.Score, 0.0, 1.0);
 
             return new Domain.Entities.SearchResult(
                 id: Guid.NewGuid(),
-                vectorDocumentId: embedding.VectorDocumentId,
-                textContent: embedding.TextContent,
-                pageNumber: embedding.PageNumber,
-                relevanceScore: confidence,
+                vectorDocumentId: scored.Embedding.VectorDocumentId,
+                textContent: scored.Embedding.TextContent,
+                pageNumber: scored.Embedding.PageNumber,
+                relevanceScore: new Confidence(cosine),
                 rank: index + 1,
-                searchMethod: "vector"
+                searchMethod: "vector",
+                pdfDocumentId: scored.Embedding.PdfDocumentId,                       // real (JOIN-resolved)
+                chunkIndex: scored.Embedding.ChunkIndex,
+                roleTags: (GameBookRole)scored.Embedding.RoleTags,                   // int → enum
+                heading: scored.Embedding.Heading,                                    // #3270
+                boundingBoxesJson: scored.Embedding.BoundingBoxesJson,               // SP-C (#3407)
+                charStart: scored.Embedding.CharStart,
+                charEnd: scored.Embedding.CharEnd
             );
         }).ToList();
 
@@ -195,27 +198,50 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         var vectorResults = await PerformVectorSearchAsync(
             gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
 
-        // Keyword search (use HybridSearchService with Keyword mode)
-        // Issue #423: Pass keywordMinScore to filter low-relevance keyword matches (e.g., ToC entries)
-        // ts_rank_cd scores are typically 0-0.3; threshold of 0.01 filters noise while keeping real matches
-        // Phase D (D6): queryRoleHint enables role-match boost in the re-ranker.
+        // Issue #423: ts_rank_cd scores ~0-0.3; 0.01 filters ToC noise.
         const double KeywordMinScore = 0.01;
-        var hybridSearchResults = await _hybridSearchService.SearchAsync(
+
+        // #3338 WP1c: resolve the per-game FTS config for the heading-term synonym expansion below.
+        // NOTE: SearchAsync resolves the same config internally, so this is one extra (fast, GameId-
+        // indexed) language-detection query per hybrid search — an accepted minor cost; threading it
+        // into SearchAsync would churn ~15 keyword-mock setups for a non-blocking perf finding.
+        var ftsConfig = await _keywordSearchService
+            .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
+            .ConfigureAwait(false);
+
+        // Spec §6: RAW keyword arm sourced directly from IKeywordSearchService (un-boosted, raw ts_rank_cd
+        // order) so HybridFusionCore applies role-boost + legend exactly once.
+        var rawKeyword = await _keywordSearchService.SearchAsync(
             query,
             gameId,
-            SearchMode.Keyword,
             topK,
-            documentIds?.ToList(), // Issue #2051: Pass document filter
-            keywordMinScore: KeywordMinScore,
-            queryRoleHint: queryRoleHint,
+            phraseSearch: query.Contains('"'),            // reproduce HybridSearchService.cs:189 derivation
+            boostTerms: null,                             // was _config.BoostTerms — a no-op on the tsquery
+            minScore: KeywordMinScore,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        // Map keyword results to domain entities
-        var keywordResults = hybridSearchResults
+        // Issue #2051: reproduce the documentIds post-filter that SearchAsync(Keyword) applied internally.
+        var filteredKeyword = documentIds is null
+            ? (IReadOnlyList<KeywordSearchResult>)rawKeyword
+            : rawKeyword
+                .Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal)))
+                .ToList();
+
+        var keywordResults = filteredKeyword
             .Select((kr, index) => kr.ToDomainSearchResult(index + 1))
             .ToList();
 
-        // Use RRF fusion domain service
-        return _rrfFusionService.FuseResults(vectorResults, keywordResults);
+        // Use RRF fusion domain service. #3270: derive heading-match query terms from the raw query
+        // (the same string used for the keyword arm) and forward them so the heading boost can fire.
+        // #3338 WP1c: expand those terms with the game's FTS-language intent synonyms (setup ->
+        // preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
+        var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+
+        return _rrfFusionService.FuseResults(
+            vectorResults,
+            keywordResults,
+            queryRoleHint: queryRoleHint,
+            queryTerms: headingTerms);
     }
 }

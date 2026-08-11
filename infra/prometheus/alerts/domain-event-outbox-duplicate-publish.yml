@@ -1,0 +1,57 @@
+# Prometheus recording + alerting rules — Domain Event Outbox duplicate-publish trigger.
+#
+# Issue #1965 — companion "trigger observability" for the dormant multi-instance
+# work-stealing follow-up (FOR UPDATE SKIP LOCKED). This is deliberately NOT the
+# implementation of #1965; it is the PRE-implementation gate watch so the issue's
+# reactivation condition becomes self-detecting once the API scales to >=2 replicas,
+# instead of relying on a manual dashboard check (see #1965 audit comment 2026-06-22).
+#
+# Distinct from #1535 T6 AC#4 (which would monitor POST-implementation regression of an
+# exactly-once guarantee). This watches the PRE-implementation trigger: the observed
+# duplicate-publish ratio.
+#
+# NOTE ON FILE SPLIT: infra/prometheus/alerts/domain-event-outbox.yml already exists but is
+# in Grafana unified-alerting provisioning format (apiVersion: 1 / uid / model.expr) and is
+# NOT wired into any Prometheus rule_files or compose mount. This file is Prometheus-native +
+# promtool-tested + wired into rule_files, matching the ACTIVE audit-outbox.yml pattern (#3116).
+# Rewiring the orphaned Grafana file is out of scope for #1965.
+#
+# Metric source: apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.DomainEventOutbox.cs
+# (#1535 T6). Counter instrument names `meepleai.domain_event_outbox.{enqueued,dispatched}.total`
+# export to Prometheus as `meepleai_domain_event_outbox_{enqueued,dispatched}_total`
+# (dots -> underscores, no doubled _total suffix — same convention noted in audit-outbox.yml).
+#
+# DORMANCY: with a single API instance (the current staging + prod topology, verified 2026-07-19
+# — no `deploy.replicas` in infra/compose.{staging,prod}.yml) the ratio is structurally ~1.0, so
+# this alert cannot fire. It self-fires only after (a) scaling to >=2 replicas AND (b) the
+# duplicate rate breaching >1.05 — exactly the #1965 refined reactivation condition. The
+# `enqueued rate > 0` guard suppresses the 0/0=NaN case on an idle queue; the 2h `for` absorbs
+# the transient duplicates from crash-recovery re-publish (dispatch is at-least-once) and from
+# rolling-deploy windows (old pods do not honour new pods' locks).
+groups:
+  - name: meepleai_domain_event_outbox_duplicate_publish
+    rules:
+      # Recording rule — dispatched/enqueue publish ratio over a 1h window.
+      # ~1.0 in steady state; trends toward the instance count N when >=2 pods work-steal
+      # the same Pending rows. Materialised for dashboards + manual gate inspection.
+      - record: meepleai_domain_event_outbox:dispatch_enqueue_ratio1h
+        expr: |
+          sum(rate(meepleai_domain_event_outbox_dispatched_total[1h]))
+          /
+          sum(rate(meepleai_domain_event_outbox_enqueued_total[1h]))
+
+      # Alert — duplicate-publish ratio breaches the #1965 reactivation gate.
+      - alert: DomainEventOutboxDuplicatePublish
+        expr: |
+          meepleai_domain_event_outbox:dispatch_enqueue_ratio1h > 1.05
+          and
+          sum(rate(meepleai_domain_event_outbox_enqueued_total[1h])) > 0
+        for: 2h
+        labels:
+          severity: warning
+          team: platform
+          component: domain_event_outbox
+        annotations:
+          summary: "Domain event outbox duplicate-publish ratio above 1.05 (#1965 reactivation trigger)"
+          description: "dispatched/enqueued ratio has stayed above 1.05 for 2h: domain events are being published more than once. The dominant cause is >=2 API instances SELECT-ing the same Pending outbox rows concurrently (the #1965 multi-instance work-stealing premise). Consumer idempotency keeps duplicates safe but not free. If the API is now running >=2 replicas, this is the gate to implement FOR UPDATE SKIP LOCKED per issue #1965; if it is still single-instance, investigate an abnormal crash-recovery re-publish loop."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#domain-event-outbox-alerts"

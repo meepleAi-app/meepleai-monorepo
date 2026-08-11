@@ -30,6 +30,36 @@ internal sealed class Embedding : Entity<Guid>
     public int RoleTags { get; private set; }
 
     /// <summary>
+    /// The owning PDF document id (via <c>vector_documents.PdfDocumentId</c>). Resolved by the
+    /// scored pgvector search so hybrid fusion can key vector results on the SAME
+    /// <c>{PdfDocumentId}_{ChunkIndex}</c> identity the keyword arm uses. <see cref="Guid.Empty"/>
+    /// on paths that don't need it (only the hybrid-search read populates it).
+    /// </summary>
+    public Guid PdfDocumentId { get; private set; }
+
+    /// <summary>
+    /// #3270: chunk heading-path label (from <c>text_chunks."Heading"</c> via a JOIN on
+    /// <c>source_chunk_id</c> in the scored pgvector read) so hybrid fusion can apply the
+    /// heading-match boost to vector-arm chunks. Null when the chunk has no heading or the read
+    /// path did not project it.
+    /// </summary>
+    public string? Heading { get; private set; }
+
+    /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON (<c>text_chunks.bounding_boxes_json</c>) resolved via the
+    /// same <c>source_chunk_id</c> JOIN as <see cref="Heading"/>. Carried as a primitive string (no
+    /// layer dep) — parsed to <c>CitationRegion</c> and Full-gated only at the API handler boundary.
+    /// Null for the pre-coordinate corpus / non-Unstructured branch / reads that don't project it.
+    /// </summary>
+    public string? BoundingBoxesJson { get; private set; }
+
+    /// <summary>SP-C (#3407): char offset (inclusive) of the chunk in the source PDF text (<c>text_chunks.char_start</c>). Null when unavailable.</summary>
+    public int? CharStart { get; private set; }
+
+    /// <summary>SP-C (#3407): char offset (exclusive) of the chunk in the source PDF text (<c>text_chunks.char_end</c>). Null when unavailable.</summary>
+    public int? CharEnd { get; private set; }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618
@@ -52,7 +82,12 @@ internal sealed class Embedding : Entity<Guid>
         string language = "en",
         Guid? sourceChunkId = null,
         bool isTranslation = false,
-        int roleTags = 0) : base(id)
+        int roleTags = 0,
+        Guid pdfDocumentId = default,
+        string? heading = null,
+        string? boundingBoxesJson = null,
+        int? charStart = null,
+        int? charEnd = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -77,6 +112,11 @@ internal sealed class Embedding : Entity<Guid>
         SourceChunkId = sourceChunkId;
         IsTranslation = isTranslation;
         RoleTags = roleTags;
+        PdfDocumentId = pdfDocumentId;
+        Heading = heading;
+        BoundingBoxesJson = boundingBoxesJson;
+        CharStart = charStart;
+        CharEnd = charEnd;
     }
 
     /// <summary>

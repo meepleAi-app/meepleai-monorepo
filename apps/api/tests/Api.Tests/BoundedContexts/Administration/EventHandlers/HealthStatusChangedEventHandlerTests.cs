@@ -127,6 +127,93 @@ public class HealthStatusChangedEventHandlerTests
         severity.Should().Be("info");
     }
 
+    // ── Email suppression tests ────────────────────────────────────────
+    // Two-stage gate (#3245):
+    //  1. Only "critical" (Unhealthy) severity is ever eligible for email; warning/info
+    //     (Degraded/recovery) always route to Slack/DB/dashboard but NOT email.
+    //  2. Among critical transitions, only genuinely critical infrastructure
+    //     (tagged core/critical: postgres, redis, pgvector) emails. Monitoring,
+    //     non-critical and optional services (grafana, prometheus, ollama, embedding…)
+    //     stay OFF email to avoid alert fatigue.
+
+    private static readonly string[] CoreCriticalTags = { HealthCheckTags.Core, HealthCheckTags.Critical };
+
+    [Fact]
+    public void Warning_severity_suppresses_email_even_for_core_service()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("warning", CoreCriticalTags).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Info_severity_suppresses_email_even_for_core_service()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("info", CoreCriticalTags).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_for_core_service_emails()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", CoreCriticalTags).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Critical_severity_with_only_critical_tag_emails()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", new[] { HealthCheckTags.Critical }).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Critical_severity_for_monitoring_service_suppresses_email()
+    {
+        // grafana / prometheus — the #3245 alert-fatigue case
+        var tags = new[] { HealthCheckTags.Monitoring, HealthCheckTags.NonCritical };
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", tags).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_for_noncritical_ai_service_suppresses_email()
+    {
+        // embedding / reranker / ollama
+        var tags = new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical };
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", tags).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_for_optional_service_suppresses_email()
+    {
+        var tags = new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional };
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", tags).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_when_noncritical_coexists_with_core_grouping_tag_suppresses_email()
+    {
+        // #3245 review finding: `core` is a /health/core grouping tag, NOT an alert-escalation
+        // signal. An explicit `non-critical` tag must win over `core` so services grouped under
+        // core-but-documented-non-critical don't email. Real case: live_sessions_persistence
+        // ({ core, non-critical, live-sessions }) returns Unhealthy on DB error.
+        var tags = new[] { HealthCheckTags.Core, HealthCheckTags.NonCritical, "live-sessions" };
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", tags).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_with_no_tags_suppresses_email()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", System.Array.Empty<string>()).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Critical_severity_core_tag_match_is_case_insensitive()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("critical", new[] { "CORE" }).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ShouldSuppressEmail_severity_match_is_case_insensitive()
+    {
+        HealthStatusChangedEventHandler.ShouldSuppressEmail("CRITICAL", CoreCriticalTags).Should().BeFalse();
+    }
+
     // ── AlertType format tests ─────────────────────────────────────────
 
     [Fact]

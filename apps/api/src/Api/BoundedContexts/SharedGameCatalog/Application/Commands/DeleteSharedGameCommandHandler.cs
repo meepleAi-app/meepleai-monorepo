@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -33,7 +34,7 @@ internal sealed class DeleteSharedGameCommandHandler : ICommandHandler<DeleteSha
             command.GameId, command.DeletedBy);
 
         var game = await _repository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Shared game with ID {command.GameId} not found");
+            ?? throw new NotFoundException("SharedGame", command.GameId.ToString());
 
         // Call domain method (marks as deleted and raises event)
         game.Delete(command.DeletedBy);

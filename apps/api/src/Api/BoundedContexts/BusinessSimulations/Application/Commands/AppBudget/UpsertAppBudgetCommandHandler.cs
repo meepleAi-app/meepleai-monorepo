@@ -42,26 +42,12 @@ internal sealed class UpsertAppBudgetCommandHandler
                 request.CriticalThresholdPct,
                 request.UpdatedBy);
 
-            if (!string.IsNullOrEmpty(request.RowVersion))
+            if (request.Xmin.HasValue)
             {
-                var tokenBytes = TryDecodeRowVersion(request.RowVersion);
-                if (tokenBytes is not null)
-                {
-                    // Reconstitute a copy carrying the client-supplied token so
-                    // the repository can detect a concurrent update via
-                    // Entry.OriginalValues — UpdateLimit doesn't touch RowVersion.
-                    existing = AppBudgetAggregate.Reconstitute(
-                        existing.Id,
-                        existing.MonthlyLimit,
-                        existing.AlertThresholdPct,
-                        existing.CriticalThresholdPct,
-                        existing.IsEnabled,
-                        existing.CreatedAt,
-                        existing.UpdatedAt,
-                        existing.CreatedBy,
-                        existing.UpdatedBy,
-                        tokenBytes);
-                }
+                // Carry the client-supplied token so the repository can detect a
+                // concurrent update via Entry.OriginalValue — UpdateLimit doesn't
+                // touch Xmin.
+                existing.SetXmin(request.Xmin.Value);
             }
             aggregate = existing;
         }
@@ -77,25 +63,13 @@ internal sealed class UpsertAppBudgetCommandHandler
                 ex);
         }
 
-        // Re-fetch to surface the freshly-bumped RowVersion to the client.
+        // Re-fetch to surface the freshly-bumped xmin to the client.
         var refreshed = await _repository.GetCurrentAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("AppBudget");
 
         return new AppBudgetUpsertResult(
             Id: refreshed.Id,
             UpdatedAt: refreshed.UpdatedAt,
-            RowVersion: Convert.ToBase64String(refreshed.RowVersion ?? Array.Empty<byte>()));
-    }
-
-    private static byte[]? TryDecodeRowVersion(string base64)
-    {
-        try
-        {
-            return Convert.FromBase64String(base64);
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
+            Xmin: refreshed.Xmin);
     }
 }

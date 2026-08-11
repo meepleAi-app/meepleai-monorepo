@@ -17,6 +17,8 @@ const meta: Meta<typeof PlayRecordNewPage> = {
   title: 'Authenticated / sp4-play-records-new',
   component: PlayRecordNewPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default', 'loading', 'error'],
     layout: 'fullscreen',
     nextjs: { appDirectory: true, navigation: { pathname: '/play-records/new' } },
     viewport: { defaultViewport: 'desktop' },

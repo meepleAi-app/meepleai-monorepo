@@ -58,6 +58,15 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 | [054](adr-054-devops-multi-branch-strategy.md) | DevOps Multi-Branch Strategy | 2026-05-08 | Accepted |
 | [058](adr-058-canonical-log-sanitizers.md) | Canonical Log Sanitizers (PII masking + log-forging) | 2026-05-15 | Proposed |
 
+### Knowledge Base & RAG (080–090)
+
+> Nota: 060–087 esistono su disco ma le loro righe README non sono state aggiunte nei rispettivi PR (drift pre-esistente, vedi nota in fondo). Questa sezione elenca solo l'ADR aggiunto dal suo PR.
+
+| ADR | Title | Date | Status |
+|-----|-------|------|--------|
+| [088](adr-088-mechanic-cards-as-rag-retrieval-source.md) | Mechanic Cards as RAG Retrieval Source | 2026-07-30 | Proposed |
+| [090](adr-090-in-session-grounded-answer-ownership.md) | In-Session Grounded Answer Ownership (KnowledgeBase owner, SessionTracking consumer) | 2026-08-02 | Accepted |
+
 ## ADR Lifecycle
 
 | Status | Description |

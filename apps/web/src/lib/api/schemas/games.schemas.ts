@@ -7,10 +7,12 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Game Entity ==========
 
 export const GameSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   title: z.string().min(1),
   publisher: z.string().nullable(),
   yearPublished: z.number().int().nullable(),
@@ -33,7 +35,7 @@ export const GameSchema = z.object({
   faqCount: z.number().int().nonnegative().nullable().optional(),
   averageRating: z.number().nullable().optional(),
   // Issue #2373: SharedGameCatalog integration
-  sharedGameId: z.string().uuid().nullable().optional(),
+  sharedGameId: GameIdString.nullable().optional(),
   // Issue #3481: Publication workflow fields
   isPublished: z.boolean().optional(),
   approvalStatus: z.string().nullable().optional(),
@@ -73,7 +75,7 @@ export const GameLeaderboardEntrySchema = z.object({
 export type GameLeaderboardEntry = z.infer<typeof GameLeaderboardEntrySchema>;
 
 export const GameLeaderboardResponseSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   entries: z.array(GameLeaderboardEntrySchema),
   returnedCount: z.number().int().nonnegative(),
   since: z.string().datetime({ offset: true }).nullable(),
@@ -95,9 +97,19 @@ export const SessionPlayerDtoSchema = z.object({
 
 export type SessionPlayerDto = z.infer<typeof SessionPlayerDtoSchema>;
 
+// #3022: player aligned to scoreData.playerId (LiveGameSession player), carrying the
+// display name + color needed to render per-player scores in the summary flavor.
+export const ScorePlayerDtoSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  color: z.string().nullable(),
+});
+
+export type ScorePlayerDto = z.infer<typeof ScorePlayerDtoSchema>;
+
 export const GameSessionDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   status: z.string().min(1),
   startedAt: z.string().datetime({ offset: true }),
   completedAt: z.string().datetime({ offset: true }).nullable(),
@@ -110,6 +122,13 @@ export const GameSessionDtoSchema = z.object({
   // Both fields are nullable strings (scoreData is a JSON-encoded payload).
   scoringType: z.string().nullable().optional(),
   scoreData: z.string().nullable().optional(),
+  // #2483 Task 1 BE: turnOrderType derived from the game's toolkit (static for the session).
+  // Null when the game has no toolkit wired. Path B: no SignalR event, populated from DTO.
+  turnOrderType: z.string().nullable().optional(),
+  // #3022: summary flavor identity + score-aligned players (single-session GET only).
+  gameSlug: z.string().nullable().optional(),
+  gameName: z.string().nullable().optional(),
+  scorePlayers: z.array(ScorePlayerDtoSchema).nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;
@@ -127,7 +146,7 @@ export type PaginatedSessionsResponse = z.infer<typeof PaginatedSessionsResponse
 
 export const GameFAQSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   question: z.string().min(1).max(500),
   answer: z.string().min(1).max(5000),
   upvotes: z.number().int().nonnegative(),
@@ -226,7 +245,7 @@ export type RuleAtom = z.infer<typeof RuleAtomSchema>;
  */
 export const RuleSpecSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   version: z.string(),
   createdAt: z.string().datetime({ offset: true }),
   createdByUserId: z.string().uuid().nullable(),
@@ -254,7 +273,7 @@ export type RuleSpecVersion = z.infer<typeof RuleSpecVersionSchema>;
  * Matches RuleSpecHistoryDto from backend GetVersionHistoryQuery
  */
 export const RuleSpecHistorySchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   versions: z.array(RuleSpecVersionSchema),
   totalVersions: z.number().int().nonnegative(),
 });
@@ -281,7 +300,7 @@ export type VersionNode = z.infer<typeof VersionNodeSchema>;
  * Matches VersionTimelineDto from backend GetVersionTimelineQuery
  */
 export const VersionTimelineSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   versions: z.array(VersionNodeSchema),
   totalVersions: z.number().int().nonnegative(),
   authors: z.array(z.string()).optional(),
@@ -342,7 +361,7 @@ export type DiffSummary = z.infer<typeof DiffSummarySchema>;
  * Matches RuleSpecDiff from backend Models
  */
 export const RuleSpecDiffSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   fromVersion: z.string(),
   toVersion: z.string(),
   fromCreatedAt: z.string().datetime({ offset: true }),
@@ -362,7 +381,7 @@ export type RuleSpecDiff = z.infer<typeof RuleSpecDiffSchema>;
  */
 export const QuickQuestionSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   text: z.string().min(1).max(500),
   emoji: z.string(),
   category: z.number().int().min(0).max(5),
@@ -388,7 +407,7 @@ export type GetQuickQuestionsResult = z.infer<typeof GetQuickQuestionsResultSche
  * Collaborative editing lock information for conflict prevention
  */
 export const EditorLockSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   lockedByUserId: z.string().uuid().nullable(),
   lockedByUserEmail: z.string().nullable(),
   lockedAt: z.string().datetime({ offset: true }).nullable(),
@@ -440,7 +459,7 @@ export type RuleSpecWithETag = z.infer<typeof RuleSpecWithETagSchema>;
  * Game with similarity score and reason
  */
 export const SimilarGameDtoSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   title: z.string(),
   thumbnailUrl: z.string().nullable(),
   minPlayers: z.number().int().nullable(),
@@ -460,7 +479,7 @@ export type SimilarGameDto = z.infer<typeof SimilarGameDtoSchema>;
  */
 export const GetSimilarGamesResultSchema = z.object({
   games: z.array(SimilarGameDtoSchema),
-  sourceGameId: z.string().uuid(),
+  sourceGameId: GameIdString,
   sourceGameTitle: z.string(),
 });
 
@@ -470,7 +489,7 @@ export type GetSimilarGamesResult = z.infer<typeof GetSimilarGamesResultSchema>;
 
 export const GameStrategyDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   title: z.string(),
   content: z.string(),
   author: z.string(),
@@ -494,7 +513,7 @@ export type PagedStrategiesResult = z.infer<typeof PagedStrategiesResultSchema>;
 
 export const GameReviewDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   authorName: z.string(),
   rating: z.number().int().min(1).max(10),
   content: z.string(),

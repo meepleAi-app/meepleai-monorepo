@@ -81,6 +81,17 @@ export const ClaimableGuestDtoSchema = z.object({
   groupName: z.string().nullable(),
 });
 
+/**
+ * Issue #2492: aggregated counts (agent · game · session · kb) for the SP6 §F
+ * drawer ConnectionBar. Backend returns all four counts in a single GET.
+ */
+export const HouseRulesMetadataDtoSchema = z.object({
+  agentCount: z.number().int().nonnegative(),
+  gameCount: z.number().int().nonnegative(),
+  sessionCount: z.number().int().nonnegative(),
+  kbCount: z.number().int().nonnegative(),
+});
+
 // --- Types ---
 
 export type HouseRuleDto = z.infer<typeof HouseRuleDtoSchema>;
@@ -93,6 +104,7 @@ export type GroupMemoryDto = z.infer<typeof GroupMemoryDtoSchema>;
 export type PlayerGameStatsDto = z.infer<typeof PlayerGameStatsDtoSchema>;
 export type PlayerMemoryDto = z.infer<typeof PlayerMemoryDtoSchema>;
 export type ClaimableGuestDto = z.infer<typeof ClaimableGuestDtoSchema>;
+export type HouseRulesMetadataDto = z.infer<typeof HouseRulesMetadataDtoSchema>;
 
 // --- Client ---
 
@@ -142,6 +154,17 @@ export function createAgentMemoryClient({ httpClient }: CreateAgentMemoryClientP
 
     async addNote(gameId: string, content: string): Promise<void> {
       await httpClient.post(`${BASE}/games/${gameId}/memory/notes`, { content });
+    },
+
+    /**
+     * Issue #2492: fetch the 4 ConnectionBar counts for the SP6 §F drawer.
+     * Returns null on 401 (apiClient convention).
+     */
+    async getHouseRulesMetadata(gameId: string): Promise<HouseRulesMetadataDto | null> {
+      return httpClient.get(
+        `${BASE}/house-rules/metadata?gameId=${encodeURIComponent(gameId)}`,
+        HouseRulesMetadataDtoSchema
+      );
     },
 
     // === Player Stats ===

@@ -1,3 +1,6 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
+
 namespace Api.Services;
 
 /// <summary>
@@ -6,6 +9,10 @@ namespace Api.Services;
 /// </summary>
 internal record DocumentChunk
 {
+    // Slice D: stable identity so a child chunk's ParentChunkId can reference
+    // its parent's persisted TextChunkEntity.Id. Guid.Empty (default) means
+    // "not yet assigned" — save sites fall back to a fresh Guid in that case.
+    public Guid Id { get; init; }
     public string Text { get; init; } = string.Empty;
     public float[] Embedding { get; init; } = Array.Empty<float>();
     public int Page { get; init; }
@@ -16,6 +23,9 @@ internal record DocumentChunk
     public short Level { get; init; } = 1;
     public Guid? ParentChunkId { get; init; }
     public string ElementType { get; init; } = "NarrativeText";
+    // SP-B (#3406): normalized region [0,1] top-left (union of the section's element boxes on
+    // the start page); null when the extractor emitted no coordinates.
+    public BoundingBox? BBox { get; init; }
 }
 
 /// <summary>
@@ -56,6 +66,27 @@ internal record SearchResultItem
     public string PdfId { get; init; } = string.Empty;
     public int Page { get; init; }
     public int ChunkIndex { get; init; }
+
+    /// <summary>
+    /// Role classification of the underlying chunk (multi-label bitflag from text_chunks.role_tags,
+    /// denormalized onto pgvector_embeddings.role_tags). Carried through the vector-arm projection so
+    /// HYBRID fusion can apply the role-match boost to vector-only chunks (Slice C).
+    /// </summary>
+    public GameBookRole RoleTags { get; init; } = GameBookRole.None;
+
+    /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
+    public string? Heading { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON carried from the vector arm (<c>Embedding.BoundingBoxesJson</c>).
+    /// Primitive string (no layer dep); parsed + Full-gated at the API handler boundary. Null for the
+    /// keyword/FTS/RAPTOR arms and the pre-coordinate corpus.
+    /// </summary>
+    public string? BoundingBoxesJson { get; init; }
+
+    /// <summary>SP-C (#3407): chunk char offsets in the source PDF text (nullable).</summary>
+    public int? CharStart { get; init; }
+    public int? CharEnd { get; init; }
 }
 
 /// <summary>

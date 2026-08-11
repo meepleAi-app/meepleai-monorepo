@@ -1,4 +1,4 @@
-import type { CSSProperties, JSX } from 'react';
+import type { JSX } from 'react';
 
 import clsx from 'clsx';
 
@@ -15,23 +15,42 @@ export type StepEntityKey =
   | 'toolkit'
   | 'tool';
 
-// Mirror of ENTITY_CSS_VAR_KEY in btn.tsx / entity-tokens.ts — `kb` maps to `document`
-const ENTITY_CSS_VAR_KEY: Record<StepEntityKey, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
-
 export interface Step {
   readonly label: string;
   readonly status?: StepStatus;
 }
+
+/**
+ * Per-entity solid fill for completed/current circles + filled connectors (issue #2955).
+ * Literal class strings so Tailwind's content scanner emits the utilities (a dynamic
+ * `bg-entity-${entity}` would NOT be generated). `kb` uses the registered `-kb` (teal)
+ * token — NEVER `-document` (slate), which lives only in `@layer tokens` and is not
+ * exposed via `@theme inline`.
+ */
+const ENTITY_BG: Record<StepEntityKey, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
+};
+
+/** Per-entity focus ring for the current step (issue #2955). Same literal-map discipline. */
+const ENTITY_RING: Record<StepEntityKey, string> = {
+  game: 'ring-entity-game',
+  player: 'ring-entity-player',
+  session: 'ring-entity-session',
+  agent: 'ring-entity-agent',
+  kb: 'ring-entity-kb',
+  chat: 'ring-entity-chat',
+  event: 'ring-entity-event',
+  toolkit: 'ring-entity-toolkit',
+  tool: 'ring-entity-tool',
+};
 
 export interface StepProgressProps {
   readonly steps: Step[];
@@ -55,9 +74,6 @@ export function StepProgress({
   className,
   ariaLabel = 'Progresso',
 }: StepProgressProps): JSX.Element {
-  const varKey = ENTITY_CSS_VAR_KEY[entity];
-  const entityColor = `hsl(var(--e-${varKey}))`;
-
   const statuses: StepStatus[] = steps.map((s, i) => deriveStatus(i, currentIndex, s.status));
 
   return (
@@ -67,6 +83,7 @@ export function StepProgress({
       aria-valuemin={1}
       aria-valuemax={steps.length}
       aria-valuenow={currentIndex + 1}
+      data-entity={entity}
       className={clsx('w-full', className)}
     >
       <ol className="flex items-start justify-between gap-0">
@@ -80,27 +97,17 @@ export function StepProgress({
           const connectorFilled =
             status === 'completed' && (nextStatus === 'completed' || nextStatus === 'current');
 
-          const circleStyle: CSSProperties | undefined =
-            status === 'completed' || status === 'current'
-              ? { backgroundColor: entityColor }
-              : undefined;
-
-          const connectorStyle: CSSProperties | undefined = connectorFilled
-            ? { backgroundColor: entityColor }
-            : undefined;
-
           const circleClasses = clsx(
             'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-transform',
-            status === 'completed' && 'text-white',
+            status === 'completed' && clsx(ENTITY_BG[entity], 'text-primary-foreground'),
             status === 'current' &&
-              'text-white ring-2 ring-offset-2 ring-offset-background scale-110',
+              clsx(
+                ENTITY_BG[entity],
+                ENTITY_RING[entity],
+                'text-primary-foreground ring-2 ring-offset-2 ring-offset-background scale-110'
+              ),
             status === 'pending' && 'bg-muted text-muted-foreground'
           );
-
-          const currentRingStyle: CSSProperties | undefined =
-            status === 'current'
-              ? { ...circleStyle, boxShadow: `0 0 0 2px ${entityColor}` }
-              : circleStyle;
 
           return (
             <li
@@ -110,12 +117,7 @@ export function StepProgress({
               className={clsx('flex flex-col items-center', isLast ? 'flex-none' : 'flex-1')}
             >
               <div className="flex w-full items-center">
-                <div
-                  data-step-circle
-                  className={circleClasses}
-                  style={currentRingStyle}
-                  aria-hidden="true"
-                >
+                <div data-step-circle className={circleClasses} aria-hidden="true">
                   {status === 'completed' ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -139,9 +141,8 @@ export function StepProgress({
                     data-step-connector-filled={connectorFilled}
                     className={clsx(
                       'mx-2 h-0.5 flex-1 rounded-full',
-                      !connectorFilled && 'bg-muted'
+                      connectorFilled ? ENTITY_BG[entity] : 'bg-muted'
                     )}
-                    style={connectorStyle}
                     aria-hidden="true"
                   />
                 )}

@@ -114,6 +114,45 @@
     "title": "MeepleAI - AI Board Game Rules Assistant"
   },
   "auth": {
+    "requestAccess": {
+      "successTitle": "Request submitted!",
+      "successMessage": "If your email is eligible, you'll receive an invitation shortly.",
+      "email": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "submitting": "Submitting...",
+      "submit": "Request Access"
+    },
+    "2fa": {
+      "setupTitle": "Set Up Two-Factor Authentication",
+      "setupSubtitle": "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)",
+      "step1": "Step 1: Scan QR Code",
+      "step2": "Step 2: Verify & Enable",
+      "cantScan": "Can't scan? Enter manually",
+      "secretKey": "Secret Key",
+      "enterCode": "Enter the 6-digit code from your app",
+      "verifyAndEnable": "Verify & Enable",
+      "verifying": "Verifying...",
+      "disableTitle": "Disable Two-Factor Authentication",
+      "disableSubtitle": "Enter your password and a code to disable 2FA",
+      "disableWarningTitle": "Warning: Your account will be less secure",
+      "disableWarning": "Disabling two-factor authentication removes an important security layer from your account. Anyone with your password will be able to access your account.",
+      "currentPassword": "Current Password",
+      "enterPassword": "Enter your password",
+      "codeOrBackup": "TOTP Code or Backup Code",
+      "enterCodeOrBackup": "000000 or XXXX-XXXX",
+      "codeInvalid": "Code is too long",
+      "codeRequired": "Please enter a 6-digit code or backup code",
+      "disableButton": "Disable 2FA",
+      "disabling": "Disabling...",
+      "backupCodesTitle": "Save Your Backup Codes",
+      "backupCodesWarningTitle": "Important: Save these codes now!",
+      "backupCodesWarning": "These codes are your only way to access your account if you lose your authenticator device. Each code can only be used once.",
+      "backupCodesList": "Backup codes",
+      "copyCodes": "Copy Codes",
+      "downloadCodes": "Download",
+      "savedCodes": "I've Saved My Codes",
+      "lowBackupCodesWarning": "You only have {count} backup {count, plural, one {code} other {codes}} remaining. Consider re-enabling 2FA after disabling to generate new backup codes."
+    },
     "login": {
       "emailLabel": "Email",
       "emailPlaceholder": "you@example.com",
@@ -346,13 +385,16 @@
     "close": "Close",
     "confirm": "Confirm",
     "copy": "Copy",
+    "copied": "Copied!",
     "cut": "Cut",
     "delete": "Delete",
     "deselect": "Deselect",
     "deselectAll": "Deselect all",
     "download": "Download",
+    "downloaded": "Downloaded!",
     "edit": "Edit",
     "error": "Error",
+    "errorTitle": "Error",
     "export": "Export",
     "filter": "Filter",
     "import": "Import",
@@ -368,10 +410,12 @@
     "previous": "Previous",
     "refresh": "Refresh",
     "reset": "Reset",
+    "retry": "Retry",
     "save": "Save",
     "search": "Search",
     "select": "Select",
     "selectAll": "Select all",
+    "selected": "Selected",
     "submit": "Submit",
     "success": "Success",
     "upload": "Upload",
@@ -537,10 +581,6 @@
       }
     }
   },
-  "n8n": {
-    "namePlaceholder": "Production n8n",
-    "title": "n8n Workflows"
-  },
   "nav": {
     "home": "Home"
   },
@@ -627,34 +667,6 @@
     },
     "title": "Settings"
   },
-  "setup": {
-    "aiConfidence": "AI Confidence:",
-    "backToHome": "← Back to Home",
-    "closeButton": "Close",
-    "closeReferences": "Close references modal",
-    "estimatedTime": "Estimated setup time:",
-    "gameLabel": "Game:",
-    "generateButton": "Generate Setup Guide",
-    "generateForGame": "Generate setup guide for selected game",
-    "generating": "Generating...",
-    "generatingMessage": "Generating your setup guide...",
-    "generatingSubMessage": "This may take a few moments",
-    "goToLogin": "Go to Login",
-    "heading": "Game Setup Guide",
-    "loginRequired": "Login Required",
-    "loginRequiredMessage": "You must be logged in to use the setup guide.",
-    "noGuideMessage": "Select a game and click \"Generate Setup Guide\"",
-    "noGuideYet": "No Setup Guide Yet",
-    "optional": "OPTIONAL",
-    "progress": "Progress:",
-    "readyToPlay": "Your game is ready to play",
-    "references": "References",
-    "resetProgress": "Reset Progress",
-    "selectGame": "Select Game",
-    "selectGamePlaceholder": "Select a game...",
-    "setupComplete": "Setup Complete!",
-    "viewButton": "View"
-  },
   "timeline": {
     "details": "Details",
     "eventDetails": "Event Details",
@@ -705,6 +717,7 @@
     "passwordMatch": "Passwords do not match",
     "passwordMax": "Password must not exceed 128 characters",
     "passwordMin": "Password must be at least 12 characters",
+    "passwordRequired": "Password is required",
     "required": "This field is required"
   },
   "wizard": {
@@ -726,7 +739,59 @@
     },
     "title": "PDF Import Wizard"
   },
+  "pdfIndexing": {
+    "pending": "Awaiting processing",
+    "processing": "Processing...",
+    "indexed": "Knowledge Base ready!",
+    "failed": "Indexing failed",
+    "progress": "{progress}%",
+    "chunksCount": "{count} chunks indexed",
+    "backgroundNote": "You can keep going — indexing will finish in the background.",
+    "continueToAgent": "Continue: configure agent",
+    "stageCompleted": "completed",
+    "stageActive": "in progress...",
+    "stageFailed": "error",
+    "stagePending": "pending",
+    "steps": {
+      "uploading": "Uploading file",
+      "extracting": "Extracting text",
+      "chunking": "Semantic chunking",
+      "indexing": "Vector indexing"
+    }
+  },
+  "kbStatus": {
+    "pending": "Pending",
+    "processing": "Processing",
+    "indexed": "Knowledge Base ready",
+    "failed": "Indexing failed",
+    "createAgent": "Create agent",
+    "retry": "Retry"
+  },
+  "notificationCenter": {
+    "title": "Notifications",
+    "newSection": "NEW",
+    "previousSection": "EARLIER",
+    "markAllRead": "Mark all as read",
+    "empty": "No notifications",
+    "emptySubtext": "Your notifications will appear here",
+    "viewAll": "View all",
+    "preferences": "Notification preferences",
+    "loading": "Loading notifications...",
+    "kbReady": {
+      "cta": "→ Create your agent"
+    }
+  },
   "legal": {
+    "hub": {
+      "title": "Legal",
+      "description": "All of MeepleAI's legal documents and policies in one place.",
+      "sections": {
+        "documents": {
+          "title": "Legal documents",
+          "content": "- [Terms of Service](/terms) — The terms governing your use of MeepleAI, including AI usage, copyright, and user content policies.\n- [Privacy Policy](/privacy) — How we collect, use, and protect your personal data, in compliance with GDPR.\n- [Cookie Policy](/cookies) — The cookies we use and how to manage your preferences.\n- [Takedown Request](/legal/takedown) — How to report content you believe infringes your copyright."
+        }
+      }
+    },
     "tableOfContents": "Table of Contents",
     "lastUpdated": "Last updated: {date}",
     "cookieBanner": {
@@ -771,19 +836,19 @@
         },
         "userContent": {
           "title": "5. User-Uploaded Content",
-          "content": "By uploading PDFs or other content to MeepleAI, you represent and warrant that you have the right to use such content and to grant MeepleAI a limited license to process it in order to provide you with the service. Content is processed exclusively for your personal use and is not shared with other users without your consent.\n\n**Copyright Certification:** By uploading any content, you certify that you own or have obtained the necessary rights, licenses, or permissions to use and share such content. You confirm that your upload does not infringe upon any third party's intellectual property rights.\n\n**Indemnification:** You agree to indemnify, defend, and hold harmless MeepleAI and its operators from and against any claims, damages, losses, or expenses (including reasonable legal fees) arising from your upload of content that infringes upon any copyright, trademark, or other intellectual property right.\n\n**DMCA Compliance:** MeepleAI respects the intellectual property rights of others. If you believe that any content on MeepleAI infringes upon your copyright, you may submit a takedown notice to: **legal@meepleai.com**. Please include: identification of the copyrighted work, identification of the infringing material, your contact information, and a statement of good faith belief."
+          "content": "By uploading PDFs or other content to MeepleAI, you represent and warrant that you have the right to use such content and to grant MeepleAI a limited license to process it in order to provide you with the service. This license is **limited, non-exclusive and revocable where possible, strictly necessary to provide the service** (processing the content for personal assistance and, where applicable, generating the comprehension cards described below). The license grants MeepleAI no right to exploit the content beyond those purposes.\n\n**Copyright Certification:** By uploading any content, you certify that you own or have obtained the necessary rights, licenses, or permissions to use and share such content. You confirm that your upload does not infringe upon any third party's intellectual property rights.\n\n**Indemnification:** You agree to indemnify, defend, and hold harmless MeepleAI and its operators from and against any claims, damages, losses, or expenses (including reasonable legal fees) arising from your upload of content that infringes upon any copyright, trademark, or other intellectual property right, including any such claims arising from the processing and publication of comprehension cards derived from that content.\n\n**Comprehension Cards:** MeepleAI may process and publish **derived comprehension cards** based on uploaded content. Such cards **do not reproduce the uploaded PDF**: game mechanics are **reworded in original language** and may include **brief quotations strictly necessary for attribution**. Publication of a card **is not automatic**: every card undergoes **human review** before publication. MeepleAI reserves the right to **refuse, modify or remove** a card at any time, at its own discretion. MeepleAI **does not intend to replace, distribute or reproduce the original rulebooks**: the cards are **for informational and descriptive purposes only** and **do not constitute a reproduction of the original rulebook**.\n\n**DMCA Compliance:** MeepleAI respects the intellectual property rights of others. If you believe that any content on MeepleAI infringes upon your copyright, you may submit a takedown notice via the [Takedown Request page](/legal/takedown) or to: **takedown@meepleai.app**. Please include: identification of the copyrighted work, identification of the infringing material, your contact information, and a statement of good faith belief."
         },
         "aiUsage": {
           "title": "6. Use of Artificial Intelligence",
-          "content": "Responses provided by MeepleAI's AI are **automatically generated** and always include a reference to the source (page and section of the rulebook). However, the AI **may contain errors** or misinterpretations. We always recommend **verifying responses against the original rulebook**. MeepleAI does not guarantee absolute accuracy of responses and assumes no responsibility for decisions made based solely on AI responses.\n\n**AI Providers:**\n- **Ollama** (self-hosted, EU): Handles approximately **80%** of all AI requests. Data stays within our infrastructure.\n- **OpenRouter** (USA): Handles approximately **20%** of AI requests when needed. Protected by DPA with Standard Contractual Clauses.\n\n**Consent Versioning:** Your AI consent preferences are versioned. When we make material changes to AI processing or add new providers, you will be notified and asked to review your consent.\n\n**Right to Opt-Out:** You may opt out of AI processing at any time by visiting **/settings/ai-consent**. Opting out will disable all AI-powered features for your account."
+          "content": "Responses provided by MeepleAI's AI are **automatically generated** and always include a reference to the source (page and section of the rulebook). However, the AI **may contain errors** or misinterpretations. We always recommend **verifying responses against the original rulebook**. MeepleAI does not guarantee absolute accuracy of responses and assumes no responsibility for decisions made based solely on AI responses. The same warnings about possible inaccuracy also apply to the **comprehension cards**, which — although subject to human review — may contain errors and do not replace the original rulebook.\n\n**AI Providers:**\n- **Ollama** (self-hosted, EU): Handles approximately **80%** of all AI requests. Data stays within our infrastructure.\n- **OpenRouter** (USA): Handles approximately **20%** of AI requests when needed. Protected by DPA with Standard Contractual Clauses.\n\n**Consent Versioning:** Your AI consent preferences are versioned. When we make material changes to AI processing or add new providers, you will be notified and asked to review your consent.\n\n**Right to Opt-Out:** You may opt out of AI processing at any time by visiting **/settings/ai-consent**. Opting out will disable all AI-powered features for your account."
         },
         "intellectualProperty": {
           "title": "7. Intellectual Property",
-          "content": "MeepleAI and all its original content, features, and functionality are owned by MeepleAI and are protected by copyright, trademark, and other intellectual property laws. Processed game rulebooks remain the property of their respective publishers."
+          "content": "MeepleAI and all its original content, features, and functionality are owned by MeepleAI and are protected by copyright, trademark, and other intellectual property laws. Processed game rulebooks remain the property of their respective publishers.\n\nIn many jurisdictions game mechanics, regarded as functional ideas or procedures, **may not be protected** by copyright, whereas the **specific textual expression** of the rulebook **normally remains protected**."
         },
         "limitations": {
           "title": "8. Limitations of Liability",
-          "content": "MeepleAI is provided \"as is\" without warranties of any kind. We do not guarantee that the service will be uninterrupted, secure, or error-free. In no event shall MeepleAI be liable for any indirect, incidental, special, or consequential damages arising from the use or inability to use the service."
+          "content": "MeepleAI is provided \"as is\" without warranties of any kind. We do not guarantee that the service will be uninterrupted, secure, or error-free. In no event shall MeepleAI be liable for any indirect, incidental, special, or consequential damages arising from the use or inability to use the service. These limitations also apply to content automatically generated and published by MeepleAI, including comprehension cards, to the extent permitted by law."
         },
         "termination": {
           "title": "9. Suspension and Termination",
@@ -801,6 +866,55 @@
           "title": "12. Contact",
           "content": "For questions regarding these Terms and Conditions, you can contact us at: legal@meepleai.com"
         }
+      }
+    },
+    "takedown": {
+      "title": "Takedown Request",
+      "description": "How to report content you believe infringes your copyright, and how we handle the request.",
+      "sections": {
+        "overview": {
+          "title": "1. Overview",
+          "content": "MeepleAI respects copyright. Published mechanic cards are AI-generated analyses of game rulebooks: every claim is reworded in original language and cites the rulebook page. Copyright in the original manual text remains with the publishers.\n\nIf you believe a published card reproduces your protected material beyond what is permitted, you can request its removal or suppression through this page. Every request is reviewed by a person; this is not an automated process."
+        },
+        "whoCanFile": {
+          "title": "2. Who can file a request",
+          "content": "A takedown request may be filed by the copyright owner (for example the publisher or the author of the rulebook) or by a representative authorized to act on their behalf.\n\nSo we can verify and reach you, provide your full name, a valid email address, and — if acting on behalf of a third party — the party you represent."
+        },
+        "whatToInclude": {
+          "title": "3. What to include",
+          "content": "To let us handle the request quickly, please include:\n\n- The protected work involved (rulebook or manual title).\n- The exact URL of the card in question (the `/games/{id}/card` page).\n- A description of which content you believe is infringing and why.\n- A good-faith statement that the disputed use is not authorized by the copyright owner, its agent, or the law.\n- Confirmation that the information you provide is accurate.\n\nThe form below assembles these elements into a pre-filled email automatically."
+        },
+        "howWeRespond": {
+          "title": "4. How we respond",
+          "content": "We acknowledge receipt of your request within **3 business days**. We assess the report and, where upheld, suppress or remove the affected card within **10 business days** of receipt.\n\nA suppressed card is no longer publicly accessible. We will update you by email on the outcome, and may ask for additional information if needed to complete the review."
+        },
+        "contact": {
+          "title": "5. Contact",
+          "content": "Takedown requests should be sent to: **takedown@meepleai.app**\n\nYou can use the form at the bottom of this page to compose a pre-filled email, or write directly to that address including the information listed above."
+        }
+      },
+      "form": {
+        "heading": "Takedown request form",
+        "intro": "Fill in the fields to generate a pre-filled email to takedown@meepleai.app. No data is sent to our servers from this page.",
+        "nameLabel": "Full name",
+        "namePlaceholder": "Jane Doe",
+        "emailLabel": "Email",
+        "emailPlaceholder": "you@example.com",
+        "workLabel": "Copyrighted work / rulebook title",
+        "workPlaceholder": "e.g. Catan — Base game rulebook",
+        "cardUrlLabel": "URL of the card in question",
+        "cardUrlPlaceholder": "https://meepleai.com/games/.../card",
+        "descriptionLabel": "Description of the problem",
+        "descriptionPlaceholder": "Describe which content you believe infringes your copyright and why.",
+        "confirmLabel": "I state in good faith that the disputed use is not authorized and that the information I have provided is accurate.",
+        "submit": "Open pre-filled email",
+        "copy": "Copy request to clipboard",
+        "copied": "Copied!",
+        "requiredError": "This field is required.",
+        "emailInvalidError": "Enter a valid email address.",
+        "confirmError": "You must confirm the statement to proceed.",
+        "errorSummary": "Please fix the highlighted fields before proceeding.",
+        "mailSubject": "Takedown request — {work}"
       }
     },
     "privacy": {
@@ -1059,6 +1173,53 @@
       },
       "aboutCta": "Learn more about MeepleAI",
       "faqCta": "Browse the FAQ"
+    },
+    "gameComprehension": {
+      "metaTitle": "How MeepleAI understands a game | MeepleAI",
+      "metaDescription": "From the rulebook PDF to a card with citations: see the trust chain that makes every MeepleAI answer verifiable, page by page.",
+      "eyebrow": "The trust chain",
+      "title": "Every answer traces back to the rulebook.",
+      "subtitle": "MeepleAI reads the official manual, rewords each mechanic in its own words, and cites the exact page. No invented rules — only what's written, with the source attached.",
+      "chainHeading": "From PDF to a cited card",
+      "chainSubheading": "Four steps, one thread running through them: the source is never lost.",
+      "chain": {
+        "pdf": {
+          "label": "Source",
+          "title": "The rulebook PDF",
+          "description": "It all starts with the game's official manual. It is our single source of truth: MeepleAI never adds anything that isn't in the document."
+        },
+        "read": {
+          "label": "AI reads",
+          "title": "The AI reads and rewords",
+          "description": "The AI reads the manual and rewrites each mechanic in its own words, keeping the link back to the exact spot it came from."
+        },
+        "review": {
+          "label": "Human review",
+          "title": "A reviewer approves",
+          "description": "A person reviews every claim, one by one. Only approved rules make it onto the published card."
+        },
+        "card": {
+          "label": "Final card",
+          "title": "The card with citations",
+          "description": "The published card cites the precise rulebook page for every claim. One click and you see where it came from."
+        }
+      },
+      "demoHeading": "Try it: hover the citation",
+      "demoSubheading": "Here's a Catan mechanic as it would appear on the card. Hover or press Enter on the reference to see the source.",
+      "demoGameName": "Catan",
+      "demoSectionLabel": "Mechanics",
+      "demoClaim": "Players gather resources by rolling dice at the start of each turn.",
+      "demoQuote": "At the beginning of their turn, the active player rolls both dice. The total indicates which terrain hexes produce resources this turn.",
+      "demoDocumentName": "Catan Rulebook",
+      "demoPanelHeading": "Citation source",
+      "demoReviewedBadge": "AI-generated, human-reviewed",
+      "demoPageLabel": "page {page}",
+      "demoDismiss": "Dismiss",
+      "trustNote": "Every card is AI-generated and human-reviewed. It's that combination — not the AI alone — that makes each citation trustworthy.",
+      "ctaHeading": "Ready to trust the rules?",
+      "ctaSubheading": "Upload your game's rulebook and get answers with the source attached.",
+      "ctaPrimary": "Try it with your game",
+      "ctaSecondary": "See how it works overall"
     },
     "blog": {
       "title": "Blog",
@@ -1637,7 +1798,7 @@
       },
       "hubTabs": {
         "all": "All",
-        "games": "Games",
+        "games": "My games",
         "agents": "Agents",
         "kb": "KB",
         "sessions": "Sessions",
@@ -1694,13 +1855,6 @@
             "cta": "Retry"
           }
         }
-      },
-      "selectionMode": {
-        "enter": "Select",
-        "enterAriaLabel": "Enter multi-select mode",
-        "exit": "Cancel",
-        "exitAriaLabel": "Exit selection mode",
-        "selectedCount": "{count, plural, =0 {Nothing selected} =1 {1 item selected} other {# items selected}}"
       },
       "filters": {
         "search": {
@@ -1818,33 +1972,6 @@
         "list": "List",
         "compact": "Compact"
       },
-      "bulk": {
-        "counter": "selected",
-        "counterCompact": "sel.",
-        "closeAriaLabel": "Cancel selection",
-        "actions": {
-          "archive": "Archive",
-          "archiveAriaLabel": "Archive the selected items",
-          "tag": "Tag",
-          "tagAriaLabel": "Add tags to the selected items",
-          "delete": "Delete",
-          "deleteAriaLabel": "Delete the selected items",
-          "favorite": "Mark favorite",
-          "favoriteAriaLabel": "Mark the selected items as favorite",
-          "export": "Export",
-          "exportAriaLabel": "Export the selected items",
-          "loan": "Mark on loan",
-          "loanAriaLabel": "Mark the selected items as on loan"
-        },
-        "confirm": {
-          "deleteTitle": "Delete {count, plural, =1 {1 game} other {# games}}?",
-          "deleteMessage": "This will remove the selected items from your library. This action cannot be undone.",
-          "confirmCta": "Delete",
-          "cancelCta": "Cancel"
-        },
-        "clearSelection": "Clear selection",
-        "clearSelectionAriaLabel": "Deselect all items"
-      },
       "activityRail": {
         "title": "Recent activity",
         "subtitle": "Latest additions and changes to your library.",
@@ -1852,6 +1979,7 @@
         "viewAll": "View all",
         "viewAllAriaLabel": "Open the full activity history",
         "collapseAriaLabel": "Collapse panel",
+        "expandAriaLabel": "Expand panel",
         "error": "Failed to load activity.",
         "fallback": {
           "agent": "New agent created",
@@ -2046,9 +2174,9 @@
         "catalogTitle": "Add from catalog",
         "question": "How do you want to add your game?",
         "manualLabel": "Add manually",
-        "manualDescription": "Enter the game details. You can upload the rulebook and configure the AI agent later from the game detail page.",
-        "catalogLabel": "From shared catalog",
-        "catalogDescription": "Search the community catalog and add a game in one click. Rulebook and AI agent setup come later.",
+        "manualDescription": "Enter the game details. Upload the rulebook and configure the AI agent later, from the game detail page.",
+        "catalogLabel": "Add from the shared catalog",
+        "catalogDescription": "Search the community catalog and add a game in one click. Upload the rulebook and configure the AI agent later, from the game detail page.",
         "catalog": {
           "backAriaLabel": "Back to choice",
           "searchPlaceholder": "Search games…",
@@ -2075,6 +2203,112 @@
         "nextPage": "Next page",
         "lastPage": "Last page",
         "pageNumber": "Page {n}"
+      },
+      "wishlist": {
+        "hero": {
+          "breadcrumbLibrary": "Library",
+          "breadcrumbWishlist": "Wishlist",
+          "breadcrumbAria": "Breadcrumb",
+          "title": "Wishlist · Wanted games",
+          "subtitle": "Track the games you want to buy or try.",
+          "tabsAria": "Library sections",
+          "tabLibrary": "Library",
+          "tabWishlist": "Wishlist",
+          "addCta": "Add to wishlist",
+          "addCtaShort": "Add"
+        },
+        "stats": {
+          "games": "{count} games",
+          "highPriority": "{count} high priority",
+          "estimatedSpend": "estimated spend {amount}"
+        },
+        "filters": {
+          "searchPlaceholder": "Search by game name or notes…",
+          "searchAriaLabel": "Search by game name or notes",
+          "searching": "Searching…",
+          "clearSearch": "Clear search",
+          "priorityGroupAria": "Filter by priority (multi-select)",
+          "all": "All",
+          "sort": "Sort",
+          "sortBy": "Sort by",
+          "sortAria": "Sort wishlist",
+          "sortOptions": {
+            "priority": "By priority",
+            "recent": "Most recent",
+            "oldest": "Oldest",
+            "alpha": "Alphabetical",
+            "price": "Target price"
+          }
+        },
+        "summary": {
+          "activeFilters": "{n, plural, one {# active filter} other {# active filters}}",
+          "results": "{n, plural, one {# game} other {# games}} of {total}",
+          "clearAll": "Clear filters"
+        },
+        "priority": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low",
+          "filterAria": "{label} priority — filter by this priority"
+        },
+        "card": {
+          "target": "Target",
+          "noNote": "No notes",
+          "addedAt": "Added {when}",
+          "addedTitle": "Added on {date}",
+          "edit": "Edit",
+          "editAria": "Edit wishlist item {name}",
+          "remove": "Remove",
+          "removeAria": "Remove {name} from wishlist",
+          "openGameAria": "Open game detail {name}",
+          "unknownGame": "Unnamed game",
+          "gridAria": "Wishlist games"
+        },
+        "dialog": {
+          "addTitle": "Add to wishlist",
+          "editTitle": "Edit wishlist",
+          "addSub": "Save a game you want to buy or try",
+          "editSub": "{name} · {priority} priority",
+          "close": "Close",
+          "error": "Error adding to wishlist.",
+          "retry": "Retry",
+          "gameLabel": "Game",
+          "gameComboPlaceholder": "Search by name or paste a game ID…",
+          "gameComboAria": "Search for a game to add",
+          "gameRemoveAria": "Remove selected game",
+          "priorityLabel": "Priority",
+          "priceLabel": "Target price (€)",
+          "pricePlaceholder": "65",
+          "priceHint": "Maximum price you're willing to spend — optional.",
+          "priceAria": "Maximum price you're willing to spend",
+          "notesLabel": "Notes",
+          "notesPlaceholder": "e.g. buy by Q3, waiting for the new edition, etc.",
+          "notesCounter": "{len} / 200",
+          "cancel": "Cancel",
+          "submitting": "Adding…",
+          "success": "Added",
+          "add": "Add",
+          "save": "Save"
+        },
+        "empty": {
+          "noItems": {
+            "title": "No games in your wishlist",
+            "body": "Add games you're interested in so you don't lose track of them — with priority, target price and notes.",
+            "cta": "Add your first"
+          },
+          "filtered": {
+            "title": "No games match the filters",
+            "body": "Try changing the priority or adjusting the name or notes search.",
+            "cta": "Clear filters"
+          }
+        },
+        "loading": {
+          "ariaLabel": "Loading wishlist"
+        },
+        "error": {
+          "message": "Unable to load the wishlist — please try again.",
+          "retry": "Retry"
+        }
       }
     },
     "onboarding": {
@@ -2424,6 +2658,185 @@
         "shareAction": "Share"
       }
     },
+    "toolkitHistory": {
+      "hero": {
+        "breadcrumbToolkit": "Toolkit",
+        "breadcrumbHistory": "History",
+        "breadcrumbAria": "Breadcrumb",
+        "title": "Session history",
+        "subtitle": "All finalized games, filterable by game, date and winner.",
+        "quickStat": "{sessions} sessions · {games} games · {winners} winners",
+        "exportCsv": "Export CSV",
+        "exportCsvShort": "CSV"
+      },
+      "tabs": {
+        "stats": "Stats",
+        "history": "History",
+        "templates": "Templates",
+        "play": "Play",
+        "ariaLabel": "Toolkit sections"
+      },
+      "filters": {
+        "searchPlaceholder": "Search by game or winner…",
+        "searchAriaLabel": "Search by game or winner",
+        "searching": "Searching…",
+        "clearSearch": "Clear search",
+        "games": "Games",
+        "filterByGame": "Filter by game",
+        "all": "All",
+        "showMore": "Show {n} more",
+        "showLess": "Show less",
+        "date": "Date",
+        "dateRange": "Date range",
+        "dateOptions": {
+          "all": "All dates",
+          "last30": "Last 30 days",
+          "last90": "Last 90 days",
+          "lastYear": "Last year",
+          "custom": "Custom dates"
+        },
+        "dateFrom": "From",
+        "dateTo": "To",
+        "dateFromLabel": "Start date",
+        "dateToLabel": "End date",
+        "applyRange": "Apply range",
+        "winners": "Winners",
+        "filterByWinner": "Filter by winner",
+        "winnerWon": "{name} (won)",
+        "noWinner": "No winner",
+        "sort": "Sort",
+        "sortBy": "Sort by",
+        "sortOptions": {
+          "recent": "Most recent",
+          "oldest": "Oldest",
+          "longest": "Longest",
+          "score": "Highest score"
+        },
+        "view": "View",
+        "viewTable": "Table view",
+        "viewCards": "Cards view"
+      },
+      "summary": {
+        "activeFilters": "{n, plural, one {# active filter} other {# active filters}}",
+        "results": "{n, plural, one {# session} other {# sessions}} of {total}",
+        "clearAll": "Clear all"
+      },
+      "table": {
+        "date": "Date",
+        "game": "Game",
+        "duration": "Duration",
+        "players": "Players",
+        "winner": "Winner",
+        "score": "Score",
+        "notes": "Notes",
+        "actions": "Actions",
+        "coop": "Cooperative",
+        "coopShort": "co-op",
+        "noWinner": "No winner",
+        "noNote": "No notes",
+        "hasNote": "Has notes",
+        "viewDetails": "View details",
+        "gameStats": "Game stats",
+        "unknownGame": "Unknown game",
+        "openInLibrary": "Open {game} in library",
+        "winnerAria": "Winner: {name}",
+        "playersAria": "{count} players: {names}"
+      },
+      "pagination": {
+        "prev": "Prev.",
+        "next": "Next",
+        "prevAria": "Previous page",
+        "nextAria": "Next page",
+        "mobileMeta": "Page {page} of {pages} · {total} sess.",
+        "rangeMeta": "{from}–{to} of {total} sessions",
+        "empty": "0 sessions",
+        "perPage": "Per page",
+        "perPageAria": "Sessions per page",
+        "listAria": "Session history pages"
+      },
+      "empty": {
+        "title": "No sessions yet",
+        "body": "Finalized games will appear here: filter by game, date or winner and open each one's details.",
+        "cta": "Create first session"
+      },
+      "filteredEmpty": {
+        "title": "No sessions match the filters",
+        "body": "Try adjusting the search or removing the active game, date or winner filters.",
+        "cta": "Clear filters"
+      },
+      "loading": {
+        "ariaLabel": "Loading session history"
+      },
+      "error": {
+        "message": "Unable to load history — try again.",
+        "retry": "Retry"
+      },
+      "modal": {
+        "title": "{game} · {date}",
+        "sub": "Duration {duration} · {count} players · {time}",
+        "close": "Close",
+        "leaderboard": "Final leaderboard",
+        "you": " · you",
+        "timeline": "Event timeline",
+        "notes": "Notes",
+        "notesEmpty": "No notes for this session.",
+        "stats": "Game statistics",
+        "turns": "Total turns",
+        "winnerScore": "Winner score",
+        "variance": "Score variance",
+        "highlights": "Highlights",
+        "noData": "—"
+      },
+      "cards": {
+        "coop": "Co-op"
+      },
+      "batchNote": "Showing the first {n} results."
+    },
+    "setup": {
+      "title": "Game Setup Guide",
+      "subtitle": "Generate a step-by-step guide to prepare the game, with references to the rulebook.",
+      "selectGame": "Select Game",
+      "gameLabel": "Game:",
+      "selectGamePlaceholder": "Select a game...",
+      "generateButton": "Generate Setup Guide",
+      "generating": "Generating...",
+      "generateForGameAria": "Generate setup guide for selected game",
+      "errors": {
+        "noGameSelected": "Please select a game first.",
+        "loadGames": "Error loading games.",
+        "generateGuide": "Error generating setup guide. Please try again.",
+        "retry": "Retry"
+      },
+      "loading": {
+        "title": "Generating your setup guide...",
+        "subtitle": "This may take a few moments while we retrieve the best instructions from the rulebook."
+      },
+      "estimatedTime": "Estimated setup time: {minutes} minutes",
+      "resetProgress": "Reset Progress",
+      "resetConfirm": "Are you sure you want to reset all progress?",
+      "progress": "Progress: {done} / {total} steps",
+      "complete": {
+        "title": "Setup Complete!",
+        "body": "Your game is ready to play. Have fun!"
+      },
+      "aiConfidence": "AI Confidence: {percent}%",
+      "empty": {
+        "title": "No Setup Guide Yet",
+        "description": "Select a game and click \"Generate Setup Guide\" to get started with step-by-step instructions."
+      },
+      "optional": "OPTIONAL",
+      "references": "References",
+      "viewReferences": "{n, plural, one {View # reference} other {View # references}}",
+      "citation": {
+        "docLabel": "Doc {id}",
+        "pageLabel": "Page {n}",
+        "noPage": "No page"
+      },
+      "step": {
+        "markComplete": "Mark as complete",
+        "markIncomplete": "Mark as incomplete"
+      }
+    },
     "sessions": {
       "metadata": {
         "title": "My sessions — MeepleAI",
@@ -2591,6 +3004,31 @@
           "viewAll": "View all",
           "viewAllAriaLabel": "View all achievements for {playerName}",
           "empty": "No achievements yet"
+        },
+        "trend": {
+          "title": "Trend",
+          "deltaUp": "↗ +{percent}%",
+          "deltaDown": "↘ {percent}%",
+          "deltaFlat": "→ 0%",
+          "deltaUpAriaLabel": "Win rate up by {percent}%",
+          "deltaDownAriaLabel": "Win rate down by {percent}%",
+          "deltaFlatAriaLabel": "Win rate unchanged",
+          "empty": "Not enough data to show a trend",
+          "trendSummaryAriaLabel": "Win rate trend from {from}% to {to}% over the last {count} months",
+          "monthsShort": {
+            "jan": "Jan",
+            "feb": "Feb",
+            "mar": "Mar",
+            "apr": "Apr",
+            "may": "May",
+            "jun": "Jun",
+            "jul": "Jul",
+            "aug": "Aug",
+            "sep": "Sep",
+            "oct": "Oct",
+            "nov": "Nov",
+            "dec": "Dec"
+          }
         }
       },
       "states": {
@@ -2733,6 +3171,8 @@
         "strategyLabel": "RAG Strategy",
         "parametersLabel": "Strategy parameters",
         "readOnlyBanner": "Settings are read-only for archived agents.",
+        "readOnlyStandalone": "Configuration is available only for agents linked to a game.",
+        "perGameNote": "These settings apply to every agent for this game.",
         "saveCta": "Save settings",
         "cancelCta": "Cancel",
         "saveSuccess": "Settings saved.",
@@ -2890,6 +3330,42 @@
           "subtitle": "Something went wrong. Please try again in a moment.",
           "cta": "Retry"
         }
+      },
+      "stats": {
+        "winRate": "Win rate",
+        "timesPlayed": "Times played",
+        "lastPlayed": "Last played",
+        "lastPlayedNever": "Never",
+        "lastPlayedDaysAgoUnit": "d ago",
+        "leaderboardTitle": "Leaderboard",
+        "leaderboardPlays": "Plays",
+        "leaderboardAvg": "Avg score",
+        "leaderboardWins": "Wins",
+        "leaderboardEmpty": "No leaderboard data yet.",
+        "communityGateTitle": "Your stats",
+        "communityGateDescription": "Add this game to your library to unlock your play stats.",
+        "communityGateCta": "Add to library"
+      },
+      "chat": {
+        "title": "Chat with the assistant",
+        "empty": "No messages yet. Ask a question about the game's rules.",
+        "openCta": "Open chat",
+        "userPrefix": "You",
+        "assistantPrefix": "Assistant"
+      },
+      "houseRules": {
+        "title": "House rules",
+        "addCta": "Add rule",
+        "addPlaceholder": "Write a house rule...",
+        "addSubmit": "Add",
+        "editLabel": "Edit",
+        "editSubmit": "Save",
+        "cancel": "Cancel",
+        "deleteLabel": "Delete",
+        "deleteConfirmTitle": "Delete rule?",
+        "deleteConfirmMessage": "This house rule will be permanently deleted.",
+        "deleteConfirm": "Delete",
+        "empty": "No house rules yet. Add one to customize the game's rules."
       }
     },
     "sharedGames": {
@@ -2914,6 +3390,7 @@
         "totalCounter": "{total, plural, =1 {1 game in the catalog} other {# games in the catalog}}"
       },
       "chips": {
+        "withKb": "KB-ready only",
         "withToolkit": "With toolkit",
         "withAgent": "With agent",
         "topRated": "Top rated",
@@ -3068,6 +3545,8 @@
         "endgameCta": "End session",
         "exitAriaLabel": "Exit session",
         "elapsedTimeAriaLabel": "Elapsed time",
+        "startedAtChip": "▶ Started at {time} · derived",
+        "startedAtChipAriaLabel": "Session start time (derived, not editable)",
         "connectionStateConnected": "Connection active",
         "connectionStateReconnecting": "Reconnecting",
         "connectionStateFailed": "Connection lost"
@@ -3098,7 +3577,20 @@
         "kickAriaLabel": "Kick {playerName}",
         "roleSpectator": "Spectator",
         "rolePlayer": "Player",
-        "roleHost": "Host"
+        "roleHost": "Host",
+        "addPlayerCta": "Add player",
+        "addPlayerDialogTitle": "Add player",
+        "guestTab": "Guest",
+        "registeredTab": "Registered user",
+        "displayNameLabel": "Name",
+        "displayNamePlaceholder": "E.g. Marco",
+        "searchUserPlaceholder": "Search by name or email…",
+        "confirmCta": "Add",
+        "cancelCta": "Cancel",
+        "errorNoColorAvailable": "No color available (all 10 slots are taken).",
+        "errorDuplicateName": "A player with this name already exists in this session.",
+        "errorColorTaken": "The assigned color was already taken. Please try again.",
+        "errorGeneric": "An error occurred. Please try again."
       },
       "scoring": {
         "title": "Scores",
@@ -3191,12 +3683,179 @@
       },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
+        "tabFlavor": "Catan",
         "tabScore": "Score",
         "tabTurn": "Turn",
         "tabWidget": "Widget",
         "tabNotes": "Notes",
+        "tabPhotos": "Photos",
+        "tabAgent": "Arbiter",
         "tabTools": "Tools",
         "tabChat": "Chat"
+      },
+      "flavor": {
+        "catan": {
+          "panelAriaLabel": "Catan panel",
+          "roundTemplate": "Round {n}",
+          "activePlayerTemplate": "{name}'s turn",
+          "phaseTemplate": "Phase: {name}",
+          "initBoardCta": "Generate Catan board",
+          "viewerWaiting": "Waiting for the host…",
+          "hexAriaTemplate": "{terrain} {number}",
+          "robberLabel": "Robber",
+          "diceLastLabel": "Last roll",
+          "diceHistoryLabel": "History",
+          "rollAriaTemplate": "Record roll {n}",
+          "vpLabel": "VP",
+          "handLabel": "Hand",
+          "devLabel": "Dev",
+          "settlementsLabel": "Settlements",
+          "citiesLabel": "Cities",
+          "roadsLabel": "Roads",
+          "longestRoadLabel": "Long. Road",
+          "largestArmyLabel": "Big Army",
+          "incAriaTemplate": "{field} +1",
+          "decAriaTemplate": "{field} -1"
+        },
+        "wingspan": {
+          "panelAriaLabel": "Wingspan",
+          "leaderboardHeading": "Standings",
+          "scoreAriaTemplate": "{name}: {score} PV",
+          "categoriesHeading": "Points by category",
+          "roundHeading": "Round",
+          "roundTemplate": "Round {n}/4",
+          "turnBudgetTemplate": "{n} turns",
+          "goalsHeading": "Round goals",
+          "goalPlaceholderTemplate": "Round {n} goal",
+          "advanceRoundLabel": "Advance round",
+          "initRoundCta": "Start the round",
+          "viewerWaiting": "Waiting for the host…",
+          "category": {
+            "birds": "Birds",
+            "bonusCards": "Bonus cards",
+            "endOfRoundGoals": "End-of-round goals",
+            "eggs": "Eggs",
+            "cachedFood": "Cached food",
+            "tuckedCards": "Tucked cards"
+          }
+        },
+        "codenames": {
+          "panelAriaLabel": "Codenames",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Generate grid",
+          "viewerWaiting": "Waiting for the host…",
+          "redLabel": "Red",
+          "blueLabel": "Blue",
+          "turnLabel": "On turn",
+          "foundTemplate": "{found}/{total}",
+          "revealAriaTemplate": "Reveal {word}",
+          "perspectiveOperative": "View: Operative",
+          "perspectiveSpymaster": "View: Spymaster",
+          "noClue": "No active clue",
+          "cluePlaceholder": "Word",
+          "clueNumberAria": "Clue number",
+          "giveClue": "Give clue",
+          "endTurn": "End turn",
+          "regenerate": "Regenerate grid",
+          "winnerTemplate": "{team} wins"
+        },
+        "puerto-rico": {
+          "panelAriaLabel": "Puerto Rico",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "doubloons": "Doubloons",
+          "colonists": "Colonists",
+          "plantations": "Plantations",
+          "quarries": "Quarries",
+          "buildings": "Buildings",
+          "galleonsHeading": "Cargo ships",
+          "tradingHeading": "Trading house",
+          "colonistShipHeading": "Colonist ship",
+          "onShip": "On ship",
+          "supply": "Supply",
+          "emptyGood": "—",
+          "capTemplate": "{loaded}/{cap}",
+          "goodAria": "Ship {n} good",
+          "loadAria": "Load ship {n}",
+          "unloadAria": "Unload ship {n}",
+          "slotAria": "Slot {n}",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
+        },
+        "paleo": {
+          "panelAriaLabel": "Paleo",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "resourcesHeading": "Resources",
+          "wood": "Wood",
+          "stone": "Stone",
+          "food": "Food",
+          "knowledge": "Knowledge",
+          "tribeHeading": "Tribe",
+          "statusAlive": "Alive",
+          "statusWounded": "Wounded",
+          "statusDead": "Dead",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: change status"
+        },
+        "power-grid": {
+          "panelAriaLabel": "Power Grid",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "plantsHeading": "Power plants",
+          "currentBank": "Current",
+          "futureBank": "Future",
+          "emptySlot": "—",
+          "slotAria": "{bank} slot {n}",
+          "resourcesHeading": "Resource market",
+          "coal": "Coal",
+          "oil": "Oil",
+          "garbage": "Garbage",
+          "uranium": "Uranium",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1"
+        },
+        "zombicide": {
+          "panelAriaLabel": "Zombicide",
+          "leaderboardHeading": "Standings",
+          "initBoardCta": "Start game",
+          "resetCta": "Reset state",
+          "viewerWaiting": "Waiting for the host…",
+          "hordeHeading": "Horde",
+          "walker": "Walker",
+          "runner": "Runner",
+          "fatty": "Fatty",
+          "berserker": "Berserker",
+          "abomination": "Abomination",
+          "necromancer": "Necromancer",
+          "survivorsHeading": "Survivors",
+          "healthy": "Healthy",
+          "wounded": "Wounded",
+          "down": "Down",
+          "incAria": "{field} +1",
+          "decAria": "{field} -1",
+          "cycleAria": "{name}: change wounds"
+        }
+      },
+      "photosTab": {
+        "galleryHeading": "Match photo gallery",
+        "snapshotsHeading": "Vision AI snapshots"
+      },
+      "photos": {
+        "title": "Match photos",
+        "noneYet": "No photos yet",
+        "photoAlt": "Match photo {n}",
+        "deleteAriaLabel": "Delete photo {n}",
+        "emptyStateBody": "Take photos to document the game state",
+        "firstPhoto": "First photo",
+        "captureButton": "Capture"
       },
       "tools": {
         "title": "Tools",
@@ -3214,15 +3873,26 @@
         "visibilityShared": "Shared",
         "emptyMessage": "No messages yet.",
         "newMessagesToast": "{count, plural, one {# new message} other {# new messages}}",
-        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom"
+        "newMessagesToastAriaLabel": "New messages available — click to scroll to bottom",
+        "attachAriaLabel": "Attach image",
+        "removeImageAriaLabel": "Remove image {n}"
       },
       "chatAgent": {
         "title": "ChatAgent",
-        "onlineLabel": "Online",
-        "latencyAriaLabel": "Latency {ms}ms",
         "agentNameAriaLabel": "Agent name {name}",
         "collapsedAriaLabel": "ChatAgent collapsed — click to expand",
-        "expandedAriaLabel": "ChatAgent expanded — click to collapse"
+        "expandedAriaLabel": "ChatAgent expanded — click to collapse",
+        "noAgentMessage": "No assistant available for this game",
+        "launchingMessage": "Starting assistant…",
+        "errorMessage": "Could not start the assistant. Try again later.",
+        "statusAriaLabel": "Assistant status",
+        "nonGroundedDisclaimer": "Answer not grounded in the rulebook",
+        "nonGroundedDisclaimerImage": "I answered from the photo and my game knowledge, not the official rulebook — check the manual",
+        "imageAsk": {
+          "defaultQuestion": "Analyse this image",
+          "fallbackResponse": "Response not available.",
+          "errorToast": "Unable to process the image. Please try again."
+        }
       },
       "mobile": {
         "openSheetCta": "Open panel",
@@ -3234,9 +3904,8 @@
         "title": "Notes",
         "inputAriaLabel": "Write a note",
         "addAriaLabel": "Add note",
-        "visibilityPrivate": "Private",
-        "visibilityShared": "Shared",
-        "emptyMessage": "No notes yet."
+        "emptyMessage": "No notes yet.",
+        "addNoteErrorToast": "Failed to save note. Please try again."
       },
       "pauseOverlay": {
         "title": "Session paused",
@@ -3248,7 +3917,31 @@
         "title": "Session ended",
         "winnerLabel": "Winner",
         "acknowledgeCta": "Got it",
-        "viewSummaryCta": "View summary"
+        "viewSummaryCta": "View summary",
+        "saveGameCta": "Save game",
+        "savingLabel": "Saving…",
+        "alreadyCompletedToast": "Game already finished",
+        "photoUpload": {
+          "sectionTitle": "Game photos",
+          "addPhotosCta": "Select photos",
+          "uploadCta": "Upload photos",
+          "uploadingLabel": "Uploading…",
+          "preparingLabel": "Preparing…",
+          "retryCta": "Retry",
+          "doneBadge": "Uploaded",
+          "errorGeneric": "Upload failed",
+          "tooManyFiles": "You can upload at most {max} photos",
+          "tooLarge": "File too large (max 5 MB)",
+          "badFormat": "Format not supported",
+          "heicFailed": "HEIC conversion failed",
+          "selectedPhotosList": "Selected photos"
+        }
+      },
+      "endgameConfirm": {
+        "title": "End the game?",
+        "body": "This action is irreversible. Final scores will be recorded.",
+        "confirmCta": "End game",
+        "cancelCta": "Cancel"
       },
       "toolkitRenderer": {
         "title": "Tools",
@@ -3297,6 +3990,15 @@
       }
     },
     "sessionSummary": {
+      "flavor": {
+        "catan": {
+          "winnerTemplate": "{name} wins!",
+          "vpUnit": "VP",
+          "durationTemplate": "{minutes} min",
+          "standingsTitle": "Final standings",
+          "empty": "Summary not available"
+        }
+      },
       "hero": {
         "title": "Session summary",
         "podiumLabel": "Final podium",
@@ -3428,8 +4130,6 @@
     "complexityPlaceholder": "e.g. 2.5",
     "description": "Description",
     "descriptionPlaceholder": "Game description...",
-    "imageUrl": "Image URL",
-    "imageUrlPlaceholder": "https://example.com/image.jpg",
     "adding": "Adding...",
     "addPrivateGame": "Add Private Game",
     "addFromBgg": "Add from catalog"
@@ -3571,6 +4271,47 @@
         }
       }
     },
+    "campaignClose": {
+      "heading": "End the evening",
+      "prompt": "How do you want to close “{campaign}”?",
+      "complete": "Complete",
+      "completeHint": "You finished the book — close the campaign.",
+      "archive": "Archive",
+      "archiveHint": "Pause it: you can resume later.",
+      "abandon": "Abandon",
+      "abandonHint": "Close it for good without finishing.",
+      "closing": "Closing…",
+      "error": "Close failed. Try again.",
+      "retry": "Retry"
+    },
+    "bookList": {
+      "heading": "Books",
+      "count": "{count, plural, one {# book} other {# books}}",
+      "indexed": "{count, plural, one {# indexed} other {# indexed}}",
+      "empty": "No books available for this game yet.",
+      "loading": "Loading books…",
+      "originCommunity": "Community",
+      "originPersonal": "Personal",
+      "statusIndexed": "Indexed",
+      "statusPhysical": "Physical only",
+      "statusNotIndexed": "Not indexed"
+    },
+    "bookRole": {
+      "tutorial": "Tutorial",
+      "rulesReference": "Rules",
+      "narrative": "Story",
+      "encounter": "Encounters",
+      "lore": "Lore",
+      "setup": "Setup"
+    },
+    "glossaryLookup": {
+      "title": "Glossary",
+      "subtitle": "Campaign terms (EN → IT)",
+      "close": "Close",
+      "loading": "Loading glossary…",
+      "error": "Failed to load the glossary. Retry.",
+      "empty": "No glossary terms yet. Terms are created during translation."
+    },
     "glossaryEditor": {
       "title": "Edit glossary entry",
       "termEnLabel": "Source term",
@@ -3587,6 +4328,12 @@
         "overwrite": "Overwrite",
         "changeTranslation": "Change translation",
         "sidePanelLabel": "Conflicting entry"
+      },
+      "contexts": {
+        "heading": "Appears in",
+        "usaBase": "uses base",
+        "firstSeen": "See original paragraph {ref}",
+        "deleteVariant": "Delete variant {book}"
       }
     },
     "encounter": {
@@ -3721,9 +4468,9 @@
       "host": {
         "edit": "Edit",
         "cancel": "Cancel game night",
-        "publish": "Publish",
+        "publish": "Send invites",
         "kickGuest": "Remove",
-        "publishedToast": "Game night published",
+        "publishedToast": "Invites sent",
         "publishedToastDescription": "Guests will receive a notification.",
         "cancelledToast": "Game night cancelled"
       },
@@ -3745,7 +4492,8 @@
         "accepted": "Going",
         "declined": "Declined",
         "maybe": "Maybe",
-        "pending": "Pending"
+        "pending": "Pending",
+        "tagged": "To invite"
       }
     },
     "cancelled": {
@@ -3771,6 +4519,66 @@
         "reload": "Reload",
         "dismiss": "Dismiss"
       }
+    },
+    "editDrawer": {
+      "title": "Edit game night",
+      "description": "Update the details of your game night.",
+      "submit": "Save changes",
+      "savedToast": "Game night updated",
+      "errorGeneric": "Could not update the game night."
+    },
+    "voting": {
+      "title": "Candidate voting",
+      "votingClosed": "Voting closed",
+      "vote": "Vote",
+      "retract": "Remove vote",
+      "leaderBadge": "Leading",
+      "winnerBadge": "Winner",
+      "candidateFallback": "Game",
+      "votesCount": "{count, plural, =0 {No votes} =1 {1 vote} other {# votes}}",
+      "actionError": "Could not record your vote. Please retry.",
+      "error": "Could not load the vote.",
+      "empty": {
+        "title": "No candidates",
+        "body": "There are no games to vote on for this night."
+      },
+      "tie": {
+        "title": "It's a tie!",
+        "body": "Choose the winning game among the tied candidates.",
+        "resolve": "Choose {title}"
+      }
+    },
+    "summary": {
+      "loading": "Loading summary…",
+      "error": "Could not load the game night summary.",
+      "mvpWins": "{wins, plural, =1 {1 win} other {# wins}}",
+      "durationUnknown": "—",
+      "shareCopied": "Link copied to clipboard",
+      "shareError": "Could not generate the share link."
+    },
+    "photos": {
+      "title": "Game night photos",
+      "addCta": "Add photo",
+      "emptyTitle": "No photos yet",
+      "emptyDescription": "Add shots from the night: scoreboards, lucky rolls, cheers.",
+      "photoAltFallback": "Game night photo",
+      "deleteCta": "Delete photo",
+      "prev": "Previous",
+      "next": "Next",
+      "dialogTitle": "Upload a photo",
+      "dialogDescription": "JPEG, PNG or WebP up to 5 MB.",
+      "selectLabel": "Choose an image",
+      "previewAlt": "Preview of the selected photo",
+      "captionLabel": "Caption (optional)",
+      "captionPlaceholder": "e.g. Davide's photo-finish win",
+      "extractScoreLabel": "Extract the score from the photo (OCR)",
+      "uploadCta": "Upload",
+      "uploading": "Uploading…",
+      "uploadError": "Could not upload the photo. Please try again.",
+      "dedupToast": "This photo is already in the gallery.",
+      "ocrResultTitle": "Detected text",
+      "badFormat": "Unsupported format. Use JPEG, PNG or WebP.",
+      "tooLarge": "The photo exceeds 5 MB."
     }
   },
   "gameNightsIndex": {
@@ -3824,8 +4632,10 @@
         "viewSummary": "View summary →",
         "reschedule": "Reschedule",
         "accept": "✓ Attending",
-        "maybe": "Maybe"
-      }
+        "maybe": "Maybe",
+        "decline": "Decline"
+      },
+      "pendingBadge": "To confirm"
     },
     "drawer": {
       "title": "{day} {month} {year}",
@@ -4219,6 +5029,10 @@
         "deleteToast": "Record deleted",
         "deleteToastDescription": "The record was deleted successfully"
       },
+      "savedWhileLive": {
+        "toast": "Record saved while a session is live. Double-check you logged the games in the right order.",
+        "goToLive": "Go to the live session"
+      },
       "conflict": {
         "title": "Concurrent edit",
         "description": "Someone modified this game while you were editing. Reload the latest data or overwrite with your changes.",
@@ -4229,19 +5043,77 @@
       "error": {
         "loadFailed": "Could not load the record",
         "updateFailed": "Update failed",
-        "deleteFailed": "Delete failed"
+        "deleteFailed": "Delete failed",
+        "saveFailed": "Save failed",
+        "saveFailedDescription": "Unable to save the game. Please try again.",
+        "retry": "↻ Retry save"
       },
       "a11y": {
         "formLabel": "Edit play record form",
         "readonlyFieldsLabel": "Non-editable fields",
-        "ariaReadonly": "This field is not editable"
+        "ariaReadonly": "This field is not editable",
+        "wizardLabel": "Game recording wizard",
+        "stepIndicatorLabel": "Recording progress",
+        "backButton": "Go back to previous step",
+        "closeButton": "Close",
+        "previewLabel": "Live preview play record",
+        "backToList": "Back to play records"
       },
       "actions": {
         "save": "Save changes",
         "saving": "Saving…",
         "delete": "Delete",
         "cancel": "Cancel",
-        "back": "← Back"
+        "back": "← Back",
+        "next": "Next →",
+        "draft": "Draft"
+      },
+      "stepIndicatorLabel": "Step {current} of 3",
+      "step1Label": "Game",
+      "step2Label": "When",
+      "step3Label": "Scores",
+      "step1": {
+        "title": "Which game did you play?",
+        "subtitle": "Choose from your library. Scoring and players adapt to the game.",
+        "searchPlaceholder": "Search your library…",
+        "emptyLibraryHint": "↑ Select a game to continue",
+        "freeformLabel": "Game name (free text)",
+        "freeformPlaceholder": "e.g. Catan, Puerto Rico…",
+        "freeformHint": "Enter the game name if it's not in the catalog"
+      },
+      "step2": {
+        "title": "When did you play?",
+        "subtitle": "Date, start time and duration. Duration is optional.",
+        "dateLabel": "Date",
+        "timeLabel": "Start time",
+        "durationLabel": "Duration (optional)",
+        "locationLabel": "Location (optional)",
+        "locationPlaceholder": "e.g. Marco's place",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "Add a comment about the session…",
+        "durationHint": "Approximate — used for total hours statistics"
+      },
+      "step3": {
+        "title": "Who played and what were the scores?",
+        "subtitle": "Enter scores: the winner is automatically the highest scorer.",
+        "playersLabel": "Players and scores ({count})",
+        "addPlayerPlaceholder": "Player name…",
+        "addPlayerButton": "Add player",
+        "winnerBadge": "Winner",
+        "noPlayersHint": "Add at least one player to save the game"
+      },
+      "preview": {
+        "sectionLabel": "Live preview · Play record",
+        "noGameSelected": "Select a game",
+        "rankingLabel": "Ranking · {count} players",
+        "tip": "The winner is determined by the highest score. Updates in real time as you fill in the form."
+      },
+      "draft": {
+        "saving": "Saving…",
+        "saved": "Draft saved {time}"
+      },
+      "loading": {
+        "library": "Loading library…"
       }
     },
     "share": {

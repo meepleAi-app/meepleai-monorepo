@@ -76,6 +76,24 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
             return;
         }
 
+        // Issue #3153 (D7) — BggId-independent idempotency guard. M4.4 sets
+        // draft.ResultingSharedGameId to a placeholder Guid (never inserted as a game);
+        // this handler overwrites it with the REAL aggregate Id only after
+        // materialisation (below). So if it already resolves to a real, non-deleted
+        // SharedGame, this event already ran — short-circuit to avoid creating a
+        // duplicate game + duplicate M:N links on a re-dispatch. This closes the gap
+        // the BggId-only dedup below misses for pure-Wikidata (no-BggId) drafts.
+        // NB: read the draft's persisted column, NOT notification.ResultingSharedGameId
+        // (the event field is always the placeholder).
+        if (draft.ResultingSharedGameId.HasValue
+            && await _games.ExistsByIdAsync(draft.ResultingSharedGameId.Value, cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogInformation(
+                "CatalogSeedApprovedEventHandler: draft {DraftId} already materialised SharedGame {SharedGameId}; skipping (idempotent).",
+                notification.DraftId, draft.ResultingSharedGameId.Value);
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(draft.ProvenanceJson))
         {
             _logger.LogWarning(
@@ -105,6 +123,20 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
                 notification.DraftId);
             return;
         }
+
+        // Issue #3147/#3154/#3153 — the sparse Wikidata-primary (BGG-fallback) fields to
+        // carry onto a freshly-materialised skeleton. Scalars (`GetValue<int?>`) flow
+        // through SharedGame.EnrichFromProvenance (lenient). Designer/publisher NAMES
+        // (#3153) are passed RAW to the repository's get-or-create-by-name resolver —
+        // NOT routed through the aggregate (whose GameDesigner/GamePublisher carry
+        // throwaway Guids and are read-only through SharedGameRepository). Keys are
+        // plural `designers`/`publishers`, value List<string>; absent == empty == no-op.
+        var provYear = provenance.GetValue<int?>("yearPublished");
+        var provMinPlayers = provenance.GetValue<int?>("minPlayers");
+        var provMaxPlayers = provenance.GetValue<int?>("maxPlayers");
+        var provPlayingTime = provenance.GetValue<int?>("playingTimeMinutes");
+        var provDesigners = provenance.GetValue<List<string>>("designers") ?? new List<string>();
+        var provPublishers = provenance.GetValue<List<string>>("publishers") ?? new List<string>();
 
         // Idempotency: if a draft was approved twice, or if a SharedGame already
         // exists for the same BGG ID (collision with prior import path), reuse it.
@@ -156,12 +188,29 @@ internal sealed class CatalogSeedApprovedEventHandler : INotificationHandler<Cat
                 skeleton.AssignWikidataQid(draft.WikidataQid, notification.ApprovedByUserId);
             }
 
-            await _games.AddAsync(skeleton, cancellationToken).ConfigureAwait(false);
+            // Issue #3147/#3154 — carry the Wikidata-primary scalars onto the skeleton
+            // instead of dropping them (the M5 follow-up flagged in this handler's
+            // remarks). Only the new-skeleton branch enriches: a BggId collision
+            // (existing branch) is already covered by the BGG enrichment queue
+            // (#1874), whereas a pure-Wikidata skeleton (frequently no BggId) has
+            // Wikidata as its ONLY property source. Lenient — a title-only draft
+            // leaves the skeleton unchanged.
+            skeleton.EnrichFromProvenance(
+                yearPublished: provYear,
+                minPlayers: provMinPlayers,
+                maxPlayers: provMaxPlayers,
+                playingTimeMinutes: provPlayingTime,
+                modifiedBy: notification.ApprovedByUserId);
+
+            // Issue #3153 — persist the Wikidata designers/publishers as M:N links via
+            // the repository's get-or-create-by-name resolver (raw names, case-insensitive
+            // reuse). New-skeleton branch only, mirroring the scalar-enrichment scope.
+            await _games.AddAsync(skeleton, provDesigners, provPublishers, cancellationToken).ConfigureAwait(false);
             materialisedId = skeleton.Id;
 
             _logger.LogInformation(
-                "CatalogSeedApprovedEventHandler: created SharedGame {SharedGameId} (Skeleton) for draft {DraftId} title='{Title}' BggId={BggId} WikidataQid={Qid}",
-                skeleton.Id, notification.DraftId, title, draft.BggId, draft.WikidataQid);
+                "CatalogSeedApprovedEventHandler: created SharedGame {SharedGameId} (Skeleton) for draft {DraftId} title='{Title}' BggId={BggId} WikidataQid={Qid} Designers={DesignerCount} Publishers={PublisherCount}",
+                skeleton.Id, notification.DraftId, title, draft.BggId, draft.WikidataQid, provDesigners.Count, provPublishers.Count);
         }
 
         // Overwrite the placeholder ResultingSharedGameId from M4.4 with the real Id.

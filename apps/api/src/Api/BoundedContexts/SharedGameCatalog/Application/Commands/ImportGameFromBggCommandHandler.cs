@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -51,14 +52,14 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
         var exists = await _repository.ExistsByBggIdAsync(command.BggId, cancellationToken).ConfigureAwait(false);
         if (exists)
         {
-            throw new InvalidOperationException($"A game with BGG ID {command.BggId} already exists in the catalog");
+            throw new ConflictException($"A game with BGG ID {command.BggId} already exists in the catalog");
         }
 
         // Fetch game details from BGG API
         var bggDetails = await _bggApiService.GetGameDetailsAsync(command.BggId, cancellationToken).ConfigureAwait(false);
         if (bggDetails is null)
         {
-            throw new InvalidOperationException($"Game with BGG ID {command.BggId} not found on BoardGameGeek");
+            throw new NotFoundException("Game", command.BggId.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
 
         _logger.LogInformation(

@@ -96,6 +96,11 @@ internal static class CatalogSeeder
         await PdfSeeder.SeedAsync(db, manifest, gameMap, systemUserId, primaryBlob, seedBlob, logger, ct)
             .ConfigureAwait(false);
 
+        // Step 2.5: Seed self-healing — orphan-PDF cleanup (#2907) + stale-Pending re-enqueue (#2908)
+        // runs ONCE via CatalogSeedLayer's OrphanPdfCleanupSeeder + ReattemptStalePendingPdfsSeeder,
+        // which execute immediately after this method returns. The duplicate SeedMaintenanceSeeder
+        // pass that used to run here was removed to eliminate the double self-healing work (#3086).
+
         // Step 3: Seed agents for games with seedAgent=true (Dev only)
         if (profile >= SeedProfile.Dev)
         {

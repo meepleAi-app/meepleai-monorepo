@@ -236,6 +236,51 @@ internal class BlobStorageService : IBlobStorageService
         return Task.FromResult<string?>(null);
     }
 
+    /// <summary>
+    /// Local storage does not support pre-signed URLs.
+    /// Consumers should fall back to the API download endpoint when this returns null.
+    /// </summary>
+    public Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+    {
+        _ = (rawKey, expirySeconds); // Local storage: no presigned URL
+        return Task.FromResult<string?>(null);
+    }
+
+    /// <summary>
+    /// Local storage does not host objects under raw R2-style keys (those are
+    /// only ever written directly to S3-compatible storage by the raw-key
+    /// upload paths). No-op returning false so callers treat it as "nothing to
+    /// delete here" rather than throwing.
+    /// </summary>
+    public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct); // Local storage: raw keys are not supported
+        return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Local storage does not host objects under raw R2-style keys (mirrors
+    /// <see cref="DeleteRawKeyAsync"/>/<see cref="GetPresignedUrlForRawKeyAsync"/>).
+    /// No-op returning false so cover-write callers (#3384) surface a clear failure in
+    /// local mode rather than persisting an unresolvable deterministic key.
+    /// </summary>
+    public Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+    {
+        _ = (rawKey, stream, contentType, ct); // Local storage: raw keys are not supported
+        return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Local storage does not host objects under raw R2-style keys (mirrors
+    /// <see cref="StoreRawKeyAsync"/>/<see cref="DeleteRawKeyAsync"/>). No-op
+    /// returning null so callers treat it as "not found" rather than throwing.
+    /// </summary>
+    public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct); // Local storage: raw keys are not supported
+        return Task.FromResult<Stream?>(null);
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         return StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file");

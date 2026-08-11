@@ -178,11 +178,21 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
   };
 
   const handleReplace = async () => {
-    // Deactivate all currently active PDFs
+    // Deactivate all currently active PDFs.
     const activePdfs = pdfs.filter(p => p.isActiveForRag);
-    await Promise.all(
+    // #3231: allSettled so a partial failure is handled cohesively (no unhandled rejection escapes,
+    // no stuck dialog / skipped refresh).
+    const results = await Promise.allSettled(
       activePdfs.map(pdf => toggleRagMutation.mutateAsync({ pdfId: pdf.id, isActive: false }))
     );
+
+    if (results.some(r => r.status === 'rejected')) {
+      // Keep the dialog open, refresh to reflect the real (partial) state, prompt a retry.
+      void queryClient.invalidateQueries({ queryKey: ['game-pdfs', gameId] });
+      toast.error('Alcune versioni non sono state disattivate. Riprova.');
+      return;
+    }
+
     setShowReplaceDialog(false);
     finishUpload();
     toast.success('Versione sostituita con successo.');
@@ -326,7 +336,9 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
             <table className="w-full text-sm" data-testid="pdf-list-table">
               <thead>
                 <tr className="border-b border-border bg-card">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">File</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    File
+                  </th>
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                     Versione
                   </th>
@@ -336,7 +348,9 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                     Stato
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">RAG</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    RAG
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-700/50">

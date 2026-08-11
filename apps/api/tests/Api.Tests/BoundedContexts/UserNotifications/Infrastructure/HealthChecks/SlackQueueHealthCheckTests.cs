@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.HealthChecks;
 using Api.Tests.Constants;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,12 +37,21 @@ public class SlackQueueHealthCheckTests
         _healthCheck = new SlackQueueHealthCheck(scopeFactory.Object, _loggerMock.Object);
     }
 
+    /// <summary>
+    /// Sets up the channel-scoped pending count that the (fixed) health check must consume.
+    /// </summary>
+    private void SetupSlackPendingCount(int count)
+    {
+        _repositoryMock.Setup(r => r.GetPendingCountByChannelsAsync(
+                It.IsAny<IReadOnlyCollection<NotificationChannelType>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(count);
+    }
+
     [Fact]
     public async Task CheckHealthAsync_PendingBelowThreshold_ReturnsHealthy()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(50);
+        SetupSlackPendingCount(50);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(
@@ -52,19 +62,23 @@ public class SlackQueueHealthCheckTests
         result.Description!.Should().Contain("50");
     }
 
+    /// <summary>
+    /// #3618: a backlog degrades, it does not 503. This check is registered NonCritical, and a
+    /// NonCritical check returning Unhealthy takes the aggregate /health to 503 (the
+    /// failureStatus argument at registration does NOT cap an explicitly-returned status).
+    /// </summary>
     [Fact]
-    public async Task CheckHealthAsync_PendingAboveThreshold_ReturnsUnhealthy()
+    public async Task CheckHealthAsync_PendingAboveThreshold_ReturnsDegraded()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(150);
+        SetupSlackPendingCount(150);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(
             new HealthCheckContext(), CancellationToken.None);
 
         // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy);
+        result.Status.Should().Be(HealthStatus.Degraded);
         result.Description!.Should().Contain("150");
         result.Description!.Should().Contain("backlog");
     }
@@ -73,8 +87,7 @@ public class SlackQueueHealthCheckTests
     public async Task CheckHealthAsync_ExactlyAtThreshold_ReturnsHealthy()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(100);
+        SetupSlackPendingCount(100);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(
@@ -85,18 +98,19 @@ public class SlackQueueHealthCheckTests
     }
 
     [Fact]
-    public async Task CheckHealthAsync_RepositoryThrows_ReturnsUnhealthy()
+    public async Task CheckHealthAsync_RepositoryThrows_ReturnsDegraded()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()))
+        _repositoryMock.Setup(r => r.GetPendingCountByChannelsAsync(
+                It.IsAny<IReadOnlyCollection<NotificationChannelType>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("DB connection failed"));
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(
             new HealthCheckContext(), CancellationToken.None);
 
-        // Assert
-        result.Status.Should().Be(HealthStatus.Unhealthy);
+        // Assert — Degraded, not Unhealthy: NonCritical checks must not 503 /health (#3618)
+        result.Status.Should().Be(HealthStatus.Degraded);
         result.Description!.Should().Contain("Failed to check");
     }
 
@@ -104,8 +118,7 @@ public class SlackQueueHealthCheckTests
     public async Task CheckHealthAsync_ZeroPending_ReturnsHealthy()
     {
         // Arrange
-        _repositoryMock.Setup(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
+        SetupSlackPendingCount(0);
 
         // Act
         var result = await _healthCheck.CheckHealthAsync(
@@ -114,5 +127,52 @@ public class SlackQueueHealthCheckTests
         // Assert
         result.Status.Should().Be(HealthStatus.Healthy);
         result.Description!.Should().Contain("0");
+    }
+
+    /// <summary>
+    /// Regression for the mis-attributed 503 on staging: a large backlog on a NON-Slack
+    /// channel (310 pending email items) must NOT trip the Slack queue health check.
+    /// The check must count only Slack-channel pending items — here zero — and report Healthy.
+    /// Before the fix the check called the unfiltered <c>GetPendingCountAsync</c> and returned
+    /// Unhealthy (the aggregate /health then returned 503, blamed on Slack).
+    /// </summary>
+    [Fact]
+    public async Task CheckHealthAsync_OtherChannelBacklog_IgnoresNonSlackAndReturnsHealthy()
+    {
+        // Arrange — 310 pending items exist overall (the staging email backlog) but ZERO
+        // belong to a Slack channel.
+        _repositoryMock.Setup(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(310);
+        SetupSlackPendingCount(0);
+
+        // Act
+        var result = await _healthCheck.CheckHealthAsync(
+            new HealthCheckContext(), CancellationToken.None);
+
+        // Assert — the Slack check ignores the email backlog and stays Healthy
+        result.Status.Should().Be(HealthStatus.Healthy);
+    }
+
+    /// <summary>
+    /// The health check must query the channel-scoped count restricted to the two Slack
+    /// channels (slack_user + slack_team), never the unfiltered all-channel count.
+    /// </summary>
+    [Fact]
+    public async Task CheckHealthAsync_QueriesOnlySlackChannels()
+    {
+        // Arrange
+        SetupSlackPendingCount(5);
+
+        // Act
+        await _healthCheck.CheckHealthAsync(new HealthCheckContext(), CancellationToken.None);
+
+        // Assert — the Slack channels (and only those) were passed to the filtered query
+        _repositoryMock.Verify(r => r.GetPendingCountByChannelsAsync(
+            It.Is<IReadOnlyCollection<NotificationChannelType>>(c =>
+                c.Contains(NotificationChannelType.SlackUser)
+                && c.Contains(NotificationChannelType.SlackTeam)
+                && !c.Contains(NotificationChannelType.Email)),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _repositoryMock.Verify(r => r.GetPendingCountAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

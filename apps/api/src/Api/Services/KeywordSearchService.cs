@@ -18,23 +18,17 @@ internal class KeywordSearchService : IKeywordSearchService
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<KeywordSearchService> _logger;
 
-    // PostgreSQL full-text search configuration
-    // Issue #3228: Use built-in config (custom meepleai_italian never created)
-    // Note: ADR-016 planned custom FTS with game synonyms - tracked in follow-up issue
-    private const string DefaultTextSearchConfig = "italian";
-    private const string EnglishTextSearchConfig = "english";
+    // Default PostgreSQL FTS configuration when a language is unknown/unspecified.
+    // #2569 background: the GENERATED search_vector column on text_chunks/pdf_documents is built
+    // with 'english', so a divergent query config against THAT column silently returns nothing.
+    // The chunk search (SearchAsync) now honours per-game language (see ResolveGameFtsConfigAsync):
+    // English keeps using the indexed 'english' search_vector column, while non-english languages
+    // are matched against a query-time to_tsvector(cfg, Content) so the query config and vector
+    // config always agree (sidestepping the #2569 footgun without a multilingual column). The
+    // document search (SearchDocumentsAsync) stays english-pinned — see its own note. See
+    // ResolveFtsConfig.
+    private const string DefaultTextSearchConfig = "english";
     private const int DefaultNormalization = 1; // ts_rank_cd normalization method (1 = divide by document length)
-
-    /// <summary>
-    /// Mapping of language codes to PostgreSQL text search configurations.
-    /// </summary>
-    private static readonly Dictionary<string, string> LanguageToFtsConfig = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-    {
-        { "it", "italian" },  // Issue #3228: Use built-in (meepleai_italian not created)
-        { "italian", "italian" },
-        { "en", "english" },
-        { "english", "english" }
-    };
 
     public KeywordSearchService(
         MeepleAiDbContext dbContext,
@@ -50,7 +44,7 @@ internal class KeywordSearchService : IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
-        string language = "it",
+        string language = "en",
         double minScore = 0.0,
         CancellationToken cancellationToken = default)
     {
@@ -71,17 +65,28 @@ internal class KeywordSearchService : IKeywordSearchService
 
         var gameIdString = gameId.ToString();
 
-        // ADR-016 Phase 3: Resolve language to FTS configuration
-        var textSearchConfig = ResolveFtsConfig(language);
+        // #2569 follow-up: detect the game's dominant language so Italian content is stemmed with
+        // 'italian' instead of the caller's default 'en'. English keeps the indexed search_vector
+        // column; non-english uses a query-time to_tsvector with the SAME config (see tsvectorExpr).
+        var textSearchConfig = await ResolveGameFtsConfigAsync(gameId, language, cancellationToken).ConfigureAwait(false);
 
         try
         {
-            // Build tsquery for full-text search
-            var tsQuery = BuildTsQuery(query, phraseSearch, boostTerms);
+            // Build tsquery for full-text search (Slice A: synonym expansion is language-aware,
+            // so the resolved per-game FTS config is threaded through to BuildTsQuery).
+            var tsQuery = BuildTsQuery(query, phraseSearch, textSearchConfig);
 
             _logger.LogInformation(
                 "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
                 query, gameId, phraseSearch, boostTerms?.Count ?? 0, limit, textSearchConfig);
+
+            // English uses the indexed english 'search_vector' GENERATED column (hot path). Non-english
+            // computes the tsvector at query time with the resolved config so the query config always
+            // matches the vector config (#2569). tsvectorExpr is one of two fixed internal literals
+            // (never user input), so interpolating it into the SQL is injection-safe.
+            var tsvectorExpr = string.Equals(textSearchConfig, "english", StringComparison.Ordinal)
+                ? "search_vector"
+                : "to_tsvector(@textSearchConfig::regconfig, \"Content\")";
 
             // Execute PostgreSQL full-text search with ts_rank_cd scoring
             // Using FromSqlRaw for complex tsvector queries (EF Core limitation with tsvector operators)
@@ -89,7 +94,7 @@ internal class KeywordSearchService : IKeywordSearchService
             // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
             // Phase D (D6): include role_tags in the projection so the hybrid re-ranker can
             // apply a role-match boost without an extra round-trip.
-            var sql = @"
+            var sql = $@"
                 SELECT * FROM (
                     SELECT
                         ""Id"",
@@ -99,11 +104,12 @@ internal class KeywordSearchService : IKeywordSearchService
                         ""ChunkIndex"",
                         ""PageNumber"",
                         role_tags AS ""RoleTags"",
-                        ts_rank_cd(search_vector, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
+                        ""Heading"",
+                        ts_rank_cd({tsvectorExpr}, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
                         ""GameId"" = @gameId::uuid
-                        AND search_vector @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
+                        AND {tsvectorExpr} @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
                 ) ranked
                 WHERE ""RelevanceScore"" >= @minScore
                 ORDER BY ""RelevanceScore"" DESC
@@ -133,16 +139,18 @@ internal class KeywordSearchService : IKeywordSearchService
 
             var keywordResults = results.Select(r => new KeywordSearchResult
             {
-                ChunkId = r.Id,
+                ChunkId = r.Id.ToString(),
                 Content = r.Content,
-                PdfDocumentId = r.PdfDocumentId,
-                GameId = Guid.Parse(r.GameId),
+                PdfDocumentId = r.PdfDocumentId.ToString(),
+                GameId = r.GameId,
                 ChunkIndex = r.ChunkIndex,
                 PageNumber = r.PageNumber,
                 RelevanceScore = r.RelevanceScore,
                 MatchedTerms = matchedTerms,
                 // Phase D (D6): SQL projects role_tags as int; cast to flag enum.
-                RoleTags = (GameBookRole)r.RoleTags
+                RoleTags = (GameBookRole)r.RoleTags,
+                // #3270: carry the chunk heading for the heading-match boost.
+                Heading = r.Heading
             }).ToList();
 
             _logger.LogInformation(
@@ -165,7 +173,7 @@ internal class KeywordSearchService : IKeywordSearchService
         string query,
         Guid gameId,
         int limit = 10,
-        string language = "it",
+        string language = "en",
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -181,12 +189,17 @@ internal class KeywordSearchService : IKeywordSearchService
 
         var gameIdString = gameId.ToString();
 
-        // ADR-016 Phase 3: Resolve language to FTS configuration
-        var textSearchConfig = ResolveFtsConfig(language);
+        // Document-level keyword search stays pinned to the english 'search_vector' column.
+        // Unlike SearchAsync it does NOT use a query-time to_tsvector, so a non-english config
+        // here would reintroduce the #2569 footgun (e.g. an 'italian' query against the english
+        // column silently returns 0 rows). This path has no callers today (only SearchAsync is
+        // used), so pinning to english keeps it correct and footgun-free.
+        var textSearchConfig = DefaultTextSearchConfig;
 
         try
         {
-            var tsQuery = BuildTsQuery(query, phraseSearch: false, boostTerms: null);
+            // English-pinned (DefaultTextSearchConfig) → no synonym expansion, by design.
+            var tsQuery = BuildTsQuery(query, phraseSearch: false, DefaultTextSearchConfig);
 
             // Security: Set query timeout
             var previousTimeout = _dbContext.Database.GetCommandTimeout();
@@ -222,9 +235,9 @@ internal class KeywordSearchService : IKeywordSearchService
 
             return results.Select(r => new KeywordDocumentResult
             {
-                DocumentId = r.Id,
+                DocumentId = r.Id.ToString(),
                 FileName = r.FileName,
-                GameId = Guid.Parse(r.GameId),
+                GameId = r.GameId,
                 RelevanceScore = r.RelevanceScore,
                 PageCount = r.PageCount
             }).ToList();
@@ -240,15 +253,17 @@ internal class KeywordSearchService : IKeywordSearchService
     }
 
     /// <summary>
-    /// Builds a PostgreSQL tsquery from a search query with phrase search and boost support.
+    /// Builds a PostgreSQL tsquery from a search query. Non-phrase queries become a recall-first OR
+    /// query with curated per-language intent-synonym expansion (see <see cref="ExpandTermsToTsQuery"/>);
+    /// phrase queries (quoted) become an exact <c>&lt;-&gt;</c> proximity match.
     /// </summary>
     /// <remarks>
     /// Examples:
-    /// - Simple: "castling" returns "castling"
-    /// - Phrase: "en passant" with phraseSearch=true returns "en passant" with proximity operator
-    /// - Boost: "check" with boostTerms=["check", "checkmate"] returns boosted query
+    /// - Simple (english): "castling" returns "castling"
+    /// - Phrase: "en passant" with phraseSearch=true returns "en &lt;-&gt; passant"
+    /// - Synonym (italian): "setup" returns "(setup | preparazione | allestimento)"
     /// </remarks>
-    private string BuildTsQuery(string query, bool phraseSearch, List<string>? boostTerms)
+    internal static string BuildTsQuery(string query, bool phraseSearch, string ftsConfig)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
@@ -261,28 +276,156 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Join(" <-> ", words);
         }
 
-        // Build query with boost terms (weight :A for boosted terms, :B for others)
-        if (boostTerms != null && boostTerms.Count > 0)
-        {
-            var queryTerms = sanitizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var weightedTerms = queryTerms.Select(term =>
-            {
-                var isBoosted = boostTerms.Any(bt => bt.Equals(term, StringComparison.OrdinalIgnoreCase));
-                return isBoosted ? $"{term}:A" : $"{term}:B";
-            });
+        // Default: recall-first OR query. A #3241 follow-up switched strict AND to OR because
+        // natural-language questions like "setup per N giocatori" returned 0 hits when the surface
+        // tokens didn't co-occur in one chunk (collapsing hybrid to vector-only). Ranking
+        // (ts_rank_cd + RRF fusion + reranker + legend-demotion) sorts the candidates.
+        //
+        // Slice A: also expand curated per-language intent synonyms (e.g. setup ->
+        // preparazione/allestimento) so the query matches native rulebook lexemes. No-op for
+        // non-tabled configs, so English recall is unchanged.
+        //
+        // NOTE: the previous ":A"/":B" boost-weighting branch was REMOVED here. Those query weight
+        // labels only match lexemes carrying the same weight in the tsvector, but the generated
+        // search_vector is a plain to_tsvector('english', Content) with NO setweight (all lexemes
+        // are weight D), so ":A"/":B" matched *nothing* — silently killing the keyword arm (and
+        // shadowing this expansion) for every real query on the production hybrid path, which
+        // always passes a non-empty BoostTerms list. Re-introducing boost ranking requires
+        // setweight on the tsvector (a migration + re-index), tracked separately.
+        return ExpandTermsToTsQuery(sanitizedQuery, ftsConfig);
+    }
 
-            return string.Join(" | ", weightedTerms); // OR operator for multiple terms
+    /// <summary>
+    /// Curated, language-keyed intent synonym tables for keyword-arm expansion. Keyed by the
+    /// resolved PostgreSQL FTS config (<see cref="ResolveFtsConfig"/>); only languages with a
+    /// curated table are expanded. Kept deliberately small and high-signal (divergent-stem intent
+    /// synonyms) to avoid recall noise. Head-token lookup is case-insensitive.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyList<string>>> SynonymTablesByConfig =
+        new Dictionary<string, IReadOnlyDictionary<string, IReadOnlyList<string>>>(StringComparer.Ordinal)
+        {
+            ["italian"] = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                // Setup intent — "setup" is an English loanword whose 'italian' stem diverges from
+                // the native rulebook terms; many Italian rulebooks also use "Setup" as a section
+                // title, so the mapping is kept symmetric (query in either lexeme matches both).
+                ["setup"] = new[] { "preparazione", "allestimento" },
+                ["preparazione"] = new[] { "setup", "allestimento" },
+                ["allestimento"] = new[] { "setup", "preparazione" },
+                // Player-count intent — "per N giocatori" <-> "numero (di) giocatori".
+                ["giocatori"] = new[] { "numero giocatori" },
+                ["giocatore"] = new[] { "numero giocatori" },
+            },
+        };
+
+    /// <summary>
+    /// #3338 WP1c: expands heading-match query terms with the SAME per-language intent synonyms the
+    /// keyword arm uses (<see cref="SynonymTablesByConfig"/>), so a query lexeme like "setup" fires the
+    /// #3270 heading-match boost on a chunk whose heading is the native rulebook term ("preparazione").
+    /// Returns the original terms plus synonyms — lowercased, length ≥ 3, order-preserving,
+    /// de-duplicated. No-op for a null/blank config or a config without a curated table
+    /// (english/simple/…), so English retrieval is byte-identical.
+    /// </summary>
+    internal static IReadOnlyList<string> ExpandHeadingMatchTerms(IReadOnlyList<string>? terms, string? ftsConfig)
+    {
+        if (terms is null || terms.Count == 0
+            || string.IsNullOrEmpty(ftsConfig)
+            || !SynonymTablesByConfig.TryGetValue(ftsConfig, out var synonyms))
+        {
+            return terms ?? Array.Empty<string>();
         }
 
-        // Default: simple AND query (all terms must match)
-        return sanitizedQuery.Replace(" ", " & ");
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var expanded = new List<string>(terms.Count);
+
+        void Add(string candidate)
+        {
+            var lower = candidate.ToLowerInvariant();
+            if (lower.Length >= 3 && seen.Add(lower))
+            {
+                expanded.Add(lower);
+            }
+        }
+
+        foreach (var term in terms)
+        {
+            Add(term);
+            if (synonyms.TryGetValue(term, out var syns))
+            {
+                foreach (var s in syns)
+                {
+                    Add(s);
+                }
+            }
+        }
+
+        return expanded;
+    }
+
+    /// <summary>
+    /// Expands keyword-arm query terms with curated, language-keyed intent synonyms, emitting a
+    /// valid <c>to_tsquery</c> OR-fragment.
+    /// <para>
+    /// The failing "Setup per N giocatori" query missed the Italian rulebook lexemes
+    /// ("preparazione"/"allestimento") because the English loanword "setup" stems to a different
+    /// lexeme under the 'italian' FTS config. Expansion runs ONLY on the keyword arm (never the
+    /// embedding vector, which is produced by a separate call in <c>HybridSearchService</c>), so it
+    /// cannot dilute semantic search. Non-tabled configs (english/simple/…) reproduce the plain OR
+    /// join verbatim — zero recall/precision drift outside the curated table.
+    /// </para>
+    /// <para>
+    /// A token with a synonym entry becomes a grouped alternation <c>(head | syn1 | syn2)</c>;
+    /// multi-word synonyms are joined with the proximity operator <c>&lt;-&gt;</c> (a bare space is
+    /// a to_tsquery syntax error). <paramref name="sanitizedQuery"/> is already operator/paren
+    /// stripped by <see cref="SanitizeQuery"/>, and the injected grouping characters come only from
+    /// this controlled table, so the fragment is injection-safe.
+    /// </para>
+    /// </summary>
+    internal static string ExpandTermsToTsQuery(string sanitizedQuery, string ftsConfig)
+    {
+        if (string.IsNullOrWhiteSpace(sanitizedQuery))
+        {
+            return string.Empty;
+        }
+
+        var tokens = sanitizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        if (!SynonymTablesByConfig.TryGetValue(ftsConfig, out var synonyms))
+        {
+            // No curated table for this language → preserve the pre-slice OR join verbatim.
+            return string.Join(" | ", tokens);
+        }
+
+        var groups = tokens.Select(token =>
+        {
+            if (!synonyms.TryGetValue(token, out var alternatives) || alternatives.Count == 0)
+            {
+                return token; // no synonyms → bare token (never an empty group)
+            }
+
+            var members = new List<string>(alternatives.Count + 1) { token };
+            members.AddRange(alternatives.Select(ToTsQueryPhrase));
+            return $"({string.Join(" | ", members)})";
+        });
+
+        return string.Join(" | ", groups);
+    }
+
+    /// <summary>
+    /// Renders a (possibly multi-word) synonym value as a to_tsquery term: single words pass
+    /// through; multi-word values are joined with the <c>&lt;-&gt;</c> proximity operator.
+    /// </summary>
+    private static string ToTsQueryPhrase(string synonym)
+    {
+        var words = synonym.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length == 1 ? words[0] : string.Join(" <-> ", words);
     }
 
     /// <summary>
     /// Sanitizes user query to prevent tsquery syntax errors and SQL injection.
     /// Removes special PostgreSQL full-text search operators and dangerous characters.
     /// </summary>
-    private string SanitizeQuery(string query)
+    private static string SanitizeQuery(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -311,28 +454,82 @@ internal class KeywordSearchService : IKeywordSearchService
     }
 
     /// <summary>
-    /// Resolves a language code to the corresponding PostgreSQL FTS configuration.
-    /// ADR-016 Phase 3: Maps "it" → meepleai_italian (with game synonyms), "en" → english.
+    /// Maps a document/query language to a PostgreSQL FTS configuration.
+    /// <para>
+    /// English resolves to <c>'english'</c> so the query can keep using the indexed english
+    /// <c>search_vector</c> GENERATED column (the common case). Non-english languages resolve to
+    /// their snowball config and are matched against a query-time <c>to_tsvector(cfg, Content)</c>
+    /// (see the SQL in <see cref="SearchAsync"/>), so the query config and the vector config
+    /// always agree — this sidesteps the #2569 footgun (an <c>'italian'</c> query against the
+    /// <c>'english'</c> column silently returns nothing) without needing a multilingual column.
+    /// Unknown languages resolve to <c>'simple'</c> (tokenize, no stemming) which is safe under
+    /// the same "query-time to_tsvector with the same config" rule.
+    /// </para>
     /// </summary>
-    /// <param name="language">Language code (e.g., "it", "en", "italian", "english")</param>
-    /// <returns>PostgreSQL text search configuration name</returns>
-    private string ResolveFtsConfig(string language)
+    internal static string ResolveFtsConfig(string? language)
     {
         if (string.IsNullOrWhiteSpace(language))
         {
-            _logger.LogDebug("Empty language provided, using default FTS config: {Config}", DefaultTextSearchConfig);
             return DefaultTextSearchConfig;
         }
 
-        if (LanguageToFtsConfig.TryGetValue(language, out var ftsConfig))
+        return language.Trim().ToLowerInvariant() switch
         {
-            return ftsConfig;
-        }
+            "en" or "eng" or "english" => "english",
+            "it" or "ita" or "italian" or "italiano" => "italian",
+            "de" or "deu" or "ger" or "german" or "deutsch" => "german",
+            "fr" or "fra" or "french" or "francais" or "français" => "french",
+            "es" or "spa" or "spanish" or "espanol" or "español" => "spanish",
+            "pt" or "por" or "portuguese" or "portugues" or "português" => "portuguese",
+            "nl" or "dut" or "nld" or "dutch" => "dutch",
+            _ => "simple",
+        };
+    }
 
-        _logger.LogWarning(
-            "Unknown language '{Language}' for FTS config, falling back to English",
-            language);
-        return EnglishTextSearchConfig;
+    /// <inheritdoc />
+    public Task<string> ResolveFtsConfigAsync(Guid gameId, string language = "en", CancellationToken cancellationToken = default)
+        => ResolveGameFtsConfigAsync(gameId, language, cancellationToken);
+
+    /// <summary>
+    /// Detects the dominant document language for a game (from <c>pdf_documents.Language</c>,
+    /// joined via the game's chunks) and resolves it to an FTS config. Keyword-retrieval callers
+    /// do not thread a per-game language, so it is detected here rather than pinned to english.
+    /// Falls back to <paramref name="requestedLanguage"/> (then english) when unknown/unavailable.
+    /// </summary>
+    private async Task<string> ResolveGameFtsConfigAsync(Guid gameId, string requestedLanguage, CancellationToken cancellationToken)
+    {
+        var previousTimeout = _dbContext.Database.GetCommandTimeout();
+        try
+        {
+            _dbContext.Database.SetCommandTimeout(3);
+            var dominant = await _dbContext.Database
+                .SqlQueryRaw<string>(@"
+                    SELECT pd.""Language"" AS ""Value""
+                    FROM text_chunks tc
+                    JOIN pdf_documents pd ON pd.""Id"" = tc.""PdfDocumentId""
+                    WHERE tc.""GameId"" = @gameId::uuid AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
+                    GROUP BY pd.""Language""
+                    ORDER BY count(*) DESC
+                    LIMIT 1",
+                    new NpgsqlParameter("@gameId", gameId.ToString()))
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+
+            return ResolveFtsConfig(string.IsNullOrWhiteSpace(dominant) ? requestedLanguage : dominant);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types - language detection is best-effort
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Game FTS language detection failed for {GameId}; falling back to requested language", gameId);
+            return ResolveFtsConfig(requestedLanguage);
+        }
+#pragma warning restore CA1031
+        finally
+        {
+            // Restore even on exception (incl. the 3s timeout above) — the request-scoped
+            // DbContext is reused by SearchAsync; leaking the 3s cap would throttle the request.
+            _dbContext.Database.SetCommandTimeout(previousTimeout);
+        }
     }
 
     /// <summary>
@@ -359,10 +556,14 @@ internal class KeywordSearchService : IKeywordSearchService
 /// </summary>
 internal class KeywordSearchRawResult
 {
-    public string Id { get; set; } = default!;
+    // text_chunks."Id"/"PdfDocumentId"/"GameId" are Postgres `uuid` columns. Npgsql refuses to read
+    // a uuid field into a `string` (InvalidCastException), so these MUST be typed as Guid — projecting
+    // them as string silently broke every keyword search that returned rows (uncovered by #3269's FTS
+    // integration test, since only the pure helpers had unit coverage).
+    public Guid Id { get; set; }
     public string Content { get; set; } = default!;
-    public string PdfDocumentId { get; set; } = default!;
-    public string GameId { get; set; } = default!;
+    public Guid PdfDocumentId { get; set; }
+    public Guid GameId { get; set; }
     public int ChunkIndex { get; set; }
     public int? PageNumber { get; set; }
     public float RelevanceScore { get; set; }
@@ -372,6 +573,9 @@ internal class KeywordSearchRawResult
     /// Defaults to 0 (None) when the chunk has not been classified.
     /// </summary>
     public int RoleTags { get; set; }
+
+    /// <summary>#3270: heading-path label from text_chunks."Heading" (nullable).</summary>
+    public string? Heading { get; set; }
 }
 
 /// <summary>
@@ -379,9 +583,11 @@ internal class KeywordSearchRawResult
 /// </summary>
 internal class KeywordDocumentRawResult
 {
-    public string Id { get; set; } = default!;
+    // pdf_documents."Id"/"GameId" are Postgres `uuid` columns — same Npgsql uuid→string cast trap as
+    // KeywordSearchRawResult (they must be Guid, not string).
+    public Guid Id { get; set; }
     public string FileName { get; set; } = default!;
-    public string GameId { get; set; } = default!;
+    public Guid GameId { get; set; }
     public int? PageCount { get; set; }
     public float RelevanceScore { get; set; }
 }

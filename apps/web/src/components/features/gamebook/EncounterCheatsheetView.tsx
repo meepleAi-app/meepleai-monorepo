@@ -370,8 +370,8 @@ function RenderedState({
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {conditions.win && (
-          <div className="rounded-md border border-success/30 bg-success/10 p-3">
-            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-success">
+          <div className="rounded-md border border-[hsl(var(--c-success)/0.3)] bg-[hsl(var(--c-success)/0.1)] p-3">
+            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--c-success-ink))]">
               {labels.conditionsWin}
             </span>
             <span className="block text-sm leading-snug text-foreground">{conditions.win}</span>
@@ -390,7 +390,7 @@ function RenderedState({
       {lowConfidence && (
         <p
           data-slot="encounter-low-confidence"
-          className="rounded-md border border-dashed border-warning/40 bg-warning/10 p-3 font-mono text-xs text-warning"
+          className="rounded-md border border-dashed border-[hsl(var(--c-warning)/0.4)] bg-[hsl(var(--c-warning)/0.1)] p-3 font-mono text-xs text-[hsl(var(--c-warning-ink))]"
         >
           {labels.lowConfidenceHint}
         </p>

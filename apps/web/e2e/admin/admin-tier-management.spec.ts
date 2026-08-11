@@ -7,6 +7,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -116,6 +118,7 @@ async function mockCatchAllAdmin(page: Page) {
 
 test.describe('Tier Management — Admin Config', () => {
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
     await mockTiersEndpoint(page);
     await mockCatchAllAdmin(page);

@@ -17,7 +17,6 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 /// <param name="PlayingTimeMinutes">Updated playing time</param>
 /// <param name="MinAge">Updated minimum age</param>
 /// <param name="ComplexityRating">Updated complexity rating</param>
-/// <param name="ImageUrl">Updated image URL</param>
 internal record UpdatePrivateGameCommand(
     Guid PrivateGameId,
     Guid UserId,
@@ -28,6 +27,5 @@ internal record UpdatePrivateGameCommand(
     string? Description,
     int? PlayingTimeMinutes,
     int? MinAge,
-    decimal? ComplexityRating,
-    string? ImageUrl
+    decimal? ComplexityRating
 ) : ICommand<PrivateGameDto>;

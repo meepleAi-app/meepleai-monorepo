@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { ScrollArea } from '@/components/ui/primitives/scroll-area';
 import { agentTypologiesApi } from '@/lib/api/agent-typologies.api';
+import { canUseEditor } from '@/lib/utils/roles';
 
 interface TestMessage {
   id: string;
@@ -59,7 +60,7 @@ function EditorAuthGuard({
     return <HubPageContainer className="p-6">Loading...</HubPageContainer>;
   }
 
-  if (!user || (user.role !== 'Editor' && user.role !== 'Admin')) {
+  if (!user || !canUseEditor(user.role)) {
     return (
       <HubPageContainer className="p-6">
         <div className="text-center p-12">

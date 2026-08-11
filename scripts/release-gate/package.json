@@ -15,9 +15,15 @@
   },
   "dependencies": {
     "@octokit/rest": "^21.0.2",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.3.1"
   },
   "devDependencies": {
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "vite": ">=7.3.5",
+      "postcss": ">=8.5.18"
+    }
   }
 }

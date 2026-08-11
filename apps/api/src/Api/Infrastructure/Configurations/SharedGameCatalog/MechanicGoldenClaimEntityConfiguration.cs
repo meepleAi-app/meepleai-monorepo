@@ -18,9 +18,11 @@ internal sealed class MechanicGoldenClaimEntityConfiguration : IEntityTypeConfig
     {
         builder.ToTable("mechanic_golden_claims", t =>
         {
+            // #2974: MechanicSection has 9 values (0-8). Keep in sync with the enum
+            // (MechanicSectionRangeConstraintTests guards against drift).
             t.HasCheckConstraint(
                 "ck_mechanic_golden_claims_section_range",
-                "section BETWEEN 0 AND 5");
+                "section BETWEEN 0 AND 8");
 
             t.HasCheckConstraint(
                 "ck_mechanic_golden_claims_expected_page_positive",

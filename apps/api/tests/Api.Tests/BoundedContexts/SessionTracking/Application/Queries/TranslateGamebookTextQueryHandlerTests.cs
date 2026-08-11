@@ -4,7 +4,11 @@ using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using System.Diagnostics.Metrics;
 using Api.Middleware.Exceptions;
+using Api.Observability;
+using Api.SharedKernel.Services;
+using Moq;
 using Api.Services;
 using Api.Services.LlmClients;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -14,6 +18,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Application.Queries;
 
+[Collection("GamebookMeter")] // #2752: serialize with GamebookTranslationMetricsTests — shared static gamebook Meter
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class TranslateGamebookTextQueryHandlerTests
@@ -61,6 +66,8 @@ public sealed class TranslateGamebookTextQueryHandlerTests
         public Task AddAsync(GamebookGlossaryEntry entry, CancellationToken cancellationToken = default)
         { Store.Add(entry); return Task.CompletedTask; }
 
+        public void Remove(GamebookGlossaryEntry entry) => Store.Remove(entry);
+
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
@@ -90,6 +97,48 @@ public sealed class TranslateGamebookTextQueryHandlerTests
                 await Task.Yield();
             }
             yield return new StreamChunk(null, IsFinal: true, Usage: new LlmUsage(10, 5, 15));
+        }
+
+        public Task<LlmCompletionResult> GenerateCompletionAsync(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+
+        public Task<T?> GenerateJsonAsync<T>(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default) where T : class
+            => Task.FromResult<T?>(null);
+
+        public Task<LlmCompletionResult> GenerateMultimodalCompletionAsync(IReadOnlyList<LlmMessage> messages, RequestSource source = RequestSource.Manual, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+
+        public async IAsyncEnumerable<StreamChunk> GenerateMultimodalCompletionStreamAsync(
+            IReadOnlyList<LlmMessage> messages,
+            RequestSource source = RequestSource.Manual,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            yield return new StreamChunk(null, IsFinal: true);
+            await Task.CompletedTask;
+        }
+
+        public Task<LlmCompletionResult> GenerateCompletionWithModelAsync(string explicitModel, string systemPrompt, string userPrompt, RequestSource source = RequestSource.Manual, int? maxTokens = null, CancellationToken ct = default)
+            => Task.FromResult(LlmCompletionResult.CreateSuccess(string.Empty));
+    }
+
+    /// <summary>
+    /// #2752: Fake LLM whose final chunk carries BOTH Usage and Cost, mirroring what
+    /// OpenRouterLlmClient / DeepSeekLlmClient emit. Drives the translation_cost_eur wiring.
+    /// </summary>
+    private sealed class CostReportingFakeLlmService : ILlmService
+    {
+        private readonly LlmCost _cost;
+        public CostReportingFakeLlmService(LlmCost cost) => _cost = cost;
+
+        public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+            string systemPrompt,
+            string userPrompt,
+            RequestSource source = RequestSource.Manual,
+            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+        {
+            yield return new StreamChunk("Ciao mondo.", IsFinal: false);
+            await Task.Yield();
+            yield return new StreamChunk(null, Usage: new LlmUsage(10, 5, 15), Cost: _cost, IsFinal: true);
         }
 
         public Task<LlmCompletionResult> GenerateCompletionAsync(string s, string u, RequestSource r = RequestSource.Manual, CancellationToken ct = default)
@@ -148,13 +197,15 @@ public sealed class TranslateGamebookTextQueryHandlerTests
         FakeCampaignRepo campaignRepo,
         FakeGlossaryRepo glossaryRepo,
         ILlmService? llm = null,
-        ICampaignOwnershipGuard? guard = null) =>
+        ICampaignOwnershipGuard? guard = null,
+        ITierEnforcementService? tierService = null) =>
         new(
             campaignRepo,
             glossaryRepo,
             llm ?? new FakeLlmService(),
             guard ?? new AlwaysOwnedGuard(),
-            NullLogger<TranslateGamebookTextQueryHandler>.Instance);
+            NullLogger<TranslateGamebookTextQueryHandler>.Instance,
+            tierService ?? new Mock<ITierEnforcementService>().Object);
 
     private static (FakeCampaignRepo campaigns, FakeGlossaryRepo glossary)
         BuildRepos()
@@ -169,6 +220,41 @@ public sealed class TranslateGamebookTextQueryHandlerTests
     }
 
     // ── Tests ─────────────────────────────────────────────────────────────────
+
+    // #2750 (C14): a successful paragraph translation counts toward the monthly quota;
+    // a failed one does not.
+    [Fact]
+    public async Task Handle_OnSuccess_RecordsGamebookTranslationQuotaUsage()
+    {
+        var (campaigns, glossary) = BuildRepos();
+        var campaign = campaigns.Store[0];
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(campaigns, glossary, tierService: tierService.Object);
+        var query = new TranslateGamebookTextQuery(campaign.Id, "Hello.", "EN", "IT", GameBookId, UserId);
+
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        tierService.Verify(
+            s => s.RecordUsageAsync(UserId, TierAction.TranslateGamebookParagraph, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_OnFailure_DoesNotRecordGamebookTranslationQuotaUsage()
+    {
+        var (campaigns, glossary) = BuildRepos();
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(campaigns, glossary, guard: new AlwaysDeniedGuard(), tierService: tierService.Object);
+
+        await Assert.ThrowsAsync<ForbiddenException>(async () =>
+        {
+            await foreach (var _ in handler.Handle(DefaultQuery(), CancellationToken.None)) { }
+        });
+
+        tierService.Verify(
+            s => s.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 
     [Fact]
     public async Task Handle_OwnershipDenied_ThrowsForbidden()
@@ -281,7 +367,8 @@ public sealed class TranslateGamebookTextQueryHandlerTests
             glossary,
             new FakeLlmService(),
             new AlwaysOwnedGuard(),
-            NullLogger<TranslateGamebookTextQueryHandler>.Instance);
+            NullLogger<TranslateGamebookTextQueryHandler>.Instance,
+            new Mock<ITierEnforcementService>().Object);
 
         await foreach (var _ in handler.Handle(
             new TranslateGamebookTextQuery(campaign.Id, "Hello.", "EN", "IT", GameBookId, UserId),
@@ -323,6 +410,94 @@ public sealed class TranslateGamebookTextQueryHandlerTests
             "lowercase 'fr' must normalize to 'FR' → 'French' in prompt");
         chunks.Last().DetectedSourceLang.Should().Be("FR",
             "final chunk must echo normalized uppercase source lang code");
+    }
+
+    // ── #2752: translation_cost_eur wiring from StreamChunk.Cost ────────────────
+
+    [Fact]
+    public async Task Handle_FinalChunkCarriesCost_RecordsTranslationCostEur()
+    {
+        var (campaigns, glossary) = BuildRepos();
+        var campaign = campaigns.Store[0];
+
+        // TotalCost = 0.0005 USD, distinctive provider isolates this test from concurrent meter emitters.
+        var cost = new LlmCost { InputCost = 0.0003m, OutputCost = 0.0002m, ModelId = "deepseek-chat", Provider = "test-text-provider" };
+        var handler = BuildHandler(campaigns, glossary, llm: new CostReportingFakeLlmService(cost));
+        var query = new TranslateGamebookTextQuery(campaign.Id, "Hello world.", "EN", "IT", GameBookId, UserId);
+
+        using var capture = new CostEurCapture();
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        var recorded = capture.ForProvider("test-text-provider");
+        recorded.Should().NotBeNull("StreamChunk.Cost carries a positive cost → translation_cost_eur must be recorded");
+        recorded!.Value.Value.Should().BeApproximately(0.0005 * MeepleAiMetrics.UsdToEurRate, 1e-9);
+    }
+
+    [Fact]
+    public async Task Handle_FinalChunkWithoutCost_DoesNotRecordCostEur()
+    {
+        var (campaigns, glossary) = BuildRepos();
+        var campaign = campaigns.Store[0];
+
+        // Default FakeLlmService yields a final chunk with Usage but no Cost.
+        var handler = BuildHandler(campaigns, glossary);
+        var query = new TranslateGamebookTextQuery(campaign.Id, "Hello world.", "EN", "IT", GameBookId, UserId);
+
+        using var capture = new CostEurCapture();
+        await foreach (var _ in handler.Handle(query, CancellationToken.None)) { }
+
+        capture.ForProvider("unknown").Should().BeNull("null Cost → handler must not record translation_cost_eur");
+    }
+
+    /// <summary>
+    /// #2752: captures meepleai.gamebook.translation_cost_eur measurements, keyed by provider tag,
+    /// so assertions filter to this test's distinctive provider and stay robust under parallel test runs.
+    /// </summary>
+    private sealed class CostEurCapture : IDisposable
+    {
+        private const string CostName = "meepleai.gamebook.translation_cost_eur";
+        private readonly MeterListener _listener;
+        private readonly List<(double Value, string? Provider)> _captured = new();
+        private readonly object _gate = new();
+
+        public CostEurCapture()
+        {
+            _listener = new MeterListener
+            {
+                InstrumentPublished = (instrument, l) =>
+                {
+                    if (instrument.Meter.Name == MeepleAiMetrics.MeterName && instrument.Name == CostName)
+                        l.EnableMeasurementEvents(instrument);
+                }
+            };
+            _listener.SetMeasurementEventCallback<double>((instrument, value, tags, _) =>
+            {
+                string? provider = null;
+                foreach (var tag in tags)
+                {
+                    if (tag.Key == "provider")
+                        provider = tag.Value as string;
+                }
+                lock (_gate)
+                {
+                    _captured.Add((value, provider));
+                }
+            });
+            _listener.Start();
+        }
+
+        public (double Value, string? Provider)? ForProvider(string provider)
+        {
+            lock (_gate)
+            {
+                return _captured
+                    .Where(m => string.Equals(m.Provider, provider, StringComparison.Ordinal))
+                    .Select(m => ((double Value, string? Provider)?)m)
+                    .LastOrDefault();
+            }
+        }
+
+        public void Dispose() => _listener.Dispose();
     }
 
     // ── Additional tracking fake ──────────────────────────────────────────────

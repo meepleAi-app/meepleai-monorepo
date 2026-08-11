@@ -318,7 +318,8 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             certifiedByUserId: entity.CertifiedByUserId,
             certificationOverrideReason: entity.CertificationOverrideReason,
             lastMetricsId: entity.LastMetricsId,
-            xminVersion: entity.Xmin);
+            xminVersion: entity.Xmin,
+            publishedCardId: entity.PublishedCardId);
     }
 
     private static MechanicClaim MapClaimToDomain(MechanicClaimEntity entity)
@@ -335,7 +336,9 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             reviewedBy: entity.ReviewedBy,
             reviewedAt: entity.ReviewedAt,
             rejectionNote: entity.RejectionNote,
-            citations: citations);
+            citations: citations,
+            reviewNote: entity.ReviewNote,
+            validations: entity.Validations);
     }
 
     private static MechanicCitation MapCitationToDomain(MechanicCitationEntity entity)
@@ -363,6 +366,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             ReviewedBy = analysis.ReviewedBy,
             ReviewedAt = analysis.ReviewedAt,
             RejectionReason = analysis.RejectionReason,
+            PublishedCardId = analysis.PublishedCardId,
             TotalTokensUsed = analysis.TotalTokensUsed,
             EstimatedCostUsd = analysis.EstimatedCostUsd,
             ModelUsed = analysis.ModelUsed,
@@ -402,6 +406,10 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             ReviewedBy = claim.ReviewedBy,
             ReviewedAt = claim.ReviewedAt,
             RejectionNote = claim.RejectionNote,
+            ReviewNote = claim.ReviewNote,
+            Validations = claim.Validations.Count == 0
+                ? null
+                : claim.Validations.ToList(),
             Citations = claim.Citations.Select(MapCitationToEntity).ToList()
         };
     }

@@ -977,6 +977,85 @@ groups:
           summary: "OpenRouter RPM utilization above 80%"
           description: "RPM utilization at {{ $value | humanizePercentage }}."
 
+  # ─── SP5-b (#2582): Live-RAG SLO Recording Rules ────────────────────────
+  # meepleai:slo:live_rag_ttft:p95:5m — p95 of the first-visible-token
+  # latency on the live-session RAG path (ChatWithSessionAgentCommandHandler).
+  #
+  # ⚠️  BUFFERING CAVEAT: HandleCore buffers all LLM chunks before yielding,
+  #     so meepleai_rag_first_token_latency measures start → first-VISIBLE-token
+  #     (post-buffer), which equals total-response latency on this path.
+  #     The threshold therefore mirrors the total-response SLO (~3 000ms),
+  #     NOT the chat-path TTFT 800ms.  Mark PROVISIONAL until ≥1 week of
+  #     live-RAG data is available; tune down towards 800ms once buffering is
+  #     removed (SP5-c or later).
+  #
+  # Metric: meepleai.rag.first_token_latency (Histogram<double>, ms)
+  #   Code: MeepleAiMetrics.Rag.cs:78-81
+  #   Scraped name: meepleai_rag_first_token_latency_bucket/_count/_sum
+  #
+  # Cardinality: metric recorded with NO session/game/user tags (bounded safe).
+  - name: meepleai_slo_live_rag_recording_rules
+    interval: 30s
+    rules:
+      # SLO: Live-RAG first-visible-token p95 (PROVISIONAL — see caveat above)
+      # Target: ≤ 3 000ms (total-response scale, due to buffering).
+      # Mirror of meepleai:slo:rag_ttft:p95:5m (:132-138) but for live-session path.
+      - record: meepleai:slo:live_rag_ttft:p95:5m
+        expr: |
+          histogram_quantile(
+            0.95,
+            rate(meepleai_rag_first_token_latency_bucket[5m])
+          )
+        labels:
+          service: meepleai-api
+          slo: live_rag_ttft
+          target: "3000"
+          provisional: "true"
+
+  # ─── SP5-b (#2582): Live-RAG Warning Alerts ──────────────────────────────
+  - name: meepleai_live_rag_warning_alerts
+    interval: 1m
+    rules:
+      # WARNING: High retrieval-empty rate on live-session RAG path.
+      #
+      # A retrieval-empty event occurs in RagPromptAssemblyService when
+      # filteredChunks.Count == 0 after pgvector nearest-neighbour search.
+      # Metric: meepleai.rag.retrieval_empty (Counter<long>)
+      #   Scraped: meepleai_rag_retrieval_empty_total
+      # Denominator: meepleai_rag_first_token_latency_count (answers served on
+      #   this path, consistent cardinality — no session tags on either metric).
+      #
+      # Threshold: >5% of live-RAG answers have zero retrieved chunks.
+      # ⚠️  PROVISIONAL — tune after ≥1 week of baseline data.
+      # Severity: warning (NOT critical/paging) — signals degraded quality,
+      #   not an outage; the LLM still responds with general knowledge.
+      - alert: LiveRagRetrievalEmptyHigh
+        expr: |
+          (
+            rate(meepleai_rag_retrieval_empty_total[15m])
+            /
+            (rate(meepleai_rag_first_token_latency_count[15m]) > 0)
+          ) > 0.05
+        for: 15m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: rag
+          slo: live_rag_ttft
+        annotations:
+          summary: "Live-RAG retrieval-empty rate > 5% for 15m (PROVISIONAL threshold)"
+          description: |
+            {{ $value | humanizePercentage }} of live-session RAG answers have zero
+            retrieved chunks in the last 15m (threshold: 5% — provisional, tune after
+            baseline data).
+            This means the LLM is answering from general knowledge, not game-rules KB.
+            Possible causes: pgvector index drift, embedding model mismatch, or
+            filteredChunks score threshold too strict.
+            Check pgvector health, re-run rag-smoke (make rag-smoke), and inspect
+            RagPromptAssemblyService filteredChunks path.
+          runbook_url: "https://docs.meepleai.dev/runbooks/rag-errors"
+          dashboard_url: "http://localhost:3001/d/llm-operational-maturity"
+
   # ─── Issue #614: SharedGame Detail Observability — Recording Rules ─────
   # Pre-computed views used by both the dashboard and the alert group below.
   # Bounded label cardinality (≤10 active series, see MeepleAiMetrics.SharedGameDetail.cs).

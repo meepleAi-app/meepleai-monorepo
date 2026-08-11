@@ -28,10 +28,13 @@ const LABELS: MobileBottomSheetDrawerLabels = {
   drawerTitle: 'Strumenti sessione',
   closeAriaLabel: 'Chiudi pannello',
   tabsAriaLabel: 'Tab strumenti',
+  tabFlavor: 'Catan',
   tabScore: 'Score',
   tabTurn: 'Turni',
   tabWidget: 'Widget',
   tabNotes: 'Note',
+  tabPhotos: 'Foto',
+  tabAgent: 'Arbitro',
 };
 
 function renderDrawer(overrides: Partial<MobileBottomSheetDrawerProps> = {}) {
@@ -87,14 +90,16 @@ describe('MobileBottomSheetDrawer — render shape', () => {
 });
 
 describe('MobileBottomSheetDrawer — tab strip', () => {
-  it('tab strip has 4 buttons in order: Score, Turn, Widget, Notes', () => {
+  it('tab strip has 6 buttons in order: Score, Turn, Widget, Notes, Photos, Arbitro', () => {
     renderDrawer({ open: true });
     const tabs = screen.getAllByRole('tab');
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(6);
     expect(tabs[0]).toHaveTextContent(LABELS.tabScore);
     expect(tabs[1]).toHaveTextContent(LABELS.tabTurn);
     expect(tabs[2]).toHaveTextContent(LABELS.tabWidget);
     expect(tabs[3]).toHaveTextContent(LABELS.tabNotes);
+    expect(tabs[4]).toHaveTextContent(LABELS.tabPhotos);
+    expect(tabs[5]).toHaveTextContent(LABELS.tabAgent);
   });
 
   it('active tab has aria-selected="true" and others false', () => {
@@ -104,6 +109,8 @@ describe('MobileBottomSheetDrawer — tab strip', () => {
     expect(tabs[1]).toHaveAttribute('aria-selected', 'true');
     expect(tabs[2]).toHaveAttribute('aria-selected', 'false');
     expect(tabs[3]).toHaveAttribute('aria-selected', 'false');
+    expect(tabs[4]).toHaveAttribute('aria-selected', 'false');
+    expect(tabs[5]).toHaveAttribute('aria-selected', 'false');
   });
 
   it('clicking a tab calls onTabChange with the tab id', () => {
@@ -111,6 +118,21 @@ describe('MobileBottomSheetDrawer — tab strip', () => {
     const widgetTab = screen.getAllByRole('tab')[2];
     fireEvent.click(widgetTab!);
     expect(onTabChange).toHaveBeenCalledWith('widget');
+  });
+});
+
+describe('MobileBottomSheetDrawer — conditional flavor tab (#2787)', () => {
+  it('omits the flavor tab by default (showFlavorTab unset)', () => {
+    renderDrawer({ open: true });
+    expect(screen.queryByRole('tab', { name: LABELS.tabFlavor })).not.toBeInTheDocument();
+  });
+
+  it('renders the flavor tab first when showFlavorTab is set', () => {
+    renderDrawer({ open: true, showFlavorTab: true, activeTab: 'flavor' });
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs).toHaveLength(7);
+    expect(tabs[0]).toHaveTextContent(LABELS.tabFlavor);
+    expect(tabs[0]).toHaveAttribute('aria-selected', 'true');
   });
 });
 

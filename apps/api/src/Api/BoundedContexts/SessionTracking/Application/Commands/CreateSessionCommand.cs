@@ -12,6 +12,15 @@ namespace Api.BoundedContexts.SessionTracking.Application.Commands;
 /// <c>GameNightEvent</c> implicitly (one-click "Start playing" flow). When provided,
 /// the session is attached to the existing InProgress night (at most one active
 /// session per night is allowed — enforced by the handler).
+///
+/// <para>WS1 DEC-3 (#2633): when <paramref name="SkipGameNightEnvelope"/> is true the
+/// handler creates ONLY the tracking Session (+ participants) and skips the whole
+/// game-night envelope (ResolveGameNightAsync, the game_night_sessions link, and the
+/// game-night diary rows). The game-night orchestrators
+/// (<c>StartGameNightSessionCommandHandler</c>, <c>AttachGamebookCampaignToGameNightCommandHandler</c>)
+/// pass true so <c>GameNightEvent.AddSession</c> is the SOLE linker against the real
+/// <c>command.GameNightId</c> — eliminating the phantom ad-hoc night that otherwise
+/// double-linked the session and made <c>FindByLinkedSessionIdAsync</c> nondeterministic.</para>
 /// </summary>
 public record CreateSessionCommand(
     Guid UserId,
@@ -22,7 +31,10 @@ public record CreateSessionCommand(
     List<ParticipantDto> Participants,
     Guid? GameNightEventId = null,
     IReadOnlyList<string>? GuestNames = null,
-    GameStateTier StateTier = GameStateTier.Minimal
+    GameStateTier StateTier = GameStateTier.Minimal,
+    Guid? GamebookCampaignId = null,
+    bool SkipGameNightEnvelope = false,
+    bool SkipKbReadinessGate = false
 ) : ICommand<CreateSessionResult>;
 
 /// <summary>

@@ -23,12 +23,28 @@ async function ensureOk(res: Response, ctx: string): Promise<Response> {
 // Schema
 // ---------------------------------------------------------------------------
 
+/**
+ * A single provenance context for a glossary term (issue #2638 / SI-7): the book
+ * (and optionally the paragraph ref) where the term appears, plus an optional
+ * context-specific definition. Read from the DTO's camelCase fields.
+ */
+export const GlossaryContextSchema = z.object({
+  bookId: z.string().uuid(),
+  paragraphRef: z.string().nullable().optional(),
+  definition: z.string().nullable().optional(),
+});
+
+export type GlossaryContext = z.infer<typeof GlossaryContextSchema>;
+
 export const GamebookGlossaryEntrySchema = z.object({
   id: z.string().uuid(),
   termEn: z.string().min(1),
   termIt: z.string().min(1),
   source: z.enum(['AutoBootstrap', 'Manual']),
   updatedAt: z.string(),
+  // #2638 / SI-7: `.default([])` (NOT required) — fixtures, MSW handlers, and the
+  // not-yet-deployed backend may return entries without a `contexts` field.
+  contexts: z.array(GlossaryContextSchema).default([]),
 });
 
 export type GamebookGlossaryEntry = z.infer<typeof GamebookGlossaryEntrySchema>;

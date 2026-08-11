@@ -3,6 +3,13 @@
 # Upload ultimo snapshot a seed blob bucket + rotation (tieni 3).
 set -euo pipefail
 
+# Resolve infra/ relative to THIS script, not the cwd. Both `make
+# seed-index-publish` and the bake workflows invoke this from infra/ (not the
+# repo root), so a hardcoded `infra/secrets/...` resolved to infra/infra/...
+# and the publish always failed at the storage.secret source (#2516).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INFRA_DIR="$(dirname "$SCRIPT_DIR")"
+
 OUT_DIR="${SEED_INDEX_OUT_DIR:-data/snapshots}"
 LATEST="$OUT_DIR/.latest"
 
@@ -16,7 +23,7 @@ BASENAME=$(cat "$LATEST")
 
 # Carica credenziali da storage.secret
 # shellcheck disable=SC1091
-set -a; source infra/secrets/storage.secret; set +a
+set -a; source "$INFRA_DIR/secrets/storage.secret"; set +a
 : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET mancante in storage.secret}"
 : "${S3_ENDPOINT:?S3_ENDPOINT mancante}"
 : "${S3_ACCESS_KEY:?S3_ACCESS_KEY mancante}"
@@ -30,6 +37,14 @@ PREFIX="snapshots"
 
 log "uploading $BASENAME.dump"
 $AWS_S3 cp "$OUT_DIR/$BASENAME.dump" "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.dump"
+# Generated-columns supplement (pgvector_embeddings et al.) — REQUIRED. The main
+# .dump excludes generated-column tables' data (seed-index-dump.sh), so without
+# this file the restored snapshot has 0 embeddings (RAG cold) and the .dump.sha256
+# — which covers BOTH files — fails verification on the consumer. Always exists
+# (dump writes an empty placeholder when no generated tables). snapshot-fetch.sh
+# fetches it; it MUST be on the bucket before the meta.json atomic marker.
+log "uploading $BASENAME.generated-tables.sql (embeddings supplement)"
+$AWS_S3 cp "$OUT_DIR/$BASENAME.generated-tables.sql" "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.generated-tables.sql"
 log "uploading $BASENAME.dump.sha256"
 $AWS_S3 cp "$OUT_DIR/$BASENAME.dump.sha256" "s3://$SEED_BLOB_BUCKET/$PREFIX/$BASENAME.dump.sha256"
 # META PER ULTIMO — atomic marker
@@ -50,9 +65,10 @@ $AWS_S3 ls "s3://$SEED_BLOB_BUCKET/$PREFIX/" \
     | while read -r old_meta; do
         old_base=${old_meta%.meta.json}
         log "rimuovo obsoleto: $old_base"
-        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.dump"        || true
-        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.dump.sha256" || true
-        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.meta.json"   || true
+        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.dump"                 || true
+        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.generated-tables.sql" || true
+        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.dump.sha256"          || true
+        $AWS_S3 rm "s3://$SEED_BLOB_BUCKET/$PREFIX/$old_base.meta.json"            || true
       done
 
 # ───────────────────────────────────────────────────────────────────────

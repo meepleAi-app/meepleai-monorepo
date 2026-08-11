@@ -7,7 +7,7 @@
  * Step 1 — Giocatori: add/remove players with name + color
  * Step 2 — Ordine turni: drag to reorder turn order → Avvia Partita
  *
- * Game is pre-selected (passed as prop). Navigates to /sessions/live/{id} on start.
+ * Game is pre-selected (passed as prop). Navigates to /sessions/{id}/live on start.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -186,7 +186,7 @@ export function StartSessionSheet({
         await new Promise(r => setTimeout(r, 1500));
       }
 
-      router.push(`/sessions/live/${sessionId}`);
+      router.push(`/sessions/${sessionId}/live`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossibile avviare la sessione.');
       setIsCreating(false);

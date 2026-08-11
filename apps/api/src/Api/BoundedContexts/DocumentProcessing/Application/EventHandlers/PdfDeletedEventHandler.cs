@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -37,34 +38,36 @@ internal sealed class PdfDeletedEventHandler : INotificationHandler<PdfDeletedDo
             return;
         }
 
-        var resourceKey = notification.CoverR2Key;
-
-        // Mirror of PdfProcessingPipelineService upload pattern (linee 539-549):
-        // resourceKey = "pdf-cover-{id}", fileId = "thumb.webp" | "preview.webp",
-        // category = GameImage → S3 prefix "game-images/{resourceKey}/{fileId}_".
-        await TryDeleteAsync("thumb.webp", resourceKey, notification.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-        await TryDeleteAsync("preview.webp", resourceKey, notification.PdfDocumentId, cancellationToken).ConfigureAwait(false);
+        // Issue #2947: CoverR2Key is now the deterministic, un-suffixed key
+        // ("covers/pdf/{id:D}/cover") written by PdfProcessingPipelineService /
+        // BackfillPdfCoversJob. The ONLY physical object is the preview variant
+        // ("{key}-preview.webp") — there is no separate thumb object anymore.
+        // The categorized DeleteAsync cannot be used because it runs
+        // PathSecurity.ValidateIdentifier, which rejects '/' and '.'; delete via
+        // the raw-key primitive instead (mirrors CoverUrlResolver's raw-key reads).
+        var rawKey = CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, notification.CoverR2Key);
+        await TryDeleteRawKeyAsync(rawKey, notification.PdfDocumentId, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task TryDeleteAsync(string fileId, string resourceKey, Guid pdfDocumentId, CancellationToken cancellationToken)
+    private async Task TryDeleteRawKeyAsync(string rawKey, Guid pdfDocumentId, CancellationToken cancellationToken)
     {
         try
         {
             var deleted = await _blobStorage
-                .DeleteAsync(fileId, BlobCategory.GameImage, resourceKey, cancellationToken)
+                .DeleteRawKeyAsync(rawKey, cancellationToken)
                 .ConfigureAwait(false);
 
             if (deleted)
             {
                 _logger.LogInformation(
-                    "Evicted cover blob {FileId} for PDF {PdfDocumentId} (resourceKey={ResourceKey}).",
-                    fileId, pdfDocumentId, resourceKey);
+                    "Evicted cover blob for PDF {PdfDocumentId} (rawKey={RawKey}).",
+                    pdfDocumentId, rawKey);
             }
             else
             {
                 _logger.LogDebug(
-                    "Cover blob {FileId} for PDF {PdfDocumentId} was not present (resourceKey={ResourceKey}).",
-                    fileId, pdfDocumentId, resourceKey);
+                    "Cover blob for PDF {PdfDocumentId} was not present (rawKey={RawKey}).",
+                    pdfDocumentId, rawKey);
             }
         }
         catch (OperationCanceledException)
@@ -81,8 +84,8 @@ internal sealed class PdfDeletedEventHandler : INotificationHandler<PdfDeletedDo
 #pragma warning restore CA1031
         {
             _logger.LogWarning(ex,
-                "Failed to delete cover blob {FileId} for PDF {PdfDocumentId} (resourceKey={ResourceKey}); leaving orphan.",
-                fileId, pdfDocumentId, resourceKey);
+                "Failed to delete cover blob for PDF {PdfDocumentId} (rawKey={RawKey}); leaving orphan.",
+                pdfDocumentId, rawKey);
         }
     }
 }

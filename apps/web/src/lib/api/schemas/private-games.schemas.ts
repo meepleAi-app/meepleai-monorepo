@@ -7,13 +7,15 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // Private game source enum
 export const PrivateGameSourceSchema = z.enum(['Manual', 'BoardGameGeek']);
 export type PrivateGameSource = z.infer<typeof PrivateGameSourceSchema>;
 
 // Private game DTO from backend
 export const PrivateGameDtoSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   ownerId: z.string().uuid(),
   source: PrivateGameSourceSchema,
   bggId: z.number().int().positive().nullable().optional(),
@@ -49,8 +51,6 @@ export const AddPrivateGameRequestSchema = z
     playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
     minAge: z.number().int().min(0).max(99).nullable().optional(),
     complexityRating: z.number().min(0).max(5).nullable().optional(),
-    imageUrl: z.string().url().nullable().optional(),
-    thumbnailUrl: z.string().url().nullable().optional(),
   })
   .refine(data => data.maxPlayers >= data.minPlayers, {
     message: 'Max players must be greater than or equal to min players',
@@ -70,7 +70,6 @@ export const UpdatePrivateGameRequestSchema = z
     playingTimeMinutes: z.number().int().min(1).max(10000).nullable().optional(),
     minAge: z.number().int().min(0).max(99).nullable().optional(),
     complexityRating: z.number().min(0).max(5).nullable().optional(),
-    imageUrl: z.string().url().nullable().optional(),
   })
   .refine(data => data.maxPlayers >= data.minPlayers, {
     message: 'Max players must be greater than or equal to min players',

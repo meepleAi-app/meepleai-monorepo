@@ -3,8 +3,10 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -67,9 +69,17 @@ public sealed class BackfillPdfCoversJob : IJob
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var extractor = scope.ServiceProvider.GetRequiredService<IPdfCoverExtractor>();
         var blob = scope.ServiceProvider.GetRequiredService<IBlobStorageService>();
+        var coverUploadPipeline = scope.ServiceProvider.GetService<IPdfCoverUploadPipeline>();
+        if (coverUploadPipeline is null)
+        {
+            // Issue #3363: the R2 cover-upload pipeline is registered only when STORAGE_PROVIDER=s3.
+            // In local-storage mode there is nowhere to upload L4 covers, so the backfill is a no-op.
+            _logger.LogDebug("BackfillPdfCoversJob skipped: cover-upload pipeline unavailable (local storage).");
+            return;
+        }
         var eventCollector = scope.ServiceProvider.GetService<IDomainEventCollector>();
 
-        await RunBatchAsync(db, extractor, blob, eventCollector, ct).ConfigureAwait(false);
+        await RunBatchAsync(db, extractor, blob, coverUploadPipeline, eventCollector, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -80,6 +90,7 @@ public sealed class BackfillPdfCoversJob : IJob
         MeepleAiDbContext db,
         IPdfCoverExtractor extractor,
         IBlobStorageService blob,
+        IPdfCoverUploadPipeline coverUploadPipeline,
         IDomainEventCollector? eventCollector,
         CancellationToken ct)
     {
@@ -109,7 +120,7 @@ public sealed class BackfillPdfCoversJob : IJob
         {
             ct.ThrowIfCancellationRequested();
             var pdf = batch[i];
-            await ProcessOneAsync(pdf, db, extractor, blob, eventCollector, ct).ConfigureAwait(false);
+            await ProcessOneAsync(pdf, db, extractor, blob, coverUploadPipeline, eventCollector, ct).ConfigureAwait(false);
 
             if (i < batch.Count - 1)
             {
@@ -123,6 +134,7 @@ public sealed class BackfillPdfCoversJob : IJob
         MeepleAiDbContext db,
         IPdfCoverExtractor extractor,
         IBlobStorageService blob,
+        IPdfCoverUploadPipeline coverUploadPipeline,
         IDomainEventCollector? eventCollector,
         CancellationToken ct)
     {
@@ -131,8 +143,16 @@ public sealed class BackfillPdfCoversJob : IJob
             var pdfBytes = await LoadPdfBytesAsync(pdf, blob, ct).ConfigureAwait(false);
             if (pdfBytes is null)
             {
-                pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
+                // #3373 D1: a missing binary can be a transient storage blip — TRANSIENT,
+                // retry-eligible until PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+                var (missStatus, missAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
+                pdf.CoverGenerationStatus = missStatus.ToString();
+                pdf.CoverGenerationAttempts = missAttempts;
                 pdf.CoverGenerationError = "PDF binary not found in blob storage";
+                // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
+                MeepleAiMetrics.RecordPdfCoverGeneration(missAttempts >= PdfCoverRetryPolicy.MaxAttempts
+                    ? MeepleAiMetrics.CoverGenerationOutcomeFailed
+                    : MeepleAiMetrics.CoverGenerationOutcomeRetrying);
                 _logger.LogWarning(
                     "BackfillPdfCoversJob: PDF {PdfId} binary missing from blob storage; marking Failed",
                     pdf.Id);
@@ -146,38 +166,41 @@ public sealed class BackfillPdfCoversJob : IJob
             {
                 case PdfCoverExtractionOutcome.Generated:
                     {
-                        var resourceKey = $"pdf-cover-{pdf.Id}";
+                        // Issue #2947: deterministic DB key; the pipeline writes the
+                        // physical R2 object "{dbKey}-preview.webp" that the resolver
+                        // reconstructs. Only the preview size is uploaded (the
+                        // resolver never reads the thumbnail size).
+                        // #3384 D5-A: DB key comes from the single CoverKeyBuilder.
+                        var dbKey = CoverKeyBuilder.ForPdf(pdf.Id).DbKey;
 
-                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
-                        {
-                            await blob.StoreAsync(thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, ct)
-                                .ConfigureAwait(false);
-                        }
-                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                        {
-                            await blob.StoreAsync(previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, ct)
-                                .ConfigureAwait(false);
-                        }
+                        var persistedKey = await coverUploadPipeline
+                            .UploadAsync(dbKey, result.PreviewWebp!, ct)
+                            .ConfigureAwait(false);
 
-                        pdf.CoverR2Key = resourceKey;
+                        pdf.CoverR2Key = persistedKey;
                         pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Generated);
                         pdf.CoverPageIndex = result.SelectedPageIndex;
                         pdf.CoverGenerationError = null;
+                        // #3373 D1: a successful generation closes the retry cycle — reset the budget
+                        // so a later orphan-reset (Generated→Pending) starts fresh, not pre-exhausted.
+                        pdf.CoverGenerationAttempts = 0;
+                        MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
                         eventCollector?.Collect(new PdfCoverGeneratedEvent(
                             pdfDocumentId: pdf.Id,
                             sharedGameId: pdf.SharedGameId,
-                            coverR2Key: resourceKey,
+                            coverR2Key: persistedKey,
                             coverPageIndex: result.SelectedPageIndex ?? 0));
 
                         _logger.LogInformation(
-                            "BackfillPdfCoversJob: cover generated for PDF {PdfId} from page {PageIndex}",
-                            pdf.Id, result.SelectedPageIndex);
+                            "BackfillPdfCoversJob: cover generated for PDF {PdfId} from page {PageIndex} (dbKey={DbKey})",
+                            pdf.Id, result.SelectedPageIndex, persistedKey);
                         break;
                     }
                 case PdfCoverExtractionOutcome.Skipped:
                     pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Skipped);
                     pdf.CoverPageIndex = result.SelectedPageIndex;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeSkipped);
                     _logger.LogInformation(
                         "BackfillPdfCoversJob: cover skipped for PDF {PdfId} (heuristic rejected all candidate pages)",
                         pdf.Id);
@@ -185,6 +208,7 @@ public sealed class BackfillPdfCoversJob : IJob
                 case PdfCoverExtractionOutcome.Failed:
                     pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
                     pdf.CoverGenerationError = result.ErrorMessage;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
                     _logger.LogWarning(
                         "BackfillPdfCoversJob: cover extraction failed for PDF {PdfId}: {Error}",
                         pdf.Id, result.ErrorMessage);
@@ -206,21 +230,27 @@ public sealed class BackfillPdfCoversJob : IJob
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            // Operator-recovery hint: when StoreAsync succeeded for one or both
-            // sizes BUT the subsequent SaveChangesAsync threw (transient DB
-            // error, RowVersion conflict, etc.), R2 will contain orphan
-            // thumb.webp / preview.webp under "game-images/pdf-cover-{Id}/".
-            // The entity ends up Failed without a CoverR2Key so
-            // PdfDeletedEventHandler can't reach them. We embed the prospective
-            // resourceKey in CoverGenerationError so operators can grep the bucket.
-            var resourceKey = $"pdf-cover-{pdf.Id}";
+            // Operator-recovery hint: when UploadAsync succeeded BUT the subsequent
+            // SaveChangesAsync threw (transient DB error, RowVersion conflict, etc.),
+            // R2 will contain an orphan preview under the deterministic key. The
+            // entity ends up Failed without a CoverR2Key so cleanup can't reach it.
+            // Embed the prospective physical key so operators can grep the bucket.
+            var orphanPhysicalKey = CoverKeyBuilder.ForPdf(pdf.Id).PhysicalKey;
             _logger.LogWarning(ex,
                 "BackfillPdfCoversJob: unexpected error processing PDF {PdfId}; marking Failed. " +
-                "Inspect R2 prefix game-images/{ResourceKey}/ for orphan blobs and clean up manually if present.",
-                pdf.Id, resourceKey);
-            pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Failed);
-            var detail = ex.GetType().Name + ": orphan-check-key=" + resourceKey;
+                "Inspect R2 key {OrphanKey} for an orphan preview blob and clean up manually if present.",
+                pdf.Id, orphanPhysicalKey);
+            // #3373 D1: an unexpected exception here is infra (R2/DB) — TRANSIENT, retry-eligible
+            // until PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+            var (catchStatus, catchAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdf.CoverGenerationAttempts);
+            pdf.CoverGenerationStatus = catchStatus.ToString();
+            pdf.CoverGenerationAttempts = catchAttempts;
+            var detail = ex.GetType().Name + ": orphan-check-key=" + orphanPhysicalKey;
             pdf.CoverGenerationError = detail.Length > 500 ? detail[..500] : detail;
+            // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
+            MeepleAiMetrics.RecordPdfCoverGeneration(catchAttempts >= PdfCoverRetryPolicy.MaxAttempts
+                ? MeepleAiMetrics.CoverGenerationOutcomeFailed
+                : MeepleAiMetrics.CoverGenerationOutcomeRetrying);
             try
             {
                 await db.SaveChangesAsync(ct).ConfigureAwait(false);
@@ -243,8 +273,12 @@ public sealed class BackfillPdfCoversJob : IJob
         // backfill is intended for production-like environments where the PDF
         // lives in blob storage. The filesystem fallback in the pipeline
         // service exists for dev/test, which doesn't need a backfill job.
-        var fileId = PdfStorageKey.ForPdf(pdf.Id);
-        var stream = await blob.RetrieveAsync(fileId, BlobCategory.Pdf, fileId, ct).ConfigureAwait(false);
+        // Issue #2671: the blob lives under a random fileId embedded in FilePath, not pdfId.
+        // Recover it from the persisted path; ForPdf(Id) is the resourceKey folder. The ??
+        // fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
+        var resourceKey = PdfStorageKey.ForPdf(pdf.Id);
+        var fileId = PdfStorageKey.FileIdFromPath(pdf.FilePath) ?? resourceKey;
+        var stream = await blob.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, ct).ConfigureAwait(false);
         if (stream is null)
         {
             return null;

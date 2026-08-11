@@ -8,6 +8,9 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
+using System.Net;
+using System.Text;
 using Xunit;
 using Api.Tests.Constants;
 
@@ -130,6 +133,42 @@ public class DeepSeekLlmClientTests
         healthy.Should().BeFalse();
     }
 
+    // ─── CheckHealthAsync — balance-aware (#2953 #5) ─────────────────────────
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public async Task CheckHealthAsync_WhenBalanceAvailable_ReturnsTrue()
+    {
+        // Arrange
+        var client = CreateClientWithResponse(JsonResponse(
+            HttpStatusCode.OK,
+            "{\"is_available\": true, \"balance_infos\": [{\"currency\": \"USD\", \"total_balance\": \"10.00\"}]}"));
+
+        // Act
+        var healthy = await client.CheckHealthAsync(TestCancellationToken);
+
+        // Assert
+        healthy.Should().BeTrue();
+    }
+
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    public async Task CheckHealthAsync_WhenBalanceUnavailable_ReturnsFalse()
+    {
+        // #2953 (#5): credit exhausted → is_available=false. GET /models would still return 200
+        // and hide the exhaustion; /user/balance surfaces it so the provider is marked unhealthy.
+        // Arrange
+        var client = CreateClientWithResponse(JsonResponse(
+            HttpStatusCode.OK,
+            "{\"is_available\": false, \"balance_infos\": [{\"currency\": \"USD\", \"total_balance\": \"0.00\"}]}"));
+
+        // Act
+        var healthy = await client.CheckHealthAsync(TestCancellationToken);
+
+        // Assert
+        healthy.Should().BeFalse();
+    }
+
     // ─── Factory helpers ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -175,4 +214,42 @@ public class DeepSeekLlmClientTests
 
         return new DeepSeekLlmClient(mockFactory.Object, scopeFactory, mockCostCalculator.Object, logger);
     }
+
+    /// <summary>
+    /// Creates a configured DeepSeekLlmClient whose HTTP calls are all served by
+    /// <paramref name="response"/>. The resolver returns a dummy key so CheckHealthAsync reaches
+    /// the HTTP call (unlike <see cref="CreateUnconfiguredClient"/> which short-circuits).
+    /// </summary>
+    private static DeepSeekLlmClient CreateClientWithResponse(HttpResponseMessage response)
+    {
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(response);
+
+        var httpClient = new HttpClient(handler.Object);
+        var mockFactory = new Mock<IHttpClientFactory>();
+        mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
+
+        var resolver = new Mock<IProviderCredentialResolver>();
+        resolver
+            .Setup(r => r.ResolveAsync(DeepSeekLlmClient.ProviderKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("test-api-key");
+
+        var services = new ServiceCollection();
+        services.AddSingleton(resolver.Object);
+        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+
+        return new DeepSeekLlmClient(
+            mockFactory.Object,
+            scopeFactory,
+            Mock.Of<ILlmCostCalculator>(),
+            Mock.Of<ILogger<DeepSeekLlmClient>>());
+    }
+
+    private static HttpResponseMessage JsonResponse(HttpStatusCode statusCode, string json) =>
+        new(statusCode) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 }

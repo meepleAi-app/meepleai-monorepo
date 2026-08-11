@@ -36,37 +36,6 @@ internal record GameDto(
 );
 
 /// <summary>
-/// DTO for creating a game.
-/// Issue #2373: Added SharedGameId for catalog integration.
-/// </summary>
-internal record CreateGameRequest(
-    string Title,
-    string? Publisher = null,
-    int? YearPublished = null,
-    int? MinPlayers = null,
-    int? MaxPlayers = null,
-    int? MinPlayTimeMinutes = null,
-    int? MaxPlayTimeMinutes = null,
-    string? IconUrl = null,
-    string? ImageUrl = null,
-    int? BggId = null,
-    Guid? SharedGameId = null
-);
-
-/// <summary>
-/// DTO for updating game details.
-/// </summary>
-internal record UpdateGameRequest(
-    string? Title = null,
-    string? Publisher = null,
-    int? YearPublished = null,
-    int? MinPlayers = null,
-    int? MaxPlayers = null,
-    int? MinPlayTimeMinutes = null,
-    int? MaxPlayTimeMinutes = null
-);
-
-/// <summary>
 /// Extended DTO for game detail page with additional metadata and statistics.
 /// Issue #2373: Added SharedGameId for catalog integration.
 /// </summary>
@@ -144,13 +113,4 @@ internal record EditorLockDto(
     DateTime? ExpiresAt,
     bool IsLocked,
     bool IsCurrentUserLock
-);
-
-/// <summary>
-/// Issue #2055: Conflict information when concurrent edit is detected.
-/// </summary>
-internal record RuleSpecConflictDto(
-    RuleSpecDto LocalVersion,
-    RuleSpecDto RemoteVersion,
-    string ConflictReason
 );

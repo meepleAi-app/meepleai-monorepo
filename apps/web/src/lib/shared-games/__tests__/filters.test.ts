@@ -10,13 +10,19 @@ import {
 } from '../filters';
 
 describe('FILTER_CHIPS', () => {
-  it('exposes the 4 chips required by the sp3-shared-games mockup', () => {
+  it('exposes the KB-ready chip first, then the sp3-shared-games mockup chips', () => {
     expect(FILTER_CHIPS.map(c => c.key)).toEqual([
+      'with-kb',
       'with-toolkit',
       'with-agent',
       'top-rated',
       'new',
     ]);
+  });
+
+  it('maps the with-kb chip to the "Solo con KB pronta" i18n label key', () => {
+    const kbChip = FILTER_CHIPS.find(c => c.key === 'with-kb');
+    expect(kbChip?.i18nKey).toBe('pages.sharedGames.chips.withKb');
   });
 });
 

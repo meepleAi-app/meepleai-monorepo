@@ -76,6 +76,21 @@ internal static class AdminResourcesEndpoints
         .ProducesProblem(401)
         .ProducesProblem(403);
 
+        // System Metrics (Issue #3041) — self-contained via System.Diagnostics, no Prometheus dependency
+        group.MapGet("/resources/system", async (HttpContext context, IMediator mediator, CancellationToken ct) =>
+        {
+            var sessionResult = context.RequireAdminSession();
+            if (!sessionResult.IsAuthorized) return sessionResult.ErrorResult!;
+
+            var metrics = await mediator.Send(new GetSystemResourcesQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(metrics);
+        })
+        .WithName("GetSystemResources")
+        .WithTags("Admin", "Resources")
+        .Produces<Api.Models.SystemResourcesDto>(200)
+        .ProducesProblem(401)
+        .ProducesProblem(403);
+
         // Dangerous Actions
 
         // Clear Cache (Level 2: DANGER)

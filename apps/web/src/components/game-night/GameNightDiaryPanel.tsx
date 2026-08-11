@@ -32,7 +32,12 @@ export function GameNightDiaryPanel({ gameNightId, limit = 50 }: GameNightDiaryP
   const { data: entries, isLoading } = useGameNightDiaryQuery(gameNightId);
 
   const sortedEntries = useMemo(() => {
-    if (!entries) return [];
+    // Issue #S: for empty/Published game nights the diary query can yield a
+    // non-array value (envelope object or undefined). Spreading it threw
+    // "s is not iterable" and crashed the ENTIRE game-night detail into the
+    // error boundary. Guard with Array.isArray so a malformed/empty diary
+    // degrades to an empty timeline instead of blowing up the page.
+    if (!Array.isArray(entries)) return [];
     return [...entries]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .slice(0, limit);

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.SharedKernel.Application.IntegrationEvents;
@@ -58,7 +59,7 @@ internal sealed class SharedGameIndexingAdminNotificationHandler
                 evt.PdfDocumentId,
                 evt.FileName,
                 $"Indicizzato ({evt.ChunkCount} chunk) — pronto per RAG"),
-            DeepLinkPath = $"/admin/shared-games/{evt.GameId}",
+            DeepLinkPath = NotificationRoutes.AdminSharedGame(evt.GameId),
             Metadata = new
             {
                 gameId = evt.GameId,

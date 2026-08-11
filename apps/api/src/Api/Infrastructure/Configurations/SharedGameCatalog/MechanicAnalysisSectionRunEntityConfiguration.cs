@@ -14,13 +14,17 @@ internal sealed class MechanicAnalysisSectionRunEntityConfiguration : IEntityTyp
     {
         builder.ToTable("mechanic_analysis_section_runs", t =>
         {
+            // #2974: MechanicSection has 9 values (0-8), incl. Setup/Components/EndgameScoring.
+            // Keep the upper bound in sync with the enum — MechanicSectionRangeConstraintTests
+            // guards against drift (a 0-5 bound crashes the pipeline on any section > 5).
             t.HasCheckConstraint(
                 "ck_mechanic_section_runs_section_range",
-                "section BETWEEN 0 AND 5");
+                "section BETWEEN 0 AND 8");
 
+            // 0=Succeeded, 1=Failed, 2=SkippedDueToCostCap, 3=RetainedWithGuardrailFlags (D9).
             t.HasCheckConstraint(
                 "ck_mechanic_section_runs_status_range",
-                "status BETWEEN 0 AND 2");
+                "status BETWEEN 0 AND 3");
 
             t.HasCheckConstraint(
                 "ck_mechanic_section_runs_tokens_non_negative",

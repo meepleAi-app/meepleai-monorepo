@@ -96,6 +96,18 @@ internal static class AgentMemoryEndpoints
             .Produces(401)
             .WithSummary("Get all glossary entries for a game");
 
+        // === House-rule Metadata (issue #2492 — SP6 §F drawer ConnectionBar) ===
+
+        // Note: no Produces(404). When the (gameId, userId) pair has no GameMemory
+        // record the endpoint returns 200 with agentCount=0 and the cross-BC kb
+        // count — a missing record is a valid "zero" state, not an error.
+        agentMemory.MapGet("/house-rules/metadata", HandleGetHouseRulesMetadata)
+            .RequireAuthenticatedUser()
+            .Produces<HouseRulesMetadataDto>(200)
+            .Produces(400)
+            .Produces(401)
+            .WithSummary("Get aggregated house-rule metadata counts (agent/game/session/kb) for SP6 §F drawer");
+
         // === Player Stats ===
 
         agentMemory.MapGet("/players/me/stats", HandleGetMyStats)
@@ -140,9 +152,16 @@ internal static class AgentMemoryEndpoints
     private static async Task<IResult> HandleGetGroup(
         Guid groupId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var result = await mediator.Send(new GetGroupMemoryQuery(groupId), cancellationToken).ConfigureAwait(false);
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(new GetGroupMemoryQuery(groupId, userId), cancellationToken).ConfigureAwait(false);
         return result is null ? Results.NotFound() : Results.Ok(result);
     }
 
@@ -150,10 +169,17 @@ internal static class AgentMemoryEndpoints
         Guid groupId,
         [FromBody] UpdatePreferencesRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new UpdateGroupPreferencesCommand(
-            groupId, request.MaxDuration, request.PreferredComplexity, request.CustomNotes);
+            groupId, userId, request.MaxDuration, request.PreferredComplexity, request.CustomNotes);
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
@@ -252,6 +278,22 @@ internal static class AgentMemoryEndpoints
     {
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetGlossaryQuery(gameId, userId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetHouseRulesMetadata(
+        [FromQuery] Guid gameId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (gameId == Guid.Empty)
+            return Results.BadRequest(new { error = "gameId is required" });
+
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator
+            .Send(new GetHouseRulesMetadataQuery(gameId, userId), cancellationToken)
+            .ConfigureAwait(false);
         return Results.Ok(result);
     }
 

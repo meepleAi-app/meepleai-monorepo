@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+import { setupMockAuth } from '../fixtures/auth';
+
 test.describe('Admin dark theme scope (SP5 F0c)', () => {
-  test.beforeEach(() => {
+  test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
     process.env.PLAYWRIGHT_AUTH_BYPASS = 'true';
   });
 

@@ -108,6 +108,14 @@ export function useWizardAutoSave() {
   const store = useGameImportWizardStore();
   const hasRestoredRef = useRef(false);
 
+  // #3102: `useGameImportWizardStore()` (no selector) returns a NEW object reference
+  // on every set(), so depending on `store` in the effects below recreated the 30s
+  // interval on every edit and the auto-save never fired during active editing.
+  // Keep the live store in a ref (updated each render) and use stable `[]` deps so
+  // the interval survives edits while still reading the latest state.
+  const storeRef = useRef(store);
+  storeRef.current = store;
+
   // Restore draft on mount (only once)
   useEffect(() => {
     if (hasRestoredRef.current) return;
@@ -116,37 +124,40 @@ export function useWizardAutoSave() {
     const draft = loadDraft();
     if (!draft) return;
 
+    const s = storeRef.current;
+
     // Restore wizard state
-    if (draft.currentStep) store.setStep(draft.currentStep);
-    if (draft.uploadedPdf) store.setUploadedPdf(draft.uploadedPdf);
-    if (draft.extractedMetadata) store.setReviewedMetadata(draft.extractedMetadata);
+    if (draft.currentStep) s.setStep(draft.currentStep);
+    if (draft.uploadedPdf) s.setUploadedPdf(draft.uploadedPdf);
+    if (draft.extractedMetadata) s.setReviewedMetadata(draft.extractedMetadata);
     if (draft.selectedBggId)
-      store.setSelectedBggId(draft.selectedBggId, draft.bggGameData ?? undefined);
+      s.setSelectedBggId(draft.selectedBggId, draft.bggGameData ?? undefined);
     // Note: enrichedData is not directly restorable as it's typically computed in Step 4
 
     toast.success('Draft restored', {
       description: 'Your previous wizard session has been restored.',
     });
-  }, [store]);
+  }, []);
 
-  // Auto-save wizard state every 30s
+  // Auto-save wizard state every 30s (stable interval, reads latest state via ref)
   useEffect(() => {
     const interval = setInterval(() => {
+      const s = storeRef.current;
       // Only save if there's meaningful progress (beyond step 1)
-      if (store.currentStep > 1 || store.uploadedPdf) {
+      if (s.currentStep > 1 || s.uploadedPdf) {
         saveDraft({
-          currentStep: store.currentStep,
-          uploadedPdf: store.uploadedPdf,
-          extractedMetadata: store.extractedMetadata,
-          selectedBggId: store.selectedBggId,
-          bggGameData: store.bggGameData,
-          enrichedData: store.enrichedData,
+          currentStep: s.currentStep,
+          uploadedPdf: s.uploadedPdf,
+          extractedMetadata: s.extractedMetadata,
+          selectedBggId: s.selectedBggId,
+          bggGameData: s.bggGameData,
+          enrichedData: s.enrichedData,
         });
       }
     }, AUTO_SAVE_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [store]);
+  }, []);
 
   // Clear draft on wizard completion (when enrichedData is submitted)
   // This is handled by the wizard component calling clearDraft() explicitly

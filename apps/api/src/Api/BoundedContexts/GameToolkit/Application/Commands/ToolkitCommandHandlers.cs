@@ -94,6 +94,10 @@ internal class PublishToolkitCommandHandler : ICommandHandler<PublishToolkitComm
         var toolkit = await _repository.GetByIdAsync(command.ToolkitId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameToolkit", command.ToolkitId.ToString());
 
+        // Issue #3224: pre-check state so an already-published toolkit maps to 409 (not 500).
+        if (toolkit.IsPublished)
+            throw new ConflictException("Toolkit is already published");
+
         toolkit.Publish();
 
         await _repository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);

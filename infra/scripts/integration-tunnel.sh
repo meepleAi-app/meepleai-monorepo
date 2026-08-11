@@ -5,8 +5,8 @@
 #   bash infra/scripts/integration-tunnel.sh [start|stop|status]
 #
 # Opens SSH tunnels to staging server (meepleai.app) for:
-#   - PostgreSQL  :15432 -> staging container (dynamic IP)
-#   - Redis       :16379 -> staging container (dynamic IP)
+#   - PostgreSQL  :25432 -> staging container (dynamic IP)
+#   - Redis       :26379 -> staging container (dynamic IP)
 #   - AI/monitoring services -> staging host ports
 #
 # Then run:
@@ -43,8 +43,7 @@ print_ports() {
     echo "  Ollama        localhost:21434 -> container:11434"
     echo "  Orchestrator  localhost:18004 -> container:8004"
     echo ""
-    echo "  -- Monitoring & Automation (Docker IP) ----"
-    echo "  n8n           localhost:15678 -> container:5678"
+    echo "  -- Monitoring (Docker IP) ----"
     echo "  Grafana       localhost:13001 -> container:3000"
     echo "  Prometheus    localhost:19090 -> container:9090"
     echo ""
@@ -79,7 +78,6 @@ do_start() {
     UNSTRUCTURED_IP=$(resolve_container_ip meepleai-unstructured)
     SMOLDOCLING_IP=$(resolve_container_ip meepleai-smoldocling)
     OLLAMA_IP=$(resolve_container_ip meepleai-ollama)
-    N8N_IP=$(resolve_container_ip meepleai-n8n)
     GRAFANA_IP=$(resolve_container_ip meepleai-grafana)
     PROMETHEUS_IP=$(resolve_container_ip meepleai-prometheus)
     ORCHESTRATOR_IP=$(resolve_container_ip meepleai-orchestrator)
@@ -91,7 +89,6 @@ do_start() {
     echo "  Unstructured container IP:${UNSTRUCTURED_IP:-NOT FOUND}"
     echo "  SmolDocling container IP: ${SMOLDOCLING_IP:-NOT FOUND}"
     echo "  Ollama container IP:      ${OLLAMA_IP:-NOT FOUND}"
-    echo "  N8N container IP:         ${N8N_IP:-NOT FOUND}"
     echo "  Grafana container IP:     ${GRAFANA_IP:-NOT FOUND}"
     echo "  Prometheus container IP:  ${PROMETHEUS_IP:-NOT FOUND}"
     echo "  Orchestrator container IP:${ORCHESTRATOR_IP:-NOT FOUND}"
@@ -113,7 +110,6 @@ do_start() {
       -L 18002:${SMOLDOCLING_IP:-localhost}:8002 \
       -L 18003:${RERANKER_IP:-localhost}:8003 \
       -L 21434:${OLLAMA_IP:-localhost}:11434 \
-      -L 15678:${N8N_IP:-localhost}:5678 \
       -L 13001:${GRAFANA_IP:-localhost}:3000 \
       -L 19090:${PROMETHEUS_IP:-localhost}:9090 \
       -L 18004:${ORCHESTRATOR_IP:-localhost}:8004 \

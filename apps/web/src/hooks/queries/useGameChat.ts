@@ -59,6 +59,7 @@ const nextId = (prefix: string) => `${prefix}-${++messageIdCounter}-${Date.now()
 const TOKEN_EVENT_TYPE = 7;
 const COMPLETE_EVENT_TYPE = 4;
 const ERROR_EVENT_TYPE = 5;
+const CITATIONS_EVENT_TYPE = 1;
 
 // Soglie derivate frontend (backend non espone isLowQuality/outOfContext)
 const LOW_QUALITY_THRESHOLD = 0.7;
@@ -77,6 +78,46 @@ interface StreamingCompletePayload {
 
 interface ErrorPayload {
   readonly message?: string;
+}
+
+// Issue #V: the QA stream (POST /agents/qa/stream) delivers citations in the
+// type-1 (CITATIONS) event with the raw shape { text, source:"PDF:{docId}",
+// page, score }, while the type-4 COMPLETE payload carries citations:null in
+// production. Map that shape to the FE Citation type so the chat renders
+// CitationChip and can open the source PDF at the cited page.
+interface SseRegion {
+  readonly page: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+interface SseCitation {
+  readonly text?: string;
+  readonly source?: string;
+  readonly page?: number;
+  readonly score?: number;
+  // SP-C (#3407): Full-gated region grounding emitted by the BE Snippet (camelCase wire).
+  readonly regions?: ReadonlyArray<SseRegion> | null;
+  readonly charStart?: number | null;
+  readonly charEnd?: number | null;
+}
+
+function mapSseCitation(c: SseCitation): Citation {
+  return {
+    documentId: (c.source ?? '').replace(/^PDF:/, ''),
+    pageNumber: c.page ?? 0,
+    snippet: c.text ?? '',
+    relevanceScore: c.score ?? 0,
+    copyrightTier: 'full',
+    // SP-C (#3407): surface the region overlay + char offsets (already Full-gated by the BE).
+    regions: c.regions
+      ? c.regions.map(r => ({ page: r.page, x: r.x, y: r.y, width: r.width, height: r.height }))
+      : null,
+    charStart: c.charStart ?? null,
+    charEnd: c.charEnd ?? null,
+  };
 }
 
 function toChatMessage(dto: ChatThreadMessageDto, idx: number): ChatMessage {
@@ -149,6 +190,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
       setIsError(false);
 
       let answerBuffer = '';
+      let collectedCitations: Citation[] = [];
 
       try {
         const stream = qaStream({
@@ -162,18 +204,30 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             const tokenData = event.data;
             if (typeof tokenData === 'string') {
               answerBuffer += tokenData;
-            } else if (
-              typeof tokenData === 'object' &&
-              tokenData !== null &&
-              'content' in tokenData
-            ) {
-              answerBuffer += String((tokenData as { content?: unknown }).content ?? '');
+            } else if (typeof tokenData === 'object' && tokenData !== null) {
+              // Issue #2712: the SSE token event (type 7) carries { token: "..." } — see
+              // chatClient.qaStream, which yields the raw event.data. The previous code only
+              // handled { content }, so the answer text was NEVER accumulated (empty bubble).
+              // Support both shapes (token first) plus the plain-string form used in tests.
+              const obj = tokenData as { token?: unknown; content?: unknown };
+              answerBuffer += String(obj.token ?? obj.content ?? '');
             }
           } else if (event.type === COMPLETE_EVENT_TYPE) {
             const payload = event.data as StreamingCompletePayload;
             const confidence = payload.confidence ?? undefined;
-            const citations = payload.Citations ?? payload.citations ?? [];
-            const isLowQuality = confidence !== undefined && confidence < LOW_QUALITY_THRESHOLD;
+            // Issue #V: prefer citations from the COMPLETE payload when present
+            // (back-compat with older streams/tests), otherwise fall back to the
+            // ones captured from the type-1 CITATIONS event (production path).
+            const streamedCitations = payload.Citations ?? payload.citations ?? [];
+            const citations = streamedCitations.length > 0 ? streamedCitations : collectedCitations;
+            // Issue #2712: a grounded answer (valid citations) must NOT be degraded to the
+            // "Non sono certo" card. The numeric confidence is currently compressed (rank-based),
+            // so gating solely on it hid correct answers. Treat low-quality only when the RAG
+            // found NO context (no citations) AND confidence is below threshold.
+            const isLowQuality =
+              citations.length === 0 &&
+              confidence !== undefined &&
+              confidence < LOW_QUALITY_THRESHOLD;
             const outOfContext =
               citations.length === 0 &&
               (confidence === undefined || confidence < OUT_OF_CONTEXT_THRESHOLD);
@@ -197,8 +251,16 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
           } else if (event.type === ERROR_EVENT_TYPE) {
             const errPayload = event.data as ErrorPayload;
             throw new Error(errPayload?.message ?? 'QA stream error');
+          } else if (event.type === CITATIONS_EVENT_TYPE) {
+            // Issue #V: the early CITATIONS event is the ONLY place citations
+            // are delivered — the COMPLETE payload's citations field is null in
+            // production. Capture + map them here so they survive to the bubble.
+            const citData = event.data as { citations?: ReadonlyArray<SseCitation> } | null;
+            if (citData && Array.isArray(citData.citations)) {
+              collectedCitations = citData.citations.map(mapSseCitation);
+            }
           }
-          // Ignora type=0 (StateUpdate), type=1 (Citations early), type=8 (Follow-up).
+          // Ignora type=0 (StateUpdate) e type=8 (Follow-up).
         }
       } catch (e) {
         setIsError(true);

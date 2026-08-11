@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -39,7 +40,7 @@ internal sealed class RequestDeleteSharedGameCommandHandler : ICommandHandler<Re
 
         // Verify game exists
         _ = await _gameRepository.GetByIdAsync(command.GameId, cancellationToken).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Shared game with ID {command.GameId} not found");
+            ?? throw new NotFoundException("SharedGame", command.GameId.ToString());
 
         // Create delete request
         var deleteRequest = SharedGameDeleteRequest.Create(

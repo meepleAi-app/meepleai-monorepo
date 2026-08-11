@@ -91,11 +91,58 @@ describe('GameNightRsvpActionBar', () => {
     expect(region).toBeInTheDocument();
   });
 
+  // #2989 Screen C mobile parity: RSVP CTAs must clear the 44px touch-target
+  // floor on mobile (SP8 gap B-02 regression guard — the 24px `.hy-goto` bug
+  // must not repeat). The button primitive `size="sm"` alone renders h-9 (36px),
+  // so a `min-h-[44px]` override is applied to every RSVP button.
+  it('renders RSVP buttons at the 44px touch-target floor (SP8 B-02 guard)', () => {
+    renderBar();
+    for (const testId of ['rsvp-btn-accepted', 'rsvp-btn-maybe', 'rsvp-btn-declined']) {
+      expect(screen.getByTestId(testId).className).toContain('min-h-[44px]');
+    }
+  });
+
   it('current response with no pending uses entity-toned selected styling', () => {
     renderBar({ currentResponse: 'Accepted' });
     const acceptBtn = screen.getByTestId('rsvp-btn-accepted');
     // Entity tokens for selected state come from BUTTONS config — verify success palette applied.
-    expect(acceptBtn.className).toContain('bg-success');
+    expect(acceptBtn.className).toContain('border-[hsl(var(--c-success))]');
+  });
+
+  // #2989 Screen C: `compact` sheds the card chrome + visible heading ONLY at
+  // <md (max-md: variants) so the control fits a mobile sticky bar, while the
+  // full card is preserved at md+. jsdom can't evaluate the media query, so we
+  // assert the class contract + that a11y (the region landmark) is unaffected.
+  describe('compact prop (#2989 Screen C)', () => {
+    it('keeps the full card chrome + heading by default (compact=false)', () => {
+      renderBar();
+      const region = screen.getByRole('region', { name: 'La tua risposta' });
+      expect(region).toHaveAttribute('data-compact', 'false');
+      expect(region.className).toContain('border');
+      expect(region.className).not.toContain('max-md:border-0');
+      // Heading is visible (no responsive hide class).
+      expect(screen.getByText('La tua risposta').className).not.toContain('max-md:hidden');
+    });
+
+    it('sheds card chrome + hides the heading below md when compact', () => {
+      renderBar({ compact: true });
+      const region = screen.getByRole('region', { name: 'La tua risposta' });
+      expect(region).toHaveAttribute('data-compact', 'true');
+      expect(region.className).toContain('max-md:border-0');
+      expect(region.className).toContain('max-md:bg-transparent');
+      expect(region.className).toContain('max-md:p-0');
+      // Heading still rendered (a11y) but visually hidden at <md.
+      expect(screen.getByText('La tua risposta').className).toContain('max-md:hidden');
+    });
+
+    it('preserves the labelled region landmark for screen readers when compact', () => {
+      renderBar({ compact: true });
+      expect(screen.getByRole('region', { name: 'La tua risposta' })).toBeInTheDocument();
+      // The three CTAs are still present + still meet the 44px floor.
+      for (const testId of ['rsvp-btn-accepted', 'rsvp-btn-maybe', 'rsvp-btn-declined']) {
+        expect(screen.getByTestId(testId).className).toContain('min-h-[44px]');
+      }
+    });
   });
 
   describe('mode prop (issue #1169)', () => {

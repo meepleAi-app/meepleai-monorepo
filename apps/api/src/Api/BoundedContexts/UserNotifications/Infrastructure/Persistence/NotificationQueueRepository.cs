@@ -7,6 +7,7 @@ using Api.Infrastructure.Entities.UserNotifications;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 
@@ -17,9 +18,15 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Persistence;
 /// </summary>
 internal class NotificationQueueRepository : RepositoryBase, INotificationQueueRepository
 {
-    public NotificationQueueRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
+    private readonly ILogger<NotificationQueueRepository> _logger;
+
+    public NotificationQueueRepository(
+        MeepleAiDbContext dbContext,
+        IDomainEventCollector eventCollector,
+        ILogger<NotificationQueueRepository> logger)
         : base(dbContext, eventCollector)
     {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task AddAsync(NotificationQueueItem item, CancellationToken ct = default)
@@ -78,7 +85,9 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             .Take(batchSize)
             .ToListAsync(ct).ConfigureAwait(false);
 
-        return entities.Select(MapToDomain).ToList();
+        var (items, poisonIds) = MaterializeResilient(entities);
+        await DeadLetterUnmappableAsync(poisonIds, ct).ConfigureAwait(false);
+        return items;
     }
 
     public async Task<int> GetPendingCountAsync(CancellationToken ct = default)
@@ -89,6 +98,21 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             .CountAsync(e =>
                 (e.Status == "pending") ||
                 (e.Status == "failed" && e.NextRetryAt != null && e.NextRetryAt <= now),
+                ct).ConfigureAwait(false);
+    }
+
+    public async Task<int> GetPendingCountByChannelsAsync(
+        IReadOnlyCollection<NotificationChannelType> channels, CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        var channelValues = channels.Select(c => c.Value).ToArray();
+
+        return await DbContext.Set<NotificationQueueEntity>()
+            .AsNoTracking()
+            .CountAsync(e =>
+                channelValues.Contains(e.ChannelType) &&
+                ((e.Status == "pending") ||
+                 (e.Status == "failed" && e.NextRetryAt != null && e.NextRetryAt <= now)),
                 ct).ConfigureAwait(false);
     }
 
@@ -109,7 +133,80 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
             .Take(batchSize)
             .ToListAsync(ct).ConfigureAwait(false);
 
-        return entities.Select(MapToDomain).ToList();
+        // These rows are already dead-lettered; an unmappable one is just skipped (no re-dead-letter).
+        var (items, _) = MaterializeResilient(entities);
+        return items;
+    }
+
+    /// <summary>
+    /// Materializes entities to domain items, isolating any row whose payload cannot be
+    /// deserialized (unknown "$type", corrupt JSON, …) so a single poison row can never fail the
+    /// whole batch — the root cause of the #3057 email-notification outage, where one malformed
+    /// row made the entire <c>GetPendingByChannelAsync</c> query throw and no email was processed.
+    /// Returns the successfully mapped items plus the ids of the rows that failed to map.
+    /// </summary>
+    private (List<NotificationQueueItem> Items, List<Guid> PoisonIds) MaterializeResilient(
+        IReadOnlyList<NotificationQueueEntity> entities)
+    {
+        var items = new List<NotificationQueueItem>(entities.Count);
+        var poisonIds = new List<Guid>();
+
+        foreach (var entity in entities)
+        {
+            try
+            {
+                items.Add(MapToDomain(entity));
+            }
+#pragma warning disable CA1031 // one malformed row must not abort the batch — isolate + dead-letter it
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogError(
+                    ex,
+                    "notification_queue_items {NotificationQueueItemId} could not be materialized (payload deserialization failed); dead-lettering it so it cannot block the batch",
+                    entity.Id);
+                poisonIds.Add(entity.Id);
+            }
+        }
+
+        return (items, poisonIds);
+    }
+
+    /// <summary>
+    /// Best-effort dead-letters rows that could not be materialized, via a targeted UPDATE — the
+    /// domain aggregate cannot be reconstituted from an unmappable payload, so this bypasses the
+    /// aggregate. Stops a poison row from being re-queried (and re-logged) every cycle. #3057.
+    /// Genuinely best-effort: its own failure is swallowed so it can never discard the batch's
+    /// already-materialized deliverable items — the poison rows simply stay isolated (they never
+    /// re-enter the good set) and are re-attempted next cycle.
+    /// </summary>
+    private async Task DeadLetterUnmappableAsync(IReadOnlyCollection<Guid> poisonIds, CancellationToken ct)
+    {
+        if (poisonIds.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await DbContext.Set<NotificationQueueEntity>()
+                .Where(e => poisonIds.Contains(e.Id))
+                .ExecuteUpdateAsync(s => s
+                    .SetProperty(e => e.Status, "dead_letter")
+                    .SetProperty(e => e.NextRetryAt, (DateTime?)null)
+                    .SetProperty(e => e.LastError, "Row could not be materialized (unmappable payload); isolated by #3057 guard"),
+                    ct)
+                .ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // best-effort: dead-lettering must never discard the batch's deliverable items
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(
+                ex,
+                "Failed to dead-letter {Count} unmappable notification_queue_items row(s); they stay isolated from the batch and are re-attempted next cycle",
+                poisonIds.Count);
+        }
     }
 
     private static NotificationQueueEntity MapToPersistence(NotificationQueueItem item)

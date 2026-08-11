@@ -11,9 +11,6 @@ export type { PublicFooterProps } from './PublicFooter';
 export { PublicLayout } from './PublicLayout';
 export type { PublicLayoutProps } from './PublicLayout';
 
-export { PublicLayoutWrapper } from './PublicLayoutWrapper';
-export type { PublicLayoutWrapperProps } from './PublicLayoutWrapper';
-
 /**
  * Auth Layout Components - Issue #2231
  *
@@ -22,4 +19,3 @@ export type { PublicLayoutWrapperProps } from './PublicLayoutWrapper';
 
 export { AuthLayout } from './AuthLayout';
 export type { AuthLayoutProps } from './AuthLayout';
-

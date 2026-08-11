@@ -49,6 +49,9 @@ smoke: ## Run automated smoke set against BASE_URL (default localhost:8080) — 
 smoke-staging: ## Run automated smoke set against staging (https://meepleai.app)
 	bash scripts/smoke-set.sh https://meepleai.app $(TEST_EMAIL) $(TEST_PASSWORD)
 
+rag-smoke: ## RAG retrieval smoke: canonical queries vs golden baseline (#2480). --update-baseline to capture.
+	bash scripts/rag-smoke-assert.sh $(RAG_SMOKE_ARGS)
+
 smoke-pg-readback: ## Run pg-readback.sh DB-direct migration validation (requires open tunnel)
 	bash scripts/pg-readback.sh
 
@@ -61,12 +64,22 @@ staging-minimal: ## Deploy staging single-tester profile (~3GB RAM) — edge via
 		--profile ai-essential --profile monitoring-essential up -d
 
 staging-with-tutor: ## Deploy staging single-tester + orchestration-service for tutor agents (~5GB RAM)
-	$(COMPOSE) -f compose.staging.yml \
+	# Issue #3617: compose.staging.tutor.yml valorizza ORCHESTRATION_SERVICE_URL sull'api, così
+	# l'health check `orchestrator` viene registrato quando il servizio gira davvero. Va aggiunto
+	# QUI e non in compose.staging.yml: le env var non sono condizionabili per profilo, e settarla
+	# per lo staging standard (dove orchestration non è deployato) riaprirebbe #3339.
+	$(COMPOSE) -f compose.staging.yml -f compose.staging.tutor.yml \
 		--profile ai-essential --profile monitoring-essential --profile tutor-agents up -d
 
 staging-tutor-down: ## Stop only orchestration-service (keep rest of staging running)
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents stop orchestration-service
 	$(COMPOSE) -f compose.staging.yml --profile tutor-agents rm -f orchestration-service
+	# Issue #3617: ricrea l'api SENZA l'override del tutor. Senza questo passo il container
+	# conserva ORCHESTRATION_SERVICE_URL dall'avvio precedente: il check resta registrato mentre
+	# orchestration non c'è più → Degraded permanente, cioè #3339 di nuovo, e per giunta in una
+	# forma transitoria che non si spiega leggendo compose.staging.yml.
+	$(COMPOSE) -f compose.staging.yml \
+		--profile ai-essential --profile monitoring-essential up -d --force-recreate api
 
 staging-core: ## (Deprecated, use staging-minimal) Deploy staging core only — no AI services
 	$(COMPOSE) -f compose.staging.yml \
@@ -239,10 +252,16 @@ logs-ui: ## Open Grafana log explorer in browser (staging)
 seed-status: ## Report local snapshot freshness (age, schema drift, embedding model)
 	@bash scripts/seed-status.sh
 
+seed-status-badge: ## Regenerate README snapshot-freshness badge between <!-- snapshot-badge --> markers
+	@BADGE=$$(bash scripts/seed-status.sh --badge 2>/dev/null); \
+	perl -i -0pe "s|<!-- snapshot-badge:start -->.*?<!-- snapshot-badge:end -->|$$BADGE|gs" \
+	  ../README.md && \
+	echo "README.md badge updated: $$BADGE"
+
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
 	$(COMPOSE) -f compose.dev.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
-	@bash scripts/wait-for-healthy.sh api 180
+	@bash scripts/wait-for-healthy.sh api $${SEED_INDEX_HEALTH_TIMEOUT:-180}
 	@bash scripts/seed-index-wait.sh
 	@bash scripts/seed-index-dump.sh
 	@echo "::notice:: snapshot pronto in data/snapshots/ — lancia 'make seed-index-publish' per caricarlo"
@@ -357,11 +376,6 @@ test-e2e: ## Playwright E2E tests (requires make dev + api + web running) — mi
 	cd $(WEB) && pnpm test:e2e
 	@echo "✅ E2E tests passed"
 
-test-visual: ## Visual regression tests — mirrors test-visual.yml
-	@echo "🔵 Visual regression tests..."
-	cd $(WEB) && pnpm build && pnpm test:e2e:visual --project=desktop-chrome
-	@echo "✅ Visual tests passed"
-
 test-perf: ## K6 smoke performance tests (requires api running) — mirrors test-performance.yml
 	@echo "🔵 Performance smoke tests..."
 	@which k6 > /dev/null 2>&1 || (echo "❌ k6 not installed: https://k6.io/docs/get-started/installation/" && exit 1)
@@ -414,7 +428,69 @@ game-reset-verify: ## Run verification gates after EF migration applied (ENV=dev
 	./scripts/game-reset/04-verify-gates.sh scripts/game-reset/.env.$(ENV)
 
 game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
-	../tests/scripts/game-reset/rehearse-rollback.sh
+	./scripts/game-reset/rehearse-rollback.sh
+
+# === Corpus re-index orchestration (issue #3269 SP3 Slice 3 / D4) ===
+# Script lives in infra/scripts/reindex-corpus/. Wraps POST /admin/queue/reindex-ready
+# in a drain loop until the whole Ready corpus is re-indexed to the server's current
+# IndexerVersion — now coordinate-aware v1.2 (region grounding, #3409 SP-E / epic #3403).
+# 🔴 Precondition: the `unstructured` container MUST be the SP-B coordinate-aware build,
+# else the re-extract silently produces bbox-less chunks (regions stay null).
+
+reindex-corpus-help: ## Show corpus re-index (SP3 #3269) workflow help
+	@echo "Corpus big-bang re-index (SP3 #3269 D4) — usage:"
+	@echo "  make reindex-corpus ENV=staging EXTRA=--dry-run   # 1. preview (verifies auth, prints plan, NO enqueue)"
+	@echo "  make reindex-corpus ENV=staging                   # 2. real run: loop reindex-ready until corpus drained"
+	@echo ""
+	@echo "For prod, pass IMEANIT=--i-mean-it (production safety guard) — always dry-run first:"
+	@echo "  make reindex-corpus ENV=prod EXTRA=--dry-run IMEANIT=--i-mean-it"
+	@echo "  make reindex-corpus ENV=prod IMEANIT=--i-mean-it"
+	@echo ""
+	@echo "Per env, create infra/scripts/reindex-corpus/.env.<ENV> from .env.example (NEVER commit filled files)."
+	@echo "Full runbook: docs/for-developers/operations/2026-07-26-corpus-reindex-runbook.md"
+
+reindex-corpus: ## Big-bang re-index Ready PDFs to coordinate-aware v1.2 (ENV=staging|prod|dev; EXTRA=--dry-run for preview; prod needs IMEANIT=--i-mean-it)
+	@test -n "$(ENV)" || (echo "ENV required: make reindex-corpus ENV=staging" && exit 64)
+	@test -f scripts/reindex-corpus/.env.$(ENV) || (echo "Missing scripts/reindex-corpus/.env.$(ENV) — copy from .env.example" && exit 66)
+	./scripts/reindex-corpus/reindex-corpus.sh scripts/reindex-corpus/.env.$(ENV) $(EXTRA) $(IMEANIT)
+
+# === RAG evaluation admin runner (issue #3433, Task 6) ===
+# Wraps POST /api/v1/admin/eval/retrieval (admin-gated). Retrieved chunk ids only make sense
+# against the coordinate-aware v1.2 corpus, so a real run against staging is deferred until
+# the #3427 re-index completes — for now this target is for local ad-hoc smoke only.
+
+eval-retrieval: ## Run RAG retrieval evaluation via admin endpoint (DATASET=path required; MAX_SAMPLES optional int; BASE_URL default localhost:8080; ADMIN_EMAIL/ADMIN_PASSWORD to auto-login). Deferred until #3427 corpus re-index completes.
+	@test -n "$(DATASET)" || (echo "DATASET required: make eval-retrieval DATASET=../tests/evaluation-datasets/meepleai-en-seed.json" && exit 64)
+	@cookie=$$(mktemp); trap 'rm -f "$$cookie"' EXIT; \
+	base="$(BASE_URL)"; [ -n "$$base" ] || base="http://localhost:8080"; \
+	max="$(MAX_SAMPLES)"; [ -n "$$max" ] || max="null"; \
+	if [ -n "$(ADMIN_EMAIL)" ] && [ -n "$(ADMIN_PASSWORD)" ]; then \
+		curl -s -o /dev/null -c "$$cookie" -X POST "$$base/api/v1/auth/login" \
+			-H 'Content-Type: application/json' \
+			-d "{\"email\":\"$(ADMIN_EMAIL)\",\"password\":\"$(ADMIN_PASSWORD)\"}"; \
+	fi; \
+	curl -s -b "$$cookie" -X POST "$$base/api/v1/admin/eval/retrieval" \
+		-H 'Content-Type: application/json' \
+		-d "{\"datasetPath\":\"$(DATASET)\",\"maxSamples\":$$max}" \
+		| (command -v jq >/dev/null 2>&1 && jq . || cat)
+
+eval-merge-labels: ## Merge a human-reviewed LabelingReview into a dataset and persist it (DATASET=path + REVIEW=path-to-review-json required; OUTPUT optional, defaults to DATASET; BASE_URL default localhost:8080; ADMIN_EMAIL/ADMIN_PASSWORD to auto-login). Recall labeling deferred until #3427 corpus re-index completes.
+	@test -n "$(DATASET)" || (echo "DATASET required: make eval-merge-labels DATASET=../tests/evaluation-datasets/meepleai-en-seed.json REVIEW=review.json" && exit 64)
+	@test -n "$(REVIEW)" || (echo "REVIEW required: path to a JSON file containing the reviewed LabelingReview ({\"items\":[...]})" && exit 64)
+	@test -f "$(REVIEW)" || (echo "REVIEW file not found: $(REVIEW)" && exit 66)
+	@cookie=$$(mktemp); trap 'rm -f "$$cookie"' EXIT; \
+	base="$(BASE_URL)"; [ -n "$$base" ] || base="http://localhost:8080"; \
+	out="$(OUTPUT)"; [ -n "$$out" ] || out="$(DATASET)"; \
+	if [ -n "$(ADMIN_EMAIL)" ] && [ -n "$(ADMIN_PASSWORD)" ]; then \
+		curl -s -o /dev/null -c "$$cookie" -X POST "$$base/api/v1/auth/login" \
+			-H 'Content-Type: application/json' \
+			-d "{\"email\":\"$(ADMIN_EMAIL)\",\"password\":\"$(ADMIN_PASSWORD)\"}"; \
+	fi; \
+	review=$$(cat "$(REVIEW)"); \
+	curl -s -b "$$cookie" -X POST "$$base/api/v1/admin/eval/merge-labels" \
+		-H 'Content-Type: application/json' \
+		-d "{\"datasetPath\":\"$(DATASET)\",\"outputPath\":\"$$out\",\"review\":$$review}" \
+		| (command -v jq >/dev/null 2>&1 && jq . || cat)
 
 .PHONY: dev dev-core dev-down \
         tunnel tunnel-stop tunnel-status integration-check integration \
@@ -424,7 +500,9 @@ game-reset-rollback-rehearse: ## Run disposable docker rollback rehearsal
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
-        sec-scan sec-pentest security-audit test-e2e test-visual test-perf validate-workflows \
+        sec-scan sec-pentest security-audit test-e2e test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \
-        game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse
+        game-reset-help game-reset-backup game-reset-mapping game-reset-relink game-reset-verify game-reset-rollback-rehearse \
+        reindex-corpus reindex-corpus-help \
+        eval-retrieval eval-merge-labels

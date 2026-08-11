@@ -8,6 +8,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 /**
  * Document types supported in the system
  */
@@ -39,7 +41,7 @@ export type CreateDocumentCollectionRequest = z.infer<typeof createDocumentColle
  */
 export const documentCollectionSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   name: z.string(),
   description: z.string().nullable(),
   documentCount: z.number().int().min(0),

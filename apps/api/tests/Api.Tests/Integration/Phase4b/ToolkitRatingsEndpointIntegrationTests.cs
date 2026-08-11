@@ -303,8 +303,7 @@ public sealed class ToolkitRatingsEndpointIntegrationTests : IAsyncLifetime
                 "ScoringTemplateJson", "TurnTemplateJson", "StateTemplate",
                 "AgentConfig",
                 "TemplateStatus", "IsTemplate",
-                "ReviewNotes", "ReviewedByUserId", "ReviewedAt",
-                "RowVersion"
+                "ReviewNotes", "ReviewedByUserId", "ReviewedAt"
             ) VALUES (
                 {0}, {1}, NULL, {2}, 1,
                 {3}, {4},
@@ -315,8 +314,7 @@ public sealed class ToolkitRatingsEndpointIntegrationTests : IAsyncLifetime
                 NULL, NULL, NULL,
                 NULL,
                 {7}, {8},
-                NULL, NULL, NULL,
-                E'\\x01'
+                NULL, NULL, NULL
             )
             """;
 

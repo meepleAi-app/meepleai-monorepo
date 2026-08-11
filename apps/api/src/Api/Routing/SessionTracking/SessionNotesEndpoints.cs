@@ -7,6 +7,12 @@ namespace Api.Routing;
 
 /// <summary>
 /// Private notes endpoints (Issue #3344): save, reveal, hide, delete, get notes.
+///
+/// Ownership identity (Issue #3263): every endpoint derives the caller identity from
+/// the authenticated principal (ClaimsPrincipal.GetUserId) and uses it as the note
+/// owner / requester. The client-supplied requesterId/participantId are NEVER trusted —
+/// doing so was an IDOR (any authenticated user could read/mutate another participant's
+/// private notes by spoofing their id).
 /// </summary>
 internal static class SessionNotesEndpoints
 {
@@ -25,15 +31,23 @@ internal static class SessionNotesEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/private-notes", async (
             Guid sessionId,
             SaveNoteCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
             if (sessionId != command.SessionId)
             {
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // Owner identity comes from the authenticated principal, not the request body.
+            var result = await mediator.Send(command with { ParticipantId = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/private-notes/{result.NoteId}", result);
         })
         .RequireAuthenticatedUser()
@@ -53,15 +67,22 @@ internal static class SessionNotesEndpoints
             Guid sessionId,
             Guid noteId,
             RevealNoteCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
             if (sessionId != command.SessionId || noteId != command.NoteId)
             {
                 return Results.BadRequest(new { error = "Session or Note ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            var result = await mediator.Send(command with { ParticipantId = userId }, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
@@ -82,15 +103,22 @@ internal static class SessionNotesEndpoints
             Guid sessionId,
             Guid noteId,
             HideNoteCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
             if (sessionId != command.SessionId || noteId != command.NoteId)
             {
                 return Results.BadRequest(new { error = "Session or Note ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            var result = await mediator.Send(command with { ParticipantId = userId }, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
@@ -110,11 +138,17 @@ internal static class SessionNotesEndpoints
         group.MapDelete("/game-sessions/{sessionId:guid}/private-notes/{noteId:guid}", async (
             Guid sessionId,
             Guid noteId,
-            Guid participantId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var command = new DeleteNoteCommand(noteId, sessionId, participantId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new DeleteNoteCommand(noteId, sessionId, userId);
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -133,11 +167,17 @@ internal static class SessionNotesEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/private-notes", async (
             Guid sessionId,
-            Guid requesterId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetSessionNotesQuery(sessionId, requesterId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionNotesQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -145,7 +185,7 @@ internal static class SessionNotesEndpoints
         .WithName("GetSessionNotes")
         .WithTags("SessionTracking", "PrivateNotes")
         .WithSummary("Get all visible notes in the session")
-        .WithDescription("Returns the requester's own notes and any revealed notes from other participants.")
+        .WithDescription("Returns the caller's own notes and any revealed notes from other participants.")
         .Produces(200)
         .Produces(401);
     }
@@ -155,11 +195,17 @@ internal static class SessionNotesEndpoints
         group.MapGet("/game-sessions/{sessionId:guid}/private-notes/{noteId:guid}", async (
             Guid sessionId,
             Guid noteId,
-            Guid requesterId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetNoteByIdQuery(noteId, requesterId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetNoteByIdQuery(noteId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
             if (result is null)
@@ -173,7 +219,7 @@ internal static class SessionNotesEndpoints
         .WithName("GetNoteById")
         .WithTags("SessionTracking", "PrivateNotes")
         .WithSummary("Get a specific note by ID")
-        .WithDescription("Returns the note if the requester is the owner or if the note is revealed.")
+        .WithDescription("Returns the note if the caller is the owner or if the note is revealed.")
         .Produces(200)
         .Produces(401)
         .Produces(404);

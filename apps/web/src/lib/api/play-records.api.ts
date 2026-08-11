@@ -36,6 +36,17 @@ export class UpdatePlayRecordError extends Error {
   }
 }
 
+/**
+ * #13 / Invariante 4: a successful update carries a non-blocking warning when the
+ * user had another session live (InProgress) at save time. `warningCode` is
+ * `'SAVED_WHILE_LIVE_ACTIVE'` in that case and `liveSessionId` is the live
+ * session's id for the "go to live" deep-link. Both undefined on a normal save.
+ */
+export interface UpdatePlayRecordSuccess {
+  readonly warningCode?: string;
+  readonly liveSessionId?: string;
+}
+
 export interface UploadPlayRecordPhotoResult {
   photoId: string;
   photoUrl: string;
@@ -132,14 +143,24 @@ export const playRecordsApi = {
    * #2437-1: Sends optional `xmin` for optimistic-concurrency; throws `UpdatePlayRecordError`
    * with `kind='conflict'` on 409 + `X-Warning-Code: concurrent-edit`.
    */
-  async updateRecord(recordId: string, updates: UpdatePlayRecordRequest): Promise<void> {
+  async updateRecord(
+    recordId: string,
+    updates: UpdatePlayRecordRequest
+  ): Promise<UpdatePlayRecordSuccess> {
     const res = await fetch(`${BASE_URL}/${recordId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(updates),
     });
-    if (res.ok) return;
+    // #13: on success, surface the non-blocking warning headers (if any) instead of
+    // discarding them — the caller fires the "saved while live" amber toast.
+    if (res.ok) {
+      return {
+        warningCode: res.headers.get('X-Warning-Code') ?? undefined,
+        liveSessionId: res.headers.get('X-Live-Session-Id') ?? undefined,
+      };
+    }
     const warningCode = res.headers.get('X-Warning-Code') ?? undefined;
     if (res.status === 409) {
       throw new UpdatePlayRecordError(

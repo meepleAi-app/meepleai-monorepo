@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
 using Api.Infrastructure.Extensions;
@@ -49,6 +50,17 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Verify session exists and can be finalized
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
+
+        // IDOR guard (security review high-priority): only the session owner or a registered
+        // (User-linked) participant may finalize. Finalizing destroys the live session and triggers
+        // the KB cleanup + game-night link-close cascade, so this must run before any state mutation.
+        // Mirrors UpdateSessionScoresCommandHandler.
+        if (session.UserId != request.RequestedBy &&
+            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        {
+            throw new ForbiddenException(
+                $"User {request.RequestedBy} is not authorized to finalize session {request.SessionId}.");
+        }
 
         if (session.Status != SessionStatus.Active && session.Status != SessionStatus.Paused)
         {
@@ -148,6 +160,34 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Resolve GameNightId via the link row (if any) so the diary entry is
         // correlated with the cross-game timeline.
         var gameNightId = await _db.ResolveGameNightIdAsync(session.Id, cancellationToken).ConfigureAwait(false);
+
+        // Issue #3157 C1 — close this session's game_night_sessions link so a finalized
+        // session does not leave an orphaned open live-slot. Without this, once the
+        // restored ix_game_night_sessions_unique_active partial unique index is in place a
+        // NEW session in the same night (minting a fresh InProgress link) would hit a unique
+        // violation.
+        //
+        // Epic #3188 Slice 4 — broaden the close to BOTH non-terminal link states:
+        //   • InProgress — a session that went live (Slice 2 go-live promoted Pending → InProgress).
+        //   • Pending    — a never-promoted DRAFT link (Slice 3: a direct create is born Pending and
+        //                  the Session stays Active without ever going live). Finalizing such a Session
+        //                  must not leave its draft link orphaned as Pending; it becomes Completed too
+        //                  (parity with the live path — a finalized session's link is terminal).
+        // Guarded on the two non-terminal statuses → idempotent, and a no-op when Path B
+        // (CompleteGameNightSession) or the CompleteGameNight cascade already closed the link to a
+        // terminal state (Completed / Skipped).
+        var openLink = await _db.GameNightSessions
+            .FirstOrDefaultAsync(
+                l => l.SessionId == session.Id
+                    && (l.Status == nameof(GameNightSessionStatus.InProgress)
+                        || l.Status == nameof(GameNightSessionStatus.Pending)),
+                cancellationToken)
+            .ConfigureAwait(false);
+        if (openLink is not null)
+        {
+            openLink.Status = nameof(GameNightSessionStatus.Completed);
+            openLink.CompletedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        }
 
         var finalizedAt = session.FinalizedAt ?? _timeProvider.GetUtcNow().UtcDateTime;
         var durationSeconds = (int)(finalizedAt - session.SessionDate).TotalSeconds;

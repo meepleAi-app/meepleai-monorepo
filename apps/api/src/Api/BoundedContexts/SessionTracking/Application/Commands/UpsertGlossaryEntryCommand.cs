@@ -8,4 +8,6 @@ public sealed record UpsertGlossaryEntryCommand(
     Guid EntryId,
     string TermEn,
     string TermIt,
-    Guid CallerUserId) : IRequest<GamebookGlossaryEntryDto>;
+    Guid CallerUserId,
+    // #2638 / SI-7: null = leave existing contexts unchanged; non-null = full-set replace.
+    IReadOnlyList<GlossaryContextDto>? Contexts = null) : IRequest<GamebookGlossaryEntryDto>;

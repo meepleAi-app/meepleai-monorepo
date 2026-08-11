@@ -136,6 +136,34 @@ internal sealed class EmailTemplateService : IEmailTemplateService
         return WrapInBaseTemplate($"{Escape(title)} - MeepleAI", content);
     }
 
+    public string RenderGenericNotification(string userName, string title, string bodyText, string? deepLinkPath)
+    {
+        var cta = string.Empty;
+        if (!string.IsNullOrWhiteSpace(deepLinkPath))
+        {
+            var url = $"{_frontendBaseUrl.TrimEnd('/')}{deepLinkPath}";
+            cta = $@"
+        <div style=""text-align: center; margin: 30px 0;"">
+            <a href=""{Escape(url)}"" style=""background-color: #2c3e50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Open in MeepleAI</a>
+        </div>";
+        }
+
+        var content = $@"
+        <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 2px solid #2c3e50; margin-bottom: 20px;"">
+            <h2 style=""color: #2c3e50; margin-top: 0;"">{Escape(title)}</h2>
+        </div>
+
+        <p>Hello {Escape(userName)},</p>
+
+        <p>{Escape(bodyText)}</p>
+        {cta}
+        <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
+            You are receiving this because of your MeepleAI notification settings.
+        </p>";
+
+        return WrapInBaseTemplate($"{title} - MeepleAI", content);
+    }
+
     private string WrapInBaseTemplate(string title, string content)
     {
         var preferencesUrl = $"{_frontendBaseUrl}/settings/notifications";

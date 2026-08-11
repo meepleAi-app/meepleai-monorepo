@@ -6,7 +6,7 @@
  * their own unit tests; this suite verifies wiring + state branching.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { GameNightDto } from '@/lib/api/schemas/game-nights.schemas';
@@ -38,10 +38,21 @@ vi.mock('@/hooks/useTranslation', () => ({
 
 const useUpcomingMock = vi.fn();
 const useMineMock = vi.fn();
+const rsvpMutateMock = vi.fn();
+// #3191: controllable RSVP mutation state so a test can simulate an in-flight RSVP.
+const rsvpMock =
+  vi.fn<() => { mutate: typeof rsvpMutateMock; isPending: boolean; variables?: { id: string } }>();
+// #3191: controllable network status so a test can simulate offline.
+const networkStatusMock = vi.fn<() => { isOffline: boolean }>();
 
 vi.mock('@/hooks/queries/useGameNights', () => ({
   useUpcomingGameNights: () => useUpcomingMock(),
   useMyGameNights: () => useMineMock(),
+  useRsvpGameNight: () => rsvpMock(),
+}));
+
+vi.mock('@/hooks/useNetworkStatus', () => ({
+  useNetworkStatus: () => networkStatusMock(),
 }));
 
 const useCurrentUserMock = vi.fn();
@@ -103,6 +114,9 @@ beforeEach(() => {
   for (const k of Object.keys(searchParamsState)) delete searchParamsState[k];
 
   useCurrentUserMock.mockReturnValue({ data: { id: VIEWER_ID } });
+  // #3191: default online + idle mutation; individual tests override.
+  rsvpMock.mockReturnValue({ mutate: rsvpMutateMock, isPending: false, variables: undefined });
+  networkStatusMock.mockReturnValue({ isOffline: false });
 });
 
 // ─── Tests ────────────────────────────────────────────────────────────────
@@ -296,5 +310,198 @@ describe('GameNightsContent (orchestrator)', () => {
     expect(replaceMock).toHaveBeenCalled();
     const target = String(replaceMock.mock.calls[0]?.[0] ?? '');
     expect(target).toMatch(/filter=organizing/);
+  });
+
+  // #2978 (invariante #17): a pending invitee can RSVP inline from the list card.
+  it('wires the RSVP mutation when a pending invitee clicks Declina', () => {
+    searchParamsState.view = 'list';
+    const invited = makeDto({
+      id: '99999999-9999-9999-9999-999999999999',
+      organizerId: 'someone-else-id-00000000000000000000',
+      viewerRsvpStatus: 'Pending',
+      title: 'Serata su invito',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [invited],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+    render(<GameNightsContent />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
+    expect(rsvpMutateMock).toHaveBeenCalledWith({
+      id: '99999999-9999-9999-9999-999999999999',
+      response: 'Declined',
+    });
+  });
+
+  // #2978 (invariante #17) M1: RSVP must also work from the calendar day-detail drawer.
+  it('wires the RSVP mutation from the day-detail drawer (calendar view)', () => {
+    const invited = makeDto({
+      id: '88888888-8888-8888-8888-888888888888',
+      organizerId: 'someone-else-id-00000000000000000000',
+      viewerRsvpStatus: 'Pending',
+      title: 'Serata drawer',
+    });
+    useUpcomingMock.mockReturnValue({
+      data: [invited],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+    render(<GameNightsContent />);
+
+    // The fixture schedules the night "today", so today's cell carries the event.
+    const todayCell = screen
+      .getAllByTestId('game-nights-calendar-day-cell')
+      .find(c => c.hasAttribute('data-today'));
+    expect(todayCell).toBeDefined();
+    fireEvent.click(todayCell as HTMLElement);
+
+    const drawer = screen.getByTestId('game-nights-day-detail-drawer');
+    fireEvent.click(
+      within(drawer).getByRole('button', { name: 'gameNightsIndex.list.cta.decline' })
+    );
+    expect(rsvpMutateMock).toHaveBeenCalledWith({
+      id: '88888888-8888-8888-8888-888888888888',
+      response: 'Declined',
+    });
+  });
+
+  // #3191: offline-disable the inline RSVP CTAs (parity with HomeFeed / PR #3189) across
+  // BOTH surfaces that funnel through handleCardAction — the list card and the calendar drawer.
+  describe('offline + double-submit guard (#3191)', () => {
+    const LIST_INVITEE_ID = '99999999-9999-9999-9999-999999999999';
+
+    function setUpPendingListInvitee(id: string = LIST_INVITEE_ID): string {
+      searchParamsState.view = 'list';
+      const invited = makeDto({
+        id,
+        organizerId: 'someone-else-id-00000000000000000000',
+        viewerRsvpStatus: 'Pending',
+        title: 'Serata su invito',
+      });
+      useUpcomingMock.mockReturnValue({
+        data: [invited],
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+      return id;
+    }
+
+    it('does not fire the RSVP mutation from the list card when offline', () => {
+      networkStatusMock.mockReturnValue({ isOffline: true });
+      setUpPendingListInvitee();
+
+      render(<GameNightsContent />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
+      expect(rsvpMutateMock).not.toHaveBeenCalled();
+    });
+
+    it('visually disables the list-card RSVP buttons when offline', () => {
+      networkStatusMock.mockReturnValue({ isOffline: true });
+      setUpPendingListInvitee();
+
+      render(<GameNightsContent />);
+
+      const decline = screen.getByRole('button', {
+        name: 'gameNightsIndex.list.cta.decline',
+      });
+      expect(decline).toBeDisabled();
+      expect(decline).toHaveAttribute('data-disabled', 'true');
+    });
+
+    it('does not fire the RSVP mutation from the day-detail drawer when offline', () => {
+      networkStatusMock.mockReturnValue({ isOffline: true });
+      const invited = makeDto({
+        id: '88888888-8888-8888-8888-888888888888',
+        organizerId: 'someone-else-id-00000000000000000000',
+        viewerRsvpStatus: 'Pending',
+        title: 'Serata drawer',
+      });
+      useUpcomingMock.mockReturnValue({
+        data: [invited],
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+
+      render(<GameNightsContent />);
+
+      const todayCell = screen
+        .getAllByTestId('game-nights-calendar-day-cell')
+        .find(c => c.hasAttribute('data-today'));
+      fireEvent.click(todayCell as HTMLElement);
+      const drawer = screen.getByTestId('game-nights-day-detail-drawer');
+      fireEvent.click(
+        within(drawer).getByRole('button', { name: 'gameNightsIndex.list.cta.decline' })
+      );
+      expect(rsvpMutateMock).not.toHaveBeenCalled();
+    });
+
+    it('visually disables the drawer RSVP buttons while that night is submitting', () => {
+      const id = '88888888-8888-8888-8888-888888888888';
+      const invited = makeDto({
+        id,
+        organizerId: 'someone-else-id-00000000000000000000',
+        viewerRsvpStatus: 'Pending',
+        title: 'Serata drawer',
+      });
+      useUpcomingMock.mockReturnValue({
+        data: [invited],
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+      useMineMock.mockReturnValue({ data: [], isLoading: false, error: null, refetch: vi.fn() });
+      // In-flight (not offline) — exercises resolveCtaDisabled's id correlation in the drawer.
+      rsvpMock.mockReturnValue({ mutate: rsvpMutateMock, isPending: true, variables: { id } });
+
+      render(<GameNightsContent />);
+
+      const todayCell = screen
+        .getAllByTestId('game-nights-calendar-day-cell')
+        .find(c => c.hasAttribute('data-today'));
+      fireEvent.click(todayCell as HTMLElement);
+      const drawer = screen.getByTestId('game-nights-day-detail-drawer');
+      const decline = within(drawer).getByRole('button', {
+        name: 'gameNightsIndex.list.cta.decline',
+      });
+      expect(decline).toHaveAttribute('data-disabled', 'true');
+      expect(decline).toBeDisabled();
+    });
+
+    it('does not fire a second RSVP while this night is already submitting (double-submit)', () => {
+      const id = setUpPendingListInvitee();
+      rsvpMock.mockReturnValue({ mutate: rsvpMutateMock, isPending: true, variables: { id } });
+
+      render(<GameNightsContent />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
+      expect(rsvpMutateMock).not.toHaveBeenCalled();
+    });
+
+    it('still fires the RSVP when a different night is submitting (correlation guard)', () => {
+      const id = setUpPendingListInvitee();
+      rsvpMock.mockReturnValue({
+        mutate: rsvpMutateMock,
+        isPending: true,
+        variables: { id: 'other-night-id' },
+      });
+
+      render(<GameNightsContent />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'gameNightsIndex.list.cta.decline' }));
+      expect(rsvpMutateMock).toHaveBeenCalledWith({ id, response: 'Declined' });
+    });
   });
 });

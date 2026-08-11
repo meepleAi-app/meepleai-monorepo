@@ -14,9 +14,16 @@ vi.mock('react-pdf', () => ({
     setTimeout(() => onLoadSuccess?.({ numPages: 5 }), 0);
     return <div data-testid="pdf-document">{children}</div>;
   },
-  Page: ({ pageNumber, scale }: { pageNumber: number; scale?: number }) => (
-    <div data-testid="pdf-page" data-page-number={pageNumber} data-scale={scale ?? 1}>
+  Page: ({ pageNumber, scale, renderTextLayer, customTextRenderer, children }: any) => (
+    <div
+      data-testid="pdf-page"
+      data-page-number={pageNumber}
+      data-scale={scale ?? 1}
+      data-render-text-layer={String(!!renderTextLayer)}
+      data-has-custom-renderer={String(!!customTextRenderer)}
+    >
       Page {pageNumber}
+      {children}
     </div>
   ),
   pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
@@ -24,7 +31,11 @@ vi.mock('react-pdf', () => ({
 
 vi.mock('@/lib/api', () => ({
   api: {
-    pdf: { getPdfDownloadUrl: (id: string) => `http://test/api/v1/pdfs/${id}/download` },
+    pdf: {
+      getPdfDownloadUrl: (id: string) => `http://test/api/v1/pdfs/${id}/download`,
+      // #3447 slice: default no regions so existing tests are unaffected; specific tests override.
+      getImageRegions: vi.fn().mockResolvedValue([]),
+    },
   },
 }));
 
@@ -32,6 +43,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
 import { PdfInlineViewer } from '../PdfInlineViewer';
+import { api } from '@/lib/api';
 
 function mockBlobSuccess() {
   mockFetch.mockResolvedValue({
@@ -60,6 +72,24 @@ describe('PdfInlineViewer', () => {
     await waitFor(() => {
       expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page-number', '3');
     });
+  });
+
+  it('draws the image-region overlay for the current page (#3447)', async () => {
+    vi.mocked(api.pdf.getImageRegions).mockResolvedValueOnce([
+      { page: 1, x: 0.1, y: 0.2, width: 0.3, height: 0.1, elementType: 'Image' },
+    ]);
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('pdf-image-region-rect')).toBeInTheDocument());
+  });
+
+  it('does not draw image regions belonging to other pages (#3447)', async () => {
+    vi.mocked(api.pdf.getImageRegions).mockResolvedValueOnce([
+      { page: 3, x: 0.1, y: 0.2, width: 0.3, height: 0.1, elementType: 'Image' },
+    ]);
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.queryByTestId('pdf-image-region-rect')).not.toBeInTheDocument();
   });
 
   it('shows error banner on fetch HTTP 500', async () => {
@@ -170,5 +200,66 @@ describe('PdfInlineViewer', () => {
     render(<PdfInlineViewer documentId="doc-1" />);
     await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
     expect(screen.queryByRole('combobox', { name: /zoom/i })).not.toBeInTheDocument();
+  });
+
+  // ── SP-D #3408: region overlay (Pattern B) via highlightRects ────────────────
+
+  it('renders the bbox overlay for highlightRects on the current page', async () => {
+    render(
+      <PdfInlineViewer
+        documentId="doc-1"
+        initialPage={3}
+        highlightRects={[{ page: 3, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+  });
+
+  it('does not render overlay rects that belong to another page', async () => {
+    render(
+      <PdfInlineViewer
+        documentId="doc-1"
+        initialPage={3}
+        highlightRects={[{ page: 7, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+  });
+
+  it('suppresses the quote text layer when highlightRects are present (Pattern B over A)', async () => {
+    render(
+      <PdfInlineViewer
+        documentId="doc-1"
+        initialPage={3}
+        highlightQuote="regola X"
+        highlightRects={[{ page: 3, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }]}
+      />
+    );
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'false');
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-has-custom-renderer', 'false');
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+  });
+
+  it('keeps the quote text layer active when only highlightQuote is provided (Pattern A)', async () => {
+    render(<PdfInlineViewer documentId="doc-1" initialPage={3} highlightQuote="regola X" />);
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'true');
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-has-custom-renderer', 'true');
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+  });
+
+  // Geometry contract (SP-D #3408): the bbox overlay is a child of <Page> and anchors to its
+  // box, so that box MUST shrink-wrap the canvas. The canvas renders at scale×pageWidth (A4
+  // denominator) and is left-aligned; if the Page div filled the full container width the
+  // %-based rects would misalign for pages narrower than A4. A `justify-center` flex wrapper
+  // shrinks the Page ancestor to the canvas (mirrors PdfPageModal). Guard against its removal.
+  it('renders the PDF page inside a centering wrapper so the overlay anchors to the canvas', async () => {
+    render(<PdfInlineViewer documentId="doc-1" initialPage={1} />);
+    await waitFor(() => expect(screen.getByTestId('pdf-document')).toBeInTheDocument());
+    const wrapper = screen.getByTestId('pdf-document').parentElement;
+    expect(wrapper?.className).toContain('justify-center');
   });
 });

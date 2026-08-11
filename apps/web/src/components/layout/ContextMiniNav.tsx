@@ -37,7 +37,7 @@ export function ContextMiniNav({ tabs, activeTab, onTabChange, className }: Cont
             className={cn(
               'px-4 py-1.5 rounded-md font-body font-semibold text-sm transition-all',
               activeTab === tab.id
-                ? 'bg-entity-game/15 text-entity-game'
+                ? 'bg-entity-game/15 text-entity-game-text'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
             )}
           >

@@ -26,12 +26,12 @@
     "designer_approved_on": "",
     "story_path": "apps/web/src/app/(authenticated)/notifications/notifications.stories.tsx",
     "fixtures_path": "apps/web/src/__tests__/fixtures/mockup-pilots/auth/notifications.ts",
-    "design_intent": "forward-refactor",
+    "design_intent": "forward-refactor-obsolete",
     "design_intent_tracking_issue": "2180",
     "design_intent_notes": "Phase B reclassified `current` → `forward-refactor` per #2180: the mockup ships 5 phone-only screens (380px width + PhoneTopBar) while the live `/notifications` route is desktop+mobile responsive (max-w-3xl container, horizontal pill bar, Drawer detail). Sara persona target is confirmed desktop+mobile responsive (user input 2026-06-11). Designer signoff required to commission a desktop variant (`notifications-desktop.{html,jsx,fidelity.json}`) and rename the existing phone-only set to `notifications-mobile.*`.",
     "viewports": [
       "mobile"
     ],
-    "obsolete_tracking_issue": ""
+    "obsolete_tracking_issue": "#2028"
   }
 }

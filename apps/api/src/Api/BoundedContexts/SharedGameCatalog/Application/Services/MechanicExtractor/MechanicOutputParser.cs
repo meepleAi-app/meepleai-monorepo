@@ -5,7 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 
 /// <summary>
-/// Parses the six section-level JSON envelopes emitted by the Mechanic Extractor pipeline
+/// Parses the nine section-level JSON envelopes emitted by the Mechanic Extractor pipeline
 /// into a flat list of <see cref="MechanicClaim"/> entities ready to be attached to a
 /// <see cref="Domain.Aggregates.MechanicAnalysis"/> aggregate.
 /// </summary>
@@ -75,6 +75,9 @@ internal static class MechanicOutputParser
                     MechanicSection.Resources => ParseResources(analysisId, root),
                     MechanicSection.Phases => ParsePhases(analysisId, root),
                     MechanicSection.Faq => ParseFaq(analysisId, root),
+                    MechanicSection.Setup => ParseSetup(analysisId, root),
+                    MechanicSection.Components => ParseComponents(analysisId, root),
+                    MechanicSection.EndgameScoring => ParseEndgame(analysisId, root),
                     _ => Array.Empty<MechanicClaim>()
                 };
 
@@ -115,7 +118,8 @@ internal static class MechanicOutputParser
             section: MechanicSection.Summary,
             text: text!,
             displayOrder: 0,
-            citations: citations);
+            citations: citations,
+            sourceAnchor: "$.summary");
     }
 
     // ============================================================
@@ -129,9 +133,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.mechanics[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -161,7 +169,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Mechanics,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -193,13 +202,21 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        // The primary anchors to the whole "$.victory" object; its guardrail violations land on
+        // "$.victory" or "$.victory.citations[n]", both of which prefix-match this anchor (shared
+        // citations belong to the primary). NOTE: because MatchesAnchor is a one-way prefix check,
+        // "$.victory" also prefix-covers the "$.victory.alternatives[i]" subtree. That is harmless
+        // today — no guardrail walks the alternatives strings, so no "$.victory.alternatives[i]"
+        // violation path is ever produced. If alternatives-level validation is ever added, give the
+        // primary a boundary-exact anchor (or tighten MatchesAnchor) so it stops covering them.
         yield return BuildClaim(
             claimId: primaryClaimId,
             analysisId: analysisId,
             section: MechanicSection.Victory,
             text: primary!,
             displayOrder: displayOrder++,
-            citations: primaryCitations);
+            citations: primaryCitations,
+            sourceAnchor: "$.victory");
 
         // Alternatives reuse the same citation source — re-extract per claim so ClaimId wires up.
         if (!victory.TryGetProperty("alternatives", out var alternatives)
@@ -208,8 +225,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var altIndex = -1;
         foreach (var alt in alternatives.EnumerateArray())
         {
+            // #2808: stamp the RAW array index so each alternative carries a stable
+            // per-claim anchor ($.victory.alternatives[i]) that a "$.victory" primary
+            // violation no longer prefix-matches — mirrors the $.mechanics[i] semantics.
+            altIndex++;
             if (alt.ValueKind != JsonValueKind.String)
             {
                 continue;
@@ -234,7 +256,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Victory,
                 text: text!,
                 displayOrder: displayOrder++,
-                citations: altCitations);
+                citations: altCitations,
+                sourceAnchor: $"$.victory.alternatives[{altIndex}]");
         }
     }
 
@@ -249,9 +272,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.resources[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -281,7 +308,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Resources,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -325,7 +353,7 @@ internal static class MechanicOutputParser
             .ThenBy(x => x.SourceIndex);
 
         var displayOrder = 0;
-        foreach (var (_, _, item) in ordered)
+        foreach (var (_, srcIdx, item) in ordered)
         {
             var description = ReadString(item, "description");
             if (string.IsNullOrWhiteSpace(description))
@@ -351,7 +379,8 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Phases,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: $"$.phases[{srcIdx}]");
         }
     }
 
@@ -367,9 +396,13 @@ internal static class MechanicOutputParser
             yield break;
         }
 
+        var sourceIndex = 0;
         var displayOrder = 0;
         foreach (var item in items.EnumerateArray())
         {
+            var anchor = $"$.faq[{sourceIndex}]";
+            sourceIndex++;
+
             if (item.ValueKind != JsonValueKind.Object)
             {
                 continue;
@@ -399,7 +432,197 @@ internal static class MechanicOutputParser
                 section: MechanicSection.Faq,
                 text: text,
                 displayOrder: displayOrder++,
-                citations: citations);
+                citations: citations,
+                sourceAnchor: anchor);
+        }
+    }
+
+    // ============================================================
+    // Section: Setup (v1.1.0)
+    // Schema: { "setup": [{ "description": "...", "order": 1, "playerCountNote": "...", "citations": [...] }] }
+    // Emitted in declared `order`; falls back to source array order when missing/duplicate.
+    // ============================================================
+    private static IEnumerable<MechanicClaim> ParseSetup(Guid analysisId, JsonElement root)
+    {
+        if (!root.TryGetProperty("setup", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var buffered = new List<(int? Order, int SourceIndex, JsonElement Element)>();
+        var sourceIndex = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                sourceIndex++;
+                continue;
+            }
+
+            int? order = null;
+            if (item.TryGetProperty("order", out var orderEl)
+                && orderEl.ValueKind == JsonValueKind.Number
+                && orderEl.TryGetInt32(out var parsedOrder))
+            {
+                order = parsedOrder;
+            }
+
+            buffered.Add((order, sourceIndex, item));
+            sourceIndex++;
+        }
+
+        var ordered = buffered
+            .OrderBy(x => x.Order ?? int.MaxValue)
+            .ThenBy(x => x.SourceIndex);
+
+        var displayOrder = 0;
+        foreach (var (_, srcIdx, item) in ordered)
+        {
+            var description = ReadString(item, "description");
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                continue;
+            }
+
+            var claimId = Guid.NewGuid();
+            var citations = ExtractCitations(item, claimId).ToList();
+            if (citations.Count == 0)
+            {
+                continue;
+            }
+
+            var note = ReadString(item, "playerCountNote");
+            var text = string.IsNullOrWhiteSpace(note)
+                ? description!
+                : $"{description!.Trim()} ({note!.Trim()})";
+
+            yield return BuildClaim(
+                claimId: claimId,
+                analysisId: analysisId,
+                section: MechanicSection.Setup,
+                text: text,
+                displayOrder: displayOrder++,
+                citations: citations,
+                sourceAnchor: $"$.setup[{srcIdx}]");
+        }
+    }
+
+    // ============================================================
+    // Section: Components (v1.1.0)
+    // Schema: { "components": [{ "name": "...", "description": "...", "quantity": "...", "citations": [...] }] }
+    // ============================================================
+    private static IEnumerable<MechanicClaim> ParseComponents(Guid analysisId, JsonElement root)
+    {
+        if (!root.TryGetProperty("components", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var sourceIndex = 0;
+        var displayOrder = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            var anchor = $"$.components[{sourceIndex}]";
+            sourceIndex++;
+
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var description = ReadString(item, "description");
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                continue;
+            }
+
+            var claimId = Guid.NewGuid();
+            var citations = ExtractCitations(item, claimId).ToList();
+            if (citations.Count == 0)
+            {
+                continue;
+            }
+
+            var name = ReadString(item, "name");
+            var quantity = ReadString(item, "quantity");
+            string? label;
+            if (string.IsNullOrWhiteSpace(quantity))
+            {
+                label = string.IsNullOrWhiteSpace(name) ? null : name!.Trim();
+            }
+            else if (string.IsNullOrWhiteSpace(name))
+            {
+                label = $"×{quantity!.Trim()}";
+            }
+            else
+            {
+                label = $"{name!.Trim()} (×{quantity!.Trim()})";
+            }
+
+            var text = string.IsNullOrWhiteSpace(label)
+                ? description!
+                : $"{label}: {description!.Trim()}";
+
+            yield return BuildClaim(
+                claimId: claimId,
+                analysisId: analysisId,
+                section: MechanicSection.Components,
+                text: text,
+                displayOrder: displayOrder++,
+                citations: citations,
+                sourceAnchor: anchor);
+        }
+    }
+
+    // ============================================================
+    // Section: EndgameScoring (v1.1.0)
+    // Schema: { "endgame": [{ "name": "...", "description": "...", "citations": [...] }] }
+    // ============================================================
+    private static IEnumerable<MechanicClaim> ParseEndgame(Guid analysisId, JsonElement root)
+    {
+        if (!root.TryGetProperty("endgame", out var items) || items.ValueKind != JsonValueKind.Array)
+        {
+            yield break;
+        }
+
+        var sourceIndex = 0;
+        var displayOrder = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            var anchor = $"$.endgame[{sourceIndex}]";
+            sourceIndex++;
+
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var description = ReadString(item, "description");
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                continue;
+            }
+
+            var claimId = Guid.NewGuid();
+            var citations = ExtractCitations(item, claimId).ToList();
+            if (citations.Count == 0)
+            {
+                continue;
+            }
+
+            var name = ReadString(item, "name");
+            var text = string.IsNullOrWhiteSpace(name)
+                ? description!
+                : $"{name!.Trim()}: {description!.Trim()}";
+
+            yield return BuildClaim(
+                claimId: claimId,
+                analysisId: analysisId,
+                section: MechanicSection.EndgameScoring,
+                text: text,
+                displayOrder: displayOrder++,
+                citations: citations,
+                sourceAnchor: anchor);
         }
     }
 
@@ -496,7 +719,8 @@ internal static class MechanicOutputParser
         MechanicSection section,
         string text,
         int displayOrder,
-        IReadOnlyList<MechanicCitation> citations)
+        IReadOnlyList<MechanicCitation> citations,
+        string sourceAnchor)
     {
         return MechanicClaim.CreateWithId(
             id: claimId,
@@ -504,7 +728,8 @@ internal static class MechanicOutputParser
             section: section,
             text: text.Trim(),
             displayOrder: displayOrder,
-            citations: citations);
+            citations: citations,
+            sourceAnchor: sourceAnchor);
     }
 
     private static string? ReadString(JsonElement obj, string propertyName)

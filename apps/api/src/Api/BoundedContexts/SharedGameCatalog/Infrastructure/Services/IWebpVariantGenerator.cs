@@ -25,7 +25,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 /// <c>SharedGameCatalogServiceExtensions.AddSharedGameCatalogContext</c>.
 /// </para>
 /// </remarks>
-public interface IWebpVariantGenerator
+internal interface IWebpVariantGenerator
 {
     /// <summary>
     /// Generates a WebP variant of the original image, cropped to the requested
@@ -52,4 +52,14 @@ public interface IWebpVariantGenerator
     /// Thrown when <paramref name="ct"/> fires before completion.
     /// </exception>
     Task<byte[]> GenerateWebpAsync(byte[] originalImage, int width, int height, CancellationToken ct);
+
+    /// <summary>
+    /// Focal-point variant (epic #3470): crops the aspect-ratio-filled image toward the
+    /// given focal point (<c>focalX</c>/<c>focalY</c>, each in <c>[0,1]</c>; <c>0.5,0.5</c>
+    /// = center, byte-identical to the 3-argument overload) instead of always the center.
+    /// The crop window centers on the focal point, clamped to the image bounds. Used to
+    /// render the per-context cover crop from an admin-set <c>GameCoverAssignment</c>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when a focal component is NaN/Infinity or outside [0,1].</exception>
+    Task<byte[]> GenerateWebpAsync(byte[] originalImage, int width, int height, double focalX, double focalY, CancellationToken ct);
 }

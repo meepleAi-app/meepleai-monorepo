@@ -85,7 +85,7 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
             yield return CreateEvent(StreamingEventType.StateUpdate,
                 new StreamingStateUpdate("Ricerca nella tua libreria..."));
             yield return CreateEvent(StreamingEventType.Complete,
-                new StreamingComplete(0, 0, 0, 0, null));
+                new StreamingComplete(0, 0, 0, 0, null, GroundingStatus: "Ungrounded"));
             yield break;
         }
 
@@ -150,7 +150,8 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
                 promptTokens: llmUsage?.PromptTokens ?? 0,
                 completionTokens: llmUsage?.CompletionTokens ?? tokenEvents.Count,
                 totalTokens: llmUsage?.TotalTokens ?? tokenEvents.Count,
-                confidence: null));
+                confidence: null,
+                GroundingStatus: snippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
         _logger.LogInformation(
             "[CrossGameAsk] Complete for user {UserId}, tokens: {Tokens}",

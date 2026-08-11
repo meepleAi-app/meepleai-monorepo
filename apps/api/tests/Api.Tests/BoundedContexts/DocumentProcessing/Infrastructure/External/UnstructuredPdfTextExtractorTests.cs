@@ -30,7 +30,7 @@ public class UnstructuredPdfTextExtractorTests
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
     }
 
-    private UnstructuredPdfTextExtractor CreateExtractor()
+    private UnstructuredPdfTextExtractor CreateExtractor(IExtractionStrategySelector? strategySelector = null)
     {
         var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
         {
@@ -43,7 +43,62 @@ public class UnstructuredPdfTextExtractorTests
 
         return new UnstructuredPdfTextExtractor(
             _mockHttpClientFactory.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            strategySelector);
+    }
+
+    /// <summary>
+    /// DC-2 (#3419): builds an extractor whose HTTP handler reads the <c>strategy</c> multipart form
+    /// field posted to the Unstructured service, so a test can assert the exact value without fragile
+    /// raw-body parsing. The handler returns a canned success response.
+    /// </summary>
+    private (UnstructuredPdfTextExtractor extractor, Func<string?> capturedStrategy) CreateExtractorCapturingStrategy(
+        IExtractionStrategySelector? strategySelector)
+    {
+        string? strategy = null;
+        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
+        {
+            BaseAddress = new Uri("http://test-unstructured:8001")
+        };
+
+        _mockHttpClientFactory
+            .Setup(x => x.CreateClient("UnstructuredService"))
+            .Returns(httpClient);
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, ct) =>
+            {
+                if (req.Content is MultipartFormDataContent multipart)
+                {
+                    foreach (var part in multipart)
+                    {
+                        if (string.Equals(
+                                part.Headers.ContentDisposition?.Name?.Trim('"'),
+                                "strategy",
+                                StringComparison.Ordinal))
+                        {
+                            strategy = await part.ReadAsStringAsync(ct).ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(CreateSuccessResponse())
+                };
+            });
+
+        var extractor = new UnstructuredPdfTextExtractor(
+            _mockHttpClientFactory.Object,
+            _mockLogger.Object,
+            strategySelector);
+        return (extractor, () => strategy);
     }
 
     private Stream CreateTestPdfStream()
@@ -94,6 +149,101 @@ public class UnstructuredPdfTextExtractorTests
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
         });
+    }
+
+    private string CreateResponseWithElements()
+    {
+        var response = new
+        {
+            text = "Preparazione\n\nDisponi le tessere.",
+            chunks = new[] { new { text = "composite", page_number = 1, element_type = "CompositeElement", metadata = new Dictionary<string, object>() } },
+            elements = new object[]
+            {
+                new { text = "Preparazione", page_number = 1, category = "Title" },
+                new { text = "Disponi le tessere.", page_number = 1, category = "NarrativeText" },
+                new { text = "", page_number = 2, category = "PageBreak" }
+            },
+            quality_score = 0.85,
+            page_count = 1,
+            metadata = new { extraction_duration_ms = 10, strategy_used = "fast", language = "ita", detected_tables = 0, detected_structures = new[] { "Title" }, quality_breakdown = new { text_coverage_score = 0.4, structure_detection_score = 0.2, table_detection_score = 0.0, page_coverage_score = 0.2 } }
+        };
+        return JsonSerializer.Serialize(response, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower });
+    }
+
+    [Fact]
+    [Trait("Issue", "3419")]
+    public async Task ExtractPagedTextAsync_WhenSelectorHiRes_SendsHiResStrategyField()
+    {
+        // DC-2 (#3419): a table-heavy PDF routed to hi_res must post strategy=hi_res.
+        var (extractor, capturedStrategy) = CreateExtractorCapturingStrategy(
+            new ExtractionStrategySelector { Current = ExtractionStrategy.HiRes });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        capturedStrategy().Should().Be("hi_res");
+    }
+
+    [Fact]
+    [Trait("Issue", "3419")]
+    public async Task ExtractPagedTextAsync_WhenSelectorFast_SendsFastStrategyField()
+    {
+        var (extractor, capturedStrategy) = CreateExtractorCapturingStrategy(
+            new ExtractionStrategySelector { Current = ExtractionStrategy.Fast });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        capturedStrategy().Should().Be("fast");
+    }
+
+    [Fact]
+    [Trait("Issue", "3419")]
+    public async Task ExtractTextAsync_WhenNoSelector_DefaultsToFastStrategyField()
+    {
+        // Backward-compat: manual construction (DevTools + integration tests) passes no selector →
+        // the extractor must fall back to the historical hard-coded "fast".
+        var (extractor, capturedStrategy) = CreateExtractorCapturingStrategy(strategySelector: null);
+
+        await extractor.ExtractTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        capturedStrategy().Should().Be("fast");
+    }
+
+    [Fact]
+    public async Task ExtractPagedTextAsync_PopulatesStructuredElements_SkippingEmpty()
+    {
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(CreateResponseWithElements()) });
+
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.StructuredElements.Should().NotBeNull();
+        result.StructuredElements!.Select(e => e.ElementType).Should().Equal("Title", "NarrativeText");
+        result.StructuredElements![0].Text.Should().Be("Preparazione");
+        result.StructuredElements![0].PageNumber.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExtractPagedTextAsync_NoElements_LeavesStructuredElementsNull_AndPageChunksIntact()
+    {
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(CreateSuccessResponse()) });
+
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.Success.Should().BeTrue();
+        result.StructuredElements.Should().BeNull();
+        // regression pin: the ExtractPagedTextAsync rewrite must not change chunking.
+        // CreateSuccessResponse() has pageCount=1 → exactly one page chunk starting at offset 0.
+        result.PageChunks.Should().HaveCount(1);
+        result.PageChunks[0].CharStartIndex.Should().Be(0);
+        result.PageChunks[0].Text.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -255,6 +405,10 @@ public class UnstructuredPdfTextExtractorTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("Failed to connect");
+        // #3589: a genuine transport failure (no HTTP status was ever received) has no
+        // StatusCode on the exception, so this really is a connection failure, not a
+        // masked service response — must not be flagged permanent.
+        result.IsPermanentFailure.Should().BeFalse();
     }
 
     [Fact]
@@ -307,10 +461,20 @@ public class UnstructuredPdfTextExtractorTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
+        // #3589: the service answered (with a 4xx), so the message must not claim a
+        // connection failure — and a 400 is not the specific permanent condition (413).
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.IsPermanentFailure.Should().BeFalse();
     }
 
+    /// <summary>
+    /// #3589: reproduces the staging incident where Unstructured rejects an oversized
+    /// PDF with 413 and the extractor (a) blamed a connection failure that never
+    /// happened and (b) gave the pipeline no way to know the failure is permanent —
+    /// RetryFailedPdfsJob burned 3 full retries on a file that will never shrink.
+    /// </summary>
     [Fact]
-    public async Task ExtractTextAsync_FileTooLarge_ReturnsFailureResult()
+    public async Task ExtractTextAsync_FileTooLarge_IsPermanentFailure_AndDoesNotClaimConnectionFailure()
     {
         // Arrange
         var extractor = CreateExtractor();
@@ -325,7 +489,8 @@ public class UnstructuredPdfTextExtractorTests
             .ReturnsAsync(new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.RequestEntityTooLarge,
-                Content = new StringContent("{}")
+                Content = new StringContent(
+                    "{\"detail\":{\"error\":{\"code\":\"FILE_TOO_LARGE\",\"message\":\"File size 65824691 bytes exceeds maximum 52428800 bytes\"}}}")
             });
 
         // Act
@@ -333,6 +498,9 @@ public class UnstructuredPdfTextExtractorTests
 
         // Assert
         result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.ErrorMessage.Should().Contain("RequestEntityTooLarge");
+        result.IsPermanentFailure.Should().BeTrue();
     }
 
     [Fact]
@@ -553,6 +721,65 @@ public class UnstructuredPdfTextExtractorTests
         // Assert
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().NotBeNull();
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.IsPermanentFailure.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// #3589: same fix as <c>ExtractTextAsync_FileTooLarge_IsPermanentFailure_...</c> but
+    /// on the paged extraction path — <c>ExtractPagedTextAsync</c> has its own catch block.
+    /// </summary>
+    [Fact]
+    public async Task ExtractPagedTextAsync_FileTooLarge_IsPermanentFailure_AndDoesNotClaimConnectionFailure()
+    {
+        // Arrange
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.RequestEntityTooLarge,
+                Content = new StringContent("{\"detail\":{\"error\":{\"code\":\"FILE_TOO_LARGE\"}}}")
+            });
+
+        // Act
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().NotContain("Failed to connect");
+        result.IsPermanentFailure.Should().BeTrue();
+    }
+
+    /// <summary>#3589: genuine transport failure on the paged path must stay non-permanent.</summary>
+    [Fact]
+    public async Task ExtractPagedTextAsync_ConnectionFailure_IsNotPermanent()
+    {
+        // Arrange
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ThrowsAsync(new HttpRequestException("Connection refused"));
+
+        // Act
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeFalse();
+        result.ErrorMessage.Should().Contain("Failed to connect");
+        result.IsPermanentFailure.Should().BeFalse();
     }
 
     [Fact]

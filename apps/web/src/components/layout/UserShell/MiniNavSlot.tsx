@@ -21,7 +21,7 @@ export function MiniNavSlot() {
       data-testid="mini-nav-slot"
       className="h-12 flex items-center gap-1 px-7 pl-[104px] border-b border-[var(--glass-border)] bg-[var(--bg)]"
     >
-      <div className="text-xs font-semibold text-[var(--text-muted)] mr-5">
+      <div className="text-xs font-semibold text-muted-foreground mr-5">
         <span aria-hidden>›</span> {config.breadcrumb}
       </div>
       {config.tabs.map(tab => {
@@ -33,9 +33,7 @@ export function MiniNavSlot() {
             aria-current={active ? 'page' : undefined}
             className={cn(
               'relative px-3.5 py-2 rounded-lg text-[0.78rem] font-bold flex items-center gap-1.5 transition-colors',
-              active
-                ? 'text-[var(--text)]'
-                : 'text-[var(--text-sec)] hover:bg-[var(--bg-card)]'
+              active ? 'text-[var(--text)]' : 'text-[var(--text-sec)] hover:bg-[var(--bg-card)]'
             )}
           >
             {tab.label}

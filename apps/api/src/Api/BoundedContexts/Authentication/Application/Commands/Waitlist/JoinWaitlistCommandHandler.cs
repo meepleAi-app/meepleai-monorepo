@@ -50,37 +50,41 @@ internal class JoinWaitlistCommandHandler : ICommandHandler<JoinWaitlistCommand,
         // Race-safe insert: the advisory lock + transaction serializes Position assignment.
         // The unique index on Email is the second line of defense if two requests slip
         // past the optimistic pre-check between the GetByEmailAsync and the insert.
-        await _unitOfWork.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        // #3636: ExecuteInTransactionAsync, non BeginTransactionAsync. Il DbContext ha
+        // EnableRetryOnFailure attivo fuori da Testing, e aprire una transazione utente sotto
+        // quella strategia lancia InvalidOperationException: questo endpoint è pubblico e
+        // rispondeva 500 su staging. Il delegate è idempotente — l'advisory lock e la SELECT del
+        // max position vengono rieseguiti dalla strategy insieme al resto.
         try
         {
-            await _repository.AcquirePositionLockAsync(cancellationToken).ConfigureAwait(false);
+            return await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                await _repository.AcquirePositionLockAsync(ct).ConfigureAwait(false);
 
-            var maxPosition = await _repository.GetMaxPositionAsync(cancellationToken).ConfigureAwait(false);
-            var newPosition = (maxPosition ?? 0) + 1;
+                var maxPosition = await _repository.GetMaxPositionAsync(ct).ConfigureAwait(false);
+                var newPosition = (maxPosition ?? 0) + 1;
 
-            var entry = WaitlistEntry.Create(
-                email: normalizedEmail,
-                name: request.Name,
-                gamePreferenceId: request.GamePreferenceId,
-                gamePreferenceOther: request.GamePreferenceOther,
-                newsletterOptIn: request.NewsletterOptIn,
-                position: newPosition);
+                var entry = WaitlistEntry.Create(
+                    email: normalizedEmail,
+                    name: request.Name,
+                    gamePreferenceId: request.GamePreferenceId,
+                    gamePreferenceOther: request.GamePreferenceOther,
+                    newsletterOptIn: request.NewsletterOptIn,
+                    position: newPosition);
 
-            await _repository.AddAsync(entry, cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken).ConfigureAwait(false);
+                await _repository.AddAsync(entry, ct).ConfigureAwait(false);
 
-            return new JoinWaitlistResult(
-                IsAlreadyOnList: false,
-                Position: newPosition,
-                EstimatedWeeks: ComputeEstimatedWeeks(newPosition));
+                return new JoinWaitlistResult(
+                    IsAlreadyOnList: false,
+                    Position: newPosition,
+                    EstimatedWeeks: ComputeEstimatedWeeks(newPosition));
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
             // A concurrent request inserted the same email between our pre-check and our insert.
-            // Roll back, re-query, and return the existing entry's position.
-            await _unitOfWork.RollbackTransactionAsync(cancellationToken).ConfigureAwait(false);
-
+            // Re-query and return the existing entry's position. Il rollback è già stato eseguito
+            // da ExecuteInTransactionAsync prima di propagare l'eccezione.
             var raceWinner = await _repository.GetByEmailAsync(normalizedEmail, cancellationToken).ConfigureAwait(false);
             if (raceWinner is null)
             {

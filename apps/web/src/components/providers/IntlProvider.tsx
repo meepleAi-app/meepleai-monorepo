@@ -17,7 +17,7 @@
  * @see https://formatjs.io/docs/react-intl
  */
 
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { IntlProvider as ReactIntlProvider } from 'react-intl';
 
@@ -71,8 +71,20 @@ function getBrowserLocale(): Locale {
  * ```
  */
 export function IntlProvider({ children, locale }: IntlProviderProps) {
-  // Use provided locale or detect from browser
-  const currentLocale = locale || getBrowserLocale();
+  // #3263: detect the browser locale only AFTER mount. On the server and on the
+  // first client (hydration) render we use the same value — an explicit prop, or
+  // DEFAULT_LOCALE — so the SSR HTML matches the first client render and a
+  // non-Italian browser no longer triggers a hydration mismatch. The browser
+  // locale is then adopted by the effect below (a brief, intentional swap).
+  const [detectedLocale, setDetectedLocale] = useState<Locale | null>(null);
+
+  useEffect(() => {
+    if (!locale) {
+      setDetectedLocale(getBrowserLocale());
+    }
+  }, [locale]);
+
+  const currentLocale = locale ?? detectedLocale ?? DEFAULT_LOCALE;
 
   // Get messages for current locale and flatten for react-intl
   const flatMessages = useMemo(() => {

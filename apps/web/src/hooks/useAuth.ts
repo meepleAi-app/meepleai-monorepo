@@ -35,6 +35,8 @@ export interface RegisterData {
   password: string;
   displayName?: string;
   role?: string;
+  // #2954 F1: user's ToS acceptance, forwarded to the register API.
+  termsAccepted?: boolean;
 }
 
 export interface LoginData {
@@ -158,6 +160,7 @@ export function useAuth(): UseAuthReturn {
         password: data.password,
         displayName: data.displayName || undefined,
         role: data.role || 'User',
+        termsAccepted: data.termsAccepted,
       });
 
       setUser(authUser);

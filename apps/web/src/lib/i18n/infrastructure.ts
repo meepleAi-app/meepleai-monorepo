@@ -5,14 +5,13 @@
  * Follows project principle: no hardcoded values.
  */
 
-export const infrastructurei18n = {
+const infrastructurei18n = {
   it: {
     // Service names
     services: {
       postgres: 'PostgreSQL',
       redis: 'Redis',
       pgvector: 'pgvector',
-      n8n: 'n8n',
       prometheus: 'Prometheus',
       grafana: 'Grafana',
       api: 'API',
@@ -99,7 +98,6 @@ export const infrastructurei18n = {
       postgres: 'PostgreSQL',
       redis: 'Redis',
       pgvector: 'pgvector',
-      n8n: 'n8n',
       prometheus: 'Prometheus',
       grafana: 'Grafana',
       api: 'API',

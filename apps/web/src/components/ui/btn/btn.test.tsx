@@ -53,35 +53,93 @@ describe('Btn', () => {
     expect(screen.getByRole('button')).toHaveClass('bg-transparent');
   });
 
-  it('entity prop applies entity background on primary variant', () => {
+  it('entity prop applies per-entity bg utility on primary variant (no inline color)', () => {
     render(
       <Btn variant="primary" entity="game">
         x
       </Btn>
     );
     const btn = screen.getByRole('button');
-    expect(btn.style.backgroundColor).toBe('hsl(var(--e-game))');
+    expect(btn).toHaveAttribute('data-entity', 'game');
+    // Issue #2955 Fase 1: primary variant restores per-entity background via the
+    // registered `bg-entity-*` utility (not an inline style, not flat bg-primary).
+    expect(btn.className).toMatch(/bg-entity-game/);
+    // hover parity (#2955): entity primary dims its OWN hue on hover, it must not
+    // revert to theme `bg-primary/90` (which would flip a purple button to orange).
+    expect(btn.className).toMatch(/hover:bg-entity-game\/90/);
+    expect(btn.className).not.toMatch(/\bbg-primary\b/);
+    expect(btn.style.backgroundColor).toBe('');
   });
 
-  it('entity=kb maps to --e-document css variable', () => {
+  it('entity=kb uses the registered -kb (teal) utility, not the unregistered document slate', () => {
     render(
       <Btn variant="primary" entity="kb">
         x
       </Btn>
     );
     const btn = screen.getByRole('button');
-    expect(btn.style.backgroundColor).toBe('hsl(var(--e-document))');
+    expect(btn).toHaveAttribute('data-entity', 'kb');
+    expect(btn.className).toMatch(/bg-entity-kb/);
+    expect(btn.className).not.toMatch(/bg-entity-document/);
   });
 
-  it('entity prop applies entity border + color on outline variant', () => {
+  it('primary variant without entity keeps flat bg-primary', () => {
+    render(<Btn variant="primary">x</Btn>);
+    const btn = screen.getByRole('button');
+    expect(btn).toHaveClass('bg-primary');
+    expect(btn.className).not.toMatch(/bg-entity-/);
+  });
+
+  it('entity prop no longer inline-colors the outline variant', () => {
     render(
       <Btn variant="outline" entity="agent">
         x
       </Btn>
     );
     const btn = screen.getByRole('button');
-    expect(btn.style.borderColor).toBe('hsl(var(--e-agent))');
-    expect(btn.style.color).toBe('hsl(var(--e-agent))');
+    expect(btn).toHaveAttribute('data-entity', 'agent');
+    expect(btn.style.borderColor).toBe('');
+    expect(btn.style.color).toBe('');
+  });
+
+  it('outline variant restores per-entity border + AA -text label when entity is provided', () => {
+    render(
+      <Btn variant="outline" entity="agent">
+        x
+      </Btn>
+    );
+    const btn = screen.getByRole('button');
+    expect(btn).toHaveAttribute('data-entity', 'agent');
+    // Issue #2955 Fase 2: outline restores the entity-colored border + AA
+    // text-on-tint label via the registered `-entity-*` / `-text` utilities.
+    expect(btn.className).toMatch(/border-entity-agent/);
+    expect(btn.className).toMatch(/text-entity-agent-text/);
+    // still transparent fill with muted hover (outline affordance preserved)
+    expect(btn.className).toMatch(/bg-transparent/);
+    expect(btn.className).toMatch(/hover:bg-muted/);
+    // className-only — never inline styles
+    expect(btn.style.borderColor).toBe('');
+    expect(btn.style.color).toBe('');
+  });
+
+  it('outline entity=kb uses the registered -kb (teal) utilities, not the document slate', () => {
+    render(
+      <Btn variant="outline" entity="kb">
+        x
+      </Btn>
+    );
+    const btn = screen.getByRole('button');
+    expect(btn.className).toMatch(/border-entity-kb/);
+    expect(btn.className).toMatch(/text-entity-kb-text/);
+    expect(btn.className).not.toMatch(/entity-document/);
+  });
+
+  it('outline variant without entity keeps the neutral border token', () => {
+    render(<Btn variant="outline">x</Btn>);
+    const btn = screen.getByRole('button');
+    expect(btn.className).toMatch(/border-border/);
+    expect(btn.className).not.toMatch(/border-entity-/);
+    expect(btn.className).not.toMatch(/text-entity-/);
   });
 
   it('entity prop has no inline style effect on ghost/secondary/destructive', () => {

@@ -74,7 +74,7 @@
     <PackageReference Include="itext7.bouncy-castle-adapter" Version="9.4.0" />
     <!-- Magick.NET-Q8-AnyCPU (Apache 2.0): replaces SixLabors.ImageSharp 3.x (Split License,
          requires commercial paid). DEC-3d-1 LOCKED 2026-06-20, issue #2055 Phase G AC-G2. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.14.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.15.0" />
     <PackageReference Include="MediatR" Version="14.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.8" />
@@ -116,6 +116,16 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="9.1.0" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <!--
+      #3454 — pin the Linux native lib to match the managed SkiaSharp (3.119.2).
+      Without this, ScottPlot 5.0.47 → SkiaSharp.HarfBuzz 2.88.9 transitively
+      pins SkiaSharp.NativeAssets.Linux.NoDependencies 2.88.9, so on Linux the
+      published libSkiaSharp.so is v88.1 while the managed SkiaSharp is 3.119.2
+      → SKObject static init throws "native libSkiaSharp (88.1) incompatible
+      … range [119.0, 120.0)" and PDF cover generation fails. Windows dev is
+      unaffected (Win32 native already resolves to 3.119.2).
+    -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.2" />
     <PackageReference Include="SlackNet" Version="0.17.10" />
     <PackageReference Include="StackExchange.Redis" Version="2.10.1" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.8" />

@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import EditPlayRecordPage from './page';
 import { playRecordsEditMessages } from '@/__tests__/fixtures/i18n-test-messages';
@@ -414,6 +415,96 @@ describe('EditPlayRecordPage', () => {
     await waitFor(() => {
       expect(screen.getByText(/Failed to load record/i)).toBeInTheDocument();
     });
+  });
+
+  it('#13: fires the non-blocking amber toast + go-to-live action on SAVED_WHILE_LIVE_ACTIVE', async () => {
+    const user = userEvent.setup();
+
+    // The update succeeds but the user had another session live → warning headers.
+    mockUseUpdateRecord.mockReturnValue({
+      mutateAsync: vi
+        .fn()
+        .mockResolvedValue({ warningCode: 'SAVED_WHILE_LIVE_ACTIVE', liveSessionId: 'live-1' }),
+      isPending: false,
+    });
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-form')).toBeInTheDocument();
+    });
+
+    const form = screen.getByTestId('session-form');
+    await user.click(form.querySelector('button[type="submit"]')!);
+
+    await waitFor(() => {
+      expect(toast.warning).toHaveBeenCalledTimes(1);
+    });
+    const [, opts] = (toast.warning as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(opts).toMatchObject({ duration: 6000 });
+    expect(opts.action).toMatchObject({ label: expect.any(String) });
+    // The action deep-links to the live session.
+    opts.action.onClick();
+    expect(mockRouterPush).toHaveBeenCalledWith('/sessions/live-1/live');
+  });
+
+  it('#13: fires the warning toast WITHOUT an action when liveSessionId is missing', async () => {
+    const user = userEvent.setup();
+    mockUseUpdateRecord.mockReturnValue({
+      mutateAsync: vi
+        .fn()
+        .mockResolvedValue({ warningCode: 'SAVED_WHILE_LIVE_ACTIVE', liveSessionId: undefined }),
+      isPending: false,
+    });
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-form')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('session-form').querySelector('button[type="submit"]')!);
+
+    await waitFor(() => {
+      expect(toast.warning).toHaveBeenCalledTimes(1);
+    });
+    const [, opts] = (toast.warning as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect(opts).toMatchObject({ duration: 6000 });
+    expect(opts.action).toBeUndefined();
+  });
+
+  it('#13: does NOT fire the warning toast on a normal save (no warning code)', async () => {
+    const user = userEvent.setup();
+    mockUseUpdateRecord.mockReturnValue({
+      mutateAsync: vi.fn().mockResolvedValue({ warningCode: undefined, liveSessionId: undefined }),
+      isPending: false,
+    });
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('session-form')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('session-form').querySelector('button[type="submit"]')!);
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalled();
+    });
+    expect(toast.warning).not.toHaveBeenCalled();
   });
 
   it('#2437-1: shows conflict dialog when updateRecord rejects with kind="conflict"', async () => {

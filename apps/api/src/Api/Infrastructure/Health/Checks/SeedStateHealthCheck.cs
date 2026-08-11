@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -33,7 +34,10 @@ namespace Api.Infrastructure.Health.Checks;
 ///     <c>chunk_count != embedding_count</c>, OR at least one PDF is in
 ///     state <c>Failed</c>. RAG returns degraded recall. Equivalent to
 ///     <c>snapshot-verify.sh</c> exit code 6 (#2126 D7) but applied to the
-///     live DB.</description>
+///     live DB. Note (#2675): <c>embedding_count</c> is the SUM of
+///     <c>VectorDocument.ChunkCount</c> across VectorDocuments (chunks indexed),
+///     not the VectorDocuments row-count (which is per-PDF), so it is directly
+///     comparable to <c>chunk_count</c> from TextChunks.</description>
 ///   </item>
 ///   <item>
 ///     <description><c>ready</c> — every PDF is <c>Ready</c>, chunks and
@@ -70,18 +74,25 @@ public sealed class SeedStateHealthCheck : IHealthCheck
     {
         try
         {
+            // #3075: exclude demo mock placeholders (seed/ prefix, no real blob/chunks) from the
+            // RAG-readiness counts. SeedBadswormPersonaCommandHandler seeds them in deliberate
+            // non-Ready states (Pending/Embedding) for the dashboard demo; they are not real corpus
+            // content, so counting them would wrongly pin seed_state to indexing/partial_failed.
             var pdfTotal = await _db.PdfDocuments
                 .AsNoTracking()
+                .Where(d => !d.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
                 .CountAsync(cancellationToken)
                 .ConfigureAwait(false);
 
             var pdfReady = await _db.PdfDocuments
                 .AsNoTracking()
+                .Where(d => !d.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
                 .CountAsync(d => d.ProcessingState == "Ready", cancellationToken)
                 .ConfigureAwait(false);
 
             var pdfFailed = await _db.PdfDocuments
                 .AsNoTracking()
+                .Where(d => !d.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
                 .CountAsync(d => d.ProcessingState == "Failed", cancellationToken)
                 .ConfigureAwait(false);
 
@@ -90,9 +101,15 @@ public sealed class SeedStateHealthCheck : IHealthCheck
                 .CountAsync(cancellationToken)
                 .ConfigureAwait(false);
 
+            // VectorDocuments holds ONE row per PDF (an indexing-status record with a
+            // ChunkCount), not one row per chunk. Counting rows would compare per-PDF
+            // (≈ pdf_ready) against TextChunks' per-chunk count and never match for
+            // multi-chunk PDFs, pinning seed_state to partial_failed forever (#2675).
+            // Sum the per-PDF ChunkCount so both sides count chunks. Same idiom as
+            // VectorDocumentRepository.GetTotalChunkCountAsync.
             var embeddingCount = await _db.VectorDocuments
                 .AsNoTracking()
-                .CountAsync(cancellationToken)
+                .SumAsync(v => v.ChunkCount, cancellationToken)
                 .ConfigureAwait(false);
 
             string seedState = DeriveSeedState(pdfTotal, pdfReady, pdfFailed, chunkCount, embeddingCount);
@@ -124,7 +141,7 @@ public sealed class SeedStateHealthCheck : IHealthCheck
         catch (Exception ex)
         {
             _logger.LogError(ex, "SeedStateHealthCheck failed to query DB counts");
-            return HealthCheckResult.Unhealthy("Failed to query seed-state counts", ex);
+            return HealthCheckResult.Degraded("Failed to query seed-state counts", ex);
         }
     }
 

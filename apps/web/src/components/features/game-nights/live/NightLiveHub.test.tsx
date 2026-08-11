@@ -147,6 +147,21 @@ describe('NightLiveHub', () => {
       expect(screen.getByLabelText('Current game')).toBeInTheDocument();
     });
 
+    // #3146 Slice 2 review (F3): the tab-nav is now reachable in production, so
+    // its ARIA tabs relationship must be complete — the active tab's
+    // aria-controls resolves to a role="tabpanel" element that points back via
+    // aria-labelledby (no dangling references).
+    it('exposes a complete tab ↔ tabpanel ARIA relationship', () => {
+      render(<NightLiveHub {...baseProps} mobile />);
+      const currentTab = screen.getByRole('tab', { name: /Current/ });
+      expect(currentTab.id).toBeTruthy();
+      const panelId = currentTab.getAttribute('aria-controls');
+      expect(panelId).toBeTruthy();
+      const panel = screen.getByRole('tabpanel');
+      expect(panel.id).toBe(panelId);
+      expect(panel.getAttribute('aria-labelledby')).toBe(currentTab.id);
+    });
+
     it('respects initialMobileTab prop', () => {
       render(<NightLiveHub {...baseProps} mobile initialMobileTab="planned" />);
       expect(screen.getByRole('tab', { name: /Planned/ })).toHaveAttribute('aria-selected', 'true');
@@ -291,6 +306,25 @@ describe('NightLiveHub', () => {
     it('does not render toast when autoSaveToast prop missing', () => {
       render(<NightLiveHub {...baseProps} />);
       expect(screen.queryByText('Auto-salvato')).toBeNull();
+    });
+  });
+
+  describe('readOnly projection (#2633 Slice B · LD-13)', () => {
+    it('hides the pause/transition/end drive controls when readOnly', () => {
+      render(<NightLiveHub {...baseProps} readOnly />);
+      expect(screen.queryByRole('button', { name: /Pausa/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /Transition/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: /^End$/ })).toBeNull();
+    });
+
+    it('still renders the read-only jump-to-session action', () => {
+      render(<NightLiveHub {...baseProps} readOnly onJumpToSession={() => undefined} />);
+      expect(screen.getByRole('button', { name: /Apri sessione live/ })).toBeInTheDocument();
+    });
+
+    it('renders the drive controls by default (readOnly omitted)', () => {
+      render(<NightLiveHub {...baseProps} />);
+      expect(screen.getByRole('button', { name: /Pausa/ })).toBeInTheDocument();
     });
   });
 

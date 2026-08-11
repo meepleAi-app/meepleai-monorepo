@@ -107,6 +107,7 @@ internal sealed class RejectMechanicClaimCommandHandler
             ReviewedBy: claim.ReviewedBy,
             ReviewedAt: claim.ReviewedAt,
             RejectionNote: claim.RejectionNote,
+            ReviewNote: claim.ReviewNote,
             Citations: claim.Citations
                 .OrderBy(c => c.DisplayOrder)
                 .Select(c => new MechanicCitationDto(
@@ -114,6 +115,7 @@ internal sealed class RejectMechanicClaimCommandHandler
                     PdfPage: c.PdfPage,
                     Quote: c.Quote,
                     DisplayOrder: c.DisplayOrder))
-                .ToList());
+                .ToList(),
+            Validations: MechanicClaimValidations.FromDomain(claim));
     }
 }

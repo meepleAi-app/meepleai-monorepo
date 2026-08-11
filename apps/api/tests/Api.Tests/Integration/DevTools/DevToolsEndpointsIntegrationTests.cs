@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using System.Linq;
 using Api.DevTools;
 using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Application.Services;
+using Api.Tests.Constants;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -34,7 +36,13 @@ namespace Api.Tests.Integration.DevTools;
 /// They are grouped in a collection to enforce sequential execution, since the
 /// MockToggleStateProvider singleton is shared across tests.
 /// </summary>
+// Issue #3622: la classe era priva di [Trait("Category", …)] e quindi non veniva eseguita da
+// NESSUN gate — né da `Category=Unit` né da `Category=Integration`. È così che il suo host è
+// potuto restare rotto senza che nulla lo segnalasse. Integration e non Unit perché avvia
+// l'host completo via WebApplicationFactory (~13s per test): troppo lento per il gate veloce.
 [Collection("DevToolsEndpoints")]
+[Trait("Category", TestCategories.Integration)]
+[Trait("BoundedContext", "DevTools")]
 public class DevToolsEndpointsIntegrationTests
     : IClassFixture<DevToolsEndpointsTestFactory>
 {
@@ -198,6 +206,18 @@ public sealed class DevToolsEndpointsTestFactory : WebApplicationFactory<Program
             // DomainEventCollector is only registered in non-Testing path of
             // InfrastructureServiceExtensions.AddDatabaseServices(); add it manually.
             services.AddScoped<IDomainEventCollector, DomainEventCollector>();
+
+            // Issue #3622: drop every IHostedService. Several of them (HybridCacheInvalidationSubscriber,
+            // ProviderCacheInvalidationSubscriber, …) call _redis.GetSubscriber() in StartAsync; the mock
+            // above only stubs GetDatabase, so they get null and the host dies with a
+            // NullReferenceException before a single route is reachable. That is precisely why these
+            // tests were red — unnoticed, because the class carried no Category trait and no gate ran it.
+            //
+            // Removed wholesale rather than one by one: deep-stubbing is not an option
+            // (ChannelMessageQueue is sealed), and an allow-list would silently break again the next
+            // time someone registers a Redis-backed background service. These four tests exercise three
+            // synchronous /dev/toggles routes — no hosted service takes part in that.
+            services.RemoveAll(typeof(IHostedService));
 
             // Wire DevTools services manually (guarded by #if DEBUG + IsDevelopment in Program.cs)
             DevToolsServiceCollectionExtensions.AddMeepleDevTools(services);

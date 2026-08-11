@@ -33,19 +33,3 @@ public interface IRateLimitEvaluator
     /// <param name="cancellationToken">Cancellation token.</param>
     Task RecordRejectionAsync(Guid userId, CancellationToken cancellationToken = default);
 }
-
-/// <summary>
-/// Statistics about a user's share request activity.
-/// Used by the rate limit evaluator to calculate status.
-/// </summary>
-/// <param name="UserId">The user these stats are for.</param>
-/// <param name="Tier">The user's current tier level.</param>
-/// <param name="PendingRequestCount">Number of pending share requests.</param>
-/// <param name="CurrentMonthRequestCount">Number of requests made this month.</param>
-/// <param name="LastRejectionAt">When the user was last rejected (if applicable).</param>
-public record RateLimitUserStats(
-    Guid UserId,
-    UserTier Tier,
-    int PendingRequestCount,
-    int CurrentMonthRequestCount,
-    DateTime? LastRejectionAt);

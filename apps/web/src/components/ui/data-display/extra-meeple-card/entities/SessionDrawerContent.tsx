@@ -59,7 +59,7 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
           {
             icon: Play,
             label: 'Riprendi',
-            onClick: () => router.push(`/sessions/live/${entityId}`),
+            onClick: () => router.push(`/sessions/${entityId}/live`),
             variant: 'primary' as const,
             enabled: true,
           },

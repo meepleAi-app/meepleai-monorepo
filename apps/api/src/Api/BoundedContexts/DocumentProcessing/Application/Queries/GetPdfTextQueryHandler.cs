@@ -31,7 +31,8 @@ internal class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextRe
             var pdf = await _dbContext.PdfDocuments
                 .Where(p => p.Id == query.PdfId)
                 .AsNoTracking()
-                .Select(p => new PdfTextResult(
+                .Select(p => new
+                {
                     p.Id,
                     p.FileName,
                     p.ExtractedText,
@@ -39,16 +40,41 @@ internal class GetPdfTextQueryHandler : IQueryHandler<GetPdfTextQuery, PdfTextRe
                     p.ProcessedAt,
                     p.PageCount,
                     p.CharacterCount,
-                    p.ProcessingError
-                ))
+                    p.ProcessingError,
+                    p.SharedGameId,
+                    p.UploadedByUserId
+                })
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
             if (pdf == null)
             {
                 _logger.LogWarning("PDF {PdfId} not found", query.PdfId);
+                return null;
             }
 
-            return pdf;
+            // Issue #3222 — Authorization: shared-game PDFs are public (citation viewer); private
+            // PDFs require ownership; admins bypass (the admin-queue extracted-text tool reads any
+            // PDF). Return null (→ 404, no info leak) otherwise, so a non-owner cannot read another
+            // user's private rulebook text.
+            var isSharedGamePdf = pdf.SharedGameId.HasValue;
+            var isOwner = pdf.UploadedByUserId == query.UserId;
+            if (!query.IsAdmin && !isSharedGamePdf && !isOwner)
+            {
+                _logger.LogWarning(
+                    "User {UserId} denied access to PDF text for {PdfId} (owner: {OwnerId})",
+                    query.UserId, query.PdfId, pdf.UploadedByUserId);
+                return null;
+            }
+
+            return new PdfTextResult(
+                pdf.Id,
+                pdf.FileName,
+                pdf.ExtractedText,
+                pdf.ProcessingState,
+                pdf.ProcessedAt,
+                pdf.PageCount,
+                pdf.CharacterCount,
+                pdf.ProcessingError);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

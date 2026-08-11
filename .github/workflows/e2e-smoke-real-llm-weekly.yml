@@ -98,20 +98,11 @@ jobs:
           UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
           SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
           RERANKER_SERVICE_URL=http://reranker-service:8003
-          N8N_URL=http://n8n:5678
           Email__EnableSsl=false
           HYPERDX_OTLP_ENDPOINT=http://meepleai-hyperdx:4317
           HYPERDX_API_KEY=demo
           ALPHA_MODE=true
           APIENV
-          cat > n8n.env.dev <<'N8NENV'
-          N8N_HOST=0.0.0.0
-          N8N_PORT=5678
-          N8N_PROTOCOL=http
-          WEBHOOK_URL=http://localhost:5678/
-          N8N_EDITOR_BASE_URL=http://localhost:5678/
-          GENERIC_TIMEZONE=Europe/Rome
-          N8NENV
 
       - name: Boot full snapshot stack (Catan + rulebook indicizzati)
         working-directory: infra

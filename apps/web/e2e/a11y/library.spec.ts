@@ -27,7 +27,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 
-import { mockAuthEndpoints, seedAuthSession } from '../_helpers/seedAuthSession';
+import {
+  mockAuthEndpoints,
+  mockLibraryHubSiblingSources,
+  seedAuthSession,
+} from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -36,6 +40,9 @@ async function gotoLibraryReady(page: Page, search = ''): Promise<void> {
   await seedAuthSession(page);
   await seedCookieConsent(page);
   await mockAuthEndpoints(page);
+  // #3289: mock the 4 sibling hub sources so `useHybridHubItems.isLoading`
+  // settles and LibraryHybridGrid mounts (fixture only short-circuits games).
+  await mockLibraryHubSiblingSources(page);
   await page.goto(`/library${search}`, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('[data-slot="library-hub-v2"]', { timeout: 30_000 });
 }

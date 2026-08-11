@@ -40,9 +40,14 @@ import { CascadeDrawerHost } from '@/components/dashboard/CascadeDrawerHost';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
-import { useCompletedGameNights, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import {
+  useCompletedGameNights,
+  useRsvpGameNight,
+  useUpcomingGameNights,
+} from '@/hooks/queries/useGameNights';
 import { useLibrary, useLibraryStats } from '@/hooks/queries/useLibrary';
 import { useFriendsActivity } from '@/hooks/use-friends-activity';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useTranslation } from '@/hooks/useTranslation';
 
 import { DashboardHero, type DashboardHeroKpi } from './_components/DashboardHero';
@@ -82,6 +87,10 @@ export function DashboardClient(): ReactElement {
 
   // ── Data hooks (re-used from Stage 3 + asse-C additions) ─────────────────
   const upcomingGNQuery = useUpcomingGameNights();
+  // #2978 (invariante #17): inline RSVP for pending-invitee cards on the dashboard.
+  const rsvpMutation = useRsvpGameNight();
+  // #3191: offline state gates the inline RSVP CTAs (parity with HomeFeed / PR #3189).
+  const { isOffline } = useNetworkStatus();
   // F20 #1974: dashboard "Recenti" slot — recently completed game nights.
   const completedGNQuery = useCompletedGameNights({ limit: 5 });
   const sessionsQuery = useActiveSessions(10);
@@ -120,6 +129,7 @@ export function DashboardClient(): ReactElement {
           rsvpConfirmedCount: gn.acceptedCount,
           rsvpPendingCount: gn.pendingCount,
           rsvpTotalCount: gn.totalInvited,
+          viewerRsvpStatus: gn.viewerRsvpStatus ?? null,
         }))
     );
   }, [upcomingGNQuery.data]);
@@ -132,19 +142,19 @@ export function DashboardClient(): ReactElement {
 
   // ── Slot #2: Recenti (completed GameNights) ──────────────────────────────
   // F20 #1974 (audit 2026-06-07): wires the BE `/game-nights/completed`
-  // endpoint shipped alongside this PR. Projection mirrors `prossimiCards`:
-  // map the BE `GameNightDto` to the `RecentiGameNightCard` contract that
-  // `RecentiSection` expects. `sessionCount` defaults to 0 until the BE
-  // surfaces it on the DTO; mini cover thumbnails are not yet exposed
-  // server-side so we pass an empty array (the card primitive already
-  // hides the cover stack in that case).
+  // endpoint. Projection mirrors `prossimiCards`: map the BE `GameNightDto` to
+  // the `RecentiGameNightCard` contract that `RecentiSection` expects.
+  // `sessionCount` now comes from the BE DTO (#3084 — a completed night has >= 1
+  // session, so the card no longer shows a misleading "0 partite"). Mini cover
+  // thumbnails are not yet exposed server-side so we pass an empty array (the
+  // card primitive already hides the cover stack in that case).
   const recentiCards = useMemo<ReadonlyArray<RecentiGameNightCard>>(() => {
     const data = completedGNQuery.data ?? [];
     return data.slice(0, 3).map<RecentiGameNightCard>(gn => ({
       id: gn.id,
       title: gn.title,
       date: gn.scheduledAt,
-      sessionCount: 0,
+      sessionCount: gn.sessionCount,
       gamePreviewThumbnails: [],
     }));
   }, [completedGNQuery.data]);
@@ -274,6 +284,11 @@ export function DashboardClient(): ReactElement {
         <ProssimiSection
           state={prossimiState}
           gameNights={prossimiCards}
+          isOffline={isOffline}
+          // #3191: derive the in-flight night id so the card can lock its own CTAs
+          // (anti-double-submit) without freezing sibling cards.
+          pendingRsvpId={rsvpMutation.isPending ? (rsvpMutation.variables?.id ?? null) : null}
+          onRsvp={(id, response) => rsvpMutation.mutate({ id, response })}
           onRetry={() => {
             void upcomingGNQuery.refetch();
           }}

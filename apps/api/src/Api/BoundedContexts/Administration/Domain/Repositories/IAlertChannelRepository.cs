@@ -16,7 +16,7 @@ internal interface IAlertChannelRepository
     /// <summary>
     /// Upserts a channel. When the channel already exists the implementation
     /// MUST enforce optimistic concurrency via the aggregate's
-    /// <see cref="AlertChannel.RowVersion"/> token (translated to
+    /// <see cref="AlertChannel.Xmin"/> token (translated to
     /// <c>DbUpdateConcurrencyException</c> by EF Core).
     /// </summary>
     Task UpsertAsync(AlertChannel channel, CancellationToken cancellationToken = default);

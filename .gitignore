@@ -120,6 +120,10 @@ CUsersUtente*
 
 # Docker
 .dockerignore
+# #2953 (#7): the ROOT .dockerignore trims the API build context (context=repo-root per
+# infra/docker-compose.yml). The unqualified pattern above would silently keep it out of git;
+# un-ignore just the root one (nested apps/*/.dockerignore stay ignored for new files).
+!/.dockerignore
 compose.override.yml
 
 # Data
@@ -148,6 +152,7 @@ test-results/
 .claude/.mcp.local.json
 .claude/worktrees/
 .worktrees/
+.claire/
 
 # Playwright MCP temp files
 tmpclaude-*-cwd
@@ -236,6 +241,11 @@ tests/llm-eval/ocr-validation/manuals/*
 # Golden set contractor CSV uploads (before JSONL conversion)
 tests/llm-eval/golden-set/*.csv
 
+# Golden dataset RAG: generato da tools/golden-dataset-generator, non committato (#3655).
+# tests/data/README.md lo dichiarava già "git-ignored", ma la regola non esisteva: il file
+# era committabile per sbaglio (26.658 righe rigenerabili in due secondi).
+tests/data/golden_dataset.json
+
 # Page catalog (generated screenshots and static site)
 docs/pages/screenshots/
 docs/pages/dist/
@@ -265,7 +275,12 @@ infra/dotnet-watch.log
 # .meta.json sidecars are intentionally NOT ignored (committable log history).
 data/snapshots/*.dump
 data/snapshots/*.dump.sha256
+data/snapshots/*.generated-tables.sql
 data/snapshots/.latest
+# `make` run from infra/ with a relative OUT_DIR drops snapshots in
+# infra/data/snapshots/ — never commit those (a stale 45MB .dump committed here
+# masked the R2 fetch in dev-from-snapshot, #2480). Ignore the whole tree.
+infra/data/snapshots/
 
 # Backups directory (issue #1320 — game entity reset)
 infra/backups/*.dump
@@ -278,8 +293,12 @@ infra/backups/*.txt
 infra/scripts/game-reset/.env.*
 !infra/scripts/game-reset/.env.example
 
+# Per-environment config for corpus re-index scripts (#3269; never commit actual values)
+infra/scripts/reindex-corpus/.env.*
+!infra/scripts/reindex-corpus/.env.example
+
 # Claude Design source bundle (derived folder linked to claude.ai/design, regenerated on demand via cp script)
-# Note: claude-design-handoff/ is intentionally NOT gitignored — exported prototypes are committed
+# Note: admin-mockups/claude-design-handoff/ is intentionally NOT gitignored — exported prototypes are committed
 # so they're shareable across terminals and reviewable via PR (see folder README)
 claude-design-bundle/
 
@@ -288,3 +307,6 @@ loc.png
 
 # Windows temp diff files accidentally created by harness tools
 C*UsersUtenteAppDataLocalTemp*-diff.txt
+
+# Mockup<->live compare tool output (#2999) - screenshots, mai committare
+apps/web/mockup-compare-output/

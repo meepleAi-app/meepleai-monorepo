@@ -6,6 +6,8 @@ import { ADMIN_NAV_GROUPS } from '../admin-nav-config';
 
 const VALID_ROLES: UserRole[] = ['superadmin', 'admin', 'editor', 'user'];
 
+const ANALYSES_HREF = '/admin/knowledge-base/mechanic-extractor/analyses';
+
 describe('ADMIN_NAV_GROUPS', () => {
   it('declares exactly the four groups A, B, C, D in order', () => {
     expect(ADMIN_NAV_GROUPS.map(g => g.id)).toEqual(['A', 'B', 'C', 'D']);
@@ -40,5 +42,10 @@ describe('ADMIN_NAV_GROUPS', () => {
   it('has no duplicate hrefs across all groups', () => {
     const hrefs = ADMIN_NAV_GROUPS.flatMap(g => g.items.map(i => i.href));
     expect(new Set(hrefs).size).toBe(hrefs.length);
+  });
+
+  it('always exposes the AI-first Mechanic Analyses entry', () => {
+    const hrefs = ADMIN_NAV_GROUPS.flatMap(g => g.items.map(i => i.href));
+    expect(hrefs).toContain(ANALYSES_HREF);
   });
 });

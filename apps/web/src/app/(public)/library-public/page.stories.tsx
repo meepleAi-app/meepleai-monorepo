@@ -17,6 +17,10 @@ const meta: Meta<typeof LibraryPublicHome> = {
           '#2208 DS-17-10 sub-issue. Mockup parity: `admin-mockups/design_files/sp3-library-public.jsx` (816 LOC, forward-refactor 0.6 conf). Full designer review deferred per DEC-4 tracking issue.',
       },
     },
+    // `Default` export covers the canonical `default` state via populated fixtures,
+    // not a `mswForState('default')` string literal — lint:storybook-states heuristic
+    // can't see it (#2342 Task 4 bonifica).
+    canonicalStates: ['default'],
   },
 };
 

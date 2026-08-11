@@ -64,11 +64,11 @@ Già documentato in [SP6 Capitolo 2](./SP6-libro-game.md#capitolo-2--iter-1-dogf
 | **A** | `sp7-game-night-new.{html,jsx}` | `/game-nights/new` | US-31 | Multistep wizard 4 step (mobile) / split-form (desktop) |
 | **B** | `sp7-game-night-detail-rsvp.{html,jsx}` | `/game-nights/[id]` | US-31 | Hub detail + RSVP + game voting |
 | **C** | ~~`sp7-game-night-edit.{html,jsx}`~~ — **NOT COMMISSIONED** (ADR-079: drawer overlay) | `/game-nights/[id]?action=edit` | US-31 | Form edit + cancel/reschedule states rendered as drawer overlay from B detail page |
-| **D** | `sp7-agent-proposals-list.{html,jsx}` | `/editor/agent-proposals` | US-33 | Grid + filters + status badge |
-| **E** | `sp7-agent-builder-create.{html,jsx}` | `/editor/agent-proposals/create` | US-33 | Multistep wizard 4 step (KB → prompt → tone → review) |
-| **F** | `sp7-agent-builder-test.{html,jsx}` | `/editor/agent-proposals/[id]/test` | US-33 | Playground chat + feedback annotation |
-| **G** | `sp7-agent-builder-edit.{html,jsx}` | `/editor/agent-proposals/[id]/edit` | US-33 | Form edit + version diff |
-| **H** | `sp7-library-game-agent.{html,jsx}` | `/library/games/[gameId]/agent` | US-13/33 | Chat inline a livello game (full-screen mobile / split desktop) |
+| **D** | ~~`sp7-agent-proposals-list`~~ — **già shipped** (admin) | `/admin/agents/definitions` (admin-only, ADR-085) | US-33 | Grid + filters + status badge |
+| **E** | ~~`sp7-agent-builder-create`~~ — **già shipped** (admin) | `/admin/agents/definitions/create` (admin-only, ADR-085) | US-33 | Wizard admin (no tone-picker/confidence — fuori MVP) |
+| **F** | ~~`sp7-agent-builder-test`~~ — **già shipped** (admin) | `/admin/agents/definitions/playground` (admin-only, ADR-085) | US-33 | Playground chat (`PlaygroundChatCommand`) |
+| **G** | ~~`sp7-agent-builder-edit`~~ — **già shipped** (admin, no version-diff) | `/admin/agents/definitions/[id]/edit` (admin-only, ADR-085) | US-33 | Form edit (version-diff fuori MVP) |
+| **H** | ~~`sp7-library-game-agent`~~ — **NOT COMMISSIONED** (già coperto) | `/library/[gameId]?tab=aiChat` (legacy `/library/games/[gameId]/agent` = redirect 307) | US-13/33 | Chat inline già shipped come tab `aiChat` — vedi banner sez. H |
 | **I** | `sp7-notifications-hub.{html,jsx}` | `/notifications` | US-41 | Timeline + grouping + bulk actions |
 | **J** | `sp7-notifications-preferences.{html,jsx}` | `/notifications/preferences` | US-41 | Preferences form + channel settings |
 
@@ -249,8 +249,8 @@ grep -E "hsl\([0-9]+,?\s*89%,\s*48%\)|hsla\([0-9]+,?\s*89%" \
 | `state-04-step3-party` | Step 3 player picker + email | Tag chips entity=player, autocomplete dropdown |
 | `state-05-step4-games` | Step 4 game multi-select | Library cards + duration/players matching |
 | `state-06-step4-conflict` | 2 game candidates con duration totale > "tutto il giorno" | Banner red "Troppo lungo per una sera" |
-| `state-07-review` | Riepilogo finale (read-only summary) | "Crea e invia inviti" CTA primary |
-| `state-08-success` | Post-submit: redirect a B con toast | "Invitato 6 giocatori, attendi RSVP" |
+| `state-07-review` | Riepilogo finale (read-only summary) | "Crea serata" CTA primary (**tagging silente, NESSUN invio inviti al submit** — invariante #16; gli inviti si mandano dopo, dal detail page B) |
+| `state-08-success` | Post-submit: redirect a B con toast | "Serata creata · 6 giocatori taggati. Invia gli inviti dal dettaglio." |
 | `state-09-mobile-step-flow` | Mobile vista wizard (4 step single column) | Bottom bar fixed con CTA "Avanti" / "Indietro" |
 
 Desktop variants:
@@ -269,7 +269,7 @@ Desktop variants:
 
 ### Coverage Gherkin
 
-US-31 happy: G31.1 (create + send invites), G31.5 (game candidates max 3), G31.7 (auto-RSVP regulars), G31.10 (mobile single-column wizard).
+US-31 happy: G31.1 (create + tag players — NO auto-invite al submit, invariante #16), G31.5 (game candidates max 3), G31.7 (auto-RSVP regulars), G31.10 (mobile single-column wizard).
 
 ---
 
@@ -539,6 +539,17 @@ US-31: G31.16 (summary aggregation), G31.17 (share riepilogo), G31.18 (archive f
 
 # WAVE 2 — Agent Builder Flow (US-33)
 
+> ## ⚠️ CORREZIONE 2026-07-15 — allineamento al backend (ADR-085, issue #2964)
+>
+> Lo spec-panel #1889 ha verificato che la superficie agent-builder descritta in questa wave **NON corrisponde al backend reale**. Correzioni **normative** (governate da [ADR-085](../../docs/for-claude/architecture/adr/adr-085-agent-builder-admin-backend-alignment.md); invarianti in [`agent-builder-domain-invariants.md`](../../docs/for-developers/specs/2026-07-15-agent-builder-domain-invariants.md)):
+> - **Route/entità**: D–G vivono su `/admin/agent-definitions*` **admin-only** (`RequireAdminSessionFilter`), NON `/editor/agent-proposals*`. Entità = `AgentDefinition`, non `AgentProposal`.
+> - **Persona**: la **costruzione** agenti è **admin/dogfood (Aaron)**, non Marco. Marco **usa** gli agenti via chat inline (mockup H).
+> - **Già shipped → non commissionare**: la UI admin agent-builder **esiste già in produzione** (`/admin/agents/definitions` — list/create-wizard/test-playground/edit). I mockup D–G sono **ridondanti** e **non vanno commissionati** (disposition analoga ad ADR-079/mockup C).
+> - **Fuori MVP**: status `Archived` (è soft-delete, non un lifecycle status), **confidence-threshold slider** + **tone-preset picker a 5 toni** (E-Step 3), **version history/rollback** (G) — non supportati dal backend. Il publish **passa obbligatoriamente da Testing** (niente "Pubblica subito" da Draft in E). Analogo tono grezzo backend = `TypologySlug` {arbitro, game-master, chat}.
+> - **H resta user-facing** (chat inline, `/library/games/[id]/agent`).
+>
+> Le sezioni D–G sottostanti restano come **spec storica del design-intent user-facing** (differito); per l'MVP fanno fede questo banner + ADR-085.
+
 ## D — Agent Proposals List (`sp7-agent-proposals-list`)
 
 **File**: `sp7-agent-proposals-list.{html,jsx}`
@@ -789,6 +800,15 @@ US-33: G33.6 (iterate prompt), G33.9 (rollback to previous version).
 
 ## H — Library Game Agent Inline (`sp7-library-game-agent`)
 
+> ## ⚠️ NOT COMMISSIONED 2026-07-15 — già coperto dal runtime (#1889)
+>
+> Verifica FE 2026-07-15: la funzionalità di H (chat inline user↔agente di un gioco) è **già shipped** e la route `/library/[gameId]/agent` è un **redirect 307 deliberato** verso il tab `aiChat` della game-detail unificata — la vista standalone fu ritirata di proposito (spec `docs/superpowers/specs/2026-04-09-library-to-game-epic-design.md §4.4 CR-I4`).
+> - **Runtime**: tab `aiChat` → `GameAiChatTab` → `GameChatTab` (barrel `@/components/features/game-chat/`: `ChatBubble`, `CitationChip`, `ConfidenceBadge`, `LowConfidenceDisclaimer`, `OutOfContextActions`, `SuggestedPrompts`, sidebar Tutor/Arbitro, fast-resume). Hook `useGameChat`.
+> - **Backend**: `POST /api/v1/agents/qa/stream` (SSE, user-facing non-admin, legato a `gameId`).
+> - **Mockup di riferimento già esistente**: `admin-mockups/design_files/sp4-game-chat-tab.html`.
+>
+> **Disposition**: H **non va commissionato** (analogo a D–G in ADR-085). Le sezioni sotto restano come spec storica del design-intent. Con questa disposizione l'intera wave agent-builder D–H è riconciliata al runtime shipped: **nessun mockup agent-builder da autorare**. Vedi [ADR-085](../../docs/for-claude/architecture/adr/adr-085-agent-builder-admin-backend-alignment.md).
+
 **File**: `sp7-library-game-agent.{html,jsx}`
 **Route**: `/library/games/[gameId]/agent`
 **Persona**: Marco al tavolo (mobile primario). Chat con agente specifico del gioco durante partita.
@@ -1010,7 +1030,7 @@ Buon lavoro. SP7 attiva 3 user story P1 dormant — post-merge si passa allo spr
 | 2 | E `sp7-agent-builder-create` | ⏳ pending | After D |
 | 2 | F `sp7-agent-builder-test` | ⏳ pending | After E |
 | 2 | G `sp7-agent-builder-edit` | ⏳ pending | After F |
-| 3 | H `sp7-library-game-agent` | ⏳ pending | First della wave 3 |
+| 3 | ~~H `sp7-library-game-agent`~~ | ✅ **NOT COMMISSIONED** (già coperto) | Chat già shipped come tab `aiChat` + `sp4-game-chat-tab.html` — vedi sez. H / ADR-085 |
 | 3 | I `sp7-notifications-hub` | ⏳ pending | After H |
 | 3 | J `sp7-notifications-preferences` | ⏳ pending | After I |
 

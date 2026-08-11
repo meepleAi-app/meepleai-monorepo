@@ -36,6 +36,7 @@ import {
 import clsx from 'clsx';
 
 import { Drawer, DrawerContent, DrawerDescription, DrawerTitle } from '@/components/ui/drawer';
+import { useHistoryBackGuard } from '@/hooks/useHistoryBackGuard';
 import { useTranslation } from '@/hooks/useTranslation';
 
 import {
@@ -67,6 +68,10 @@ export function AdvancedFiltersDrawer({
   useEffect(() => {
     if (open) setDraft(activeFilters);
   }, [open, activeFilters]);
+
+  // Gap A-03 (#3197): 1-level Back guard — the hardware/browser Back button
+  // closes the drawer instead of navigating away from the /library route.
+  useHistoryBackGuard(open, () => onOpenChange(false));
 
   const handleApply = () => {
     onApply(draft);
@@ -448,7 +453,7 @@ function SelectMultiBody({
                 className={clsx(
                   'inline-flex flex-shrink-0 items-center gap-1 rounded-full border px-2 py-1 font-mono text-[10.5px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
                   active
-                    ? 'border-entity-game/40 bg-entity-game/[0.12] text-entity-game'
+                    ? 'border-entity-game/40 bg-entity-game/[0.12] text-entity-game-text'
                     : 'border-transparent bg-muted text-muted-foreground hover:bg-muted/80'
                 )}
               >
@@ -690,11 +695,11 @@ function entityBorderActiveClass(color: EntityColorSlug): string {
 function entityTextClass(color: EntityColorSlug): string {
   switch (color) {
     case 'game':
-      return 'text-entity-game';
+      return 'text-entity-game-text';
     case 'agent':
       return 'text-entity-agent';
     case 'kb':
-      return 'text-entity-kb';
+      return 'text-entity-kb-text';
     case 'session':
       return 'text-entity-session';
     case 'chat':

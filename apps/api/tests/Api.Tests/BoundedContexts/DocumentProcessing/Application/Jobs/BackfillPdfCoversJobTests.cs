@@ -23,6 +23,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IPdfCoverExtractor> _extractor = new();
     private readonly Mock<IBlobStorageService> _blob = new();
+    private readonly Mock<IPdfCoverUploadPipeline> _coverPipeline = new();
     private readonly Mock<IDomainEventCollector> _eventCollector = new();
     private readonly List<IDomainEvent> _collectedEvents = new();
 
@@ -52,7 +53,8 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         string coverStatus = "Pending",
         string processingState = "Ready",
         DateTime? uploadedAt = null,
-        Guid? sharedGameId = null)
+        Guid? sharedGameId = null,
+        int coverAttempts = 0)
     {
         var pdf = new PdfDocumentEntity
         {
@@ -65,6 +67,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
             UploadedAt = uploadedAt ?? DateTime.UtcNow,
             ProcessingState = processingState,
             CoverGenerationStatus = coverStatus,
+            CoverGenerationAttempts = coverAttempts,
             SharedGameId = sharedGameId,
         };
         _db.PdfDocuments.Add(pdf);
@@ -75,7 +78,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
     [Fact]
     public async Task RunBatchAsync_NoEligiblePdfs_DoesNothing()
     {
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         _extractor.Verify(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Never);
         _blob.Verify(b => b.RetrieveAsync(It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -99,30 +102,49 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         ConfigureExtractorReturning(PdfCoverExtractionOutcome.Skipped);
         ConfigureBlobReturningStream();
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         _extractor.Verify(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task RunBatchAsync_PdfBytesNullFromBlob_MarksFailedWithoutCallingExtractor()
+    public async Task RunBatchAsync_PdfBytesNullFromBlob_TransientRetry_MarksPendingWithIncrementedAttempt()
     {
-        var pdf = SeedPdf();
+        var pdf = SeedPdf(); // attempts = 0
 
         _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
              .ReturnsAsync((Stream?)null);
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         _extractor.Verify(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()), Times.Never);
 
         var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
-        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed));
+        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending),
+            "#3373 D1: a missing binary is a transient storage failure — retry-eligible, not immediately terminal");
+        refreshed.CoverGenerationAttempts.Should().Be(1);
         refreshed.CoverGenerationError.Should().Contain("not found");
     }
 
     [Fact]
-    public async Task RunBatchAsync_ExtractGenerated_UploadsBothSizesAndPersistsKeyAndEmitsEvent()
+    public async Task RunBatchAsync_PdfBytesNull_AtMaxAttempts_MarksTerminalFailed()
+    {
+        // attempts already at Max-1: this transient failure exhausts the budget → terminal Failed.
+        var pdf = SeedPdf(coverAttempts: PdfCoverRetryPolicy.MaxAttempts - 1);
+
+        _blob.Setup(b => b.RetrieveAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+             .ReturnsAsync((Stream?)null);
+
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
+
+        var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed),
+            "at MaxAttempts the transient retry budget is exhausted → terminal");
+        refreshed.CoverGenerationAttempts.Should().Be(PdfCoverRetryPolicy.MaxAttempts);
+    }
+
+    [Fact]
+    public async Task RunBatchAsync_ExtractGenerated_UploadsPreviewViaPipelineAndPersistsDeterministicKeyAndEmitsEvent()
     {
         var sharedGameId = Guid.NewGuid();
         var pdf = SeedPdf(sharedGameId: sharedGameId);
@@ -137,14 +159,22 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
                       SelectedPageIndex = 1,
                   });
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        var expectedKey = $"covers/pdf/{pdf.Id:D}/cover";
+        _coverPipeline
+            .Setup(p => p.UploadAsync(expectedKey, It.IsAny<byte[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedKey);
 
-        var expectedKey = $"pdf-cover-{pdf.Id}";
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
-        _blob.Verify(b => b.StoreAsync(It.IsAny<Stream>(), "thumb.webp", BlobCategory.GameImage, expectedKey, It.IsAny<CancellationToken>()),
-            Times.Once);
-        _blob.Verify(b => b.StoreAsync(It.IsAny<Stream>(), "preview.webp", BlobCategory.GameImage, expectedKey, It.IsAny<CancellationToken>()),
-            Times.Once);
+        // Only the PREVIEW size is uploaded (the resolver only reads -preview.webp).
+        _coverPipeline.Verify(p => p.UploadAsync(
+            expectedKey,
+            It.Is<byte[]>(b => b.SequenceEqual(new byte[] { 4, 5, 6, 7 })),
+            It.IsAny<CancellationToken>()), Times.Once);
+        // StoreAsync must NOT be used for the cover write anymore.
+        _blob.Verify(b => b.StoreAsync(
+            It.IsAny<Stream>(), It.IsAny<string>(), BlobCategory.GameImage, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
 
         var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
         refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Generated));
@@ -154,7 +184,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
 
         _collectedEvents.Should().ContainSingle()
             .Which.Should().BeOfType<PdfCoverGeneratedEvent>()
-            .Which.SharedGameId.Should().Be(sharedGameId);
+            .Which.CoverR2Key.Should().Be(expectedKey);
     }
 
     [Fact]
@@ -170,13 +200,13 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
                       SelectedPageIndex = 0,
                   });
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
         refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Skipped));
         refreshed.CoverR2Key.Should().BeNull();
 
-        _blob.Verify(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _coverPipeline.Verify(p => p.UploadAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<CancellationToken>()),
             Times.Never);
         _collectedEvents.Should().BeEmpty();
     }
@@ -194,7 +224,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
                       ErrorMessage = "PDF corrupt",
                   });
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         var refreshed = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
         refreshed.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed));
@@ -202,7 +232,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
     }
 
     [Fact]
-    public async Task RunBatchAsync_ExtractorThrows_MarksFailedAndContinuesNextItem()
+    public async Task RunBatchAsync_ExtractorThrows_TransientRetry_MarksPendingAndContinuesNextItem()
     {
         var first = SeedPdf(uploadedAt: DateTime.UtcNow.AddMinutes(-10));
         var second = SeedPdf(uploadedAt: DateTime.UtcNow);
@@ -218,14 +248,16 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
 
         // Speed up test — bypass the default 500ms inter-item sleep would still
         // run, but xUnit defaults to 60s timeout so it's fine.
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         var refreshedFirst = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == first.Id);
-        refreshedFirst.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed));
+        refreshedFirst.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending),
+            "#3373 D1: an unexpected exception is transient infra — retry-eligible, not terminal");
+        refreshedFirst.CoverGenerationAttempts.Should().Be(1);
         // Error message encodes the orphan-check hint (#1873 review fix H2): contains the
         // exception type name and the resourceKey operators must inspect for orphan blobs.
         refreshedFirst.CoverGenerationError.Should().Contain(nameof(InvalidOperationException));
-        refreshedFirst.CoverGenerationError.Should().Contain($"pdf-cover-{first.Id}");
+        refreshedFirst.CoverGenerationError.Should().Contain($"covers/pdf/{first.Id:D}/cover-preview.webp");
 
         var refreshedSecond = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == second.Id);
         refreshedSecond.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Skipped));
@@ -243,7 +275,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         ConfigureBlobReturningStream();
         ConfigureExtractorReturning(PdfCoverExtractionOutcome.Skipped);
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         _extractor.Verify(e => e.ExtractAsync(It.IsAny<byte[]>(), It.IsAny<CancellationToken>()),
             Times.Exactly(BackfillPdfCoversJob.BatchSize));
@@ -273,7 +305,7 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
 
         ConfigureExtractorReturning(PdfCoverExtractionOutcome.Skipped);
 
-        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _eventCollector.Object, default);
+        await CreateJob().RunBatchAsync(_db, _extractor.Object, _blob.Object, _coverPipeline.Object, _eventCollector.Object, default);
 
         retrieveCallOrder.Should().HaveCount(2);
         var olderKey = PdfStorageKey.ForPdf(older.Id);

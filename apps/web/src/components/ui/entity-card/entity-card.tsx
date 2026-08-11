@@ -1,24 +1,28 @@
-import type { CSSProperties, JSX, ReactNode } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
 
-// Map EntityType -> CSS variable key. Mirrors TAILWIND_KEY in entity-tokens.ts
-// so `kb` resolves to `--c-kb` (pre-existing naming from design tokens).
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
-};
-
 export type EntityCardVariant = 'default' | 'elevated' | 'flat';
+
+/**
+ * Per-entity left-border accent (issue #2955). Literal class strings so Tailwind's
+ * content scanner generates the utilities (dynamic `border-l-entity-${e}` would not
+ * be emitted). `kb` uses the registered `-kb` (teal) token — NOT `-document` (slate),
+ * which lives only in `@layer tokens` and is not exposed via `@theme inline`.
+ */
+const ENTITY_BORDER_L: Record<EntityType, string> = {
+  game: 'border-l-entity-game',
+  player: 'border-l-entity-player',
+  session: 'border-l-entity-session',
+  agent: 'border-l-entity-agent',
+  kb: 'border-l-entity-kb',
+  chat: 'border-l-entity-chat',
+  event: 'border-l-entity-event',
+  toolkit: 'border-l-entity-toolkit',
+  tool: 'border-l-entity-tool',
+};
 
 export interface EntityCardProps {
   readonly entity: EntityType;
@@ -52,15 +56,12 @@ export function EntityCard({
   const classes = clsx(
     'bg-card rounded-xl p-4 text-foreground transition-colors',
     entityBorder && 'border-l-4',
+    entityBorder && ENTITY_BORDER_L[entity],
     variant === 'default' && 'border border-border',
     variant === 'elevated' && 'shadow-md',
     isInteractive && 'cursor-pointer transition-transform hover:-translate-y-0.5 hover:bg-muted/40',
     className
   );
-
-  const style: CSSProperties | undefined = entityBorder
-    ? { borderLeftColor: `hsl(var(--e-${ENTITY_CSS_VAR_KEY[entity]}))` }
-    : undefined;
 
   if (onClick) {
     return (
@@ -70,7 +71,6 @@ export function EntityCard({
         data-entity={entity}
         onClick={onClick}
         className={clsx('block w-full text-left', classes)}
-        style={style}
       >
         {children}
       </button>
@@ -78,7 +78,7 @@ export function EntityCard({
   }
 
   return (
-    <div data-entity={entity} className={classes} style={style}>
+    <div data-entity={entity} className={classes}>
       {children}
     </div>
   );

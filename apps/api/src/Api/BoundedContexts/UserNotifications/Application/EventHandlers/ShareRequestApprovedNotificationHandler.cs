@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -109,7 +110,7 @@ internal sealed class ShareRequestApprovedNotificationHandler
                 user.DisplayName,
                 gameTitle,
                 sourceGame.ImageUrl),
-            DeepLinkPath = $"/shared-games/{targetSharedGameId}",
+            DeepLinkPath = NotificationRoutes.SharedGame(targetSharedGameId),
             // Issue #1937 / CF-1: propagate event id for dispatcher dedup
             SourceEventId = domainEvent.EventId
         }, cancellationToken).ConfigureAwait(false);

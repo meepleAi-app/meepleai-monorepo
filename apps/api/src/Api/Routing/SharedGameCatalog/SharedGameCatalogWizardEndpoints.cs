@@ -327,9 +327,11 @@ internal static class SharedGameCatalogWizardEndpoints
             }
         }
 
-        // Determine if user is Admin (auto-publish) or Editor (requires approval)
-        var isAdmin = context.User.IsInRole("Admin");
-        var requiresApproval = !isAdmin; // Editors require approval, Admins auto-publish
+        // Determine if user has admin privileges (auto-publish) or not (requires approval).
+        // IsAdmin() == Admin || SuperAdmin — a SuperAdmin's role claim is "SuperAdmin", so
+        // IsInRole("Admin") alone would wrongly draft their content (Issue #3367, cf. #2845).
+        var isAdmin = context.User.IsAdmin();
+        var requiresApproval = !isAdmin; // Non-admins require approval; Admin/SuperAdmin auto-publish
 
         logger.LogInformation(
             "Wizard create game: PdfId={PdfId}, Title='{Title}', BggId={BggId}, UserId={UserId}, RequiresApproval={RequiresApproval}",
@@ -440,7 +442,7 @@ internal static class SharedGameCatalogWizardEndpoints
             ? null
             : tagsStr.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        var isAdmin = context.User.IsInRole("Admin");
+        var isAdmin = context.User.IsAdmin();
 
         var command = new AddRagToSharedGameCommand(
             id,
@@ -494,7 +496,7 @@ internal static class SharedGameCatalogWizardEndpoints
             return Results.BadRequest(new { error = "validation_failed", details = new Dictionary<string, string>(StringComparer.Ordinal) { ["items"] = "sharedGameIds, files, documentTypes, and versions must have the same count" } });
         }
 
-        var isAdmin = context.User.IsInRole("Admin");
+        var isAdmin = context.User.IsAdmin();
         var userId = session!.Principal!.Subject.Id;
         var items = new List<AddRagToSharedGameCommand>();
 

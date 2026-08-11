@@ -357,6 +357,25 @@ export function PipelineCanvas({
     onNodeSelect?.(null);
   }, [onNodeSelect]);
 
+  // #3083: thread a config-open callback into each node's data so a node's
+  // "Configure" gear resolves to the same target as node selection
+  // (StrategyBuilder.handleNodeSelect → setSelectedNodeId → BlockConfigPanel).
+  const handleConfigureNode = useCallback(
+    (nodeId: string) => {
+      onNodeSelect?.(nodeId);
+    },
+    [onNodeSelect]
+  );
+
+  const nodesWithConfigure = useMemo(
+    () =>
+      nodes.map(node => ({
+        ...node,
+        data: { ...(node.data as RagNodeData), onConfigure: handleConfigureNode },
+      })),
+    [nodes, handleConfigureNode]
+  );
+
   // Toolbar actions
   const handleZoomIn = useCallback(() => {
     reactFlowInstance?.zoomIn();
@@ -377,7 +396,7 @@ export function PipelineCanvas({
       data-testid="pipeline-canvas"
     >
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithConfigure}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}

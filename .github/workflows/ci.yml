@@ -102,6 +102,11 @@ jobs:
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          # #3632: senza questo, `cache-version` resta al default 'v1' mentre i job che consumano
+          # l'artifact passano `vars.CACHE_VERSION`. Al primo uso di quella repo variable il job che
+          # POPOLA la cache userebbe una chiave diversa da quelli che la leggono → restore NuGet a
+          # freddo su ogni run. L'action documenta questo input come contratto del chiamante.
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Build Solution (Release)
         run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
@@ -147,7 +152,7 @@ jobs:
           compression-level: 0  # already zstd-compressed
 
   # Build Next.js once with default config (no fixture flag) and share via
-  # artifact. Consumed by `frontend-bundle-size` and `e2e`. NOT used by
+  # artifact. Consumed by `e2e` (bundle-size gate removed 2026-07-21). NOT used by
   # `frontend-a11y` which needs NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
   # (constant-folded at build time → separate artifact in build-frontend-a11y).
   # Spec: docs/for-developers/specs/2026-05-25-ci-build-once-test-many.md
@@ -340,9 +345,54 @@ jobs:
         run: pnpm mockup-annotations:audit --denominator mappable --threshold 80
         # Note: script resolves REPO_ROOT from __dirname; runs from apps/web (job default).
 
+      # DEC-A5 (umbrella #2342): blocking gate — each page-mock story must
+      # implement the canonical states its fidelity.json declares.
+      # coverage-gaps whitelist-incremental (ratchet down); contract-violations always fail.
+      # Ratchet 44 -> 0 on 2026-07-15 (#2063): 26 gaps wired to existing stories,
+      # 3 residual MIGRATE stories authored (#2971), 14 per-game session mockups
+      # marked design_intent=deferred (#2234), 1 non-page storyboard scoped out (#2970).
+      # All page-mock stories render real content (render-verified, not just declared).
+      # 0 -> 1 on 2026-07-16: #3051 (catan L2/L3) flipped sp4-session-catan-live to
+      # design_intent=forward-refactor without a story (was masked by the catan-palette
+      # lint failure in this same job). Tolerated as 1 gap; ratchet back to 0 once a
+      # SessionLiveView story lands.
+      - name: Storybook canonical-states coverage gate (DEC-A5 / #2342)
+        run: pnpm lint:storybook-states --strict --max-baseline 1
+
+      - name: Upload storybook-states report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: storybook-states-${{ github.run_number }}
+          path: |
+            audits/2026-07-14-storybook-states-coverage.json
+            audits/2026-07-14-storybook-states-coverage.md
+          retention-days: 14
+
+      # ADR-077 (#2997): Designer signoff attestation gate. Every
+      # design_intent="current" fidelity file MUST carry a non-empty
+      # acceptance.designer_approved_by — the "self-waiver P250" solo-maintainer
+      # token is an accepted approval (developer-is-designer exception). Signoff
+      # failures are STRICT (never baselined). Pre-existing structural
+      # (mockup.source cross-reference) drift is whitelist-incremental via
+      # `--max-baseline 3` (3 orphaned fidelity files whose source mockups were
+      # deleted: sp4-play-records-data / scaffold / pr-form-core — reconcile to
+      # ratchet the baseline down). Doc template examples (templates/**) are
+      # excluded as non-surface illustrations. `pnpm lint:fidelity` scans the
+      # whole repo (REPO_ROOT resolved from __dirname) regardless of job cwd.
+      # ADR: docs/for-claude/architecture/adr/adr-077-designer-signoff-ci-gate.md
+      - name: Designer signoff + fidelity gate (ADR-077 / #2997)
+        run: pnpm lint:fidelity
+
       # Issue #2123 — BGG ToS compliance gate
       - name: BGG ToS compliance gate (#2123)
         run: pnpm lint:bgg
+
+      # Issue #3498 — impedisce che gli assert R2-strict sulle cover tornino `test.fixme`.
+      # Lo script esisteva dal #3536 ma non era agganciato ad alcun job: il gate che il commento
+      # in cover-l4.spec.ts prometteva non è mai girato.
+      - name: Cover R2-strict fixme gate (#3498)
+        run: pnpm lint:no-cover-fixme
 
       # ADR-075 short-term (#2383 brainstorm 2026-06-16):
       # Cross-language constants drift detection. Auto-discovers paired files
@@ -382,33 +432,29 @@ jobs:
             audits/2026-06-14-bgg-mockup-violations.md
           retention-days: 14
 
-      # DS-17-8-v2 (mockup-to-app fidelity, 2026-06-10):
-      # Non-blocking Storybook snapshot scaffolding per Phase 2 pilot stories.
-      # Phase 2 ships scaffolding only (config + specs + scripts); baseline
-      # capture deferred to Phase 4 hardening — the pilot Client components
-      # call `useTranslation()` (react-intl) and the global `.storybook/preview.tsx`
-      # decorator stack does not yet wire IntlProvider, so the stories render
-      # an "intl object missing" error wall at snapshot time. Phase 4 fixes
-      # the preview decorator + captures real baselines. CI runs the suite
-      # with continue-on-error: true so the artifact + failure log are
-      # uploaded for debugging without blocking the build.
-      # Spec: docs/superpowers/specs/2026-06-09-ds-17-phase-2-design.md
-      # Sub-issue: #2095 · Umbrella: #2063
-      - name: Storybook snapshot scaffolding (DS-17-8-v2 non-blocking)
-        run: pnpm test:storybook:snapshots
-        continue-on-error: true
-        env:
-          NODE_OPTIONS: "--max-old-space-size=4096"
-
-      - name: Upload Storybook snapshot diff artifact
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: storybook-snapshots-${{ github.run_number }}
-          path: |
-            apps/web/test-results/**
-            apps/web/playwright-report/**
-          retention-days: 14
+      # DS-17 visual pixel-gate — DESCOPED FROM CI on 2026-07-15 (#2063).
+      #
+      # The Storybook snapshot suite (playwright.storybook.config.ts +
+      # e2e/storybook/*.snapshot.spec.ts) is retained as a LOCAL developer tool,
+      # not a CI gate. It is intentionally NOT run here. Rationale:
+      #
+      #   1. Platform mismatch: committed baselines are `*-win32.png` (captured on
+      #      Windows dev boxes), but CI runs on ubuntu-latest → Playwright looks for
+      #      `*-linux.png` that don't exist, so the step never produced a real signal
+      #      (it was continue-on-error the whole time — green theatre).
+      #   2. False-positive history: the previous full-page visual gate was REMOVED
+      #      on 2026-05-20 precisely for font/locale/render drift false positives.
+      #      A scoped pixel gate carries the same intrinsic fragility.
+      #   3. Structural anti-drift is already enforced by 5 BLOCKING gates above
+      #      (mockup-state-naming, tokens:mockups, mockup-annotations:audit,
+      #      lint:storybook-states, bgg-mockups). Those make drift *structurally*
+      #      detectable; the incremental value of a fragile pixel gate over them is low.
+      #
+      # Developers CAN still run it locally (Windows baselines valid there):
+      #   pnpm test:storybook:snapshots
+      # Re-introducing it as a CI gate requires Linux baselines (Docker/CI-generated)
+      # — see the descope note in docs/for-developers/frontend/page-mock-story-pattern.md.
+      # Sub-issue: #2095 (scaffolding) · Umbrella: #2063
 
   # Frontend Typecheck — fast-fail check (~1 min). Independent job for
   # parallel execution with lint.
@@ -503,10 +549,22 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      # #3632 — qui c'era `actions/setup-dotnet` nudo, senza restore né cache NuGet: era LA causa
+      # del gate vuoto. L'artifact porta bin/ e obj/, ma `obj/project.nuget.g.props` importa
+      # `Microsoft.NET.Test.Sdk.props` da ~/.nuget/packages con Condition="Exists(…)". Senza
+      # restore quella cartella è vuota, l'import fallisce IN SILENZIO, `IsTestProject` non viene
+      # impostato, e MSBuild non riconosce più alcun progetto come testabile: il target VSTest
+      # completa in 1,8s senza scendere in un solo progetto e `dotnet test` esce 0 con zero test.
+      #
+      # Misurato: stesso comando, stesso runner — senza restore 0 test in 6s, con restore 22 538
+      # test in 5m02s. `setup-backend` è la stessa action usata da build-backend: cachea i
+      # pacchetti e fa `dotnet restore`. Non ricostruisce nulla, quindi il Build-Once resta intatto.
+      - name: Setup Backend (restore + NuGet cache — #3632)
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Download backend artifact
         uses: actions/download-artifact@v7
@@ -534,16 +592,66 @@ jobs:
         run: |
           echo "🧪 Running unit tests with dotnet-coverage..."
           mkdir -p coverage
+          # Issue #3622: deny-list anziché `Category=Unit` — un test privo di trait non finiva in
+          # alcun filtro e non veniva eseguito da NESSUN workflow. Tenere allineata a dev-fast.yml;
+          # le categorie escluse sono pinnate da TestCategoryGateArchitectureTests.
           dotnet-coverage collect \
             "dotnet test MeepleAI.Api.sln \
-              --filter Category=Unit \
+              --filter \"Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow\" \
               --settings tests/Api.Tests/unit.runsettings \
               --no-build \
               --configuration Release \
-              --blame-hang-timeout 5min" \
+              --blame-hang-timeout 5min \
+              --logger \"trx;LogFileName=unit.trx\"" \
             -f cobertura \
             -o coverage/unit-coverage.xml
-          echo "✅ Unit tests passed"
+
+      # #3632 — il verde va misurato, non dichiarato.
+      #
+      # Qui c'era `echo "✅ Unit tests passed"`, che affermava un esito che lo script non aveva
+      # verificato. `dotnet test --no-build` esce 0 SENZA STAMPARE NULLA quando gli assembly non
+      # ci sono: non lo segnala come errore e non distingue «nessun test eseguito» da «tutti
+      # passati». Con quell'echo subito dopo, il gate era verde per costruzione — misurato: 5,7s
+      # a fronte dei ~22 5xx test attesi.
+      #
+      # Tre dettagli che rendono il guard efficace invece che decorativo:
+      #
+      # 1. SOMMA su tutti i .trx, non il primo trovato. `dotnet test MeepleAI.Api.sln` esegue DUE
+      #    progetti — Api.Tests e Api.Analyzers.Tests — e `unit.runsettings` risolve
+      #    ResultsDirectory per progetto, quindi i file `unit.trx` sono due. Un `find -print -quit`
+      #    ne prendeva uno arbitrario: pescando quello degli analyzer (~36 test) il guard avrebbe
+      #    certificato un verde con Api.Tests a zero, cioè esattamente la regressione da impedire.
+      #
+      # 2. Soglia MINIMA, non `> 0`. 36 > 0: solo un floor vicino al conteggio reale distingue
+      #    «la suite è girata» da «è girato qualcos'altro». Il valore è volutamente sotto il
+      #    conteggio atteso, così non va aggiornato a ogni test aggiunto.
+      #
+      # 3. `executed`, non `total`. `total` conta anche skipped e not-run: se una collection
+      #    fixture esplode e nessun test parte, `total` resta alto ed `executed` va a zero.
+      - name: 'Guard: assert unit tests actually ran (#3632)'
+        run: |
+          set -euo pipefail
+          mapfile -t trx_files < <(find . -name 'unit.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::No .trx produced: dotnet test executed no tests at all."
+            exit 1
+          fi
+          sum=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: unreadable 'executed' counter (malformed trx?)."
+              exit 1
+            fi
+            echo "  $f → executed=$n"
+            sum=$((sum + n))
+          done
+          echo "Total executed across ${#trx_files[@]} trx file(s): $sum"
+          if [ "$sum" -lt 20000 ]; then
+            echo "::error::Only $sum unit tests executed (expected ~22.5k). The gate would have been green without running the suite (#3632)."
+            exit 1
+          fi
+          echo "✅ Unit tests executed: $sum"
 
       - name: Upload Coverage
         if: always()
@@ -634,10 +742,22 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v5
+      # #3632 — qui c'era `actions/setup-dotnet` nudo, senza restore né cache NuGet: era LA causa
+      # del gate vuoto. L'artifact porta bin/ e obj/, ma `obj/project.nuget.g.props` importa
+      # `Microsoft.NET.Test.Sdk.props` da ~/.nuget/packages con Condition="Exists(…)". Senza
+      # restore quella cartella è vuota, l'import fallisce IN SILENZIO, `IsTestProject` non viene
+      # impostato, e MSBuild non riconosce più alcun progetto come testabile: il target VSTest
+      # completa in 1,8s senza scendere in un solo progetto e `dotnet test` esce 0 con zero test.
+      #
+      # Misurato: stesso comando, stesso runner — senza restore 0 test in 6s, con restore 22 538
+      # test in 5m02s. `setup-backend` è la stessa action usata da build-backend: cachea i
+      # pacchetti e fa `dotnet restore`. Non ricostruisce nulla, quindi il Build-Once resta intatto.
+      - name: Setup Backend (restore + NuGet cache — #3632)
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Download backend artifact
         uses: actions/download-artifact@v7
@@ -718,7 +838,15 @@ jobs:
         # the suite now actually runs to completion (it used to short-circuit
         # on the first wave of failures at ~25 min). 45 min keeps headroom
         # for transient Testcontainers churn on the GitHub-hosted runner.
-        timeout-minutes: 45
+        #
+        # #3634: 45 → 90. Il TestSessionTimeout del runsettings passa a 75 min perché a 45 la
+        # sessione veniva troncata a metà (2148 test su ~2962, `Test Run Aborted.` su tutti e tre
+        # gli shard). Questo timeout deve restare SOPRA quello della sessione: se scattasse prima,
+        # GitHub marcherebbe il job `cancelled` senza riepilogo — il difetto di #3629.
+        #
+        # Nota: la stima «45 min bastano» di PR #1505 non era verificabile, perché nello stesso
+        # periodo questo job non eseguiva alcun test (#3632).
+        timeout-minutes: 90
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -764,7 +892,44 @@ jobs:
               --blame-hang-dump-type mini" \
             -f cobertura \
             -o coverage/${{ matrix.shard.coverage_file }}
-          echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
+
+      # #3632 — stesso guard del gate unit: il verde va misurato, non dichiarato. Qui c'era
+      # `echo "✅ Integration tests passed"`, che affermava un esito che lo script non aveva
+      # verificato — e infatti lo shard usciva verde in 3-7 secondi senza eseguire nulla.
+      #
+      # Legge il .trx che `integration.runsettings` produce già (`integration-test-results.trx`,
+      # riga 52-54 di quel file). Una prima versione aggiungeva un `--logger trx` da riga di
+      # comando con un nome per shard: duplicava il logger dichiarato nel runsettings, e quale dei
+      # due LogFileName prevalga non è garantito — un guard che cerca un file che potrebbe non
+      # esistere mai sarebbe rosso al 100% invece che vigile.
+      #
+      # Qui il target è il csproj esplicito, quindi c'è un solo .trx; la somma resta per simmetria
+      # col gate unit e per non dipendere da quel dettaglio. La soglia è bassa (100) perché gli
+      # shard hanno conteggi diversi e mobili — serve a distinguere «è girato» da «zero», non a
+      # pinnare un numero.
+      - name: 'Guard: assert integration tests actually ran (#3632)'
+        run: |
+          set -euo pipefail
+          mapfile -t trx_files < <(find . -name 'integration-test-results.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::No .trx for shard ${{ matrix.shard.name }}: no test executed."
+            exit 1
+          fi
+          sum=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: unreadable 'executed' counter (malformed trx?)."
+              exit 1
+            fi
+            echo "  $f → executed=$n"
+            sum=$((sum + n))
+          done
+          if [ "$sum" -lt 100 ]; then
+            echo "::error::Shard ${{ matrix.shard.name }}: only $sum tests executed — would have been green without running anything (#3632)."
+            exit 1
+          fi
+          echo "✅ Integration tests executed (${{ matrix.shard.name }}): $sum"
 
       - name: Upload Coverage
         if: always()
@@ -1145,66 +1310,18 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  # Frontend bundle-size budget enforcement (Issue #629).
-  # Verifies First Load JS for budgeted public routes against
-  # `apps/web/.bundle-budgets.json`. Fails when any route exceeds
-  # `budget × (1 + tolerance)` (default 5%). Documented in
-  # `docs/frontend/bundle-size-budget.md`.
-  #
-  # Build-Once refactor 2026-05-25: consumes upstream build-frontend artifact
-  # instead of running its own pnpm build (~100s saved). The default-config
-  # build matches what bundle-size budgets target (no a11y fixture flag).
-  frontend-bundle-size:
-    name: Frontend - Bundle Size
-    runs-on: ${{ needs.changes.outputs.runner }}
-    timeout-minutes: 15
-    needs: [changes, build-frontend]
-    if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
-    defaults:
-      run:
-        working-directory: apps/web
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Frontend
-        uses: ./.github/actions/setup-frontend
-        with:
-          node-version: '20'
-          pnpm-version: '10'
-          working-directory: apps/web
-          frozen-lockfile: 'true'
-
-      - name: Download frontend artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: frontend-build-${{ github.run_id }}
-          path: /tmp/
-
-      - name: Extract frontend artifact
-        shell: bash
-        working-directory: apps/web
-        run: |
-          echo "📂 Extracting frontend build artifact..."
-          tar --use-compress-program='zstd -d' -xf /tmp/frontend-build.tar.zst
-          echo "✅ Frontend artifact extracted"
-
-      - name: Check Bundle Budgets
-        run: pnpm bundle:check
-
-      - name: Upload Bundle Budget Report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: bundle-budget-report-${{ github.run_number }}
-          path: apps/web/.next/diagnostics/bundle-budget-report.json
-          retention-days: 30
+  # Frontend bundle-size gate TEMPORARILY REMOVED (2026-07-21, product decision):
+  # the app is pre-prod and enforcing First-Load-JS budgets (Issue #629) is premature.
+  # Re-introduce the `frontend-bundle-size` job — plus its entries in the `ci-success`
+  # and `ci-cost-tracker` `needs:` arrays and the `ci-success` required-jobs loop —
+  # before the prod promotion. Budget config still lives at apps/web/.bundle-budgets.json
+  # and `pnpm bundle:check` still works locally.
 
   # Final status check
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e]
+    needs: [build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, backend-unit, backend-integration, python-tests, e2e]
     if: always()
     steps:
       - name: Check Status
@@ -1227,20 +1344,15 @@ jobs:
           done
 
           # Required jobs (block CI)
-          # NOTE: frontend-a11y was non-blocking via job-level continue-on-error
-          # until Phase D gate flip (#1094 closure, 2026-05-18). It is now in the
-          # required-jobs list — any axe AA violation fails CI. #1015 (release-
-          # level baseline-diff) is complementary, not a substitute.
           # Onda A (2026-05-25): 'frontend' was split into frontend-lint,
           # frontend-typecheck, frontend-test (3-shard matrix). All three are
           # required gates.
-          for job in frontend-lint frontend-typecheck frontend-test frontend-a11y frontend-bundle-size backend-unit python-tests e2e; do
+          for job in frontend-lint frontend-typecheck frontend-test frontend-a11y backend-unit python-tests e2e; do
             case "$job" in
               frontend-lint) result="${{ needs.frontend-lint.result }}" ;;
               frontend-typecheck) result="${{ needs.frontend-typecheck.result }}" ;;
               frontend-test) result="${{ needs.frontend-test.result }}" ;;
               frontend-a11y) result="${{ needs.frontend-a11y.result }}" ;;
-              frontend-bundle-size) result="${{ needs.frontend-bundle-size.result }}" ;;
               backend-unit) result="${{ needs.backend-unit.result }}" ;;
               python-tests) result="${{ needs.python-tests.result }}" ;;
               e2e) result="${{ needs.e2e.result }}" ;;
@@ -1253,13 +1365,23 @@ jobs:
             fi
           done
 
-          # Advisory jobs (warn but don't block — integration tests depend on CI
-          # service containers). frontend-a11y was promoted to required (above) on
-          # 2026-05-18 via #1094 Phase D closure.
-          integration_result="${{ needs.backend-integration.result }}"
-          if [ "$integration_result" == "failure" ]; then
-            echo "⚠️ CI Warning: backend-integration=$integration_result (non-blocking, may be infrastructure)"
-          fi
+          # Advisory jobs (warn but don't block).
+          # frontend-a11y was RE-PROMOTED to the required-jobs loop above on
+          # 2026-07-26 (#3289) after clearing the systemic WCAG AA color-contrast
+          # debt (entity-token game/kb/document chips swapped to the AA `-text`
+          # variants) plus the shared-component (MenuPlaceholder, PauseOverlay,
+          # SessionShareCard) + session-live/library a11y spec fixes. This restores
+          # the #1094 Phase-D gate flip that #3290 had temporarily reverted
+          # (2026-07-21). backend-integration remains advisory because integration
+          # tests depend on CI service containers.
+          for advisory in backend-integration; do
+            case "$advisory" in
+              backend-integration) result="${{ needs.backend-integration.result }}" ;;
+            esac
+            if [ "$result" == "failure" ]; then
+              echo "⚠️ CI Warning: $advisory=$result (non-blocking)"
+            fi
+          done
 
           echo "✅ CI Passed"
 
@@ -1274,7 +1396,7 @@ jobs:
   ci-cost-tracker:
     name: CI Cost Tracker
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success]
+    needs: [build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, backend-unit, backend-integration, python-tests, e2e, ci-success]
     # Runs on every ci.yml invocation (PR, push main-staging, dispatch, call).
     # On a PR it posts/updates a comment; otherwise it writes the job summary
     # (workflow_dispatch and push have no issue context). Onda A.5 fix
@@ -1458,7 +1580,7 @@ jobs:
         || github.base_ref == 'main-staging'
         || github.base_ref == 'main'
       )
-    needs: [changes, build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, frontend-bundle-size, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
+    needs: [changes, build-backend, build-frontend, build-frontend-a11y, frontend-lint, frontend-typecheck, frontend-test, frontend-a11y, backend-unit, backend-integration, python-tests, e2e, ci-success, deploy-preview]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: failed

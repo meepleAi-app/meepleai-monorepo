@@ -5,6 +5,7 @@ using Api.Infrastructure;
 using Api.Models;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,6 +47,10 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
         // Filter by PendingApproval status
         var dbQuery = _context.SharedGames
             .AsNoTracking()
+            // Epic #3470 Slice 2b: eager-load CoverAssignments so the per-context (Card)
+            // resolver honors an admin override. Entities are materialized directly (no
+            // Select projection), so the Include is honored — unlike the search handler.
+            .Include(g => g.CoverAssignments)
             .Where(g => g.Status == (int)GameStatus.PendingApproval)
             .OrderBy(g => g.ModifiedAt ?? g.CreatedAt); // Oldest submissions first
 
@@ -62,9 +67,11 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
         var games = new List<SharedGameDto>(entities.Count);
         foreach (var g in entities)
         {
-            var coverUrl = await CoverUrlResolver
-                .ResolvePublicAsync(g, _blobStorage)
+            // Epic #3470 Slice 2b — the pending-approval queue is a Card surface.
+            var cover = await CoverUrlResolver
+                .ResolveForContextWithSourceAsync(g, CoverContext.Card, _blobStorage)
                 .ConfigureAwait(false);
+            var (coverLicense, coverAttribution, coverSourceUrl) = CoverAttribution.ForWinningSource(cover.Kind, g);
 
             games.Add(new SharedGameDto(
                 g.Id,
@@ -96,11 +103,13 @@ internal sealed class GetPendingApprovalGamesQueryHandler : IRequestHandler<GetP
                 0,      // ContributorsCount
                 false,  // IsTopRated
                 false,  // IsNew
-                CoverUrl: coverUrl,
-                // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
-                WikidataCoverLicense: g.WikidataCoverLicense,
-                WikidataCoverAttribution: AttributionTextExtractor.Strip(g.WikidataCoverAttribution),
-                WikidataCoverSourceUrl: g.WikidataCoverSourceUrl));
+                CoverUrl: cover.Url,
+                CoverFocalX: cover.FocalX,
+                CoverFocalY: cover.FocalY,
+                // Epic #3470 Slice 1d-a — attribution follows the winning source.
+                CoverLicense: coverLicense,
+                CoverAttribution: coverAttribution,
+                CoverSourceUrl: coverSourceUrl));
         }
 
         // Issue #2339 (Wave 4 Task 13 — DEC-WIRING): enrich SharedGameDto.Translations

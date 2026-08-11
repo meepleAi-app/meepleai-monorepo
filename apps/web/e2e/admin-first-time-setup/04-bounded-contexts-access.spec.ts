@@ -12,12 +12,14 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
 import { loginAsAdmin, sendTestQuestion } from '../utils/admin-setup-helpers';
 
 test.describe.configure({ mode: 'serial' });
 test.describe('Bounded Context Access', () => {
   // Ensure admin is logged in for all tests
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     await loginAsAdmin(page);
   });
 

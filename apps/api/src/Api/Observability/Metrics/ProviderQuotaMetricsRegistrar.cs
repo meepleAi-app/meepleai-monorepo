@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.Models;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Observability;
@@ -22,12 +23,12 @@ internal static class ProviderQuotaMetricsRegistrar
     /// <summary>Mirror of backend DI provider names — must update when adding providers to <c>InfrastructureServiceExtensions</c>.</summary>
     private static readonly string[] SupportedProviders = ["openrouter", "deepseek"];
 
-    private static IProviderQuotaService? _quotaService;
+    private static IServiceScopeFactory? _scopeFactory;
     private static ILogger? _logger;
 
-    public static void Initialize(IProviderQuotaService quotaService, ILogger logger)
+    public static void Initialize(IServiceScopeFactory scopeFactory, ILogger logger)
     {
-        _quotaService = quotaService;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -52,7 +53,7 @@ internal static class ProviderQuotaMetricsRegistrar
     /// </summary>
     private static IEnumerable<Measurement<double>> Observe(Func<ProviderQuotaDto, decimal?> selector)
     {
-        if (_quotaService is null)
+        if (_scopeFactory is null)
             yield break;
 
         foreach (var provider in SupportedProviders)
@@ -60,8 +61,13 @@ internal static class ProviderQuotaMetricsRegistrar
             ProviderQuotaDto? dto = null;
             try
             {
+                // #3044: open a FRESH scope per scrape — IProviderQuotaService now depends
+                // (transitively) on the scoped MeepleAiDbContext (via IProviderCredentialResolver),
+                // so it must NOT be captured past a disposed scope.
+                using var scope = _scopeFactory.CreateScope();
+                var quotaService = scope.ServiceProvider.GetRequiredService<IProviderQuotaService>();
 #pragma warning disable VSTHRD002 // sync-over-async — see XML comment above for safety rationale
-                dto = _quotaService.GetQuotaAsync(provider, CancellationToken.None).GetAwaiter().GetResult();
+                dto = quotaService.GetQuotaAsync(provider, CancellationToken.None).GetAwaiter().GetResult();
 #pragma warning restore VSTHRD002
             }
 #pragma warning disable CA1031 // catch general exception — metric callback must never throw to OTEL pipeline

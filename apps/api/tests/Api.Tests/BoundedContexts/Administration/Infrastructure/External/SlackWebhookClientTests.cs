@@ -19,6 +19,13 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure.External;
 [Trait("Issue", "1840")]
 public class SlackWebhookClientTests
 {
+    // A genuinely-public IP literal. An IP literal keeps the SSRF guard's DNS resolution
+    // offline/deterministic in unit tests (Dns.GetHostAddressesAsync on a literal returns it
+    // without a DNS query). NB: RFC 5737 TEST-NET ranges are NOT usable here — the IANA-driven
+    // SsrfPolicy (#3495) correctly blocks them as reserved; 8.8.8.8 is public and, with the mock
+    // handler below, is never actually dialed.
+    private const string PublicWebhookUrl = "https://8.8.8.8/services/T1/B1/abc";
+
     private static SlackWebhookClient CreateClient(Mock<HttpMessageHandler> handler)
     {
         var httpClient = new HttpClient(handler.Object);
@@ -46,7 +53,7 @@ public class SlackWebhookClientTests
         var client = CreateClient(handler);
 
         var result = await client.SendAsync(
-            "https://hooks.slack.com/services/T1/B1/abc",
+            PublicWebhookUrl,
             new SlackMessage("Hello"),
             CancellationToken.None);
 
@@ -61,7 +68,7 @@ public class SlackWebhookClientTests
         var client = CreateClient(handler);
 
         var result = await client.SendAsync(
-            "https://hooks.slack.com/services/T1/B1/expired",
+            PublicWebhookUrl,
             new SlackMessage("Hello", Severity: "warning"),
             CancellationToken.None);
 
@@ -83,7 +90,7 @@ public class SlackWebhookClientTests
         var client = CreateClient(handler);
 
         var result = await client.SendAsync(
-            "https://hooks.slack.com/services/T1/B1/ok",
+            PublicWebhookUrl,
             new SlackMessage("Hello"),
             CancellationToken.None);
 
@@ -136,7 +143,7 @@ public class SlackWebhookClientTests
         var client = CreateClient(handler);
 
         var result = await client.TestConnectionAsync(
-            "https://hooks.slack.com/services/T1/B1/probe",
+            PublicWebhookUrl,
             CancellationToken.None);
 
         result.Success.Should().BeTrue();
@@ -151,11 +158,34 @@ public class SlackWebhookClientTests
         var client = CreateClient(handler);
 
         var result = await client.TestConnectionAsync(
-            "https://hooks.slack.com/services/T1/B1/missing",
+            PublicWebhookUrl,
             CancellationToken.None);
 
         result.Success.Should().BeFalse();
         result.Message.Should().NotBeNullOrEmpty();
         result.StatusCode.Should().Be(404);
     }
+
+    // ---- SSRF guard (#2655 finding #11) ----
+
+    [Theory]
+    [InlineData("http://203.0.113.10/services/T1/B1/abc")]  // non-HTTPS scheme
+    [InlineData("ftp://203.0.113.10/services/T1/B1/abc")]    // non-HTTP scheme
+    public async Task SendAsync_NonHttpsUrl_BlockedWithoutPosting(string webhookUrl)
+    {
+        var handler = HandlerReturning(HttpStatusCode.OK, "ok");
+        var client = CreateClient(handler);
+
+        var result = await client.SendAsync(webhookUrl, new SlackMessage("Hello"), CancellationToken.None);
+
+        result.Success.Should().BeFalse("a non-HTTPS webhook URL must be blocked by the SSRF guard");
+        handler.Protected().Verify(
+            "SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    // #3495 fix 3/N: the private/reserved-IP guarantee moved from a pre-connect DNS check in the
+    // client to the SSRF connect-pin on the DI-wired primary handler (ConfigureSsrfPin). A unit
+    // test with a hand-built mock handler cannot exercise the pin, so that guarantee is proven by
+    // (a) SsrfPinnedConnectTests (the pin fails closed on private/mixed/empty resolutions) and
+    // (b) SlackWebhookClientPinIntegrationTests (the Slack DI registration is actually pinned).
 }

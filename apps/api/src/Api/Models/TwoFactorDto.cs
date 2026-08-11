@@ -52,13 +52,3 @@ internal class AdminDisable2FARequest
     /// <summary>I4: admin re-authentication password (verified by handler).</summary>
     public string AdminPassword { get; set; } = string.Empty;
 }
-
-/// <summary>
-/// Response for login when 2FA is required
-/// </summary>
-internal class LoginWith2FaResponse
-{
-    public bool RequiresTwoFactor { get; set; }
-    public string? SessionToken { get; set; }
-    public string? Message { get; set; }
-}

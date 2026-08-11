@@ -34,7 +34,7 @@ public sealed class CreateAgentDefinitionCommandValidatorKbCardsTests
             Name: "TestAgent",
             Description: "Test",
             Type: "RAG",
-            Model: "gpt-4",
+            Model: "anthropic/claude-3.5-haiku",
             MaxTokens: 2048,
             Temperature: 0.7f,
             KbCardIds: kbCardIds,

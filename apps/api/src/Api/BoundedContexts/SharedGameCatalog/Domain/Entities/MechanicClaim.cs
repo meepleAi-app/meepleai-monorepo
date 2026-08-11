@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
@@ -48,8 +49,30 @@ public sealed class MechanicClaim : Entity<Guid>
     /// <summary>Reason the claim was rejected. Required when <see cref="Status"/> is Rejected.</summary>
     public string? RejectionNote { get; private set; }
 
+    /// <summary>Optional note captured on approval (#526 AC-6). Distinct from <see cref="RejectionNote"/>.</summary>
+    public string? ReviewNote { get; private set; }
+
     /// <summary>Attribution citations (minimum 1 — ADR-051 T3).</summary>
     public IReadOnlyList<MechanicCitation> Citations => _citations.AsReadOnly();
+
+    /// <summary>
+    /// Stable JSONPath anchor of this claim's RAW source object, captured by the parser before any
+    /// drop/reorder/compaction (#2782 D4), e.g. "$.mechanics[2]" or "$.victory". Used to correlate a
+    /// guardrail violation's Path to exactly one claim WITHIN the originating pipeline execution.
+    /// NOT persisted or reloaded — it is empty on ALL reconstituted claims (there is no
+    /// mechanic_claims column for it), so it is only meaningful during the run that parsed the claim.
+    /// </summary>
+    public string SourceAnchor { get; private set; } = string.Empty;
+
+    private readonly List<MechanicClaimValidation> _validations = new();
+
+    /// <summary>
+    /// Per-rule guardrail outcomes correlated to this claim at pipeline time (#2782 D4), one per
+    /// rule family (T1/T2/T3a/T3b/T4) evaluated for the owning section. Empty when the section had
+    /// no captured <c>SectionOutcomes</c> (e.g. it succeeded before D3 landed) or on claims that
+    /// have not yet gone through <see cref="AttachValidations"/>.
+    /// </summary>
+    public IReadOnlyList<MechanicClaimValidation> Validations => _validations.AsReadOnly();
 
     /// <summary>
     /// True when the claim was instantiated via <see cref="Create"/> and is not yet persisted;
@@ -147,7 +170,8 @@ public sealed class MechanicClaim : Entity<Guid>
         MechanicSection section,
         string text,
         int displayOrder,
-        IEnumerable<MechanicCitation> citations)
+        IEnumerable<MechanicCitation> citations,
+        string sourceAnchor)
     {
         if (id == Guid.Empty)
         {
@@ -185,7 +209,10 @@ public sealed class MechanicClaim : Entity<Guid>
             analysisId: analysisId,
             section: section,
             text: text.Trim(),
-            displayOrder: displayOrder);
+            displayOrder: displayOrder)
+        {
+            SourceAnchor = sourceAnchor
+        };
 
         claim._citations.AddRange(citationList);
         return claim;
@@ -205,7 +232,10 @@ public sealed class MechanicClaim : Entity<Guid>
         Guid? reviewedBy,
         DateTime? reviewedAt,
         string? rejectionNote,
-        IEnumerable<MechanicCitation> citations)
+        IEnumerable<MechanicCitation> citations,
+        string? reviewNote = null,
+        string? sourceAnchor = null,
+        IEnumerable<MechanicClaimValidation>? validations = null)
     {
         ArgumentNullException.ThrowIfNull(citations);
 
@@ -220,17 +250,34 @@ public sealed class MechanicClaim : Entity<Guid>
             ReviewedBy = reviewedBy,
             ReviewedAt = reviewedAt,
             RejectionNote = rejectionNote,
+            ReviewNote = reviewNote,
+            SourceAnchor = sourceAnchor ?? string.Empty,
             IsNew = false
         };
 
         claim._citations.AddRange(citations);
+
+        if (validations is not null)
+        {
+            claim._validations.AddRange(validations);
+        }
+
         return claim;
     }
 
+    /// <summary>Attach the correlated per-rule guardrail outcomes captured at pipeline time (#2782 D4).</summary>
+    internal void AttachValidations(IReadOnlyList<MechanicClaimValidation> validations)
+    {
+        ArgumentNullException.ThrowIfNull(validations);
+        _validations.Clear();
+        _validations.AddRange(validations);
+    }
+
     /// <summary>
-    /// Approves the claim. Idempotent: re-approving is a no-op.
+    /// Approves the claim, optionally capturing a review note (#526 AC-6). Idempotent:
+    /// re-approving is a no-op except for refreshing the note.
     /// </summary>
-    internal void Approve(Guid reviewerId, DateTime utcNow)
+    internal void Approve(Guid reviewerId, DateTime utcNow, string? note = null)
     {
         if (reviewerId == Guid.Empty)
         {
@@ -241,6 +288,7 @@ public sealed class MechanicClaim : Entity<Guid>
         ReviewedBy = reviewerId;
         ReviewedAt = utcNow;
         RejectionNote = null;
+        ReviewNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
     }
 
     /// <summary>
@@ -262,6 +310,7 @@ public sealed class MechanicClaim : Entity<Guid>
         ReviewedBy = reviewerId;
         ReviewedAt = utcNow;
         RejectionNote = note.Trim();
+        ReviewNote = null;
     }
 
     /// <summary>
@@ -273,5 +322,6 @@ public sealed class MechanicClaim : Entity<Guid>
         ReviewedBy = null;
         ReviewedAt = null;
         RejectionNote = null;
+        ReviewNote = null;
     }
 }

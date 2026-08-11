@@ -80,7 +80,7 @@ public sealed class CancelJobCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CompletedJob_ThrowsInvalidOperationException()
+    public async Task Handle_CompletedJob_ThrowsConflictException()
     {
         // Arrange
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 0, 0, _timeProvider);
@@ -92,8 +92,8 @@ public sealed class CancelJobCommandHandlerTests
             .Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(job);
 
-        // Act & Assert
+        // Act & Assert — cancelling a terminal job is a conflict (HTTP 409), not a 500 (#2568).
         await FluentActions.Invoking(() => _handler.Handle(new CancelJobCommand(job.Id), CancellationToken.None))
-            .Should().ThrowAsync<InvalidOperationException>();
+            .Should().ThrowAsync<ConflictException>();
     }
 }

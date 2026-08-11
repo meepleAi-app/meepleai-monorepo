@@ -1,8 +1,13 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.Configuration;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -27,6 +32,9 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 /// RESOLVED: Issue #1690 - Integration tests added in IndexPdfIntegrationTests.cs.
 /// ISSUE-1500: TEST-002 - Fixed test isolation (fresh context per test)
 /// ISSUE-1818: Migrated to FluentAssertions for improved readability.
+/// Slice D (Issue #730): chunking source migrated from ITextChunkingService.ChunkText to
+/// IAdvancedChunkingService.ChunkDocumentAsync (via HeadingAwareChunker), so chunk-count-driven
+/// tests mock IAdvancedChunkingService returning flat parent-level HierarchicalChunks.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 public class IndexPdfCommandHandlerTests
@@ -42,9 +50,9 @@ public class IndexPdfCommandHandlerTests
     /// <summary>
     /// Creates a fresh set of mocks for each test
     /// </summary>
-    private static (Mock<ITextChunkingService>, Mock<IEmbeddingService>, Mock<ILogger<IndexPdfCommandHandler>>, Mock<IOptions<IndexingSettings>>) CreateMocks()
+    private static (Mock<IAdvancedChunkingService>, Mock<IEmbeddingService>, Mock<ILogger<IndexPdfCommandHandler>>, Mock<IOptions<IndexingSettings>>) CreateMocks()
     {
-        var chunkingServiceMock = new Mock<ITextChunkingService>();
+        var advancedChunkingServiceMock = new Mock<IAdvancedChunkingService>();
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         var loggerMock = new Mock<ILogger<IndexPdfCommandHandler>>();
         var indexingSettingsMock = new Mock<IOptions<IndexingSettings>>();
@@ -53,19 +61,19 @@ public class IndexPdfCommandHandlerTests
         var settings = new IndexingSettings { EmbeddingBatchSize = 100 };
         indexingSettingsMock.Setup(x => x.Value).Returns(settings);
 
-        return (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock);
+        return (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock);
     }
     [Fact]
     public void Constructor_WithValidDependencies_CreatesInstance()
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         // Act
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -81,13 +89,13 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
         var timeProvider = TimeProvider.System;
 
         // Act
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -104,12 +112,12 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange - fresh resources per test
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         // Act
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -230,13 +238,239 @@ public class IndexPdfCommandHandlerTests
         Enum.IsDefined(typeof(PdfIndexingErrorCode), errorCode).Should().BeTrue();
     }
 
+    // role_tags index-population (review #1555): handler-driven test that the classified role
+    // reaches BOTH persisted sinks — pgvector_embeddings.role_tags AND text_chunks.role_tags — in
+    // sync, per chunk. Without a classifier this is invisible (roles default to None), so this is
+    // the only test that actually observes the fix.
+    [Fact]
+    public async Task Handle_WithRoleClassifier_PopulatesRoleTagsOnBothSinksInSync()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", GenerateExtractedText(120));
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(4);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        // Distinct role per chunk proves per-chunk alignment (not a uniform value).
+        var expectedRoles = new[] { GameBookRole.Setup, GameBookRole.RulesReference, GameBookRole.Lore, GameBookRole.Setup };
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(expectedRoles);
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
+            timeProvider: null,
+            roleClassifier: classifierMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var vectorRoleTags = await context.PgVectorEmbeddings
+            .OrderBy(e => e.ChunkIndex)
+            .Select(e => e.RoleTags)
+            .ToListAsync();
+        var textChunkRoleTags = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .OrderBy(tc => tc.ChunkIndex)
+            .Select(tc => tc.RoleTags)
+            .ToListAsync();
+
+        var expectedInts = expectedRoles.Select(r => (int)r).ToList();
+        // pgvector_embeddings.role_tags is now populated (was always 0) and matches per chunk...
+        vectorRoleTags.Should().Equal(expectedInts);
+        // ...and text_chunks.role_tags is the SAME per chunk (single classification, two sinks).
+        textChunkRoleTags.Should().Equal(expectedRoles);
+    }
+
+    // Slice D (Issue #730), task 5: handler-driven test that heading-aware hierarchy (parent +
+    // children built by IAdvancedChunkingService via HeadingAwareChunker) survives the re-index
+    // path into BOTH persisted sinks. Also covers the Task-1 binding that a supplied
+    // DocumentChunk.Id (here, the parent's HierarchicalChunk.Id parsed from "N" format) is
+    // honored at the text_chunks save site rather than being overwritten with a fresh Guid.
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    [Trait("BoundedContext", "DocumentProcessing")]
+    public async Task Handle_WithStructuredElements_PersistsHeadingAwareHierarchy()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var structuredElements = new List<ExtractedElement>
+        {
+            new("Setup", 1, "Title"),
+            new("Place the board in the middle of the table.", 1, "NarrativeText")
+        };
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", "Setup\n\nPlace the board in the middle of the table.");
+        pdf.StructuredElementsJson = System.Text.Json.JsonSerializer.Serialize(structuredElements);
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        // One parent (section-level, Heading "Setup", Level 0) + two children (Level 2) linked
+        // via the parent's auto-generated "N"-format Id — mirrors what AdvancedChunkingService
+        // actually produces (HierarchicalChunk.Create always self-assigns its own Id).
+        var parentMetadata = new ChunkMetadata { Heading = "Setup", Page = 1, ElementType = "Title" };
+        var parent = HierarchicalChunk.CreateParent("Setup section", parentMetadata);
+
+        var childMetadata = new ChunkMetadata { Heading = "Setup", Page = 1, ElementType = "NarrativeText" };
+        var child1 = HierarchicalChunk.CreateChild("Place the board in the middle of the table.", 2, childMetadata, parent.Id);
+        var child2 = HierarchicalChunk.CreateChild("Each player takes a set of pieces.", 2, childMetadata, parent.Id);
+
+        var hierarchicalChunks = new List<HierarchicalChunk> { parent, child1, child2 };
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
+
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        var savedChunks = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .OrderBy(tc => tc.ChunkIndex)
+            .ToListAsync();
+        savedChunks.Should().HaveCount(3);
+
+        var parentEntity = savedChunks[0];
+        parentEntity.Heading.Should().Be("Setup");
+        parentEntity.Level.Should().Be((short)0);
+        parentEntity.ParentChunkId.Should().BeNull();
+        // [BINDING] the supplied HierarchicalChunk.Id must be honored at the text_chunks save
+        // site (TextChunkEntity.Id), not silently overwritten with a fresh Guid.
+        parentEntity.Id.Should().Be(Guid.ParseExact(parent.Id, "N"));
+
+        var childEntities = savedChunks.Skip(1).ToList();
+        childEntities.Should().AllSatisfy(child =>
+        {
+            child.Level.Should().Be((short)2);
+            child.ParentChunkId.Should().Be(parentEntity.Id);
+        });
+
+        // Both parent and child levels are embedded and persisted to pgvector.
+        var vectorCount = await context.PgVectorEmbeddings.CountAsync();
+        vectorCount.Should().Be(savedChunks.Count);
+    }
+
+    // Slice D robustness guard: HeadingAwareChunker can emit a Level-0 parent chunk whose Text is
+    // a full document section (no ~512-char cap like the old flat chunker). EmbeddingService does
+    // not truncate, so an oversized chunk risks failing the whole re-index if the embedding
+    // provider rejects long input. The handler must cap ONLY the text sent to the embedding
+    // service, while persisting the FULL text to text_chunks/pgvector for retrieval.
+    [Fact]
+    [Trait("Category", TestCategories.Unit)]
+    [Trait("BoundedContext", "DocumentProcessing")]
+    public async Task Handle_WithOversizedChunk_CapsEmbeddingInputButPersistsFullText()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var oversizedText = new string('a', 2500);
+        var pdf = CreatePdfDocument(pdfId, gameId, "completed", oversizedText);
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        var parentMetadata = new ChunkMetadata { Heading = "Setup", Page = 1, ElementType = "NarrativeText" };
+        var oversizedParent = HierarchicalChunk.CreateParent(oversizedText, parentMetadata);
+
+        var hierarchicalChunks = new List<HierarchicalChunk> { oversizedParent };
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
+
+        List<string>? capturedTexts = null;
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+            {
+                capturedTexts = texts;
+                return new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() };
+            });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+
+        // 1) The embedding service received the CAPPED text, not the full 2500-char text.
+        capturedTexts.Should().NotBeNull();
+        capturedTexts.Should().ContainSingle();
+        capturedTexts![0].Length.Should().Be(ChunkingConstants.MaxEmbeddingChars);
+
+        // 2) The persisted text_chunks row keeps the FULL, uncapped text for retrieval.
+        var savedChunk = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .SingleAsync();
+        savedChunk.Content.Length.Should().Be(2500);
+        savedChunk.Content.Should().Be(oversizedText);
+    }
+
     // ISSUE-3197: Batch processing tests for memory optimization
     [Fact]
     public async Task Handle_WithLargeInput_ProcessesEmbeddingsInBatches()
     {
         // Arrange: Create 250 chunks (should trigger 3 batches with size 100)
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -244,10 +478,10 @@ public class IndexPdfCommandHandlerTests
         await context.PdfDocuments.AddAsync(pdf);
         await context.SaveChangesAsync();
 
-        var textChunks = GenerateTextChunks(250);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(250);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
 
         var embeddingCallCount = 0;
         embeddingServiceMock
@@ -264,7 +498,7 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -302,7 +536,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -310,10 +544,10 @@ public class IndexPdfCommandHandlerTests
         await context.PdfDocuments.AddAsync(pdf);
         await context.SaveChangesAsync();
 
-        var textChunks = GenerateTextChunks(1200);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(1200);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -328,7 +562,7 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -356,7 +590,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -364,10 +598,10 @@ public class IndexPdfCommandHandlerTests
         await context.PdfDocuments.AddAsync(pdf);
         await context.SaveChangesAsync();
 
-        var textChunks = GenerateTextChunks(200);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(200);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
 
         var callCount = 0;
         embeddingServiceMock
@@ -389,7 +623,7 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -419,7 +653,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -432,7 +666,7 @@ public class IndexPdfCommandHandlerTests
 
         var handler = new IndexPdfCommandHandler(
             context,
-            chunkingServiceMock.Object,
+            advancedChunkingServiceMock.Object,
             embeddingServiceMock.Object,
             loggerMock.Object,
             indexingSettingsMock.Object,
@@ -451,8 +685,8 @@ public class IndexPdfCommandHandlerTests
         result.ErrorMessage.Should().Contain("extraction required");
 
         // Verify: No chunking or embedding calls
-        chunkingServiceMock.Verify(
-            x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()),
+        advancedChunkingServiceMock.Verify(
+            x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
         embeddingServiceMock.Verify(
@@ -466,7 +700,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange: PDF has extracted text but ProcessingState is Extracting (not Ready)
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -475,10 +709,10 @@ public class IndexPdfCommandHandlerTests
         await context.PdfDocuments.AddAsync(pdf);
         await context.SaveChangesAsync();
 
-        var textChunks = GenerateTextChunks(10);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(10);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -492,7 +726,7 @@ public class IndexPdfCommandHandlerTests
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
         var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
             Mock.Of<IPdfIndexingPipeline>());
@@ -512,7 +746,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -521,15 +755,15 @@ public class IndexPdfCommandHandlerTests
         await context.SaveChangesAsync();
 
         // Chunking returns empty list → triggers embedding failure path
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(new List<TextChunk>());
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HierarchicalChunk>());
 
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
         var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
             Mock.Of<IPdfIndexingPipeline>());
@@ -548,7 +782,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -558,15 +792,15 @@ public class IndexPdfCommandHandlerTests
         await context.SaveChangesAsync();
 
         // Chunking throws an unexpected exception (not a handled failure result)
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Throws(new InvalidOperationException("Unexpected chunking crash"));
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Unexpected chunking crash"));
 
         embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
         embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
 
         var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
             Mock.Of<IPdfIndexingPipeline>());
@@ -607,16 +841,20 @@ public class IndexPdfCommandHandlerTests
         return text;
     }
 
-    private static List<TextChunk> GenerateTextChunks(int count)
+    // Slice D (Issue #730): flat parent-level (Level 0) HierarchicalChunks standing in for what
+    // IAdvancedChunkingService.ChunkDocumentAsync would return, used by tests that only care about
+    // chunk COUNT (batching, failure propagation) rather than heading hierarchy.
+    private static List<HierarchicalChunk> GenerateFlatHierarchicalChunks(int count)
     {
         return Enumerable.Range(1, count)
-            .Select(i => new TextChunk
-            {
-                Text = $"Chunk {i} content with sufficient text to simulate real chunks",
-                Page = (i / 10) + 1,
-                CharStart = (i - 1) * 512,
-                CharEnd = i * 512
-            })
+            .Select(i => HierarchicalChunk.CreateParent(
+                $"Chunk {i} content with sufficient text to simulate real chunks",
+                new ChunkMetadata
+                {
+                    Page = (i / 10) + 1,
+                    CharStart = (i - 1) * 512,
+                    CharEnd = i * 512
+                }))
             .ToList();
     }
 
@@ -633,7 +871,7 @@ public class IndexPdfCommandHandlerTests
     {
         // Arrange: PDF with IsActiveForRag explicitly set to false (e.g. manually disabled)
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
@@ -642,10 +880,10 @@ public class IndexPdfCommandHandlerTests
         await context.PdfDocuments.AddAsync(pdf);
         await context.SaveChangesAsync();
 
-        var textChunks = GenerateTextChunks(10);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(10);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -663,7 +901,7 @@ public class IndexPdfCommandHandlerTests
         // stops calling pipeline (the very anti-pattern #2244 closed).
         var pipelineMock = new Mock<IPdfIndexingPipeline>();
         var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
             pipelineMock.Object);
@@ -702,7 +940,7 @@ public class IndexPdfCommandHandlerTests
         // Post-Phase2d (#1345): text_chunks.GameId IS shared_games.id directly
         // (legacy games table removed; PdfGameIdResolver returns SharedGameId).
         using var context = CreateFreshDbContext();
-        var (chunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
 
         var sharedGameId = Guid.NewGuid();
         await context.SharedGames.AddAsync(new SharedGameEntity
@@ -729,10 +967,10 @@ public class IndexPdfCommandHandlerTests
         await context.PdfDocuments.AddAsync(pdf);
         await context.SaveChangesAsync();
 
-        var textChunks = GenerateTextChunks(5);
-        chunkingServiceMock
-            .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(textChunks);
+        var hierarchicalChunks = GenerateFlatHierarchicalChunks(5);
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hierarchicalChunks);
 
         embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
@@ -750,7 +988,7 @@ public class IndexPdfCommandHandlerTests
         // wrong gameId would pass this test (text_chunks assertion is independent).
         var pipelineMock = new Mock<IPdfIndexingPipeline>();
         var handler = new IndexPdfCommandHandler(
-            context, chunkingServiceMock.Object, embeddingServiceMock.Object,
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
             loggerMock.Object, indexingSettingsMock.Object,
             Mock.Of<ISemanticResponseCache>(),
             pipelineMock.Object);

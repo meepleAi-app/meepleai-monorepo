@@ -44,7 +44,11 @@ internal record TextExtractionResult(
     int CharacterCount,
     bool OcrTriggered,
     ExtractionQuality Quality,
-    string? ErrorMessage = null)
+    string? ErrorMessage = null,
+    // #3589: true when the failure is permanent (e.g. Unstructured 413 — the file will
+    // never shrink on retry) so callers can classify it as non-retryable instead of
+    // leaving it eligible for RetryFailedPdfsJob's automatic backoff retries.
+    bool IsPermanentFailure = false)
 {
     public static TextExtractionResult CreateSuccess(
         string extractedText,
@@ -63,7 +67,7 @@ internal record TextExtractionResult(
             ErrorMessage: null);
     }
 
-    public static TextExtractionResult CreateFailure(string errorMessage)
+    public static TextExtractionResult CreateFailure(string errorMessage, bool isPermanentFailure = false)
     {
         return new TextExtractionResult(
             Success: false,
@@ -72,7 +76,8 @@ internal record TextExtractionResult(
             CharacterCount: 0,
             OcrTriggered: false,
             Quality: ExtractionQuality.VeryLow,
-            ErrorMessage: errorMessage);
+            ErrorMessage: errorMessage,
+            IsPermanentFailure: isPermanentFailure);
     }
 }
 
@@ -85,13 +90,17 @@ internal record PagedTextExtractionResult(
     int TotalPages,
     int TotalCharacters,
     bool OcrTriggered,
-    string? ErrorMessage = null)
+    string? ErrorMessage = null,
+    IReadOnlyList<ExtractedElement>? StructuredElements = null,
+    // #3589: see TextExtractionResult.IsPermanentFailure.
+    bool IsPermanentFailure = false)
 {
     public static PagedTextExtractionResult CreateSuccess(
         IList<PageTextChunk> pageChunks,
         int totalPages,
         int totalCharacters,
-        bool ocrTriggered)
+        bool ocrTriggered,
+        IReadOnlyList<ExtractedElement>? structuredElements = null)
     {
         return new PagedTextExtractionResult(
             Success: true,
@@ -99,10 +108,11 @@ internal record PagedTextExtractionResult(
             TotalPages: totalPages,
             TotalCharacters: totalCharacters,
             OcrTriggered: ocrTriggered,
-            ErrorMessage: null);
+            ErrorMessage: null,
+            StructuredElements: structuredElements);
     }
 
-    public static PagedTextExtractionResult CreateFailure(string errorMessage)
+    public static PagedTextExtractionResult CreateFailure(string errorMessage, bool isPermanentFailure = false)
     {
         return new PagedTextExtractionResult(
             Success: false,
@@ -110,7 +120,8 @@ internal record PagedTextExtractionResult(
             TotalPages: 0,
             TotalCharacters: 0,
             OcrTriggered: false,
-            ErrorMessage: errorMessage);
+            ErrorMessage: errorMessage,
+            IsPermanentFailure: isPermanentFailure);
     }
 }
 

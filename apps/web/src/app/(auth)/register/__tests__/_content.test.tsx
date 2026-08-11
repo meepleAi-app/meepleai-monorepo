@@ -25,11 +25,9 @@ vi.mock('@/hooks/useTranslation', () => ({
 
 const pushMock = vi.fn().mockResolvedValue(undefined);
 const refreshMock = vi.fn();
-const searchParamsMock = { get: vi.fn<(key: string) => string | null>() };
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
-  useSearchParams: () => searchParamsMock,
 }));
 
 const { mockAuth } = vi.hoisted(() => ({
@@ -67,18 +65,12 @@ vi.mock('@/lib/analytics/flywheel-events', () => ({
 }));
 
 // Import AFTER mocks
-import { RegisterPageContent, RegisterFallback } from '../_content';
+import { RegisterPageContent } from '../_content';
 import { logger } from '@/lib/logger';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function setSearchParams(params: Record<string, string | null>) {
-  searchParamsMock.get.mockImplementation((key: string) =>
-    Object.prototype.hasOwnProperty.call(params, key) ? (params[key] ?? null) : null
-  );
-}
 
 function resolveMode(mode: { publicRegistrationEnabled: boolean; oauthEnabled?: boolean }) {
   getRegistrationModeMock.mockResolvedValue(mode);
@@ -86,13 +78,13 @@ function resolveMode(mode: { publicRegistrationEnabled: boolean; oauthEnabled?: 
 
 beforeEach(() => {
   vi.clearAllMocks();
-  setSearchParams({});
   // default: public registration with OAuth enabled
   resolveMode({ publicRegistrationEnabled: true, oauthEnabled: true });
 });
 
-async function renderAndWait(mode?: 'public' | 'invite-only') {
-  const result = render(<RegisterPageContent />);
+async function renderAndWait(mode?: 'public' | 'invite-only', props?: { oauthDisabled?: boolean }) {
+  // #2773: oauth_disabled now flows as a prop from the async page.tsx.
+  const result = render(<RegisterPageContent oauthDisabled={props?.oauthDisabled} />);
   // Wait for async mode fetch to settle (loading indicator disappears)
   if (mode === 'public') {
     await screen.findByTestId('register-form');
@@ -130,16 +122,15 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
       expect(screen.getByText('auth.register.inviteOnlySubtitle')).toBeInTheDocument();
     });
 
-    it('shows inviteOauthDisabled alert when ?oauth_disabled=true', async () => {
-      setSearchParams({ oauth_disabled: 'true' });
-      await renderAndWait('invite-only');
+    it('shows inviteOauthDisabled alert when oauthDisabled prop is true', async () => {
+      await renderAndWait('invite-only', { oauthDisabled: true });
       const alerts = screen.getAllByRole('alert');
       expect(alerts.some(a => a.textContent?.includes('auth.register.inviteOauthDisabled'))).toBe(
         true
       );
     });
 
-    it('does not show inviteOauthDisabled alert when oauth_disabled is absent', async () => {
+    it('does not show inviteOauthDisabled alert when oauthDisabled prop is absent', async () => {
       await renderAndWait('invite-only');
       const alerts = screen.queryAllByRole('alert');
       expect(alerts.some(a => a.textContent?.includes('auth.register.inviteOauthDisabled'))).toBe(
@@ -197,6 +188,7 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
         expect(mockAuth.register).toHaveBeenCalledWith({
           email: 'new@example.com',
           password: 'StrongPassword1',
+          termsAccepted: true,
         });
       });
 
@@ -272,12 +264,5 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
         });
       }
     });
-  });
-});
-
-describe('RegisterFallback', () => {
-  it('renders loading message', () => {
-    render(<RegisterFallback />);
-    expect(screen.getByText('auth.register.loadingMessage')).toBeInTheDocument();
   });
 });

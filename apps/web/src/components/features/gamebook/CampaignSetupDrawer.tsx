@@ -1,28 +1,32 @@
 'use client';
 
 /**
- * CampaignSetupDrawer — Iter 4 (M4 in storyboard).
+ * CampaignSetupDrawer — Iter 4 (M4 in storyboard) + Iter 5 roster wire-up (#2917).
  *
  * 3-step setup wizard for "Nuova campagna libro game", replacing the
  * minimal `NewCampaignDialog` (1-step modal with just a title field).
  *
- * UX per storyboard `nanolith-runthrough-setup-wizard.html`:
+ * UX per storyboard `librogame-runthrough-setup-wizard.html`:
  *   Step 1 · Name       — campaign title + group preset (Gruppo A · I ragazzi,
  *                          Gruppo B · Coppia, Custom)
- *   Step 2 · Players    — host (Aaron) + guest chips, add custom (visual)
- *   Step 3 · Confirm    — review card with ManaPips + CTA "📖 Inizia sessione"
+ *   Step 2 · Players    — editable roster via `<PlayerSetup>`: the owner is the
+ *                          Host entry (real display name), extra players are free
+ *                          guests that the user can add/remove/reorder.
+ *   Step 3 · Confirm    — review card with the REAL roster + CTA "📖 Inizia sessione"
  *   Validation          — title ≥ 3 chars
  *
- * Backend contract (Iter 1.A): POST /api/v1/gamebook/campaigns accepts
- * `{ gameId, title }` only. Preset + players are presentation-layer for now;
- * iter futuro estenderà lo schema (issue separata) — quando arriva, sostituire
- * il payload in `mutation.mutate()` senza toccare la UI.
+ * Backend contract (#2917): POST /api/v1/gamebook/campaigns accepts
+ * `{ gameId, title, participants?, guestNames? }`. The owner is auto-seeded
+ * server-side, so we only send `guestNames` (everyone but the Host). MVP:
+ * every extra player is a free guest — no User lookup (`participants` stays
+ * empty). Omitting the roster keeps the legacy campaign-only behavior.
  */
 
 import {
   cloneElement,
   isValidElement,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent,
@@ -33,6 +37,7 @@ import {
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
+import { PlayerSetup, PLAYER_COLORS, type SetupPlayer } from '@/components/game-night';
 import {
   Drawer,
   DrawerContent,
@@ -40,6 +45,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer/drawer';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { createCampaign } from '@/lib/api/gamebook-campaigns';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -94,6 +100,21 @@ const PRESETS: readonly PresetConfig[] = [
 const MIN_TITLE_LENGTH = 3;
 const MAX_TITLE_LENGTH = 200;
 
+/**
+ * Derive an editable `SetupPlayer[]` roster from a preset, substituting the
+ * owner's real display name into the Host entry (the preset stores a demo
+ * "Aaron" placeholder). Colors are drawn from `PLAYER_COLORS` by position so
+ * the roster starts with unique colors; `PlayerSetup` keeps them unique on edit.
+ */
+function presetToRoster(preset: PresetConfig, ownerName: string): SetupPlayer[] {
+  return preset.players.map((p, i) => ({
+    id: p.id,
+    name: p.role === 'host' ? ownerName : p.name,
+    color: PLAYER_COLORS[i % PLAYER_COLORS.length].value,
+    role: p.role === 'host' ? 'Host' : 'Player',
+  }));
+}
+
 export interface CampaignSetupDrawerProps {
   readonly gameId: string;
   readonly gameTitle: string;
@@ -105,6 +126,21 @@ export interface CampaignSetupDrawerProps {
   /** Controlled mode — drawer open state managed by parent. */
   readonly open?: boolean;
   readonly onOpenChange?: (open: boolean) => void;
+  /**
+   * Storybook/test seam: initial wizard step (default 1).
+   * Allows snapshot stories to render interaction-driven states statically
+   * without requiring play functions. Must NOT be used in production call sites.
+   */
+  readonly initialStep?: StepId;
+  /**
+   * Storybook/test seam: initial campaign title (default 'Campagna con i ragazzi').
+   * Pass a short string (< 3 chars) to render the validation-error state statically.
+   */
+  readonly initialTitle?: string;
+  /**
+   * Storybook/test seam: initial preset selection (default 'group-a').
+   */
+  readonly initialPresetId?: PresetId;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -115,8 +151,14 @@ export function CampaignSetupDrawer({
   trigger,
   open: openProp,
   onOpenChange,
+  initialStep,
+  initialTitle,
+  initialPresetId,
 }: CampaignSetupDrawerProps): ReactElement {
   const router = useRouter();
+  const { data: currentUser } = useCurrentUser();
+  const ownerName = currentUser?.displayName || currentUser?.email || 'Tu';
+
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : internalOpen;
@@ -124,13 +166,48 @@ export function CampaignSetupDrawer({
     if (isControlled) onOpenChange?.(next);
     else setInternalOpen(next);
   };
-  const [step, setStep] = useState<StepId>(1);
-  const [title, setTitle] = useState('Campagna con i ragazzi');
-  const [presetId, setPresetId] = useState<PresetId>('group-a');
-  const preset = PRESETS.find(p => p.id === presetId) ?? PRESETS[0];
+  const [step, setStep] = useState<StepId>(initialStep ?? 1);
+  const [title, setTitle] = useState(initialTitle ?? 'Campagna con i ragazzi');
+  const [presetId, setPresetId] = useState<PresetId>(initialPresetId ?? 'group-a');
+  const preset = useMemo(() => PRESETS.find(p => p.id === presetId) ?? PRESETS[0], [presetId]);
+
+  // Editable roster (Step 2). Derived from the selected preset, with the Host
+  // entry carrying the owner's real display name. Re-derived only when the
+  // preset changes OR when the owner name first resolves — user edits made
+  // while staying on the same preset are preserved (guarded by the sync ref).
+  const [players, setPlayers] = useState<SetupPlayer[]>(() => presetToRoster(preset, ownerName));
+  const rosterSyncRef = useRef<{ presetId: PresetId; ownerName: string }>({
+    presetId,
+    ownerName,
+  });
+
+  useEffect(() => {
+    const last = rosterSyncRef.current;
+    const presetChanged = last.presetId !== presetId;
+    // Only patch the Host name when it actually resolves (placeholder → real),
+    // never overwrite a real name with the "Tu" fallback if the user logs out.
+    const ownerResolved = last.ownerName !== ownerName && ownerName !== 'Tu';
+    if (!presetChanged && !ownerResolved) return;
+
+    rosterSyncRef.current = { presetId, ownerName };
+    if (presetChanged) {
+      // Full re-derive from the new preset (drops prior edits by design).
+      setPlayers(presetToRoster(preset, ownerName));
+    } else {
+      // Owner name resolved while on the same preset: patch the Host entry only,
+      // preserving any guest edits already made.
+      setPlayers(prev => prev.map(p => (p.role === 'Host' ? { ...p, name: ownerName } : p)));
+    }
+  }, [presetId, preset, ownerName]);
 
   const mutation = useMutation({
-    mutationFn: () => createCampaign({ gameId, title: title.trim() }),
+    mutationFn: () => {
+      const guestNames = players
+        .filter(p => p.role !== 'Host')
+        .map(p => p.name.trim())
+        .filter(Boolean);
+      return createCampaign({ gameId, title: title.trim(), guestNames });
+    },
     onSuccess: campaign => {
       reset();
       router.push(`/library/${gameId}/play/${campaign.id}`);
@@ -162,6 +239,9 @@ export function CampaignSetupDrawer({
     setStep(1);
     setTitle('Campagna con i ragazzi');
     setPresetId('group-a');
+    const defaultPreset = PRESETS.find(p => p.id === 'group-a') ?? PRESETS[0];
+    setPlayers(presetToRoster(defaultPreset, ownerName));
+    rosterSyncRef.current = { presetId: 'group-a', ownerName };
     mutation.reset();
     isInitialMountRef.current = true;
   }
@@ -231,12 +311,13 @@ export function CampaignSetupDrawer({
               onPresetChange={setPresetId}
             />
           )}
-          {step === 2 && <StepPlayers preset={preset} />}
+          {step === 2 && <StepPlayers players={players} onPlayersChange={setPlayers} />}
           {step === 3 && (
             <StepConfirm
               gameTitle={gameTitle}
               campaignTitle={trimmedTitle}
               preset={preset}
+              players={players}
               error={
                 mutation.isError
                   ? mutation.error instanceof Error
@@ -417,62 +498,16 @@ function StepName({
 
 // ─── Step 2 · Players ───────────────────────────────────────────────────────
 
-function StepPlayers({ preset }: { preset: PresetConfig }): ReactElement {
+interface StepPlayersProps {
+  readonly players: SetupPlayer[];
+  readonly onPlayersChange: (players: SetupPlayer[]) => void;
+}
+
+function StepPlayers({ players, onPlayersChange }: StepPlayersProps): ReactElement {
   return (
     <div className="grid gap-4">
-      <div>
-        <h3 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-          Party · {preset.players.length} {preset.players.length === 1 ? 'giocatore' : 'giocatori'}
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {preset.players.map(p => {
-            const isHost = p.role === 'host';
-            return (
-              <div
-                key={p.id}
-                className={
-                  isHost
-                    ? 'flex items-center gap-2 rounded-md border border-[hsl(var(--c-session)/0.55)] bg-[hsl(var(--c-session)/0.1)] px-3 py-2'
-                    : 'flex items-center gap-2 rounded-md border border-[hsl(var(--c-player)/0.35)] bg-[hsl(var(--c-player)/0.08)] px-3 py-2'
-                }
-              >
-                <span
-                  className={
-                    isHost
-                      ? 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--c-session))] font-mono text-xs font-bold text-white'
-                      : 'flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--c-player))] font-mono text-xs font-bold text-white'
-                  }
-                  aria-hidden="true"
-                >
-                  {p.initial}
-                </span>
-                <span className="flex-1 truncate">
-                  <span className="block text-sm font-semibold text-foreground">{p.name}</span>
-                  <span
-                    className={
-                      isHost
-                        ? 'block font-mono text-[10px] text-[hsl(var(--c-session))]'
-                        : 'block font-mono text-[10px] text-[hsl(var(--c-player))]'
-                    }
-                  >
-                    {isHost ? '⭐ Host · tu' : 'guest'}
-                  </span>
-                </span>
-              </div>
-            );
-          })}
-          {/* Add-custom slot (visual only for Iter 4 — wire-up in iter futuro) */}
-          <button
-            type="button"
-            disabled
-            className="flex items-center justify-center gap-1 rounded-md border-2 border-dashed border-border bg-transparent px-3 py-2 text-sm font-semibold text-muted-foreground opacity-60"
-            aria-disabled="true"
-            title="Aggiunta custom — disponibile in iter futuro"
-          >
-            ＋ Aggiungi giocatore
-          </button>
-        </div>
-      </div>
+      {/* Editable roster (#2917): host = owner, extra players = free guests. */}
+      <PlayerSetup players={players} onPlayersChange={onPlayersChange} />
 
       <div className="flex gap-3 rounded-md border border-[hsl(var(--c-agent)/0.25)] bg-[hsl(var(--c-agent)/0.08)] p-3 text-sm">
         <span aria-hidden="true" className="text-lg">
@@ -480,7 +515,7 @@ function StepPlayers({ preset }: { preset: PresetConfig }): ReactElement {
         </span>
         <span className="text-muted-foreground">
           <strong className="font-bold text-[hsl(var(--c-agent))]">Nanolith Tutor</strong> consiglia{' '}
-          <strong className="font-semibold">{preset.players.length} giocatori</strong> per la prima
+          <strong className="font-semibold">{players.length} giocatori</strong> per la prima
           campagna.
         </span>
       </div>
@@ -494,11 +529,23 @@ interface StepConfirmProps {
   readonly gameTitle: string;
   readonly campaignTitle: string;
   readonly preset: PresetConfig;
+  readonly players: readonly SetupPlayer[];
   readonly error: string | null;
 }
 
-function StepConfirm({ gameTitle, campaignTitle, preset, error }: StepConfirmProps): ReactElement {
-  const playerNames = preset.players.map(p => p.name).join(' · ');
+function StepConfirm({
+  gameTitle,
+  campaignTitle,
+  preset,
+  players,
+  error,
+}: StepConfirmProps): ReactElement {
+  // Show the REAL roster the user assembled in Step 2 (host + guests), not the
+  // static preset — the confirm screen must match exactly what gets persisted.
+  const playerNames = players
+    .map(p => p.name.trim())
+    .filter(Boolean)
+    .join(' · ');
   return (
     <div className="grid gap-3">
       <article

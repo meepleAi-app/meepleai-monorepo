@@ -3,9 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { MeepleCardGame, type MeepleCardGameLabels } from './meeple-card-game';
 
-// Stub next/link to render a plain <a> in jsdom.
-// `prefetch` is a Next-only prop; strip it before spreading on <a> to avoid
-// React DOM "non-boolean attribute" warnings.
+// Stub next/link (GridCard's root Link) to a plain <a> in jsdom.
 vi.mock('next/link', () => ({
   default: ({
     href,
@@ -42,77 +40,79 @@ const baseProps = {
   labels,
 };
 
-describe('MeepleCardGame (v2)', () => {
-  it('links to /shared-games/{id}', () => {
+describe('MeepleCardGame (adapter over MeepleCard, #2858)', () => {
+  it('renders an anchor linking to /shared-games/{id}', () => {
     render(<MeepleCardGame {...baseProps} />);
     expect(screen.getByRole('link')).toHaveAttribute('href', `/shared-games/${baseProps.id}`);
   });
 
-  it('emits data-slot=shared-games-card with data-game-id', () => {
-    const { container } = render(<MeepleCardGame {...baseProps} />);
-    const root = container.querySelector('[data-slot="shared-games-card"]');
-    expect(root).not.toBeNull();
-    expect(root).toHaveAttribute('data-game-id', baseProps.id);
-  });
-
-  it('renders the title in an h3', () => {
+  it('carries data-testid=shared-games-card on the card root', () => {
     render(<MeepleCardGame {...baseProps} />);
-    expect(screen.getByRole('heading', { level: 3, name: 'Catan' })).toBeInTheDocument();
+    expect(screen.getByTestId('shared-games-card')).toBeInTheDocument();
   });
 
-  it('renders year in meta line when provided', () => {
+  it('emits no interactive element nested inside the card anchor (WCAG 4.1.2)', () => {
+    render(<MeepleCardGame {...baseProps} />);
+    const link = screen.getByRole('link');
+    // Count chips render as static <span role="img"> and no MenuPlaceholder button is
+    // rendered inside an anchor-rooted card, so the <a> has zero nested buttons/anchors.
+    expect(link.querySelectorAll('button, a')).toHaveLength(0);
+  });
+
+  it('renders the title as a heading', () => {
+    render(<MeepleCardGame {...baseProps} />);
+    expect(screen.getByRole('heading', { name: 'Catan' })).toBeInTheDocument();
+  });
+
+  it('renders the year as the subtitle when provided', () => {
     render(<MeepleCardGame {...baseProps} />);
     expect(screen.getByText('1995')).toBeInTheDocument();
   });
 
-  it('omits year line when null', () => {
+  it('omits the year when null', () => {
     render(<MeepleCardGame {...baseProps} year={null} />);
     expect(screen.queryByText('1995')).not.toBeInTheDocument();
   });
 
-  it('renders 5-star rating as role=img with aria-label', () => {
+  it('renders the canonical rating readout (value.toFixed(1)) from rating + ratingMax=5', () => {
     render(<MeepleCardGame {...baseProps} rating={4} />);
-    expect(screen.getByRole('img', { name: /Voto 4 di 5/i })).toBeInTheDocument();
+    expect(screen.getByText('4.0')).toBeInTheDocument();
   });
 
-  it('clamps rating to [0..5] range visually (rating=12 → 5 stars)', () => {
-    render(<MeepleCardGame {...baseProps} rating={12} />);
-    expect(screen.getByRole('img', { name: /Voto 5 di 5/i })).toBeInTheDocument();
+  it('renders the connection strip when any entity count > 0', () => {
+    const { container } = render(<MeepleCardGame {...baseProps} />);
+    expect(container.querySelector('[data-testid="connection-chip-strip"]')).not.toBeNull();
   });
 
-  it('renders toolkits/agents/kbs chips when count > 0', () => {
-    render(<MeepleCardGame {...baseProps} />);
-    expect(screen.getByText('3 tk')).toBeInTheDocument();
-    expect(screen.getByText('2 ag')).toBeInTheDocument();
-    // kb chip is count-only (label="").
-    expect(screen.getByText('1')).toBeInTheDocument();
-  });
-
-  it('omits all entity chips when all counts are 0', () => {
+  it('omits the connection strip when all entity counts are 0', () => {
     const { container } = render(
       <MeepleCardGame {...baseProps} toolkitsCount={0} agentsCount={0} kbsCount={0} />
     );
-    expect(container.textContent).not.toContain('tk');
-    expect(container.textContent).not.toContain('ag');
+    expect(container.querySelector('[data-testid="connection-chip-strip"]')).toBeNull();
   });
 
-  it('does not render newWeek badge when count < 2', () => {
-    render(<MeepleCardGame {...baseProps} newThisWeekCount={1} />);
-    expect(screen.queryByText(/^\+1$/)).not.toBeInTheDocument();
-  });
-
-  it('renders newWeek badge when count >= 2 with aria-label', () => {
+  it('renders the new-this-week badge (+N) when count >= 2', () => {
     render(<MeepleCardGame {...baseProps} newThisWeekCount={3} />);
     expect(screen.getByText('+3')).toBeInTheDocument();
-    expect(screen.getByLabelText('3 nuovi questa settimana')).toBeInTheDocument();
   });
 
-  it('renders 🎲 emoji placeholder when coverUrl is missing', () => {
-    render(<MeepleCardGame {...baseProps} coverUrl={null} />);
-    expect(screen.getByText('🎲')).toBeInTheDocument();
+  it('does not render the new-this-week badge when count < 2', () => {
+    render(<MeepleCardGame {...baseProps} newThisWeekCount={1} />);
+    expect(screen.queryByText('+1')).not.toBeInTheDocument();
   });
 
-  it('renders <img> when coverUrl is provided', () => {
+  it('renders the 🎲 cover fallback when coverUrl is missing', () => {
+    // Real canonical DOM: GridCard renders 🎲 twice (Cover emoji-band via
+    // coverEmoji="🎲" AND EntityBadge's default entityIcon.game glyph), so a
+    // single getByText('🎲') is ambiguous. Scope to the cover-emoji-band slot
+    // to verify the adapter's coverEmoji wiring specifically.
+    const { container } = render(<MeepleCardGame {...baseProps} coverUrl={null} />);
+    const coverBand = container.querySelector('[data-slot="cover-emoji-band"]');
+    expect(coverBand).not.toBeNull();
+    expect(coverBand).toHaveTextContent('🎲');
+  });
+
+  it('renders an <img> cover when coverUrl is provided', () => {
     const { container } = render(
       <MeepleCardGame {...baseProps} coverUrl="https://cdn.example/c.jpg" />
     );
@@ -121,22 +121,14 @@ describe('MeepleCardGame (v2)', () => {
     expect(img).toHaveAttribute('src', 'https://cdn.example/c.jpg');
   });
 
-  it('cover img has empty alt (decorative; title is the link label)', () => {
-    const { container } = render(
-      <MeepleCardGame {...baseProps} coverUrl="https://cdn.example/c.jpg" />
-    );
-    expect(container.querySelector('img')).toHaveAttribute('alt', '');
-  });
-
-  // Issue #2055 Phase 7 — Wikidata cover attribution footer
-  describe('Wikidata attribution footer', () => {
-    it('renders <footer> with license text when wikidataCoverLicense is provided', () => {
+  describe('Wikidata attribution footer (rendered by MeepleCard for entity=game)', () => {
+    it('renders <footer> with license text when coverLicense is provided', () => {
       const { container } = render(
         <MeepleCardGame
           {...baseProps}
-          wikidataCoverLicense="CC BY-SA 4.0"
-          wikidataCoverAttribution="Doe, John"
-          wikidataCoverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
+          coverLicense="CC BY-SA 4.0"
+          coverAttribution="Doe, John"
+          coverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
         />
       );
       const footer = container.querySelector('footer');
@@ -144,23 +136,12 @@ describe('MeepleCardGame (v2)', () => {
       expect(footer).toHaveTextContent('CC BY-SA 4.0');
     });
 
-    it('renders attribution text in footer when provided', () => {
-      render(
-        <MeepleCardGame
-          {...baseProps}
-          wikidataCoverLicense="CC BY 4.0"
-          wikidataCoverAttribution="Jane Smith"
-        />
-      );
-      expect(screen.getByText('Jane Smith')).toBeInTheDocument();
-    });
-
-    it('renders a source link when wikidataCoverSourceUrl is provided', () => {
+    it('renders a source link when coverSourceUrl is provided', () => {
       const { container } = render(
         <MeepleCardGame
           {...baseProps}
-          wikidataCoverLicense="CC BY-SA 4.0"
-          wikidataCoverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
+          coverLicense="CC BY-SA 4.0"
+          coverSourceUrl="https://commons.wikimedia.org/wiki/File:Catan.jpg"
         />
       );
       const link = container.querySelector('footer a');
@@ -170,25 +151,9 @@ describe('MeepleCardGame (v2)', () => {
       expect(link).toHaveAttribute('target', '_blank');
     });
 
-    it('renders no <footer> when wikidataCoverLicense is null', () => {
-      const { container } = render(<MeepleCardGame {...baseProps} wikidataCoverLicense={null} />);
-      expect(container.querySelector('footer')).toBeNull();
-    });
-
-    it('renders no <footer> when wikidataCoverLicense is omitted', () => {
+    it('renders no <footer> when coverLicense is omitted', () => {
       const { container } = render(<MeepleCardGame {...baseProps} />);
       expect(container.querySelector('footer')).toBeNull();
-    });
-
-    it('renders license-only footer when attribution and sourceUrl are absent', () => {
-      const { container } = render(
-        <MeepleCardGame {...baseProps} wikidataCoverLicense="Public Domain" />
-      );
-      const footer = container.querySelector('footer');
-      expect(footer).not.toBeNull();
-      expect(footer).toHaveTextContent('Public Domain');
-      // No separator dots or extra content beyond the license.
-      expect(footer?.querySelector('a')).toBeNull();
     });
   });
 });

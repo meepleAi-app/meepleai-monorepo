@@ -78,6 +78,17 @@ internal sealed class WikidataCoverEnrichmentRetryPolicy : IWikidataCoverEnrichm
         TimeSpan.FromMinutes(15),
     };
 
+    /// <summary>
+    /// Upper bound (seconds) of the additive anti-thundering-herd jitter layered on
+    /// top of every scheduled retry. A batch of games that fail simultaneously (a
+    /// transient R2 outage, a tripped breaker) would otherwise be rescheduled to the
+    /// identical instant and stampede Wikimedia in lockstep on the next scheduler
+    /// tick. Additive-only (never negative) so the DEC-3j backoff floor is preserved
+    /// and — for circuit-open — the retry still lands past the 5min BreakDuration.
+    /// Mirrors the 0-30s jitter on <c>NotificationQueueItem</c>.
+    /// </summary>
+    internal const int MaxJitterSeconds = 30;
+
     public WikidataCoverEnrichmentRetryDecision Classify(
         EnrichCatalogCoverResult result,
         int currentRetryCount,
@@ -115,7 +126,7 @@ internal sealed class WikidataCoverEnrichmentRetryPolicy : IWikidataCoverEnrichm
 
             // currentRetryCount = 0 → schedule the first retry (BackoffSchedule[0] = 1m)
             var backoff = BackoffSchedule[Math.Min(currentRetryCount, BackoffSchedule.Length - 1)];
-            return new WikidataCoverEnrichmentRetryDecision.ScheduleRetry(nowUtc.Add(backoff));
+            return ScheduleWithJitter(nowUtc, backoff);
         }
 
         // Issue #1823 Wave 3 M13 / M10 follow-up: Polly circuit OPEN. The
@@ -126,11 +137,22 @@ internal sealed class WikidataCoverEnrichmentRetryPolicy : IWikidataCoverEnrichm
         // not a per-game failure.
         if (string.Equals(failed.Reason, EnrichCatalogCoverCommandHandler.FailReasonCircuitOpen, StringComparison.Ordinal))
         {
-            return new WikidataCoverEnrichmentRetryDecision.ScheduleRetry(nowUtc.Add(CircuitOpenBackoff));
+            return ScheduleWithJitter(nowUtc, CircuitOpenBackoff);
         }
 
         // Unknown failure reason — fail-fast to surface it on the admin dead-letter page
         // for triage rather than silently retrying.
         return new WikidataCoverEnrichmentRetryDecision.DeadLetter();
+    }
+
+    /// <summary>
+    /// Wraps a base backoff in a <see cref="WikidataCoverEnrichmentRetryDecision.ScheduleRetry"/>
+    /// with additive [0, <see cref="MaxJitterSeconds"/>]s jitter so simultaneously-failed
+    /// games do not all reschedule to the identical <c>NextRetryAt</c>.
+    /// </summary>
+    private static WikidataCoverEnrichmentRetryDecision.ScheduleRetry ScheduleWithJitter(DateTime nowUtc, TimeSpan baseDelay)
+    {
+        var jitter = TimeSpan.FromSeconds(Random.Shared.Next(0, MaxJitterSeconds + 1));
+        return new WikidataCoverEnrichmentRetryDecision.ScheduleRetry(nowUtc.Add(baseDelay + jitter));
     }
 }

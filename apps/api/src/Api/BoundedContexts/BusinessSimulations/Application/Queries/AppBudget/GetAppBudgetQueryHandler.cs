@@ -55,7 +55,7 @@ internal sealed class GetAppBudgetQueryHandler : IRequestHandler<GetAppBudgetQue
             DaysRemaining: daysRemaining,
             UpdatedAt: budget.UpdatedAt,
             UpdatedBy: budget.UpdatedBy,
-            RowVersion: Convert.ToBase64String(budget.RowVersion ?? Array.Empty<byte>()));
+            Xmin: budget.Xmin);
     }
 
     private async Task<SpendBreakdownDto> ComputeSpendBreakdownAsync(

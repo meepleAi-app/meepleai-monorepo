@@ -23,6 +23,8 @@ namespace Api.Observability;
 ///   - MeepleAiMetrics.PdfConcurrency.cs  — DbUpdateConcurrencyException counter for PdfDocumentEntity (#1802)
 ///   - MeepleAiMetrics.WikidataEnrichment.cs — Wikidata cover enrichment attempts, SPARQL latency, QID hit-rate (#1823 DEC-3g)
 ///   - MeepleAiMetrics.LiveSession.cs        — LiveSession write counters and UpdateAsync duration (#2097 ADR-060)
+///   - MeepleAiMetrics.LiveSessionSse.cs    — Native SSE active-connections gauge + reconnect counter (#2561 SP2 T12)
+///   - MeepleAiMetrics.AgentGrounding.cs    — In-session agent response grounding by path/status/profile + citation count (#3390 Slice 1)
 /// </summary>
 internal static partial class MeepleAiMetrics
 {

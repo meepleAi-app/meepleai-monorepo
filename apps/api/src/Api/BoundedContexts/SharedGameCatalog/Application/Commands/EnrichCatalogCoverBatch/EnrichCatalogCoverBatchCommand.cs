@@ -10,12 +10,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatal
 /// </summary>
 /// <remarks>
 /// <para>
-/// The handler iterates <paramref name="GameIds"/> in order, dispatching one
-/// child command per id through <see cref="MediatR.IMediator"/>. Per-game
-/// outcomes are independent — an unhandled exception inside one M8 invocation
-/// is captured as a <c>failed/unhandled-exception</c> entry and the batch
-/// continues. Cancellation aborts the loop immediately and surfaces an
-/// <see cref="OperationCanceledException"/> to the caller.
+/// The handler iterates <paramref name="GameIds"/> in order, delegating each
+/// id to the <c>IWikidataCoverEnrichmentRunner</c> (Issue #3369) — the SSOT
+/// that records an attempt row, applies the DEC-3j retry/dead-letter policy
+/// and broadcasts SSE. Per-game outcomes are independent — an exception
+/// leaking from the runner is captured as a <c>failed/unhandled-exception</c>
+/// entry and the batch continues. Cancellation aborts the loop immediately and
+/// surfaces an <see cref="OperationCanceledException"/> to the caller.
 /// </para>
 /// <para>
 /// Rate-limit posture: the M8 handler already enforces the 1 req/sec Wikimedia

@@ -49,20 +49,14 @@ internal sealed class ExportUserDataCommandHandler
         if (user is null)
             throw new NotFoundException("User", command.UserId.ToString());
 
-        // Gather data from all bounded contexts in parallel
-        var libraryTask = _libraryRepository.GetUserGamesAsync(command.UserId, cancellationToken: cancellationToken);
-        var chatThreadsTask = _chatThreadRepository.FindByUserIdAsync(command.UserId, cancellationToken);
-        var notificationsTask = _notificationRepository.GetByUserIdAsync(command.UserId, unreadOnly: false, limit: 10000, cancellationToken: cancellationToken);
-        var aiConsentTask = _aiConsentRepository.GetByUserIdAsync(command.UserId, cancellationToken);
-        var memoryCountTask = _conversationMemoryRepository.CountByUserIdAsync(command.UserId, cancellationToken);
-
-        await Task.WhenAll(libraryTask, chatThreadsTask, notificationsTask, aiConsentTask, memoryCountTask).ConfigureAwait(false);
-
-        var library = await libraryTask.ConfigureAwait(false);
-        var chatThreads = await chatThreadsTask.ConfigureAwait(false);
-        var notifications = await notificationsTask.ConfigureAwait(false);
-        var aiConsent = await aiConsentTask.ConfigureAwait(false);
-        var memoryCount = await memoryCountTask.ConfigureAwait(false);
+        // Issue #3228: the 5 repositories share one scoped DbContext, so await sequentially — EF
+        // forbids concurrent operations on the same context (Task.WhenAll trips the
+        // ConcurrencyDetector). No real parallelism is lost.
+        var library = await _libraryRepository.GetUserGamesAsync(command.UserId, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var chatThreads = await _chatThreadRepository.FindByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        var notifications = await _notificationRepository.GetByUserIdAsync(command.UserId, unreadOnly: false, limit: 10000, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var aiConsent = await _aiConsentRepository.GetByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
+        var memoryCount = await _conversationMemoryRepository.CountByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
         // Map to export DTOs
         var profile = new ExportedUserProfile(

@@ -37,6 +37,13 @@ internal class GamebookCampaignSessionEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted").HasDefaultValue(false);
         builder.Property(e => e.DeletedAt).HasColumnName("deleted_at");
 
+        // SI-8 (#2639): manual terminal close. Nullable outcome (stored as the enum's
+        // int value) + completion timestamp. Null outcome = still open/resumable.
+        builder.Property(e => e.Outcome)
+            .HasColumnName("outcome")
+            .HasConversion<int?>();
+        builder.Property(e => e.CompletedAt).HasColumnName("completed_at");
+
         // A0.2 (#1320): index over (owner_user_id, game_ref_kind, game_ref_id, is_deleted) is
         // declared via raw SQL in the migration because composite indexes spanning both the
         // parent entity (owner_user_id, is_deleted) AND owned-type columns (game_ref_kind,

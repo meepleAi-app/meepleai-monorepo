@@ -340,4 +340,186 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
             },
             GameNightEventId: gameNightEventId,
             GuestNames: null);
+
+    // Issue #3157 C1 — the restored ix_game_night_sessions_unique_active partial unique
+    // index must reject a second InProgress link in the same GameNight.
+    // Epic #3188 Slice 3: a direct create now yields a DRAFT (Pending link), so we first flip
+    // session1's link to InProgress to occupy the night's single live slot (as if it had gone
+    // live); seeding a second InProgress link then violates the index.
+    [Fact]
+    public async Task RestoredUniqueIndex_RejectsSecondInProgressLinkInSameNight()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        var link1 = await _dbContext.GameNightSessions
+            .FirstAsync(l => l.SessionId == first.SessionId, TestCancellationToken);
+        link1.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        var act = async () => await SeedAdditionalActiveSessionInNightAsync(userId, gameId, first.GameNightEventId);
+
+        // Assert the specific partial-unique-index violation (23505) so a future constraint
+        // that trips first cannot produce a false green.
+        var ex = await act.Should().ThrowAsync<DbUpdateException>();
+        ex.Which.InnerException.Should().BeOfType<PostgresException>()
+            .Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
+    }
+
+    // Issue #3157 C1 — finalizing a session must close its game_night_sessions link so it does not
+    // leave an orphaned open live slot that would block the restored unique index from admitting the
+    // next session in the same night.
+    //
+    // Epic #3188 Slice 4 — RE-PURPOSED as the never-promoted DRAFT path. Post-Slice-3 a direct create
+    // is born a DRAFT: the link is Pending (NOT InProgress) and the Session stays Active without ever
+    // going live. This test pins that finalizing such a Session transitions its Pending draft link →
+    // Completed (not orphaned Pending). The complementary live path (InProgress → Completed) is pinned
+    // by Finalize_ClosesInProgressLiveLink_AfterGoLive below.
+    //
+    // Which guard fires: the FinalizeSessionCommandHandler up-front link-close WHERE clause (now
+    // matching Pending || InProgress) governs — the tracking-Session finalize itself is status-driven
+    // on Active/Paused (Session.Finalize), independent of the link status.
+    [Fact]
+    public async Task Finalize_ClosesInProgressLink()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        // Precondition: the born link is a Pending DRAFT (never promoted to InProgress). This is the
+        // Slice 3 born-status change that re-purposes this test onto the draft path.
+        var draftLink = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        draftLink.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Pending));
+
+        var ownerParticipantId = await _dbContext.Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>()
+            .AsNoTracking()
+            .Where(p => p.SessionId == created.SessionId)
+            .Select(p => p.Id)
+            .FirstAsync(TestCancellationToken);
+
+        var finalizeHandler = BuildFinalizeHandler();
+
+        await finalizeHandler.Handle(
+            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }, userId),
+            TestCancellationToken);
+
+        _dbContext.ChangeTracker.Clear();
+        var link = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
+    }
+
+    // Epic #3188 Slice 4 — the complementary LIVE path: a session that went live (Slice 2 go-live
+    // promotes the link Pending → InProgress) must still close InProgress → Completed on finalize.
+    // We simulate go-live by flipping the link to InProgress directly (the go-live handler lives in a
+    // separate slice), so this keeps explicit regression coverage of the original C1 behaviour now that
+    // a direct create no longer yields an InProgress link.
+    [Fact]
+    public async Task Finalize_ClosesInProgressLiveLink_AfterGoLive()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+        var created = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        // Simulate go-live: promote the draft link Pending → InProgress.
+        var link0 = await _dbContext.GameNightSessions
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        link0.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
+        link0.StartedAt = DateTimeOffset.UtcNow;
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        var ownerParticipantId = await _dbContext.Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>()
+            .AsNoTracking()
+            .Where(p => p.SessionId == created.SessionId)
+            .Select(p => p.Id)
+            .FirstAsync(TestCancellationToken);
+
+        var finalizeHandler = BuildFinalizeHandler();
+
+        await finalizeHandler.Handle(
+            new FinalizeSessionCommand(created.SessionId, new Dictionary<Guid, int> { [ownerParticipantId] = 1 }, userId),
+            TestCancellationToken);
+
+        _dbContext.ChangeTracker.Clear();
+        var link = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
+        link.Status.Should().Be(nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Completed));
+    }
+
+    /// <summary>
+    /// Builds a real <see cref="FinalizeSessionCommandHandler"/> over the integration DbContext.
+    /// IScoreEntryRepository / ISessionSyncService are not registered by the integration service
+    /// builder — mock them (these tests target the game_night_sessions link close, not scoring/SSE).
+    /// The Session itself is the real persisted aggregate.
+    /// </summary>
+    private FinalizeSessionCommandHandler BuildFinalizeHandler()
+    {
+        var eventCollector = _serviceProvider!.GetRequiredService<IDomainEventCollector>();
+        var unitOfWork = _serviceProvider.GetRequiredService<IUnitOfWork>();
+        var sessionRepo = new SessionRepository(_dbContext!, eventCollector);
+        var scoreRepoMock = new Mock<IScoreEntryRepository>();
+        scoreRepoMock.Setup(r => r.GetBySessionIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ScoreEntry>());
+        var syncMock = new Mock<ISessionSyncService>();
+        syncMock.Setup(s => s.PublishEventAsync(It.IsAny<Guid>(), It.IsAny<INotification>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return new FinalizeSessionCommandHandler(
+            sessionRepo,
+            scoreRepoMock.Object,
+            unitOfWork,
+            syncMock.Object,
+            _dbContext!,
+            TimeProvider.System,
+            new DiaryStreamService());
+    }
+
+    // Issue #3157 C2a — RE-PURPOSED for epic #3188 Slice 3 (D1 / #19).
+    // Pre-Slice-3 premise (two direct-creates in one night race on the InProgress live-slot index →
+    // one 409) NO LONGER HOLDS: after the born-Pending flip, a direct create yields a DRAFT (Pending
+    // link, Session stays Active/not-live). Two direct-creates on the same night therefore BOTH make
+    // Pending links and BOTH succeed — drafts coexist per night. The partial-unique live-slot index
+    // only bites at go-live (an InProgress link), so the real max-1-live race is now covered by
+    // Slice 2's GoLiveSessionConcurrencyTests. This test pins the coexistence invariant end-to-end.
+    [Fact]
+    public async Task CreateSession_SecondDirectCreateInSameNight_CoexistsAsDraft_No409()
+    {
+        var (userId, gameId) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
+
+        // First direct create → ad-hoc Published night + draft link 1 (Pending).
+        var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear();
+
+        // Second direct create attached to the SAME night → must NOT 409 (drafts coexist, #19).
+        var second = await _createHandler.Handle(
+            BuildCreateCommand(userId, gameId, first.GameNightEventId), TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        second.GameNightEventId.Should().Be(first.GameNightEventId);
+        second.SessionId.Should().NotBe(first.SessionId);
+
+        // Both links exist and are Pending — neither create promoted a session to live.
+        var links = await _dbContext.GameNightSessions
+            .AsNoTracking()
+            .Where(l => l.GameNightEventId == first.GameNightEventId)
+            .ToListAsync(TestCancellationToken);
+        links.Should().HaveCount(2);
+        links.Should().OnlyContain(l =>
+            l.Status == nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.Pending));
+        links.Should().OnlyContain(l => l.StartedAt == null);
+
+        // No InProgress link (the night's single live slot stays free) and the night stays Published.
+        var night = await _dbContext.GameNightEvents
+            .AsNoTracking()
+            .FirstAsync(e => e.Id == first.GameNightEventId, TestCancellationToken);
+        night.Status.Should().Be(
+            nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightStatus.Published));
+    }
 }

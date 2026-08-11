@@ -34,18 +34,23 @@ import { useTablistKeyboardNav } from '@/hooks/useTablistKeyboardNav';
 
 // ─── Tab types ────────────────────────────────────────────────────────────────
 
-export type LiveTab = 'score' | 'turn' | 'widget' | 'notes';
+export type LiveTab = 'flavor' | 'score' | 'turn' | 'widget' | 'notes' | 'photos' | 'agent';
 
-const ORDERED_TABS: ReadonlyArray<LiveTab> = ['score', 'turn', 'widget', 'notes'];
+// Base tab set (order matches mockup). The optional per-game 'flavor' tab
+// (#2787) is prepended at runtime when `showFlavorTab` is set.
+const BASE_TABS: ReadonlyArray<LiveTab> = ['score', 'turn', 'widget', 'notes', 'photos', 'agent'];
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
 
 export interface RightColumnTabsLabels {
   readonly tabsAriaLabel: string;
+  readonly tabFlavor: string;
   readonly tabScore: string;
   readonly tabTurn: string;
   readonly tabWidget: string;
   readonly tabNotes: string;
+  readonly tabPhotos: string;
+  readonly tabAgent: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -56,6 +61,8 @@ export interface RightColumnTabsProps {
   readonly children: React.ReactNode;
   readonly labels: RightColumnTabsLabels;
   readonly className?: string;
+  /** #2787 — when true, prepend a game-conditional 'flavor' tab (default false). */
+  readonly showFlavorTab?: boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -66,22 +73,39 @@ export function RightColumnTabs({
   children,
   labels,
   className,
+  showFlavorTab = false,
 }: RightColumnTabsProps): ReactElement {
   const panelId = useId();
   const tablistId = useId();
 
+  const orderedTabs = useMemo<ReadonlyArray<LiveTab>>(
+    () => (showFlavorTab ? ['flavor', ...BASE_TABS] : BASE_TABS),
+    [showFlavorTab]
+  );
+
   const tabLabels: Record<LiveTab, string> = useMemo(
     () => ({
+      flavor: labels.tabFlavor,
       score: labels.tabScore,
       turn: labels.tabTurn,
       widget: labels.tabWidget,
       notes: labels.tabNotes,
+      photos: labels.tabPhotos,
+      agent: labels.tabAgent,
     }),
-    [labels.tabScore, labels.tabTurn, labels.tabWidget, labels.tabNotes]
+    [
+      labels.tabFlavor,
+      labels.tabScore,
+      labels.tabTurn,
+      labels.tabWidget,
+      labels.tabNotes,
+      labels.tabPhotos,
+      labels.tabAgent,
+    ]
   );
 
   const { tabRefs, handleKeyDown } = useTablistKeyboardNav<LiveTab>({
-    orderedKeys: ORDERED_TABS,
+    orderedKeys: orderedTabs,
     onChange: onTabChange,
     orientation: 'horizontal',
   });
@@ -100,7 +124,7 @@ export function RightColumnTabs({
         aria-orientation="horizontal"
         className="flex shrink-0 border-b border-border/60"
       >
-        {ORDERED_TABS.map(tab => {
+        {orderedTabs.map(tab => {
           const isActive = activeTab === tab;
           const tabId = `${tablistId}-tab-${tab}`;
           return (

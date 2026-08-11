@@ -1,0 +1,120 @@
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
+using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
+using FluentAssertions;
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNights;
+
+/// <summary>
+/// Unit tests for <see cref="GameNightSummaryMapper"/> — the MVP/KPI/recap aggregation (#2702).
+/// </summary>
+[Trait("Category", "Unit")]
+[Trait("BoundedContext", "GameManagement")]
+[Trait("Feature", "GameNightSummary")]
+public class GameNightSummaryMapperTests
+{
+    private static readonly DateTimeOffset Start = new(2026, 8, 1, 21, 0, 0, TimeSpan.Zero);
+
+    private static GameNightSession CompletedSession(
+        Guid eventId, int order, Guid gameId, string title, Guid? winnerId, int durationMinutes)
+    {
+        return GameNightSession.Reconstitute(
+            id: Guid.NewGuid(),
+            gameNightEventId: eventId,
+            sessionId: Guid.NewGuid(),
+            gameId: gameId,
+            gameTitle: title,
+            playOrder: order,
+            status: GameNightSessionStatus.Completed,
+            winnerId: winnerId,
+            startedAt: Start,
+            completedAt: Start.AddMinutes(durationMinutes));
+    }
+
+    private static readonly IReadOnlyDictionary<Guid, int> NoEventCounts =
+        new Dictionary<Guid, int>();
+
+    private static readonly IReadOnlyDictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>> NoTopPlayers =
+        new Dictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>>();
+
+    [Fact]
+    public void Map_ComputesMvpKpisAndRecap()
+    {
+        var evt = GameNightEvent.Create(Guid.NewGuid(), "Serata", Start.AddDays(-1));
+        var davide = Guid.NewGuid();
+        var marco = Guid.NewGuid();
+        var brass = CompletedSession(evt.Id, 1, Guid.NewGuid(), "Brass", davide, 120);
+        evt.RestoreSessions(new[]
+        {
+            brass,
+            CompletedSession(evt.Id, 2, Guid.NewGuid(), "Spirit", davide, 60),
+            CompletedSession(evt.Id, 3, Guid.NewGuid(), "Azul", marco, 30),
+        });
+        var names = new Dictionary<Guid, string> { [davide] = "Davide", [marco] = "Marco" };
+        string? Resolver(GameNightSession s) => s.WinnerId is { } w ? names.GetValueOrDefault(w) : null;
+        var eventCounts = new Dictionary<Guid, int> { [brass.SessionId] = 11 };
+        var topPlayers = new Dictionary<Guid, IReadOnlyList<GameNightRecapPlayerDto>>
+        {
+            [brass.SessionId] = new List<GameNightRecapPlayerDto>
+            {
+                new("Davide", 1),
+                new("Marco", 2),
+                new("Giulia", 3),
+            },
+        };
+
+        var dto = GameNightSummaryMapper.Map(evt, Resolver, eventCounts, topPlayers, isViewerOrganizer: true);
+
+        dto.Mvp.Should().NotBeNull();
+        dto.Mvp!.PlayerName.Should().Be("Davide");
+        dto.Mvp.Wins.Should().Be(2);
+        dto.Kpis.TotalGames.Should().Be(3);
+        dto.Kpis.CompletedGames.Should().Be(3);
+        dto.Kpis.WinnersCount.Should().Be(3);
+        dto.Kpis.TotalDurationMinutes.Should().Be(210);
+        dto.Games.Should().HaveCount(3);
+        dto.Games[0].GameTitle.Should().Be("Brass");
+        dto.Games[0].WinnerName.Should().Be("Davide");
+        dto.Games[0].DurationMinutes.Should().Be(120);
+        dto.Games[0].EventsCount.Should().Be(11);
+        dto.Games[0].TopPlayers.Should().HaveCount(3);
+        dto.Games[0].TopPlayers[0].PlayerName.Should().Be("Davide");
+        dto.Games[0].TopPlayers[0].Rank.Should().Be(1);
+        dto.Games[1].EventsCount.Should().Be(0); // no events recorded for this session
+        dto.Games[1].TopPlayers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Map_NoWinners_YieldsNullMvpAndZeroWinnersCount()
+    {
+        var evt = GameNightEvent.Create(Guid.NewGuid(), "Serata", Start.AddDays(-1));
+        evt.RestoreSessions(new[]
+        {
+            CompletedSession(evt.Id, 1, Guid.NewGuid(), "Brass", winnerId: null, 90),
+        });
+
+        var dto = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, NoTopPlayers, isViewerOrganizer: true);
+
+        dto.Mvp.Should().BeNull();
+        dto.Kpis.WinnersCount.Should().Be(0);
+        dto.Kpis.TotalDurationMinutes.Should().Be(90);
+    }
+
+    [Fact]
+    public void Map_NonOrganizer_OmitsShareTokenButKeepsSharedFlag()
+    {
+        var evt = GameNightEvent.Create(Guid.NewGuid(), "Serata", Start.AddDays(-1));
+        evt.Publish(new List<Guid>());
+        evt.Complete();
+        evt.GenerateShareToken();
+
+        var organizerView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, NoTopPlayers, isViewerOrganizer: true);
+        var guestView = GameNightSummaryMapper.Map(evt, _ => null, NoEventCounts, NoTopPlayers, isViewerOrganizer: false);
+
+        organizerView.ShareToken.Should().NotBeNull();
+        guestView.ShareToken.Should().BeNull();
+        guestView.IsShared.Should().BeTrue();
+    }
+}

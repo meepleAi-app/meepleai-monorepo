@@ -38,6 +38,7 @@ import * as path from 'path';
 
 import { test, expect, BrowserContext, Page } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
 import { checkFlowPrerequisites, formatHealthResults } from '../helpers/flow-health-gate';
 import { env } from '../helpers/onboarding-environment';
 import { QueueDashboardPage } from '../pages/admin/QueueDashboardPage';
@@ -86,6 +87,12 @@ const state: Partial<EmbeddingFlowState> = {};
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Admin Embedding Flow @flow @rag @slow', () => {
+  // Test 1 performs a real UI login via LoginPage — skip the flow without a
+  // reachable backend (complements the beforeAll health gate). See #2784.
+  test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
+  });
+
   test.beforeAll(async () => {
     const health = await checkFlowPrerequisites(['api', 'frontend', 'embedding']);
     const unhealthy = health.filter(h => !h.healthy);

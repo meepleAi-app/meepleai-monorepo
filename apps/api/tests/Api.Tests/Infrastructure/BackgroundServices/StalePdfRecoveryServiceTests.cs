@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,23 @@ public sealed class StalePdfRecoveryServiceTests
             UploadedByUserId = userId ?? Guid.NewGuid(),
             UploadedAt = uploadedAt,
             ProcessingState = processingState,
+        };
+    }
+
+    /// <summary>
+    /// Builds a <see cref="ProcessingJobEntity"/> in the given status for a PDF, so tests can
+    /// express "this document is owned by the queue" vs "nothing owns it". Issue #3588 follow-up.
+    /// </summary>
+    private static ProcessingJobEntity BuildJobFor(Guid pdfDocumentId, string status)
+    {
+        return new ProcessingJobEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = pdfDocumentId,
+            UserId = Guid.NewGuid(),
+            Status = status,
+            Priority = 0,
+            CreatedAt = DateTimeOffset.UtcNow.AddHours(-1),
         };
     }
 
@@ -334,6 +352,32 @@ public sealed class StalePdfRecoveryServiceTests
         Assert.Empty(stalePdfs);
     }
 
+    // ── FindStalePdfsAsync: demo mock placeholders are always excluded (#3075) ─
+
+    [Fact]
+    [Trait("Issue", "3075")]
+    public async Task FindStalePdfsAsync_DemoMockPlaceholder_IsNeverConsideredStale()
+    {
+        // #3075: Badsworm dogfood mocks (seed/ prefix, no real blob) are seeded in deliberate
+        // non-Ready states. Recovery must skip them — otherwise ProcessAsync fails on the missing
+        // blob and flips them to Failed, degrading seed_state to partial_failed.
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var mock = BuildPdfEntity(
+            nameof(PdfProcessingState.Embedding),
+            DateTime.UtcNow - TimeSpan.FromHours(2), // well past the staleness threshold
+            filePath: $"{PdfDocumentEntity.DemoMockFilePathPrefix}badsworm/spirit-island/rulebook.pdf");
+        db.PdfDocuments.Add(mock);
+        await db.SaveChangesAsync();
+
+        var pipelineMock = new Mock<IPdfProcessingPipelineService>();
+        var (scopeFactory, _) = BuildScopeFactory(db, pipelineMock);
+        var sut = CreateService(scopeFactory);
+
+        var stalePdfs = await InvokeFindStalePdfsAsync(sut);
+
+        Assert.Empty(stalePdfs);
+    }
+
     // ── FindStalePdfsAsync: Empty database ───────────────────────────────────
 
     [Fact]
@@ -430,6 +474,105 @@ public sealed class StalePdfRecoveryServiceTests
         var updated = await db.PdfDocuments.FindAsync(entity.Id);
         Assert.NotNull(updated);
         Assert.Equal(nameof(PdfProcessingState.Ready), updated.ProcessingState);
+    }
+
+    // ── FindStalePdfsAsync: ownership guard vs the queue worker (#3588 follow-up) ──
+
+    /// <summary>
+    /// A PDF whose job is <c>Queued</c> belongs to the queue worker, not to this service.
+    /// Driving it here would reset it to Pending under the worker's feet.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "3588")]
+    public async Task FindStalePdfsAsync_PdfWithQueuedJob_IsExcluded()
+    {
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pdf = BuildPdfEntity(
+            nameof(PdfProcessingState.Chunking),
+            DateTime.UtcNow - TimeSpan.FromMinutes(40));
+        db.PdfDocuments.Add(pdf);
+        db.ProcessingJobs.Add(BuildJobFor(pdf.Id, nameof(JobStatus.Queued)));
+        await db.SaveChangesAsync();
+
+        var (scopeFactory, _) = BuildScopeFactory(db, new Mock<IPdfProcessingPipelineService>());
+
+        var stalePdfs = await InvokeFindStalePdfsAsync(CreateService(scopeFactory));
+
+        Assert.Empty(stalePdfs);
+    }
+
+    /// <summary>
+    /// Regression guard for the gap observed on staging on 2026-08-07: a job requeued by
+    /// <c>OrphanedProcessingJobRecoveryService</c> is picked up by the worker within seconds, so it
+    /// leaves <c>Queued</c> for <c>Processing</c>. The original guard only excluded <c>Queued</c>,
+    /// so this service then tried to "recover" a document the worker was actively processing —
+    /// calling <c>ResetToPendingAsync</c> on it BEFORE the pipeline's atomic claim could refuse it.
+    /// No corruption resulted (the claim held), but the protection rested entirely on that claim.
+    ///
+    /// An active job means an owner: both queue states must be excluded.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "3588")]
+    public async Task FindStalePdfsAsync_PdfWithProcessingJob_IsExcluded()
+    {
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pdf = BuildPdfEntity(
+            nameof(PdfProcessingState.Chunking),
+            DateTime.UtcNow - TimeSpan.FromMinutes(40));
+        db.PdfDocuments.Add(pdf);
+        db.ProcessingJobs.Add(BuildJobFor(pdf.Id, nameof(JobStatus.Processing)));
+        await db.SaveChangesAsync();
+
+        var stalePdfs = await InvokeFindStalePdfsAsync(
+            CreateService(BuildScopeFactory(db, new Mock<IPdfProcessingPipelineService>()).scopeFactory));
+
+        Assert.Empty(stalePdfs);
+    }
+
+    /// <summary>
+    /// The guard must stay narrow: a job in a TERMINAL state has no owner, so a document left
+    /// mid-pipeline behind it is genuinely stale and must still be recovered. Without this, the
+    /// ownership guard would silently disable the service for every document that ever had a job.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "3588")]
+    [InlineData("Completed")]
+    [InlineData("Failed")]
+    [InlineData("Cancelled")]
+    public async Task FindStalePdfsAsync_PdfWithTerminalJob_IsStillRecovered(string terminalStatus)
+    {
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pdf = BuildPdfEntity(
+            nameof(PdfProcessingState.Chunking),
+            DateTime.UtcNow - TimeSpan.FromMinutes(40));
+        db.PdfDocuments.Add(pdf);
+        db.ProcessingJobs.Add(BuildJobFor(pdf.Id, terminalStatus));
+        await db.SaveChangesAsync();
+
+        var stalePdfs = await InvokeFindStalePdfsAsync(
+            CreateService(BuildScopeFactory(db, new Mock<IPdfProcessingPipelineService>()).scopeFactory));
+
+        Assert.Single(stalePdfs);
+        Assert.Equal(pdf.Id, stalePdfs[0].Id);
+    }
+
+    /// <summary>A document with no job row at all is the classic stale case — always recovered.</summary>
+    [Fact]
+    [Trait("Issue", "3588")]
+    public async Task FindStalePdfsAsync_PdfWithNoJobAtAll_IsStillRecovered()
+    {
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pdf = BuildPdfEntity(
+            nameof(PdfProcessingState.Embedding),
+            DateTime.UtcNow - TimeSpan.FromMinutes(40));
+        db.PdfDocuments.Add(pdf);
+        await db.SaveChangesAsync();
+
+        var stalePdfs = await InvokeFindStalePdfsAsync(
+            CreateService(BuildScopeFactory(db, new Mock<IPdfProcessingPipelineService>()).scopeFactory));
+
+        Assert.Single(stalePdfs);
+        Assert.Equal(pdf.Id, stalePdfs[0].Id);
     }
 
     // ── Constructor: null guards ─────────────────────────────────────────────

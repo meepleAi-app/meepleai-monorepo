@@ -9,6 +9,7 @@
  *   POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve       → single
  *   POST /admin/mechanic-analyses/{id}/claims/{claimId}/reject        → single + note
  *   POST /admin/mechanic-analyses/{id}/claims/bulk-approve            → batch
+ *   POST /admin/mechanic-analyses/{id}/claims/bulk-reject             → batch + reason (#526 ME-M1.4 AC-3)
  *
  * Lifecycle invariant (AC-10): the parent analysis can only be promoted to
  * Published once **every** claim is Approved. The viewer surfaces totals so
@@ -20,27 +21,140 @@ import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon, Loader2Icon, XIcon } from 'lucide-react';
 
+import { PdfQuoteHighlighter } from '@/components/pdf/PdfQuoteHighlighter';
 import { Badge } from '@/components/ui/data-display/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
 import {
   MECHANIC_CLAIM_STATUS_LABELS,
+  MECHANIC_SECTION_DISPLAY_ORDER,
   MECHANIC_SECTION_LABELS,
   MechanicClaimStatus,
   type MechanicClaimDto,
+  type MechanicClaimValidationDto,
 } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
+import { ApproveClaimDialog } from './ApproveClaimDialog';
+import { BulkActionDialog } from './BulkActionDialog';
 import { RejectClaimDialog } from './RejectClaimDialog';
 
 const httpClient = new HttpClient();
 const adminClient = createAdminClient({ httpClient });
+
+/** Word threshold above which a citation quote is considered "long" (#526 ME-M1.4 AC-3, ADR-051 T1). */
+/** Claims carrying a real T2 (long-verbatim) guardrail FAIL (#2782 FU-1). */
+function claimsFailingT2(claims: MechanicClaimDto[]): MechanicClaimDto[] {
+  return claims.filter(c => c.validations.some(v => v.rule === 'T2' && v.outcome === 'fail'));
+}
+
+type BulkActionKind = 'approve-pending' | 'reject-all-failing-T2';
 
 const CLAIM_STATUS_BADGE_CLASS: Record<number, string> = {
   [MechanicClaimStatus.Pending]: 'bg-amber-100 text-amber-800 border-amber-300',
   [MechanicClaimStatus.Approved]: 'bg-green-100 text-green-800 border-green-300',
   [MechanicClaimStatus.Rejected]: 'bg-rose-100 text-rose-800 border-rose-300',
 };
+
+/** Per-rule (T1-T4) template validation badge styling (#526 ME-M1.4 AC-1). */
+const VALIDATION_BADGE_CLASS: Record<string, string> = {
+  pass: 'bg-green-100 text-green-800 border-green-300',
+  fail: 'bg-rose-100 text-rose-800 border-rose-300',
+  notRun: 'bg-slate-100 text-slate-600 border-slate-300',
+};
+
+/**
+ * #539: human-readable ADR-051 guardrail taxonomy. Drives the per-badge tooltip and the
+ * "Cosa sono i badge" legend so reviewers understand what each T-rule checks.
+ */
+export const GUARDRAIL_DESCRIPTIONS: Record<string, { label: string; desc: string }> = {
+  T1: {
+    label: 'T1 · Quote cap',
+    desc: 'Ogni citazione (quote) deve essere breve (≤ N parole): nessuna copia verbatim lunga.',
+  },
+  T2: {
+    label: 'T2 · No long-verbatim',
+    desc: 'Il testo del claim non deve ricopiare alla lettera lunghe sequenze del regolamento (anti-plagio / tutela IP).',
+  },
+  T3a: {
+    label: 'T3a · Citazione presente',
+    desc: 'Ogni affermazione deve portare almeno una citazione della fonte.',
+  },
+  T3b: {
+    label: 'T3b · Grounding semantico',
+    desc: 'Il claim deve essere semanticamente coerente col chunk citato (similarità coseno sopra soglia).',
+  },
+  T4: {
+    label: 'T4 · Pagina/substring',
+    desc: 'La pagina citata deve esistere nel PDF e la quote deve essere un estratto reale di quella pagina.',
+  },
+};
+
+/**
+ * Renders one Badge per template validation rule (T1-T4) with pass/fail/notRun
+ * styling. Exported for direct unit testing and reuse across claim rows.
+ */
+export function ValidationBadges({
+  validations,
+}: {
+  validations: MechanicClaimValidationDto[];
+}): React.JSX.Element | null {
+  if (!validations || validations.length === 0) return null;
+  return (
+    <span className="flex flex-wrap gap-1" data-testid="claim-validation-badges">
+      {validations.map(v => (
+        <Badge
+          key={v.rule}
+          variant="outline"
+          className={VALIDATION_BADGE_CLASS[v.outcome] ?? VALIDATION_BADGE_CLASS.notRun}
+          data-testid={`claim-validation-badge-${v.rule}`}
+          aria-label={`${v.rule} ${v.outcome}${v.score != null ? ` score ${v.score.toFixed(2)}` : ''}${v.message ? `: ${v.message}` : ''}`}
+          title={`${GUARDRAIL_DESCRIPTIONS[v.rule]?.label ?? v.rule} — ${GUARDRAIL_DESCRIPTIONS[v.rule]?.desc ?? ''}\nEsito: ${v.outcome}${v.score != null ? ` (score ${v.score.toFixed(2)})` : ''}${v.message ? `\n${v.message}` : ''}`}
+        >
+          {v.outcome === 'pass' ? '✓' : v.outcome === 'fail' ? '✗' : '—'} {v.rule}
+        </Badge>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * #539: expandable legend explaining the T1-T4 guardrails + how claims are produced.
+ * Rendered once above the claim list so reviewers understand the ✓/✗/— badges.
+ */
+export function ValidationLegend(): React.JSX.Element {
+  return (
+    <details className="rounded-md border border-border bg-muted/40 p-3 text-xs dark:border-zinc-700 dark:bg-zinc-800/40">
+      <summary className="cursor-pointer font-medium text-foreground">
+        Cosa sono i badge T1–T4? (guardrail di qualità)
+      </summary>
+      <p className="mt-2 text-muted-foreground">
+        Ogni sezione è generata dall&apos;LLM come JSON (affermazioni + citazioni); una catena di
+        guardrail valida poi ogni claim. Esito badge: <span className="font-medium">✓</span>{' '}
+        superato
+        {' · '}
+        <span className="font-medium">✗</span> fallito
+        {' · '}
+        <span className="font-medium">—</span> non eseguito.
+      </p>
+      <ul className="mt-2 space-y-1">
+        {Object.values(GUARDRAIL_DESCRIPTIONS).map(g => (
+          <li key={g.label}>
+            <span className="font-medium text-foreground">{g.label}</span>{' '}
+            <span className="text-muted-foreground">— {g.desc}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 interface ClaimsSectionProps {
   analysisId: string;
@@ -49,19 +163,35 @@ interface ClaimsSectionProps {
    * Used for terminal states where claims are still useful read-only context.
    */
   isClaimsActionable?: boolean;
+  /**
+   * Source PDF id (#526 ME-M1.4 AC-2). When present, citation rows become
+   * clickable buttons that open {@link PdfQuoteHighlighter} at the cited
+   * page/quote; when absent, citations render as plain read-only text.
+   */
+  pdfDocumentId?: string;
+}
+
+interface CitationTarget {
+  documentId: string;
+  page: number;
+  quote: string;
 }
 
 export function ClaimsSection({
   analysisId,
   isClaimsActionable = true,
+  pdfDocumentId,
 }: ClaimsSectionProps): React.JSX.Element {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   // Separate channel for success-with-skipped (amber) so we don't conflate it
   // with hard failures (rose) — spec-panel P1 fix.
   const [actionWarning, setActionWarning] = useState<string | null>(null);
+  const [approveTarget, setApproveTarget] = useState<MechanicClaimDto | null>(null);
   const [rejectTarget, setRejectTarget] = useState<MechanicClaimDto | null>(null);
   const [pendingClaimId, setPendingClaimId] = useState<string | null>(null);
+  const [citationTarget, setCitationTarget] = useState<CitationTarget | null>(null);
+  const [bulkAction, setBulkAction] = useState<BulkActionKind | null>(null);
 
   const claimsQuery = useQuery({
     queryKey: ['mechanic-analysis', analysisId, 'claims'],
@@ -92,8 +222,11 @@ export function ClaimsSection({
       arr.push(c);
       map.set(key, arr);
     }
-    // Stable section ordering by enum number; claims by displayOrder within.
-    const orderedKeys = Array.from(map.keys()).sort((a, b) => a - b);
+    // Section ordering by logical display order (v1.1.0: Setup/Components float up near the top,
+    // since their enum values are append-only 6/7); claims by displayOrder within.
+    const orderedKeys = Array.from(map.keys()).sort(
+      (a, b) => (MECHANIC_SECTION_DISPLAY_ORDER[a] ?? a) - (MECHANIC_SECTION_DISPLAY_ORDER[b] ?? b)
+    );
     return orderedKeys.map(section => ({
       section,
       claims: (map.get(section) ?? []).slice().sort((a, b) => a.displayOrder - b.displayOrder),
@@ -107,11 +240,13 @@ export function ClaimsSection({
   };
 
   const approveMutation = useMutation({
-    mutationFn: (claimId: string) => adminClient.approveMechanicClaim(analysisId, claimId),
-    onMutate: claimId => setPendingClaimId(claimId),
+    mutationFn: ({ claimId, note }: { claimId: string; note?: string }) =>
+      adminClient.approveMechanicClaim(analysisId, claimId, note || undefined),
+    onMutate: ({ claimId }) => setPendingClaimId(claimId),
     onSuccess: () => {
       setActionError(null);
       setActionWarning(null);
+      setApproveTarget(null);
       invalidateClaimsAndStatus();
     },
     onError: (err: unknown) => {
@@ -155,7 +290,53 @@ export function ClaimsSection({
     onError: (err: unknown) => {
       setActionError(err instanceof Error ? err.message : 'Bulk approve failed');
     },
+    onSettled: () => setBulkAction(null),
   });
+
+  const bulkRejectMutation = useMutation({
+    mutationFn: (vars: { claimIds: string[]; reason: string }) =>
+      adminClient.bulkRejectMechanicClaims(analysisId, vars),
+    onSuccess: result => {
+      setActionError(null);
+      // Partial success: report skipped-already-rejected as a warning (amber), not error (rose).
+      if (result.skippedAlreadyRejectedCount > 0) {
+        setActionWarning(
+          `Bulk reject completed: ${result.rejectedCount} rejected, ` +
+            `${result.skippedAlreadyRejectedCount} already-rejected claim(s) skipped.`
+        );
+      } else {
+        setActionWarning(null);
+      }
+      invalidateClaimsAndStatus();
+    },
+    onError: (err: unknown) => {
+      setActionError(err instanceof Error ? err.message : 'Bulk reject failed');
+    },
+    onSettled: () => setBulkAction(null),
+  });
+
+  const pendingClaims = useMemo(
+    () => claims.filter(c => c.status === MechanicClaimStatus.Pending),
+    [claims]
+  );
+  const failingT2Claims = useMemo(() => claimsFailingT2(claims), [claims]);
+
+  const bulkActionTargets = bulkAction === 'approve-pending' ? pendingClaims : failingT2Claims;
+  const bulkActionTitle =
+    bulkAction === 'approve-pending'
+      ? 'Approve all pending claims?'
+      : 'Reject claims that failed the T2 guardrail?';
+
+  const handleBulkActionConfirm = () => {
+    if (bulkAction === 'approve-pending') {
+      bulkApproveMutation.mutate();
+    } else if (bulkAction === 'reject-all-failing-T2') {
+      bulkRejectMutation.mutate({
+        claimIds: bulkActionTargets.map(c => c.id),
+        reason: 'Claim ha fallito il guardrail T2 (long-verbatim) — rifiuto bulk (#2782).',
+      });
+    }
+  };
 
   if (claimsQuery.isLoading) {
     return (
@@ -195,7 +376,7 @@ export function ClaimsSection({
     );
   }
 
-  const canBulkApprove = isClaimsActionable && stats.pending > 0 && !bulkApproveMutation.isPending;
+  const isBulkActionPending = bulkApproveMutation.isPending || bulkRejectMutation.isPending;
 
   return (
     <div className="space-y-3" data-testid="claims-section">
@@ -218,22 +399,27 @@ export function ClaimsSection({
           )}
         </div>
         {isClaimsActionable && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => bulkApproveMutation.mutate()}
-            disabled={!canBulkApprove}
-            data-testid="bulk-approve-button"
+          <Select
+            value=""
+            onValueChange={value => setBulkAction(value as BulkActionKind)}
+            disabled={isBulkActionPending}
           >
-            {bulkApproveMutation.isPending ? (
-              <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
-            ) : (
-              <CheckIcon className="mr-1 h-4 w-4" />
-            )}
-            Bulk approve pending ({stats.pending})
-          </Button>
+            <SelectTrigger className="w-64" data-testid="bulk-action-select">
+              <SelectValue placeholder="Bulk action…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="approve-pending" disabled={pendingClaims.length === 0}>
+                Approve all pending ({pendingClaims.length})
+              </SelectItem>
+              <SelectItem value="reject-all-failing-T2" disabled={failingT2Claims.length === 0}>
+                Reject all failing T2 ({failingT2Claims.length})
+              </SelectItem>
+            </SelectContent>
+          </Select>
         )}
       </div>
+
+      <ValidationLegend />
 
       {actionError && (
         <div
@@ -262,11 +448,27 @@ export function ClaimsSection({
             claims={sectionClaims}
             isActionable={isClaimsActionable}
             pendingClaimId={pendingClaimId}
-            onApprove={id => approveMutation.mutate(id)}
+            pdfDocumentId={pdfDocumentId}
+            onApprove={claim => setApproveTarget(claim)}
             onReject={claim => setRejectTarget(claim)}
+            onOpenCitation={setCitationTarget}
           />
         ))}
       </div>
+
+      <ApproveClaimDialog
+        open={!!approveTarget}
+        onOpenChange={open => {
+          if (!open) setApproveTarget(null);
+        }}
+        onConfirm={note => {
+          if (!approveTarget) return;
+          approveMutation.mutate({ claimId: approveTarget.id, note });
+        }}
+        isPending={approveMutation.isPending}
+        claimPreview={approveTarget ? truncate(approveTarget.text, 120) : undefined}
+        validations={approveTarget?.validations}
+      />
 
       <RejectClaimDialog
         open={!!rejectTarget}
@@ -280,6 +482,29 @@ export function ClaimsSection({
         isPending={rejectMutation.isPending}
         claimPreview={rejectTarget ? truncate(rejectTarget.text, 120) : undefined}
       />
+
+      <BulkActionDialog
+        open={!!bulkAction}
+        onOpenChange={open => {
+          if (!open) setBulkAction(null);
+        }}
+        title={bulkActionTitle}
+        count={bulkActionTargets.length}
+        onConfirm={handleBulkActionConfirm}
+        isPending={isBulkActionPending}
+      />
+
+      {citationTarget && (
+        <PdfQuoteHighlighter
+          open={!!citationTarget}
+          onOpenChange={open => {
+            if (!open) setCitationTarget(null);
+          }}
+          documentId={citationTarget.documentId}
+          page={citationTarget.page}
+          quote={citationTarget.quote}
+        />
+      )}
     </div>
   );
 }
@@ -289,8 +514,10 @@ interface SectionGroupProps {
   claims: MechanicClaimDto[];
   isActionable: boolean;
   pendingClaimId: string | null;
-  onApprove: (claimId: string) => void;
+  pdfDocumentId?: string;
+  onApprove: (claim: MechanicClaimDto) => void;
   onReject: (claim: MechanicClaimDto) => void;
+  onOpenCitation: (target: CitationTarget) => void;
 }
 
 function SectionGroup({
@@ -298,8 +525,10 @@ function SectionGroup({
   claims,
   isActionable,
   pendingClaimId,
+  pdfDocumentId,
   onApprove,
   onReject,
+  onOpenCitation,
 }: SectionGroupProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(true);
   const label = MECHANIC_SECTION_LABELS[section] ?? `Section ${section}`;
@@ -335,8 +564,10 @@ function SectionGroup({
               claim={claim}
               isActionable={isActionable}
               isPending={pendingClaimId === claim.id}
-              onApprove={() => onApprove(claim.id)}
+              pdfDocumentId={pdfDocumentId}
+              onApprove={() => onApprove(claim)}
               onReject={() => onReject(claim)}
+              onOpenCitation={onOpenCitation}
             />
           ))}
         </ul>
@@ -349,8 +580,10 @@ interface ClaimRowProps {
   claim: MechanicClaimDto;
   isActionable: boolean;
   isPending: boolean;
+  pdfDocumentId?: string;
   onApprove: () => void;
   onReject: () => void;
+  onOpenCitation: (target: CitationTarget) => void;
 }
 
 /**
@@ -365,8 +598,10 @@ function ClaimRow({
   claim,
   isActionable,
   isPending,
+  pdfDocumentId,
   onApprove,
   onReject,
+  onOpenCitation,
 }: ClaimRowProps): React.JSX.Element {
   const [showCitations, setShowCitations] = useState(false);
   const [textExpanded, setTextExpanded] = useState(false);
@@ -405,8 +640,17 @@ function ClaimRow({
               <strong>Rejection:</strong> {claim.rejectionNote}
             </p>
           )}
+          {claim.reviewNote && (
+            <p
+              className="mt-1 rounded border border-green-200 bg-green-50 p-1 text-xs text-green-800 break-words"
+              data-testid={`claim-review-note-${claim.id}`}
+            >
+              <strong>Note:</strong> {claim.reviewNote}
+            </p>
+          )}
         </div>
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <ValidationBadges validations={claim.validations} />
           <Badge
             variant="outline"
             className={CLAIM_STATUS_BADGE_CLASS[status] ?? ''}
@@ -461,10 +705,28 @@ function ClaimRow({
             <ul className="mt-1 space-y-1 border-l-2 border-sky-200 pl-3 text-xs">
               {claim.citations.map(c => (
                 <li key={c.id} className="text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    p.{c.pdfPage}
-                  </span>{' '}
-                  — &ldquo;{c.quote}&rdquo;
+                  {pdfDocumentId ? (
+                    <button
+                      type="button"
+                      className="text-left hover:underline"
+                      onClick={() =>
+                        onOpenCitation({
+                          documentId: pdfDocumentId,
+                          page: c.pdfPage,
+                          quote: c.quote,
+                        })
+                      }
+                      data-testid={`claim-citation-open-${c.id}`}
+                    >
+                      <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                      {c.quote}&rdquo;
+                    </button>
+                  ) : (
+                    <>
+                      <span className="font-medium text-foreground">p.{c.pdfPage}</span> — &ldquo;
+                      {c.quote}&rdquo;
+                    </>
+                  )}
                 </li>
               ))}
             </ul>

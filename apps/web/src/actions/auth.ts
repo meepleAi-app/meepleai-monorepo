@@ -151,6 +151,10 @@ export async function registerAction(
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
     const displayName = formData.get('displayName') as string | undefined;
+    // #2954 F1: forward the ToS-acceptance checkbox. A checkbox posts "on" when checked;
+    // a hidden field may post "true". The backend rejects registration without acceptance.
+    const termsAccepted =
+      formData.get('termsAccepted') === 'on' || formData.get('termsAccepted') === 'true';
 
     if (!email || !password) {
       return {
@@ -167,6 +171,7 @@ export async function registerAction(
       password,
       displayName: displayName || undefined,
       role: 'user', // Default role (lowercase, matching backend Role.cs)
+      termsAccepted,
     });
 
     return {

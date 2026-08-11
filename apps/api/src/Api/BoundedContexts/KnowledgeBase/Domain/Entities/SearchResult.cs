@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Entities;
 
@@ -15,6 +16,20 @@ internal sealed class SearchResult : Entity<Guid>
     public Confidence RelevanceScore { get; private set; }
     public int Rank { get; private set; }
     public string? SearchMethod { get; private set; } // "vector", "keyword", "hybrid"
+    public Guid PdfDocumentId { get; private set; }
+    public int ChunkIndex { get; private set; }
+    public GameBookRole RoleTags { get; private set; }
+
+    /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
+    public string? Heading { get; private set; }
+
+    /// <summary>
+    /// SP-C (#3407): raw bounding-box JSON + char offsets carried from the vector arm to the citation
+    /// surface (parsed + Full-gated at the API boundary). Null for the keyword arm / pre-coordinate corpus.
+    /// </summary>
+    public string? BoundingBoxesJson { get; private set; }
+    public int? CharStart { get; private set; }
+    public int? CharEnd { get; private set; }
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -35,7 +50,14 @@ internal sealed class SearchResult : Entity<Guid>
         int pageNumber,
         Confidence relevanceScore,
         int rank,
-        string? searchMethod = null) : base(id)
+        string? searchMethod = null,
+        Guid pdfDocumentId = default,
+        int chunkIndex = 0,
+        GameBookRole roleTags = GameBookRole.None,
+        string? heading = null,
+        string? boundingBoxesJson = null,
+        int? charStart = null,
+        int? charEnd = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -52,19 +74,13 @@ internal sealed class SearchResult : Entity<Guid>
         RelevanceScore = relevanceScore ?? throw new ArgumentNullException(nameof(relevanceScore));
         Rank = rank;
         SearchMethod = searchMethod;
-    }
-
-    /// <summary>
-    /// Creates a citation from this search result.
-    /// </summary>
-    public Citation ToCitation()
-    {
-        return new Citation(
-            documentId: VectorDocumentId,
-            pageNumber: PageNumber,
-            snippet: TextContent.Length > 200 ? TextContent[..200] + "..." : TextContent,
-            relevanceScore: RelevanceScore.Value
-        );
+        PdfDocumentId = pdfDocumentId;
+        ChunkIndex = chunkIndex;
+        RoleTags = roleTags;
+        Heading = heading;
+        BoundingBoxesJson = boundingBoxesJson;
+        CharStart = charStart;
+        CharEnd = charEnd;
     }
 
     /// <summary>

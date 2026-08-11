@@ -28,6 +28,7 @@
 import { NextResponse } from 'next/server';
 
 import * as metrics from '@/lib/metrics/session-cache-metrics';
+import { isAdminPath, isProtectedPath } from '@/lib/routing/protected-routes';
 import { isAdminRole } from '@/lib/utils/roles';
 
 import type { NextRequest } from 'next/server';
@@ -38,57 +39,10 @@ import type { NextRequest } from 'next/server';
 // Configuration
 // ============================================================================
 
-/**
- * Protected routes that require authentication
- * Unauthenticated users will be redirected to /login
- *
- * Kept alphabetised so the diff is easy to read and additions are mechanical.
- * Sources of truth for what belongs here:
- *   - any top-level path under `src/app/(authenticated)/` whose Server Component
- *     should not render for an anonymous visitor
- *   - any path under `src/app/(chat)/`
- *   - `/admin` (its own (dashboard) subtree)
- *
- * `#2118` sweep: added the remaining `(authenticated)` top-levels that were
- * silently missing from this list. Before the sweep, anonymous users hitting
- * `/hub/games`, `/dashboard`, `/profile`, etc. saw the authenticated chrome
- * (`UserShell` / `AppTopBar`) with an empty session and relied on each page
- * hook to surface a 401 — which produced a flash of broken UI.
- */
-const PROTECTED_ROUTES = [
-  '/admin',
-  '/agents',
-  '/chat',
-  '/dashboard',
-  '/discover',
-  '/editor',
-  '/game-nights',
-  '/gamebook',
-  '/games',
-  '/hub',
-  '/knowledge-base',
-  '/library',
-  '/n8n',
-  '/notifications',
-  '/onboarding',
-  '/pipeline-builder',
-  '/play-records',
-  '/players',
-  '/private-games',
-  '/profile',
-  '/sessions',
-  '/settings',
-  '/setup',
-  '/toolkit',
-  '/toolkits',
-  '/upload',
-  '/versions',
-];
-
-/**
- * Admin-only routes that require admin role
- */
-const ADMIN_ONLY_ROUTES = ['/admin'];
+// Route authorization policy (protected / public-share / admin prefix sets and
+// the boundary-aware decision helpers) lives in `@/lib/routing/protected-routes`
+// so it can be unit-tested without a full edge/NextRequest harness — see
+// `isProtectedPath` / `isAdminPath`.
 
 /**
  * Public routes that don't require authentication
@@ -318,13 +272,29 @@ function getSecurityHeaders(requestOrigin?: string) {
       connectSrcParts.push(apiOrigin);
     }
   }
+
+  // #3498 — E2E-only opt-in for MinIO presigned covers served from http://localhost:9000.
+  //
+  // 🔴 This middleware emits its OWN Content-Security-Policy alongside the one from
+  // next.config.js, and a browser enforces the INTERSECTION of every CSP it receives. Widening
+  // `img-src` in only one of the two therefore changes nothing: the stricter header still blocks
+  // the image, the card falls back to its emoji placeholder, and the failure reads exactly like a
+  // missing object. Both must be widened together.
+  //
+  // Literal `=== 'true'` parse, identical to isLocalBlobAllowed in lib/security/csp.js (the twin
+  // policy): only an explicit opt-in widens the default, which stays closed for prod/staging.
+  const imgSrcParts = ["'self'", 'data:', 'https:'];
+  if (process.env.NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB === 'true') {
+    imgSrcParts.push('http://localhost:9000');
+  }
+
   return {
     // Content Security Policy - XSS protection
     'Content-Security-Policy': [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Required for Next.js hydration
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Required for Tailwind CSS + Google Fonts
-      "img-src 'self' data: https:", // Allow images from data URIs and HTTPS
+      `img-src ${imgSrcParts.join(' ')}`, // data URIs + HTTPS, plus the #3498 E2E opt-in
       "font-src 'self' data: https://fonts.gstatic.com", // Allow Google Fonts files
       `connect-src ${connectSrcParts.join(' ')} https://fonts.googleapis.com https://fonts.gstatic.com`, // Allow API + Google Fonts
       "worker-src 'self' blob:", // Required for PDF.js web workers
@@ -418,7 +388,11 @@ export async function proxy(request: NextRequest) {
   // PLAYWRIGHT_AUTH_BYPASS is never set there.
   const isVisualTestBuild = process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1';
   const isAuthBypassAllowed = process.env.NODE_ENV !== 'production' || isVisualTestBuild;
-  if (isAuthBypassAllowed && process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' && sessionCookieValue) {
+  const isAuthBypassEngaged =
+    isAuthBypassAllowed &&
+    process.env.PLAYWRIGHT_AUTH_BYPASS === 'true' &&
+    Boolean(sessionCookieValue);
+  if (isAuthBypassEngaged) {
     isAuthenticated = true;
   } else if (sessionCookieValue) {
     isAuthenticated = await isSessionCookieValid(request, sessionCookieValue);
@@ -437,6 +411,20 @@ export async function proxy(request: NextRequest) {
     const cachedRole = getCachedRole(sessionCookieValue);
     if (cachedRole) {
       userRole = cachedRole;
+    } else if (isAuthBypassEngaged) {
+      // E2E auth bypass: isSessionCookieValid was skipped above, so the
+      // session-validation cache is never warmed and getCachedRole() is null.
+      // Resolve the role from the plaintext meepleai_user_role cookie seeded by
+      // the E2E auth helpers instead. Unreachable in production: the bypass
+      // requires PLAYWRIGHT_AUTH_BYPASS (never set in prod) AND either
+      // NODE_ENV!=='production' or the visual-test flag (dead-code-eliminated in
+      // real prod builds), so a client-set role cookie can never escalate a real
+      // user. Restores admin E2E coverage after the v1 role-cookie sunset
+      // (2026-05-13). See issue #2784.
+      const bypassRole = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
+      if (bypassRole) {
+        userRole = bypassRole;
+      }
     } else if (Date.now() < USER_ROLE_COOKIE_V1_SUNSET) {
       const v1 = request.cookies.get(USER_ROLE_COOKIE_V1)?.value;
       if (v1) {
@@ -454,9 +442,14 @@ export async function proxy(request: NextRequest) {
   const isAdminViewMode = isAdmin && viewModeCookie?.value !== 'user';
 
   // Check if the current route is protected or public auth route
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+  // Boundary-aware matching: a route matches only on an exact hit or a
+  // `route + '/'` sub-path, so protected `/library` no longer swallows the
+  // public `/library-public` landing (plain startsWith did). Issue #2846:
+  // isProtectedPath also subtracts the public share routes (`/library/shared/*`,
+  // `/game-nights/shared/*`, `/play-records/shared/*`) so guests can reach them.
+  const isProtectedRoute = isProtectedPath(pathname);
   const isPublicAuthRoute = PUBLIC_AUTH_ROUTES.some(route => pathname === route);
-  const isAdminRoute = ADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route));
+  const isAdminRoute = isAdminPath(pathname);
   const isHomePage = pathname === '/';
 
   // Redirect unauthenticated users from protected routes to login
@@ -481,7 +474,7 @@ export async function proxy(request: NextRequest) {
     const fromParam = request.nextUrl.searchParams.get('from');
     const defaultDest = isAdminViewMode ? '/admin' : '/library';
     const redirectUrl =
-      fromParam && PROTECTED_ROUTES.some(route => fromParam.startsWith(route))
+      fromParam && isProtectedPath(fromParam)
         ? new URL(fromParam, request.url)
         : new URL(defaultDest, request.url);
     const response = NextResponse.redirect(redirectUrl);

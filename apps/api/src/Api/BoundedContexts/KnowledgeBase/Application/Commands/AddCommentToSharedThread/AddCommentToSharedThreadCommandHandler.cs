@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLink;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Globalization;
@@ -18,6 +19,7 @@ internal sealed class AddCommentToSharedThreadCommandHandler
     private readonly IChatThreadRepository _threadRepository;
     private readonly IMediator _mediator;
     private readonly IDistributedCache _cache;
+    private readonly IUnitOfWork _unitOfWork;
 
     // Rate limiting: 10 comments per hour per share link
     private const int MaxCommentsPerHour = 10;
@@ -26,14 +28,17 @@ internal sealed class AddCommentToSharedThreadCommandHandler
     public AddCommentToSharedThreadCommandHandler(
         IChatThreadRepository threadRepository,
         IMediator mediator,
-        IDistributedCache cache)
+        IDistributedCache cache,
+        IUnitOfWork unitOfWork)
     {
         ArgumentNullException.ThrowIfNull(threadRepository);
         ArgumentNullException.ThrowIfNull(mediator);
         ArgumentNullException.ThrowIfNull(cache);
+        ArgumentNullException.ThrowIfNull(unitOfWork);
         _threadRepository = threadRepository;
         _mediator = mediator;
         _cache = cache;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<AddCommentToSharedThreadResult?> Handle(
@@ -92,8 +97,11 @@ internal sealed class AddCommentToSharedThreadCommandHandler
         // Add user message to thread (domain method)
         thread.AddUserMessage(request.Content);
 
-        // Save changes via repository
+        // Save changes. ChatThreadRepository.UpdateAsync is stage-only (it marks the entity as
+        // modified without SaveChanges), so the comment is only persisted once the unit of work
+        // is committed here.
         await _threadRepository.UpdateAsync(thread, cancellationToken).ConfigureAwait(false);
+        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Update rate limit counter
         await _cache.SetStringAsync(

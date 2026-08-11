@@ -32,8 +32,6 @@ internal static class SessionQueryEndpoints
 
         // GST-003: Real-time SSE stream
         MapSessionStreamEndpoint(group);
-        // Issue #4764: Enhanced SSE stream with reconnection, typed events, selective broadcasting
-        MapEnhancedSessionStreamEndpoint(group);
 
         // Session export and sharing endpoints (Issue #3347)
         MapExportSessionPdfEndpoint(group);
@@ -261,6 +259,10 @@ internal static class SessionQueryEndpoints
 
             // Create heartbeat task for keep-alive
             using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            // #3263: the heartbeat task and the main loop below both write to the same
+            // response body; Kestrel forbids concurrent response-body writes, so all
+            // frames go through this single-writer gate.
+            using var writeGate = new SemaphoreSlim(1, 1);
             var heartbeatTask = Task.Run(async () =>
             {
                 while (!heartbeatCts.Token.IsCancellationRequested)
@@ -268,9 +270,11 @@ internal static class SessionQueryEndpoints
                     try
                     {
                         await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.WriteAsync("event: heartbeat\n", heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.WriteAsync($"data: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n", heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                        await Sse.SseFrameWriter.WriteFrameAsync(
+                            context.Response,
+                            writeGate,
+                            $"event: heartbeat\ndata: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n",
+                            heartbeatCts.Token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException)
                     {
@@ -287,9 +291,11 @@ internal static class SessionQueryEndpoints
                     var eventType = evt.GetType().Name;
                     var json = JsonSerializer.Serialize(evt, JsonOptions);
 
-                    await context.Response.WriteAsync($"event: {eventType}\n", ct).ConfigureAwait(false);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
-                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+                    await Sse.SseFrameWriter.WriteFrameAsync(
+                        context.Response,
+                        writeGate,
+                        $"event: {eventType}\ndata: {json}\n\n",
+                        ct).ConfigureAwait(false);
                 }
             }
             finally
@@ -310,111 +316,6 @@ internal static class SessionQueryEndpoints
         .Produces(401)
         .Produces(403)
         .Produces(404);
-    }
-
-    /// <summary>
-    /// Enhanced SSE endpoint with Last-Event-ID reconnection, typed events,
-    /// connection pool limits, and selective broadcasting support.
-    /// </summary>
-    private static void MapEnhancedSessionStreamEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/game-sessions/{sessionId:guid}/stream/v2", async (
-            Guid sessionId,
-            HttpContext context,
-            ISessionBroadcastService broadcastService,
-            IMediator mediator,
-            CancellationToken ct) =>
-        {
-            // Extract user ID from claims
-            var userIdClaim = context.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            // Verify session access via CQRS query
-            try
-            {
-                var query = new GetSessionStreamQuery(sessionId, userId);
-                await mediator.Send(query, ct).ConfigureAwait(false);
-            }
-            catch (Api.Middleware.Exceptions.NotFoundException)
-            {
-                return Results.NotFound(new { error = "Session not found" });
-            }
-            catch (UnauthorizedAccessException)
-            {
-                return Results.StatusCode(403);
-            }
-
-            // Check connection pool limit
-            if (broadcastService.GetConnectionCount(sessionId) >= 20) // MaxConnectionsPerSession
-            {
-                return Results.StatusCode(429); // Too Many Requests
-            }
-
-            // Get Last-Event-ID for reconnection
-            var lastEventId = context.Request.Headers["Last-Event-ID"].FirstOrDefault();
-
-            // Set SSE response headers
-            context.Response.Headers.Append("Content-Type", "text/event-stream");
-            context.Response.Headers.Append("Cache-Control", "no-cache");
-            context.Response.Headers.Append("Connection", "keep-alive");
-            context.Response.Headers.Append("X-Accel-Buffering", "no");
-
-            // Create heartbeat task
-            using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            var heartbeatTask = Task.Run(async () =>
-            {
-                while (!heartbeatCts.Token.IsCancellationRequested)
-                {
-                    try
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.WriteAsync(
-                            $"event: heartbeat\ndata: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n",
-                            heartbeatCts.Token).ConfigureAwait(false);
-                        await context.Response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                }
-            }, heartbeatCts.Token);
-
-            try
-            {
-                // Stream events to client using enhanced broadcast service
-                await foreach (var envelope in broadcastService.SubscribeAsync(sessionId, userId, lastEventId, ct).ConfigureAwait(false))
-                {
-                    var json = JsonSerializer.Serialize(envelope.Data, JsonOptions);
-
-                    // Write SSE format with event ID for reconnection
-                    await context.Response.WriteAsync($"id: {envelope.Id}\n", ct).ConfigureAwait(false);
-                    await context.Response.WriteAsync($"event: {envelope.EventType}\n", ct).ConfigureAwait(false);
-                    await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
-                    await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
-                }
-            }
-            finally
-            {
-                await heartbeatCts.CancelAsync().ConfigureAwait(false);
-                await heartbeatTask.ConfigureAwait(false);
-            }
-
-            return Results.Empty;
-        })
-        .RequireAuthenticatedUser()
-        .WithName("StreamSessionEventsV2")
-        .WithTags("SessionTracking", "Real-Time")
-        .WithSummary("Enhanced SSE stream with reconnection, typed events, and selective broadcasting")
-        .WithDescription("Server-Sent Events v2 with Last-Event-ID reconnection, typed event names (session:score, session:turn, etc.), connection pool limits, and per-player event filtering.")
-        .Produces(200)
-        .Produces(401)
-        .Produces(403)
-        .Produces(404)
-        .Produces(429);
     }
 
     // ========== Export and Sharing Endpoints (Issue #3347) ==========
@@ -508,10 +409,17 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/media", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var query = new GetSessionMediaQuery(sessionId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionMediaQuery(sessionId, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -520,7 +428,8 @@ internal static class SessionQueryEndpoints
         .WithTags("SessionTracking", "Media")
         .WithSummary("Get all media for a session")
         .Produces(200)
-        .Produces(401);
+        .Produces(401)
+        .Produces(403);
     }
 
     // ========== Chat Endpoints (Issue #4760) ==========
@@ -529,12 +438,19 @@ internal static class SessionQueryEndpoints
     {
         group.MapGet("/game-sessions/{sessionId:guid}/chat", async (
             Guid sessionId,
+            HttpContext httpContext,
             IMediator mediator,
             int? limit = null,
             int? offset = null,
             CancellationToken ct = default) =>
         {
-            var query = new GetSessionChatQuery(sessionId, limit, offset);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var query = new GetSessionChatQuery(sessionId, limit, offset, userId);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
@@ -543,7 +459,8 @@ internal static class SessionQueryEndpoints
         .WithTags("SessionTracking", "Chat")
         .WithSummary("Get chat messages for a session (paginated)")
         .Produces(200)
-        .Produces(401);
+        .Produces(401)
+        .Produces(403);
     }
 
     // ========== Toolkit Session State Endpoints (Issue #5148 — Epic B5) ==========

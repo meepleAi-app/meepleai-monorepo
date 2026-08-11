@@ -7,14 +7,15 @@ using Api.BoundedContexts.EntityRelationships.Infrastructure.DependencyInjection
 using Api.BoundedContexts.GameManagement.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolbox.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.GameToolkit.Infrastructure.DependencyInjection;
+using Api.BoundedContexts.KnowledgeBase.Application.Evaluation.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
 using Api.Helpers;
 using Api.Infrastructure;
-using Api.Services;
+using Api.Observability;
 using Api.Services.Pdf;
 using Api.Services.Rag;
-using Api.Observability;
+using Api.Services;
 using Api.SharedKernel.Application;
 using FluentValidation;
 
@@ -61,13 +62,6 @@ internal static class ApplicationServiceExtensions
         // CONFIG-05: Feature flags service
         services.AddScoped<IFeatureFlagService, FeatureFlagService>();
 
-        // N8N services
-        services.AddScoped<N8NConfigService>();
-        services.AddScoped<IN8NTemplateService, N8NTemplateService>(); // N8N-04: Workflow template service
-
-        // N8N-05: Workflow error logging service
-        services.AddScoped<IWorkflowErrorLoggingService, WorkflowErrorLoggingService>();
-
         return services;
     }
 
@@ -83,7 +77,6 @@ internal static class ApplicationServiceExtensions
         services.AddScoped<IAiResponseCacheService, AiResponseCacheService>();
 
         // SOLID Phase 3: RAG sub-services (specialized services extracted from RagService)
-        services.AddScoped<IQueryExpansionService, QueryExpansionService>();
         services.AddScoped<ISearchResultReranker, SearchResultReranker>();
         services.AddScoped<ICitationExtractorService, CitationExtractorService>();
         services.AddScoped<IRagConfigurationProvider, RagConfigurationProvider>(); // Issue #1441: RAG configuration provider
@@ -103,6 +96,11 @@ internal static class ApplicationServiceExtensions
 
         // AI-06: RAG offline evaluation service
         services.AddScoped<IRagEvaluationService, RagEvaluationService>();
+
+        // #3438: sandboxes the dataset paths accepted by the admin eval endpoints against a
+        // configured root. Singleton — it only normalises the root once from IConfiguration and
+        // holds no per-request state.
+        services.AddSingleton<IEvalDatasetPathResolver, EvalDatasetPathResolver>();
 
         // AI-07: Prompt versioning and management service
 
@@ -136,6 +134,10 @@ internal static class ApplicationServiceExtensions
             Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker,
             Api.BoundedContexts.Administration.Infrastructure.Health.ImpersonationHealthTracker>();
         services.AddHostedService<Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs.ImpersonationMetricsRefreshService>();
+
+        // #3383 (ADR-087 D4) — il gauge dead-letter deve essere DB-derivato per restare corretto
+        // sotto max() a più di un'istanza: l'incremento in memoria del runner divergeva per processo.
+        services.AddHostedService<Api.BoundedContexts.SharedGameCatalog.Infrastructure.BackgroundJobs.WikidataDeadLetterMetricsRefreshService>();
 
         return services;
     }
@@ -200,6 +202,9 @@ internal static class ApplicationServiceExtensions
 
         // Issue #3694: Resource metrics service for extended KPIs
         services.AddScoped<IResourceMetricsService, ResourceMetricsService>();
+
+        // Issue #3041: Self-contained system resource metrics (Singleton — holds CPU delta snapshot)
+        services.AddSingleton<ISystemResourceService, SystemResourceService>();
 
         // Issue #2854: User dashboard service for aggregated dashboard data
         services.AddScoped<IUserDashboardService, UserDashboardService>();
@@ -271,10 +276,6 @@ internal static class ApplicationServiceExtensions
 
         // Register validators from DatabaseSync bounded context
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.DatabaseSync.Application.Commands.ApplyMigrationsCommandValidator>(
-            includeInternalTypes: true);
-
-        // Register validators from WorkflowIntegration bounded context
-        services.AddValidatorsFromAssemblyContaining<BoundedContexts.WorkflowIntegration.Application.Validators.CreateN8NConfigCommandValidator>(
             includeInternalTypes: true);
 
         // Register validators from GameManagement bounded context

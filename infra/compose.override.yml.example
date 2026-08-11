@@ -128,11 +128,6 @@ services:
   #   profiles:
   #     - disabled
 
-  # Example: Disable n8n when not working on workflow automation
-  # n8n:
-  #   profiles:
-  #     - disabled
-
 # ====================
 # USAGE TIPS
 # ====================

@@ -18,6 +18,20 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.STAGING_URL || 'https://meepleai.app',
+    // #2799: all of staging is behind Cloudflare Access (owner-only). Without
+    // these service-token headers every navigation lands on the CF Access
+    // "Sign in" page instead of the app — smoke.spec.ts step 2 (email input)
+    // fails deterministically and the lenient steps silently pass against CF's
+    // page. Mirrors the CF_ACCESS_CLIENT_ID/SECRET bypass the curl smoke already
+    // uses in deploy-staging.yml (Post-deploy Validation). Conditional so local
+    // runs without the tokens don't send empty headers.
+    extraHTTPHeaders:
+      process.env.CF_ACCESS_CLIENT_ID && process.env.CF_ACCESS_CLIENT_SECRET
+        ? {
+            'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID,
+            'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET,
+          }
+        : {},
     trace: 'on-first-retry',
     actionTimeout: 10_000,
     navigationTimeout: 30_000,

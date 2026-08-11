@@ -1,6 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Entities;
+using Api.BoundedContexts.Authentication.Domain.Enums;
+using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
@@ -38,6 +41,7 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<RegisterCommandHandler> _logger;
     private readonly Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger _auditLogger;
+    private readonly ITermsAcceptanceRepository _termsAcceptanceRepository;
 
     public RegisterCommandHandler(
         IUserRepository userRepository,
@@ -48,7 +52,8 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         MeepleAiDbContext db,
         TimeProvider timeProvider,
         ILogger<RegisterCommandHandler> logger,
-        Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger auditLogger)
+        Api.BoundedContexts.SecurityAudit.Application.Services.IAuditLogger auditLogger,
+        ITermsAcceptanceRepository termsAcceptanceRepository)
     {
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
@@ -59,6 +64,7 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _auditLogger = auditLogger ?? throw new ArgumentNullException(nameof(auditLogger));
+        _termsAcceptanceRepository = termsAcceptanceRepository ?? throw new ArgumentNullException(nameof(termsAcceptanceRepository));
     }
 
     public async Task<RegisterResponse> Handle(RegisterCommand command, CancellationToken cancellationToken)
@@ -133,6 +139,20 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         // into a 409 ConflictException.
         await _userRepository.AddAsync(user, cancellationToken).ConfigureAwait(false);
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
+
+        // #2954 F1: record ToS acceptance in the SAME transaction as the new user.
+        // The endpoint already rejects registration without acceptance; the guard here
+        // keeps direct-command callers (tests) that omit the flag from writing a row.
+        if (command.TermsAccepted)
+        {
+            var termsAcceptance = TermsAcceptance.Create(
+                userId,
+                TermsVersion.Current,
+                TermsAcceptanceContext.Registration,
+                command.IpAddress,
+                command.UserAgent);
+            await _termsAcceptanceRepository.AddAsync(termsAcceptance, cancellationToken).ConfigureAwait(false);
+        }
 
         try
         {

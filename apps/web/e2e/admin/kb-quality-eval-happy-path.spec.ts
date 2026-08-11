@@ -14,6 +14,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -174,6 +176,7 @@ test.describe('Admin KB Quality — happy-path eval trigger', () => {
   test.skip(SKIP_E2E, 'KB_QUALITY_E2E_SKIP=true — admin shell not reproducible in this env');
 
   test.beforeEach(async ({ page }) => {
+    await seedMockRoleCookies(page, 'Admin');
     await mockAdminAuth(page);
     await mockKbDocShell(page);
     await mockKbQualityLifecycle(page);

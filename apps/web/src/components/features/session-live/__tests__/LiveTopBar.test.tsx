@@ -29,6 +29,8 @@ const LABELS: LiveTopBarLabels = {
   exitAriaLabel: 'Esci',
   // G4 labels
   elapsedTimeAriaLabel: 'Tempo trascorso',
+  // SI-4 label
+  startedAtChipAriaLabel: 'Ora di inizio della sessione (derivata)',
   connectionStateAriaLabels: {
     connected: 'Connessione attiva',
     reconnecting: 'Riconnessione in corso',
@@ -66,6 +68,58 @@ describe('LiveTopBar — backward compat (no G4 props)', () => {
   it('preserves existing TopBar slot + status', () => {
     renderTopBar();
     expect(document.querySelector('[data-slot="session-live-top-bar"]')).not.toBeNull();
+  });
+});
+
+// ─── SI-4 (#2635) — derived start-time chip ───────────────────────────────────
+
+describe('LiveTopBar — SI-4 start-time chip', () => {
+  it('renders the read-only start-time chip when startedAtLabel is provided', () => {
+    renderTopBar({ startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata' });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-started-at"]');
+    expect(chip).not.toBeNull();
+    expect(chip?.textContent).toBe('▶ Ora di inizio 5 lug, 20:35 · derivata');
+    expect(chip?.getAttribute('aria-label')).toBe('Ora di inizio della sessione (derivata)');
+  });
+
+  it('hides the chip when startedAtLabel is undefined', () => {
+    renderTopBar();
+    expect(document.querySelector('[data-slot="session-live-top-bar-started-at"]')).toBeNull();
+  });
+
+  it('renders no editable input — the chip is display-only (Invariante 5)', () => {
+    renderTopBar({ startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata' });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-started-at"]');
+    expect(chip?.querySelector('input')).toBeNull();
+    expect(chip?.tagName.toLowerCase()).toBe('span'); // static text, not a control
+  });
+});
+
+// ─── #3146 Slice 1 — chips are desktop-only (lg+) ──────────────────────────────
+
+describe('LiveTopBar — session-state chips are desktop-only (lg+, #3146)', () => {
+  // Below lg the chips move to LiveMobileMetaStrip (the mobile always-visible
+  // counterpart), so the topbar chips are gated `lg:inline` — they belong to
+  // the desktop layer (which itself switches on lg via DesktopBody/MobileBody).
+  it('gates the start-time chip to lg (not md/sm)', () => {
+    renderTopBar({ startedAtLabel: '▶ Ora di inizio 5 lug, 20:35 · derivata' });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-started-at"]');
+    expect(chip?.className).toContain('lg:inline');
+    expect(chip?.className).not.toContain('md:inline');
+  });
+
+  it('gates the elapsed timer chip to lg (not sm)', () => {
+    renderTopBar({ elapsedMs: 60_000 });
+    const chip = document.querySelector('[data-slot="session-live-top-bar-timer"]');
+    expect(chip?.className).toContain('lg:inline');
+    expect(chip?.className).not.toContain('sm:inline');
+  });
+
+  it('gates the turn label to lg (not sm)', () => {
+    renderTopBar();
+    const turn = screen.getByText('Turno 3/8');
+    expect(turn.className).toContain('lg:inline');
+    expect(turn.className).not.toContain('sm:inline');
   });
 });
 

@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -45,10 +46,10 @@ internal sealed class CreateAbTestCommandHandler : ICommandHandler<CreateAbTestC
 
         // Check budget and rate limit
         if (!await _budgetService.HasBudgetRemainingAsync(cancellationToken).ConfigureAwait(false))
-            throw new InvalidOperationException("Daily A/B test budget exhausted");
+            throw new ConflictException("ab_test_budget_exhausted", "Daily A/B test budget exhausted");
 
         if (!await _budgetService.HasRateLimitRemainingAsync(command.CreatedBy, isAdmin: true, cancellationToken).ConfigureAwait(false))
-            throw new InvalidOperationException("Daily A/B test rate limit reached");
+            throw new TooManyRequestsException("ab_test_rate_limit_reached", "Daily A/B test rate limit reached");
 
         // Create session and add variants
         var session = AbTestSession.Create(command.CreatedBy, command.Query, command.KnowledgeBaseId);

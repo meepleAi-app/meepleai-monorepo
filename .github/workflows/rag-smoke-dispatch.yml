@@ -1,0 +1,294 @@
+name: RAG Smoke (retrieval regression guard)
+
+# Tier 3 D8 of #2126 / #2480 — retrieval-quality smoke.
+#
+# Consumes a published seed snapshot (`make dev-from-snapshot`) and asserts the canonical RAG
+# queries in infra/fixtures/rag-canonical-queries.json return top-3 retrieved chunks matching
+# infra/fixtures/rag-golden-baseline.json. Catches silent retrieval regressions (embedding model /
+# chunker / index drift) the bake smoke does not cover.
+#
+# NB (#3338 WP3): the title-health EXTRACTION-QUALITY guard used to run here too, but the CI seed
+# snapshot is baked with the Docnet extractor (headingless) so it had nothing to measure. It was
+# moved to .github/workflows/title-health-staging.yml, which asserts against the heading-aware
+# staging corpus. This workflow keeps ONLY the retrieval golden-baseline smoke.
+#
+# Runs weekly (schedule) in ASSERT mode against the committed golden baseline, and can be dispatched
+# manually to re-capture it (update_baseline=true) after a re-bake. R2 snapshot distribution works
+# (#2516): the dedicated meepleai-seed-snapshots bucket + SEED_BLOB_* repo secrets are configured,
+# and dev-from-snapshot fetches the published snapshot via the read creds synthesized in "Configure
+# snapshot bucket read credentials" below. The golden baseline was first committed for snapshot
+# meepleai_seed_20260628T211806Z_intfloat_multilingual-e5-base_7cee37d47 (#2480).
+#
+# Re-baseline procedure (after a re-bake that changes the EF head / embedding model / chunker):
+#   1. re-bake + publish (seed-snapshot-bake-full.yml -f publish=true)
+#   2. dispatch this workflow with update_baseline=true
+#   3. download the rag-golden-baseline-<run_id> artifact, commit infra/fixtures/rag-golden-baseline.json
+#
+# On a schedule trigger github.event.inputs.update_baseline is empty → assert mode.
+
+on:
+  schedule:
+    # Weekly, Monday 05:37 UTC. Off-peak + offset minute (ADR-078: stay under the
+    # API/runner budget, avoid the top-of-hour cron stampede). Asserts only.
+    - cron: '37 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      update_baseline:
+        description: 'Capture/overwrite the golden baseline from this run (instead of asserting)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# ADR-078: monitor/consume workflows serialize per ref to stay under the API/runner budget.
+concurrency:
+  group: rag-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  rag-smoke:
+    name: RAG canonical queries vs golden baseline
+    runs-on: ubuntu-latest
+    # Generous: the embedding + reranker images build from source (~15-20min) on a
+    # fresh runner, on top of dotnet-ef restore (~5min) + snapshot fetch/restore.
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      # .secret / env files are gitignored — generate placeholders so docker compose boots.
+      - name: Generate placeholder secrets
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Generate placeholder api.env.dev
+        working-directory: infra/env
+        run: |
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          EMBEDDING_SERVICE_URL=http://embedding-service:8000
+          UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
+          SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
+          RERANKER_SERVICE_URL=http://reranker-service:8003
+          OLLAMA_URL=http://ollama:11434
+          STORAGE_PROVIDER=local
+          APIENV
+
+      - name: Configure snapshot bucket read credentials
+        working-directory: infra
+        env:
+          SEED_BLOB_S3_ENDPOINT: ${{ secrets.SEED_BLOB_S3_ENDPOINT }}
+          SEED_BLOB_S3_ACCESS_KEY: ${{ secrets.SEED_BLOB_S3_ACCESS_KEY }}
+          SEED_BLOB_S3_SECRET_KEY: ${{ secrets.SEED_BLOB_S3_SECRET_KEY }}
+          SEED_BLOB_BUCKET: ${{ secrets.SEED_BLOB_BUCKET }}
+        run: |
+          # snapshot-fetch.sh reads the snapshot bucket via S3_ENDPOINT/S3_ACCESS_KEY/
+          # S3_SECRET_KEY + SEED_BLOB_BUCKET from storage.secret. Map the dedicated
+          # SEED_BLOB_* repo secrets onto those keys (overwriting the make secrets-setup
+          # placeholder). STORAGE_PROVIDER=local so the app uses disk — RAG retrieval
+          # reads the restored DB index, not blob storage. #2480.
+          : "${SEED_BLOB_S3_ENDPOINT:?SEED_BLOB_S3_ENDPOINT secret not configured}"
+          cat > secrets/storage.secret <<EOF
+          STORAGE_PROVIDER=local
+          S3_ENDPOINT=${SEED_BLOB_S3_ENDPOINT}
+          S3_ACCESS_KEY=${SEED_BLOB_S3_ACCESS_KEY}
+          S3_SECRET_KEY=${SEED_BLOB_S3_SECRET_KEY}
+          S3_REGION=auto
+          SEED_BLOB_BUCKET=${SEED_BLOB_BUCKET}
+          EOF
+          chmod 600 secrets/storage.secret
+
+      # snapshot-restore.sh applies the working-tree schema via `dotnet ef database
+      # update` on the host before pg_restore --data-only, so the consume flow needs
+      # the .NET SDK + dotnet-ef tool present (#2480).
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-ef tool
+        run: |
+          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
+            echo "dotnet-ef already installed globally:"; dotnet tool list --global | grep '^dotnet-ef'
+          else
+            dotnet tool install --global dotnet-ef --version 9.*
+          fi
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Boot from published snapshot
+        working-directory: infra
+        env:
+          # Canonical out-dir (repo root, gitignored) so fetch/verify/restore use
+          # the same dir as the bake workflows — NOT infra/data/snapshots, which a
+          # relative default would create and where a stale snapshot used to be
+          # committed (#2480).
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+        run: |
+          # Inline the dev-from-snapshot flow but bring up ONLY the services RAG
+          # retrieval needs — `make dev-from-snapshot` does `--profile ai up -d`
+          # which also starts web (a Next.js build) that
+          # this smoke doesn't use and that only add failure surface + minutes on
+          # a 2-core runner (#2480). COMPOSE mirrors the Makefile.
+          COMPOSE="docker compose -f docker-compose.yml -f compose.dev.yml"
+          bash scripts/snapshot-fetch.sh
+          bash scripts/snapshot-verify.sh
+          $COMPOSE up -d postgres
+          bash scripts/wait-for-healthy.sh postgres 60
+          bash scripts/snapshot-restore.sh
+          SKIP_CATALOG_SEED=true $COMPOSE --profile ai up -d postgres redis api embedding-service reranker-service
+          bash scripts/wait-for-healthy.sh api 300
+          # Retrieval encodes the query via embedding-service; its /health returns
+          # 503 until the model is loaded (e5-base download+load can take minutes on
+          # a fresh runner). Without waiting, the queries hit a not-ready encoder and
+          # the SSE stream emits zero type=1 citations. Wait for the model to be
+          # ready (and the reranker) before the smoke runs. #2480.
+          # wait-for-healthy prepends "meepleai-" → pass the container suffix, NOT
+          # the compose service name (containers are meepleai-embedding /
+          # meepleai-reranker, not -embedding-service). These images build from
+          # source on a fresh runner (torch ~532MB), so the model isn't ready for
+          # ~15-20min — wait generously. #2480.
+          bash scripts/wait-for-healthy.sh embedding 1800
+          bash scripts/wait-for-healthy.sh reranker 1800
+
+      - name: Run RAG smoke
+        id: ragsmoke
+        working-directory: infra
+        env:
+          API_BASE_URL: http://localhost:8080
+          SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
+          # The published snapshot is baked with the INITIAL_ADMIN user (same creds
+          # as the bake workflows). Auth as that user — SMOKE_USER_* secrets don't
+          # exist and wouldn't be present in the snapshot DB anyway. #2480.
+          SMOKE_EMAIL: bake-admin@meepleai.test
+          SMOKE_PASSWORD: BakeSeed1!Admin
+        run: |
+          # Espone i due snapshot: il passo che apre la issue deve poter dire QUALE dei due
+          # problemi si è verificato senza che un umano rilegga i log (#3645).
+          echo "baseline_snapshot=$(jq -r '.snapshot // ""' fixtures/rag-golden-baseline.json)" >> "$GITHUB_OUTPUT"
+          echo "current_snapshot=$(cat "$SEED_INDEX_OUT_DIR/.latest" 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+          # GitHub esegue i run: con `bash -e`: senza set +e il codice di uscita si perde
+          # prima di poterlo classificare.
+          set +e
+          if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
+            bash scripts/rag-smoke-assert.sh --update-baseline
+            rc=$?
+            [ "$rc" -eq 0 ] && echo "::notice:: baseline updated — download the diff from the job and commit infra/fixtures/rag-golden-baseline.json"
+          else
+            bash scripts/rag-smoke-assert.sh
+            rc=$?
+          fi
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          exit "$rc"
+
+      # NB: the title-health extraction-quality guard was MOVED to its own workflow
+      # (.github/workflows/title-health-staging.yml). The CI seed snapshot is baked with the Docnet
+      # extractor (headingless) so title-health could not be armed here; it now runs against the
+      # heading-aware staging corpus. This workflow keeps ONLY the retrieval golden-baseline smoke.
+
+      - name: Diagnose smoke failure
+        # always() is required: without it GitHub implicitly ANDs the condition
+        # with success(), so the step is skipped after the smoke step fails (#2480).
+        # exit_code 3 = baseline scaduta: il corpus è cambiato, non il retrieval. Conteggi di
+        # righe e log dell'API non dicono nulla su quel guasto, e 70 righe di diagnostica
+        # irrilevante sono ciò che ha reso invisibile il problema per tre settimane (#3645).
+        if: ${{ always() && steps.ragsmoke.outcome == 'failure' && steps.ragsmoke.outputs.exit_code != '3' }}
+        working-directory: infra
+        env:
+          API_BASE_URL: http://localhost:8080
+          SMOKE_EMAIL: bake-admin@meepleai.test
+          SMOKE_PASSWORD: BakeSeed1!Admin
+        run: |
+          set +e
+          PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
+          PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
+          q() { docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At -c "$1" 2>&1; }
+          echo "::group::DB row counts"
+          echo "vector_documents:   $(q 'SELECT count(*) FROM vector_documents;')"
+          echo "pgvector_embeddings:$(q 'SELECT count(*) FROM pgvector_embeddings;')"
+          echo "text_chunks:        $(q 'SELECT count(*) FROM text_chunks;')"
+          echo "shared_games:       $(q 'SELECT count(*) FROM shared_games;')"
+          echo "::endgroup::"
+          echo "::group::vector_documents structure + sample"
+          q '\d vector_documents'
+          q 'SELECT * FROM vector_documents LIMIT 1;'
+          echo "::endgroup::"
+          echo "::group::shared_games rag flags (HasKnowledgeBase / IsRagPublic columns)"
+          q "SELECT column_name FROM information_schema.columns WHERE table_name='shared_games' AND (column_name ILIKE '%knowledge%' OR column_name ILIKE '%rag%');"
+          echo "::endgroup::"
+          echo "::group::raw ask/global response"
+          COOKIE=$(mktemp)
+          curl -s -c "$COOKIE" -X POST "$API_BASE_URL/api/v1/auth/login" -H 'Content-Type: application/json' \
+            -d "{\"email\":\"$SMOKE_EMAIL\",\"password\":\"$SMOKE_PASSWORD\"}" -o /dev/null -w "login HTTP: %{http_code}\n"
+          curl -sN -b "$COOKIE" -X POST "$API_BASE_URL/api/v1/knowledge-base/ask/global" -H 'Content-Type: application/json' \
+            -d '{"query":"How do I set up Catan?","language":"en","topK":3}' -w "\n--- HTTP: %{http_code} ---\n" | head -50
+          echo "::endgroup::"
+          echo "::group::api logs (rag/retrieval/error)"
+          docker logs meepleai-api --tail 250 2>&1 | grep -iE 'rag|retriev|vector|embed|error|exception|ask|citation|llm|openrouter|deepseek|threshold|search' | tail -70
+          echo "::endgroup::"
+          echo "::group::embedding-service logs"; docker logs meepleai-embedding --tail 40 2>&1; echo "::endgroup::"
+
+      - name: Upload updated baseline (when --update-baseline)
+        # always(): the Diagnose step above runs on ragsmoke failure; without a status function the
+        # implicit success() would skip this upload after it. The RAG-smoke step writes the golden
+        # baseline on success, so upload it whenever a capture was requested.
+        if: ${{ always() && github.event.inputs.update_baseline == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-golden-baseline-${{ github.run_id }}
+          path: infra/fixtures/rag-golden-baseline.json
+          retention-days: 14
+
+      - name: Open issue on retrieval drift
+        # Only on actual retrieval drift (the smoke step failed), NOT on an infra
+        # failure like the broken R2 snapshot fetch in "Boot from published snapshot".
+        # always() is required: without a status function GitHub ANDs an implicit success()
+        # into the condition, so after ragsmoke fails the job is failed → success() is false
+        # → this step is skipped and the issue is never opened. The outcome check still scopes
+        # it to a real drift (skipped/successful ragsmoke → not 'failure').
+        if: ${{ always() && steps.ragsmoke.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
+        env:
+          EXIT_CODE: ${{ steps.ragsmoke.outputs.exit_code }}
+          BASELINE_SNAPSHOT: ${{ steps.ragsmoke.outputs.baseline_snapshot }}
+          CURRENT_SNAPSHOT: ${{ steps.ragsmoke.outputs.current_snapshot }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // #3645: un solo titolo per due guasti diversi ha mandato la diagnosi fuori strada
+            // per tre settimane. exit 3 = la baseline appartiene a un altro snapshot (re-bake,
+            // atteso, si rigenera); exit 1 = il retrieval è cambiato a parità di corpus (da
+            // indagare). Il titolo deve dire quale dei due, perché è la prima cosa che si legge.
+            const stale = process.env.EXIT_CODE === '3';
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const runbook = 'docs/for-developers/operations/rag-smoke-runbook.md';
+
+            const title = stale
+              ? `[RAG SMOKE] baseline scaduta dopo un re-bake — ${new Date().toISOString().slice(0,10)}`
+              : `[RAG SMOKE] retrieval drift — ${new Date().toISOString().slice(0,10)}`;
+
+            const body = stale
+              ? `La golden baseline è stata catturata su uno snapshot diverso da quello in esecuzione: **il retrieval non è regredito**, è cambiato il corpus.\n\n| | |\n|---|---|\n| baseline catturata su | \`${process.env.BASELINE_SNAPSHOT}\` |\n| snapshot in esecuzione | \`${process.env.CURRENT_SNAPSHOT}\` |\n\nRun: ${run}\n\n**Azione**: rigenera la baseline con \`--update-baseline\` (dispatch di questo workflow con \`update_baseline=true\`), scarica l'artifact e committa \`infra/fixtures/rag-golden-baseline.json\` — vedi ${runbook}.\n\n⚠️ Finché questa issue resta aperta il gate non emette altri alert (dedup su label), quindi una regressione autentica resterebbe silenziosa: chiudila appena rigenerata.`
+              : `Canonical RAG queries drifted from the golden baseline, **a parità di snapshot** (\`${process.env.CURRENT_SNAPSHOT || 'sconosciuto'}\`) — quindi è un cambiamento del retrieval, non del corpus.\n\nRun: ${run}\n\nSe il drift è intenzionale (nuovo modello di embedding, nuovo chunker), rigenera via \`--update-baseline\` per ${runbook}. Altrimenti va indagato.`;
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              labels: 'rag-smoke-failure', state: 'open'
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, labels: ['bug', 'rag-smoke-failure'], body
+              });
+            }

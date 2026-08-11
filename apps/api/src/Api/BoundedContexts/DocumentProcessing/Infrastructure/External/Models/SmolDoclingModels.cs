@@ -48,50 +48,6 @@ internal class SmolDoclingChunk
 }
 
 /// <summary>
-/// Single page extraction result from SmolDocling
-/// Matches Python schema: PageResultSchema
-/// </summary>
-internal class SmolDoclingPageResult
-{
-    [JsonPropertyName("page_number")]
-    public int PageNumber { get; set; }
-
-    [JsonPropertyName("markdown_text")]
-    public string MarkdownText { get; set; } = string.Empty;
-
-    [JsonPropertyName("char_count")]
-    public int CharCount { get; set; }
-
-    [JsonPropertyName("has_tables")]
-    public bool HasTables { get; set; }
-
-    [JsonPropertyName("has_equations")]
-    public bool HasEquations { get; set; }
-
-    [JsonPropertyName("confidence_score")]
-    public double ConfidenceScore { get; set; }
-}
-
-/// <summary>
-/// Quality breakdown from SmolDocling extraction
-/// Matches Python schema: QualityBreakdownSchema
-/// </summary>
-internal class SmolDoclingQualityBreakdown
-{
-    [JsonPropertyName("text_coverage_score")]
-    public double TextCoverageScore { get; set; }
-
-    [JsonPropertyName("layout_detection_score")]
-    public double LayoutDetectionScore { get; set; }
-
-    [JsonPropertyName("confidence_score")]
-    public double ConfidenceScore { get; set; }
-
-    [JsonPropertyName("page_coverage_score")]
-    public double PageCoverageScore { get; set; }
-}
-
-/// <summary>
 /// Error response from SmolDocling service
 /// Matches Python schema: ErrorResponse
 /// </summary>

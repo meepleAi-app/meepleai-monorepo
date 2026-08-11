@@ -56,7 +56,6 @@ internal class ListTablesHandler : IQueryHandler<ListTablesQuery, IReadOnlyList<
         ["processing_queue_configs"] = "DocumentProcessing",
         ["vector_documents"] = "DocumentProcessing",
         ["text_chunks"] = "DocumentProcessing",
-        ["n8n_configs"] = "WorkflowIntegration",
         ["rule_spec_comments"] = "KnowledgeBase",
         ["prompt_templates"] = "KnowledgeBase",
         ["prompt_versions"] = "KnowledgeBase",

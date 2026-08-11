@@ -45,6 +45,12 @@ export interface NightLiveHubProps {
   readonly diaryGames: ReadonlyArray<DiaryGameRef>;
   readonly diaryPlayers: ReadonlyArray<DiaryPlayerRef>;
   readonly autoSaveToast?: { readonly visible: boolean; readonly timestamp: string };
+  /**
+   * #2633 Slice B (LD-13): render as a read-only projection — hides the
+   * pause/transition/end drive controls so the surface does not advertise
+   * interactions it cannot yet perform. The jump-to-session action stays.
+   */
+  readonly readOnly?: boolean;
   readonly mobile?: boolean;
   readonly initialMobileTab?: MobileTab;
   readonly onBack?: () => void;
@@ -82,6 +88,7 @@ export function NightLiveHub({
   diaryGames,
   diaryPlayers,
   autoSaveToast,
+  readOnly = false,
   mobile = false,
   initialMobileTab = 'current',
   onBack,
@@ -115,6 +122,7 @@ export function NightLiveHub({
         totalPlayers={totalPlayers}
         compact={mobile}
         isPaused={isPaused}
+        readOnly={readOnly}
         onBack={onBack}
         onPauseToggle={onPauseToggle}
         onTransition={onTransition}
@@ -170,6 +178,7 @@ interface NightLiveTopBarProps {
   readonly totalPlayers?: number;
   readonly compact: boolean;
   readonly isPaused: boolean;
+  readonly readOnly: boolean;
   readonly onBack?: () => void;
   readonly onPauseToggle?: () => void;
   readonly onTransition?: () => void;
@@ -186,6 +195,7 @@ function NightLiveTopBar({
   totalPlayers,
   compact,
   isPaused,
+  readOnly,
   onBack,
   onPauseToggle,
   onTransition,
@@ -302,21 +312,23 @@ function NightLiveTopBar({
           </div>
         ) : null}
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          <ToolbarButton
-            icon={isPaused ? '▶' : '⏸'}
-            label={compact ? null : isPaused ? 'Riprendi' : 'Pausa'}
-            tone={isPaused ? 'session' : null}
-            onClick={onPauseToggle}
-          />
-          <ToolbarButton
-            icon="➡️"
-            label={compact ? null : 'Transition'}
-            tone="event"
-            onClick={onTransition}
-          />
-          <ToolbarButton icon="🛑" label={compact ? null : 'End'} tone="danger" onClick={onEnd} />
-        </div>
+        {readOnly ? null : (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ToolbarButton
+              icon={isPaused ? '▶' : '⏸'}
+              label={compact ? null : isPaused ? 'Riprendi' : 'Pausa'}
+              tone={isPaused ? 'session' : null}
+              onClick={onPauseToggle}
+            />
+            <ToolbarButton
+              icon="➡️"
+              label={compact ? null : 'Transition'}
+              tone="event"
+              onClick={onTransition}
+            />
+            <ToolbarButton icon="🛑" label={compact ? null : 'End'} tone="danger" onClick={onEnd} />
+          </div>
+        )}
       </div>
 
       {compact ? (
@@ -507,7 +519,12 @@ function MobileBody({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
+      <div
+        role="tabpanel"
+        id={`night-live-pane-${tab}`}
+        aria-labelledby={`night-live-tab-${tab}`}
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background"
+      >
         {tab === 'current' ? (
           <CurrentGameCard game={currentGame} onJumpToSession={onJumpToSession} compact />
         ) : null}
@@ -539,7 +556,7 @@ function MobileBody({
                 : 'border-t-transparent text-muted-foreground'
               : t.tone === 'game'
                 ? active
-                  ? 'bg-entity-game/[0.08] border-t-entity-game text-entity-game'
+                  ? 'bg-entity-game/[0.08] border-t-entity-game text-entity-game-text'
                   : 'border-t-transparent text-muted-foreground'
                 : active
                   ? 'bg-entity-event/[0.08] border-t-entity-event text-entity-event'
@@ -548,6 +565,7 @@ function MobileBody({
           return (
             <button
               key={t.id}
+              id={`night-live-tab-${t.id}`}
               type="button"
               role="tab"
               aria-selected={active}

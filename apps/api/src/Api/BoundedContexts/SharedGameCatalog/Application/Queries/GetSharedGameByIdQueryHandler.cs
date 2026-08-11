@@ -7,6 +7,7 @@ using Api.Infrastructure;
 using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
@@ -16,7 +17,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 
 /// <summary>
 /// Handler for getting a shared game by ID.
-/// Uses HybridCache (L1: Memory 30min, L2: Redis 2h) for performance.
+/// Uses HybridCache (see <see cref="DetailCacheL1Expiration"/> / <see cref="DetailCacheL2Expiration"/>) for performance.
 /// Tagged with <c>shared-game:{id}</c> so cross-BC event handlers (toolkit/agent/KB
 /// changes) can invalidate a single detail entry surgically rather than flushing
 /// the whole search namespace. Issue #2371 Phase 2, extended #2373 Phase 4, #603 Wave A.4.
@@ -59,6 +60,23 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
     /// avoids cross-BC enum imports in the cross-context LINQ tree.
     /// </summary>
     private const int ApprovedStatus = 2;
+
+    /// <summary>
+    /// L1 (in-process Memory) cache lifetime for a single game detail entry.
+    /// </summary>
+    internal static readonly TimeSpan DetailCacheL1Expiration = TimeSpan.FromMinutes(30);
+
+    /// <summary>
+    /// L2 (Redis) cache lifetime for a single game detail entry. Issue #3620: this is
+    /// the longest-lived surface that caches a resolved cover presigned URL (the DTO
+    /// returned by <see cref="FetchGameDetailsAsync"/>, including
+    /// <c>CoverUrlResolver</c>'s output, is baked into the cache entry for this whole
+    /// window) — <c>CoverUrlResolver.CoverPresignExpirySeconds</c> must exceed it with
+    /// an explicit margin, mechanically enforced by
+    /// <c>CoverPresignCacheInvariantTests</c> rather than left as two numbers in two
+    /// files that happen to agree today.
+    /// </summary>
+    internal static readonly TimeSpan DetailCacheL2Expiration = TimeSpan.FromHours(2);
 
     private readonly ISharedGameRepository _repository;
     private readonly MeepleAiDbContext _context;
@@ -105,7 +123,7 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             var cacheKey = $"shared-game:{query.GameId}";
             var cacheTag = $"shared-game:{query.GameId}";
 
-            // Try cache first (L1: 30min, L2: 2h).
+            // Try cache first (see DetailCacheL1Expiration / DetailCacheL2Expiration).
             // Tagged with the per-game key so toolkit/agent/KB event handlers can
             // invalidate this entry without touching the whole search-games namespace.
             var dto = await _cache.GetOrCreateAsync<SharedGameDetailDto?>(
@@ -118,8 +136,8 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
                 },
                 new HybridCacheEntryOptions
                 {
-                    LocalCacheExpiration = TimeSpan.FromMinutes(30),  // L1
-                    Expiration = TimeSpan.FromHours(2)                // L2
+                    LocalCacheExpiration = DetailCacheL1Expiration,  // L1
+                    Expiration = DetailCacheL2Expiration              // L2
                 },
                 tags: new[] { cacheTag },
                 cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -387,17 +405,43 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
         // PdfCoverR2Key, so we load the entity here from the already-open DbContext.
         // _context.SharedGames is already queried above (aggregates query), so EF's
         // identity map will typically satisfy this from its first-level cache.
+        // Epic #3470 Slice 2: eager-load CoverAssignments so the per-context (Hero)
+        // resolver can honor an admin override; without the Include it silently falls
+        // through to the implicit precedence (the assignment appears ignored).
         var sharedGameEntity = await _context.SharedGames
             .AsNoTracking()
+            .Include(g => g.CoverAssignments)
             .Where(g => g.Id == gameId)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var coverUrl = sharedGameEntity is not null
-            ? await CoverUrlResolver
-                .ResolvePublicAsync(sharedGameEntity, _blobStorage)
-                .ConfigureAwait(false)
-            : null;
+        // Epic #3470 Slice 2 — the detail page is the sole Hero surface, so resolve the
+        // cover for the Hero context (admin per-context override → implicit precedence
+        // fall-through) AND its winning source. Source-aware so the attribution footer
+        // follows the actual image (Slice 1d-a: previously emitted Wikidata license/
+        // attribution unconditionally, even for a PDF/BGG-sourced cover).
+        string? coverUrl = null;
+        string? coverLicense = null, coverAttribution = null, coverSourceUrl = null;
+        string? socialCoverUrl = null;
+        double coverFocalX = 0.5, coverFocalY = 0.5;
+        if (sharedGameEntity is not null)
+        {
+            var cover = await CoverUrlResolver
+                .ResolveForContextWithSourceAsync(sharedGameEntity, CoverContext.Hero, _blobStorage)
+                .ConfigureAwait(false);
+            coverUrl = cover.Url;
+            coverFocalX = cover.FocalX;
+            coverFocalY = cover.FocalY;
+            (coverLicense, coverAttribution, coverSourceUrl) =
+                CoverAttribution.ForWinningSource(cover.Kind, sharedGameEntity);
+
+            // Epic #3470 Slice 2d (AC-2) — the Social-context cover feeds the FE OpenGraph
+            // meta (#3452). Independent of the Hero cover; falls through to the implicit
+            // precedence when no Social override is pinned.
+            socialCoverUrl = await CoverUrlResolver
+                .ResolveForContextAsync(sharedGameEntity, CoverContext.Social, _blobStorage)
+                .ConfigureAwait(false);
+        }
 
         return new SharedGameDetailDto(
             game.Id,
@@ -437,9 +481,13 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             isTopRated,
             isNew,
             CoverUrl: coverUrl,
-            // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (HTML-stripped per DEC-G6-1).
-            WikidataCoverLicense: game.WikidataCoverLicense,
-            WikidataCoverAttribution: AttributionTextExtractor.Strip(game.WikidataCoverAttribution),
-            WikidataCoverSourceUrl: game.WikidataCoverSourceUrl);
+            // Epic #3470 Slice 1d-a — source-aware attribution (read from the entity, gated
+            // on the winning cover source; was emitted unconditionally from the aggregate).
+            CoverLicense: coverLicense,
+            CoverAttribution: coverAttribution,
+            CoverSourceUrl: coverSourceUrl,
+            SocialCoverUrl: socialCoverUrl,
+            CoverFocalX: coverFocalX,
+            CoverFocalY: coverFocalY);
     }
 }

@@ -45,6 +45,10 @@ internal class ProcessingJobEntityConfiguration : IEntityTypeConfiguration<Proce
         builder.Property(e => e.StartedAt)
             .HasColumnName("started_at");
 
+        // #3585: progress heartbeat - see ProcessingJobEntity.LastProgressAt.
+        builder.Property(e => e.LastProgressAt)
+            .HasColumnName("last_progress_at");
+
         builder.Property(e => e.CompletedAt)
             .HasColumnName("completed_at");
 

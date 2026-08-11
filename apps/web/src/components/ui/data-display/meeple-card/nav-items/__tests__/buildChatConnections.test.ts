@@ -41,4 +41,9 @@ describe('buildChatConnections', () => {
     items[3].onClick?.();
     expect(handlers.onArchiveClick).toHaveBeenCalledOnce();
   });
+
+  it('emits the canonical entityType slot order (#2860)', () => {
+    const items = buildChatConnections({ messageCount: 10 }, handlers);
+    expect(items.map(i => i.entityType)).toEqual(['chat', 'kb', 'agent', 'chat']);
+  });
 });

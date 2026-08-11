@@ -8,7 +8,9 @@ using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 
@@ -32,9 +34,10 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 internal sealed class GenerateMechanicAnalysisCommandHandler
     : ICommandHandler<GenerateMechanicAnalysisCommand, MechanicAnalysisGenerationResponseDto>
 {
-    // B4=A: prompts v1 target DeepSeek. These defaults align with ADR-007 routing.
-    private const string DefaultProvider = "DeepSeek";
-    private const string DefaultModel = "deepseek-chat";
+    // #2951: default provider/model are now config-driven via MechanicExtractorLlmOptions
+    // (previously hardcoded consts). This lets an operator switch the default provider without
+    // a redeploy when the wired default is unavailable (e.g. DeepSeek credit exhausted → 402).
+    // Still overridable per-request via ProviderOverride/ModelOverride (#2926).
 
     // Conservative DeepSeek list pricing as of 2026-04 (project_deepseek_llm memory).
     // Runtime cost is captured per-section from the actual LlmCompletionResult, so any drift
@@ -55,7 +58,10 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         MechanicSection.Victory,
         MechanicSection.Resources,
         MechanicSection.Phases,
-        MechanicSection.Faq
+        MechanicSection.Faq,
+        MechanicSection.Setup,
+        MechanicSection.Components,
+        MechanicSection.EndgameScoring
     };
 
     private readonly IMechanicAnalysisRepository _analysisRepository;
@@ -67,6 +73,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
     // prompt input. All writes go through repositories + IUnitOfWork.
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMechanicPromptProvider _promptProvider;
+    private readonly MechanicExtractorLlmOptions _llmOptions;
     private readonly IAnalysisCostEstimator _costEstimator;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -80,6 +87,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         ISharedGameDocumentRepository documentRepository,
         MeepleAiDbContext dbContext,
         IMechanicPromptProvider promptProvider,
+        IOptions<MechanicExtractorLlmOptions> llmOptions,
         IAnalysisCostEstimator costEstimator,
         IBackgroundTaskService backgroundTaskService,
         IServiceScopeFactory scopeFactory,
@@ -92,6 +100,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         _documentRepository = documentRepository ?? throw new ArgumentNullException(nameof(documentRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
+        _llmOptions = llmOptions?.Value ?? throw new ArgumentNullException(nameof(llmOptions));
         _costEstimator = costEstimator ?? throw new ArgumentNullException(nameof(costEstimator));
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
@@ -107,6 +116,15 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         ArgumentNullException.ThrowIfNull(request);
 
         var promptVersion = _promptProvider.PromptVersion;
+
+        // #539 eval: resolve the effective provider/model. Null override → ADR-007 DeepSeek default.
+        // Routing is by model name (ILlmClient.SupportsModel), so the model alone selects the provider.
+        var effectiveProvider = string.IsNullOrWhiteSpace(request.ProviderOverride)
+            ? _llmOptions.DefaultProvider
+            : request.ProviderOverride.Trim();
+        var effectiveModel = string.IsNullOrWhiteSpace(request.ModelOverride)
+            ? _llmOptions.DefaultModel
+            : request.ModelOverride.Trim();
 
         // 1. SharedGame existence (404 if missing).
         var sharedGame = await _sharedGameRepository
@@ -131,29 +149,34 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
                 resourceId: $"{request.SharedGameId}/{request.PdfDocumentId}");
         }
 
-        // 3. T7 idempotency — return the existing non-rejected analysis unchanged.
-        var existing = await _analysisRepository
-            .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
-            .ConfigureAwait(false);
-        if (existing is not null)
+        // 3. T7 idempotency — return the existing non-rejected analysis unchanged. Skipped when
+        //    ForceRegenerate is set (#539), so a re-run with a different model creates a new row
+        //    instead of short-circuiting to the prior analysis for the same (game, pdf, prompt).
+        if (!request.ForceRegenerate)
         {
-            _logger.LogInformation(
-                "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
-                existing.Id,
-                request.SharedGameId,
-                request.PdfDocumentId,
-                promptVersion,
-                existing.Status);
+            var existing = await _analysisRepository
+                .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
+                .ConfigureAwait(false);
+            if (existing is not null)
+            {
+                _logger.LogInformation(
+                    "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
+                    existing.Id,
+                    request.SharedGameId,
+                    request.PdfDocumentId,
+                    promptVersion,
+                    existing.Status);
 
-            return BuildResponse(
-                existing.Id,
-                existing.Status,
-                promptVersion,
-                effectiveCostCap: existing.CostCapUsd,
-                estimatedCost: 0m,
-                projectedTotalTokens: 0,
-                costCapOverrideApplied: existing.CostCapOverrideBy is not null,
-                isExisting: true);
+                return BuildResponse(
+                    existing.Id,
+                    existing.Status,
+                    promptVersion,
+                    effectiveCostCap: existing.CostCapUsd,
+                    estimatedCost: 0m,
+                    projectedTotalTokens: 0,
+                    costCapOverrideApplied: existing.CostCapOverrideBy is not null,
+                    isExisting: true);
+            }
         }
 
         // 4. Load retrieval context. M1.2 ships the same bundled rulebook content to every
@@ -173,8 +196,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         var retrievedPromptTokens = retrievalContext.Length / 4;
         var estimate = _costEstimator.Estimate(new AnalysisCostEstimateInput(
             PromptVersion: promptVersion,
-            Provider: DefaultProvider,
-            Model: DefaultModel,
+            Provider: effectiveProvider,
+            Model: effectiveModel,
             Sections: AllSections,
             TotalRetrievedPromptTokens: retrievedPromptTokens,
             InputCostPerMillionTokens: DefaultInputCostPerMillion,
@@ -208,8 +231,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
             promptVersion: promptVersion,
             createdBy: request.RequestedBy,
             createdAt: utcNow,
-            modelUsed: DefaultModel,
-            provider: DefaultProvider,
+            modelUsed: effectiveModel,
+            provider: effectiveProvider,
             costCapUsd: request.CostCapUsd);
 
         if (hasOverride)

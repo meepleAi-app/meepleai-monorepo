@@ -29,11 +29,12 @@ public class AddParticipantCommandHandlerTests
     public async Task Handle_ValidRequest_AddsParticipantAndReturnsResult()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new AddParticipantCommand(session.Id, "Alice", Guid.NewGuid());
+        var command = new AddParticipantCommand(session.Id, "Alice", Guid.NewGuid(), userId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -53,7 +54,7 @@ public class AddParticipantCommandHandlerTests
         _sessionRepoMock.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((Session?)null);
 
-        var command = new AddParticipantCommand(sessionId, "Bob", null);
+        var command = new AddParticipantCommand(sessionId, "Bob", null, Guid.NewGuid());
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -64,16 +65,37 @@ public class AddParticipantCommandHandlerTests
     public async Task Handle_FinalizedSession_ThrowsConflictException()
     {
         // Arrange
-        var session = Session.Create(Guid.NewGuid(), Guid.NewGuid(), SessionType.Generic);
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
         session.Finalize();
 
         _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var command = new AddParticipantCommand(session.Id, "Charlie", null);
+        var command = new AddParticipantCommand(session.Id, "Charlie", null, userId);
 
         // Act & Assert
         await Assert.ThrowsAsync<ConflictException>(
             () => _handler.Handle(command, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_CallerNotOwnerOrParticipant_ThrowsForbiddenException()
+    {
+        // Arrange — session owned by someone else; caller is neither owner nor participant (IDOR).
+        var ownerId = Guid.NewGuid();
+        var attackerId = Guid.NewGuid();
+        var session = Session.Create(ownerId, Guid.NewGuid(), SessionType.Generic);
+
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var command = new AddParticipantCommand(session.Id, "Injected", null, attackerId);
+
+        // Act & Assert — IDOR guard rejects before any participant is added.
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(command, CancellationToken.None));
+        _sessionRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Session>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

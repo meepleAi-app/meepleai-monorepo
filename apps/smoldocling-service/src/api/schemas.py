@@ -3,6 +3,8 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
+from ..domain.models import CROP_REASONS
+
 
 # Response Schemas
 class PageResultSchema(BaseModel):
@@ -43,6 +45,26 @@ class PdfExtractionResponse(BaseModel):
     quality_score: float = Field(description="Overall quality (0.0-1.0)", ge=0.0, le=1.0)
     page_count: int = Field(description="Number of pages", ge=1)
     metadata: Dict[str, Any] = Field(description="Extraction metadata")
+
+
+class ExtractImageResponse(BaseModel):
+    """Response for POST /api/v1/extract-image (issue #3435 SP3 crop-discriminator)."""
+
+    is_table: bool = Field(description="True if the crop is an OTSL table to keep")
+    reason: str = Field(description="One of: " + " | ".join(CROP_REASONS))
+    markdown: str = Field(description="Rebuilt table markdown; empty when discarded")
+    bbox: Optional[List[float]] = Field(
+        default=None,
+        description="[x0,y0,x1,y1] in [0,1] top-left; null when discarded/absent",
+    )
+    doctags: str = Field(default="", description="Raw cleaned DocTags (audit/debug)")
+    confidence: float = Field(ge=0.0, le=1.0)
+    prefiltered: bool = Field(
+        description="True when rejected by the colorfulness pre-filter (VLM not run)"
+    )
+    degenerated: bool = Field(description="True when the repetition early-stop fired")
+    colorfulness: float = Field(description="Hasler-Süsstrunk colorfulness of the crop")
+    duration_ms: int = Field(ge=0)
 
 
 # Error Schemas (reuse from Unstructured for consistency)

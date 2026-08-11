@@ -2,7 +2,9 @@ using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
@@ -23,6 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 public class RagPromptAssemblyServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingMock;
+    private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;
     private readonly Mock<ICrossEncoderReranker> _rerankerMock;
     private readonly Mock<ILlmService> _llmMock;
     private readonly Mock<ITextChunkSearchService> _textSearchMock;
@@ -40,6 +43,7 @@ public class RagPromptAssemblyServiceTests
     public RagPromptAssemblyServiceTests()
     {
         _embeddingMock = new Mock<IEmbeddingService>();
+        _embeddingRepositoryMock = new Mock<IEmbeddingRepository>();
         _rerankerMock = new Mock<ICrossEncoderReranker>();
         _llmMock = new Mock<ILlmService>();
         _textSearchMock = new Mock<ITextChunkSearchService>();
@@ -66,12 +70,20 @@ public class RagPromptAssemblyServiceTests
         _ragEnhancementMock
             .Setup(r => r.GetActiveEnhancementsAsync(It.IsAny<UserTier>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(RagEnhancement.None);
+
+        // Default: pgvector semantic search returns no chunks (scenario-specific tests override this)
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Array.Empty<ScoredEmbedding>());
     }
 
     private RagPromptAssemblyService CreateService()
     {
         return new RagPromptAssemblyService(
             _embeddingMock.Object,
+            _embeddingRepositoryMock.Object,
             _rerankerMock.Object,
             _llmMock.Object,
             _textSearchMock.Object,
@@ -121,6 +133,27 @@ public class RagPromptAssemblyServiceTests
             });
     }
 
+    private void SetupVectorSearchResults(params (string text, int chunkIndex, double score)[] items)
+    {
+        var scored = items
+            .Select(i => new ScoredEmbedding(
+                new Embedding(
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    i.text,
+                    new Vector(TestEmbedding),
+                    "test-model",
+                    i.chunkIndex,
+                    pageNumber: 1),
+                i.score))
+            .ToList();
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scored);
+    }
+
     private static SearchResultItem CreateChunk(string pdfId, int chunkIndex, float score, string text = "Rule text", int page = 1)
     {
         return new SearchResultItem
@@ -132,6 +165,120 @@ public class RagPromptAssemblyServiceTests
             ChunkIndex = chunkIndex
         };
     }
+
+    #region AssemblePromptAsync - Vector semantic retrieval (regression #2705)
+
+    [Fact]
+    public async Task AssemblePrompt_WithRelevantVectorChunks_ProducesGroundedContext()
+    {
+        // Regression #2705: commit 5d00be387 removed the pgvector semantic search from
+        // RetrieveRagContextAsync, leaving FTS-only RRF scores capped at ~0.49 < MinScore 0.55.
+        // The RAG context was therefore ALWAYS empty, so the agent answered "non sono certo"
+        // regardless of the question. With the vector branch restored, chunks whose cosine
+        // similarity clears MinScore (0.55) must produce a grounded, non-empty context.
+        SetupSuccessfulEmbedding();
+        SetupVectorSearchResults(
+            ("Pawns move forward one square.", 0, 0.85),
+            ("Pawns can capture diagonally.", 1, 0.82));
+        SetupTextSearchResults(); // no FTS matches — semantic branch alone must ground the answer
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, null, "it", CancellationToken.None);
+
+        // Assert — semantic chunks above threshold produce grounded context
+        result.Citations.Should().NotBeEmpty();
+        result.SystemPrompt.Should().NotContain("No game documentation is currently available");
+        result.SystemPrompt.Should().Contain("Pawns move forward");
+    }
+
+    [Fact]
+    public async Task AssemblePrompt_VectorChunkWithBoundingBoxes_PropagatesToCitation()
+    {
+        // SP-C (#3407): bbox + char offsets on the vector-arm Embedding must survive BOTH the
+        // vector→SearchResultItem map AND the hybrid-fusion GroupBy rebuild (a drop site) into the
+        // ChunkCitation, so the handler boundary can parse + Full-gate them into regions[].
+        const string bbox = "[{\"page\":2,\"x\":0.1,\"y\":0.2,\"width\":0.3,\"height\":0.4}]";
+        SetupSuccessfulEmbedding();
+        var scored = new List<ScoredEmbedding>
+        {
+            new(new Embedding(
+                    Guid.NewGuid(), Guid.NewGuid(), "Pawns move forward one square.",
+                    new Vector(TestEmbedding), "test-model", chunkIndex: 0, pageNumber: 2,
+                    boundingBoxesJson: bbox, charStart: 100, charEnd: 250),
+                0.85)
+        };
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scored);
+        SetupTextSearchResults(); // no FTS — the vector chunk alone flows through hybrid fusion
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, null, "it", CancellationToken.None);
+
+        // Assert — the (only) coordinate-bearing citation kept its bbox + char offsets end-to-end.
+        var cited = result.Citations.Should().ContainSingle(c => c.BoundingBoxesJson != null).Which;
+        cited.BoundingBoxesJson.Should().Be(bbox);
+        cited.CharStart.Should().Be(100);
+        cited.CharEnd.Should().Be(250);
+    }
+
+    [Fact]
+    public async Task AssemblePrompt_VectorChunkCitation_UsesPdfDocumentIdNotVectorDocumentId()
+    {
+        // Regression (#3390 Slice-4 follow-up): the grounded vector arm mapped the citation's
+        // source document id from Embedding.VectorDocumentId (vector_documents.Id) instead of
+        // Embedding.PdfDocumentId (pdf_documents.Id). CitationValidationService keys structural
+        // validity on pdf_documents.Id, so vector-arm citations failed with DocumentNotFound and,
+        // on the live path, carried a doc id the FE cannot resolve to the source PDF. The legacy
+        // hybrid path (HybridSearchService.cs:287) already keys on PdfDocumentId — this restores parity.
+        var vectorDocumentId = Guid.NewGuid();
+        var pdfDocumentId = Guid.NewGuid();
+        SetupSuccessfulEmbedding();
+        var scored = new List<ScoredEmbedding>
+        {
+            new(new Embedding(
+                    id: Guid.NewGuid(),
+                    vectorDocumentId: vectorDocumentId,
+                    textContent: "Pawns move forward one square.",
+                    vector: new Vector(TestEmbedding),
+                    model: "test-model",
+                    chunkIndex: 0,
+                    pageNumber: 3,
+                    pdfDocumentId: pdfDocumentId),
+                0.85)
+        };
+        _embeddingRepositoryMock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(scored);
+        SetupTextSearchResults(); // no FTS — the vector chunk alone flows through hybrid fusion
+        SetupRerankerPassthrough();
+        var service = CreateService();
+
+        // Act
+        var result = await service.AssemblePromptAsync(
+            "tutor", "Chess", null, "How do pawns move?",
+            TestGameId, null, null, "it", CancellationToken.None);
+
+        // Assert — the citation's source doc id is the owning PDF id, never the vector-store doc id.
+        var citation = result.Citations.Should().ContainSingle().Which;
+        citation.DocumentId.Should().Be(pdfDocumentId.ToString());
+        citation.DocumentId.Should().NotBe(vectorDocumentId.ToString());
+        citation.PageNumber.Should().Be(3);
+    }
+
+    #endregion
 
     #region AssemblePromptAsync - With Chunks (FTS-only post pgvector migration)
 
@@ -728,17 +875,27 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullEmbeddingService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            null!, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("embeddingService");
     }
 
     [Fact]
+    public void Constructor_NullEmbeddingRepository_ThrowsArgumentNullException()
+    {
+        var act = () => new RagPromptAssemblyService(
+            _embeddingMock.Object, null!, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("embeddingRepository");
+    }
+
+    [Fact]
     public void Constructor_NullReranker_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, null!, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("reranker");
@@ -748,7 +905,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullLlmService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, null!, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("llmService");
@@ -758,7 +915,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullTextSearchService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, null!, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("textSearch");
@@ -768,7 +925,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullExpansionResolver_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, null!,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("expansionResolver");
@@ -778,7 +935,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullRagEnhancementService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             null!, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("ragEnhancementService");
@@ -788,7 +945,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullComplexityClassifier_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, null!, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("complexityClassifier");
@@ -798,7 +955,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullRelevanceEvaluator_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, null!, _queryExpanderMock.Object, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("relevanceEvaluator");
@@ -808,7 +965,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullQueryExpander_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, null!, _graphRetrievalMock.Object, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("queryExpander");
@@ -818,7 +975,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullGraphRetrievalService_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, null!, _loggerMock.Object);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("graphRetrievalService");
@@ -828,7 +985,7 @@ public class RagPromptAssemblyServiceTests
     public void Constructor_NullLogger_ThrowsArgumentNullException()
     {
         var act = () => new RagPromptAssemblyService(
-            _embeddingMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
+            _embeddingMock.Object, _embeddingRepositoryMock.Object, _rerankerMock.Object, _llmMock.Object, _textSearchMock.Object, _expansionResolverMock.Object,
             _ragEnhancementMock.Object, _complexityClassifierMock.Object, _relevanceEvaluatorMock.Object, _queryExpanderMock.Object, _graphRetrievalMock.Object, null!);
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("logger");

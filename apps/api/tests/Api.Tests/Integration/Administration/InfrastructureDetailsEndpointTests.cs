@@ -59,11 +59,11 @@ public sealed class InfrastructureDetailsEndpointTests
 
         // Overall health section
         result.Overall.State.Should().Be(HealthState.Healthy);
-        result.Overall.TotalServices.Should().Be(5);
-        result.Overall.HealthyServices.Should().Be(5);
+        result.Overall.TotalServices.Should().Be(4);
+        result.Overall.HealthyServices.Should().Be(4);
 
         // Services section
-        result.Services.Should().HaveCount(5);
+        result.Services.Should().HaveCount(4);
         result.Services.Should().AllSatisfy(s => s.State.Should().Be(HealthState.Healthy));
 
         // Metrics section
@@ -164,8 +164,8 @@ public sealed class InfrastructureDetailsEndpointTests
     {
         var overall = new OverallHealthStatus(
             HealthState.Healthy,
-            TotalServices: 5,
-            HealthyServices: 5,
+            TotalServices: 4,
+            HealthyServices: 4,
             DegradedServices: 0,
             UnhealthyServices: 0,
             DateTime.UtcNow
@@ -176,7 +176,6 @@ public sealed class InfrastructureDetailsEndpointTests
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(45)),
             new("redis", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(30)),
             new("qdrant", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(60)),
-            new("n8n", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100)),
             new("qdrant-collection", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(80))
         };
 
@@ -194,8 +193,8 @@ public sealed class InfrastructureDetailsEndpointTests
     {
         var overall = new OverallHealthStatus(
             HealthState.Degraded,
-            TotalServices: 5,
-            HealthyServices: 4,
+            TotalServices: 4,
+            HealthyServices: 3,
             DegradedServices: 1,
             UnhealthyServices: 0,
             DateTime.UtcNow
@@ -206,7 +205,6 @@ public sealed class InfrastructureDetailsEndpointTests
             new("postgres", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(45)),
             new("redis", HealthState.Degraded, "High latency", DateTime.UtcNow, TimeSpan.FromMilliseconds(2500)),
             new("qdrant", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(60)),
-            new("n8n", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(100)),
             new("qdrant-collection", HealthState.Healthy, null, DateTime.UtcNow, TimeSpan.FromMilliseconds(80))
         };
 

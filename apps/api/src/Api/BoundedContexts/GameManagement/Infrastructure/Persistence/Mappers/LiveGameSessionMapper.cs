@@ -65,7 +65,8 @@ internal static class LiveGameSessionMapper
                 : null,
             Notes = domain.Notes,
             AgentMode = (int)domain.AgentMode,
-            ChatSessionId = domain.ChatSessionId,
+            TrackingSessionId = domain.TrackingSessionId,
+            CorrelatedGameSessionId = domain.CorrelatedGameSessionId,
             // Xmin is Postgres-system-owned (Issue #2305); EF round-trips it via xid mapping.
             // Mapper passes the current domain value back so EF emits WHERE xmin = @original.
             Xmin = domain.Xmin
@@ -140,6 +141,20 @@ internal static class LiveGameSessionMapper
                 EndedAt = record.EndedAt,
                 PhaseIndex = record.PhaseIndex,
                 PhaseName = record.PhaseName
+            });
+        }
+
+        // #2570 SP3 T2: diary entries — domain DiaryEntry.Id is the stable PK assigned
+        // at creation time (AddDiaryEntry uses Guid.NewGuid()), so no deterministic helper needed.
+        foreach (var entry in domain.DiaryEntries)
+        {
+            entity.DiaryEntries.Add(new LiveSessionDiaryEntryEntity
+            {
+                Id = entry.Id,
+                LiveGameSessionId = domain.Id,
+                AuthorId = entry.AuthorId,
+                CreatedAt = entry.CreatedAt,
+                Text = entry.Text
             });
         }
 
@@ -236,6 +251,12 @@ internal static class LiveGameSessionMapper
             phaseName: t.PhaseName,
             endedAt: t.EndedAt)).ToList();
 
+        // #2570 SP3 T2: diary entries — restored in CreatedAt order (oldest first).
+        var diaryEntries = entity.DiaryEntries
+            .OrderBy(d => d.CreatedAt)
+            .Select(d => new DiaryEntry(d.Id, d.AuthorId, d.CreatedAt, d.Text))
+            .ToList();
+
         return LiveGameSession.Reconstitute(
             id: entity.Id,
             sessionCode: entity.SessionCode,
@@ -261,8 +282,8 @@ internal static class LiveGameSessionMapper
             gameState: gameState,
             notes: entity.Notes,
             agentMode: (AgentSessionMode)entity.AgentMode,
-            chatSessionId: entity.ChatSessionId,
             turnAdvancePolicy: (TurnAdvancePolicy)entity.TurnAdvancePolicy,
+            trackingSessionId: entity.TrackingSessionId,
             xmin: entity.Xmin,
             players: players,
             teams: teams,
@@ -270,7 +291,9 @@ internal static class LiveGameSessionMapper
             roundScores: roundScores,
             turnRecords: turnRecords,
             disputes: disputes,
-            setupChecklist: setupChecklist);
+            diaryEntries: diaryEntries,
+            setupChecklist: setupChecklist,
+            correlatedGameSessionId: entity.CorrelatedGameSessionId);
     }
 
     // ── Serialization helpers for types not directly deserializable by STJ ──
@@ -299,7 +322,17 @@ internal static class LiveGameSessionMapper
         var dto = JsonSerializer.Deserialize<ScoringConfigDto>(json, JsonOptions);
         if (dto == null) return SessionScoringConfig.CreateDefault();
 
-        return new SessionScoringConfig(dto.EnabledDimensions, dto.DimensionUnits);
+        // #3633: un JSON sintatticamente valido ma privo di questi campi (una riga scritta da uno
+        // schema precedente, o troncata) deserializza in un DTO con le due proprietà a null, e il
+        // costruttore di SessionScoringConfig fa ArgumentNullException.ThrowIfNull. Attraversando
+        // il middleware quell'eccezione diventa un 400 «Invalid request parameters» su un endpoint
+        // di sola LETTURA — opaco per il chiamante e impossibile da diagnosticare dal solo corpo.
+        //
+        // Le due righe sopra già degradano a CreateDefault() per json vuoto e per dto null: che il
+        // terzo caso lanciasse era un'omissione, non una scelta. Ora la degradazione è coerente.
+        return new SessionScoringConfig(
+            dto.EnabledDimensions ?? SessionScoringConfig.CreateDefault().EnabledDimensions.ToList(),
+            dto.DimensionUnits ?? new Dictionary<string, string>(StringComparer.Ordinal));
     }
 
     /// <summary>

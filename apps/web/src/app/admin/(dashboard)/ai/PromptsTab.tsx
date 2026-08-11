@@ -68,7 +68,7 @@ export function PromptsTab() {
                   <div className="mt-1.5 flex items-center gap-2">
                     <span
                       className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        p.isActive ? 'bg-success' : 'bg-muted-foreground/40'
+                        p.isActive ? 'bg-[hsl(var(--c-success))]' : 'bg-muted-foreground/40'
                       }`}
                     />
                     <span className="text-[10px] text-muted-foreground">

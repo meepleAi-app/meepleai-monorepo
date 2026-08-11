@@ -14,6 +14,7 @@ using Api.Models;
 using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Services;
 using Api.SharedKernel.Translation;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +35,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
     private readonly ICampaignOwnershipGuard _ownershipGuard;
     private readonly IHybridCacheService _cache;
     private readonly ILogger<TranslateGamebookSegmentQueryHandler> _logger;
+    private readonly ITierEnforcementService _tierService;
 
     public TranslateGamebookSegmentQueryHandler(
         IGamebookCampaignSessionRepository campaigns,
@@ -44,7 +46,8 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ILlmService llm,
         ICampaignOwnershipGuard ownershipGuard,
         IHybridCacheService cache,
-        ILogger<TranslateGamebookSegmentQueryHandler> logger)
+        ILogger<TranslateGamebookSegmentQueryHandler> logger,
+        ITierEnforcementService tierService)
     {
         ArgumentNullException.ThrowIfNull(campaigns);
         ArgumentNullException.ThrowIfNull(photos);
@@ -55,6 +58,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         ArgumentNullException.ThrowIfNull(ownershipGuard);
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(tierService);
         _campaigns = campaigns;
         _photos = photos;
         _paragraphs = paragraphs;
@@ -64,6 +68,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         _ownershipGuard = ownershipGuard;
         _cache = cache;
         _logger = logger;
+        _tierService = tierService;
     }
 
     public async IAsyncEnumerable<TranslateChunk> Handle(
@@ -77,6 +82,8 @@ internal sealed class TranslateGamebookSegmentQueryHandler
         double? streamingLatencySec = null;
         long? promptTokens = null;
         long? completionTokens = null;
+        double? costUsd = null;          // #2752: captured from StreamChunk.Cost on the final chunk
+        string provider = "unknown";     // #2752: LLM provider that served the request
         int totalApplicableTerms = 0;
         int matchedTerms = 0;
 
@@ -166,6 +173,13 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                         "gamebook.translate.cost campaign={CampaignId} paragraph={Paragraph} tokens_in={In} tokens_out={Out}",
                         query.CampaignId, query.ParagraphNumber, chunk.Usage.PromptTokens, chunk.Usage.CompletionTokens);
                 }
+                // #2752: cost + provider ride on StreamChunk.Cost (sibling of Usage), populated
+                // per-provider by OpenRouterLlmClient / DeepSeekLlmClient on the final chunk.
+                if (chunk.Cost is not null)
+                {
+                    costUsd = (double)chunk.Cost.TotalCost;
+                    provider = chunk.Cost.Provider;
+                }
             }
 
             var translatedIt = fullText.ToString().Trim();
@@ -235,23 +249,32 @@ internal sealed class TranslateGamebookSegmentQueryHandler
                 status = "cancelled";
             }
 
-            // Cost tracking via existing LlmCostUsdTotal (MeepleAiMetrics.LlmOperational, Issue #5480)
-            // is emitted by HybridLlmService per-request; gamebook-specific cost_eur deferred to a
-            // follow-up that derives cost from token counts + provider pricing (LlmUsage record does
-            // not currently carry CostUsd / Provider fields).
+            // #2752: gamebook-specific cost_eur is derived (USD x UsdToEurRate) inside the helper
+            // from StreamChunk.Cost, captured above. costUsd stays null when the provider does not
+            // report cost (or on a failed/cancelled stream) — the helper skips the EUR record then.
             MeepleAiMetrics.RecordGamebookTranslationRequest(
                 status: status,
                 latencyFullSeconds: stopwatch.Elapsed.TotalSeconds,
                 latencyStreamingSeconds: streamingLatencySec,
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
-                costUsd: null,
-                provider: "unknown");
+                costUsd: costUsd,
+                provider: provider);
 
             if (totalApplicableTerms > 0)
             {
                 var rate = (double)matchedTerms / totalApplicableTerms;
                 MeepleAiMetrics.RecordGamebookGlossaryConsistency(rate, HashCampaignId(query.CampaignId));
+            }
+
+            // #2750 (C14): count one successful paragraph translation toward the monthly quota.
+            // CancellationToken.None so a request whose SSE stream was aborted AFTER the
+            // translation completed still counts (mirrors the metrics emit above).
+            if (string.Equals(status, "success", StringComparison.Ordinal))
+            {
+                await _tierService
+                    .RecordUsageAsync(query.CallerUserId, TierAction.TranslateGamebookParagraph, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
         }
     }

@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 /// </summary>
 internal static class GameNightMapperHelper
 {
-    public static GameNightDto MapToDto(GameNightEvent gameNight, string organizerName)
+    public static GameNightDto MapToDto(GameNightEvent gameNight, string organizerName, Guid? viewerId = null)
     {
         ArgumentNullException.ThrowIfNull(gameNight);
 
@@ -28,8 +28,12 @@ internal static class GameNightMapperHelper
             AcceptedCount: gameNight.AcceptedCount,
             PendingCount: gameNight.Rsvps.Count(r => r.Status == RsvpStatus.Pending),
             TotalInvited: gameNight.Rsvps.Count,
+            // #3084: the sessions collection is already eager-loaded on the read paths
+            // (e.g. GetCompletedAsync .Include(e => e.Sessions)), so this is in-memory.
+            SessionCount: gameNight.Sessions.Count,
             CreatedAt: gameNight.CreatedAt,
-            UpdatedAt: gameNight.UpdatedAt);
+            UpdatedAt: gameNight.UpdatedAt,
+            ViewerRsvpStatus: viewerId.HasValue ? gameNight.GetRsvp(viewerId.Value)?.Status : null);
     }
 
     public static GameNightRsvpDto MapToRsvpDto(GameNightRsvp rsvp, string userName)

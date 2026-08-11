@@ -17,8 +17,8 @@ internal interface IKeywordSearchService
     /// <param name="gameId">Game ID to filter results</param>
     /// <param name="limit">Maximum number of results to return</param>
     /// <param name="phraseSearch">Enable exact phrase matching with proximity operators</param>
-    /// <param name="boostTerms">Optional list of terms to boost in ranking (e.g., game-specific terminology)</param>
-    /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
+    /// <param name="boostTerms">Retained for observability/forward-compat only; NOT currently applied to the tsquery. In-query ":A"/":B" weighting was removed because it matched nothing on the un-weighted search_vector (all lexemes are weight D). Re-introducing boost ranking requires setweight on the tsvector (migration + re-index).</param>
+    /// <param name="language">Language code for FTS configuration: "en" → english, "it" → italian (default: "en", #2569 — matches content + pgvector path)</param>
     /// <param name="minScore">Minimum ts_rank_cd score threshold to filter low-relevance results (default: 0.0, no filtering)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of keyword search results with BM25-style relevance scores</returns>
@@ -28,8 +28,19 @@ internal interface IKeywordSearchService
         int limit = 10,
         bool phraseSearch = false,
         List<string>? boostTerms = null,
-        string language = "it",
+        string language = "en",
         double minScore = 0.0,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// #3338 WP1c: resolves the PostgreSQL FTS config (english/italian/…) the keyword arm uses for a
+    /// game — detected from the game's dominant <c>pdf_documents.Language</c>, falling back to
+    /// <paramref name="language"/>. Exposed so hybrid callers can expand heading-match terms with the
+    /// same language's intent-synonym table (a "setup" query boosting a "preparazione" heading).
+    /// </summary>
+    Task<string> ResolveFtsConfigAsync(
+        Guid gameId,
+        string language = "en",
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -39,14 +50,14 @@ internal interface IKeywordSearchService
     /// <param name="query">Search query</param>
     /// <param name="gameId">Game ID to filter results</param>
     /// <param name="limit">Maximum number of results</param>
-    /// <param name="language">Language code for FTS configuration: "it" → meepleai_italian, "en" → english (default: "it")</param>
+    /// <param name="language">Language code for FTS configuration: "en" → english, "it" → italian (default: "en", #2569 — matches content + pgvector path)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of PDF document search results</returns>
     Task<List<KeywordDocumentResult>> SearchDocumentsAsync(
         string query,
         Guid gameId,
         int limit = 10,
-        string language = "it",
+        string language = "en",
         CancellationToken cancellationToken = default);
 }
 
@@ -78,6 +89,9 @@ internal record KeywordSearchResult
     /// <see cref="GameBookRole.None"/> when the chunk has not been classified.
     /// </summary>
     public GameBookRole RoleTags { get; init; } = GameBookRole.None;
+
+    /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
+    public string? Heading { get; init; }
 }
 
 /// <summary>

@@ -10,6 +10,8 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -18,6 +20,8 @@ const API_BASE =
 // ---------------------------------------------------------------------------
 
 async function mockAuth(page: Page, role: 'Admin' | 'User') {
+  // Seed role cookie FIRST so proxy.ts resolves the role under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, role);
   await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,

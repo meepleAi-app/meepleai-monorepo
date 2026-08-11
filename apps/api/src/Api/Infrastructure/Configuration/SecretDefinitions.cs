@@ -153,12 +153,6 @@ internal static class SecretDefinitions
             "RERANKER_API_KEY"
         ),
 
-        ["n8n"] = new(
-            SecretLevel.Optional,
-            "N8N_ENCRYPTION_KEY",
-            "N8N_BASIC_AUTH_PASSWORD"
-        ),
-
         ["mediatr"] = new(
             SecretLevel.Optional,
             "MEDIATR_LICENSE_KEY"

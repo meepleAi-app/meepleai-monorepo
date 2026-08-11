@@ -7,11 +7,14 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 async function mockAdminAuth(page: Page) {
-  await page.context().route(`${API_BASE}/api/v1/auth/me`, (route) =>
+  await seedMockRoleCookies(page, 'Admin');
+  await page.context().route(`${API_BASE}/api/v1/auth/me`, route =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -72,7 +75,7 @@ test.describe('ADM — Debug Console ⭐', () => {
   test.beforeEach(async ({ page }) => {
     await mockAdminAuth(page);
 
-    await page.context().route(`${API_BASE}/api/v1/admin/rag/debug-sessions**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/rag/debug-sessions**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -80,7 +83,7 @@ test.describe('ADM — Debug Console ⭐', () => {
       })
     );
 
-    await page.context().route(`${API_BASE}/api/v1/admin/rag/debug-sessions/dbg-1**`, (route) =>
+    await page.context().route(`${API_BASE}/api/v1/admin/rag/debug-sessions/dbg-1**`, route =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -88,9 +91,15 @@ test.describe('ADM — Debug Console ⭐', () => {
       })
     );
 
-    await page.context().route(`${API_BASE}/api/v1/admin/**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) })
-    );
+    await page
+      .context()
+      .route(`${API_BASE}/api/v1/admin/**`, route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: [] }),
+        })
+      );
   });
 
   test('carica pagina Debug Console', async ({ page }) => {
@@ -102,10 +111,12 @@ test.describe('ADM — Debug Console ⭐', () => {
     await page.goto('/admin/agents/debug', { waitUntil: 'domcontentloaded' });
 
     // Cerca waterfall chart o timeline
-    const waterfall = page.locator(
-      '[data-testid="waterfall-chart"], [data-testid="timeline"], .waterfall, .timeline, svg'
-    ).first();
-    if (await waterfall.count() > 0) {
+    const waterfall = page
+      .locator(
+        '[data-testid="waterfall-chart"], [data-testid="timeline"], .waterfall, .timeline, svg'
+      )
+      .first();
+    if ((await waterfall.count()) > 0) {
       await expect(waterfall).toBeVisible({ timeout: 8000 });
     } else {
       // Fallback: cerca testo delle sessioni
@@ -117,16 +128,18 @@ test.describe('ADM — Debug Console ⭐', () => {
     await page.goto('/admin/agents/debug', { waitUntil: 'domcontentloaded' });
 
     // Cerca step della timeline cliccabile
-    const step = page.locator(
-      '[data-testid="timeline-step"], [data-testid="debug-step"], .timeline-step, button:has-text("Vector"), button:has-text("Retrieval")'
-    ).first();
+    const step = page
+      .locator(
+        '[data-testid="timeline-step"], [data-testid="debug-step"], .timeline-step, button:has-text("Vector"), button:has-text("Retrieval")'
+      )
+      .first();
 
-    if (await step.count() > 0) {
+    if ((await step.count()) > 0) {
       await step.click();
       // Verifica espansione dettaglio
-      const detail = page.locator(
-        '[data-testid="step-detail"], .step-detail, [aria-expanded="true"]'
-      ).first();
+      const detail = page
+        .locator('[data-testid="step-detail"], .step-detail, [aria-expanded="true"]')
+        .first();
       await expect(detail).toBeVisible({ timeout: 5000 });
     }
   });
@@ -135,10 +148,11 @@ test.describe('ADM — Debug Console ⭐', () => {
     await page.goto('/admin/agents/debug', { waitUntil: 'domcontentloaded' });
 
     // Cerca visualizzazione token count
-    const tokenDisplay = page.locator('[data-testid="token-count"], [data-testid="duration"]')
+    const tokenDisplay = page
+      .locator('[data-testid="token-count"], [data-testid="duration"]')
       .or(page.locator('text=/token|2891|1243ms/i'))
       .first();
-    if (await tokenDisplay.count() > 0) {
+    if ((await tokenDisplay.count()) > 0) {
       await expect(tokenDisplay).toBeVisible({ timeout: 5000 });
     }
   });
@@ -146,11 +160,11 @@ test.describe('ADM — Debug Console ⭐', () => {
   test('filtra sessioni debug per query', async ({ page }) => {
     await page.goto('/admin/agents/debug', { waitUntil: 'domcontentloaded' });
 
-    const searchInput = page.locator(
-      'input[placeholder*="cerca"], input[placeholder*="search"], input[type="search"]'
-    ).first();
+    const searchInput = page
+      .locator('input[placeholder*="cerca"], input[placeholder*="search"], input[type="search"]')
+      .first();
 
-    if (await searchInput.count() > 0) {
+    if ((await searchInput.count()) > 0) {
       await searchInput.fill('Catan');
       await page.waitForTimeout(300);
       await expect(page.locator('body')).toBeVisible();

@@ -72,6 +72,13 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     public DateTime? ReviewedAt { get; private set; }
     public string? RejectionReason { get; private set; }
 
+    /// <summary>
+    /// FK to the <see cref="MechanicCard"/> this analysis was published into (#527). Null until an
+    /// admin explicitly publishes the (already Published-lifecycle) analysis. Enforces the "at most
+    /// one card per analysis" invariant (AD-3) and short-circuits duplicate publish attempts (F2).
+    /// </summary>
+    public Guid? PublishedCardId { get; private set; }
+
     // === LLM execution snapshot ===
 
     public int TotalTokensUsed { get; private set; }
@@ -263,7 +270,8 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         Guid? certifiedByUserId = null,
         string? certificationOverrideReason = null,
         Guid? lastMetricsId = null,
-        uint xminVersion = 0)
+        uint xminVersion = 0,
+        Guid? publishedCardId = null)
     {
         ArgumentNullException.ThrowIfNull(claims);
 
@@ -281,6 +289,7 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             ReviewedBy = reviewedBy,
             ReviewedAt = reviewedAt,
             RejectionReason = rejectionReason,
+            PublishedCardId = publishedCardId,
             TotalTokensUsed = totalTokensUsed,
             EstimatedCostUsd = estimatedCostUsd,
             ModelUsed = modelUsed,
@@ -416,6 +425,12 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     /// <summary>
     /// Approves the analysis and transitions it to Published. Requires every claim to be Approved.
     /// </summary>
+    /// <remarks>
+    /// <see cref="MechanicAnalysisStatus.Published"/> means the analysis <em>lifecycle</em> is frozen
+    /// and eligible for publication into a user-facing <see cref="MechanicCard"/>. It does NOT create
+    /// the card — publishing the card surface is a separate, explicit admin act (AD-2, #527), tracked
+    /// by <see cref="PublishedCardId"/>. Approving multiple analyses does not publish any of them.
+    /// </remarks>
     public void Approve(Guid reviewerId, DateTime utcNow)
     {
         if (reviewerId == Guid.Empty)
@@ -445,6 +460,38 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         ReviewedAt = utcNow;
 
         AddDomainEvent(new MechanicAnalysisStatusChangedEvent(Id, previous, Status, reviewerId, note: null));
+    }
+
+    /// <summary>
+    /// Links this analysis to the <see cref="MechanicCard"/> it was published into (#527). Sets the
+    /// <see cref="PublishedCardId"/> FK, enforcing the "publish once" invariant. Must be called by the
+    /// publish handler in the same transaction that inserts the card.
+    /// </summary>
+    /// <exception cref="InvalidMechanicAnalysisStateException">Thrown if the analysis is not Published.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if the analysis already has a published card (F2).</exception>
+    public void MarkPublished(Guid cardId)
+    {
+        if (cardId == Guid.Empty)
+        {
+            throw new ArgumentException("CardId cannot be empty.", nameof(cardId));
+        }
+
+        if (Status != MechanicAnalysisStatus.Published)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id,
+                Status,
+                "mark published card",
+                MechanicAnalysisStatus.Published);
+        }
+
+        if (PublishedCardId is not null)
+        {
+            throw new InvalidOperationException(
+                $"MechanicAnalysis {Id} is already published as card {PublishedCardId}.");
+        }
+
+        PublishedCardId = cardId;
     }
 
     /// <summary>
@@ -564,12 +611,13 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Approves a single claim. Valid only while the analysis is InReview.
+    /// Approves a single claim, optionally capturing a review note (#526 AC-6).
+    /// Valid only while the analysis is InReview.
     /// </summary>
-    public void ApproveClaim(Guid claimId, Guid reviewerId, DateTime utcNow)
+    public void ApproveClaim(Guid claimId, Guid reviewerId, DateTime utcNow, string? note = null)
     {
         var claim = RequireClaimUnderReview(claimId, "approve claim");
-        claim.Approve(reviewerId, utcNow);
+        claim.Approve(reviewerId, utcNow, note);
     }
 
     /// <summary>
@@ -699,7 +747,62 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
             actorId,
             previous,
             newCapUsd,
-            CostCapOverrideReason));
+            CostCapOverrideReason,
+            CostCapOverrunCause.AdminOverride));
+    }
+
+    /// <summary>
+    /// #2494 AC-5 — Records that the pipeline detected cumulative cost exceeding the cap
+    /// AFTER at least one section completed. Raises a <see cref="MechanicAnalysisCostCapOverriddenEvent"/>
+    /// with <see cref="CostCapOverrunCause.MidStreamOverrun"/> for downstream audit/observability.
+    /// Does NOT mutate <see cref="CostCapUsd"/> — the cap was breached, not raised.
+    /// </summary>
+    /// <param name="cumulativeCostUsd">
+    /// Pipeline-observed cumulative cost at the moment of detection. Must be &gt; <see cref="CostCapUsd"/>.
+    /// </param>
+    /// <param name="actorId">
+    /// Actor recorded on the event. Pass the analysis <see cref="CreatedBy"/> when the pipeline
+    /// is the trigger (AI is the submitter per M1.2).
+    /// </param>
+    /// <remarks>
+    /// State transition to <see cref="MechanicAnalysisStatus.PartiallyExtracted"/> is handled
+    /// separately by <c>SubmitForReview</c>/auto-rejection paths in the executor; this method
+    /// only records the cost-cap breach event.
+    /// </remarks>
+    public void RecordMidStreamCostCapOverrun(decimal cumulativeCostUsd, Guid actorId)
+    {
+        if (actorId == Guid.Empty)
+        {
+            throw new ArgumentException("ActorId cannot be empty.", nameof(actorId));
+        }
+
+        // Aggregate invariant: mid-stream overrun is a Draft-only signal. Once the
+        // aggregate transitions out of Draft (PartiallyExtracted / Rejected / Published)
+        // the cost-cap state is sealed and recording a second event would confuse
+        // downstream audit consumers.
+        if (Status != MechanicAnalysisStatus.Draft)
+        {
+            throw new InvalidMechanicAnalysisStateException(
+                Id, Status, "record mid-stream cost cap overrun", MechanicAnalysisStatus.Draft);
+        }
+
+        if (cumulativeCostUsd <= CostCapUsd)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(cumulativeCostUsd),
+                cumulativeCostUsd,
+                $"Mid-stream overrun requires cumulative cost ({cumulativeCostUsd:C}) " +
+                $"strictly greater than current cap ({CostCapUsd:C}).");
+        }
+
+        AddDomainEvent(new MechanicAnalysisCostCapOverriddenEvent(
+            Id,
+            actorId,
+            previousCapUsd: CostCapUsd,
+            newCapUsd: CostCapUsd, // cap is NOT raised on this path — it was breached
+            reason: $"Mid-stream overrun: cumulative {cumulativeCostUsd:F6} USD > cap {CostCapUsd:F6} USD.",
+            overrunCause: CostCapOverrunCause.MidStreamOverrun,
+            observedCumulativeCostUsd: cumulativeCostUsd));
     }
 
     // === AI comprehension certification methods (ADR-051 M2) ===

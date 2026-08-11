@@ -47,6 +47,7 @@ import {
 } from '../../schemas/entity-link.schemas';
 import {
   BulkApproveMechanicClaimsResponseDtoSchema,
+  BulkRejectMechanicClaimsResponseDtoSchema,
   MechanicAnalysisGenerationResponseDtoSchema,
   MechanicAnalysisLifecycleResponseDtoSchema,
   MechanicAnalysisListPageDtoSchema,
@@ -54,7 +55,11 @@ import {
   MechanicClaimDtoSchema,
   MechanicClaimsListSchema,
   MECHANIC_ANALYSES_ROUTES,
+  MechanicPromptDtoSchema,
+  type MechanicPromptDto,
   type BulkApproveMechanicClaimsResponseDto,
+  type BulkRejectMechanicClaimsRequest,
+  type BulkRejectMechanicClaimsResponseDto,
   type GenerateMechanicAnalysisRequest,
   type MechanicAnalysisGenerationResponseDto,
   type MechanicAnalysisLifecycleResponseDto,
@@ -64,10 +69,8 @@ import {
   type RejectMechanicClaimRequest,
   type SuppressMechanicAnalysisRequest,
 } from '../../schemas/mechanic-analyses.schemas';
-import * as MechanicExtractorSchemas from '../../schemas/mechanic-extractor.schemas';
 
 import type { HttpClient } from '../../core/httpClient';
-import type * as MechanicExtractorTypes from '../../schemas/mechanic-extractor.schemas';
 
 // ========== Shared Game Documents Types (Issue #119) ==========
 
@@ -486,62 +489,6 @@ export function createAdminContentClient(http: HttpClient) {
       return result.html;
     },
 
-    // ========== Mechanic Extractor ==========
-
-    async getMechanicDraft(
-      sharedGameId: string,
-      pdfDocumentId: string
-    ): Promise<MechanicExtractorTypes.MechanicDraftDto | null> {
-      return http.get(
-        `/api/v1/admin/mechanic-extractor/draft?sharedGameId=${sharedGameId}&pdfDocumentId=${pdfDocumentId}`,
-        MechanicExtractorSchemas.MechanicDraftDtoSchema
-      );
-    },
-
-    async saveMechanicDraft(
-      request: MechanicExtractorTypes.SaveMechanicDraftRequest
-    ): Promise<MechanicExtractorTypes.MechanicDraftDto> {
-      const result = await http.post(
-        '/api/v1/admin/mechanic-extractor/draft',
-        request,
-        MechanicExtractorSchemas.MechanicDraftDtoSchema
-      );
-      if (!result) throw new Error('Failed to save mechanic draft');
-      return result;
-    },
-
-    async aiAssistMechanicDraft(
-      request: MechanicExtractorTypes.AiAssistRequest
-    ): Promise<MechanicExtractorTypes.AiAssistResultDto> {
-      const result = await http.post(
-        '/api/v1/admin/mechanic-extractor/ai-assist',
-        request,
-        MechanicExtractorSchemas.AiAssistResultDtoSchema
-      );
-      if (!result) throw new Error('AI assist failed');
-      return result;
-    },
-
-    async acceptMechanicDraft(
-      request: MechanicExtractorTypes.AcceptDraftRequest
-    ): Promise<MechanicExtractorTypes.MechanicDraftDto> {
-      const result = await http.post(
-        '/api/v1/admin/mechanic-extractor/accept-draft',
-        request,
-        MechanicExtractorSchemas.MechanicDraftDtoSchema
-      );
-      if (!result) throw new Error('Failed to accept draft');
-      return result;
-    },
-
-    async finalizeMechanicAnalysis(
-      request: MechanicExtractorTypes.FinalizeRequest
-    ): Promise<unknown> {
-      const result = await http.post('/api/v1/admin/mechanic-extractor/finalize', request);
-      if (!result) throw new Error('Failed to finalize mechanic analysis');
-      return result;
-    },
-
     // ========== Mechanic Analyses (M1.2 async pipeline, ADR-051) ==========
 
     /**
@@ -574,6 +521,11 @@ export function createAdminContentClient(http: HttpClient) {
       );
       if (!result) throw new Error('Failed to enqueue mechanic analysis pipeline');
       return result;
+    },
+
+    // #539 follow-up: read-only prompt inspection (system + per-section).
+    async getMechanicPrompt(): Promise<MechanicPromptDto | null> {
+      return http.get(MECHANIC_ANALYSES_ROUTES.prompt, MechanicPromptDtoSchema);
     },
 
     async getMechanicAnalysisStatus(id: string): Promise<MechanicAnalysisStatusDto | null> {
@@ -622,10 +574,14 @@ export function createAdminContentClient(http: HttpClient) {
       return result ?? [];
     },
 
-    async approveMechanicClaim(analysisId: string, claimId: string): Promise<MechanicClaimDto> {
+    async approveMechanicClaim(
+      analysisId: string,
+      claimId: string,
+      note?: string
+    ): Promise<MechanicClaimDto> {
       const result = await http.post(
         MECHANIC_ANALYSES_ROUTES.approveClaim(analysisId, claimId),
-        {},
+        note !== undefined ? { note } : {},
         MechanicClaimDtoSchema
       );
       if (!result) throw new Error('Failed to approve claim');
@@ -655,6 +611,19 @@ export function createAdminContentClient(http: HttpClient) {
         BulkApproveMechanicClaimsResponseDtoSchema
       );
       if (!result) throw new Error('Failed to bulk-approve claims');
+      return result;
+    },
+
+    async bulkRejectMechanicClaims(
+      analysisId: string,
+      request: BulkRejectMechanicClaimsRequest
+    ): Promise<BulkRejectMechanicClaimsResponseDto> {
+      const result = await http.post(
+        MECHANIC_ANALYSES_ROUTES.bulkRejectClaims(analysisId),
+        request,
+        BulkRejectMechanicClaimsResponseDtoSchema
+      );
+      if (!result) throw new Error('Failed to bulk-reject claims');
       return result;
     },
 

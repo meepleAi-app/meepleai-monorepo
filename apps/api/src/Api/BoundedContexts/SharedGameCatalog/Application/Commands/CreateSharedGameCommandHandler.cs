@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -39,7 +40,7 @@ internal sealed class CreateSharedGameCommandHandler : ICommandHandler<CreateSha
             var exists = await _repository.ExistsByBggIdAsync(command.BggId.Value, cancellationToken).ConfigureAwait(false);
             if (exists)
             {
-                throw new InvalidOperationException($"A game with BGG ID {command.BggId.Value} already exists in the catalog");
+                throw new ConflictException($"A game with BGG ID {command.BggId.Value} already exists in the catalog");
             }
         }
 

@@ -153,7 +153,6 @@ internal static class MonitoringEndpoints
         // Issue #892: Individual service health endpoints
         MapGenericServiceHealthEndpoint(group, "/health/postgresql", "postgres", "GetPostgreSqlHealth", "PostgreSQL");
         MapGenericServiceHealthEndpoint(group, "/health/redis", "redis", "GetRedisHealth", "Redis");
-        MapGenericServiceHealthEndpoint(group, "/health/n8n", "n8n", "GetN8NHealth", "n8n");
     }
 
     private static void MapMetricsTimeSeriesEndpoint(RouteGroupBuilder group)
@@ -186,7 +185,9 @@ internal static class MonitoringEndpoints
             {
                 cpu = result.Cpu.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
                 memory = result.Memory.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
-                requests = result.Requests.Select(p => new { timestamp = p.Timestamp, value = p.Value })
+                requests = result.Requests.Select(p => new { timestamp = p.Timestamp, value = p.Value }),
+                cpuAvailable = result.CpuAvailable,
+                memoryAvailable = result.MemoryAvailable
             });
         })
         .WithName("GetMetricsTimeSeries")

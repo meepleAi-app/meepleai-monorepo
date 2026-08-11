@@ -18,6 +18,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ──────────────────────────────────────────────────────────────────────────
 // Enums (string-serialized — see Program.cs `JsonStringEnumConverter`)
 // ──────────────────────────────────────────────────────────────────────────
@@ -76,7 +78,7 @@ export type MechanicGoldenBggTagDto = z.infer<typeof MechanicGoldenBggTagDtoSche
  * Golden-set bundle for a single shared game. Mirrors `GoldenForGameDto`.
  */
 export const GoldenForGameDtoSchema = z.object({
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   versionHash: z.string(),
   claims: z.array(MechanicGoldenClaimDtoSchema),
   bggTags: z.array(MechanicGoldenBggTagDtoSchema),
@@ -93,7 +95,7 @@ export type GoldenForGameDto = z.infer<typeof GoldenForGameDtoSchema>;
  * (Routing/AdminMechanicExtractorValidationEndpoints.cs).
  */
 export const CreateGoldenClaimRequestSchema = z.object({
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   section: MechanicSectionSchema,
   statement: z.string(),
   expectedPage: z.number().int(),
@@ -245,7 +247,7 @@ export type RecalcJobStatusDto = z.infer<typeof RecalcJobStatusDtoSchema>;
  * (Domain/Repositories/IMechanicAnalysisMetricsRepository.cs).
  */
 export const ValidationDashboardRowDtoSchema = z.object({
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   name: z.string(),
   status: CertificationStatusSchema,
   overallScore: z.number(),
@@ -266,7 +268,7 @@ export type ValidationDashboardDto = z.infer<typeof ValidationDashboardDtoSchema
 export const MechanicAnalysisMetricsDtoSchema = z.object({
   id: z.string().uuid(),
   mechanicAnalysisId: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   coveragePct: z.number(),
   pageAccuracyPct: z.number(),
   bggMatchPct: z.number(),

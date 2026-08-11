@@ -3,7 +3,7 @@
  *
  * Coverage (per plan §4 T3):
  * 1. data-slot="chat-agent-panel" regression hook
- * 2. header shows agent name + emoji + Online pip + latency
+ * 2. header shows agent name + emoji (no online pip / no fabricated latency — #3393)
  * 3. header has "ChatAgent" pill (mockup magnet semantic)
  * 4. body renders LiveAgentChat (data-slot="live-agent-chat")
  * 5. collapsed=true unmounts body + aria-expanded=false
@@ -45,13 +45,12 @@ const CHAT_PANEL_LABELS: LiveAgentChatLabels = {
   visibilityShared: 'Condiviso',
   emptyMessage: 'Nessun messaggio',
   newMessagesToastAriaLabel: 'Nuovi messaggi — clic per scorrere',
+  attachAriaLabel: 'Allega immagine',
 };
 
 const LABELS: ChatAgentPanelLabels = {
   title: 'ChatAgent',
   agentNameAriaLabel: 'Nome agente Meeple',
-  onlineLabel: 'Online',
-  latencyAriaLabel: 'Latenza 42ms',
   chatPanelLabels: CHAT_PANEL_LABELS,
 };
 
@@ -75,7 +74,6 @@ function renderPanel(overrides: Partial<ChatAgentPanelProps> = {}) {
     viewerId: 'viewer-id',
     onSendMessage,
     agentName: 'Meeple',
-    latencyMs: 42,
     labels: LABELS,
     onHeaderClick,
     ...overrides,
@@ -113,17 +111,16 @@ describe('ChatAgentPanel — render shape', () => {
     expect(root).not.toBeNull();
   });
 
-  it('header shows agent name + emoji + Online pip + latency', () => {
-    renderPanel({ agentName: 'Meeple', agentEmoji: '🤖', latencyMs: 42 });
+  it('header shows agent name + emoji, without online pip or fabricated latency (#3393)', () => {
+    renderPanel({ agentName: 'Meeple', agentEmoji: '🤖' });
     // Agent name visible
     expect(screen.getByText('Meeple')).toBeInTheDocument();
     // Emoji avatar present (default 🤖)
     expect(screen.getByText('🤖')).toBeInTheDocument();
-    // Online pip — aria-label matches labels.onlineLabel
-    expect(screen.getByLabelText(LABELS.onlineLabel)).toBeInTheDocument();
-    // Latency indicator — aria-label matches labels.latencyAriaLabel + text shows ms
-    expect(screen.getByLabelText(LABELS.latencyAriaLabel)).toBeInTheDocument();
-    expect(screen.getByText(/42ms/)).toBeInTheDocument();
+    // C9b: the static "Online" pip is gone — nothing exposes it to AT
+    expect(screen.queryByLabelText('Online')).not.toBeInTheDocument();
+    // C9a: the fabricated "42ms" latency indicator is gone — no "<n>ms" text
+    expect(screen.queryByText(/\d+\s*ms/)).not.toBeInTheDocument();
   });
 
   it('header has "ChatAgent" pill (mockup magnet semantic)', () => {
@@ -178,7 +175,6 @@ describe('ChatAgentPanel — header interactions', () => {
         viewerId="viewer-id"
         onSendMessage={vi.fn()}
         agentName="Meeple"
-        latencyMs={42}
         labels={LABELS}
       />
     );

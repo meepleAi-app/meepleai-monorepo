@@ -1,8 +1,12 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -12,6 +16,7 @@ using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -56,7 +61,21 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // Nullable so pre-#1852 test constructors compile without adding a new mock param.
     private readonly IDomainEventCollector? _eventCollector;
 
+    // Issue #2947: deterministic R2 cover writes. Optional so pre-#2947 unit-test
+    // constructors compile; when null, cover generation is skipped like when
+    // _pdfCoverExtractor is null.
+    private readonly IPdfCoverUploadPipeline? _pdfCoverUploadPipeline;
+
     private readonly IPdfIndexingPipeline _indexingPipeline;
+
+    // Issue #3281: optional so pre-existing test constructors compile. When null,
+    // chunk production falls back to the flat ITextChunkingService path (pre-Slice-D behaviour).
+    private readonly IAdvancedChunkingService? _advancedChunking;
+
+    // DC-2 (#3419): scoped strategy selector — set per PDF before extraction so the same-scope
+    // UnstructuredPdfTextExtractor routes table-heavy PDFs to hi_res. Optional/nullable so the
+    // pre-#3419 test constructors compile unchanged; production DI always provides it.
+    private readonly IExtractionStrategySelector? _extractionStrategySelector;
 
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
@@ -77,7 +96,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IFeatureFlagService? featureFlagService = null,
         IRoleClassifierService? roleClassifier = null,
         IPdfCoverExtractor? pdfCoverExtractor = null,
-        IDomainEventCollector? eventCollector = null)
+        IDomainEventCollector? eventCollector = null,
+        IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null,
+        IAdvancedChunkingService? advancedChunking = null,
+        IExtractionStrategySelector? extractionStrategySelector = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -101,9 +123,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // to compile without updating every mock site. The Collect() call
         // in ExtractCoverImageAsync is guarded with a null-check.
         _eventCollector = eventCollector;
+        _pdfCoverUploadPipeline = pdfCoverUploadPipeline;
+        _advancedChunking = advancedChunking;
+        _extractionStrategySelector = extractionStrategySelector;
     }
 
-    public async Task ProcessAsync(
+    public async Task<PdfPipelineOutcome> ProcessAsync(
         Guid pdfDocumentId,
         string filePath,
         Guid uploadedByUserId,
@@ -126,7 +151,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogInformation(
                     "[PdfPipeline] PDF {PdfId} not in Pending state (already claimed or terminal), skipping",
                     pdfId);
-                return;
+                return PdfPipelineOutcome.SkippedNotClaimed;
             }
 
             // Re-load with tracked entity for the rest of the pipeline.
@@ -137,7 +162,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             if (pdfDoc == null)
             {
                 _logger.LogError("[PdfPipeline] PDF document {PdfId} disappeared after claim", pdfId);
-                return;
+                return PdfPipelineOutcome.DocumentMissing;
             }
             // Refresh tracked entity to reflect the UPDATE we just executed.
             await _db.Entry(pdfDoc).ReloadAsync(cancellationToken).ConfigureAwait(false);
@@ -176,18 +201,25 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             // Step 3: Chunk text
             _logger.LogInformation("[PdfPipeline] Step 3/4: Chunking text for {PdfId} ({CharCount} chars)", pdfId, fullText.Length);
-            var chunks = ChunkText(fullText, extractResult);
+            var chunks = await ChunkTextAsync(
+                fullText,
+                extractResult,
+                pdfDoc.Id,
+                pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
+                cancellationToken).ConfigureAwait(false);
 
             if (chunks.Count == 0)
             {
                 _logger.LogWarning("[PdfPipeline] No chunks produced for {PdfId}, marking as failed", pdfId);
                 await MarkFailedAsync(pdfDoc, "Text extraction produced no usable chunks").ConfigureAwait(false);
-                return;
+                return PdfPipelineOutcome.Failed;
             }
 
             // Dual-language indexing: translate non-English chunks to English
@@ -215,16 +247,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                         if (!string.IsNullOrWhiteSpace(t.TranslatedText))
                         {
                             var origChunk = chunks[t.OriginalIndex];
-                            // Issue #730 / spec §5.3 forward-wiring: hierarchy fields are not yet propagated from origChunk
-                            // to the translated chunk because the upstream chunking pipeline does not currently populate them.
-                            // Once AdvancedChunkingService is wired, copy origChunk.Heading/Level/ParentChunkId/ElementType here.
                             translatedChunks.Add((
                                 new DocumentChunkInput
                                 {
+                                    // Id intentionally omitted → defaults to Guid.Empty → fresh Guid at persist.
+                                    // Copying origChunk.Id here duplicates a primary key and fails non-English PDFs.
                                     Text = t.TranslatedText,
                                     Page = origChunk.Page,
                                     CharStart = origChunk.CharStart,
-                                    CharEnd = origChunk.CharEnd
+                                    CharEnd = origChunk.CharEnd,
+                                    Heading = origChunk.Heading,
+                                    Level = origChunk.Level,
+                                    ParentChunkId = origChunk.ParentChunkId,
+                                    ElementType = origChunk.ElementType
                                 },
                                 "en",
                                 true));
@@ -378,7 +413,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             // Step 4a: Generate embeddings (for all chunks: original + translated)
@@ -400,17 +437,33 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 4b: Index in pgvector
+            // Step 4b: Index in pgvector.
+            // Order matters: SaveTextChunksAsync MUST run BEFORE IndexInVectorStoreAsync.
+            // IndexInVectorStoreAsync denormalizes role_tags + source_chunk_id onto the pgvector
+            // rows by reading the freshly-saved (and freshly-classified) text_chunks keyed by
+            // ChunkIndex. Both consume the same `translatedChunks`/`allChunkInputs` order, so the
+            // join by ChunkIndex is stable. If indexing ran first the lookup would be empty and every
+            // pgvector row would be born with role_tags=0 / source_chunk_id=null (silent corpus-wide
+            // role-boost loss — see FusionSignals.ComputeRoleMatchBoost).
             _logger.LogInformation("[PdfPipeline] Step 4b/5: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
-            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
             await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
+            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
 
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
             pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            // Issue #3269 (SP3): stamp the current indexer version so a completed fresh ingest is
+            // the current pipeline version (v1.2 coordinate-aware after #3409/SP-E) and
+            // `IndexerVersion == null` means only true pre-versioning legacy — keeps the bulk
+            // re-index selector from redundantly re-processing fresh docs.
+            // Null-coalescing (not overwrite): a reindex path already stamped its chosen version at
+            // reset (ReindexDocumentCommandHandler), so we preserve that explicit choice here.
+            pdfDoc.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
             try
             {
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -423,11 +476,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _logger.LogWarning(ex,
                     "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                     pdfId, nameof(PdfProcessingPipelineService));
-                return; // CRITICAL: do not throw — Quartz must see job as successful
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
             }
 
             _logger.LogInformation("[PdfPipeline] Successfully processed PDF {PdfId}: {Pages} pages, {Chunks} chunks (incl. translations)",
                 pdfId, pdfDoc.PageCount ?? 0, translatedChunks.Count);
+
+            return PdfPipelineOutcome.Processed;
         }
 #pragma warning disable CA1031 // Background pipeline must catch all to mark status
         catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
@@ -435,10 +492,26 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogWarning(ex, "[PdfPipeline] Processing cancelled for PDF {PdfId}", pdfId);
             throw; // Let caller handle cancellation
         }
+        catch (PdfExtractionFailedException ex)
+        {
+            // #3589: this is the path RetryFailedPdfsJob and manual retry drive (via
+            // EnqueuePdfCommand → PdfProcessingQuartzJob → ProcessAsync). Before this fix
+            // ErrorCategory was left NULL here regardless of cause, which RetryFailedPdfsJob
+            // treats as retriable — a permanent 413 burned 3 full automatic retries on a file
+            // that will never shrink. Only permanent failures get a non-retryable category;
+            // transient ones keep the pre-existing NULL/retriable behavior.
+            _logger.LogError(ex,
+                "[PdfPipeline] Text extraction failed for PDF {PdfId} (permanent={IsPermanentFailure})",
+                pdfId, ex.IsPermanentFailure);
+            var category = ex.IsPermanentFailure ? ErrorCategory.PayloadTooLarge : (ErrorCategory?)null;
+            await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
             await TryMarkFailedAsync(pdfDocumentId, ex.Message).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
         }
 #pragma warning restore CA1031
     }
@@ -450,8 +523,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
-        var fileId = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken).ConfigureAwait(false);
+        // Issue #2671: StoreAsync writes the blob under a RANDOM fileId (persisted in FilePath), NOT pdfId.
+        // Recover that fileId from FilePath; ForPdf(Id) is the resourceKey folder, not the fileId. The
+        // ?? fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
+        var resourceKey = PdfStorageKey.ForPdf(pdfDoc.Id);
+        var fileId = PdfStorageKey.FileIdFromPath(pdfDoc.FilePath) ?? resourceKey;
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
@@ -467,14 +544,37 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         await using (fileStream.ConfigureAwait(false))
         {
+            // DC-2 (#3419): route table-heavy PDFs to hi_res, decided from the PRIOR
+            // StructuredElementsJson (overwritten ~20 lines below with the fresh result). Published
+            // on the scoped selector, which the same-scope Unstructured extractor reads when building
+            // the multipart. Null selector (unit tests that don't exercise strategy) → no-op; the
+            // production DI graph always provides it.
+            if (_extractionStrategySelector is not null)
+            {
+                var strategy = ExtractionStrategyDecider.FromStructuredElements(pdfDoc.StructuredElementsJson);
+                _extractionStrategySelector.Current = strategy;
+                if (strategy == ExtractionStrategy.HiRes)
+                {
+                    // The feature is dark until a table-heavy PDF is re-extracted, so log the minority
+                    // hi_res case to let ops confirm activation on staging (epic #3403 grounding).
+                    _logger.LogInformation(
+                        "[PdfPipeline] DC-2: routing PDF {PdfId} to hi_res extraction (prior extraction detected a table)",
+                        pdfDoc.Id);
+                }
+            }
+
             var extractResult = await _pdfTextExtractor
                 .ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!extractResult.Success)
             {
-                throw new InvalidOperationException(
-                    $"Text extraction failed: {extractResult.ErrorMessage}");
+                // #3589: PdfExtractionFailedException carries IsPermanentFailure so the
+                // catch-all in ProcessAsync can set the correct ErrorCategory (see that
+                // catch block for why a plain InvalidOperationException lost this signal).
+                throw new PdfExtractionFailedException(
+                    $"Text extraction failed: {extractResult.ErrorMessage}",
+                    extractResult.IsPermanentFailure);
             }
 
             var fullText = string.Join("\n\n", extractResult.PageChunks
@@ -482,6 +582,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Select(pc => pc.Text));
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
+                ? null
+                : JsonSerializer.Serialize(extractResult.StructuredElements);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -515,9 +618,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        if (_pdfCoverExtractor is null)
+        if (_pdfCoverExtractor is null || _pdfCoverUploadPipeline is null)
         {
-            // Service not registered (unit-test scenarios) — leave default Pending.
+            // Cover services not registered (unit-test scenarios) — leave default Pending.
             return;
         }
 
@@ -535,48 +638,43 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             {
                 case PdfCoverExtractionOutcome.Generated:
                     {
-                        var resourceKey = $"pdf-cover-{pdfDoc.Id}";
+                        // Issue #2947: deterministic DB key; the pipeline writes the
+                        // physical R2 object "{dbKey}-preview.webp" that the resolver
+                        // reconstructs. Only the preview size is uploaded (the
+                        // resolver never reads the thumbnail size).
+                        // #3384 D5-A: DB key comes from the single CoverKeyBuilder.
+                        var dbKey = CoverKeyBuilder.ForPdf(pdfDoc.Id).DbKey;
 
-                        // Upload thumb + preview as separate blobs. The CoverR2Key
-                        // we persist is the resourceKey prefix — the resolver
-                        // endpoint reconstructs `{prefix}/{size}.webp` at read time.
-                        using (var thumbStream = new MemoryStream(result.ThumbnailWebp!, writable: false))
-                        {
-                            await _blobStorageService.StoreAsync(
-                                thumbStream, "thumb.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                                .ConfigureAwait(false);
-                        }
-                        using (var previewStream = new MemoryStream(result.PreviewWebp!, writable: false))
-                        {
-                            await _blobStorageService.StoreAsync(
-                                previewStream, "preview.webp", BlobCategory.GameImage, resourceKey, cancellationToken)
-                                .ConfigureAwait(false);
-                        }
+                        var persistedKey = await _pdfCoverUploadPipeline
+                            .UploadAsync(dbKey, result.PreviewWebp!, cancellationToken)
+                            .ConfigureAwait(false);
 
-                        pdfDoc.CoverR2Key = resourceKey;
+                        pdfDoc.CoverR2Key = persistedKey;
                         pdfDoc.CoverGenerationStatus = "Generated";
                         pdfDoc.CoverPageIndex = result.SelectedPageIndex;
                         pdfDoc.CoverGenerationError = null;
+                        // #3373 D1: a successful generation closes the retry cycle — reset the budget
+                        // so a later orphan-reset (Generated→Pending) starts fresh, not pre-exhausted.
+                        pdfDoc.CoverGenerationAttempts = 0;
+                        MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeGenerated);
 
                         // Issue #1852 (Gap A): raise the propagation event so
                         // PdfCoverGeneratedEventHandler can populate SharedGame.PdfCoverR2Key.
-                        // Dispatched by MeepleAiDbContext.SaveChangesAsync (~line 154) after
-                        // the pipeline transitions to Chunking. Guard is present so existing
-                        // test constructors that omit eventCollector keep working.
                         _eventCollector?.Collect(new PdfCoverGeneratedEvent(
                             pdfDocumentId: pdfDoc.Id,
                             sharedGameId: pdfDoc.SharedGameId,
-                            coverR2Key: resourceKey,
+                            coverR2Key: persistedKey,
                             coverPageIndex: result.SelectedPageIndex ?? 0));
 
                         _logger.LogInformation(
-                            "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (resourceKey={ResourceKey})",
-                            pdfDoc.Id, result.SelectedPageIndex, resourceKey);
+                            "[PdfPipeline] Cover image generated for PDF {PdfId} from page {PageIndex} (dbKey={DbKey})",
+                            pdfDoc.Id, result.SelectedPageIndex, persistedKey);
                         break;
                     }
                 case PdfCoverExtractionOutcome.Skipped:
                     pdfDoc.CoverGenerationStatus = "Skipped";
                     pdfDoc.CoverPageIndex = result.SelectedPageIndex;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeSkipped);
                     _logger.LogInformation(
                         "[PdfPipeline] Cover extraction skipped for PDF {PdfId} (heuristic rejected first 3 pages)",
                         pdfDoc.Id);
@@ -584,6 +682,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 case PdfCoverExtractionOutcome.Failed:
                     pdfDoc.CoverGenerationStatus = "Failed";
                     pdfDoc.CoverGenerationError = result.ErrorMessage;
+                    MeepleAiMetrics.RecordPdfCoverGeneration(MeepleAiMetrics.CoverGenerationOutcomeFailed);
                     _logger.LogWarning(
                         "[PdfPipeline] Cover extraction failed for PDF {PdfId}: {Error}",
                         pdfDoc.Id, result.ErrorMessage);
@@ -596,8 +695,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
         catch (Exception ex)
         {
-            pdfDoc.CoverGenerationStatus = "Failed";
+            // #3373 D1: an exception here is an infra failure (R2 upload / DB) — TRANSIENT.
+            // Return to Pending (retry-eligible via BackfillPdfCoversJob) until
+            // PdfCoverRetryPolicy.MaxAttempts, then terminal Failed.
+            var (retryStatus, retryAttempts) = PdfCoverRetryPolicy.NextAfterTransientFailure(pdfDoc.CoverGenerationAttempts);
+            pdfDoc.CoverGenerationStatus = retryStatus.ToString();
+            pdfDoc.CoverGenerationAttempts = retryAttempts;
             pdfDoc.CoverGenerationError = ex.Message.Length > 500 ? ex.Message[..500] : ex.Message;
+            // #3373 D1/D5-C: tag terminal vs still-retrying so the failed-ratio alert stays diagnostic.
+            MeepleAiMetrics.RecordPdfCoverGeneration(retryAttempts >= PdfCoverRetryPolicy.MaxAttempts
+                ? MeepleAiMetrics.CoverGenerationOutcomeFailed
+                : MeepleAiMetrics.CoverGenerationOutcomeRetrying);
             _logger.LogWarning(ex,
                 "[PdfPipeline] Cover extraction threw for PDF {PdfId} — continuing pipeline without cover",
                 pdfDoc.Id);
@@ -652,8 +760,27 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 #pragma warning restore CA1031
     }
 
-    private List<DocumentChunkInput> ChunkText(string fullText, PagedTextExtractionResult extractResult)
+    private async Task<List<DocumentChunkInput>> ChunkTextAsync(
+        string fullText,
+        PagedTextExtractionResult extractResult,
+        Guid documentId,
+        Guid? gameId,
+        CancellationToken cancellationToken)
     {
+        // Issue #3281: heading-aware production when AdvancedChunkingService is available.
+        if (_advancedChunking != null)
+        {
+            var hierarchical = await HeadingAwareChunker.BuildAsync(
+                extractResult.StructuredElements,
+                fullText,
+                documentId,
+                gameId,
+                _advancedChunking,
+                cancellationToken).ConfigureAwait(false);
+            return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
+        }
+
+        // Fallback: flat production (pre-Slice-D behaviour) when the chunker is unavailable.
         var chunks = _chunkingService.PrepareForEmbedding(fullText, ChunkSize, ChunkOverlap)
             ?.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text))
             .ToList()
@@ -682,6 +809,33 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         return chunks.Where(c => c != null && !string.IsNullOrWhiteSpace(c.Text)).ToList();
     }
 
+    /// <summary>
+    /// #3585 — records forward progress on the active processing job for this PDF, so
+    /// <c>ProcessingQueueMonitorService</c> measures INACTIVITY rather than total elapsed time.
+    /// <para>
+    /// Written with <c>ExecuteUpdateAsync</c> on purpose: it is a direct UPDATE that bypasses the
+    /// change tracker, so a heartbeat can never flush unrelated pending pipeline state mid-ingest.
+    /// Best-effort — a failed heartbeat must never abort an otherwise healthy ingest (and the
+    /// InMemory provider used by some tests does not support ExecuteUpdate at all).
+    /// </para>
+    /// </summary>
+    private async Task ReportProgressAsync(Guid pdfDocumentId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var now = _timeProvider.GetUtcNow();
+            await _db.Set<Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity>()
+                .Where(j => j.PdfDocumentId == pdfDocumentId && j.Status == "Processing")
+                .ExecuteUpdateAsync(s => s.SetProperty(j => j.LastProgressAt, now), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogDebug(ex,
+                "[PdfPipeline] progress heartbeat failed for PDF {PdfId} (non-fatal)", pdfDocumentId);
+        }
+    }
+
     private async Task<List<float[]>> GenerateEmbeddingsAsync(
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> chunks,
@@ -695,7 +849,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             cancellationToken.ThrowIfCancellationRequested();
 
             var skip = batchIndex * EmbeddingBatchSize;
-            var batchTexts = chunks.Skip(skip).Take(EmbeddingBatchSize).Select(c => c.Text).ToList();
+            var batchTexts = chunks.Skip(skip).Take(EmbeddingBatchSize)
+                .Select(c => HeadingAwareChunkAdapter.CapForEmbedding(c.Text))
+                .ToList();
 
             _logger.LogInformation("[PdfPipeline] Embedding batch {Current}/{Total} ({Count} texts)",
                 batchIndex + 1, batchCount, batchTexts.Count);
@@ -728,6 +884,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
 
             allEmbeddings.AddRange(batchResult.Embeddings);
+
+            // #3585: embedding is the long phase — a large rulebook runs >100 batches — and it is
+            // where the stuck-job monitor used to kill a healthy ingest. Report progress after every
+            // completed batch so "inactive" and "slow" stay distinguishable.
+            await ReportProgressAsync(pdfDoc.Id, cancellationToken).ConfigureAwait(false);
         }
 
         if (allEmbeddings.Count != chunks.Count)
@@ -769,7 +930,21 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .ConfigureAwait(false);
         if (vectorDoc is null)
         {
-            // Pipeline swallowed a concurrency conflict — exit without indexing.
+            // Pipeline swallowed a DbUpdateConcurrencyException and the row was never
+            // written — Quartz must still see job success, so we cannot rethrow. But
+            // silently skipping pgvector indexing here means the PDF is "Ready" with
+            // no embeddings until something forces a re-index. Surface the loss so
+            // ops can detect it: increment the same Category-B counter the pipeline
+            // itself uses, then log a WARN with the PDF id. The companion follow-up
+            // (issue tracked in #2248 Sub #6) wires a dedicated Prometheus gauge
+            // meepleai_pdf_indexed_no_kb_flag_total — this counter feeds into the
+            // same dashboard.
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfProcessingPipelineService),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(
+                "PdfPipeline: VectorDocument row for PDF {PdfId} missing after IndexAsync — pipeline swallowed a concurrency conflict, pgvector embeddings skipped. PDF will need re-index.",
+                pdfDoc.Id);
             return;
         }
 
@@ -805,6 +980,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 .Select(tc => new { tc.Id, tc.ChunkIndex, tc.RoleTags })
                 .ToDictionaryAsync(tc => tc.ChunkIndex, cancellationToken)
                 .ConfigureAwait(false);
+
+            // Tripwire: SaveTextChunksAsync must have run earlier in ProcessAsync so this lookup is
+            // populated. If it is empty while we have chunks to index, the pgvector rows would be
+            // denormalized with role_tags=0 / source_chunk_id=null (the ordering bug this method's
+            // precondition guards against). Surface it rather than silently degrading RAG quality.
+            if (textChunkLookup.Count == 0 && translatedChunks.Count > 0)
+            {
+                _logger.LogWarning(
+                    "[PdfPipeline] text_chunks lookup empty for PDF {PdfId} while indexing {ChunkCount} chunks — role_tags/source_chunk_id will not be denormalized onto pgvector rows. Was SaveTextChunksAsync run before IndexInVectorStoreAsync?",
+                    pdfDoc.Id, translatedChunks.Count);
+            }
 
             var modelName = _embeddingService.GetModelName();
             var embeddingEntities = translatedChunks.Select((item, i) =>
@@ -858,7 +1044,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         var textChunkEntities = chunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = Guid.NewGuid(),
+                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = resolvedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
                 PdfDocumentId = pdfDoc.Id,
@@ -871,7 +1057,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 Heading = chunk.Heading,
                 Level = chunk.Level,
                 ParentChunkId = chunk.ParentChunkId,
-                ElementType = chunk.ElementType
+                ElementType = chunk.ElementType,
+                // SP-A (#3405): persist char offsets for citation grounding
+                CharStart = chunk.CharStart,
+                CharEnd = chunk.CharEnd,
+                // SP-B (#3406): persist the normalized region for citation grounding
+                BoundingBoxesJson = ChunkBoundingBoxJson.Serialize(chunk.BBox, chunk.Page)
             })
             .ToList();
 
@@ -964,9 +1155,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        var fileId = PdfStorageKey.ForPdf(pdfDocumentId);
+        // Issue #2671: the blob lives under a random fileId embedded in FilePath, not pdfId.
+        // Recover it from the persisted path; ForPdf(Id) is the resourceKey folder. The ??
+        // fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
+        var resourceKey = PdfStorageKey.ForPdf(pdfDocumentId);
+        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? resourceKey;
         var stream = await _blobStorageService
-            .RetrieveAsync(fileId, BlobCategory.Pdf, fileId, cancellationToken)
+            .RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
             .ConfigureAwait(false);
 
         if (stream is null)
@@ -1014,7 +1209,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// Best-effort attempt to mark a PDF as failed. Used in catch blocks where
     /// the original DbContext may be in a bad state.
     /// </summary>
-    private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage)
+    /// <param name="pdfDocumentId">The PDF document to mark as failed.</param>
+    /// <param name="errorMessage">Persisted (truncated to 500 chars) as ProcessingError.</param>
+    /// <param name="category">
+    /// #3589: when provided, persisted as PdfDocument.ErrorCategory so RetryFailedPdfsJob can
+    /// exclude permanent failures from automatic retry. Omitted (null) preserves the
+    /// pre-#3589 behavior of leaving ErrorCategory untouched (NULL — treated as retriable).
+    /// </param>
+    private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
         try
         {
@@ -1031,6 +1233,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     ? errorMessage[..500]
                     : errorMessage;
                 pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
+                if (category.HasValue)
+                {
+                    pdfDoc.ErrorCategory = category.Value.ToString();
+                }
                 await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
             }
         }
@@ -1050,4 +1256,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
 #pragma warning restore CA1031
     }
+
+    /// <summary>
+    /// Issue #2947 test seam: exposes <see cref="ExtractCoverImageAsync"/> to the
+    /// unit-test assembly (InternalsVisibleTo Api.Tests) so the deterministic
+    /// cover-key behaviour can be asserted directly without driving the full
+    /// ProcessAsync pipeline.
+    /// </summary>
+    internal Task InvokeExtractCoverImageForTestAsync(
+        PdfDocumentEntity pdfDoc, string filePath, CancellationToken cancellationToken)
+        => ExtractCoverImageAsync(pdfDoc, filePath, cancellationToken);
 }

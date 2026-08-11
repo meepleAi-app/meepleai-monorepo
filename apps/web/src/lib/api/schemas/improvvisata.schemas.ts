@@ -54,6 +54,15 @@ export const GameDisputeHistoryItemSchema = z.object({
 
 export type GameDisputeHistoryItem = z.infer<typeof GameDisputeHistoryItemSchema>;
 
+// Per-session dispute history (#3391): GET /live-sessions/{id}/disputes → GetSessionDisputesResult.
+// Same shape as a single GameDisputeHistoryItem group but scoped to one live session (no startedAt).
+export const SessionDisputesResultSchema = z.object({
+  sessionId: z.string().uuid(),
+  disputes: z.array(RuleDisputeDtoSchema),
+});
+
+export type SessionDisputesResult = z.infer<typeof SessionDisputesResultSchema>;
+
 // ──────────────────────────────────────────────
 // Pause Snapshot
 // ──────────────────────────────────────────────

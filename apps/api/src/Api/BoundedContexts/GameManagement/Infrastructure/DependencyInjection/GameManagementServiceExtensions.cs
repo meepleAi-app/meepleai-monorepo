@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightPlaylist;
@@ -31,11 +32,15 @@ internal static class GameManagementServiceExtensions
         // Register repositories
         // NOTE: IGameRepository removed by #1320 (P2c) — Game aggregate deleted.
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
+        // #3080: cross-context read-model resolving polymorphic score for session history.
+        services.AddScoped<IHistorySessionScoreProvider, HistorySessionScoreProvider>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
         services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>(); // #2437-3: version history + restore
         services.AddScoped<IRuleConflictFaqRepository, RuleConflictFaqRepository>(); // ISSUE-3761: Conflict FAQ
         services.AddScoped<ILiveSessionRepository, LiveSessionRepository>(); // Issue #2097 / ADR-060: EF-backed persistence
+        services.AddScoped<ICompanionSessionService, CompanionSessionService>(); // #2501 SP0 ACL companion
+        services.AddScoped<ILiveSessionStreamGateway, LiveSessionStreamGateway>(); // #2561 SP2 T3 ACL stream gateway
         services.AddScoped<IToolStateRepository, ToolStateRepository>(); // Issue #4754: ToolState persistence
         services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>(); // Issue #4755: SessionSnapshot persistence
         services.AddScoped<IPauseSnapshotRepository, PauseSnapshotRepository>(); // Game Night: full-state pause snapshots
@@ -46,6 +51,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<ISessionAttachmentRepository, SessionAttachmentRepository>(); // Issue #5360: Session photo attachments
         services.AddScoped<IGameNightPlaylistRepository, GameNightPlaylistRepository>(); // Issue #5582: Game Night Playlist
         services.AddScoped<IGameNightEventRepository, GameNightEventRepository>(); // Issue #42: Game Night Event
+        services.AddScoped<IGameNightPhotoRepository, GameNightPhotoRepository>(); // Issue #2724: Recap photo gallery
         services.AddScoped<IGameNightInvitationRepository, GameNightInvitationRepository>(); // Issue #607: Token-based public RSVP invitations
         services.AddScoped<IRuleDisputeRepository, RuleDisputeRepository>(); // Structured rule dispute persistence
         services.AddScoped<IGamePhaseTemplateRepository, GamePhaseTemplateRepository>(); // Game phase templates for session setup

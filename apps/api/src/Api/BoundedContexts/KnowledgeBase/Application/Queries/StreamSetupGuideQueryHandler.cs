@@ -1,4 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -23,11 +26,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetupGuideQuery, RagStreamingEvent>
 {
     private readonly IEmbeddingService _embeddingService;
+    private readonly IEmbeddingRepository _embeddingRepository;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<StreamSetupGuideQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
+
+    // ADR-083 Fase 1 (#2504): setup-guide RAG retrieval tuning. Mirrors the QA
+    // agent's hybrid defaults so the LLM receives real rulebook context.
+    private const int SetupSearchTopK = 5;
+    private const double SetupSearchMinScore = 0.55;
 
     /// <summary>
     /// ADMIN-01 Phase 3: Hardcoded fallback prompt for backward compatibility
@@ -52,6 +61,7 @@ STEP 2: <title>
 etc.";
     public StreamSetupGuideQueryHandler(
         IEmbeddingService embeddingService,
+        IEmbeddingRepository embeddingRepository,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
         IConfiguration configuration,
@@ -59,6 +69,7 @@ etc.";
         TimeProvider? timeProvider = null)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -210,13 +221,53 @@ etc.";
     /// Searches for setup-related context chunks.
     /// Returns (success, context, references, confidence).
     /// </summary>
-    private Task<(bool success, string? context, List<Snippet>? references, double? confidence)> SearchSetupContextAsync(
+    private async Task<(bool success, string? context, List<Snippet>? references, double? confidence)> SearchSetupContextAsync(
         string gameId,
         float[] queryEmbedding,
         CancellationToken cancellationToken)
     {
-        _logger.LogInformation("No RAG results for game {GameId}  (legacy path) using default steps", gameId);
-        return Task.FromResult<(bool, string?, List<Snippet>?, double?)>((false, null, null, null));
+        // ADR-083 Fase 1 (#2504): retrieve setup-related chunks from pgvector
+        // (mirrors the QA agent's vector path). Empty results fall back to default
+        // steps, so a game with no indexed KB still yields a generic guide.
+        if (!Guid.TryParse(gameId, out var gameGuid))
+        {
+            _logger.LogWarning("Setup guide: gameId {GameId} is not a valid GUID, using default steps", gameId);
+            return (false, null, null, null);
+        }
+
+        var embeddings = await _embeddingRepository.SearchByVectorAsync(
+            gameGuid,
+            new Vector(queryEmbedding),
+            SetupSearchTopK,
+            SetupSearchMinScore,
+            documentIds: null,
+            cancellationToken).ConfigureAwait(false);
+
+        if (embeddings == null || embeddings.Count == 0)
+        {
+            _logger.LogInformation("No RAG results for game {GameId}, using default steps", gameId);
+            return (false, null, null, null);
+        }
+
+        // Build citation snippets + context string (same shape the QA agent uses).
+        // pgvector already ranked/filtered by minScore, so we use a rank-based score.
+        var snippets = embeddings
+            .Select((e, index) => new Snippet(
+                e.TextContent,
+                $"PDF:{e.VectorDocumentId}",
+                e.PageNumber,
+                0,
+                (float)Math.Max(SetupSearchMinScore, 1.0 - (index * 0.05))))
+            .ToList();
+
+        var context = string.Join("\n\n", snippets.Select(s => $"[Page {s.page}] {s.text}"));
+        var confidence = Math.Max(SetupSearchMinScore, 1.0 - ((embeddings.Count - 1) * 0.05));
+
+        _logger.LogInformation(
+            "Setup guide RAG search returned {Count} chunks for game {GameId}",
+            embeddings.Count, gameId);
+
+        return (true, context, snippets, confidence);
     }
 
     /// <summary>
@@ -303,13 +354,24 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
             steps.Count, estimatedTime);
 
         // Emit final complete event
+        // #3388: derive grounding status from whether any streamed step actually
+        // carries retrieved rulebook references (each StreamingSetupStep embeds its
+        // own `references`, so this reflects what the caller receives even though no
+        // separate StreamingCitations event is emitted). Mirrors the sibling handlers'
+        // `snippets.Count > 0 ? "Grounded" : "Ungrounded"` pattern (StreamQaQueryHandler,
+        // StreamExplainQueryHandler, ChatWithSessionAgentCommandHandler). Default/fallback
+        // steps always carry empty reference lists (CreateDefaultSetupStepsStatic), so
+        // that path stays Ungrounded.
+        var hasGroundedReferences = steps.Any(s => s.references.Count > 0);
+
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(
                 estimatedTime,
                 promptTokens,
                 completionTokens,
                 totalTokens,
-                confidence));
+                confidence,
+                GroundingStatus: hasGroundedReferences ? "Grounded" : "Ungrounded"));
     }
     /// <summary>
     /// Parse LLM-generated steps response into structured SetupGuideStep objects

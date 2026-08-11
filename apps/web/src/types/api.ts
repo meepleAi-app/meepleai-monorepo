@@ -102,19 +102,13 @@ export class ApiError extends Error {
 }
 
 /**
- * Type guard to check if an error is an ApiError
- */
-export function isApiError(error: unknown): error is ApiError {
-  return error instanceof ApiError;
-}
-
-/**
  * Helper to create ApiError from response
  */
 export async function createApiError(path: string, response: Response): Promise<ApiError> {
-  const correlationId = typeof response.headers?.get === 'function'
-    ? response.headers.get('X-Correlation-Id') || undefined
-    : undefined;
+  const correlationId =
+    typeof response.headers?.get === 'function'
+      ? response.headers.get('X-Correlation-Id') || undefined
+      : undefined;
   const status = typeof response.status === 'number' ? response.status : 500;
   let errorMessage = `API ${path} ${status}`;
 

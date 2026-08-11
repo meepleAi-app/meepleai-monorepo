@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
+using Api.Observability;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameSessionContext;
@@ -9,12 +11,14 @@ using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameSessionContext;
 using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Queries.ToolState;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
+using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,15 +45,19 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/start", HandleStartSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
+            .Produces(400)  // QuotaExceededException (DomainException → 400 via middleware) or zero active players
+            .Produces(403)  // Non-creator caller (#2608: only the creator may start; maps to ForbiddenException → 403)
             .Produces(404)
-            .Produces(409)
+            .Produces(409)  // DbUpdateConcurrencyException (xmin race — concurrent start)
             .WithTags("LiveSessions")
             .WithSummary("Start a live session")
-            .WithDescription("Transitions session from Created/Setup to InProgress.");
+            .WithDescription("Transitions session from Created/Setup to InProgress. Only the session creator may start (403). Quota limit returns 400. Concurrent start race returns 409.");
 
         group.MapPost("/live-sessions/{sessionId}/pause", HandlePauseSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -58,6 +66,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/resume", HandleResumeSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -66,6 +75,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/complete", HandleCompleteSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -75,6 +85,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/save", HandleSaveSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -83,6 +94,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/players", HandleAddPlayer)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(404)
@@ -91,6 +103,7 @@ internal static class LiveSessionEndpoints
 
         group.MapDelete("/live-sessions/{sessionId}/players/{playerId}", HandleRemovePlayer)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -99,6 +112,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/turn-order", HandleUpdateTurnOrder)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -107,6 +121,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/teams", HandleCreateTeam)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(404)
@@ -115,6 +130,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/teams/{teamId}/players/{playerId}", HandleAssignPlayerToTeam)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -122,6 +138,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/scores", HandleRecordScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -130,6 +147,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/scores", HandleEditScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -138,6 +156,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/advance-turn", HandleAdvanceTurn)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .Produces(409)
@@ -146,6 +165,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/advance-phase", HandleAdvancePhase)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -156,6 +176,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/phases", HandleConfigurePhases)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -165,6 +186,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/trigger-snapshot", HandleTriggerSnapshot)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionSnapshotDto>(201)
             .Produces(204)
             .Produces(400)
@@ -175,13 +197,25 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/notes", HandleUpdateNotes)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Update session notes");
 
+        group.MapPut("/live-sessions/{sessionId}/game-state", HandleUpdateGameState)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces(204)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Update the live game-state (#3025 L1)");
+
         group.MapPost("/live-sessions/{sessionId}/scores/parse", HandleParseScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<ScoreParseResultDto>(200)
             .Produces(400)
             .Produces(404)
@@ -191,6 +225,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/scores/confirm", HandleConfirmScore)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -199,6 +234,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/save-complete", HandleSaveComplete)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionSaveResultDto>(200)
             .Produces(404)
             .Produces(409)
@@ -208,6 +244,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/setup-checklist", HandleGenerateSetupChecklist)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SetupChecklistData>(200)
             .Produces(400)
             .Produces(404)
@@ -218,6 +255,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/setup-checklist", HandleUpdateSetupChecklist)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -226,10 +264,35 @@ internal static class LiveSessionEndpoints
             .WithSummary("Update setup checklist state")
             .WithDescription("Replaces the setup checklist data, used when the user toggles components or completes steps in the setup wizard.");
 
+        // === Diary (SP3) ===
+
+        group.MapPost("/live-sessions/{sessionId}/diary", HandleAddDiaryEntry)
+            .RequireAuthenticatedUser()
+            .Produces<Guid>(201)
+            .Produces(400)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .WithTags("LiveSessions")
+            .WithSummary("Add a diary entry to a live session")
+            .WithDescription("Appends an immutable diary entry to the session. Returns the new entry id. 403 if caller is not a participant. 409 if session is Completed. Issue #2570 SP3.");
+
+        group.MapGet("/live-sessions/{sessionId}/diary", HandleGetDiary)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<DiaryEntryDto>>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get diary entries for a live session")
+            .WithDescription("Returns all diary entries ordered by CreatedAt ascending. 403 if caller is not a session participant. 404 if session not found. Issue #2570 SP3.");
+
         // === Dispute v2 ===
 
         group.MapPost("/live-sessions/{sessionId}/disputes", HandleOpenDispute)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(404)
@@ -239,6 +302,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPut("/live-sessions/{sessionId}/disputes/{disputeId}/respond", HandleRespondToDispute)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -248,6 +312,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/timeout", HandleRespondentTimeout)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -257,6 +322,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/vote", HandleCastVote)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
@@ -266,12 +332,24 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/disputes/{disputeId}/tally", HandleTallyVotes)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces(204)
             .Produces(400)
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Tally dispute votes")
             .WithDescription("Tallies all cast votes on a dispute and determines the final outcome.");
+
+        group.MapGet("/live-sessions/{sessionId}/disputes", HandleGetSessionDisputes)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces<GetSessionDisputesResult>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Get the dispute history for a live session")
+            .WithDescription("Returns all rule disputes recorded in a single live session, ordered by timestamp ascending. Powers the Arbitro tab's REST hydration on reload (#3391).");
 
         group.MapGet("/games/{gameId}/dispute-history", HandleGetDisputeHistory)
             .RequireAuthenticatedUser()
@@ -299,8 +377,19 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Get live session by join code");
 
+        group.MapGet("/live-sessions/code/{code}/public", HandleGetPublicSessionByCode)
+            .AllowAnonymous()
+            .RequireRateLimiting("LiveSessionCodeReadPublic")
+            .Produces<PublicLiveSessionDto>(200)
+            .Produces(404)
+            .Produces(429)
+            .WithTags("LiveSessions")
+            .WithSummary("Get a live session lobby by join code (public, read-only)")
+            .WithDescription("Public QR-code endpoint. Returns a narrow read-only lobby/scoreboard projection (no UserIds/Notes/scores history). Code-as-capability, optional auth. Rate-limited 60/min per IP. Issue #2590.");
+
         group.MapGet("/live-sessions/{sessionId}", HandleGetSession)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<LiveSessionDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -309,6 +398,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/scores", HandleGetSessionScores)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<IReadOnlyList<LiveSessionRoundScoreDto>>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -316,6 +406,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/players", HandleGetSessionPlayers)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<IReadOnlyList<LiveSessionPlayerDto>>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -323,6 +414,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/phases", HandleGetTurnPhases)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<TurnPhasesDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -331,6 +423,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/tools", HandleGetSessionTools)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionToolsDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -339,6 +432,7 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/context", HandleGetSessionContext)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<GameSessionContextDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -347,6 +441,7 @@ internal static class LiveSessionEndpoints
 
         group.MapPost("/live-sessions/{sessionId}/context/refresh", HandleRefreshSessionContext)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<GameSessionContextDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
@@ -355,11 +450,27 @@ internal static class LiveSessionEndpoints
 
         group.MapGet("/live-sessions/{sessionId}/resume-context", HandleGetResumeContext)
             .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
             .Produces<SessionResumeContextDto>(200)
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Get session resume context")
             .WithDescription("Get session resume context with recap, scores, and photos. Issue #122.");
+
+        // NOTE: /{sessionId:guid}/stream uses a sub-segment and does NOT collide with /{sessionId:guid}
+        // because ASP.NET Core route matching considers the trailing /stream literal.
+        group.MapGet("/live-sessions/{sessionId:guid}/stream", HandleStreamAsync)
+            .RequireAuthenticatedUser()
+            .Produces(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Native SSE stream for live session events")
+            .WithDescription(
+                "Server-Sent Events stream for real-time live session updates via ILiveSessionStreamGateway. " +
+                "Returns X-Warning-Code: stream-not-linked when session has no companion (TrackingSessionId null). " +
+                "Issue #2561 SP2 T4.");
 
         return group;
     }
@@ -391,9 +502,20 @@ internal static class LiveSessionEndpoints
     private static async Task<IResult> HandleStartSession(
         Guid sessionId,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new StartLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        // Issue #2587 Slice 1: Resolve user identity for quota enforcement and GameSession correlation.
+        var (authenticated, session, error) = httpContext.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var userId = session!.Principal!.Subject.Id;
+        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
+        var userRole = Role.Parse(session.Principal!.EffectiveActor.Role);
+
+        await mediator.Send(
+            new StartLiveSessionCommand(sessionId, userId, userTier, userRole),
+            cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 
@@ -638,6 +760,70 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
+    // === Diary handlers (SP3 T5) ===
+
+    /// <summary>
+    /// POST /api/v1/live-sessions/{sessionId}/diary — Issue #2570 SP3 T5.
+    /// AuthorId is taken from the authenticated user's claims (not from the body).
+    /// 409 (Completed session) and 404 (not found) propagate from the command handler via middleware.
+    /// </summary>
+    private static async Task<IResult> HandleAddDiaryEntry(
+        Guid sessionId,
+        [FromBody] AddDiaryEntryRequest request,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var authorId = httpContext.User.GetUserId();
+
+        var entryId = await mediator.Send(
+            new AddDiaryEntryCommand(sessionId, authorId, request.Text),
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.Created($"/api/v1/live-sessions/{sessionId}/diary/{entryId}", entryId);
+    }
+
+    /// <summary>
+    /// PUT /api/v1/live-sessions/{sessionId}/game-state — #3025 L1.
+    /// Replaces the opaque live game-state. 204 on success; 403 non-participant;
+    /// 404 session not found; 409 if the session is Completed.
+    /// </summary>
+    private static async Task<IResult> HandleUpdateGameState(
+        Guid sessionId,
+        [FromBody] UpdateGameStateRequest request,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        await mediator.Send(
+            new UpdateLiveGameStateCommand(sessionId, userId, request.State),
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.NoContent();
+    }
+
+    /// <summary>
+    /// GET /api/v1/live-sessions/{sessionId}/diary — Issue #2570 SP3 T5.
+    /// Returns all diary entries ordered by CreatedAt ascending. 404 if session not found.
+    /// 403 if the caller is not the session creator or an active participant.
+    /// </summary>
+    private static async Task<IResult> HandleGetDiary(
+        Guid sessionId,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+
+        var entries = await mediator.Send(
+            new GetLiveSessionDiaryQuery(sessionId, userId),
+            cancellationToken).ConfigureAwait(false);
+
+        return Results.Ok(entries);
+    }
+
     private static async Task<IResult> HandleOpenDispute(
         Guid sessionId,
         [FromBody] OpenDisputeRequest request,
@@ -661,7 +847,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new RespondToDisputeCommand(disputeId, request.RespondentPlayerId, request.RespondentClaim),
+            new RespondToDisputeCommand(sessionId, disputeId, request.RespondentPlayerId, request.RespondentClaim),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -672,7 +858,7 @@ internal static class LiveSessionEndpoints
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new RespondentTimeoutCommand(disputeId), cancellationToken).ConfigureAwait(false);
+        await mediator.Send(new RespondentTimeoutCommand(sessionId, disputeId), cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 
@@ -684,7 +870,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new CastVoteOnDisputeCommand(disputeId, request.PlayerId, request.AcceptsVerdict),
+            new CastVoteOnDisputeCommand(sessionId, disputeId, request.PlayerId, request.AcceptsVerdict),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -697,7 +883,7 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(
-            new TallyDisputeVotesCommand(disputeId, request.OverrideRule),
+            new TallyDisputeVotesCommand(sessionId, disputeId, request.OverrideRule),
             cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
@@ -709,6 +895,16 @@ internal static class LiveSessionEndpoints
     {
         var result = await mediator.Send(
             new GetGameDisputeHistoryQuery(gameId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetSessionDisputes(
+        Guid sessionId,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(
+            new GetSessionDisputesQuery(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 
@@ -732,6 +928,22 @@ internal static class LiveSessionEndpoints
     {
         var result = await mediator.Send(new GetLiveSessionByCodeQuery(code), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// GET /api/v1/live-sessions/code/{code}/public — Issue #2590.
+    /// Public, anonymous, rate-limited narrow lobby projection. Returns 404 for an unknown code.
+    /// </summary>
+    private static async Task<IResult> HandleGetPublicSessionByCode(
+        string code,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var result = await mediator
+            .Send(new GetPublicLiveSessionByCodeQuery(code), cancellationToken)
+            .ConfigureAwait(false);
+
+        return result is null ? Results.NotFound() : Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetActiveSessions(
@@ -808,6 +1020,163 @@ internal static class LiveSessionEndpoints
         return Results.Ok(result);
     }
 
+    /// <summary>
+    /// Native SSE stream for live session events — Issue #2561 SP2 T4.
+    /// Mirrors the v2 legacy loop in SessionQueryEndpoints.cs:319-418 but uses
+    /// ILiveSessionStreamGateway (GameManagement ACL) instead of ISessionBroadcastService.
+    /// </summary>
+    private static async Task<IResult> HandleStreamAsync(
+        Guid sessionId,
+        HttpContext httpContext,
+        [FromServices] IMediator mediator,
+        [FromServices] ILiveSessionStreamGateway gateway,
+        [FromQuery] string? lastEventId,
+        CancellationToken ct)
+    {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+            return Results.Unauthorized();
+
+        // CQRS authz + companion-presence check — no direct repo injection in endpoints.
+        var ctx = await mediator
+            .Send(new GetLiveSessionStreamContextQuery(sessionId, userId), ct)
+            .ConfigureAwait(false);
+
+        if (!ctx.Found)
+            return Results.NotFound(new { error = "Live session not found" });
+
+        if (!ctx.Authorized)
+            return Results.StatusCode(403);
+
+        // SP5-c (#2600 Task 2): lazily provision a companion for legacy GameId-backed sessions
+        // that pre-date the SP0 Saga (TrackingSessionId == null && GameId != null).
+        // The handler is idempotent and is a no-op for free-form (GameId == null) sessions and
+        // for sessions that already have a companion. The gateway re-reads the session inside
+        // SubscribeAsync so it will pick up the freshly-persisted TrackingSessionId.
+        //
+        // EnsureCompanionCommand returns the post-ensure TrackingSessionId:
+        //   non-null → session is now linked (pre-existing OR just created on this subscribe)
+        //   null     → free-form session; genuinely unlinked; stream will be empty.
+        // We use this POST-ensure value for the warning header to avoid emitting a stale
+        // "stream-not-linked" on the exact subscribe that just fixed the session (final-review fix).
+        bool isLinkedAfterEnsure;
+        if (ctx.HasCompanion)
+        {
+            // Already linked before we ran — skip the command, preserve the known state.
+            isLinkedAfterEnsure = true;
+        }
+        else
+        {
+            var ensuredTrackingId = await mediator
+                .Send(new EnsureCompanionCommand(sessionId), ct)
+                .ConfigureAwait(false);
+            isLinkedAfterEnsure = ensuredTrackingId.HasValue;
+        }
+
+        // Set SSE response headers — must happen before the first Write call.
+        httpContext.Response.Headers.Append("Content-Type", "text/event-stream");
+        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
+        httpContext.Response.Headers.Append("Connection", "keep-alive");
+        httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
+
+        // Warn caller when session has no companion: stream will be empty (gateway yields nothing).
+        // The connection stays open with heartbeats so the client can reconnect after SP0 is provisioned.
+        // Uses the POST-ensure value so a lazy-created companion on this subscribe does NOT trigger the warning.
+        if (!isLinkedAfterEnsure)
+            httpContext.Response.Headers.Append("X-Warning-Code", "stream-not-linked");
+
+        // Commit the 200 status + SSE headers immediately, before any blocking gateway call.
+        // Without this flush, TestHost and some proxies hold off sending the response until
+        // the first body write — meaning an unhandled exception could still produce a 500 here.
+        httpContext.Response.StatusCode = 200;
+        await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+
+        // AC-OBS-1 (#2561 SP2 T12): track active connections + reconnects.
+        // Inc happens after auth + header flush so only live connections count.
+        MeepleAiMetrics.IncrementLiveSseActiveConnections();
+        if (!string.IsNullOrEmpty(lastEventId))
+            MeepleAiMetrics.RecordLiveSseReconnect();
+
+        // Heartbeat task: write a comment every 30 s to keep the connection alive.
+        using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var heartbeatTask = Task.Run(async () =>
+        {
+            while (!heartbeatCts.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30), heartbeatCts.Token).ConfigureAwait(false);
+                    await httpContext.Response.WriteAsync(
+                        $"event: heartbeat\ndata: {{\"timestamp\":\"{DateTime.UtcNow:O}\"}}\n\n",
+                        heartbeatCts.Token).ConfigureAwait(false);
+                    await httpContext.Response.Body.FlushAsync(heartbeatCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+            }
+        }, heartbeatCts.Token);
+
+        try
+        {
+            // gateway.SubscribeAsync returns an empty stream when HasCompanion == false.
+            await foreach (var evt in gateway
+                .SubscribeAsync(sessionId, userId, lastEventId, ct)
+                .ConfigureAwait(false)
+                .WithCancellation(ct))
+            {
+                var json = JsonSerializer.Serialize(evt.Data, SseJsonOptions);
+
+                if (evt.Id is not null)
+                    await httpContext.Response.WriteAsync($"id: {evt.Id}\n", ct).ConfigureAwait(false);
+
+                await httpContext.Response.WriteAsync($"event: {evt.Type}\n", ct).ConfigureAwait(false);
+                await httpContext.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+                await httpContext.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected: client disconnected or server shutting down — do not propagate to middleware.
+        }
+        catch (Exception)
+        {
+            // I/O write fault on an already-committed 200 SSE stream (e.g. IOException,
+            // ConnectionResetException) — swallow to avoid a spurious 500 in middleware logs.
+            // The connection is already broken; nothing meaningful can be written.
+        }
+        finally
+        {
+            // AC-OBS-1 (#2561 SP2 T12): decrement active-connections gauge on every exit path.
+            MeepleAiMetrics.DecrementLiveSseActiveConnections();
+
+            await heartbeatCts.CancelAsync().ConfigureAwait(false);
+            // Wait for heartbeat task to finish (it's already watching ct).
+            // Both OperationCanceledException (normal) and any other I/O exception are benign here —
+            // the heartbeat loop already exited because the connection is closing.
+            try
+            {
+                await heartbeatTask.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: CancellationToken was cancelled — heartbeat task exited normally.
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException)
+            {
+                // I/O error after client disconnect — ignore, we're already in teardown.
+            }
+        }
+
+        return Results.Empty;
+    }
+
+    private static readonly JsonSerializerOptions SseJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     #endregion
 
     #region Request Models
@@ -853,6 +1222,12 @@ internal static class LiveSessionEndpoints
     private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
 
     private sealed record GenerateSetupChecklistRequest(int PlayerCount);
+
+    // Diary (SP3) request model
+    private sealed record AddDiaryEntryRequest(string Text);
+
+    /// <summary>Body for PUT /live-sessions/{id}/game-state. Opaque JSON (#3025 L1).</summary>
+    private sealed record UpdateGameStateRequest(System.Text.Json.JsonElement State);
 
     // Dispute v2 request models
     internal sealed record OpenDisputeRequest(

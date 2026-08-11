@@ -40,7 +40,9 @@ public class UpdateGroupPreferencesCommandHandlerTests
     {
         // Arrange
         var groupId = Guid.NewGuid();
-        var group = GroupMemory.Create(Guid.NewGuid(), "Game Night Crew");
+        var creatorId = Guid.NewGuid();
+        var group = GroupMemory.Create(creatorId, "Game Night Crew");
+        group.AddMember(creatorId);
 
         _groupRepoMock
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
@@ -48,6 +50,7 @@ public class UpdateGroupPreferencesCommandHandlerTests
 
         var command = new UpdateGroupPreferencesCommand(
             groupId,
+            creatorId,
             TimeSpan.FromMinutes(90),
             "Medium",
             "We prefer cooperative games");
@@ -61,6 +64,30 @@ public class UpdateGroupPreferencesCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_RequesterNotMember_ThrowsForbiddenException()
+    {
+        // Arrange — #2655 IDOR fix: a non-member must not modify a group's prefs.
+        var groupId = Guid.NewGuid();
+        var creatorId = Guid.NewGuid();
+        var group = GroupMemory.Create(creatorId, "Game Night Crew");
+        group.AddMember(creatorId);
+
+        _groupRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(group);
+
+        var command = new UpdateGroupPreferencesCommand(
+            groupId, Guid.NewGuid(), TimeSpan.FromMinutes(90), "Medium", null); // outsider
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ForbiddenException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        _groupRepoMock.Verify(r => r.UpdateAsync(It.IsAny<GroupMemory>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_GroupNotFound_ThrowsNotFoundException()
     {
         // Arrange
@@ -69,7 +96,7 @@ public class UpdateGroupPreferencesCommandHandlerTests
             .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GroupMemory?)null);
 
-        var command = new UpdateGroupPreferencesCommand(groupId, null, null, null);
+        var command = new UpdateGroupPreferencesCommand(groupId, Guid.NewGuid(), null, null, null);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -84,7 +111,7 @@ public class UpdateGroupPreferencesCommandHandlerTests
             .Setup(f => f.IsEnabledAsync("Features:AgentMemory.Enabled", null))
             .ReturnsAsync(false);
 
-        var command = new UpdateGroupPreferencesCommand(Guid.NewGuid(), null, null, null);
+        var command = new UpdateGroupPreferencesCommand(Guid.NewGuid(), Guid.NewGuid(), null, null, null);
 
         // Act & Assert
         await Assert.ThrowsAsync<ConflictException>(

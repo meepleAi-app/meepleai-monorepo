@@ -1,16 +1,20 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.SharedKernel.Application.Interfaces;
-using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCoverBatch;
 
 /// <summary>
-/// Handler for <see cref="EnrichCatalogCoverBatchCommand"/>. Dispatches one
-/// <see cref="EnrichCatalogCoverCommand"/> per game id through
-/// <see cref="IMediator"/>, capturing per-game outcomes and aggregating
-/// bucket counters. Issue #2123 Phase B + Issue #2157 (per-game resilience).
+/// Handler for <see cref="EnrichCatalogCoverBatchCommand"/>. Delegates each game
+/// id to the <see cref="IWikidataCoverEnrichmentRunner"/> (Issue #3369) — the
+/// single source of truth that records a <c>WikidataCoverEnrichmentAttempt</c>
+/// row, applies the DEC-3j retry/dead-letter policy and broadcasts SSE — instead
+/// of dispatching the raw <see cref="EnrichCatalogCoverCommand"/> via IMediator,
+/// then aggregates the per-game outcomes into bucket counters. Batch items now
+/// get the same observability/retry parity as the M9 scheduler and M12 admin
+/// trigger. Issue #2123 Phase B + Issue #2157 (per-game resilience).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -49,14 +53,14 @@ internal sealed class EnrichCatalogCoverBatchCommandHandler
     private const string CircuitOpenReason = "circuit-open";
     private const string BrokenCircuitExceptionTypeName = "BrokenCircuitException";
 
-    private readonly IMediator _mediator;
+    private readonly IWikidataCoverEnrichmentRunner _runner;
     private readonly ILogger<EnrichCatalogCoverBatchCommandHandler> _logger;
 
     public EnrichCatalogCoverBatchCommandHandler(
-        IMediator mediator,
+        IWikidataCoverEnrichmentRunner runner,
         ILogger<EnrichCatalogCoverBatchCommandHandler> logger)
     {
-        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _runner = runner ?? throw new ArgumentNullException(nameof(runner));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -83,8 +87,13 @@ internal sealed class EnrichCatalogCoverBatchCommandHandler
             EnrichCatalogCoverResult childResult;
             try
             {
-                childResult = await _mediator
-                    .Send(new EnrichCatalogCoverCommand(gameId), cancellationToken)
+                // #3369: delegate through the runner (SSOT) so each batch item
+                // records an attempt row + retry/dead-letter classification + SSE,
+                // matching the M9 scheduler and M12 admin trigger. forceRefresh is
+                // false (the batch honours the DEC-3i freshness window); no admin
+                // trigger id is threaded yet (follow-up note in #3369).
+                childResult = await _runner
+                    .EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: cancellationToken)
                     .ConfigureAwait(false);
             }
             // Issue #2157: real caller cancellation propagates so the admin

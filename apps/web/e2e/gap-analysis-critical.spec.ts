@@ -1,11 +1,17 @@
 import { test, expect } from '@playwright/test';
 
+import { setupMockAuth } from './fixtures/auth';
+
 /**
  * Gap Analysis: Critical UI-API Gaps
  * Issues: #4113-#4118 (6 critical gaps)
  */
 
 test.describe('Gap Analysis: Critical Features', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
+  });
+
   /**
    * Issue #4113: Notification System UI
    */

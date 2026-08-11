@@ -7,10 +7,45 @@
  * These unit tests verify hook initialization and basic structure.
  */
 
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { useSessionSync } from '../useSessionSync';
+
+/**
+ * EventSource mock that records every constructed instance so a test can assert
+ * how many times `new EventSource(...)` ran. Mirrors the pattern used in
+ * useTurnOrder.test.ts (Vitest v4: assign the class directly, no `vi.fn` wrap).
+ */
+interface TrackedEventSourceInstance {
+  url: string;
+  withCredentials: boolean;
+  onopen: (() => void) | null;
+  onerror: (() => void) | null;
+  close: ReturnType<typeof vi.fn>;
+  addEventListener: ReturnType<typeof vi.fn>;
+  removeEventListener: ReturnType<typeof vi.fn>;
+  readyState: number;
+}
+
+let trackedEventSourceInstances: TrackedEventSourceInstance[] = [];
+
+class TrackedEventSource {
+  url: string;
+  withCredentials: boolean;
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  close = vi.fn();
+  addEventListener = vi.fn();
+  removeEventListener = vi.fn();
+  readyState = 0; // CONNECTING
+
+  constructor(url: string, options?: { withCredentials?: boolean }) {
+    this.url = url;
+    this.withCredentials = options?.withCredentials ?? false;
+    trackedEventSourceInstances.push(this as TrackedEventSourceInstance);
+  }
+}
 
 describe('useSessionSync', () => {
   const mockSessionId = 'session-123';
@@ -122,5 +157,41 @@ describe('useSessionSync', () => {
     unmount();
 
     expect(mockClose).toHaveBeenCalled();
+  });
+
+  it('creates the EventSource only once when re-rendered with unstable inline callbacks (#P3 churn)', () => {
+    // Mirrors the real consumer (toolkit/[sessionId]/_content.tsx): fresh inline
+    // callback identities on every render. With the churn bug, each re-render
+    // recreates `connect`, so the mount effect tears down and re-opens the SSE
+    // stream — dropping in-flight pause/resume/finalize/score events and
+    // flickering `isConnected`.
+    trackedEventSourceInstances = [];
+    global.EventSource = TrackedEventSource as unknown as typeof EventSource;
+
+    const { rerender } = renderHook(() =>
+      useSessionSync({
+        sessionId: mockSessionId,
+        onScoreUpdate: () => {},
+        onPaused: () => {},
+        onResumed: () => {},
+        onFinalized: () => {},
+        onError: () => {},
+      })
+    );
+
+    expect(trackedEventSourceInstances).toHaveLength(1);
+
+    // onopen flips isConnected → an internal re-render in which the consumer's
+    // inline callbacks are re-created with new identities.
+    act(() => {
+      trackedEventSourceInstances[0]?.onopen?.();
+    });
+
+    // Explicit parent re-render with brand-new inline callback identities.
+    rerender();
+
+    // Exactly one EventSource must ever be constructed for a stable
+    // (sessionId, apiBaseUrl) pair.
+    expect(trackedEventSourceInstances).toHaveLength(1);
   });
 });

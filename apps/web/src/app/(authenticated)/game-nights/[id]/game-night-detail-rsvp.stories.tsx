@@ -50,6 +50,13 @@ const meta: Meta<typeof GameNightDetailView> = {
           'Pixel-faithful matrix di sp7-game-night-detail-rsvp.jsx Mobile frames 01-10 + Desktop split-view 11-12. Hero usa GameNightDetailView (page-client). Tutte le 12 frame coperte via argTypes state axis: host vs invitee, status (Published/Cancelled/InProgress/Completed), tab (detail/voting/chat), RSVP transitions. ZERO separate story files per RSVP state variant per P245.',
       },
     },
+    // The 12 Frame* stories (host-pending/host-ready/invitee-*/voting-*/cancelled/
+    // in-progress/completed/mobile-tab-chat/desktop-split-*) all cover the canonical
+    // `default` (steady-state, loaded) state via `mswForSp7DetailRsvpState(<mockup
+    // stage name>)`, not the literal `mswForState('default')` — lint:storybook-states
+    // heuristic can't see it (#2342 Task 4 bonifica). `Loading`/`ErrorState` already
+    // detected via `mswForSp7DetailRsvpState('loading'|'error')` literals.
+    canonicalStates: ['default', 'loading', 'error'],
   },
   argTypes: {
     id: {
@@ -172,6 +179,20 @@ export const Frame12_DesktopSplitVoting: Story = {
     docs: {
       description: {
         story: 'Documentation-only frame. Same caveat as Frame 5 — Tab Voting post-MVP.',
+      },
+    },
+  },
+};
+
+export const Frame13_HostDraftTagged: Story = {
+  name: '13 · Host · Draft · giocatori taggati + "Invia inviti" (#2963, invariante #16)',
+  args: { id: 'gn-padovani-may17' },
+  parameters: {
+    msw: { handlers: mswForSp7DetailRsvpState('host-draft-tagged') },
+    docs: {
+      description: {
+        story:
+          'Invariante #16 (tagged vs invited): su una serata Draft i giocatori sono *taggati* (aggiunti, nessun invito inviato) — le righe Pending mostrano "Da invitare" e l\'host vede la CTA "Invia inviti" (publish → Published). Solo dopo l\'invio le righe diventano "In attesa" (invitati). Vedi #2963.',
       },
     },
   },

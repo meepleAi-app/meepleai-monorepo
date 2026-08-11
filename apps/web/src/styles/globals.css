@@ -538,14 +538,25 @@
   --color-entity-game:    hsl(var(--c-game));
   --color-entity-game-text: hsl(var(--c-game-text));  /* darker variant for AA when used as text on light bg (#1094 Real-C-B) */
   --color-entity-player:  hsl(var(--c-player));
+  --color-entity-player-text: hsl(var(--c-player-text));    /* #2955: AA text-on-tint */
   --color-entity-session: hsl(var(--c-session));
+  --color-entity-session-text: hsl(var(--c-session-text)); /* #2955: AA text-on-tint */
   --color-entity-agent:   hsl(var(--c-agent));
+  --color-entity-agent-text: hsl(var(--c-agent-text));     /* #2955: AA text-on-tint */
   --color-entity-kb:      hsl(var(--c-kb));
+  --color-entity-kb-text: hsl(var(--c-kb-text));           /* #2955: AA text-on-tint */
+  /* #3161: `kb` maps to the tailwind class `document` (entity-tokens.ts). Alias it to the
+     kb color here so `entity-document` utilities actually emit in TW v4 (only @theme vars do). */
+  --color-entity-document:      hsl(var(--c-kb));
+  --color-entity-document-text: hsl(var(--c-kb-text));
   --color-entity-chat:    hsl(var(--c-chat));
+  --color-entity-chat-text: hsl(var(--c-chat-text));       /* #2955: AA text-on-tint */
   --color-entity-event:   hsl(var(--c-event));
+  --color-entity-event-text: hsl(var(--c-event-text));     /* #2955: AA text-on-tint */
   --color-entity-toolkit: hsl(var(--c-toolkit));
   --color-entity-toolkit-text: hsl(var(--c-toolkit-text));  /* darker variant for AA when used as text on light bg (#1094 Real-C-E gamebook ready pill) */
   --color-entity-tool:    hsl(var(--c-tool));
+  --color-entity-tool-text: hsl(var(--c-tool-text));       /* #2955: AA text-on-tint */
 
   /* Font family utilities */
   --font-heading: var(--font-quicksand), system-ui, sans-serif;
@@ -559,18 +570,9 @@
 :root {
   /* MeepleCard v2 entity color shortcuts (Issue #4604, AA-aligned via #807 Iter 2 audit 2026-05-09) */
   /* Values match design-tokens.css --c-* tokens. Both used: --e-* feeds Tailwind utilities text-entity-X via @theme; --c-* used by entityHsl() helper. */
-  --c-game: 25 95% 38%;       /* 4.82:1 ✅ (#587, gate #601, then #807) */
   --c-game-text: 25 95% 32%;  /* 6.14:1 ✅ darker variant when used as text on light bg (#1094 Real-C-B, mirrors design-tokens-canonical.css:45) */
   --c-toolkit-text: 142 70% 24%;  /* ~5.6:1 ✅ darker variant for AA on light bg, paired with bg-entity-toolkit/12 (#1094 Real-C-E gamebook) */
   --c-session-text: 240 60% 35%;  /* PR #1721 follow-up: light theme value = same as --c-session (already 12.22:1 AA on cream). Dark theme overrides to 235 85% 85% for AA on dark surfaces. */
-  --c-player: 262 83% 45%;    /* 8.55:1 ✅ (#807: was L=58%) */
-  --c-session: 240 60% 35%;   /* 12.22:1 ✅ (#807: was L=55%) */
-  --c-agent: 38 92% 32%;      /* 4.87:1 ✅ (#807: was L=50%) */
-  --c-kb: 174 60% 30%;  /* 5.12:1 ✅ KB teal (#807: was L=40%, cyan hue requires lower L) */
-  --c-chat: 220 80% 40%;      /* 7.72:1 ✅ (#807: was L=55%) */
-  --c-event: 350 89% 38%;     /* 6.79:1 ✅ (#807: was L=60%) */
-  --c-toolkit: 142 70% 30%;   /* 4.88:1 ✅ Toolkit green (#807: was L=45%) */
-  --c-tool: 195 80% 32%;      /* 5.44:1 ✅ Sky Blue Epic #412 (#807: was L=50%) */
 
   /* Base theme tokens - Opzione A: Playful Boardroom */
   --radius: 0.625rem;
@@ -718,18 +720,9 @@
      Mirrors --c-* tokens in design-tokens.css .dark block.
      Issue #807 follow-up: A11y dark theme contrast fix (sessions-index, gamebook,
      session-live, session-summary specs). */
-  --c-game: 28 95% 58%;
   --c-game-text: 28 95% 70%;  /* 11.2:1 ✅ lighter variant for AA on dark bg (#1094 Real-C-B, mirrors design-tokens-canonical.css:199) */
   --c-toolkit-text: 142 60% 72%;  /* lighter variant for AA on dark bg (#1094 Real-C-E gamebook) */
   --c-session-text: 235 85% 85%;  /* PR #1721 follow-up: lighter variant for AA on dark `--card` + `--c-session/14` overlay (was --c-session 235 70% 70% → 3.85:1 fail in SessionShareCard theme toggle). Mirrors design-tokens-canonical.css */
-  --c-player: 262 75% 70%;
-  --c-session: 235 70% 70%;
-  --c-agent: 38 92% 62%;
-  --c-kb: 174 60% 55%;
-  --c-chat: 218 80% 68%;
-  --c-event: 350 85% 70%;
-  --c-toolkit: 142 60% 58%;
-  --c-tool: 195 75% 62%;
 
   /* NOTE: --bg, --bg-card, --text, --text-sec, --text-muted
      are unified tokens from design-tokens.css. Do NOT redefine here. */
@@ -863,4 +856,37 @@
   padding: var(--s-6);
   max-width: 65ch;
   margin-inline: auto;
+}
+
+/* ============================================================================
+ * PdfInlineViewer — opt-in quote highlight (ME-M1.4 AC-2 base, #526)
+ * Marks text-layer spans matching a `highlightQuote` via customTextRenderer.
+ * ============================================================================ */
+
+.pdf-quote-highlight {
+  background-color: rgba(255, 235, 59, 0.4);
+}
+
+/* ============================================================================
+ * PdfBBoxOverlay — region grounding overlay (SP-D #3408)
+ * Precise %-based rectangle drawn over the react-pdf <Page> for a citation's
+ * source region (Pattern B). Semantic --c-warning token (decorative fill +
+ * border), static (no animation) → no motion concern. Full-gated at the wire.
+ * ============================================================================ */
+
+.pdf-bbox-highlight {
+  position: absolute;
+  background-color: hsl(var(--c-warning) / 0.2);
+  border: 1px solid hsl(var(--c-warning));
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* #3447 slice: table-image region — dashed to distinguish from the solid citation highlight. */
+.pdf-image-region-highlight {
+  position: absolute;
+  background-color: hsl(var(--c-warning) / 0.08);
+  border: 2px dashed hsl(var(--c-warning) / 0.9);
+  border-radius: 2px;
+  pointer-events: none;
 }

@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 /**
  * Agent DTO Schema
  * Matches AgentDto from backend
@@ -24,7 +26,7 @@ export const AgentDtoSchema = z.object({
   isRecentlyUsed: z.boolean(),
   isIdle: z.boolean(),
   // Issue #4914: user-owned agent fields
-  gameId: z.string().uuid().nullable().optional(),
+  gameId: GameIdString.nullable().optional(),
   gameName: z.string().nullable().optional(),
   createdByUserId: z.string().uuid().nullable().optional(),
 });
@@ -48,7 +50,7 @@ export const AgentResponseDtoSchema = z.object({
   searchResults: z.array(
     z.object({
       documentId: z.string().uuid(),
-      gameId: z.string().uuid(),
+      gameId: GameIdString,
       snippet: z.string(),
       score: z.number(),
       pageNumber: z.number().int().nullable(),
@@ -66,7 +68,7 @@ export type AgentResponseDto = z.infer<typeof AgentResponseDtoSchema>;
  */
 export const InvokeAgentRequestSchema = z.object({
   query: z.string().min(1, 'Query is required'),
-  gameId: z.string().uuid().optional(),
+  gameId: GameIdString.optional(),
   chatThreadId: z.string().uuid().optional(),
 });
 
@@ -135,7 +137,7 @@ export type ChessAnalysis = z.infer<typeof ChessAnalysisSchema>;
  */
 export const SnippetSchema = z.object({
   documentId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   snippet: z.string(),
   score: z.number(),
   pageNumber: z.number().int().nullable(),
@@ -201,7 +203,7 @@ export type SetupGuideResponse = z.infer<typeof SetupGuideResponseSchema>;
  */
 export const SelectedDocumentDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   documentType: z.number().int().min(0).max(2), // Rulebook=0, Errata=1, Homerule=2
   version: z.string(),
@@ -313,7 +315,7 @@ export type RecentAgentsResponse = z.infer<typeof RecentAgentsResponseSchema>;
  * Issue #2421: Player Mode UI Controls
  */
 export const PlayerModeSuggestionRequestSchema = z.object({
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameState: z.record(z.string(), z.any()), // Flexible game state object
   query: z.string().optional(), // Optional context/question from player
   chatThreadId: z.string().uuid().optional(),

@@ -264,43 +264,4 @@ public sealed class SystemConfigurationDomainEventsTests
 
     #endregion
 
-    #region UserRateLimitReachedEvent Tests
-
-    [Fact]
-    public void UserRateLimitReachedEvent_ForPendingLimit_SetsProperties()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-
-        // Act
-        var evt = new UserRateLimitReachedEvent(userId, UserRateLimitReachedEvent.PendingLimit);
-
-        // Assert
-        evt.UserId.Should().Be(userId);
-        evt.LimitType.Should().Be("pending");
-    }
-
-    [Fact]
-    public void UserRateLimitReachedEvent_ForMonthlyLimit_SetsProperties()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-
-        // Act
-        var evt = new UserRateLimitReachedEvent(userId, UserRateLimitReachedEvent.MonthlyLimit);
-
-        // Assert
-        evt.UserId.Should().Be(userId);
-        evt.LimitType.Should().Be("monthly");
-    }
-
-    [Fact]
-    public void UserRateLimitReachedEvent_LimitTypeConstants_HaveCorrectValues()
-    {
-        // Assert
-        UserRateLimitReachedEvent.PendingLimit.Should().Be("pending");
-        UserRateLimitReachedEvent.MonthlyLimit.Should().Be("monthly");
-    }
-
-    #endregion
 }

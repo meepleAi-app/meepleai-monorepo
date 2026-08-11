@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 using Microsoft.Extensions.Logging;
@@ -40,7 +41,7 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
-    private readonly Mock<IHybridSearchService> _mockHybridSearchService;
+    private readonly Mock<IKeywordSearchService> _mockKeywordSearchService;
     private readonly Mock<RrfFusionDomainService> _mockRrfService;
     private readonly Mock<ISemanticResponseCache> _mockResponseCache;
     private readonly Mock<IEmbeddingService> _mockAskEmbeddingService;
@@ -53,7 +54,7 @@ public class AskQuestionQueryHandlerSecurityTests
         var mockVectorSearchService = new Mock<VectorSearchDomainService>();
         _mockRrfService = new Mock<RrfFusionDomainService>();
         var mockEmbeddingService = new Mock<IEmbeddingService>();
-        _mockHybridSearchService = new Mock<IHybridSearchService>();
+        _mockKeywordSearchService = new Mock<IKeywordSearchService>();
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
         // Setup IEmbeddingService to return valid EmbeddingResult
@@ -79,6 +80,16 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Embedding>());
+        // Issue #2712: PerformVectorSearchAsync now calls SearchByVectorWithScoresAsync.
+        mockEmbeddingRepo
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
 
         // Setup VectorSearchDomainService
         mockVectorSearchService
@@ -91,30 +102,28 @@ public class AskQuestionQueryHandlerSecurityTests
 
         // Setup RRF Fusion domain service (default: empty results)
         _mockRrfService
-            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>()))
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>()); // Return empty list
 
-        // Setup IHybridSearchService to return empty results by default
-        _mockHybridSearchService
+        // Setup IKeywordSearchService to return empty results by default
+        _mockKeywordSearchService
             .Setup(h => h.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(),
                 It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
+                It.IsAny<bool>(),
+                It.IsAny<List<string>?>(),
+                It.IsAny<string>(),
                 It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>());
+            .ReturnsAsync(new List<KeywordSearchResult>());
 
         _searchHandler = new SearchQueryHandler(
             mockEmbeddingRepo.Object,
             mockVectorSearchService.Object,
             _mockRrfService.Object,
             mockEmbeddingService.Object,
-            _mockHybridSearchService.Object,
+            _mockKeywordSearchService.Object,
             CreatePermissiveRagAccessServiceMock(),
             mockSearchLogger.Object);
 
@@ -217,6 +226,7 @@ public class AskQuestionQueryHandlerSecurityTests
 
         _handler = new AskQuestionQueryHandler(
             _searchHandler,
+            CreatePassthroughReranker(),
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
@@ -235,6 +245,8 @@ public class AskQuestionQueryHandlerSecurityTests
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
             routingOptionsMonitor.Object,
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
+            Mock.Of<Api.Services.IFeatureFlagService>(),
             _mockLogger.Object);
     }
 
@@ -540,7 +552,9 @@ public class AskQuestionQueryHandlerSecurityTests
             .Setup(r => r.FuseResults(
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
-                It.IsAny<int>()))
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>()))
             .Returns(oneResult);
     }
 
@@ -573,6 +587,20 @@ public class AskQuestionQueryHandlerSecurityTests
         mock.Setup(t => t.TranslateGenericAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string text, string src, string tgt, CancellationToken _) =>
                 TranslationResult.CreateSuccess(text, src, tgt, 0m));
+        return mock.Object;
+    }
+
+    private static ICrossEncoderReranker CreatePassthroughReranker()
+    {
+        var mock = new Mock<ICrossEncoderReranker>();
+        mock
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select((c, i) => new RerankedChunk(c.Id, c.Content, c.OriginalScore, 0.9 - (i * 0.1)))
+                        .ToList(),
+                    "test-model", 1.0));
         return mock.Object;
     }
 }

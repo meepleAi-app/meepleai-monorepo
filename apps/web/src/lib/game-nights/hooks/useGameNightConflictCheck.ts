@@ -17,7 +17,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { ConflictCheckDto } from '@/lib/api/schemas/game-nights.schemas';
 
-export const conflictCheckKeys = {
+const conflictCheckKeys = {
   all: ['game-nights', 'wizard', 'check-conflict'] as const,
   at: (at: string) => [...conflictCheckKeys.all, { at }] as const,
 };

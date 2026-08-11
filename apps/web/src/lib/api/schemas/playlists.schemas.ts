@@ -5,8 +5,10 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 export const PlaylistGameDtoSchema = z.object({
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   position: z.number(),
   addedAt: z.string(),
 });
@@ -47,13 +49,13 @@ export const UpdatePlaylistRequestSchema = z.object({
 export type UpdatePlaylistRequest = z.infer<typeof UpdatePlaylistRequestSchema>;
 
 export const AddGameToPlaylistRequestSchema = z.object({
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   position: z.number(),
 });
 export type AddGameToPlaylistRequest = z.infer<typeof AddGameToPlaylistRequestSchema>;
 
 export const ReorderPlaylistGamesRequestSchema = z.object({
-  orderedGameIds: z.array(z.string().uuid()),
+  orderedGameIds: z.array(GameIdString),
 });
 export type ReorderPlaylistGamesRequest = z.infer<typeof ReorderPlaylistGamesRequestSchema>;
 

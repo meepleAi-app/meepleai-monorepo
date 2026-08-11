@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.GameManagement.Application.Queries.GameNight;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
+using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -20,9 +22,11 @@ internal static class GamebookCampaignEndpoints
         MapCreateCampaignEndpoint(group);
         MapListCampaignsEndpoint(group);
         MapGetCampaignEndpoint(group);
+        MapGetCampaignSpineEndpoint(group);
         MapGetCampaignProgressEndpoint(group);
         MapUpdateProgressEndpoint(group);
         MapRenameCampaignEndpoint(group);
+        MapCloseCampaignEndpoint(group);
         MapDeleteCampaignEndpoint(group);
 
         return group;
@@ -44,8 +48,21 @@ internal static class GamebookCampaignEndpoints
                 return Results.Unauthorized();
             }
 
+            // #2917: map the optional wire roster to ParticipantDto. The owner is seeded
+            // server-side by the Session factory (authenticated user), so a client-claimed
+            // IsOwner participant is harmless — the handler filters non-owner entries.
+            var participants = body.Participants
+                ?.Select(p => new ParticipantDto
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = p.UserId,
+                    DisplayName = p.DisplayName,
+                    IsOwner = p.IsOwner,
+                })
+                .ToList();
+
             var dto = await mediator.Send(
-                new CreateGamebookCampaignCommand(body.GameId, userId, body.Title), ct
+                new CreateGamebookCampaignCommand(body.GameId, userId, body.Title, participants, body.GuestNames), ct
             ).ConfigureAwait(false);
 
             return Results.Created($"/api/v1/gamebook/campaigns/{dto.Id}", dto);
@@ -121,6 +138,42 @@ internal static class GamebookCampaignEndpoints
         .WithTags("Gamebook")
         .WithSummary("Get a gamebook campaign by ID")
         .WithDescription("Returns the gamebook campaign with the specified ID, if it belongs to the authenticated user.")
+        .WithOpenApi();
+    }
+
+    private static void MapGetCampaignSpineEndpoint(RouteGroupBuilder group)
+    {
+        // #2632 (SI-1b, Phase 3): the GameNight "Serata" spine for a campaign, or 204 if the
+        // campaign has no GameNight-attached play (standalone → no spine).
+        group.MapGet("/gamebook/campaigns/{id:guid}/spine", async (
+            Guid id,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var spine = await mediator.Send(
+                new GetGamebookCampaignSpineQuery(id, userId), ct
+            ).ConfigureAwait(false);
+
+            return spine is null ? Results.NoContent() : Results.Ok(spine);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<GamebookCampaignSpineDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithTags("Gamebook")
+        .WithSummary("Get the GameNight spine for a campaign")
+        .WithDescription("Returns the owning GameNight 'Serata' spine (title, organizer, status, session pip) + derived campaign status, or 204 if the campaign has no GameNight-attached play.")
         .WithOpenApi();
     }
 
@@ -228,6 +281,50 @@ internal static class GamebookCampaignEndpoints
         .WithOpenApi();
     }
 
+    private static void MapCloseCampaignEndpoint(RouteGroupBuilder group)
+    {
+        // SI-8 (#2639): terminal close from the play-evening-end 3-way selector.
+        // "Completa"/"Abbandona" POST here; "Archivia" (resumable) does not.
+        group.MapPost("/gamebook/campaigns/{id:guid}/close", async (
+            Guid id,
+            [FromBody] CloseGamebookCampaignRequest body,
+            IMediator mediator,
+            HttpContext context,
+            CancellationToken ct) =>
+        {
+            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
+            if (!authenticated) return error!;
+
+            if (!TryGetUserId(context, session, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            if (!Enum.TryParse<GamebookCampaignOutcome>(body.Outcome, ignoreCase: true, out var outcome)
+                || !Enum.IsDefined(outcome))
+            {
+                return Results.BadRequest(new { error = "outcome must be 'Completed' or 'Abandoned'" });
+            }
+
+            var dto = await mediator.Send(
+                new CloseGamebookCampaignCommand(id, userId, outcome), ct
+            ).ConfigureAwait(false);
+
+            return Results.Ok(dto);
+        })
+        .RequireAuthenticatedUser()
+        .Produces<GamebookCampaignDto>(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict)
+        .WithTags("Gamebook")
+        .WithSummary("Terminally close a gamebook campaign")
+        .WithDescription("Sets the manual terminal outcome (Completed/Abandoned) on the campaign (SI-8). Only the owner may close; a campaign already closed returns 409.")
+        .WithOpenApi();
+    }
+
     private static void MapDeleteCampaignEndpoint(RouteGroupBuilder group)
     {
         group.MapDelete("/gamebook/campaigns/{id:guid}", async (
@@ -278,7 +375,16 @@ internal static class GamebookCampaignEndpoints
 }
 
 /// <summary>Request body for creating a new gamebook campaign.</summary>
-public sealed record CreateGamebookCampaignRequest(Guid GameId, string Title);
+/// <remarks>#2917: optional roster — <paramref name="Participants"/> (User-linked players) and
+/// <paramref name="GuestNames"/> (free guests) persist a non-live Session for standalone play.</remarks>
+public sealed record CreateGamebookCampaignRequest(
+    Guid GameId,
+    string Title,
+    IReadOnlyList<CreateCampaignParticipantRequest>? Participants = null,
+    IReadOnlyList<string>? GuestNames = null);
+
+/// <summary>#2917: minimal wire shape for a campaign roster participant (server assigns Id/JoinOrder).</summary>
+public sealed record CreateCampaignParticipantRequest(Guid? UserId, string DisplayName, bool IsOwner = false);
 
 /// <summary>
 /// Request body for updating the current paragraph progress for a specific book.
@@ -289,3 +395,10 @@ public sealed record UpdateGamebookProgressRequest(Guid GameBookId, int CurrentP
 
 /// <summary>Request body for renaming a gamebook campaign.</summary>
 public sealed record RenameGamebookCampaignRequest(string Title);
+
+/// <summary>
+/// Request body for terminally closing a gamebook campaign (SI-8 #2639).
+/// <paramref name="Outcome"/> is the string form of <c>GamebookCampaignOutcome</c>
+/// ("Completed" or "Abandoned"); "Archivia" (resumable) does not call this endpoint.
+/// </summary>
+public sealed record CloseGamebookCampaignRequest(string Outcome);

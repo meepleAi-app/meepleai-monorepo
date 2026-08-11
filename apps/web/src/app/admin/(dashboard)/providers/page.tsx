@@ -1,4 +1,5 @@
 import { CircuitBreakerGrid } from '@/components/admin/providers/CircuitBreakerGrid';
+import { ProviderQuotaSummary } from '@/components/admin/providers/ProviderQuotaSummary';
 import { ProvidersHero } from '@/components/admin/providers/ProvidersHero';
 import { ProvidersToolbar } from '@/components/admin/providers/ProvidersToolbar';
 import { ProviderTable } from '@/components/admin/providers/ProviderTable';
@@ -25,6 +26,7 @@ export default function ProvidersPage() {
     <div className="space-y-5">
       <ProvidersToolbar />
       <ProvidersHero />
+      <ProviderQuotaSummary />
       <ProviderTable />
       <RoutingChainViz />
       <CircuitBreakerGrid />

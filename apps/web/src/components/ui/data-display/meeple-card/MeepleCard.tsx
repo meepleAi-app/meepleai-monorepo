@@ -5,7 +5,6 @@ import { memo } from 'react';
 import { MeepleCardAttributionFooter } from './MeepleCardAttributionFooter';
 import { CompactCard } from './variants/CompactCard';
 import { FeaturedCard } from './variants/FeaturedCard';
-import { FocusCard } from './variants/FocusCard';
 import { GridCard } from './variants/GridCard';
 import { HeroCard } from './variants/HeroCard';
 import { ListCard } from './variants/ListCard';
@@ -18,7 +17,6 @@ const variantMap = {
   compact: CompactCard,
   featured: FeaturedCard,
   hero: HeroCard,
-  focus: FocusCard,
 } as const;
 
 function MeepleCardImpl(props: MeepleCardProps) {
@@ -36,9 +34,9 @@ function MeepleCardImpl(props: MeepleCardProps) {
       <Renderer {...props} />
       {showAttributionFooter && (
         <MeepleCardAttributionFooter
-          license={props.wikidataCoverLicense ?? null}
-          attribution={props.wikidataCoverAttribution ?? null}
-          sourceUrl={props.wikidataCoverSourceUrl ?? null}
+          license={props.coverLicense ?? null}
+          attribution={props.coverAttribution ?? null}
+          sourceUrl={props.coverSourceUrl ?? null}
         />
       )}
     </>

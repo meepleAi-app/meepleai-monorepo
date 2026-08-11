@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -62,6 +63,26 @@ internal sealed class RetryPdfProcessingCommandHandler
             // Update via repository (handles mapping and persistence)
             await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // Enqueue the PDF so the pipeline actually reprocesses it. Retry() only resets the
+            // document to Pending; without an enqueue nothing picks it up — both the manual retry
+            // (this handler) and the automatic RetryFailedPdfsJob were dead loops before this fix
+            // (bug-hunt B11, #3269). Best-effort: an active job may already exist (e.g. a concurrent
+            // retry), in which case EnqueuePdfCommand throws ConflictException and the existing job
+            // will reprocess the now-Pending document — mirror ReindexDocumentCommandHandler.
+            try
+            {
+                await _mediator.Send(
+                    new EnqueuePdfCommand(pdf.Id, pdf.UploadedByUserId, Priority: 0),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (ConflictException ex)
+            {
+                _logger.LogInformation(
+                    ex,
+                    "PDF {PdfId} already has an active job; the retry will reprocess via that job",
+                    command.PdfId);
+            }
 
             // Publish domain event
             var retryEvent = new PdfRetryInitiatedEvent(

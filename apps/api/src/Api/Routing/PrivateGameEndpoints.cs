@@ -112,9 +112,7 @@ internal static class PrivateGameEndpoints
                 Description: request.Description,
                 PlayingTimeMinutes: request.PlayingTimeMinutes,
                 MinAge: request.MinAge,
-                ComplexityRating: request.ComplexityRating,
-                ImageUrl: request.ImageUrl,
-                ThumbnailUrl: request.ThumbnailUrl
+                ComplexityRating: request.ComplexityRating
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -209,8 +207,7 @@ internal static class PrivateGameEndpoints
                 Description: request.Description,
                 PlayingTimeMinutes: request.PlayingTimeMinutes,
                 MinAge: request.MinAge,
-                ComplexityRating: request.ComplexityRating,
-                ImageUrl: request.ImageUrl
+                ComplexityRating: request.ComplexityRating
             );
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -449,9 +446,7 @@ internal record AddPrivateGameRequest(
     string? Description = null,
     int? PlayingTimeMinutes = null,
     int? MinAge = null,
-    decimal? ComplexityRating = null,
-    string? ImageUrl = null,
-    string? ThumbnailUrl = null
+    decimal? ComplexityRating = null
 );
 
 /// <summary>
@@ -465,15 +460,5 @@ internal record UpdatePrivateGameRequest(
     string? Description,
     int? PlayingTimeMinutes,
     int? MinAge,
-    decimal? ComplexityRating,
-    string? ImageUrl
-);
-
-/// <summary>
-/// Request DTO for proposing a private game to catalog.
-/// Issue #3665: Phase 4 - Proposal System.
-/// </summary>
-internal record ProposePrivateGameRequest(
-    string? Notes = null,
-    List<Guid>? AttachedDocumentIds = null
+    decimal? ComplexityRating
 );

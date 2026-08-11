@@ -15,8 +15,8 @@ export type MeepleEntityType =
   | 'tool'
   | 'gameNightEvent';
 
-// 6 variants
-export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero' | 'focus';
+// 5 variants
+export type MeepleCardVariant = 'grid' | 'list' | 'compact' | 'featured' | 'hero';
 
 export interface MeepleCardMetadata {
   icon?: ReactNode;
@@ -73,10 +73,6 @@ export interface ConnectionChipProps {
   iconOverride?: import('react').ReactNode;
 }
 
-export type OwnershipBadge = 'owned' | 'wishlist' | 'archived';
-
-export type LifecycleState = 'active' | 'idle' | 'completed' | 'setup' | 'processing' | 'failed';
-
 export interface CoverLabel {
   text: string;
   color?: string;
@@ -98,8 +94,7 @@ export interface MeepleCardProps {
   coverEmoji?: string;
   /**
    * Semantic heading level for the card's title element (2, 3, or 4).
-   * Default: 3 for most variants (GridCard/ListCard/FeaturedCard/HeroCard);
-   * 2 for FocusCard (full-focus detail card).
+   * Default: 3 for the title-bearing variants (GridCard/ListCard/FeaturedCard/HeroCard).
    *
    * Pass `headingLevel={2}` when this card is rendered in a grid below an
    * `<h1>` hero — without this, axe-core flags `heading-order` (h1→h3 jump
@@ -132,9 +127,23 @@ export interface MeepleCardProps {
   manaPips?: ManaPip[];
   connections?: ConnectionChipProps[];
   connectionsVariant?: 'footer' | 'inline' | 'auto';
-  ownership?: OwnershipBadge;
-  lifecycle?: LifecycleState;
   onClick?: () => void;
+  /**
+   * Accessible name for the card root when `onClick` makes it interactive
+   * (`role="button"`). Overrides the implicit name derived from the
+   * rendered title/subtitle text — use when a screen-reader-only label
+   * ("Open game detail {name}") is clearer than the visible title alone.
+   * Currently honored by ListCard only; other variants ignore it.
+   */
+  ariaLabel?: string;
+  /**
+   * Issue #2858 (C1) — when present, the card root renders as a Next.js
+   * `<Link href prefetch>` instead of a `<div role="button">`, giving real
+   * anchor semantics (prefetch, middle-click / open-in-new-tab, native
+   * keyboard focus, SEO) to navigable display cards on public routes.
+   * Currently honored by GridCard only.
+   */
+  href?: string;
   flippable?: boolean;
   flipBackContent?: ReactNode;
   flipTrigger?: 'card' | 'button';
@@ -148,6 +157,15 @@ export interface MeepleCardProps {
   /** Optional test id forwarded to the root wrapper element. */
   'data-testid'?: string;
   /**
+   * Issue #3470 Slice 1d-c — optional cover-edit affordance (admin only) rendered
+   * OUTSIDE the card's anchor/button root (to avoid axe nested-interactive) over the
+   * cover. Currently honored by GridCard only. When omitted the card renders unchanged,
+   * so existing consumers are unaffected.
+   */
+  coverEditSlot?: ReactNode;
+  /** #3611 — punto focale del crop, inoltrato a `Cover`. Assente = comportamento invariato. */
+  coverFocal?: { x: number; y: number };
+  /**
    * Issue #1823 Wave 3 M14 — license + attribution metadata for the cover
    * image. Renders a small footer chip under the title when present
    * (typically Wikidata-sourced covers per ADR DEC-3c whitelist).
@@ -159,17 +177,18 @@ export interface MeepleCardProps {
    */
   attribution?: CoverAttribution;
   /**
-   * Issue #2055 Phase G AC-G6 — Wikidata cover license + attribution rendered
-   * as a plain-text footer beneath the card. Activated only for
+   * Issue #2055 Phase G AC-G6 / epic #3470 Slice 3b — the WINNING cover source's
+   * license + attribution (Wikidata or admin-attested Manual) rendered as a
+   * plain-text footer beneath the card. Activated only for
    * `entity === 'game'`. All three fields are optional so the footer
-   * gracefully degrades; when `wikidataCoverLicense` is null/undefined the
+   * gracefully degrades; when `coverLicense` is null/undefined the
    * footer renders nothing. BE strips HTML upstream per DEC-G6-1 LOCKED
    * 2026-06-20 — render as plain text only, do NOT use
    * `dangerouslySetInnerHTML`.
    */
-  wikidataCoverLicense?: string | null;
-  wikidataCoverAttribution?: string | null;
-  wikidataCoverSourceUrl?: string | null;
+  coverLicense?: string | null;
+  coverAttribution?: string | null;
+  coverSourceUrl?: string | null;
 }
 
 /**

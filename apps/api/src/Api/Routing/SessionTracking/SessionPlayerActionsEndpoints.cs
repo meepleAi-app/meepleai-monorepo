@@ -492,6 +492,7 @@ internal static class SessionPlayerActionsEndpoints
             Guid sessionId,
             Guid mediaId,
             UpdateMediaCaptionCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -500,7 +501,15 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Media ID mismatch" });
             }
 
-            await mediator.Send(command, ct).ConfigureAwait(false);
+            // #2655: the owning participant is resolved server-side from the
+            // authenticated user; any client-supplied RequesterUserId is overridden.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            await mediator.Send(command with { RequesterUserId = userId }, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
         .RequireAuthenticatedUser()
@@ -516,15 +525,22 @@ internal static class SessionPlayerActionsEndpoints
 
     private static void MapDeleteSessionMediaEndpoint(RouteGroupBuilder group)
     {
-        // Note: participantId comes from query string. Future auth refactor should extract from HttpContext.User.
+        // #2655: the deleting participant is resolved server-side from the
+        // authenticated user — no longer trusted from the client query string.
         group.MapDelete("/game-sessions/{sessionId:guid}/media/{mediaId:guid}", async (
             Guid sessionId,
             Guid mediaId,
-            Guid participantId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var command = new DeleteSessionMediaCommand(mediaId, participantId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new DeleteSessionMediaCommand(mediaId, userId);
             await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
@@ -582,9 +598,11 @@ internal static class SessionPlayerActionsEndpoints
                 // Multipart form: supports image attachments
                 var form = await httpRequest.ReadFormAsync(ct).ConfigureAwait(false);
 
+                // #3390 Slice 3: empty question is allowed on the multipart (image) path — the
+                // AskSessionAgentCommandValidator enforces "question required unless an image is
+                // attached", so the empty-text vision turn reaches the handler (and its
+                // vision-derived query) instead of being rejected here.
                 var questionStr = form["question"].ToString();
-                if (string.IsNullOrWhiteSpace(questionStr))
-                    return Results.BadRequest(new { error = "Question is required" });
 
                 if (!Guid.TryParse(form["senderId"].ToString(), out var senderId))
                     return Results.BadRequest(new { error = "Valid senderId is required" });
@@ -643,15 +661,22 @@ internal static class SessionPlayerActionsEndpoints
 
     private static void MapDeleteChatMessageEndpoint(RouteGroupBuilder group)
     {
-        // Note: requesterId comes from query string. Future auth refactor should extract from HttpContext.User.
+        // #2655: the requesting sender is resolved server-side from the
+        // authenticated user — no longer trusted from the client query string.
         group.MapDelete("/game-sessions/{sessionId:guid}/chat/{messageId:guid}", async (
             Guid sessionId,
             Guid messageId,
-            Guid requesterId,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var command = new DeleteChatMessageCommand(messageId, requesterId);
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var command = new DeleteChatMessageCommand(messageId, userId);
             await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.NoContent();
         })

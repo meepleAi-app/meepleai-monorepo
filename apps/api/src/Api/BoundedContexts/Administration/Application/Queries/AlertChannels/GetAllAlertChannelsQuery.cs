@@ -23,4 +23,4 @@ internal sealed record AlertChannelDto(
     string? LastTestMessage,
     DateTime UpdatedAt,
     string? UpdatedBy,
-    string RowVersion);
+    uint Xmin);

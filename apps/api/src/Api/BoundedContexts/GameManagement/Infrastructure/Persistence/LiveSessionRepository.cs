@@ -40,6 +40,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
             .Include(e => e.TurnRecords)
+            .Include(e => e.DiaryEntries)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             .ConfigureAwait(false);
 
@@ -56,6 +57,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
             .Include(e => e.TurnRecords)
+            .Include(e => e.DiaryEntries)
             .FirstOrDefaultAsync(e => e.SessionCode == normalized, cancellationToken)
             .ConfigureAwait(false);
 
@@ -75,12 +77,27 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
             .Include(e => e.TurnRecords)
+            .Include(e => e.DiaryEntries)
             .Where(e => e.CreatedByUserId == userId && ActiveStatuses.Contains(e.Status))
             .OrderByDescending(e => e.UpdatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return entities.Select(LiveGameSessionMapper.ToDomain).ToList();
+    }
+
+    public async Task<Guid?> GetActiveInProgressSessionIdAsync(
+        Guid userId, CancellationToken cancellationToken = default)
+    {
+        // #3146: projection-only — no Includes, no domain mapping. Only genuinely LIVE
+        // (InProgress) counts (Setup/Paused excluded, unlike GetActiveByUserIdAsync).
+        return await DbContext.LiveGameSessions
+            .AsNoTracking()
+            .Where(e => e.CreatedByUserId == userId && e.Status == (int)LiveSessionStatus.InProgress)
+            .OrderByDescending(e => e.UpdatedAt)
+            .Select(e => (Guid?)e.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(
@@ -92,6 +109,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
             .Include(e => e.Teams)
             .Include(e => e.RoundScores)
             .Include(e => e.TurnRecords)
+            .Include(e => e.DiaryEntries)
             .Where(e => ActiveStatuses.Contains(e.Status))
             .OrderByDescending(e => e.UpdatedAt)
             .ToListAsync(cancellationToken)
@@ -132,21 +150,31 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         // Map to entity snapshot for scalar values and child collections
         var snapshot = LiveGameSessionMapper.ToEntity(session);
 
-        // Preserve Entity-only fields that Domain doesn't surface.
-        // TotalPausedDurationMs (Issue #216 server-side timer) lives only on the Entity;
-        // read it back from DB (AsNoTracking, no change-tracker pollution) to prevent reset.
-        snapshot.TotalPausedDurationMs = await DbContext.LiveGameSessions
+        // Preserve Entity-only fields that Domain doesn't surface, AND read the existing diary
+        // ids in the SAME round-trip. TotalPausedDurationMs (Issue #216 server-side timer) lives
+        // only on the Entity; read it back from DB (AsNoTracking, no change-tracker pollution) to
+        // prevent reset. #2575: the diary-id set is folded into this projection so the append-only
+        // diary sync no longer needs its own standalone SELECT.
+        var loadProjection = await DbContext.LiveGameSessions
             .AsNoTracking()
             .Where(e => e.Id == session.Id)
-            .Select(e => e.TotalPausedDurationMs)
+            .Select(e => new
+            {
+                e.TotalPausedDurationMs,
+                DiaryIds = e.DiaryEntries.Select(d => d.Id).ToList(),
+            })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+
+        snapshot.TotalPausedDurationMs = loadProjection?.TotalPausedDurationMs ?? 0;
+        var existingDiaryIds = (loadProjection?.DiaryIds ?? new List<Guid>()).ToHashSet();
 
         // Capture child collection snapshots BEFORE modifying snapshot.Players etc.
         var snapshotPlayers = snapshot.Players.ToList();
         var snapshotTeams = snapshot.Teams.ToList();
         var snapshotRoundScores = snapshot.RoundScores.ToList();
         var snapshotTurnRecords = snapshot.TurnRecords.ToList();
+        var snapshotDiaryEntries = snapshot.DiaryEntries.ToList(); // #2570 SP3 T2
 
         // ── Root entity: use Entry-based update so EF uses OriginalValues.Xmin (xmin concurrency token) ──────
         var trackedRoot = DbContext.ChangeTracker.Entries<LiveGameSessionEntity>()
@@ -160,6 +188,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
             snapshot.Teams.Clear();
             snapshot.RoundScores.Clear();
             snapshot.TurnRecords.Clear();
+            snapshot.DiaryEntries.Clear(); // #2570 SP3 T2
             DbContext.Entry(snapshot).State = EntityState.Modified;
         }
         else
@@ -174,6 +203,7 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         await SyncTeamsAsync(session, snapshotTeams, cancellationToken).ConfigureAwait(false);
         await SyncRoundScoresAsync(session, snapshotRoundScores, cancellationToken).ConfigureAwait(false);
         await SyncTurnRecordsAsync(session, snapshotTurnRecords, cancellationToken).ConfigureAwait(false);
+        SyncDiaryEntries(snapshotDiaryEntries, existingDiaryIds); // #2570 SP3 T2 / #2575 refactor
 
         // Record metrics on the happy path only. If any of the above threw, we never reach here
         // and writes_total{op=update} stays consistent with actually-staged writes. The counter
@@ -326,6 +356,29 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         {
             var stub = new LiveTurnRecordEntity { Id = removedId, LiveGameSessionId = session.Id };
             AttachOrUpdate(stub, removedId, EntityState.Deleted);
+        }
+    }
+
+    /// <summary>
+    /// #2570 SP3 T2: Diary entries are append-only — only INSERT new entries, never UPDATE
+    /// or DELETE existing ones. The domain guarantees immutability post-creation; the cascade
+    /// on session delete covers the cleanup path automatically.
+    /// #2575: the set of already-persisted ids comes from the load-time projection in UpdateAsync
+    /// (one fewer DB round-trip), not a fresh SELECT. Synchronous — it only stages EF state.
+    /// </summary>
+    private void SyncDiaryEntries(
+        ICollection<LiveSessionDiaryEntryEntity> snapshotEntries,
+        IReadOnlyCollection<Guid> existingDiaryIds)
+    {
+        // Diary entries are append-only: INSERT new, skip existing (immutable).
+        // No DELETE path — the domain never removes diary entries.
+        foreach (var entry in snapshotEntries)
+        {
+            if (!existingDiaryIds.Contains(entry.Id))
+            {
+                AttachOrUpdate(entry, entry.Id, EntityState.Added);
+            }
+            // Existing entries are immutable; skipping update is correct by design.
         }
     }
 

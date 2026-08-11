@@ -116,9 +116,7 @@ export async function enqueuePdf(
 
 export type ProcessingPriority = 'Low' | 'Normal' | 'High' | 'Urgent';
 
-export const PRIORITY_LOW = 0;
 export const PRIORITY_NORMAL = 10;
-export const PRIORITY_HIGH = 20;
 export const PRIORITY_URGENT = 30;
 
 export interface QueueConfigDto {
@@ -332,7 +330,7 @@ export interface PaginatedChunksResult {
   pageSize: number;
 }
 
-export async function fetchChunksPreview(
+async function fetchChunksPreview(
   pdfDocumentId: string,
   page = 1,
   pageSize = 20,

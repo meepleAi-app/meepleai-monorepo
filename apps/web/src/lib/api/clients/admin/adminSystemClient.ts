@@ -1,18 +1,13 @@
 /**
  * Admin System Sub-Client
  *
- * Workflows, N8n, infrastructure, database, emergency controls,
+ * Infrastructure, database, emergency controls,
  * batch jobs, queue management, and cache/vector metrics.
  */
 
 import { z } from 'zod';
 
 import {
-  WorkflowTemplateSchema,
-  WorkflowTemplateDetailSchema,
-  ImportWorkflowResponseSchema,
-  N8nConfigDtoSchema,
-  N8nTestResultDtoSchema,
   InfrastructureDetailsSchema,
   BatchJobDtoSchema,
   BatchJobListSchema,
@@ -24,11 +19,7 @@ import {
   TableSizeSchema,
   CacheMetricsSchema,
   VectorStoreMetricsSchema,
-  type N8nConfigDto,
-  type N8nTestResultDto,
-  type WorkflowTemplate,
-  type WorkflowTemplateDetail,
-  type ImportWorkflowResponse,
+  SystemResourcesResponseSchema,
   type BatchJobDto,
   type BatchJobList,
   type CreateBatchJobRequest,
@@ -39,81 +30,13 @@ import {
   type TableSize,
   type CacheMetrics,
   type VectorStoreMetrics,
+  type SystemResourcesResponse,
 } from '../../schemas';
 
 import type { HttpClient } from '../../core/httpClient';
 
 export function createAdminSystemClient(http: HttpClient) {
   return {
-    // ========== N8N Workflow Templates ==========
-
-    async getWorkflowTemplates(category?: string): Promise<WorkflowTemplate[]> {
-      const query = category ? `?category=${encodeURIComponent(category)}` : '';
-      const result = await http.get<WorkflowTemplate[]>(
-        `/api/v1/n8n/templates${query}`,
-        z.array(WorkflowTemplateSchema)
-      );
-      return result ?? [];
-    },
-
-    async getWorkflowTemplateById(templateId: string): Promise<WorkflowTemplateDetail | null> {
-      return http.get<WorkflowTemplateDetail>(
-        `/api/v1/n8n/templates/${templateId}`,
-        WorkflowTemplateDetailSchema
-      );
-    },
-
-    async importWorkflowTemplate(
-      templateId: string,
-      parameters: Record<string, string>
-    ): Promise<ImportWorkflowResponse> {
-      return http.post(
-        `/api/v1/n8n/templates/${templateId}/import`,
-        { parameters },
-        ImportWorkflowResponseSchema
-      );
-    },
-
-    // ========== N8N Configuration (Issue #60) ==========
-
-    async getN8nConfigs(): Promise<N8nConfigDto[]> {
-      const result = await http.get<{ configs: N8nConfigDto[] }>(
-        '/api/v1/admin/n8n',
-        z.object({ configs: z.array(N8nConfigDtoSchema) })
-      );
-      return result?.configs ?? [];
-    },
-
-    async createN8nConfig(data: {
-      name: string;
-      baseUrl: string;
-      apiKey: string;
-      webhookUrl?: string;
-    }): Promise<N8nConfigDto> {
-      return http.post('/api/v1/admin/n8n', data, N8nConfigDtoSchema);
-    },
-
-    async updateN8nConfig(
-      configId: string,
-      data: {
-        name?: string;
-        baseUrl?: string;
-        apiKey?: string;
-        webhookUrl?: string;
-        isActive?: boolean;
-      }
-    ): Promise<N8nConfigDto> {
-      return http.put(`/api/v1/admin/n8n/${configId}`, data, N8nConfigDtoSchema);
-    },
-
-    async deleteN8nConfig(configId: string): Promise<void> {
-      await http.delete(`/api/v1/admin/n8n/${configId}`);
-    },
-
-    async testN8nConnection(configId: string): Promise<N8nTestResultDto> {
-      return http.post(`/api/v1/admin/n8n/${configId}/test`, {}, N8nTestResultDtoSchema);
-    },
-
     // ========== Infrastructure Monitoring (Issue #896) ==========
 
     async getInfrastructureDetails() {
@@ -261,6 +184,11 @@ export function createAdminSystemClient(http: HttpClient) {
 
     async getResourceVectorMetrics(): Promise<VectorStoreMetrics | null> {
       return http.get('/api/v1/resources/vectors/metrics', VectorStoreMetricsSchema);
+    },
+
+    // System Resources (Issue #3041) — self-contained via System.Diagnostics
+    async getSystemResources(): Promise<SystemResourcesResponse | null> {
+      return http.get('/api/v1/resources/system', SystemResourcesResponseSchema);
     },
 
     async rebuildVectors(): Promise<void> {

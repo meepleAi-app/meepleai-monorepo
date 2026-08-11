@@ -52,6 +52,8 @@ const echoResponder: UpsertResponder = ({ entryId, body }) =>
     termIt: body.termIt,
     source: 'Manual',
     updatedAt: new Date('2026-05-19T10:00:00Z').toISOString(),
+    // #2638 / SI-7: entries carry a (possibly empty) contexts array.
+    contexts: [],
   });
 
 let activeUpsertResponder: UpsertResponder = echoResponder;
@@ -74,14 +76,12 @@ export function resetGlossaryResponder(): void {
 // ---------------------------------------------------------------------------
 
 export const gamebookGlossaryHandlers = [
-  http.get(
-    `${API_BASE}/api/v1/gamebook/campaigns/:campaignId/glossary`,
-    () => HttpResponse.json([])
+  http.get(`${API_BASE}/api/v1/gamebook/campaigns/:campaignId/glossary`, () =>
+    HttpResponse.json([])
   ),
 
-  http.post(
-    `${API_BASE}/api/v1/gamebook/campaigns/:campaignId/glossary/bootstrap`,
-    () => HttpResponse.json([])
+  http.post(`${API_BASE}/api/v1/gamebook/campaigns/:campaignId/glossary/bootstrap`, () =>
+    HttpResponse.json([])
   ),
 
   http.put(

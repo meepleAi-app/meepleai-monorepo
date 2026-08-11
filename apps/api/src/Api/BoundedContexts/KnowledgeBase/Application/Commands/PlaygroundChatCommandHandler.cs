@@ -5,10 +5,12 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.Models;
 using Api.Services;
 using Api.Services.LlmClients;
@@ -27,6 +29,12 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
 {
     private static readonly string[] DefaultConsensusModels = { "gpt-4", "claude-3-opus" };
 
+    // Issue #2708 parity: retrieve a wider candidate pool, then let the cross-encoder narrow it to
+    // the final top-K by semantic relevance — the same retrieve-wide/rerank-narrow wiring the
+    // /agents/qa path uses. The playground previously took the raw top-5 with no reranker.
+    private const int RerankCandidatePoolSize = 20;
+    private const int FinalTopK = 5;
+
     /// <summary>
     /// In-memory query cache for playground sessions.
     /// Key: SHA256(gameId + query), Value: (searchResults JSON hash, cachedAt).
@@ -41,6 +49,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
     private readonly ILlmCostCalculator _costCalculator;
     private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IRagExecutionRepository _ragExecutionRepository;
+    private readonly ICrossEncoderReranker _reranker;
     private readonly ILogger<PlaygroundChatCommandHandler> _logger;
 
     public PlaygroundChatCommandHandler(
@@ -50,6 +59,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         ILlmCostCalculator costCalculator,
         ILlmCostLogRepository costLogRepository,
         IRagExecutionRepository ragExecutionRepository,
+        ICrossEncoderReranker reranker,
         ILogger<PlaygroundChatCommandHandler> logger)
     {
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
@@ -58,6 +68,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
         _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
+        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -238,7 +249,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                     command.Message,
                     command.GameId.Value,
                     SearchMode.Hybrid,
-                    limit: 5,
+                    limit: RerankCandidatePoolSize,
                     cancellationToken: cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -266,6 +277,15 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
 
             searchStopwatch.Stop();
 
+            // Issue #2708 parity: rerank the wider candidate pool down to the final top-K by
+            // semantic relevance (cross-encoder). Reranker failures degrade gracefully to the raw
+            // top-K inside RerankAsync. Runs only on a successful search with something to reorder.
+            if (searchError == null && searchResults.Count > 1)
+            {
+                searchResults = await SearchResultReranker.RerankAsync(
+                    _reranker, command.Message, searchResults, FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
+            }
+
             // Emit search failure notification outside catch block (CS1631: yield not allowed in catch)
             if (searchError != null)
             {
@@ -285,7 +305,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                     responseSizeBytes: searchResults.Sum(r => Encoding.UTF8.GetByteCount(r.Content)),
                     statusCode: 200,
                     latencyMs: searchStopwatch.ElapsedMilliseconds,
-                    detail: $"mode=Hybrid, limit=5, results={searchResults.Count}",
+                    detail: $"mode=Hybrid, pool={RerankCandidatePoolSize}, final={searchResults.Count}",
                     requestPreview: command.Message.Length > 500 ? command.Message[..500] : command.Message,
                     responsePreview: searchResults.Count > 0
                         ? (searchResults[0].Content.Length > 500 ? searchResults[0].Content[..500] : searchResults[0].Content)
@@ -370,7 +390,8 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                 new Dictionary<string, string>(StringComparer.Ordinal)
                 {
                     ["mode"] = "Hybrid",
-                    ["limit"] = "5",
+                    ["candidatePool"] = RerankCandidatePoolSize.ToString(CultureInfo.InvariantCulture),
+                    ["finalTopK"] = FinalTopK.ToString(CultureInfo.InvariantCulture),
                     ["resultCount"] = (ragSnippets?.Count ?? 0).ToString(CultureInfo.InvariantCulture),
                     ["latencyMs"] = retrievalStopwatch.ElapsedMilliseconds.ToString(CultureInfo.InvariantCulture),
                     ["cacheStatus"] = cacheInfo?.status ?? "skip",

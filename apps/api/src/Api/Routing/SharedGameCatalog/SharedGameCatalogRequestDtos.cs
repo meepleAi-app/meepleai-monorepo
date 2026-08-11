@@ -4,12 +4,52 @@ using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.SharedKernel.Domain.Covers;
 
 namespace Api.Routing;
+
+/// <summary>
+/// Request body for the cover-picker upsert (epic #3470). The UI context is a route
+/// segment; the body carries the pinned source and the crop focal point (defaults
+/// to center). The acting admin comes from the session, never the body.
+/// </summary>
+internal record AssignCoverRequest(
+    CoverAssignmentSource Source,
+    double FocalX = 0.5,
+    double FocalY = 0.5);
+
+/// <summary>
+/// Request body for the manual cover set (epic #3470 Slice 3a). The admin supplies an HTTPS image
+/// URL plus the attested license (must be whitelisted) and optional attribution. The acting admin
+/// comes from the session, never the body.
+/// </summary>
+internal record SetManualCoverRequest(
+    string SourceUrl,
+    string License,
+    string? Attribution = null);
+
+/// <summary>
+/// Optional request body for the manual cover revoke (#3495 H6). Carries the takedown reason, which
+/// is recorded in the <c>cover.manual.revoked</c> audit event. The body is optional so the existing
+/// no-body DELETE contract keeps working (reason is then null).
+/// </summary>
+internal record RevokeManualCoverRequest(
+    string? Reason = null);
 
 // ========================================
 // REQUEST DTOS
 // ========================================
+
+/// <summary>
+/// Request body for <c>POST /mechanic-cards/{cardId}/feedback</c> (#533 ME-M3.1). The card id comes
+/// from the route and the user id from the session, so the body only carries the claim + verdict.
+/// </summary>
+internal record SubmitMechanicCardFeedbackRequest(
+    Guid ClaimId,
+    bool IsPositive,
+    string? ErrorType,
+    string? Description,
+    string? SuggestedCitation);
 
 /// <summary>
 /// Request DTO for creating a shared game.

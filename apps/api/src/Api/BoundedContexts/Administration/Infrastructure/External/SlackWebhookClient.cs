@@ -45,6 +45,18 @@ internal sealed class SlackWebhookClient : ISlackWebhookClient
             return new SlackSendResult(false, "Webhook URL is not a valid absolute URI.");
         }
 
+        // SSRF guard (#2655 finding #11 / #3495 fix 3/N): reject non-HTTPS schemes up front, then
+        // let the SSRF connect-pin on this client's handler (ConfigureSsrfPin) enforce the public-IP
+        // guarantee at connect time. The pin — unlike a pre-connect DNS check — is not TOCTOU: every
+        // connection (and redirect hop) dials only a validated public address, so a compromised or
+        // misconfigured webhook cannot reach internal services or the cloud metadata endpoint. The
+        // URL is never logged (it embeds the webhook secret).
+        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Slack webhook blocked by SSRF guard: non-HTTPS scheme");
+            return new SlackSendResult(false, "Webhook URL is not allowed (must be HTTPS).");
+        }
+
         var payload = BuildPayload(message);
 
         try

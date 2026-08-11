@@ -131,7 +131,7 @@ internal sealed class ChannelDispatchHandler : INotificationHandler<AlertFiredEv
 
             // Issue #1941 / iso-2 Fix 1: only mark dispatched on real (non-dry-run, non-test)
             // alerts that completed without throwing. Concurrency: parallel sibling channels
-            // each upsert their own row, so RowVersion contention is bounded per-channel.
+            // each upsert their own row, so xmin contention is bounded per-channel.
             if (!notification.IsDryRun && !notification.IsTest)
             {
                 channel.MarkDispatched(notification.EventId);

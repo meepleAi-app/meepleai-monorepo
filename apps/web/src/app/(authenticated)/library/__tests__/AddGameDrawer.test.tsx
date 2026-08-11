@@ -153,7 +153,7 @@ describe('AddGameDrawer', () => {
     it('shows catalog choice card', () => {
       renderDrawer({ open: true });
       expect(screen.getByTestId('add-game-choice-catalog')).toBeInTheDocument();
-      expect(screen.getByText('From shared catalog')).toBeInTheDocument();
+      expect(screen.getByText('Add from the shared catalog')).toBeInTheDocument();
     });
 
     it('does not show wizard or catalog step on Step 0', () => {

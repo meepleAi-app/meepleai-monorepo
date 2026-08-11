@@ -1,0 +1,56 @@
+# Issue #3498 — E2E-only storage override.
+#
+# Composto SOPRA docker-compose.yml + compose.dev.yml SOLO nel job cover-R2-strict. Punta l'API a
+# MinIO via S3 con un host di presign raggiungibile dal browser (S3_PUBLIC_ENDPOINT, #3535). Tenuto
+# FUORI dal compose base perché staging/prod non devono mai esporre MinIO né flippare
+# STORAGE_PROVIDER globalmente.
+#
+# La porta 9000 NON viene ri-pubblicata qui: `compose.dev.yml` la espone già su
+# 127.0.0.1:9000, che il browser Playwright (in esecuzione sull'host del runner) raggiunge come
+# localhost:9000. Aggiungere un secondo binding `9000:9000` è additivo in compose e faceva fallire
+# l'up con "address already in use".
+services:
+  api:
+    environment:
+      STORAGE_PROVIDER: "s3"
+      S3_ENDPOINT: "http://minio:9000"            # server-to-server (rete docker)
+      S3_PUBLIC_ENDPOINT: "http://localhost:9000" # host di presign raggiungibile dal browser (#3535)
+      # Stessi default del servizio `minio` in compose.dev.yml: `storage.secret` contiene solo le
+      # variabili R2, non MINIO_ROOT_*, quindi senza questi default l'API firmerebbe i presign con
+      # credenziali VUOTE — l'API parte comunque (stringa vuota ≠ null) e il browser prende 403.
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-minioadmin}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-minioadmin123}"
+      S3_BUCKET_NAME: "meepleai-uploads"
+      # 🔴 DEVE restare "auto". BlobStorageServiceFactory fa:
+      #     if (Region != "auto" && RegionEndpoint.GetBySystemName(Region) != null)
+      #         s3Config.RegionEndpoint = ...
+      # e nell'SDK AWS .NET impostare RegionEndpoint DOPO ServiceURL fa prevalere il primo:
+      # il client smette di parlare con http://minio:9000 e va su AWS S3 vero, dove le
+      # credenziali minioadmin danno 403 Forbidden. Il sintomo è fuorviante — coverUrl null,
+      # come se l'oggetto non ci fosse — perché GetPresignedUrlForRawKeyAsync fa una HEAD
+      # prima di firmare e cattura il 403 nel catch esterno ritornando null.
+      # "auto" è anche il valore che usa la produzione (R2), quindi questo path è quello provato.
+      S3_REGION: "auto"
+      S3_FORCE_PATH_STYLE: "true"                 # bucket.localhost:9000 non risolverebbe
+      S3_DISABLE_ENCRYPTION: "true"               # MinIO dev: niente SSE
+    depends_on:
+      minio:
+        condition: service_healthy
+      # Health-gating del BUCKET, non solo del server: senza questo l'API può partire e ricevere
+      # richieste prima che `mc mb` abbia creato meepleai-uploads, e il primo presign fallisce.
+      minio-init:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      args:
+        # La CSP di default è `img-src 'self' data: https:`: l'URL presignato di MinIO è
+        # http://localhost:9000 — non 'self' (che è :3000), non data:, non https: — quindi il
+        # browser lo BLOCCA e naturalWidth resta 0 anche con l'oggetto regolarmente servito.
+        #
+        # 🔴 Deve stare fra i `build.args`, NON fra le `environment`/`env_file`: `headers()` in
+        # next.config.js viene valutata durante `next build` e congelata in routes-manifest.json,
+        # quindi un valore fornito solo a runtime arriva dopo che l'header è già stato deciso e la
+        # riga non ha alcun effetto. Sintomo: cover presignata correttamente, immagine bloccata dal
+        # browser, card sul placeholder — cioè identico a un oggetto mancante.
+        NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB: "true"

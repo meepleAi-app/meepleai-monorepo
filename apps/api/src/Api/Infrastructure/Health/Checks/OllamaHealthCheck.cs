@@ -30,10 +30,11 @@ public class OllamaHealthCheck : IHealthCheck
         var ollamaUrl = _configuration["OLLAMA_URL"];
         if (string.IsNullOrWhiteSpace(ollamaUrl))
         {
-            // Defensive: if registration somehow drifted from configuration, surface
-            // Unhealthy so monitoring catches the misregistration rather than silently
-            // returning Degraded.
-            return HealthCheckResult.Unhealthy("Ollama health check registered without OLLAMA_URL — registration/config drift");
+            // Defensive: registration drifted from configuration. Surface Degraded, not
+            // Unhealthy — ollama is NonCritical/Optional and must not 503 the aggregate
+            // /health (#3618). Monitoring still catches it: HealthStateMachine treats any
+            // non-Healthy result as a failure, and the description names the drift.
+            return HealthCheckResult.Degraded("Ollama health check registered without OLLAMA_URL — registration/config drift");
         }
 
         try
@@ -57,12 +58,12 @@ public class OllamaHealthCheck : IHealthCheck
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Ollama service health check failed - HTTP request error");
-            return HealthCheckResult.Unhealthy("Ollama service unavailable", ex);
+            return HealthCheckResult.Degraded("Ollama service unavailable", ex);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ollama service health check failed - unexpected error");
-            return HealthCheckResult.Unhealthy("Ollama service check failed", ex);
+            return HealthCheckResult.Degraded("Ollama service check failed", ex);
         }
     }
 }

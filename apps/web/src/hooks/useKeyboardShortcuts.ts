@@ -103,7 +103,7 @@ function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): bool
 /**
  * Default global keyboard shortcuts
  */
-export function getDefaultShortcuts(callbacks: {
+function getDefaultShortcuts(callbacks: {
   onNewChat: () => void;
   onUploadPdf: () => void;
   onFocusSearch: () => void;
@@ -287,23 +287,4 @@ export function useGlobalKeyboardShortcuts(
     modKey,
     formatShortcut,
   };
-}
-
-/**
- * Hook for message input shortcuts (Cmd+Enter to send)
- */
-export function useMessageInputShortcuts(onSend: () => void, enabled = true) {
-  const shortcuts: KeyboardShortcut[] = [
-    {
-      key: 'Enter',
-      ctrl: true,
-      meta: true,
-      description: 'Send message',
-      action: onSend,
-      preventDefault: true,
-      category: 'editor',
-    },
-  ];
-
-  useKeyboardShortcuts(shortcuts, enabled);
 }

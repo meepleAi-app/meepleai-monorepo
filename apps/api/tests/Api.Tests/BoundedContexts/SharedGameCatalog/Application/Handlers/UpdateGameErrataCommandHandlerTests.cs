@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -76,7 +77,7 @@ public class UpdateGameErrataCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentErrata_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentErrata_ThrowsNotFoundException()
     {
         // Arrange
         var errataId = Guid.NewGuid();
@@ -93,7 +94,7 @@ public class UpdateGameErrataCommandHandlerTests
         // Act & Assert
         var act = () =>
             _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
 
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

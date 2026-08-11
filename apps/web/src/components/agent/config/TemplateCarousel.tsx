@@ -6,6 +6,8 @@
 
 'use client';
 
+import '@/components/agent/agent-theme-styles';
+
 import { useState } from 'react';
 
 import { Info } from 'lucide-react';

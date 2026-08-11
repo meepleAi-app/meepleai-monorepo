@@ -20,7 +20,7 @@ Ogni mockup migration deve essere accompagnata da un file `<mockup-name>.fidelit
 
 - ✅ **Phase 2+** (DS-17-6): ogni story `*.stories.tsx` deve avere `*.fidelity.yml` co-located
 - ✅ **Phase 1** (oggi): pilot per `sp4-dashboard` come standalone esempio
-- ⏭️ **Phase 3**: enforcement designer sign-off (campi `designer_approved_by` + `designer_approved_on` required pre-merge)
+- ✅ **Signoff gate SHIPPED** (#2997, [ADR-077](../../for-claude/architecture/adr/adr-077-designer-signoff-ci-gate.md)): `designer_approved_by` **required non-empty** per ogni `design_intent: "current"`, enforced in CI via `pnpm lint:fidelity` (step `frontend-lint`). Il token `self-waiver P250` è un'approvazione accettata (contesto solo-maintainer).
 - ⏭️ **Phase 4**: visual gate scoped legge `visual_diff_max_px` + `color_delta_e_max` come threshold
 
 ---
@@ -87,7 +87,11 @@ Breakpoint px da testare. Default copre mobile/tablet/desktop/wide.
 
 ### `acceptance.designer_approved_by` (string, default "")
 
-GitHub handle del designer che ha approvato (es. `@design-lead`). Required Phase 3+.
+Approvazione del designer. **Enforced (#2997, ADR-077)**: per `design_intent: "current"` deve essere **non-vuoto** o il gate `pnpm lint:fidelity` fallisce (signoff strict, mai baselined). Valori accettati:
+- Nome/handle reale del designer (es. `Jane Designer`, `@design-lead`).
+- Token solo-maintainer `self-waiver P250`, es. `"you@meepleAi (self-waiver P250, single-person team)"` — documenta l'eccezione developer-è-designer.
+
+Intenti `forward-refactor` / `forward-refactor-obsolete` / `deferred` **non** sono signoff-gated (advisory: superfici speculative o non-ancora-costruite).
 
 ### `acceptance.designer_approved_on` (string ISO date, default "")
 
@@ -111,10 +115,11 @@ node apps/web/scripts/mockup-annotations/validate-fidelity.mjs docs/for-develope
 # PASS  docs/for-developers/frontend/templates/examples/sp4-dashboard.fidelity.json
 ```
 
-### Scan all fidelity files in repo
+### Scan all fidelity files in repo (CI gate)
 ```bash
-node apps/web/scripts/mockup-annotations/validate-fidelity.mjs --all
+pnpm lint:fidelity   # = validate-fidelity.mjs --all --max-baseline 3
 ```
+`--all` esclude `**/templates/**` (i file di esempio in `templates/examples/` sono illustrazioni, non superfici gated). `--max-baseline N` tollera fino a N fallimenti **strutturali** pre-esistenti (schema / `mockup.source` cross-ref); NON rilassa il signoff (sempre strict). Baseline attuale = 3 (fidelity orfani con `mockup.source` cancellato: `sp4-play-records-data` / `scaffold` / `pr-form-core` — da riconciliare per abbassare la baseline).
 
 ### Print schema
 ```bash
@@ -125,8 +130,8 @@ node apps/web/scripts/mockup-annotations/validate-fidelity.mjs --schema
 
 | Code | Meaning |
 |------|---------|
-| 0 | All validations passed |
-| 1 | Schema mismatch or missing referenced file |
+| 0 | Signoff OK **e** fallimenti strutturali ≤ `--max-baseline` |
+| 1 | Signoff mancante su una superficie `current`, **oppure** fallimenti strutturali oltre baseline |
 | 2 | Invocation error (missing arg, file not found) |
 
 ---
@@ -161,7 +166,7 @@ or wait for Phase 2 (DS-17-5) which adds yaml devDep. Template .yml is reference
 - ❌ **`tokens_used: mixed_legacy_allowed` permanente** → waiver dovrebbe essere temporary con TODO in commit
 - ❌ **`states_covered` ≠ `mockup.states`** → validator FAIL (set inequality)
 - ❌ **Path mockup.source relativo al fidelity file** → validator richiede path relativo al repo root
-- ❌ **Skip designer sign-off Phase 3+** → contro DEC-3 spec doc, blocking gate (Phase 4)
+- ❌ **`design_intent: "current"` con `designer_approved_by` vuoto** → gate `pnpm lint:fidelity` FAIL (#2997, ADR-077). Compila il signoff o usa il token `self-waiver P250`.
 
 ---
 

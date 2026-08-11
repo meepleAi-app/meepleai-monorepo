@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 
+import { setupMockAuth } from './fixtures/auth';
+
 /**
  * Epic #4: PDF Status Tracking
  * Issues: #4106-#4111 (6 issues)
@@ -7,6 +9,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Epic #4: PDF Status Tracking', () => {
   test.beforeEach(async ({ page }) => {
+    await setupMockAuth(page, 'Admin');
+
     // TODO: Login as authenticated user
     await page.goto('/');
   });
@@ -117,9 +121,8 @@ test.describe('Epic #4: PDF Status Tracking', () => {
     await page.goto('/upload');
 
     // Monitor network for SSE connection to the correct endpoint
-    const sseRequestPromise = page.waitForRequest(req =>
-      req.url().includes('/api/v1/pdfs/') &&
-      req.url().includes('/status/stream')
+    const sseRequestPromise = page.waitForRequest(
+      req => req.url().includes('/api/v1/pdfs/') && req.url().includes('/status/stream')
     );
 
     // Upload PDF

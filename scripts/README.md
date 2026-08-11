@@ -14,13 +14,6 @@ Automation scripts for MeepleAI development, deployment, testing, and maintenanc
 .\scripts\deployment\deploy-meepleai.ps1 update    # Update to latest images
 ```
 
-### `development/` — Development Workflow
-- **`e2e-demo-setup.ps1`** — E2E demo setup (Docker services, BGG import, PDF upload)
-
-```powershell
-.\scripts\development\e2e-demo-setup.ps1
-```
-
 ### `monitoring/` — Resource Monitoring
 - **`docker-resource-monitor.ps1`** — Docker container resource monitoring
 
@@ -47,18 +40,6 @@ Automation scripts for MeepleAI development, deployment, testing, and maintenanc
 ./scripts/security/epic-4068-security-audit.sh [environment]
 ```
 
-### `testing/` — Integration Testing
-- **`test-services.ps1`** — Health check all MeepleAI services
-- **`test-oauth-health.ps1`** — Test OAuth provider configuration
-- **`test-runbooks.ps1`** — Test operational runbooks (alerting)
-
-```powershell
-.\scripts\testing\test-services.ps1
-.\scripts\testing\test-oauth-health.ps1
-.\scripts\testing\test-runbooks.ps1 all              # All runbooks
-.\scripts\testing\test-runbooks.ps1 high-error-rate   # Specific runbook
-```
-
 ### Root-Level Scripts
 
 | Script | Purpose |
@@ -67,7 +48,6 @@ Automation scripts for MeepleAI development, deployment, testing, and maintenanc
 | `validate-workflows.js` | GitHub Actions workflow validation (used in CI) |
 | `security-check-local.ps1` | Local security scans (pnpm audit, dotnet audit, Semgrep, safety) |
 | `setup-branch-protection.sh` | Configure GitHub branch protection rules |
-| `seed-dashboard-data.ps1` + `.sql` | Seed test data for Gaming Hub Dashboard |
 | `seed-default-agent.ps1` + `.sql` | Seed default POC agent (MeepleAssistant) |
 
 ## Platform

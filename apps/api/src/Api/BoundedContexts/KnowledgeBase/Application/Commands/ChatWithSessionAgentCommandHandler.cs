@@ -3,13 +3,16 @@ using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Observability;
@@ -50,9 +53,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly ICircuitBreakerRegistry _circuitBreakerRegistry;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ChatWithSessionAgentCommandHandler> _logger;
-    private readonly ICopyrightLeakGuard _copyrightLeakGuard;
-    private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
-    private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
+    private readonly IGroundedAnswerService _groundedAnswerService;
+    private readonly ILiveSessionStreamGateway _liveSessionStreamGateway;
+    private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
 
     // Summary generation thresholds
     private const int SummaryThreshold = 10;
@@ -62,6 +65,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     internal const string AgentUnavailableErrorCode = "AGENT_TEMPORARILY_UNAVAILABLE";
     internal const string AgentUnavailableItalianMessage =
         "Agente AI temporaneamente non disponibile. Riprova tra qualche minuto o usa gli strumenti manuali.";
+
+    // SP5-c #2600: per-chunk LLM stream timeout error code
+    internal const string LlmTimeoutErrorCode = "LLM_TIMEOUT";
 
     public ChatWithSessionAgentCommandHandler(
         IAgentSessionRepository sessionRepository,
@@ -78,9 +84,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ICircuitBreakerRegistry circuitBreakerRegistry,
         IServiceScopeFactory scopeFactory,
         ILogger<ChatWithSessionAgentCommandHandler> logger,
-        ICopyrightLeakGuard copyrightLeakGuard,
-        ICopyrightFallbackMessageProvider fallbackMessageProvider,
-        IOptions<CopyrightLeakGuardOptions> copyrightOptions)
+        IGroundedAnswerService groundedAnswerService,
+        ILiveSessionStreamGateway liveSessionStreamGateway,
+        IOptions<SessionAgentOptions>? sessionAgentOptions = null)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
@@ -96,9 +102,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _circuitBreakerRegistry = circuitBreakerRegistry ?? throw new ArgumentNullException(nameof(circuitBreakerRegistry));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _copyrightLeakGuard = copyrightLeakGuard ?? throw new ArgumentNullException(nameof(copyrightLeakGuard));
-        _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
-        _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
+        _groundedAnswerService = groundedAnswerService ?? throw new ArgumentNullException(nameof(groundedAnswerService));
+        _liveSessionStreamGateway = liveSessionStreamGateway ?? throw new ArgumentNullException(nameof(liveSessionStreamGateway));
+        _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
     }
 
     /// <summary>
@@ -142,6 +148,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ChatWithSessionAgentCommand command,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // SP5-b T2: measure wall-clock time from handler entry to first token.
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var firstTokenRecorded = false;
+
         _logger.LogInformation(
             "Starting session agent chat for AgentSession {SessionId}, User {UserId}, Thread {ChatThreadId}",
             command.AgentSessionId, command.UserId, command.ChatThreadId);
@@ -236,7 +246,11 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             thread,
             userTier: null,
             agentLanguage: agentLanguage,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            // #3389: explicit LiveSession policy decouples retrieval from tier — the null tier above no
+            // longer silently means "Default profile + enhancements off". Enhancements stay off by policy
+            // (EnhancementsEnabled=false) until a golden eval set exists (#3390).
+            retrievalPolicy: RetrievalPolicy.LiveSession).ConfigureAwait(false);
 
         _logger.LogDebug(
             "Prompt assembled: {EstimatedTokens} tokens, {CitationCount} citations",
@@ -326,24 +340,94 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var fullResponse = new StringBuilder();
         LlmUsage? finalUsage = null;
 
-        // Note: yield return cannot be in try-catch, so we collect chunks and capture errors
+        // SP5-c #2600: per-chunk deadline.
+        // NEEDS TUNING: observe p99 inter-chunk latency in production before tightening.
+        var perChunkTimeout = TimeSpan.FromSeconds(
+            _sessionAgentOptions.Value.LlmPerChunkTimeoutSeconds);
+
+        // Note: yield return cannot be in try-catch, so we collect chunks and capture errors.
+        // The per-chunk timeout is applied via a linked CancellationTokenSource whose deadline
+        // is armed just before each MoveNextAsync and disarmed immediately after a chunk arrives,
+        // so chunk-processing time (buffering, logging) does NOT count against the next deadline.
         var chunks = new List<StreamChunk>();
         string? streamError = null;
+        bool chunkTimedOut = false;
+        bool clientDisconnected = false;
         try
         {
-            await foreach (var chunk in _llmService.GenerateCompletionStreamAsync(
+            using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var enumerator = _llmService.GenerateCompletionStreamAsync(
                 systemPrompt,
                 assembled.UserPrompt,
                 RequestSource.AgentTask,
-                cancellationToken).ConfigureAwait(false))
+                streamCts.Token).GetAsyncEnumerator(streamCts.Token);
+            await using (enumerator.ConfigureAwait(false))
             {
-                chunks.Add(chunk);
+                while (true)
+                {
+                    // Arm per-chunk deadline before awaiting the next chunk.
+                    streamCts.CancelAfter(perChunkTimeout);
+
+                    bool moved;
+                    try
+                    {
+                        moved = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (streamCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                        {
+                            // The streamCts deadline fired — the chunk took too long.
+                            chunkTimedOut = true;
+                        }
+                        else
+                        {
+                            // The original client ct was cancelled (normal disconnect).
+                            clientDisconnected = true;
+                        }
+                        break;
+                    }
+
+                    // Disarm the deadline now that a chunk has arrived (or the stream ended).
+                    // Processing the chunk does NOT count against the NEXT chunk's deadline.
+                    streamCts.CancelAfter(Timeout.InfiniteTimeSpan);
+
+                    if (!moved)
+                    {
+                        break;
+                    }
+
+                    chunks.Add(enumerator.Current);
+                }
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "LLM streaming failed for session {SessionId}", command.AgentSessionId);
             streamError = ex.Message;
+        }
+
+        // Handle timeout — yield the timeout error event (outside the try/catch per C# iterator rules).
+        if (chunkTimedOut)
+        {
+            _logger.LogWarning(
+                "LLM stream per-chunk timeout ({Timeout:g}) exceeded for session {SessionId}",
+                perChunkTimeout, command.AgentSessionId);
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(
+                    $"LLM stream timed out waiting for next chunk (deadline: {perChunkTimeout.TotalSeconds:0.#}s)",
+                    LlmTimeoutErrorCode));
+            yield break;
+        }
+
+        // Handle client disconnect — stop silently (normal disconnect, no error event).
+        if (clientDisconnected)
+        {
+            _logger.LogDebug(
+                "Client disconnected mid-stream for session {SessionId}; stream stopped",
+                command.AgentSessionId);
+            yield break;
         }
 
         if (streamError != null)
@@ -376,6 +460,21 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             {
                 fullResponse.Append(chunk.Content);
                 yield return CreateEvent(StreamingEventType.Token, new StreamingToken(chunk.Content));
+
+                // SP5-b T2: record first-token latency AFTER the yield (metrics must not block/throw the stream).
+                // C# forbids yield inside try/catch — the try/catch wraps only the Record() call.
+                if (!firstTokenRecorded)
+                {
+                    try
+                    {
+                        MeepleAiMetrics.RagFirstTokenLatency.Record(sw.Elapsed.TotalMilliseconds);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "SP5-b: RagFirstTokenLatency recording failed (metrics must not break the stream)");
+                    }
+                    firstTokenRecorded = true;
+                }
             }
 
             if (chunk.IsFinal)
@@ -395,74 +494,36 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         var responseText = fullResponse.ToString();
         var totalTokens = finalUsage?.TotalTokens ?? 0;
 
-        // #447: Copyright leak guard (fail-open)
-        var protectedCitations = resolvedCitations
-            .Where(c => c.CopyrightTier == CopyrightTier.Protected)
-            .ToList();
+        // #447 / #3490 (ADR-090): shared grounded finalize — copyright leak guard (fail-open scan /
+        // fail-closed sanitize) → paraphrase (Protected) → CitationDto mapping (Full-gated tier-nulling)
+        // → grounding (#3388) → confidence. Same seam as the one-shot path (GroundedAnswerService), so
+        // the trust-critical logic lives in ONE place (removes the ADR-090 drift). FinalizeAsync emits
+        // the copyright scan/verbatim metrics internally — the handler must NOT re-emit them.
+        //
+        // Cancellation: FinalizeAsync PROPAGATES an OperationCanceledException on the caller's token
+        // (a client-disconnect during the scan). The previous inline code fail-opened the scan but then
+        // aborted at the following SaveChangesAsync(cancellationToken) anyway — so the net user outcome
+        // (no persist, no broadcast) is IDENTICAL; propagating just drops the spurious "fail-open" log +
+        // CopyrightScanErrors metric that a mere cancel should never have produced.
+        var grounded = await _groundedAnswerService
+            .FinalizeAsync(responseText, resolvedCitations, command.UserQuestion, agentLanguage, cancellationToken)
+            .ConfigureAwait(false);
 
-        CopyrightLeakResult? leakResult = null;
+        responseText = grounded.ResponseText;
+        var finalCitations = grounded.FinalCitations;
 
-        if (protectedCitations.Count > 0)
+        // Copyright sanitize event kept in the handler: the C# iterator method forbids `yield` inside a
+        // try/catch, so FinalizeAsync does the scan/sanitize and returns LeakMatchCount for the yield.
+        if (grounded.LeakMatchCount > 0)
         {
-            try
-            {
-                using var scanCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                scanCts.CancelAfter(TimeSpan.FromMilliseconds(_copyrightOptions.Value.ScanTimeoutMs));
-
-                var scanSw = Stopwatch.StartNew();
-                leakResult = await _copyrightLeakGuard
-                    .ScanAsync(responseText, protectedCitations, scanCts.Token)
-                    .ConfigureAwait(false);
-                scanSw.Stop();
-
-                MeepleAiMetrics.CopyrightScanDurationMs.Record(scanSw.ElapsedMilliseconds);
-            }
-            catch (Exception ex)
-            {
-                MeepleAiMetrics.CopyrightScanErrors.Add(1,
-                    new KeyValuePair<string, object?>("error_type", ex.GetType().Name));
-                _logger.LogError(ex,
-                    "Copyright leak guard failed for session {SessionId}, allowing response (fail-open)",
-                    command.AgentSessionId);
-                leakResult = null;  // fail-open
-            }
-        }
-
-        // #447: Leak detection result handling (placed here due to C# iterator method constraints)
-        if (leakResult?.HasLeak == true)
-        {
-            foreach (var match in leakResult.Matches)
-            {
-                MeepleAiMetrics.CopyrightVerbatimDetected.Add(1,
-                    new KeyValuePair<string, object?>("run_length", match.RunLength),
-                    new KeyValuePair<string, object?>("document_id", match.DocumentId));
-            }
-
             _logger.LogWarning(
-                "Copyright leak detected in session {SessionId}: {MatchCount} matches, sanitizing response",
-                command.AgentSessionId, leakResult.Matches.Count);
-
-            var fallbackMessage = _fallbackMessageProvider.GetMessage(agentLanguage);
+                "Copyright leak detected in session {SessionId}: {MatchCount} matches, response sanitized",
+                command.AgentSessionId, grounded.LeakMatchCount);
 
             yield return CreateEvent(
                 StreamingEventType.CopyrightSanitized,
-                new StreamingCopyrightSanitized(fallbackMessage, leakResult.Matches.Count));
-
-            responseText = fallbackMessage;
+                new StreamingCopyrightSanitized(responseText, grounded.LeakMatchCount));
         }
-
-        // Extract paraphrased snippets for Protected-tier citations
-        var finalCitations = resolvedCitations.Select(c =>
-        {
-            if (c.CopyrightTier == CopyrightTier.Protected)
-            {
-                var paraphrase = ParaphraseExtractor.Extract(
-                    responseText, c.DocumentId, c.PageNumber,
-                    c.SnippetPreview, command.UserQuestion);
-                return c with { ParaphrasedSnippet = paraphrase };
-            }
-            return c;
-        }).ToList();
 
         // Persist assistant response with citations
         var citationsJson = JsonSerializer.Serialize(finalCitations);
@@ -542,15 +603,78 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             _ = GenerateConversationSummaryAsync(thread.Id);
         }
 
-        // Build citation DTOs for SSE response
-        var citationDtos = finalCitations.Select(c => new CitationDto(
-            c.DocumentId,
-            c.PageNumber,
-            c.RelevanceScore,
-            c.CopyrightTier == CopyrightTier.Full ? c.SnippetPreview : null,
-            c.CopyrightTier.ToString().ToLowerInvariant(),
-            c.ParaphrasedSnippet,
-            c.IsPublic)).ToList();
+        // Citation DTOs for the SSE response + session:chat broadcast — built by the shared finalize
+        // (Full-gated tier-nulling; SP-C #3407 region/offset gating inherited, no Protected verbatim leak).
+        var citationDtos = grounded.CitationDtos;
+
+        // SP5-b T2: record citations-per-answer ONCE, post-stream, using citationDtos.Count
+        // (the broadcast-authoritative list — NOT the earlier assembled.Citations or resolvedCitations).
+        // try/catch: a metrics fault must NEVER abort the user's stream.
+        try
+        {
+            MeepleAiMetrics.RecordCitationsPerAnswer(citationDtos.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "SP5-b: RagCitationsPerAnswer recording failed (metrics must not break the stream)");
+        }
+
+        // SP2 T8 — Broadcast session:chat on the live-session stream (ADR-083).
+        // Fires exactly once per completed chat, AFTER DB persist (DB is record-of-truth).
+        // Reuses the already-built citationDtos (tier-nulling inherited, no Protected verbatim leak).
+        // Wrapped in try/catch-swallow: a Redis/broadcast failure MUST NEVER break the user's stream.
+        if (liveSession is not null)
+        {
+            var broadcastMessageId = thread.Messages
+                .OrderByDescending(m => m.SequenceNumber)
+                .Select(m => (Guid?)m.Id)
+                .FirstOrDefault() ?? Guid.Empty;
+
+            var chatBroadcastPayload = new
+            {
+                sessionId = liveSession.Id,
+                messageId = broadcastMessageId,
+                senderId = definition.Name,
+                content = responseText,
+                visibility = "shared",
+                timestamp = DateTime.UtcNow.ToString("o"),
+                citations = citationDtos
+            };
+
+            try
+            {
+                await _liveSessionStreamGateway.BroadcastAsync(
+                    liveSession.Id,
+                    new LiveSessionStreamEvent("session:chat", chatBroadcastPayload, null),
+                    cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "session:chat broadcast failed for live session {LiveSessionId}; stream unaffected",
+                    liveSession.Id);
+            }
+        }
+
+        // Wire grounding string (#3388) from the shared finalize enum (Grounded/Ungrounded — derived
+        // from citation count, never Partial). SSE serializes enums numerically, so send the name.
+        var groundingStatus = grounded.GroundingStatus.ToString();
+
+        // #3390 Slice 1: structured grounding observability (text path -> RAG, LiveSession profile).
+        // Wrapped so a metrics fault can never break the user's stream (mirrors the broadcast guard above).
+        try
+        {
+            MeepleAiMetrics.RecordAgentResponseGrounding(
+                path: MeepleAiMetrics.AgentResponsePaths.Text,
+                groundingStatusWire: groundingStatus,
+                retrievalProfile: MeepleAiMetrics.AgentRetrievalProfiles.LiveSession,
+                citationCount: citationDtos.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "agent-response grounding metric emission failed; stream unaffected");
+        }
 
         yield return CreateEvent(
             StreamingEventType.Complete,
@@ -559,9 +683,10 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 promptTokens: finalUsage?.PromptTokens ?? 0,
                 completionTokens: finalUsage?.CompletionTokens ?? 0,
                 totalTokens: totalTokens,
-                confidence: RagPromptAssemblyService.ComputeConfidence(assembled.Citations, responseText),
+                confidence: grounded.Confidence,
                 chatThreadId: thread.Id,
-                Citations: citationDtos));
+                Citations: citationDtos,
+                GroundingStatus: groundingStatus));
     }
 
     private async Task GenerateConversationSummaryAsync(Guid threadId)

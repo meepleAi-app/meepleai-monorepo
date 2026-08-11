@@ -132,6 +132,19 @@ describe('useTranslateSegmentSSE', () => {
     expect(captured?.close).toHaveBeenCalled();
   });
 
+  // #3101 — cleanup on unmount to prevent a dangling EventSource + setState-after-unmount
+  // when the user navigates away mid-translate (browser back, route change).
+  it('closes EventSource on unmount', () => {
+    const { result, unmount } = renderHook(() => useTranslateSegmentSSE());
+
+    act(() => result.current.start(CAMPAIGN_ID, PHOTO_ID, 5, BOOK_ID));
+    const captured = lastInstance;
+
+    unmount();
+
+    expect(captured?.close).toHaveBeenCalled();
+  });
+
   it('resets state on new start() call', () => {
     const { result } = renderHook(() => useTranslateSegmentSSE());
 

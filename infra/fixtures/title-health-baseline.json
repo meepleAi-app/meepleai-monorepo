@@ -1,0 +1,888 @@
+{
+  "schemaVersion": 1,
+  "_comment": "Epic #3338 WP3 extraction-quality regression guard. Per-game title-health (TitleHealthMetric over each shared game's distinct text_chunks.Heading), captured from the STAGING corpus via GET /api/v1/admin/kb/title-health. Asserted by .github/workflows/title-health-staging.yml (SSH-fetch from staging → scripts/title-health-assert.sh --current-file). It fails a run if a baselined game's band DOWNGRADES (green→yellow/red, yellow→red), its plausibleFraction drops by more than `fractionRegressionTolerance`, or a baselined game vanishes. New (unbaselined) games are a NOTICE, never a FAIL. Runs against STAGING (not the CI seed snapshot) because the snapshot is Docnet-extracted = headingless; staging carries the heading-aware re-indexed corpus. `games` starts EMPTY → the gate SKIPs (dormant) until captured via workflow_dispatch (update_baseline=true). Because staging is not version-pinned, RE-CAPTURE after any deliberate re-index; the guard still catches unintended downgrades between captures. Docs: docs/for-developers/operations/2026-07-28-wp3-title-health-go-no-go.md.",
+  "fractionRegressionTolerance": 0.05,
+  "capturedAt": "2026-08-03T14:57:25Z",
+  "games": {
+    "013e4db3-6550-4283-b9a0-8d673cc18a34": {
+      "gameTitle": "7 Wonders",
+      "language": "it",
+      "band": "green",
+      "plausibleFraction": 0.8241,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 108
+    },
+    "cef805bf-d933-4ef8-8504-8352834bc2e9": {
+      "gameTitle": "7 Wonders Duel",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9916,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 119
+    },
+    "5392922e-9102-4614-a972-58ec6bdb550d": {
+      "gameTitle": "Aeon's End",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8796,
+      "canonicalCoverage": 9,
+      "distinctHeadings": 191
+    },
+    "5e657697-4c65-4002-8ab0-efa12aca0283": {
+      "gameTitle": "Agricola",
+      "language": "it",
+      "band": "yellow",
+      "plausibleFraction": 0.6106,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 113
+    },
+    "09b65b94-8f1a-4b35-91e8-76be8acfe804": {
+      "gameTitle": "Agricola (Revised Edition)",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9091,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 110
+    },
+    "600524e1-8423-41d5-9c4b-cacef3b9606e": {
+      "gameTitle": "Android: Netrunner",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8943,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 227
+    },
+    "8289f662-af64-49f4-aef4-2a47859b1f78": {
+      "gameTitle": "Ark Nova",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.787,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 108
+    },
+    "24ef490b-316f-4ce7-8cf8-0b2d6493682f": {
+      "gameTitle": "Arkham Horror: The Card Game",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.96,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 150
+    },
+    "9f25a3bb-bb8e-414b-9080-711e36e843c3": {
+      "gameTitle": "Azul",
+      "language": "it",
+      "band": "yellow",
+      "plausibleFraction": 0.7917,
+      "canonicalCoverage": 8,
+      "distinctHeadings": 96
+    },
+    "e37c9cbf-3246-490f-956c-e60d5e98456d": {
+      "gameTitle": "Battlestar Galactica: The Board Game – Exodus Expansion",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8615,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 130
+    },
+    "918d9c9f-30bd-4ac3-9b1b-68db0bf66250": {
+      "gameTitle": "Blueprints",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8261,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 23
+    },
+    "d6c80520-1c81-4a21-bb3c-949094c3fed1": {
+      "gameTitle": "Brass: Birmingham",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7216,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 97
+    },
+    "67969638-7601-47db-a468-513e07ee8917": {
+      "gameTitle": "Brass: Lancashire",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7473,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 91
+    },
+    "3122acc3-0f8b-4f8a-b188-74dc467e9712": {
+      "gameTitle": "Carcassonne",
+      "language": "it",
+      "band": "green",
+      "plausibleFraction": 0.913,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 23
+    },
+    "896ef6ab-aad2-42b2-833e-710b86043c83": {
+      "gameTitle": "Cascadia",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7573,
+      "canonicalCoverage": 9,
+      "distinctHeadings": 103
+    },
+    "9a3d0250-dc8b-4c35-96a2-716fe08cff08": {
+      "gameTitle": "Catan",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8667,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 105
+    },
+    "58f9b3d2-cb02-40ec-a3bb-d1ff8b194990": {
+      "gameTitle": "Century: Spice Road",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9286,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 28
+    },
+    "bd9caac6-74a0-4d3d-a70a-c3d9f4961115": {
+      "gameTitle": "Chess",
+      "language": "it",
+      "band": "yellow",
+      "plausibleFraction": 0.6367,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 267
+    },
+    "1d57e803-a25f-436f-888d-138c494a9281": {
+      "gameTitle": "Clank! Legacy: Acquisitions Incorporated",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.6739,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 46
+    },
+    "304ed4cb-bd5b-4ccf-9e04-47edab0f9377": {
+      "gameTitle": "Clank!: A Deck-Building Adventure",
+      "language": "en",
+      "band": "red",
+      "plausibleFraction": 0.4571,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 35
+    },
+    "880fefba-10f7-4d1a-b951-b7460ed2b3ef": {
+      "gameTitle": "Codenames",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 1,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 18
+    },
+    "d57a47e7-8b06-46e2-90fb-60c8105b27b9": {
+      "gameTitle": "Concordia",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9351,
+      "canonicalCoverage": 6,
+      "distinctHeadings": 77
+    },
+    "5ce41d59-152a-4655-bc71-753259808137": {
+      "gameTitle": "Coup",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 1,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 1
+    },
+    "13063389-c21f-456e-b9ea-81407dd47650": {
+      "gameTitle": "Cthulhu: Death May Die",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9431,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 123
+    },
+    "cbfa39cf-da18-43d7-ad26-88a0337f98a0": {
+      "gameTitle": "Darwin's Journey",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8333,
+      "canonicalCoverage": 10,
+      "distinctHeadings": 132
+    },
+    "9700e3ea-1f93-4ba8-a782-74b57b6dd380": {
+      "gameTitle": "Descent: Journeys in the Dark (Second Edition)",
+      "language": "it",
+      "band": "yellow",
+      "plausibleFraction": 0.75,
+      "canonicalCoverage": 6,
+      "distinctHeadings": 232
+    },
+    "0f5e0d2f-4281-d76c-ceea-51c076a149b6": {
+      "gameTitle": "Disney Villainous: The Worst Takes it All",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9643,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 168
+    },
+    "7fc23de4-6889-4989-9c4a-59d06b6964c0": {
+      "gameTitle": "Dixit",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8333,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 30
+    },
+    "a02a97f3-2370-4202-8c6b-cca10de07512": {
+      "gameTitle": "Dixit: Odyssey",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8679,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 53
+    },
+    "269cace7-0c21-4777-bfe3-e081635aa7d8": {
+      "gameTitle": "Dominion",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8512,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 121
+    },
+    "49a1ebc0-278b-49d8-9487-05d0e5e553cd": {
+      "gameTitle": "Dominion: Prosperity",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8469,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 98
+    },
+    "589d82db-3a88-48fd-8d60-ea4fdae35a23": {
+      "gameTitle": "Dune: Imperium",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 100
+    },
+    "97218b4c-4768-4361-9f72-068781dab87a": {
+      "gameTitle": "Dune: Imperium - Uprising",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7717,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 92
+    },
+    "ac4559c5-29f2-44e8-b248-994b3811220f": {
+      "gameTitle": "Eclipse: New Dawn for the Galaxy",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8497,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 173
+    },
+    "3ef53d84-76c2-411c-83a4-4ac9ba311d5a": {
+      "gameTitle": "Eclipse: Second Dawn for the Galaxy",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7231,
+      "canonicalCoverage": 7,
+      "distinctHeadings": 372
+    },
+    "3fa7b545-fc09-42ab-ba83-9e04f1f73baa": {
+      "gameTitle": "El Grande",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9123,
+      "canonicalCoverage": 6,
+      "distinctHeadings": 114
+    },
+    "834111fb-d73c-46ed-b94c-f3e1818449b6": {
+      "gameTitle": "Everdell",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8939,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 66
+    },
+    "1676c377-fb00-4fca-b72b-fdabe3a3df87": {
+      "gameTitle": "Fields of Arle",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7308,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 156
+    },
+    "417e9096-159b-443b-b651-7acb1c4aff76": {
+      "gameTitle": "Final Girl",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9302,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 86
+    },
+    "17b6c69a-4e30-42a2-83c8-21b43b8ac997": {
+      "gameTitle": "Five Tribes",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8793,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 58
+    },
+    "02370205-ff16-4a61-bff7-2e10786ae497": {
+      "gameTitle": "Food Chain Magnate",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.939,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 82
+    },
+    "38e028f8-73e6-4a14-8405-263c38ec346a": {
+      "gameTitle": "Forbidden Island",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9444,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 18
+    },
+    "c91fc9b0-f525-40fa-a96e-96c2b9bee1d1": {
+      "gameTitle": "Frostpunk: The Board Game",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8367,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 343
+    },
+    "ec49190d-f3ee-44a6-bdac-531be9808701": {
+      "gameTitle": "Gaia Project",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9481,
+      "canonicalCoverage": 15,
+      "distinctHeadings": 154
+    },
+    "214058c1-2eaa-46a2-8e91-aac0c114bfea": {
+      "gameTitle": "Gloom",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.88,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 25
+    },
+    "b86aab0f-5e27-489d-8583-f7e5532c0296": {
+      "gameTitle": "Gloomhaven: Jaws of the Lion",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.822,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 191
+    },
+    "19588603-d875-4759-a7c6-77a4380d99dc": {
+      "gameTitle": "Great Western Trail",
+      "language": "de",
+      "band": "yellow",
+      "plausibleFraction": 0.7487,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 195
+    },
+    "2bfb4a3d-3c62-41ca-92b2-a82ae0aa9e83": {
+      "gameTitle": "Great Western Trail: Argentina",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8466,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 163
+    },
+    "6ae83070-12e6-4f03-8c2d-1023182fc9bb": {
+      "gameTitle": "Hanamikoji",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9375,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 16
+    },
+    "3400062b-90da-4ff1-b4e6-7caab409c86b": {
+      "gameTitle": "Harmonies",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 60
+    },
+    "2cf8adc9-39c9-4a0f-bd18-c88aa3b875f8": {
+      "gameTitle": "Heat: Pedal to the Metal",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9412,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 34
+    },
+    "5b38a53a-5115-4878-bbc9-445f419b3413": {
+      "gameTitle": "Hegemony: Lead Your Class to Victory",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9355,
+      "canonicalCoverage": 12,
+      "distinctHeadings": 248
+    },
+    "2676681f-7bd1-4d7f-b139-4f79a95337c9": {
+      "gameTitle": "Hero Realms",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 30
+    },
+    "e3c0e6a1-54b6-4d94-b064-6353cbc182d0": {
+      "gameTitle": "Imperial Settlers",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8897,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 136
+    },
+    "adc9c9ce-ee87-45fd-a6b0-9de78c3066c0": {
+      "gameTitle": "Jaipur",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9286,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 42
+    },
+    "8e77ad87-64df-4e79-aba3-553698e59ed4": {
+      "gameTitle": "Kanban EV",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7688,
+      "canonicalCoverage": 13,
+      "distinctHeadings": 160
+    },
+    "cb7fd041-5e49-497d-896d-b366b52ef2ce": {
+      "gameTitle": "King of Tokyo",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8701,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 77
+    },
+    "fbcd604a-f629-4912-b40a-2df51881b41b": {
+      "gameTitle": "Kingdomino",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.625,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 8
+    },
+    "22fa380d-b4c5-4ac8-ae74-8d47bde9d6e5": {
+      "gameTitle": "Le Havre",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.75,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 24
+    },
+    "5f64b70a-0ea0-44fd-b9fc-cb21a0873fb2": {
+      "gameTitle": "Love Letter",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 5
+    },
+    "ea3a1053-cb7c-46ff-afc5-5d24ce3c50b2": {
+      "gameTitle": "Maracaibo",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7537,
+      "canonicalCoverage": 13,
+      "distinctHeadings": 134
+    },
+    "7cefc9aa-d265-4a70-afce-1c750765778f": {
+      "gameTitle": "Marvel Champions: The Card Game",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8636,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 44
+    },
+    "9c860442-a6d0-43cf-923c-33c518c83f50": {
+      "gameTitle": "Marvel United",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9286,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 70
+    },
+    "b5c0486f-018d-4ad1-8fdb-e1da961e94c0": {
+      "gameTitle": "Massive Darkness",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.95,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 40
+    },
+    "cb0765c0-1f12-4edd-ac38-15a10ec817e7": {
+      "gameTitle": "Masters of The Universe: Fields of Eternia The Board Game",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8976,
+      "canonicalCoverage": 11,
+      "distinctHeadings": 293
+    },
+    "7481219a-274d-4288-82a4-cced1afb4785": {
+      "gameTitle": "Mechs vs. Minions",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8947,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 19
+    },
+    "9d7a0061-56ac-4fcf-8adc-151aecabc0ab": {
+      "gameTitle": "Munchkin",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9556,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 45
+    },
+    "d88dbbfd-a30b-4a18-a10a-74d182e12f72": {
+      "gameTitle": "Nemesis",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8881,
+      "canonicalCoverage": 11,
+      "distinctHeadings": 286
+    },
+    "3597f07a-f665-429d-9431-55cccaf1c2a9": {
+      "gameTitle": "Paladins of the West Kingdom",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9552,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 67
+    },
+    "a1ceef25-6df1-45e3-b18f-b7d5d72656d8": {
+      "gameTitle": "Paleo",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7714,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 35
+    },
+    "3bc0dcad-12d0-4e75-a8e1-98e5a87b7a49": {
+      "gameTitle": "Pandemic",
+      "language": "it",
+      "band": "green",
+      "plausibleFraction": 0.8163,
+      "canonicalCoverage": 8,
+      "distinctHeadings": 98
+    },
+    "59d5f924-3602-40cc-b3c4-f77036c7cc94": {
+      "gameTitle": "Pandemic Legacy: Season 1",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9525,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 295
+    },
+    "57ef634c-d1b2-475e-ad7f-c00ffc9e7d6f": {
+      "gameTitle": "Pandemic Legacy: Season 2",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9162,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 191
+    },
+    "334e6e2b-6a29-4bc1-8ff6-ce0afce34173": {
+      "gameTitle": "Patchwork",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8929,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 28
+    },
+    "4df4e142-9012-4313-841a-f32754ec0f48": {
+      "gameTitle": "Photosynthesis",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8333,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 12
+    },
+    "a8262b0e-6f30-41f5-9ca0-28d8cd1f350c": {
+      "gameTitle": "Power Grid",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8095,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 42
+    },
+    "6a43b6a4-4c24-45ba-81e1-74e008bde865": {
+      "gameTitle": "Puerto Rico",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7556,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 90
+    },
+    "b85f83fd-e1cf-4989-a9c0-9d9b6d7a477c": {
+      "gameTitle": "RONE: Invasion",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9545,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 88
+    },
+    "f696982b-3a07-4003-9415-4621e99becf9": {
+      "gameTitle": "Race for the Galaxy",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9213,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 127
+    },
+    "fcd6c710-ec33-4b51-821b-c50e1ee603ad": {
+      "gameTitle": "Raiders of the North Sea",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8788,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 33
+    },
+    "f5ddf0f4-60f4-4a9d-843a-7e2f6bd181b8": {
+      "gameTitle": "Res Arcana",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8941,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 85
+    },
+    "2b3a60ed-7890-4e6f-9ecb-c7ac3ab7f2d8": {
+      "gameTitle": "Revive",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8835,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 103
+    },
+    "4f1a7e16-7770-4764-8ccc-77732037e05e": {
+      "gameTitle": "Roll Player",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8621,
+      "canonicalCoverage": 7,
+      "distinctHeadings": 29
+    },
+    "95450369-09d7-4785-99b6-9a28ffdd9757": {
+      "gameTitle": "SETI: Search for Extraterrestrial Intelligence",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9387,
+      "canonicalCoverage": 11,
+      "distinctHeadings": 212
+    },
+    "f88bb52e-4b6a-48b9-a7ac-04ef765acecc": {
+      "gameTitle": "Sagrada",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.6154,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 39
+    },
+    "3f56db0d-2736-42db-adf0-5e758f743fbe": {
+      "gameTitle": "Santorini",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8482,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 112
+    },
+    "bcea103d-b957-4b76-87b8-9453edb99405": {
+      "gameTitle": "Slay the Spire: The Board Game",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8872,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 195
+    },
+    "40e733d1-9c86-4b90-aa65-2f2ad40278a4": {
+      "gameTitle": "Sleeping Gods",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9537,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 108
+    },
+    "9f881f03-e7e3-4f1d-9b95-30fddbb843dc": {
+      "gameTitle": "Small World",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8971,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 68
+    },
+    "1a1ea2fb-f535-46a7-95a0-06c983102996": {
+      "gameTitle": "Splendor",
+      "language": "it",
+      "band": "green",
+      "plausibleFraction": 0.8667,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 15
+    },
+    "73fe33a4-672b-44b4-ac8a-a91a39c19639": {
+      "gameTitle": "Spot it!",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8571,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 21
+    },
+    "b03f840f-c23f-45c2-a2b4-f532f31f03ed": {
+      "gameTitle": "Star Wars: Imperial Assault",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8389,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 211
+    },
+    "89855dad-6cec-4e3c-a925-f89961a723b4": {
+      "gameTitle": "Star Wars: Rebellion",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.5455,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 198
+    },
+    "603b9f1e-b39a-43af-ac1b-a3496a242e36": {
+      "gameTitle": "Survive: Escape from Atlantis!",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8889,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 27
+    },
+    "e15dcd28-0ffd-42ea-b2a7-29e17ae71c0a": {
+      "gameTitle": "Sushi Go!",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9412,
+      "canonicalCoverage": 3,
+      "distinctHeadings": 34
+    },
+    "6ba11322-4dd9-46b8-8c86-d5c092c7a3bf": {
+      "gameTitle": "Terraforming Mars",
+      "language": "it",
+      "band": "yellow",
+      "plausibleFraction": 0.7206,
+      "canonicalCoverage": 11,
+      "distinctHeadings": 68
+    },
+    "d4452db9-6b9e-4e20-bf00-a21a18e08f5f": {
+      "gameTitle": "The Castles of Burgundy",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8871,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 62
+    },
+    "f04eafa4-9df4-481b-a372-30ff71fcda6a": {
+      "gameTitle": "The Crew: Quest for Planet Nine",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8043,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 46
+    },
+    "b664ee2a-a11c-4bbb-a2bd-9d85565ccee8": {
+      "gameTitle": "The Lord of the Rings: The Card Game",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 130
+    },
+    "d9d5bcc1-0afc-4837-ad51-8d2663d4e048": {
+      "gameTitle": "The Quacks of Quedlinburg",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8182,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 33
+    },
+    "072e2ab9-8905-40ab-9d79-044d679d6606": {
+      "gameTitle": "Ticket to Ride",
+      "language": "it",
+      "band": "green",
+      "plausibleFraction": 0.8462,
+      "canonicalCoverage": 4,
+      "distinctHeadings": 26
+    },
+    "b59fc11c-4d61-4cce-bdff-0ee4e188413f": {
+      "gameTitle": "Ticket to Ride: Europe",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9474,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 57
+    },
+    "512acb7a-4ad8-4d15-9613-298a3e506396": {
+      "gameTitle": "Townsfolk Tussle",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9425,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 174
+    },
+    "7e2fde31-9a19-4520-ad76-e61768fcb91b": {
+      "gameTitle": "Twilight Imperium: Fourth Edition",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.6236,
+      "canonicalCoverage": 7,
+      "distinctHeadings": 457
+    },
+    "25eb4f62-2457-43df-92d6-1fd19114ff0a": {
+      "gameTitle": "Twilight Struggle",
+      "language": "en",
+      "band": "yellow",
+      "plausibleFraction": 0.7368,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 76
+    },
+    "cb873f01-72f1-4ea8-bd06-539f77adee29": {
+      "gameTitle": "Underwater Cities",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9007,
+      "canonicalCoverage": 8,
+      "distinctHeadings": 141
+    },
+    "7f0cdbd8-1096-476a-aaff-8a43adadb66f": {
+      "gameTitle": "Viticulture Essential Edition",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8676,
+      "canonicalCoverage": 2,
+      "distinctHeadings": 136
+    },
+    "06b6f080-9e46-4117-ab7f-9a21be217e18": {
+      "gameTitle": "War of the Ring: Second Edition",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.872,
+      "canonicalCoverage": 0,
+      "distinctHeadings": 336
+    },
+    "e912db9e-c208-4331-a5e5-1932bb772632": {
+      "gameTitle": "Wingspan",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.9029,
+      "canonicalCoverage": 1,
+      "distinctHeadings": 103
+    },
+    "7e723f7f-7738-4b9a-a270-595d3cc12556": {
+      "gameTitle": "Wingspan: Asia",
+      "language": "en",
+      "band": "green",
+      "plausibleFraction": 0.8058,
+      "canonicalCoverage": 5,
+      "distinctHeadings": 139
+    }
+  }
+}

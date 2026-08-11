@@ -10,3 +10,4 @@ export * from './admin-ai.schemas';
 export * from './admin-analytics.schemas';
 export * from './admin-system.schemas';
 export * from './admin-monitor.schemas';
+export * from './admin-cover.schemas';

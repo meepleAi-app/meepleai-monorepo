@@ -1,7 +1,10 @@
 /**
  * SessionsClient CRUD and Lifecycle Tests
  *
- * Tests for: getById, getHistory, start, pause, resume, end, complete, abandon
+ * Tests for: getById, getHistory, pause, resume, end, complete, abandon
+ *
+ * NB: `start` (POST /sessions) was removed in #2587 (dead funnel). The orphaned
+ * start tests were deleted in #2715; do not re-add them.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSessionsClient } from '../clients/sessionsClient';
@@ -51,15 +54,10 @@ describe('sessionsClient CRUD and lifecycle', () => {
   });
 
   describe('getHistory', () => {
-    it('should fetch session history without filters', async () => {
-      const mockResponse = {
-        sessions: [],
-        total: 0,
-        page: 1,
-        pageSize: 20,
-      };
-
-      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(mockResponse);
+    // Issue #2848 (#Z): /sessions/history returns a bare List<GameSessionDto>;
+    // getHistory validates the array and wraps it into a PaginatedSessionsResponse.
+    it('should wrap the empty array into a paginated response', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce([]);
 
       const result = await client.getHistory();
 
@@ -67,18 +65,12 @@ describe('sessionsClient CRUD and lifecycle', () => {
         '/api/v1/sessions/history?',
         expect.any(Object)
       );
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({ sessions: [], total: 0, page: 1, pageSize: 20 });
     });
 
-    it('should fetch session history with filters', async () => {
-      const mockResponse = {
-        sessions: [{ id: 'session-1', gameId: 'game-1' }],
-        total: 1,
-        page: 1,
-        pageSize: 10,
-      };
-
-      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(mockResponse);
+    it('should wrap the returned array and apply filters', async () => {
+      const sessions = [{ id: 'session-1', gameId: 'game-1' }];
+      vi.mocked(mockHttpClient.get).mockResolvedValueOnce(sessions);
 
       const result = await client.getHistory({
         gameId: 'game-1',
@@ -96,7 +88,7 @@ describe('sessionsClient CRUD and lifecycle', () => {
         expect.stringContaining('startDate=2024-01-01'),
         expect.any(Object)
       );
-      expect(result).toEqual(mockResponse);
+      expect(result).toEqual({ sessions, total: 1, page: 1, pageSize: 10 });
     });
 
     it('should return empty response on null', async () => {
@@ -106,52 +98,6 @@ describe('sessionsClient CRUD and lifecycle', () => {
 
       expect(result.sessions).toEqual([]);
       expect(result.total).toBe(0);
-    });
-  });
-
-  describe('start', () => {
-    it('should start a new session', async () => {
-      const mockSession = {
-        id: 'new-session',
-        gameId: 'game-1',
-        status: 'active',
-        players: [{ playerName: 'Player 1', playerOrder: 1 }],
-      };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      const result = await client.start({
-        gameId: 'game-1',
-        players: [{ playerName: 'Player 1', playerOrder: 1 }],
-      });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions',
-        {
-          gameId: 'game-1',
-          players: [{ playerName: 'Player 1', playerOrder: 1 }],
-        },
-        expect.any(Object)
-      );
-      expect(result).toEqual(mockSession);
-    });
-
-    it('should start session with notes', async () => {
-      const mockSession = { id: 'session-with-notes', notes: 'Test notes' };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      await client.start({
-        gameId: 'game-1',
-        players: [{ playerName: 'Player 1', playerOrder: 1 }],
-        notes: 'Test notes',
-      });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions',
-        expect.objectContaining({ notes: 'Test notes' }),
-        expect.any(Object)
-      );
     });
   });
 

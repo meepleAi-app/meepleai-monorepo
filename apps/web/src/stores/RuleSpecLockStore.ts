@@ -377,7 +377,6 @@ export const useRuleSpecLockStore = create<RuleSpecLockStore>()(
 // Selectors
 // ============================================================================
 
-export const selectGameId = (state: RuleSpecLockStore) => state.gameId;
 export const selectLockStatus = (state: RuleSpecLockStore) => state.lockStatus;
 export const selectAcquisitionStatus = (state: RuleSpecLockStore) => state.acquisitionStatus;
 export const selectHasLock = (state: RuleSpecLockStore) =>

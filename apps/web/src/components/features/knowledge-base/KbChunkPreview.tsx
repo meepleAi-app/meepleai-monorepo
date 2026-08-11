@@ -37,7 +37,7 @@ const TABS = [
   { key: 'raw' as SubTab, label: 'Raw' },
 ];
 
-const ACCENT_ACTIVE = 'font-extrabold text-entity-kb';
+const ACCENT_ACTIVE = 'font-extrabold text-entity-kb-text';
 const ACCENT_INDICATOR = 'bg-entity-kb';
 const ACCENT_COUNT_ACTIVE = 'bg-entity-kb text-white';
 

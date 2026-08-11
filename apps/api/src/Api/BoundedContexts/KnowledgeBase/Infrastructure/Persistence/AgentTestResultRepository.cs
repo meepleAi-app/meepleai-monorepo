@@ -110,6 +110,31 @@ internal class AgentTestResultRepository : RepositoryBase, IAgentTestResultRepos
             .CountAsync(r => r.TypologyId == typologyId, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<int> GetSavedCountAsync(Guid? userId = null, CancellationToken cancellationToken = default)
+    {
+        var query = DbContext.Set<AgentTestResultEntity>()
+            .Where(r => r.IsSaved);
+
+        if (userId.HasValue)
+        {
+            query = query.Where(r => r.ExecutedBy == userId.Value);
+        }
+
+        return await query.CountAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<int> GetCountByExecutedByAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<AgentTestResultEntity>()
+            .CountAsync(r => r.ExecutedBy == userId, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<int> GetCountByDateRangeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default)
+    {
+        return await DbContext.Set<AgentTestResultEntity>()
+            .CountAsync(r => r.ExecutedAt >= from && r.ExecutedAt <= to, cancellationToken).ConfigureAwait(false);
+    }
+
     public async Task AddAsync(AgentTestResult testResult, CancellationToken cancellationToken = default)
     {
         CollectDomainEvents(testResult);

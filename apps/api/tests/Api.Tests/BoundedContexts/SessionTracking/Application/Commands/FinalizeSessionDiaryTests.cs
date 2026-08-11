@@ -192,7 +192,7 @@ public sealed class FinalizeSessionDiaryTests : IAsyncLifetime
 
         // Act — finalize the session with the owner as winner.
         var result = await _finalizeHandler!.Handle(
-            new FinalizeSessionCommand(createResult.SessionId, finalRanks),
+            new FinalizeSessionCommand(createResult.SessionId, finalRanks, userId),
             TestCancellationToken);
 
         // Assert — command result echoes the winner.
@@ -278,7 +278,7 @@ public sealed class FinalizeSessionDiaryTests : IAsyncLifetime
 
         // Act
         var result = await _finalizeHandler!.Handle(
-            new FinalizeSessionCommand(createResult.SessionId, finalRanks),
+            new FinalizeSessionCommand(createResult.SessionId, finalRanks, userId),
             TestCancellationToken);
 
         // Assert — no winner in the command result.

@@ -7,6 +7,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -143,6 +144,10 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         // does not carry EF-only columns, so we query the EF DbSet directly.
         var sharedGameEntityMap = await _dbContext.SharedGames
             .AsNoTracking()
+            // Epic #3470 Slice 2c: eager-load CoverAssignments so the per-context (Card)
+            // resolver can honor an admin override below the L3 user-custom cover.
+            // Values are the full entity (no Select projection), so the Include is honored.
+            .Include(sg => sg.CoverAssignments)
             .Where(sg => gameIds.Contains(sg.Id) && !sg.IsDeleted)
             .ToDictionaryAsync(sg => sg.Id, cancellationToken)
             .ConfigureAwait(false);
@@ -179,8 +184,10 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                 // Requires the EF SharedGameEntity (cover keys) and the EF UserLibraryEntryEntity (custom cover key).
                 sharedGameEntityMap.TryGetValue(entry.GameId, out var sharedGameEntity);
                 entryEntityMap.TryGetValue(entry.Id, out var entryEntity);
+                // Epic #3470 Slice 2c — My Library grid is the Card context; L3 user-custom
+                // cover still outranks the admin per-context override (AC-4).
                 var coverUrl = sharedGameEntity is not null
-                    ? await CoverUrlResolver.ResolveForUserAsync(sharedGameEntity, entryEntity, _blobStorage).ConfigureAwait(false)
+                    ? await CoverUrlResolver.ResolveForUserAsync(sharedGameEntity, entryEntity, CoverContext.Card, _blobStorage).ConfigureAwait(false)
                     : null;
 
                 entryDtos.Add(new UserLibraryEntryDto(

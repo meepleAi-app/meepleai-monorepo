@@ -15,25 +15,33 @@
  * same outer spacing and visual rhythm.
  */
 
+'use client';
+
 import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
+import { AdminCoverEditAffordance } from '@/components/features/cover-editor';
 import {
   MeepleCardGame,
   type MeepleCardGameLabels,
   type MeepleCardGameProps,
 } from '@/components/ui/shared-games/meeple-card-game';
 import { SkeletonCard } from '@/components/ui/shared-games/skeleton-card';
+import { useAdminRole } from '@/hooks/useAdminRole';
+import { shouldUsePlaceholder } from '@/lib/games/cover-utils';
 
 export type SharedGamesGridState =
-  | 'default'
-  | 'loading'
-  | 'error'
-  | 'empty-search'
-  | 'filtered-empty';
+  'default' | 'loading' | 'error' | 'empty-search' | 'filtered-empty';
 
-export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'compact' | 'className'>;
+export type SharedGamesGridGame = Omit<MeepleCardGameProps, 'labels' | 'className'> & {
+  /**
+   * #3611 — punto focale piatto come lo espone il DTO (dominio [0,1]); questo
+   * componente lo converte nell'oggetto `coverFocal` richiesto da `MeepleCardGame`.
+   */
+  readonly coverFocalX?: number;
+  readonly coverFocalY?: number;
+};
 
 export interface SharedGamesGridProps {
   readonly state: SharedGamesGridState;
@@ -58,6 +66,10 @@ export function SharedGamesGrid({
   compact = false,
   className,
 }: SharedGamesGridProps): JSX.Element {
+  // #3470 Slice 1d-c — role gate computed once (not per card). Non-admins get no slot,
+  // so the tile DOM is unchanged for the public audience; admins get an inline editor.
+  const { isEditorOrAbove } = useAdminRole();
+
   const gridClasses = clsx(
     'grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:grid-cols-4',
     className
@@ -92,7 +104,27 @@ export function SharedGamesGrid({
   return (
     <div data-slot="shared-games-grid" data-state="default" className={gridClasses}>
       {games.map(game => (
-        <MeepleCardGame key={game.id} {...game} labels={cardLabels} compact={compact} />
+        <MeepleCardGame
+          key={game.id}
+          {...game}
+          labels={cardLabels}
+          coverFocal={
+            game.coverFocalX != null && game.coverFocalY != null
+              ? { x: game.coverFocalX, y: game.coverFocalY }
+              : undefined
+          }
+          coverEditSlot={
+            // Title is intentionally omitted here: useGameTitle is a hook (illegal in
+            // this map callback), and the picker dialog identifies the game by the card
+            // the admin clicked. The hero surface passes the locale-resolved title.
+            isEditorOrAbove ? (
+              <AdminCoverEditAffordance
+                gameId={game.id}
+                needsAttention={shouldUsePlaceholder(game.coverUrl)}
+              />
+            ) : undefined
+          }
+        />
       ))}
     </div>
   );

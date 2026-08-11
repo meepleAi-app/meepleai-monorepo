@@ -212,15 +212,7 @@ fetch('http://localhost:8080/api/v1/endpoint', ...)
 
 ## Migration Scripts
 
-### Bulk Migration
-```bash
-bash scripts/migrate-jest-to-vitest.sh
-```
-
-### Import Fixes
-```bash
-bash scripts/fix-vitest-imports.sh
-```
+> I codemod one-off usati per la migrazione (`scripts/migrate-jest-to-vitest.sh`, `scripts/fix-vitest-imports.sh`) sono stati rimossi dopo il completamento della migrazione #1503. Restano consultabili nella git history.
 
 ## Migration Complete
 

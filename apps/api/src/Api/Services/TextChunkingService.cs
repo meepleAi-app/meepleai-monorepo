@@ -1,4 +1,5 @@
 using Api.Constants;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
 namespace Api.Services;
@@ -115,6 +116,15 @@ internal class TextChunkingService : ITextChunkingService
             // 'overlap', applying the overlap would cause currentPosition to regress,
             // creating an infinite loop. In that case, skip to chunkEnd with no overlap.
             var nextPosition = chunkEnd - overlap;
+            if (nextPosition > chunkStart)
+            {
+                // Snap the overlap start forward to a word boundary so the next chunk does not
+                // begin mid-word. The fixed char overlap is measured back from a clean end
+                // boundary, so without this ~71% of chunks started with a word fragment
+                // (e.g. "ndo acqua alla superficie."), hurting readability, embedding quality
+                // and retrieval. Bounded by chunkEnd, so overlap and forward progress are kept.
+                nextPosition = SnapToWordStart(text, nextPosition, chunkEnd);
+            }
             currentPosition = nextPosition > chunkStart ? nextPosition : chunkEnd;
         }
 
@@ -304,6 +314,40 @@ internal class TextChunkingService : ITextChunkingService
     }
 
     /// <summary>
+    /// Snaps an overlap start position forward to the next word boundary so a chunk never
+    /// begins mid-word. If <paramref name="position"/> already sits at a word boundary
+    /// (previous char is not a letter/digit) it is returned unchanged. Otherwise the current
+    /// partial word is skipped, then following whitespace, to land on the next word start —
+    /// but never at/after <paramref name="limit"/> (chunkEnd), falling back to the original
+    /// position to preserve overlap and forward progress.
+    /// </summary>
+    private static int SnapToWordStart(string text, int position, int limit)
+    {
+        if (position <= 0 || position >= limit)
+        {
+            return position;
+        }
+
+        // Already at a boundary when the previous OR current char is not word-interior.
+        if (!char.IsLetterOrDigit(text[position - 1]) || !char.IsLetterOrDigit(text[position]))
+        {
+            return position;
+        }
+
+        var i = position;
+        while (i < limit && !char.IsWhiteSpace(text[i]))
+        {
+            i++; // skip the rest of the partial word
+        }
+        while (i < limit && char.IsWhiteSpace(text[i]))
+        {
+            i++; // skip whitespace to the next word start
+        }
+
+        return i < limit ? i : position;
+    }
+
+    /// <summary>
     /// Estimate page number based on character position
     /// Assumes ~2000 characters per page (rough estimate)
     /// </summary>
@@ -347,6 +391,10 @@ internal record TextChunk
 /// </summary>
 internal record DocumentChunkInput
 {
+    // Slice D: stable identity so a child chunk's ParentChunkId can reference
+    // its parent's persisted TextChunkEntity.Id. Guid.Empty (default) means
+    // "not yet assigned" — save sites fall back to a fresh Guid in that case.
+    public Guid Id { get; init; }
     public string Text { get; init; } = string.Empty;
     public int Page { get; init; }
     public int CharStart { get; init; }
@@ -356,4 +404,6 @@ internal record DocumentChunkInput
     public short Level { get; init; } = 1;
     public Guid? ParentChunkId { get; init; }
     public string ElementType { get; init; } = "NarrativeText";
+    // SP-B (#3406): normalized region [0,1] top-left; null when unavailable.
+    public BoundingBox? BBox { get; init; }
 }

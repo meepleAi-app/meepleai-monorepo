@@ -1,8 +1,8 @@
 # ADR-077 — Designer Signoff CI Gate
 
-**Status**: Proposed
-**Date**: 2026-06-15
-**Deciders**: @badsworm (pending ratification at PR review)
+**Status**: Accepted — Implemented 2026-07-16 ([#2997](https://github.com/meepleAi-app/meepleai-monorepo/issues/2997), umbrella #2993)
+**Date**: 2026-06-15 (proposed) · 2026-07-16 (ratified + implemented)
+**Deciders**: @badsworm
 **Tracking**: [#2363](https://github.com/meepleAi-app/meepleai-monorepo/issues/2363) Wave 4 — US-INT-6 (CI/CD quality gates)
 **Related**: [umbrella #2342](https://github.com/meepleAi-app/meepleai-monorepo/issues/2342) · mockup audit DS-17 Phase B (#2127) · fidelity.json pattern · `ci.yml`
 
@@ -31,10 +31,10 @@ This pattern acknowledges that the developer and the designer are the same perso
 - `pnpm lint:tokens` — blocking (token canonicalization).
 - `pnpm mockup-annotations:audit --threshold 80` — blocking (mockup annotation coverage).
 - `pnpm lint:bgg` — blocking (BGG URL guard).
-- `pnpm lint:fidelity` — runs but validates schema only, not approval status.
+- `pnpm lint:fidelity` — **at proposal time (2026-06-15) this ran only locally** (a `package.json` script, not referenced by any workflow) and validated schema + cross-references only, not approval status. ⚠️ Earlier drafts of this ADR erroneously described it as running "in CI"; it did not until #2997 wired it into the `frontend-lint` job.
 - `Frontend - A11y E2E` — blocking (0 axe AA violations required).
 
-The `designer_approved_by` field has no current CI enforcement. Mockups flow through the audit queue (`docs/for-developers/frontend/mockup-designer-review-queue.md`) but there is no mechanical gate preventing a PR from merging a new `design_intent: "current"` component without setting `designer_approved_by`.
+The `designer_approved_by` field had no CI enforcement at proposal time. Mockups flow through the audit queue (`docs/for-developers/frontend/mockup-designer-review-queue.md`) but there is no mechanical gate preventing a PR from merging a new `design_intent: "current"` component without setting `designer_approved_by`.
 
 **Design surface definition**: "designer review" applies to PRs that modify `apps/web/src/` components tagged with `area/frontend` **and** that implement or modify a user-facing UI surface mapped in `admin-mockups/MOCKUPS_INDEX.md`. Infrastructure-only, backend-only, and documentation PRs are explicitly excluded.
 
@@ -145,6 +145,20 @@ This maps the P250 pattern from an informal convention to a formally recognised 
 
 **Rationale**: Option A blocks too broadly (all frontend PRs, not just mockup-surface changes). Option B provides no enforcement signal. Option C adds 48h time tax + GHA bot complexity without quality benefit. Option D is surgical: it blocks only when a current-design surface is added or modified without documented approval, and explicitly codifies the solo-maintainer exception without blocking velocity.
 
+## Implementation (2026-07-16, #2997)
+
+Shipped as an extension of `validate-fidelity.mjs` + a new `frontend-lint` step, with three refinements discovered during implementation:
+
+1. **Backfill was a no-op.** The proposal (Consequences → Negative) anticipated backfilling ~38 `design_intent: "current"` fidelity files. In practice **all 72** current-intent fidelity files under `admin-mockups/design_files/` already carried the P250 self-waiver (`designer_approved_by` non-empty), so signoff enforcement shipped **strict from day one with zero backfill and zero red PRs**.
+
+2. **Two failure classes, different severity.** `validate-fidelity.mjs` now distinguishes:
+   - **Signoff failures** (`design_intent: "current"` with empty `designer_approved_by`) — **strict, never baselined**. `checkApprovalStatus()` accepts any non-empty approver; the `self-waiver P250` token is the documented solo-maintainer form.
+   - **Structural failures** (schema / `mockup.source` cross-reference) — **whitelist-incremental** via `--max-baseline N` (mirrors `lint:tokens:mockups` / `lint:bgg-mockups`). Baseline set to **3** for the pre-existing orphaned fidelity files whose source mockups were deleted (`sp4-play-records-data`, `scaffold`, `pr-form-core`). Reconcile these to ratchet the baseline down. A NEW structural failure (4th) fails the gate.
+
+3. **Doc templates excluded.** `--all` now ignores `**/templates/**`. The canonical copy-me template `docs/for-developers/frontend/templates/examples/sp4-library-desktop.fidelity.json` (referenced in CLAUDE.md) intentionally ships with a blank `designer_approved_by` + placeholder `mockup.source` — it is an illustration, not a gated design surface (per the "Design surface definition" above).
+
+**Wiring**: `pnpm lint:fidelity` (= `validate-fidelity.mjs --all --max-baseline 3`) runs as the `Designer signoff + fidelity gate (ADR-077 / #2997)` step in the `ci.yml` `frontend-lint` job — active on PRs targeting `main` / `main-staging` (the release boundary), same trigger scope as the sibling mockup/token/BGG gates. Unit coverage: `apps/web/scripts/mockup-annotations/__tests__/validate-fidelity.test.ts` (`checkApprovalStatus` + `computeGateVerdict` + `validate()` `approvalErrors`).
+
 ## Consequences
 
 **Positive**:
@@ -154,8 +168,8 @@ This maps the P250 pattern from an informal convention to a formally recognised 
 - `forward-refactor` and `forward-refactor-obsolete` files remain advisory — no friction for speculative design work.
 
 **Negative**:
-- Requires existing `design_intent: "current"` fidelity files with empty `designer_approved_by` to be backfilled (either with the P250 waiver or with a genuine approval) before the gate is enabled. Audit scope: ~38 `design_intent: "current"` fidelity files (per DS-17 Phase B audit count).
-- If the gate is enabled before backfill, any PR that touches a fidelity file with empty `designer_approved_by` will fail CI — gate should be enabled only after the backfill PR merges.
+- ~~Requires existing `design_intent: "current"` fidelity files with empty `designer_approved_by` to be backfilled before the gate is enabled.~~ **Resolved at implementation**: all 72 current-intent fidelity files already carried the P250 waiver, so no backfill was needed (see Implementation § 1).
+- 3 pre-existing structurally-orphaned fidelity files (deleted `mockup.source`) are tolerated via `--max-baseline 3` rather than fixed in this PR (out of the strict "designer signoff" scope). They remain as tracked drift to reconcile.
 
 **Trade-offs**:
 - The gate does not prevent a developer from pre-filling the self-waiver without actually reviewing the design. The gate is a documentation discipline tool, not a proof-of-review mechanism. In a solo-maintainer context, this is the correct trade-off: the waiver documents the exception, not bypasses a real review.
@@ -169,7 +183,7 @@ This maps the P250 pattern from an informal convention to a formally recognised 
      - Otherwise (real approver name) → pass.
    - For `design_intent != "current"`: emit advisory warning only, do not fail.
 
-2. **Backfill PR**: before enabling the check, submit a single PR that populates `designer_approved_by: "badsworm@gmail.com (self-waiver P250, single-person team)"` and `designer_approved_on: "2026-06-15"` on all existing `design_intent: "current"` fidelity files with empty approval fields.
+2. **Backfill PR**: ✅ **not required** — all `design_intent: "current"` fidelity files already carried the P250 self-waiver when #2997 shipped (see Implementation § 1). Had any been empty, the recommended value was `designer_approved_by: "<you>@meepleAi (self-waiver P250, single-person team)"` + `designer_approved_on: "<ISO date>"`.
 
 3. **CI integration** (`ci.yml`): add `pnpm lint:fidelity:approvals` (or extend the existing `pnpm lint:fidelity` script) as a step in the frontend job, after the existing `pnpm lint:fidelity` schema validation. Gate on `if: steps.changes.outputs.frontend == 'true'` (same condition as other frontend checks).
 

@@ -1,8 +1,10 @@
 using System.Text;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -49,7 +51,10 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         MechanicSection.Victory,
         MechanicSection.Resources,
         MechanicSection.Phases,
-        MechanicSection.Faq
+        MechanicSection.Faq,
+        MechanicSection.Setup,
+        MechanicSection.Components,
+        MechanicSection.EndgameScoring
     };
 
     private readonly IMechanicAnalysisRepository _analysisRepository;
@@ -156,6 +161,13 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         // section semantic retrieval.
         var contextBySection = AllSections.ToDictionary(s => s, _ => retrievalContext);
 
+        // M1.3 (#525): pin the structured source chunk pool + page count for the guardrails
+        // (T2 long-verbatim, T3 grounding, T4 page/substring). Same bundle per section in M1.3.
+        var (sourceChunks, pdfPageCount) = await LoadSourcePoolAsync(analysis.PdfDocumentId, cancellationToken)
+            .ConfigureAwait(false);
+        var sourceChunksBySection = AllSections.ToDictionary(
+            s => s, _ => sourceChunks);
+
         var request = new MechanicPipelineRequest(
             AnalysisId: analysis.Id,
             SharedGameId: analysis.SharedGameId,
@@ -167,7 +179,11 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             Model: analysis.ModelUsed,
             EffectiveCostCapUsd: analysis.CostCapUsd,
             InputCostPerMillionTokens: DefaultInputCostPerMillion,
-            OutputCostPerMillionTokens: DefaultOutputCostPerMillion);
+            OutputCostPerMillionTokens: DefaultOutputCostPerMillion)
+        {
+            SourceChunksBySection = sourceChunksBySection,
+            PdfPageCount = pdfPageCount
+        };
 
         var result = await _pipeline.RunAsync(request, cancellationToken).ConfigureAwait(false);
 
@@ -228,6 +244,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             return;
         }
 
+        CorrelateValidations(parsed, result.SectionOutcomes);
+
         foreach (var claim in parsed)
         {
             analysis.AddClaim(claim);
@@ -241,6 +259,69 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         // AI author as the submitter; human review starts in the subsequent phase.
         analysis.SubmitForReview(analysis.CreatedBy, utcNow);
         await Task.CompletedTask.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Correlates the pipeline's per-section <see cref="MechanicRuleOutcome"/>s to individual
+    /// claims by matching each violation's JSONPath against the claim's <see cref="MechanicClaim.SourceAnchor"/>
+    /// (#2782 D4). This is what turns section-wide guardrail results into per-claim precision: a
+    /// T2 (long-verbatim) failure on claim #1 in a Mechanics section must NOT also flag claim #0 as
+    /// failing — siblings whose anchor doesn't match the violation path stay <c>pass</c> for that rule.
+    /// </summary>
+    /// <remarks>
+    /// <c>internal static</c> so <c>MechanicAnalysisExecutorCorrelationTests</c> can exercise the
+    /// correlation algorithm directly without standing up the full executor dependency graph.
+    /// </remarks>
+    internal static void CorrelateValidations(
+        IReadOnlyList<MechanicClaim> claims,
+        IReadOnlyDictionary<MechanicSection, IReadOnlyList<MechanicRuleOutcome>> sectionOutcomes)
+    {
+        foreach (var claim in claims)
+        {
+            if (!sectionOutcomes.TryGetValue(claim.Section, out var outcomes) || outcomes.Count == 0)
+            {
+                continue; // section had no captured outcomes (e.g. succeeded pre-anchor path) → leave empty
+            }
+
+            var perClaim = new List<MechanicClaimValidation>(outcomes.Count);
+            foreach (var o in outcomes)
+            {
+                var outcome = o.Outcome;
+                if (string.Equals(outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal))
+                {
+                    var hits = o.Violations.Any(v => MatchesAnchor(v.Path, claim.SourceAnchor));
+                    outcome = hits ? MechanicClaimValidationOutcomes.Fail : MechanicClaimValidationOutcomes.Pass;
+                }
+                // #2811: attach THIS claim's own grounding cosine (keyed by its anchor) rather than
+                // the section-wide min carried on o.Score — pass claims no longer render a misleading
+                // sibling's low score; claims with no per-claim cosine get null.
+                var claimScore = o.ClaimScores is not null
+                    && o.ClaimScores.TryGetValue(claim.SourceAnchor, out var cs)
+                    ? cs
+                    : (double?)null;
+                perClaim.Add(new MechanicClaimValidation(o.Rule, outcome,
+                    string.Equals(outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal) ? o.Message : null, claimScore));
+            }
+            claim.AttachValidations(perClaim);
+        }
+    }
+
+    /// <summary>
+    /// True when <paramref name="violationPath"/> belongs to the claim rooted at <paramref name="anchor"/>
+    /// — either the exact anchor (rare, whole-object violation) or a nested property/array-index
+    /// path under it (e.g. anchor <c>$.mechanics[1]</c> matches <c>$.mechanics[1].description</c>
+    /// and <c>$.mechanics[1].citations[0].quote</c>, but not <c>$.mechanics[10]...</c>).
+    /// </summary>
+    private static bool MatchesAnchor(string? violationPath, string anchor)
+    {
+        if (string.IsNullOrEmpty(violationPath) || string.IsNullOrEmpty(anchor))
+        {
+            return false;
+        }
+
+        return string.Equals(violationPath, anchor, StringComparison.Ordinal)
+            || violationPath.StartsWith(anchor + ".", StringComparison.Ordinal)
+            || violationPath.StartsWith(anchor + "[", StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -282,6 +363,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
 
         if (salvaged.Count > 0)
         {
+            CorrelateValidations(salvaged, result.SectionOutcomes);
+
             foreach (var claim in salvaged)
             {
                 analysis.AddClaim(claim);
@@ -290,6 +373,16 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             analysis.RecordUsage(
                 result.TotalPromptTokens + result.TotalCompletionTokens,
                 result.TotalCostUsd);
+
+            // #2494 AC-5: when the abort was a cost-cap breach (and we successfully salvaged
+            // at least one section), raise the mid-stream overrun event for audit visibility.
+            // Must run BEFORE MarkAsPartiallyExtracted because the aggregate may seal events
+            // on terminal transitions.
+            if (result.Outcome == MechanicPipelineOutcome.AbortedCostCap
+                && result.TotalCostUsd > analysis.CostCapUsd)
+            {
+                analysis.RecordMidStreamCostCapOverrun(result.TotalCostUsd, analysis.CreatedBy);
+            }
 
             analysis.MarkAsPartiallyExtracted(reason, analysis.CreatedBy, utcNow);
 
@@ -444,5 +537,31 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// M1.3 (#525): loads the structured source chunk pool (with page numbers + chunk ids) and the
+    /// PDF page count, pinned for the analysis run so the guardrails (T2/T3/T4) validate against the
+    /// same snapshot the LLM saw.
+    /// </summary>
+    private async Task<(IReadOnlyList<MechanicSourceChunk> Chunks, int? PageCount)> LoadSourcePoolAsync(
+        Guid pdfDocumentId, CancellationToken cancellationToken)
+    {
+        var chunks = await _dbContext.TextChunks
+            .AsNoTracking()
+            .Where(c => c.PdfDocumentId == pdfDocumentId)
+            .OrderBy(c => c.ChunkIndex)
+            .Select(c => new MechanicSourceChunk(c.ChunkIndex, c.PageNumber, c.Id, c.Content))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var pageCount = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.PageCount)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return (chunks, pageCount);
     }
 }

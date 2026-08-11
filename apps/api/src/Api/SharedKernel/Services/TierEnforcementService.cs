@@ -144,6 +144,47 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         );
     }
 
+    public async Task<GamebookQuotaSnapshot> GetGamebookQuotaSnapshotAsync(Guid userId, CancellationToken ct = default)
+    {
+        // Issue #2750 (C14): display-only monthly gamebook translation quota.
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct)
+            .ConfigureAwait(false);
+
+        string tier;
+        if (user is null)
+        {
+            tier = "free";
+        }
+        else if (string.Equals(user.Role, "superadmin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(user.Role, "admin", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(user.Role, "editor", StringComparison.OrdinalIgnoreCase))
+        {
+            // Unlimited tier surfaces as "premium" for the FE quota-widget enum.
+            tier = "premium";
+        }
+        else
+        {
+            // FE QuotaInfo.tier is a binary enum ('free' | 'premium'); collapse any paid tier
+            // (normal/pro/premium/enterprise) or contributor to "premium" so the Zod parse holds.
+            var resolved = user.IsContributor ? "premium" : (user.Tier ?? "free");
+            tier = string.Equals(resolved, "free", StringComparison.OrdinalIgnoreCase) ? "free" : "premium";
+        }
+
+        var limits = await GetLimitsAsync(userId, ct).ConfigureAwait(false);
+        var used = await GetRedisCounterAsync(userId, TierAction.TranslateGamebookParagraph).ConfigureAwait(false);
+
+        var now = DateTime.UtcNow;
+        var resetDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
+
+        return new GamebookQuotaSnapshot(
+            TranslationsThisMonth: used,
+            MaxTranslationsPerMonth: limits.MaxGamebookTranslationsPerMonth,
+            ResetDate: resetDate,
+            Tier: tier);
+    }
+
     // ─── Private helpers ──────────────────────────────────────────────────
 
     private async Task<TierDefinition?> GetTierDefinitionAsync(string tierName, CancellationToken ct)
@@ -196,7 +237,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         TierAction.AgentQuery or TierAction.SessionAgentQuery
             => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 
-        TierAction.UploadPdf
+        TierAction.UploadPdf or TierAction.TranslateGamebookParagraph
             => DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture),
 
         TierAction.ProposeToSharedCatalog
@@ -222,7 +263,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         TierAction.AgentQuery or TierAction.SessionAgentQuery or TierAction.UploadSessionPhoto
             => DailyTtl,
 
-        TierAction.UploadPdf
+        TierAction.UploadPdf or TierAction.TranslateGamebookParagraph
             => MonthlyTtl,
 
         TierAction.ProposeToSharedCatalog
@@ -242,6 +283,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         TierAction.ProposeToSharedCatalog => limits.MaxCatalogProposalsPerWeek,
         // RaptorRebuild is handled separately as a boolean gate — this path is never reached.
         TierAction.RaptorRebuild => int.MaxValue,
+        TierAction.TranslateGamebookParagraph => limits.MaxGamebookTranslationsPerMonth,
         _ => int.MaxValue
     };
 }

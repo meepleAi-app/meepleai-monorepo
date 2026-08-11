@@ -1211,7 +1211,7 @@ public class SharedTestcontainersCollectionDefinition : ICollectionFixture<Share
 /// Group A: KnowledgeBase + DocumentProcessing (~41 classes)
 /// Group B: Authentication + Integration root tests (~42 classes)
 /// Group C: SharedGameCatalog + GameManagement + UserLibrary + SessionTracking (~39 classes)
-/// Group D: Administration + WorkflowIntegration + SystemConfiguration + misc (~42 classes)
+/// Group D: Administration + SystemConfiguration + misc (~42 classes)
 /// </summary>
 [CollectionDefinition("Integration-GroupA")]
 public class IntegrationGroupACollection : ICollectionFixture<SharedTestcontainersFixture> { }

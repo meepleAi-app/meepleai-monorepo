@@ -254,4 +254,139 @@ public class EvaluationMetricsTests
         metrics.Mrr.Should().Be(value);
         metrics.AnswerCorrectness.Should().Be(value);
     }
+
+    [Fact]
+    public void Compute_ExcludesUnlabeledFromRetrievalMetrics_ButCountsThem()
+    {
+        // Arrange
+        var results = new List<EvaluationSampleResult>
+        {
+            new()
+            {
+                SampleId = "s-001",
+                Question = "Q1?",
+                ExpectedAnswer = "A1",
+                RelevantChunkIds = new[] { "c1" },
+                HitAt5 = true,
+                HitAt10 = true,
+                ReciprocalRank = 1.0
+            },
+            new()
+            {
+                SampleId = "s-002",
+                Question = "Q2?",
+                ExpectedAnswer = "A2",
+                RelevantChunkIds = [],
+                HitAt5 = false,
+                HitAt10 = false,
+                ReciprocalRank = 0.0
+            }
+        };
+
+        // Act
+        var metrics = EvaluationMetrics.Compute(results);
+
+        // Assert
+        metrics.RecallAt5.Should().Be(1.0); // Only the labeled sample counts, not (1+0)/2 = 0.5
+        metrics.Mrr.Should().Be(1.0); // Labeled only (ReciprocalRank 1.0); unlabeled's 0.0 would fail this if not excluded
+        metrics.LabeledSampleCount.Should().Be(1);
+        metrics.UnlabeledSampleCount.Should().Be(1);
+        metrics.SampleCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Compute_CitationAccuracy_OverCitedSamplesOnly()
+    {
+        // Arrange: one citation-graded match, one citation-graded miss, one not citation-graded (null)
+        var results = new List<EvaluationSampleResult>
+        {
+            new() { SampleId = "s-001", Question = "Q1?", ExpectedAnswer = "A1", CitationMatched = true },
+            new() { SampleId = "s-002", Question = "Q2?", ExpectedAnswer = "A2", CitationMatched = false },
+            new() { SampleId = "s-003", Question = "Q3?", ExpectedAnswer = "A3", CitationMatched = null }
+        };
+
+        // Act
+        var metrics = EvaluationMetrics.Compute(results);
+
+        // Assert: 1 of 2 citation-graded samples matched; the ungraded sample is excluded
+        metrics.CitationAccuracy.Should().Be(0.5);
+        metrics.CitedSampleCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Compute_CitationStructuralValidity_AveragesOverSuccessfulSamples()
+    {
+        // Arrange
+        var results = new List<EvaluationSampleResult>
+        {
+            new() { SampleId = "s-001", Question = "Q1?", ExpectedAnswer = "A1", CitationStructuralValidity = 1.0 },
+            new() { SampleId = "s-002", Question = "Q2?", ExpectedAnswer = "A2", CitationStructuralValidity = 0.5 }
+        };
+
+        // Act
+        var metrics = EvaluationMetrics.Compute(results);
+
+        // Assert
+        metrics.CitationStructuralValidity.Should().Be(0.75);
+    }
+
+    [Fact]
+    public void Empty_HasZeroCitationMetrics()
+    {
+        // Arrange & Act
+        var metrics = EvaluationMetrics.Empty;
+
+        // Assert
+        metrics.CitationAccuracy.Should().Be(0.0);
+        metrics.CitationStructuralValidity.Should().Be(0.0);
+        metrics.CitedSampleCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void MeetsCitationAccuracyTarget_AtThreshold_ReturnsTrue()
+    {
+        // Arrange — citation accuracy exactly at the 0.80 target
+        var metrics = EvaluationMetrics.Create(
+            recallAt5: 0.5, recallAt10: 0.5, ndcgAt10: 0.5, mrr: 0.5,
+            p95LatencyMs: 100.0, answerCorrectness: 0.5, sampleCount: 30,
+            citationAccuracy: 0.80);
+
+        // Act & Assert
+        metrics.MeetsCitationAccuracyTarget().Should().BeTrue();
+    }
+
+    [Fact]
+    public void MeetsCitationAccuracyTarget_BelowThreshold_ReturnsFalse()
+    {
+        // Arrange — just under the 0.80 target
+        var metrics = EvaluationMetrics.Create(
+            recallAt5: 0.9, recallAt10: 0.9, ndcgAt10: 0.9, mrr: 0.9,
+            p95LatencyMs: 100.0, answerCorrectness: 0.9, sampleCount: 30,
+            citationAccuracy: 0.79);
+
+        // Act & Assert
+        metrics.MeetsCitationAccuracyTarget().Should().BeFalse();
+    }
+
+    [Fact]
+    public void Create_WithCitationMetrics_ClampsToBounds()
+    {
+        // Arrange & Act
+        var metrics = EvaluationMetrics.Create(
+            recallAt5: 0.5,
+            recallAt10: 0.5,
+            ndcgAt10: 0.5,
+            mrr: 0.5,
+            p95LatencyMs: 100.0,
+            answerCorrectness: 0.5,
+            sampleCount: 30,
+            citationAccuracy: 1.5, // clamps to 1.0
+            citationStructuralValidity: -0.2, // clamps to 0.0
+            citedSampleCount: -3); // clamps to 0
+
+        // Assert
+        metrics.CitationAccuracy.Should().Be(1.0);
+        metrics.CitationStructuralValidity.Should().Be(0.0);
+        metrics.CitedSampleCount.Should().Be(0);
+    }
 }

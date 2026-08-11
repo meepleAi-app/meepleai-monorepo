@@ -47,8 +47,14 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
     {
         ArgumentNullException.ThrowIfNull(entity);
         CollectDomainEvents(entity);
+        // Issue #2804 (symptom 2): the DbContext default is QueryTrackingBehavior.NoTracking (PERF-06),
+        // under which FindAsync returns an UNTRACKED entity — so the scalar mutations below
+        // (Status/ReviewedAt/ReviewedBy/...) are a silent no-op and SaveChangesAsync affects 0 rows
+        // (approve leaves status='Pending'). .AsTracking() is REQUIRED so EF detects the mutations.
+        // Same fix pattern as UserRepository (#888), SessionRepository (#2660), ScoreEntryRepository (#930).
         var existing = await DbContext.AccessRequests
-            .FindAsync(new object[] { entity.Id }, cancellationToken)
+            .AsTracking()
+            .FirstOrDefaultAsync(e => e.Id == entity.Id, cancellationToken)
             .ConfigureAwait(false);
 
         if (existing is null)
@@ -65,6 +71,9 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
     public async Task DeleteAsync(AccessRequest entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
+        // Unlike UpdateAsync (#2804), FindAsync is fine here: Remove() is tracking-agnostic — it attaches
+        // the (NoTracking-default, untracked) entity as Deleted and issues the DELETE by PK. There is no
+        // scalar mutation for the change tracker to detect, so .AsTracking() is neither needed nor helpful.
         var existing = await DbContext.AccessRequests
             .FindAsync(new object[] { entity.Id }, cancellationToken)
             .ConfigureAwait(false);
@@ -122,6 +131,26 @@ internal sealed class AccessRequestRepository : RepositoryBase, IAccessRequestRe
     {
         return await DbContext.AccessRequests
             .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task SetInvitationIdAsync(Guid id, Guid invitationId, CancellationToken cancellationToken = default)
+    {
+        // Direct SQL UPDATE of a single column: does NOT load the aggregate, does NOT touch the
+        // ChangeTracker, and does NOT require SaveChangesAsync. This avoids the full-aggregate
+        // overwrite (last-writer-wins, #B 2026-07-10) that reverted an approved status when a
+        // stale aggregate snapshot was written back during async outbox dispatch.
+        await DbContext.AccessRequests
+            .Where(e => e.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.InvitationId, invitationId), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task MarkNotifiedAsync(Guid id, Guid eventId, CancellationToken cancellationToken = default)
+    {
+        await DbContext.AccessRequests
+            .Where(e => e.Id == id)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.LastNotifiedEventId, eventId), cancellationToken)
             .ConfigureAwait(false);
     }
 

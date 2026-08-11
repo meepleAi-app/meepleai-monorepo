@@ -68,6 +68,18 @@ internal sealed record EvaluationSample
     public string DatasetSource { get; init; } = "meepleai_custom";
 
     /// <summary>
+    /// ISO language code of the sample (e.g. "en", "it"). Null when unspecified.
+    /// </summary>
+    public string? Language { get; init; }
+
+    /// <summary>
+    /// Page-level citation ground truth for citation-accuracy scoring. Null = the sample is not
+    /// citation-graded (excluded from the CitationAccuracy aggregate). Page-level so it survives
+    /// corpus re-index (#3427), unlike <see cref="RelevantChunkIds"/>.
+    /// </summary>
+    public ExpectedCitations? ExpectedCitations { get; init; }
+
+    /// <summary>
     /// Creates a sample for Mozilla Structured QA format.
     /// </summary>
     public static EvaluationSample FromMozilla(

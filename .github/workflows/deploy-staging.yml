@@ -53,24 +53,31 @@ on:
 # Switching to true makes a fresh trigger CANCEL the stuck run and start clean,
 # so the pipeline is self-healing. This is safe because every stage is
 # idempotent and re-runnable:
-#   - deploy.steps."Generate idempotent migration SQL": produces SQL with every
-#     migration wrapped in IF NOT EXISTS vs __EFMigrationsHistory. Re-running
-#     re-emits identical SQL — no DB side effects yet.
-#   - deploy.steps."Apply migrations on staging": uses that idempotent SQL,
-#     so re-applying is a no-op when no new migrations exist. Includes a
-#     pre-flight check against __EFMigrationsHistory (fixes #2020) to skip
-#     psql apply when the script's target migration is already recorded —
-#     necessary because EF's idempotent generator hoists CREATE TABLE /
+#   - generate-migration job (issue #2650): produces SQL with every migration
+#     wrapped in IF NOT EXISTS vs __EFMigrationsHistory. Re-running re-emits
+#     identical SQL — no DB side effects yet. Runs on the CLOUD runner.
+#   - deploy.steps."Apply migrations on staging": uses that idempotent SQL
+#     (downloaded as artifact), so re-applying is a no-op when no new migrations
+#     exist. Includes a pre-flight check against __EFMigrationsHistory (fixes
+#     #2020) to skip psql apply when the script's target migration is already
+#     recorded — necessary because EF's idempotent generator hoists CREATE TABLE /
 #     CREATE EXTENSION outside the IF NOT EXISTS guard for squashed
 #     InitialCreate migrations, causing "relation already exists" otherwise.
 #   - deploy.steps."Deploy via SSH": `docker compose up --force-recreate`
 #     converges to the target image regardless of partial prior state.
 # A mid-flight cancel therefore can't corrupt staging; the next run re-converges.
 #
-# Architectural rework (also tracked in #1573, NOW SHIPPED with this commit):
-#   - migrate-db job collapsed: SQL generation AND apply moved as steps INSIDE
+# Architectural rework (tracked in #1573, then #2650):
+#   - #1573: migrate-db job collapsed — SQL generation AND apply moved INSIDE
 #     the deploy job (Plan B, fully inline). If the deploy is never picked by
-#     the runner, the migration is never applied — atomicity is now job-level.
+#     the runner, the migration is never applied — atomicity is job-level.
+#   - #2650 (Opzione 3): SQL GENERATION lifted back out to the `generate-migration`
+#     CLOUD job (removes the .NET build from the resource-constrained self-hosted
+#     host → no Roslyn OOM). APPLY stays inline in deploy, so job-level atomicity
+#     is preserved: the side-effect-free generation moved upstream; the DB write
+#     did not. The #1596 skip-propagation trap (a cloud SQL-gen job skipped under
+#     workflow_dispatch+skip_tests) is avoided via `always()`-based gating on the
+#     new job, identical to build/build-ai.
 # Still deferred: queue-time watchdog for self-hosted jobs (#1573 P1).
 concurrency:
   group: deploy-staging
@@ -125,7 +132,7 @@ jobs:
       commit_sha: ${{ github.event.workflow_run.head_sha || github.sha }}
       commit_message: ${{ github.event.workflow_run.head_commit.message || github.event.head_commit.message || 'Manual trigger' }}
       run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      job_list: '["detect-changes", "pre-deploy-check", "build", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
+      job_list: '["detect-changes", "pre-deploy-check", "build", "generate-migration", "snapshot-baseline", "deploy", "validate", "e2e-staging"]'
       caller_workflow_id: ${{ github.workflow_id }}
     secrets:
       SLACK_GITNOTIFY_WEBHOOK_URL: ${{ secrets.SLACK_GITNOTIFY_WEBHOOK_URL }}
@@ -191,6 +198,8 @@ jobs:
               - 'apps/reranker-service/**'
             orchestration:
               - 'apps/orchestration-service/**'
+            unstructured:
+              - 'apps/unstructured-service/**'
 
       - name: Determine what to deploy
         id: decision
@@ -222,28 +231,44 @@ jobs:
             echo "📦 Selective deploy: api=$API, web=$WEB"
           fi
 
-          # Issue #1578 — AI service change detection. Same force-full triggers
-          # as api/web (workflow_dispatch / force / infra / initial push).
+          # Issue #1578 — AI service change detection.
+          # #2655 — INFRA is deliberately NOT a force trigger for AI (unlike api/web). The AI
+          # images (~10GB embedding + ~13GB reranker) do NOT depend on infra/** or the workflow
+          # file, so an infra/workflow-only change must not force a ~23GB re-pull that trips the
+          # AI_PULL_GATE on the 75GB staging VPS. AI is re-pulled only on an explicit operator
+          # deploy (workflow_dispatch / force_full_deploy), an initial push that can't diff, or an
+          # actual change to the service's own path (apps/{embedding,reranker,orchestration}-service).
           EMB="${{ steps.changes.outputs.embedding }}"
           RRK="${{ steps.changes.outputs.reranker }}"
           ORC="${{ steps.changes.outputs.orchestration }}"
+          # #3590 — unstructured-service NON era in alcuna pipeline: non qui e non in un workflow
+          # di build/publish GHCR. Si ricostruiva solo a mano sul VPS, quindi andava alla deriva in
+          # silenzio: il 2026-08-07 staging girava un'immagine costruita un'ora PRIMA che il commit
+          # del limite 50->100MB atterrasse, e le mancavano anche i due commit di region-seeding RAG.
+          # Il servizio è build-from-source nel compose (nessuna immagine GHCR da pullare), quindi
+          # sotto viene ricostruito sul VPS invece che pullato.
+          UNS="${{ steps.changes.outputs.unstructured }}"
           if [ "$EVENT" = "workflow_dispatch" ] \
             || [ "$FORCE" = "true" ] \
-            || [ "$INFRA" = "true" ] \
             || [ "$BEFORE" = "$ZEROS" ] \
             || [ -z "$BEFORE" ]; then
-            EMB=true; RRK=true; ORC=true
+            EMB=true; RRK=true; ORC=true; UNS=true
           fi
           # paths-filter outputs are empty when the changes step is skipped
           # (workflow_dispatch). Normalize empties to false.
-          EMB="${EMB:-false}"; RRK="${RRK:-false}"; ORC="${ORC:-false}"
-          echo "ai_changed={\"embedding\":$EMB,\"reranker\":$RRK,\"orchestration\":$ORC}" >> $GITHUB_OUTPUT
+          EMB="${EMB:-false}"; RRK="${RRK:-false}"; ORC="${ORC:-false}"; UNS="${UNS:-false}"
+          echo "ai_changed={\"embedding\":$EMB,\"reranker\":$RRK,\"orchestration\":$ORC,\"unstructured\":$UNS}" >> $GITHUB_OUTPUT
+          # NOTA: `unstructured` è deliberatamente ESCLUSO da ai_any. ai_any gate il job di
+          # build+push su GHCR, la cui matrice è [embedding, reranker, orchestration];
+          # unstructured-service non ha un'immagine GHCR (è build-from-source nel compose) e viene
+          # ricostruito direttamente sul VPS nello step di deploy. Includerlo qui farebbe girare
+          # a vuoto il job GHCR.
           if [ "$EMB" = "true" ] || [ "$RRK" = "true" ] || [ "$ORC" = "true" ]; then
             echo "ai_any=true" >> $GITHUB_OUTPUT
           else
             echo "ai_any=false" >> $GITHUB_OUTPUT
           fi
-          echo "🤖 AI changed: embedding=$EMB reranker=$RRK orchestration=$ORC"
+          echo "🤖 AI changed: embedding=$EMB reranker=$RRK orchestration=$ORC unstructured=$UNS"
 
   # Lightweight pre-deploy validation (full CI already ran on main-dev PR)
   # Rationale: Code reaching main-staging has already passed the full ci.yml
@@ -273,36 +298,51 @@ jobs:
           sparse-checkout-cone-mode: true
 
       # Pre-deploy disk headroom guard (issue #1575 follow-up).
-      # The pre-deploy-check job runs on the self-hosted runner that lives on
-      # the staging VPS — `df /` here reflects the same filesystem the deploy
-      # will write to. Fail fast BEFORE Build Images (~1.5 GB pull) and
-      # Database Migration (creates schema/WAL artefacts) so we never leave
-      # the DB schema migrated while the deploy itself aborts later on
-      # disk-full (the exact failure mode from 2026-05-26 incident).
+      # #3331 Phase 1: read the VPS root filesystem over SSH instead of a local
+      # `df /`. pre-deploy-check now runs on a cloud runner (Option E), where a
+      # local `df /` would measure the GitHub runner, not staging — so the gate
+      # SSHes into STAGING_HOST (reusing the snapshot-baseline SSH pattern below).
+      # It also works before the cutover (a self-hosted runner SSHing to itself).
+      # Gated on the SSH deploy method (like every other server-touching step),
+      # NOT on vars.RUNNER. Fail fast BEFORE Build Images (~1.5 GB pull) and
+      # Database Migration so we never leave the DB schema migrated while the
+      # deploy itself aborts on disk-full (2026-05-26 incident).
       #
-      # Threshold: 10 GB. Rationale on a 75 GB disk:
-      #   - Image pull (api+web) reserves ~1.5 GB.
-      #   - Migration WAL + temp objects reserves ~0.5–1 GB.
-      #   - Safety margin against per-job runner _diag growth: ~3 GB.
-      #   - Below 10 GB free we are within 5 GB of the disk-full reproduction
-      #     window (#1348). Better to fail the deploy than corrupt staging.
-      #
-      # Override: set repo variable DEPLOY_DISK_GATE_GB to a different
-      # threshold (e.g. "0" disables the gate for emergencies).
+      # Threshold: 10 GB. Override: set repo variable DEPLOY_DISK_GATE_GB
+      # (e.g. "0" disables the gate for emergencies).
       - name: Verify VPS disk headroom
-        if: vars.RUNNER  # only runs on self-hosted (skipped on ubuntu-latest)
+        if: vars.DEPLOY_METHOD == 'ssh'
         env:
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
           DEPLOY_DISK_GATE_GB: ${{ vars.DEPLOY_DISK_GATE_GB || '10' }}
         run: |
           THRESHOLD_GB="$DEPLOY_DISK_GATE_GB"
-          FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
-          USAGE_PCT=$(df -h / | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
-          echo "VPS disk: ${FREE_GB} GB free (usage ${USAGE_PCT}%) — gate threshold ${THRESHOLD_GB} GB"
 
           if [ "$THRESHOLD_GB" -eq 0 ]; then
             echo "⚠️ Disk gate disabled (DEPLOY_DISK_GATE_GB=0)"
             exit 0
           fi
+
+          # Read the VPS root filesystem over SSH (same pattern as snapshot-baseline).
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          DF_OUT=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            "$SSH_USER@$SSH_HOST" 'df -BG /' 2>/dev/null) || true
+          rm -f ~/.ssh/deploy_key
+
+          FREE_GB=$(echo "$DF_OUT" | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+          USAGE_PCT=$(echo "$DF_OUT" | awk 'NR==2 {gsub(/%/,"",$5); print $5}')
+
+          if [ -z "$FREE_GB" ]; then
+            echo "::warning::Could not read VPS disk over SSH — skipping the gate (deploy continues)."
+            exit 0
+          fi
+
+          echo "VPS disk: ${FREE_GB} GB free (usage ${USAGE_PCT}%) — gate threshold ${THRESHOLD_GB} GB"
 
           if [ "$FREE_GB" -lt "$THRESHOLD_GB" ]; then
             echo "::error::Insufficient disk on staging VPS: ${FREE_GB} GB free < ${THRESHOLD_GB} GB threshold"
@@ -311,15 +351,8 @@ jobs:
             echo "   (Incident 2026-05-26 left the DB migrated while the Deploy job was orphaned;"
             echo "    see issue #1573, audit audits/2026-05-26-disk-cleanup-1575.md.)"
             echo ""
-            echo "Top consumers — run on the VPS:"
-            echo "  sudo du -h --max-depth=2 /home/deploy /var/lib/docker /var/log | sort -rh | head"
-            echo ""
-            echo "Manual cleanup options (safest first):"
-            echo "  1. bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
-            echo "  2. docker rmi \$(docker images --format '{{.Repository}}:{{.Tag}}' | grep 'staging-' | grep -v \$(docker inspect meepleai-api --format '{{.Config.Image}}'))"
-            echo "  3. find /home/deploy/actions-runner/_diag/blocks -type f -mtime +1 -delete"
-            echo ""
-            echo "Emergency override (use sparingly): set repo variable DEPLOY_DISK_GATE_GB to a lower value or 0 to disable."
+            echo "Manual cleanup (safest first): bash /opt/meepleai/repo/infra/scripts/daily-disk-prune.sh"
+            echo "Emergency override: set repo variable DEPLOY_DISK_GATE_GB to a lower value or 0 to disable."
             exit 1
           fi
 
@@ -346,38 +379,37 @@ jobs:
             echo "⚠️ No prior CI checks found — will run build validation"
           fi
 
-      - name: Setup .NET
-        if: needs.detect-changes.outputs.deploy_api == 'true'
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '9.0.x'
+      # Issue #2650: il "Backend build check" (dotnet build sull'host) è stato
+      # RIMOSSO. Verificato empiricamente sul deploy run 28531125939: compilare
+      # Api.csproj sul runner self-hosted (cap MemoryMax=3G) va in OOM ANCHE con
+      # SkipAnalyzers=true — lo stack trace del fallimento è in
+      # Microsoft.CodeAnalysis.CodeGen.CodeGenerator (emit IL), NON nell'
+      # AnalyzerDriver. Cioè: disabilitare gli analyzer (#2613/#2649) riduce la
+      # pressione ma NON basta; il code-gen dell'emit esaurisce comunque i 3G.
+      # La verifica di compilazione backend è già coperta, senza toccare l'host:
+      #   - il job `build` compila Api.csproj nel Docker build sul CLOUD runner
+      #     (ubuntu-latest): se non compila, quel job fallisce e blocca il deploy;
+      #   - lo step "Verify CI passed on this commit" sopra conferma che la CI
+      #     autoritativa (build + test) è già passata su questo commit.
+      # Con questa rimozione la superficie di build .NET sull'host di deploy è 0
+      # (Opzione 3 completa): tutta la compilazione .NET è sul cloud.
 
-      - name: Backend build check
-        if: needs.detect-changes.outputs.deploy_api == 'true'
-        run: |
-          echo "🔨 Verifying backend compiles..."
-          cd apps/api/src/Api
-          dotnet restore --verbosity quiet
-          dotnet build --no-restore --configuration Release --verbosity quiet
-          echo "✅ Backend builds successfully"
-
-      - name: Setup Frontend
-        if: needs.detect-changes.outputs.deploy_web == 'true'
-        uses: ./.github/actions/setup-frontend
-        with:
-          working-directory: apps/web
-          frozen-lockfile: 'true'
-
-      - name: Frontend build check
-        if: needs.detect-changes.outputs.deploy_web == 'true'
-        run: |
-          echo "🔨 Verifying frontend compiles..."
-          cd apps/web
-          pnpm build
-          echo "✅ Frontend builds successfully"
-        env:
-          NEXT_PUBLIC_API_BASE: http://localhost:8080
-          NODE_OPTIONS: '--max-old-space-size=4096'
+      # Issue #3331: il "Frontend build check" (pnpm build sull'host) è stato
+      # RIMOSSO — stesso trattamento del Backend build check (#2650, sopra).
+      # Compilare il frontend sul runner self-hosted co-locato (cap
+      # MemoryMax=3G, box staging ~8GB condiviso coi container) va in OOM:
+      # `next build` girava con NODE_OPTIONS=--max-old-space-size=4096 (heap 4GB)
+      # e il worker TypeScript sfondava il cap cgroup 3G → SIGKILL (deploy run
+      # 30334115340, 2026-07-28). La verifica di compilazione frontend è già
+      # coperta, senza toccare l'host di deploy:
+      #   - ci.yml `Build Frontend` (ubuntu-latest) esegue `pnpm build` sul CLOUD
+      #     nella PR verso main-dev: se non compila, la PR non arriva a main-staging;
+      #   - il job `build` sotto (sempre ubuntu-latest) builda l'immagine web reale
+      #     sul cloud: se `next build` fallisce, quel job fallisce e blocca il deploy;
+      #   - lo step "Verify CI passed on this commit" sopra conferma la CI autoritativa.
+      # Con questa rimozione la superficie di build sull'host di deploy è 0
+      # (backend #2650 + frontend #3331): tutta la compilazione è sul cloud.
+      # Vedi ADR-044 (Update 2026-07-28) e docs/superpowers/specs/2026-07-28-spec-panel-3331-cicd-runner.md.
 
   # Build and push Docker images (only changed components).
   # ALWAYS runs on ubuntu-latest (cloud) — never on self-hosted runner.
@@ -433,7 +465,7 @@ jobs:
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4
 
       - name: Setup QEMU for ARM64 cross-compilation
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8  # v4
         with:
           platforms: arm64
 
@@ -522,6 +554,101 @@ jobs:
           echo "  API built: ${{ needs.detect-changes.outputs.deploy_api }}"
           echo "  Web built: ${{ needs.detect-changes.outputs.deploy_web }}"
 
+  # Generate the idempotent migration SQL in the CLOUD (issue #2650, Opzione 3).
+  # ============================================================================
+  # Rationale: il job Deploy gira sul runner self-hosted (staging VPS ~8GB, cap
+  # MemoryMax=3G). Compilare Api.csproj lì per far girare dotnet-ef mandava in OOM
+  # il Roslyn AnalyzerDriver (#2613, mitigato con SkipAnalyzers in #2649). Questo
+  # job sposta la compilazione .NET + dotnet-ef sul cloud runner (ubuntu-latest,
+  # RAM abbondante), produce lo script SQL idempotente e lo passa al Deploy come
+  # artifact. Il Deploy non compila più .NET per i punti #2/#3 (vedi issue #2650).
+  #
+  # Vincolo #1596 (Plan A fallito): un job cloud separato che genera SQL fu già
+  # tentato e falliva perché GHA lo SKIPPAVA sotto workflow_dispatch+skip_tests,
+  # lasciando il download senza artifact. Fix qui: gating `always() && (...)`
+  # IDENTICO ai job build/build-ai — così questo job NON viene skippato dalla
+  # propagazione. Il download nel Deploy e questo job condividono lo stesso gate
+  # (`vars.DEPLOY_METHOD == 'ssh'`), quindi l'artifact esiste sempre quando serve.
+  #
+  # Atomicità (#1573) e idempotenza (#2020) PRESERVATE: qui si GENERA solo lo SQL
+  # (nessun side-effect sul DB). L'APPLY (backup + pre-flight __EFMigrationsHistory
+  # + psql ON_ERROR_STOP) resta inline nel job Deploy, invariato.
+  generate-migration:
+    name: Generate Migration SQL (cloud)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [pre-deploy-check, detect-changes]
+    if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && vars.DEPLOY_METHOD == 'ssh'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
+          # apps/api/ per il build; data/rulebook/golden/ (~52K) IS included:
+          # Api.csproj embeds these JSON fixtures come risorse (ADR-051). Senza,
+          # dotnet build fallisce con CS1566 (Error reading resource ...golden-claims.json).
+          sparse-checkout: |
+            apps/api/
+            data/rulebook/golden/
+          sparse-checkout-cone-mode: true
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Install dotnet-ef tool
+        run: |
+          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
+            echo "dotnet-ef already installed globally — using existing version:"
+            dotnet tool list --global | grep '^dotnet-ef'
+          else
+            dotnet tool install --global dotnet-ef --version 9.*
+          fi
+          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
+
+      - name: Restore and build API project
+        working-directory: apps/api/src/Api
+        # SkipAnalyzers=true: qui NON per OOM (il cloud runner ha RAM), ma per
+        # velocità e coerenza — gli analyzer sono già enforced in modo autoritativo
+        # da CodeQL/CI su main-dev (Api.csproj:11-17); ri-eseguirli al deploy è
+        # ridondante (stessa logica dei commenti "Verify CI passed" del workflow).
+        env:
+          SkipAnalyzers: 'true'
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
+
+      - name: Generate idempotent migration SQL
+        working-directory: apps/api/src/Api
+        env:
+          SkipAnalyzers: 'true'
+        run: |
+          # --no-build: riusa l'assembly appena prodotto dallo step precedente
+          # (evita che dotnet-ef ricompili). --configuration Release è OBBLIGATORIO
+          # con --no-build: dotnet ef NON eredita la config dell'ultima build e
+          # risolverebbe l'assembly in Debug (default), fallendo con
+          # "bin/Debug/.../Api.deps.json does not exist" (exit 129) perché abbiamo
+          # buildato solo Release. Verificato empiricamente su dotnet-ef 9.0.11.
+          dotnet ef migrations script --idempotent --no-build --configuration Release -o "$RUNNER_TEMP/migrations.sql"
+          test -f "$RUNNER_TEMP/migrations.sql" || { echo "❌ dotnet ef non ha prodotto il file SQL"; exit 1; }
+          lines=$(wc -l < "$RUNNER_TEMP/migrations.sql")
+          echo "✅ Generated ${lines} lines of SQL at $RUNNER_TEMP/migrations.sql"
+          if [ "$lines" -lt 10 ]; then
+            echo "❌ SQL output suspiciously small (< 10 lines). Aborting."
+            exit 1
+          fi
+
+      - name: Upload migration SQL artifact
+        uses: actions/upload-artifact@v7
+        with:
+          # run-id suffix per coerenza con la convenzione repo (ci.yml) e per
+          # isolamento cross-run difensivo, oltre al concurrency group.
+          name: migration-sql-${{ github.run_id }}
+          path: ${{ runner.temp }}/migrations.sql
+          retention-days: 1
+          if-no-files-found: error
+
   # Build and push AI service images (only changed ones). Issue #1578.
   # Separate from `build` so the slow torch QEMU builds run in parallel
   # (matrix), with per-service timeout, and a single failure does not block
@@ -565,7 +692,7 @@ jobs:
 
       - name: Setup QEMU for ARM64
         if: ${{ fromJSON(needs.detect-changes.outputs.ai_changed)[matrix.service] }}
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a  # v4
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8  # v4
         with:
           platforms: arm64
 
@@ -670,47 +797,56 @@ jobs:
 
   # Deploy to staging server (only changed services).
   #
-  # Issue #1573 — atomicity rework (Plan B: fully inline)
-  # ============================================
-  # The migration GENERATE AND APPLY steps both live in this job (the previous
-  # separate `migrate-db` job ran BEFORE deploy and could leave the DB ahead of
-  # the containers if deploy was orphaned in the runner queue — 2026-05-26
-  # incident, 1h45m of schema/code drift). The sequence inside this job is:
-  #   1. Setup .NET + dotnet-ef + Restore/build API
-  #   2. Generate idempotent migration SQL via dotnet ef migrations script
-  #   3. Apply migrations via SSH (pre-migration backup + psql ON_ERROR_STOP)
-  #   4. Deploy via SSH (docker pull + compose up + health checks)
+  # Issue #1573 — atomicity rework; Issue #2650 — SQL generation lifted to cloud
+  # ============================================================================
+  # The migration APPLY step lives in this job (the previous separate `migrate-db`
+  # job ran BEFORE deploy and could leave the DB ahead of the containers if deploy
+  # was orphaned in the runner queue — 2026-05-26 incident, 1h45m of schema/code
+  # drift). The sequence inside this job is now:
+  #   1. Download migration SQL artifact (generated by the cloud generate-migration job, #2650)
+  #   2. Apply migrations via SSH (pre-migration backup + psql ON_ERROR_STOP)
+  #   3. Deploy via SSH (docker pull + compose up + health checks)
   # All steps gated on vars.DEPLOY_METHOD == 'ssh' so non-SSH deploys skip them.
   # If this job is never picked by the runner, NO migration is applied —
-  # atomicity is guaranteed by job-level pickup.
+  # atomicity is guaranteed by job-level pickup (the APPLY is here; only the
+  # side-effect-free GENERATION moved upstream to the cloud in #2650).
   #
+  # HISTORY — Plan A / #1596 / #2650:
   # Plan A (split: generate-migration-sql cloud job + deploy with artifact
-  # download) was tried in commit 7cfc9c7a3 and skipped/failed under
-  # workflow_dispatch with skip_tests=true: the generate-migration-sql job
-  # was skipped by GHA scheduling, leaving the download step with no artifact.
-  # See PR #1596 review for full incident analysis.
+  # download) was first tried in commit 7cfc9c7a3 and skipped/failed under
+  # workflow_dispatch with skip_tests=true: the cloud job was skipped by GHA
+  # scheduling, leaving the download step with no artifact (PR #1596). It was
+  # reverted to fully-inline (Plan B). Issue #2650 re-introduces the cloud
+  # generation job (`generate-migration`) but FIXES the #1596 root cause: the
+  # new job uses `always()`-based gating IDENTICAL to build/build-ai, so GHA
+  # does not skip it under workflow_dispatch+skip_tests. Both the cloud job and
+  # this Download step share the same `vars.DEPLOY_METHOD == 'ssh'` gate, so the
+  # artifact always exists when the Download runs.
   deploy:
     name: Deploy to Staging
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     # Issue #1573: bumped 15 → 30 to absorb the inlined migration handling.
-    # Worst-case step times on cold self-hosted runner:
-    #   - Restore + build API project (for dotnet-ef): 3-8 min (NuGet network)
-    #   - Generate idempotent migration SQL: 2-3 min
+    # Issue #2650: the .NET build + `dotnet ef` (formerly ~5-11 min on cold cache)
+    # moved to the cloud generate-migration job, so the self-hosted deploy job is
+    # lighter now. Worst-case remaining step times on cold self-hosted runner:
+    #   - Download migration SQL artifact: <1 min
     #   - Apply migrations on staging (backup + scp + psql + verify): 5-10 min
     #   - Deploy via SSH (pull + compose up + health checks): 3-5 min
-    # Total: ~26 min worst case → ~4 min headroom under timeout-minutes: 30.
-    # Observed actuals (run 26472087138, push to main-staging): deploy job
-    # completed in 13m38s. Margin is tight on cold-cache builds; bump to 40
-    # if NuGet restore consistently exceeds 8 min.
+    # Total: ~16 min worst case → comfortable headroom under timeout-minutes: 30
+    # (kept at 30; could be lowered to 20 once the new timing is observed).
+    # Observed actuals pre-#2650 (run 26472087138): deploy job 13m38s.
     timeout-minutes: 30
-    needs: [detect-changes, build, build-ai, snapshot-baseline]
+    needs: [detect-changes, build, generate-migration, build-ai, snapshot-baseline]
     # Issue #1578 — skip-propagation handling. An AI-only deploy has `build`
     # (api/web) skipped, so `build` may be 'success' OR 'skipped'. build-ai may
     # be 'success' (built) or 'skipped' (no AI change); a build-ai FAILURE
     # (success||skipped false) blocks the deploy on purpose — don't deploy when
     # an image we asked to build failed. snapshot-baseline may be skipped on
     # AI-only deploys (it gates on `build`).
-    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.build-ai.result == 'success' || needs.build-ai.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
+    # Issue #2650 — generate-migration: 'success' su deploy SSH (genera lo SQL in
+    # cloud), 'skipped' su DEPLOY_METHOD != ssh. Un FAILURE blocca il deploy di
+    # proposito: non deployare se la generazione della migration è fallita.
+    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.generate-migration.result == 'success' || needs.generate-migration.result == 'skipped') && (needs.build-ai.result == 'success' || needs.build-ai.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
@@ -719,10 +855,11 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
-          # sparse-checkout: apps/api/ needed for dotnet ef gen below.
-          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these
-          # JSON fixtures as resources (ADR-051). Without it, dotnet build
-          # fails with CS1566 (Error reading resource ...golden-claims.json).
+          # Issue #2650: apps/api/ + data/rulebook/golden/ NON servono più a
+          # questo job per compilare .NET (il gen ef è sul cloud generate-migration
+          # job). Restano nel checkout come cleanup-candidate a basso valore —
+          # rimuoverli è un follow-up opzionale, tenuto fuori da questa PR per
+          # non allargare il blast radius. infra/ serve al Deploy via SSH.
           # Excludes the rest of data/ (1.3GB PDFs) — runner disk is limited.
           sparse-checkout: |
             apps/api/
@@ -731,54 +868,32 @@ jobs:
             data/rulebook/golden/
           sparse-checkout-cone-mode: true
 
-      # Issue #1573: migration gen + apply moved here (inline) from the removed
-      # `migrate-db` job. If this job is never picked up by the runner, no
-      # migration is applied — DB schema cannot drift from deployed code.
-      - name: Setup .NET SDK
+      # Issue #2650 (Opzione 3): lo SQL idempotente è ora generato dal job
+      # `generate-migration` sul CLOUD runner (nessuna compilazione .NET
+      # sull'host di deploy → niente OOM Roslyn). Qui lo scarichiamo come
+      # artifact in /tmp/migrations.sql, il path che lo step "Apply migrations"
+      # sotto già consuma.
+      #
+      # Presenza dell'artifact: garantita quando generate-migration ha GIRATO —
+      # cioè quando pre-deploy-check è passato OPPURE (workflow_dispatch &&
+      # skip_tests) — sotto DEPLOY_METHOD==ssh (questo è il caso #1596, risolto).
+      # Edge fail-safe residuo: su PUSH con pre-deploy-check FALLITO, il deploy
+      # gira comunque (deploy.if tollera build/generate-migration 'skipped' —
+      # weakness PRE-ESISTENTE di deploy.if, non introdotta qui) e questo Download
+      # fallisce hard (artifact assente) → il job deploy fallisce PRIMA di
+      # backup/apply/SSH: nessuna migration applicata, nessun deploy container.
+      # Fail-closed, atomicità #1573 preservata. Irrobustire deploy.if per non
+      # partire dopo un pre-deploy-check fallito su push è un follow-up separato.
+      #
+      # Atomicità (#1573) invariata: l'APPLY resta inline in questo job. Se il
+      # job non viene preso dal runner, nessuna migration è applicata. Solo la
+      # GENERAZIONE (side-effect-free) si è spostata a monte, sul cloud.
+      - name: Download migration SQL artifact
         if: vars.DEPLOY_METHOD == 'ssh'
-        uses: actions/setup-dotnet@v5
+        uses: actions/download-artifact@v7
         with:
-          dotnet-version: '9.0.x'
-
-      - name: Install dotnet-ef tool
-        if: vars.DEPLOY_METHOD == 'ssh'
-        # Idempotent: use pre-installed tool if present (self-hosted runner may
-        # already have dotnet-ef from a newer SDK). `dotnet tool install` does
-        # not support downgrades, so skipping install when a compatible version
-        # exists avoids exit 1 on runners with ef 10.x already global.
-        run: |
-          if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
-            echo "dotnet-ef already installed globally — using existing version:"
-            dotnet tool list --global | grep '^dotnet-ef'
-          else
-            dotnet tool install --global dotnet-ef --version 9.*
-          fi
-          # Self-hosted runners: $HOME/.dotnet/tools needs manual PATH append
-          # because setup-dotnet only sets DOTNET_ROOT, not the user-global
-          # tools dir. Regression caught on staging deploy run 24779812732.
-          echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
-
-      - name: Restore and build API project (for ef tools)
-        if: vars.DEPLOY_METHOD == 'ssh'
-        working-directory: apps/api/src/Api
-        run: |
-          dotnet restore
-          dotnet build --no-restore -c Release
-
-      - name: Generate idempotent migration SQL
-        if: vars.DEPLOY_METHOD == 'ssh'
-        working-directory: apps/api/src/Api
-        run: |
-          # No --no-build: dotnet-ef needs the project built. Built in prior
-          # step; let ef trigger its own build without the flag to avoid
-          # Release/Debug path mismatches.
-          dotnet ef migrations script --idempotent -o /tmp/migrations.sql
-          lines=$(wc -l < /tmp/migrations.sql)
-          echo "✅ Generated ${lines} lines of SQL at /tmp/migrations.sql"
-          if [ "$lines" -lt 10 ]; then
-            echo "❌ SQL output suspiciously small (< 10 lines). Aborting."
-            exit 1
-          fi
+          name: migration-sql-${{ github.run_id }}
+          path: /tmp
 
       - name: Apply migrations on staging
         if: vars.DEPLOY_METHOD == 'ssh'
@@ -924,16 +1039,25 @@ jobs:
             # ~356) so the unchanged service keeps pointing at its previous
             # deploy. The rebuilt service then overrides its var below with
             # the freshly-pushed digest.
-            export API_IMAGE="${{ env.API_IMAGE }}:staging-latest"
-            export WEB_IMAGE="${{ env.WEB_IMAGE }}:staging-latest"
+            # Issue #2650: Docker esige repository names TUTTI lowercase, ma
+            # ${{ github.repository }} conserva il case dell'org ('meepleAi-app'
+            # con la A maiuscola) e GHA non ha una funzione lowercase nelle
+            # espressioni. Le env var env.API_IMAGE/env.WEB_IMAGE e AI_BASE, se
+            # usate grezze, producono 'ghcr.io/meepleAi-app/...' → docker pull /
+            # compose up falliscono con "repository name must be lowercase"
+            # (deploy run 28699568838, step Deploy via SSH). Normalizza una volta
+            # qui e ricostruisci tutte le referenze immagine da REPO_LC.
+            REPO_LC=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            export API_IMAGE="${{ env.REGISTRY }}/${REPO_LC}/api:staging-latest"
+            export WEB_IMAGE="${{ env.REGISTRY }}/${REPO_LC}/web:staging-latest"
 
             # Issue #1578 — AI image vars. compose.staging.yml guards
             # embedding/reranker with ${X_IMAGE:?}, so every `compose up`
             # (even one targeting only some services) needs them set, or it
             # aborts (analog of the api/web #1399-C fix above). Default all to
             # staging-latest; changed services keep this ref (the build-ai job
-            # always pushes staging-latest).
-            AI_BASE="${{ env.REGISTRY }}/${{ github.repository }}"
+            # always pushes staging-latest). AI_BASE uses REPO_LC (lowercase).
+            AI_BASE="${{ env.REGISTRY }}/${REPO_LC}"
             export EMBEDDING_IMAGE="${AI_BASE}/embedding-service:staging-latest"
             export RERANKER_IMAGE="${AI_BASE}/reranker-service:staging-latest"
             export ORCHESTRATION_IMAGE="${AI_BASE}/orchestration-service:staging-latest"
@@ -941,17 +1065,36 @@ jobs:
             EMB_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).embedding }}"
             RRK_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).reranker }}"
             ORC_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).orchestration }}"
+            UNS_CHANGED="${{ fromJSON(needs.detect-changes.outputs.ai_changed).unstructured }}"
 
-            # Pre-pull disk guard (issue #1578 / #1575). Pulling a ~5GB torch
-            # image while the old one is still referenced can fill the disk.
-            # Pre-prune, then require AI_PULL_GATE_GB free; otherwise ABORT
-            # (fail-safe) — never risk disk-full.
+            # Issue #1578 follow-up — free OLD AI images BEFORE the disk gate (disk-safe order).
+            # The old image stays referenced by the running container while the new one is pulled
+            # (transient peak ~old+new). Freeing the changed services' old images first (~10GB
+            # embedding + ~13GB reranker) lets the AI_PULL_GATE below see the REAL post-free
+            # headroom. #2655 — previously free_old_ai ran AFTER this gate, so on the 75GB VPS the
+            # gate saw only ~10GB free (old images still present) and aborted every AI deploy before
+            # the space could be reclaimed. Trade-off: ~30-60s AI downtime during the pull.
+            free_old_ai() {
+              local cont="$1"
+              local old_img
+              old_img=$(docker inspect "$cont" --format '{{.Image}}' 2>/dev/null || true)
+              docker rm -f "$cont" 2>/dev/null && echo "  - stopped + removed $cont" || true
+              if [ -n "$old_img" ]; then
+                docker rmi "$old_img" 2>/dev/null && echo "  - rmi $old_img" || echo "  - rmi $old_img skipped (in use elsewhere)"
+              fi
+            }
+
+            # Pre-pull disk guard (issue #1578 / #1575): free old AI images, prune, then require
+            # AI_PULL_GATE_GB free; otherwise ABORT (fail-safe) — never risk disk-full.
             AI_PULL_GATE_GB="${AI_PULL_GATE_GB:-15}"
             if [ "$EMB_CHANGED" = "true" ] || [ "$RRK_CHANGED" = "true" ] || [ "$ORC_CHANGED" = "true" ]; then
+              echo "🗑️ Freeing old AI images before disk gate (disk-safe ordering)..."
+              [ "$EMB_CHANGED" = "true" ] && free_old_ai meepleai-embedding
+              [ "$RRK_CHANGED" = "true" ] && free_old_ai meepleai-reranker
               echo "🧹 Pre-prune before AI image pull..."
               docker image prune -af --filter "until=24h" || true
               FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
-              echo "💽 VPS disk: ${FREE_GB} GB free — AI pull gate ${AI_PULL_GATE_GB} GB"
+              echo "💽 VPS disk after free: ${FREE_GB} GB free — AI pull gate ${AI_PULL_GATE_GB} GB"
               if [ "$FREE_GB" -lt "$AI_PULL_GATE_GB" ]; then
                 echo "::error::Insufficient disk for AI image pull: ${FREE_GB} GB free < ${AI_PULL_GATE_GB} GB"
                 echo "🚫 Aborting AI deploy (fail-safe). Manual cleanup on the VPS:"
@@ -978,33 +1121,7 @@ jobs:
               echo "📦 Web image updated"
             fi
 
-            # Issue #1578 follow-up — free-old-AI before pull (disk-safe order).
-            # The original "pull then recreate then prune" order leaves OLD AI
-            # images on disk during the new pull (transient peak ~old+new). On
-            # a VPS at 14 GB free this hit the AI_PULL_GATE_GB=15 fail-safe and
-            # blocked the deploy (run 26563212569). Re-ordering to:
-            #   stop+rm container → rmi old image → pull new → compose recreate
-            # frees ~5.3 GB (embedding) + ~2.1 GB (reranker) BEFORE the pull, so
-            # the transient peak does not need the full old+new headroom.
-            # Trade-off: ~30-60s extra AI downtime per service during the pull,
-            # acceptable on staging.
-            free_old_ai() {
-              local cont="$1"
-              local old_img
-              old_img=$(docker inspect "$cont" --format '{{.Image}}' 2>/dev/null || true)
-              docker rm -f "$cont" 2>/dev/null && echo "  - stopped + removed $cont" || true
-              if [ -n "$old_img" ]; then
-                docker rmi "$old_img" 2>/dev/null && echo "  - rmi $old_img" || echo "  - rmi $old_img skipped (in use elsewhere)"
-              fi
-            }
-            if [ "$EMB_CHANGED" = "true" ] || [ "$RRK_CHANGED" = "true" ]; then
-              echo "🗑️ Freeing old AI images before pull (disk-safe ordering)..."
-              [ "$EMB_CHANGED" = "true" ] && free_old_ai meepleai-embedding
-              [ "$RRK_CHANGED" = "true" ] && free_old_ai meepleai-reranker
-              echo "💽 Disk after free-old: $(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}') GB free"
-            fi
-
-            # Issue #1578 — AI services. embedding/reranker are in the
+            # AI services. embedding/reranker are in the
             # ai-essential profile → pull + recreate. orchestration is
             # publish-only → pull ONLY (cached for a future activation).
             if [ "$EMB_CHANGED" = "true" ]; then
@@ -1020,6 +1137,34 @@ jobs:
             if [ "$ORC_CHANGED" = "true" ]; then
               docker pull "$ORCHESTRATION_IMAGE" || echo "⚠️ orchestration pull failed (non-blocking; not active in staging)"
               echo "📦 orchestration-service image cached (not started in staging)"
+            fi
+
+            # #3590 — unstructured-service è build-from-source nel compose (nessuna immagine GHCR
+            # da pullare), quindi si ricostruisce QUI sul VPS. Prima di #3590 non era in alcuna
+            # pipeline: si aggiornava solo a mano e andava alla deriva in silenzio.
+            #
+            # ORDINE OBBLIGATORIO — prune PRIMA del build, non dopo. L'immagine pesa ~10GB e il
+            # 2026-08-07 un rebuild manuale ha portato il disco dal 74% al 99% (873MB liberi).
+            # `docker builder prune` recupera ~6.5GB di cache: farlo dopo è troppo tardi.
+            if [ "$UNS_CHANGED" = "true" ]; then
+              echo "🧹 Pre-prune before unstructured-service rebuild (image is ~10GB)..."
+              docker builder prune -f || true
+              docker image prune -f || true
+
+              FREE_GB=$(df -BG / | awk 'NR==2 {gsub(/G/,"",$4); print $4}')
+              echo "💽 VPS disk before unstructured build: ${FREE_GB} GB free — gate ${AI_PULL_GATE_GB} GB"
+              if [ "$FREE_GB" -lt "$AI_PULL_GATE_GB" ]; then
+                echo "::error::Insufficient disk to rebuild unstructured-service: ${FREE_GB} GB free < ${AI_PULL_GATE_GB} GB"
+                echo "🚫 Aborting (fail-safe). Manual cleanup on the VPS:"
+                echo "  docker image prune -af && docker builder prune -af"
+                exit 1
+              fi
+
+              echo "🔨 Rebuilding unstructured-service from source on the VPS..."
+              docker compose -f docker-compose.yml -f compose.staging.yml --profile ai \
+                build unstructured-service
+              SERVICES="$SERVICES unstructured-service"
+              echo "📦 unstructured-service rebuilt"
             fi
 
             if [ -z "$SERVICES" ]; then
@@ -1046,26 +1191,59 @@ jobs:
               --profile ai-essential --profile monitoring-essential \
               up -d --no-deps --force-recreate $SERVICES
 
-            # Health check via docker exec (port not exposed on host)
-            echo "⏳ Waiting for API health..."
-            for attempt in $(seq 1 20); do
-              if docker exec meepleai-api curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-                echo "✅ API healthy after ~$((attempt*3))s"
+            # Health check via docker exec (port not exposed on host).
+            # #2655 — API cold-start can take several minutes (Quartz backlog) before /health
+            # reports overall Healthy; the previous 20×3s=60s loop gave up far too early. Postgres+
+            # Redis become Healthy well before that, so we poll the CORE deps (not the overall 2xx)
+            # for up to ~240s. `curl -s` (NOT `-sf`): -f discards the body on a 503 Degraded response
+            # and writes an EMPTY file, making json.load fail with a misleading JSONDecodeError; -s
+            # keeps the JSON body that ASP.NET serves even while Degraded.
+            #
+            # #1959 — the validator is written to a file first (heredoc, robust under appleboy/
+            # ssh-action quoting) and invoked as `python3 <file>`, avoiding both `python3 -c` argv
+            # breakage and a nested heredoc inside the poll loop.
+            cat > /tmp/check_health.py << 'PY'
+            import json, sys
+            try:
+                with open('/tmp/staging-health.json') as f:
+                    content = f.read().strip()
+                if not content:
+                    sys.exit(1)
+                d = json.loads(content)
+                checks = {c['name']: c['status'] for c in d.get('checks', [])}
+                sys.exit(0 if checks.get('postgres') == 'Healthy' and checks.get('redis') == 'Healthy' else 1)
+            except Exception:
+                sys.exit(1)
+            PY
+
+            echo "⏳ Waiting for API core deps (postgres+redis) Healthy — up to ~240s..."
+            health_ok=0
+            for attempt in $(seq 1 80); do
+              docker exec meepleai-api curl -s http://localhost:8080/health > /tmp/staging-health.json 2>/dev/null || true
+              if python3 /tmp/check_health.py; then
+                health_ok=1
+                echo "✅ API core deps (postgres+redis) healthy after ~$((attempt*3))s"
                 break
               fi
               sleep 3
             done
-            # #1959 — previously `... | python3 -c "<multi-line script>"` broke
-            # under appleboy/ssh-action quoting: argv arrived as `python3 -c`
-            # with `-c` interpreted as a file path (FileNotFoundError on
-            # /opt/meepleai/repo/infra/-c), yielding a spurious step failure
-            # despite the deploy succeeding. Heredoc avoids the quoting issue
-            # and is robust under SSH multi-line shell invocation.
-            docker exec meepleai-api curl -sf http://localhost:8080/health > /tmp/staging-health.json
+
+            if [ "$health_ok" -ne 1 ]; then
+              echo "::error::API did not report postgres+redis Healthy within ~240s"
+              echo "Last /health response:"
+              cat /tmp/staging-health.json 2>/dev/null || echo "(empty or missing)"
+              docker logs meepleai-api --tail 50 2>/dev/null || true
+              exit 1
+            fi
+
+            # Final assertion on the captured health JSON. Guard against an empty body for a clear
+            # message instead of a JSONDecodeError, then require postgres + redis Healthy.
             python3 << 'PY' || exit 1
             import json
             with open('/tmp/staging-health.json') as f:
-                d = json.load(f)
+                content = f.read().strip()
+            assert content, 'API /health returned an empty body (API not ready)'
+            d = json.loads(content)
             healthy = [c['name'] for c in d['checks'] if c['status']=='Healthy']
             print(f'Healthy services: {len(healthy)}')
             assert any(c['name']=='postgres' and c['status']=='Healthy' for c in d['checks']), 'postgres unhealthy'
@@ -1151,20 +1329,42 @@ jobs:
           # CF Access bypass headers reused for all curls in this step
           CF_HEADERS=(-H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}")
 
-          # Wait for API with structured health response (CF Access bypass)
+          # Wait for API with structured health response (CF Access bypass).
+          # #2655 — `curl -s` (NOT `-sf`): with `-f` curl discards the body and returns non-zero on
+          # a 503 Degraded response, so $HEALTH stayed empty and the loop timed out even though the
+          # API was up and serving. The critical-service gate below only requires postgres+redis
+          # Healthy, so a Degraded overall status (e.g. a non-critical slack_queue backlog) must not
+          # fail the deploy. Same fix as the in-container health wait earlier in this workflow.
+          # #2772 — capture the HTTP status alongside the body. An app-level health response is
+          # 200 (Healthy) or 503 (Degraded, still a valid JSON body — see #2655). A 502/504/000 is an
+          # edge/origin-unreachable failure (e.g. the host docker-proxy for :8080 died and Cloudflare
+          # can't reach the API origin) and MUST fail loud instead of being silently skipped by the jq
+          # parse below — a 502 HTML body has no postgres/redis keys, so STATUS goes empty → "skipping"
+          # → a false green. Only a 200/503 is treated as a real response and breaks the wait loop.
           HEALTH=""
+          HTTP_STATUS="000"
           for i in {1..30}; do
-            HEALTH=$(curl -sf "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || true)
-            if [ -n "$HEALTH" ]; then
-              echo "📋 Health response received"
+            HTTP_STATUS=$(curl -s -o /tmp/api_health_body -w "%{http_code}" "${CF_HEADERS[@]}" https://api.meepleai.app/health 2>/dev/null || echo "000")
+            HEALTH=$(cat /tmp/api_health_body 2>/dev/null || true)
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "503" ]; then
+              echo "📋 Health response received (HTTP $HTTP_STATUS)"
               break
             fi
-            echo "⏳ Waiting for API... ($i/30)"
+            echo "⏳ Waiting for API... ($i/30) [HTTP $HTTP_STATUS]"
             sleep 10
           done
 
-          if [ -z "$HEALTH" ]; then
-            echo "❌ API did not respond within 5 minutes"
+          # Hard guard (#2772): only a 200/503 is a genuine app health response. Anything else
+          # (502/504 from the edge, or 000 = no response) means the API origin was never reached —
+          # an infrastructure failure, not a healthy deploy. Fail loud instead of silently skipping.
+          if [ "$HTTP_STATUS" != "200" ] && [ "$HTTP_STATUS" != "503" ]; then
+            echo "❌ API /health returned HTTP $HTTP_STATUS after 5 minutes — origin unreachable (502/504) or no response (000)."
+            echo "   Infrastructure/edge failure (Cloudflare tunnel cannot reach the API origin — see #2772), NOT a healthy deploy."
+            if [ -n "$HEALTH" ]; then
+              echo "   First 500 bytes of body:"
+              echo "$HEALTH" | head -c 500
+              echo
+            fi
             exit 1
           fi
 
@@ -1231,22 +1431,48 @@ jobs:
             fi
           }
 
-          # Critical smoke tests (failure = deployment issue)
-          smoke_test "API Health" "https://meepleai.app/health" "200"
+          # Critical smoke tests (failure = deployment issue).
+          # These two probes assert REACHABILITY only, hence the 503 tolerance: a 503 still
+          # proves the origin answered, whereas a truly-down API yields 000/timeout and fails.
+          # The actual health verdict is asserted below, against the JSON body — see #3618.
+          smoke_test "API Health" "https://meepleai.app/health" "200 503"
           smoke_test "Web Root" "https://meepleai.app" "200"
           smoke_test "API Game Catalog" "https://meepleai.app/api/v1/shared-games?pageNumber=1&pageSize=1" "200"
-          smoke_test "API Direct Health" "https://api.meepleai.app/health" "200"
+          smoke_test "API Direct Health" "https://api.meepleai.app/health" "200 503"
 
-          # Health endpoint JSON validation
-          echo "  Validating health response structure..."
-          HEALTH_JSON=$(curl -sf --max-time 10 \
+          # Health verdict — BLOCKING (#3618).
+          # Historically this block was non-blocking and the 503 above was tolerated outright,
+          # so a genuinely Unhealthy deploy shipped silently (that is how #3339 stayed hidden).
+          # Note: no `-f` on curl — with -f the body is discarded on 503, i.e. exactly the case
+          # we need to inspect.
+          echo "  Validating health verdict..."
+          HEALTH_JSON=$(curl -s --max-time 10 \
             -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
             -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
             https://meepleai.app/health 2>/dev/null || true)
-          if [ -n "$HEALTH_JSON" ] && echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
-            echo "  ✅ Health JSON: valid structure"
+          if [ -z "$HEALTH_JSON" ] || ! echo "$HEALTH_JSON" | jq -e '.status' > /dev/null 2>&1; then
+            echo "  ❌ Health JSON: empty or unparseable body — cannot verify deploy health"
+            RESULTS="${RESULTS}| Health verdict | unparseable | ❌ |\n"
+            FAIL=1
           else
-            echo "  ⚠️ Health JSON: unexpected format (non-blocking)"
+            HEALTH_STATUS=$(echo "$HEALTH_JSON" | jq -r '.status')
+            UNHEALTHY=$(echo "$HEALTH_JSON" | jq -r '[.checks[]? | select(.status == "Unhealthy") | .name] | join(", ")')
+            DEGRADED=$(echo "$HEALTH_JSON" | jq -r '[.checks[]? | select(.status == "Degraded") | .name] | join(", ")')
+
+            if [ -n "$DEGRADED" ]; then
+              echo "  ⚠️ Degraded (non-blocking): $DEGRADED"
+            fi
+
+            if [ -n "$UNHEALTHY" ]; then
+              # A NonCritical check must never report Unhealthy (#3618 invariant). Anything
+              # Unhealthy here is either a real outage or a regression of that invariant.
+              echo "  ❌ Health verdict: $HEALTH_STATUS — Unhealthy checks: $UNHEALTHY"
+              RESULTS="${RESULTS}| Health verdict | Unhealthy: $UNHEALTHY | ❌ |\n"
+              FAIL=1
+            else
+              echo "  ✅ Health verdict: $HEALTH_STATUS (no Unhealthy checks)"
+              RESULTS="${RESULTS}| Health verdict | $HEALTH_STATUS | ✅ |\n"
+            fi
           fi
 
           # Response time check
@@ -1395,6 +1621,12 @@ jobs:
         env:
           STAGING_URL: https://meepleai.app
           CI: 'true'
+          # #2799: staging is behind Cloudflare Access (owner-only). Pass the
+          # service-token so Playwright reaches the real app instead of the CF
+          # Access sign-in page. Consumed by playwright.staging.config.ts →
+          # extraHTTPHeaders. Same secrets the curl smoke already uses above.
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           echo "🧪 Running E2E smoke tests against staging..."
           pnpm exec playwright test e2e/smoke.spec.ts \
@@ -1433,7 +1665,12 @@ jobs:
 
   notify-end:
     if: always()
-    needs: [detect-changes, pre-deploy-check, build, build-ai, snapshot-baseline, deploy, validate, e2e-staging, ghcr-retention]
+    # Issue #2650: generate-migration incluso nei needs così un suo FAILURE viene
+    # contato da `contains(join(needs.*.result), 'failure')` e la notifica Slack
+    # segnala 'failed'. Senza, un fallimento della generazione SQL bloccherebbe il
+    # deploy (result 'skipped') ma verrebbe annunciato come 'completed' su una
+    # pipeline is_critical=true.
+    needs: [detect-changes, pre-deploy-check, build, generate-migration, build-ai, snapshot-baseline, deploy, validate, e2e-staging, ghcr-retention]
     uses: ./.github/workflows/notify-slack.yml
     with:
       event: ${{ contains(join(needs.*.result, ','), 'failure') && 'failed' || contains(join(needs.*.result, ','), 'cancelled') && 'cancelled' || 'completed' }}

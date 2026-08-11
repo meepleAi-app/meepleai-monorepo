@@ -38,6 +38,12 @@ export type {
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
 
+export { LiveMobileMetaStrip } from '@/components/features/session-live/LiveMobileMetaStrip';
+export type {
+  LiveMobileMetaStripLabels,
+  LiveMobileMetaStripProps,
+} from '@/components/features/session-live/LiveMobileMetaStrip';
+
 export { LiveScoringPanel } from '@/components/features/session-live/LiveScoringPanel';
 export type {
   LiveScoringPanelLabels,
@@ -133,12 +139,24 @@ export type {
   PauseOverlayProps,
 } from '@/components/features/session-live/PauseOverlay';
 
+export { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
+export type { PhotosTabContentProps } from '@/components/features/session-live/PhotosTabContent';
+
 export { RightColumnTabs } from '@/components/features/session-live/RightColumnTabs';
 export type {
   LiveTab,
   RightColumnTabsLabels,
   RightColumnTabsProps,
 } from '@/components/features/session-live/RightColumnTabs';
+
+// ─── G6a #2787 / #2788 per-game flavor registry (ADR-070 lazy per-game modules) ─
+export { FlavorRenderer, hasFlavor } from '@/components/features/session-live/FlavorRenderer';
+export type {
+  FlavorProps,
+  FlavorRendererProps,
+  FlavorView,
+} from '@/components/features/session-live/FlavorRenderer';
+export type { CatanLiveFlavorProps } from '@/components/features/session-live/flavors/catan/CatanLiveFlavor';
 
 export { SessionToolsRail } from '@/components/features/session-live/SessionToolsRail';
 export type {

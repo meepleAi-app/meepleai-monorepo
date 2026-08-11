@@ -70,6 +70,26 @@ rate should drop from 2× to 1× within one poll interval. A ratio sustained at
 1.5× or anything > 1.05× indicates the inline path is still firing for some
 reason — investigate.
 
+> **Correction — #2923 (2026-07-14)**: the "2× in Phase A" premise above is
+> inaccurate. `meepleai_domain_event_outbox_dispatched_total` is emitted **only** by
+> the `DomainEventOutboxProcessor` (one tick per Pending → Sent transition, verified in
+> `DomainEventOutboxProcessor.cs`); the inline Hybrid `MediatR.Publish` path does NOT
+> increment it. The ratio is therefore ≈ 1× in **both** phases — and because a
+> per-`event_type` series first appears only after that type's first post-restart
+> dispatch, the ratio reads artificially low at low volume (this is the "partial
+> `event_type` coverage" reported in #2923, an observability artefact — not a code
+> defect; the DB ground truth shows 0 Pending / all `dispatched_at` set). **Do not gate
+> on this ratio.** Use the backlog gauges instead — which are what the production
+> Grafana alerts already page on:
+>
+> ```promql
+> meepleai_domain_event_outbox_pending_count == 0
+> and meepleai_domain_event_outbox_pending_oldest_age_seconds < 10
+> ```
+>
+> See `infra/prometheus/alerts/domain-event-outbox.yml` and the counter docstring in
+> `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.DomainEventOutbox.cs`.
+
 #### Gate B2 — Zero `domain_event_log.dispatch_failures_total` increment
 
 ```promql

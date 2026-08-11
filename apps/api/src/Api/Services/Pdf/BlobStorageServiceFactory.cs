@@ -37,6 +37,9 @@ internal static class BlobStorageServiceFactory
         var options = new S3StorageOptions
         {
             Endpoint = config["S3_ENDPOINT"] ?? throw new InvalidOperationException("S3_ENDPOINT is required when STORAGE_PROVIDER=s3"),
+            // Issue #3498: optional presign-only public endpoint (e.g. localhost:9000 for MinIO in E2E)
+            // so browser-fetched presigned covers are signed against a browser-reachable host.
+            PublicEndpoint = config["S3_PUBLIC_ENDPOINT"],
             AccessKey = config["S3_ACCESS_KEY"] ?? throw new InvalidOperationException("S3_ACCESS_KEY is required when STORAGE_PROVIDER=s3"),
             SecretKey = config["S3_SECRET_KEY"] ?? throw new InvalidOperationException("S3_SECRET_KEY is required when STORAGE_PROVIDER=s3"),
             BucketName = config["S3_BUCKET_NAME"] ?? throw new InvalidOperationException("S3_BUCKET_NAME is required when STORAGE_PROVIDER=s3"),
@@ -51,7 +54,8 @@ internal static class BlobStorageServiceFactory
         {
             ServiceURL = options.Endpoint,
             ForcePathStyle = options.ForcePathStyle,
-            AuthenticationRegion = options.Region
+            AuthenticationRegion = options.Region,
+            UseHttp = UsesPlainHttp(options.Endpoint)
         };
 
         // Handle region configuration
@@ -73,12 +77,54 @@ internal static class BlobStorageServiceFactory
         // simply stop returning 501.
         s3Client.BeforeRequestEvent += StripUnsupportedR2Headers;
 
-        logger.LogInformation(
-            "Initialized S3 storage: endpoint={Endpoint}, bucket={Bucket}, region={Region}, encryption={Encryption}",
-            options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
+        // Issue #3498: when a distinct public presign endpoint is configured, build a presign-only
+        // client signed against it (SigV4 signs the host). Presigning is pure computation, so this
+        // client never opens a connection — HEAD/existence checks stay on the main client.
+        AmazonS3Client? presignClient = null;
+        if (!string.IsNullOrWhiteSpace(options.PublicEndpoint) &&
+            !string.Equals(options.PublicEndpoint, options.Endpoint, StringComparison.OrdinalIgnoreCase))
+        {
+            var presignConfig = new AmazonS3Config
+            {
+                ServiceURL = options.PublicEndpoint,
+                ForcePathStyle = options.ForcePathStyle,
+                AuthenticationRegion = options.Region,
+                // #3498: declares the endpoint's protocol for the paths that derive a URL from the
+                // config (i.e. when no ServiceURL is set). It does NOT govern the presigned URL:
+                // AWSSDK.S3 3.7.413 signs https regardless of this flag, so the scheme is realigned
+                // afterwards in S3BlobStorageService.AlignSchemeWithPresignEndpoint.
+                UseHttp = UsesPlainHttp(options.PublicEndpoint)
+            };
+            if (!string.Equals(options.Region, "auto", StringComparison.Ordinal) && RegionEndpoint.GetBySystemName(options.Region) != null)
+            {
+                presignConfig.RegionEndpoint = RegionEndpoint.GetBySystemName(options.Region);
+            }
+            presignClient = new AmazonS3Client(credentials, presignConfig);
+        }
 
-        return new S3BlobStorageService(s3Client, options, logger);
+        logger.LogInformation(
+            "Initialized S3 storage: endpoint={Endpoint}, presignEndpoint={PresignEndpoint}, bucket={Bucket}, region={Region}, encryption={Encryption}",
+            options.Endpoint, options.PublicEndpoint ?? options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
+
+        return new S3BlobStorageService(s3Client, options, logger, presignClient);
     }
+
+    /// <summary>
+    /// Issue #3498 — true when <paramref name="endpoint"/> is an absolute <c>http://</c> URL, i.e.
+    /// the operator explicitly opted into a cleartext object store (MinIO in dev/E2E).
+    ///
+    /// Sole gate for the presigned-URL scheme downgrade in
+    /// <c>S3BlobStorageService.AlignSchemeWithPresignEndpoint</c>: the AWS SDK signs <c>https</c>
+    /// even against a cleartext <c>ServiceURL</c>, so the scheme has to be realigned afterwards, and
+    /// that must never happen unless cleartext was configured on purpose.
+    ///
+    /// Anything unparseable or scheme-less returns false: opting into cleartext must be explicit,
+    /// never a side effect of a malformed value. Production endpoints (R2/AWS) are https, so this
+    /// returns false there and nothing changes.
+    /// </summary>
+    internal static bool UsesPlainHttp(string? endpoint) =>
+        Uri.TryCreate(endpoint, UriKind.Absolute, out var uri) &&
+        string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Issue #1357: removes S3 extension headers that Cloudflare R2 does not implement.

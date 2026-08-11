@@ -341,9 +341,7 @@ describe('useTurnOrder', () => {
 
       // Vitest v4: assert via instance properties, not vi.fn call tracking
       expect(mockEventSourceInstances).toHaveLength(1);
-      expect(mockEventSourceInstances[0]?.url).toContain(
-        '/api/v1/game-sessions/sess-123/stream/v2'
-      );
+      expect(mockEventSourceInstances[0]?.url).toContain('/api/v1/live-sessions/sess-123/stream');
       expect(mockEventSourceInstances[0]?.withCredentials).toBe(true);
     });
 

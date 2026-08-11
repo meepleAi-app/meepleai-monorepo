@@ -60,7 +60,7 @@ export function ModelsTab() {
               className="relative rounded-xl border border-border/60 bg-card/70 backdrop-blur-md p-3 sm:p-4"
             >
               {m.isPrimary && (
-                <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[10px] font-medium text-warning">
+                <span className="absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-[hsl(var(--c-warning)/0.15)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--c-warning-ink))]">
                   <Star className="h-3 w-3" /> Primary
                 </span>
               )}
@@ -78,7 +78,9 @@ export function ModelsTab() {
                   <div className="mt-2 flex items-center gap-2">
                     <span
                       className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        m.status === 'active' ? 'bg-success' : 'bg-muted-foreground/40'
+                        m.status === 'active'
+                          ? 'bg-[hsl(var(--c-success))]'
+                          : 'bg-muted-foreground/40'
                       }`}
                     />
                     <span className="text-[10px] text-muted-foreground capitalize">{m.status}</span>

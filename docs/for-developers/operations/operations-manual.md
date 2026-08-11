@@ -29,6 +29,7 @@
 19. [Catalog Seed Pipeline (#1903)](#19-catalog-seed-pipeline-1903)
 20. [Catalog Covers — BGG ToS Compliance (#2123)](#20-catalog-covers--bgg-tos-compliance-2123)
 21. [Self-Hosted Runner Recovery](#21-self-hosted-runner-recovery)
+22. [Live-RAG Observability — SLO, Alerts & Grafana (SP5-b #2582)](#22-live-rag-observability--slo-alerts--grafana-sp5-b-2582)
 
 ---
 
@@ -1736,6 +1737,36 @@ cd infra
 docker compose -f docker-compose.yml -f compose.dev.yml --profile monitoring up -d
 ```
 
+### Health checks of opt-in services (#3339, #3617)
+
+**Regola: un servizio opt-in va monitorato quando è attivo, e solo allora.**
+
+Alcuni health check sono registrati condizionalmente, in base alla presenza della URL del servizio
+in configurazione (`HealthCheckServiceExtensions`): `orchestrator` su `ORCHESTRATION_SERVICE_URL`,
+`ollama` su `OLLAMA_URL`. Il motivo è che le due condizioni sbagliate falliscono entrambe, in
+direzioni opposte:
+
+- registrare il check per un servizio **non deployato** produce un Degraded permanente — rumore che
+  insegna a ignorare il report (era #3339);
+- non registrarlo per un servizio **che gira** lascia un servizio non monitorato che sembra
+  monitorato: se degrada durante una sessione, `/health` non lo dice (era #3617).
+
+La condizione corretta non è «quale ambiente» ma «il servizio è attivo». Poiché le env var di
+compose non sono condizionabili per profilo, l'attivazione passa da un file di override applicato
+solo dal target che avvia il profilo.
+
+| Comando | orchestration gira | `ORCHESTRATION_SERVICE_URL` | check `orchestrator` |
+|---|---|---|---|
+| `make staging-minimal` | no | non settata | non registrato |
+| `make staging-with-tutor` | sì | `compose.staging.tutor.yml` | registrato |
+| `make staging-tutor-down` | no (rimosso) | rimossa ricreando `api` | non registrato |
+| dev / prod | sì | `compose.dev.yml` / `compose.prod.yml` | registrato |
+
+> ⚠️ `staging-tutor-down` deve ricreare il container `api`, non solo fermare orchestration: un
+> container avviato con l'override conserva la variabile finché vive, e il check resterebbe
+> registrato su un servizio ormai assente — di nuovo #3339, per giunta in una forma transitoria che
+> non si spiega leggendo `compose.staging.yml`.
+
 ### Prometheus
 
 #### Configuration
@@ -2785,6 +2816,16 @@ Either failure blocks merge. Bypassing requires an explicit lift comment from
 
 ## 21. Self-Hosted Runner Recovery
 
+> **⚠️ OBSOLETE (2026-07-28, #3331)** — the self-hosted runner was **retired** (Option E):
+> the `RUNNER` repo variable was removed, all workflows now run on GitHub-hosted, and the
+> runner was deregistered + decommissioned on the VPS. The scripts referenced below
+> (`apply-memory-overrides.sh`, `10-memory-limits.conf`, `maintenance.sh`, `monitor.sh`)
+> and the babysitting workflows (`runner-health-check`, `runner-maintenance`,
+> `monitor-runner-queue`) were deleted in #3348. This section is kept as historical
+> reference and as the operational guide **if** a dedicated runner is ever re-introduced
+> (Option D fallback, provisioned from `infra/runner/cloud-init.yml` + `setup-*.sh`). See
+> the [migration plan](../../superpowers/plans/2026-07-28-issue-3331-eliminate-self-hosted-runner.md).
+
 ### Background
 
 A GitHub Actions self-hosted runner (`meepleai-staging`, ARM64, Hetzner CX31)
@@ -2981,6 +3022,50 @@ Background metric contract:
 
 ---
 
+## Wikidata Enrichment Alerts
+
+Defined in `infra/prometheus/alerts/wikidata-enrichment.yml` (#3117). Distinct from the
+SSE-transport alert above (§22, `wikidata-sse.yml`): this covers the enrichment **pipeline**
+health. The gauges are emitted by `MeepleAiMetrics.WikidataEnrichment.cs` and routed via
+`severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (throttled email).
+Gauges report `0` when idle, so the expressions never fire on an idle queue.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `WikidataDeadLetterHigh` | `max(meepleai_wikidata_dead_letter_count) > 100` | 1h | Operator triage backlog building. Investigate via the M13 admin dead-letter page — likely a license-whitelist or SPARQL schema drift. |
+| `WikidataDeadLetterSpike` | `delta(max(meepleai_wikidata_dead_letter_count)[5m:]) > 50` | — | A sudden burst of dead-letters: systemic upstream failure or license-whitelist drift. Cross-check `WikidataSparqlLatency` p95 and Wikidata/Commons endpoint health. |
+| `WikidataQueueBacklogHigh` | `meepleai_wikidata_queue_depth > 5000` | 1h | Enrichment backlog building; scheduler under-provisioned relative to enrichment rate. Consider tuning batch size or the DEC-3e rate-limiter. |
+| `MultipleApiInstances` | `count(up{job="meepleai-api"}) > 1` | 5m | Il contratto single-pod (ADR-087 D4) è violato: due istanze raddoppiano il rate verso Wikidata/Commons (ToS). Riportare il servizio a una replica. Definito in `api-single-instance.yml` — **non caricato in alcun ambiente fino a #3383**. |
+
+> #3383: le due regole dead-letter aggregano con `max()`. Il gauge è DB-derivato (ogni istanza
+> riporta lo stesso `COUNT`), quindi `max()` è esatto e collassa le N serie in un solo alert; senza
+> aggregazione lo stesso backlog notificherebbe N volte. `delta()` richiede un range vector, da cui
+> la subquery `[5m:]`.
+
+### Investigation steps
+
+1. **Dead-letter accumulation** (`WikidataDeadLetterHigh` / `WikidataDeadLetterSpike`): open the M13 admin dead-letter page. A steady climb usually means a license-whitelist entry went stale or the SPARQL query drifted; a sharp spike points at a Wikidata/Commons outage. Cross-check the enrichment attempt outcomes (`meepleai_wikidata_enrichment_attempts_total{outcome="dead_letter"}`).
+2. **Queue not draining** (`WikidataQueueBacklogHigh`): the M9 scheduler is enqueuing faster than the enrichment runner drains. Check the Quartz job health and the DEC-3e rate-limiter; consider raising the batch size if the SPARQL endpoint has headroom.
+
+### Enrichment Wikidata fermo senza errori applicativi
+
+Sintomo: `meepleai_wikidata_queue_depth` non cala, nessun nuovo attempt registrato, nessuna eccezione
+applicativa nei log dell'handler.
+
+**Causa da escludere per prima: Redis irraggiungibile.** Dal #3383 il batch di enrichment gira sotto
+un lease Redis **fail-closed** (`wikidata-cover-enrichment-batch`, TTL 10 min): se Redis non risponde
+il tick fallisce di proposito, perché due istanze che processano lo stesso batch raddoppierebbero il
+rate verso Wikidata/Commons (violazione ToS, DEC-3e). L'enrichment fermo è quindi un **sintomo
+atteso** di un'indisponibilità Redis, non un guasto della pipeline cover.
+
+Verifica: stato del container redis, poi cerca nei log dell'API
+`WikidataCoverEnrichmentJob: lease ... già detenuto`. Se il messaggio ricorre con una sola istanza
+attiva, il lease è orfano (istanza morta a metà batch) e scade da solo entro 10 minuti.
+
+Alert unit tests live in `infra/prometheus/alerts/wikidata-enrichment.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+---
+
 ## Appendix A: Complete Command Reference
 
 ### Service Management
@@ -3151,3 +3236,169 @@ Existing runbooks in `docs/for-developers/operations/runbooks/`:
 | `infra/Makefile` | Make targets for common operations |
 | `infra/start-*.sh` / `infra/start-*.ps1` | Start helper scripts |
 | `infra/stop.ps1` | Stop helper script |
+
+---
+
+## 22. Live-RAG Observability — SLO, Alerts & Grafana (SP5-b #2582)
+
+> **Reference**: Epic #2501 SP5-b | Issue #2582 | ADR-043 (LLM subsystem NFR) | ADR-083 (live-session aggregate convergence).
+> **Added**: 2026-06-29.
+
+### 22.1 Background — the buffering caveat
+
+The live-session RAG handler (`ChatWithSessionAgentCommandHandler.HandleCore`) is a streaming `IAsyncEnumerable`.  
+**Current implementation buffers all LLM chunks before yielding** (SP5-b state, pending SP5-c streaming refactor).  
+As a consequence:
+
+- `meepleai.rag.first_token_latency` measures **start → first-VISIBLE-token (post-buffer)**, which is equivalent to **total-response latency** on this path.
+- The SLO target is therefore **≤ 3 000ms (total-response scale)**, mirroring `meepleai:slo:rag_total`, **NOT** the chat-path TTFT target of 800ms.
+- Once buffering is removed (SP5-c or later), the threshold should be revised down towards 800ms.
+
+**Mark all live-RAG SLO thresholds PROVISIONAL** until ≥1 week of real data is available.
+
+### 22.2 Metrics added by SP5-b
+
+| Metric (OTel dotted) | Prometheus name | Type | Cardinality rule |
+|---|---|---|---|
+| `meepleai.rag.first_token_latency` | `meepleai_rag_first_token_latency_{bucket,count,sum}` | Histogram (ms) | NO session/game/user tags |
+| `meepleai.rag.retrieval_empty` | `meepleai_rag_retrieval_empty_total` | Counter | NO tags |
+| `meepleai.rag.citations_per_answer` | `meepleai_rag_citations_per_answer_{bucket,count,sum}` | Histogram (count) | NO tags |
+
+**Cardinality rule (CRITICAL)**: never add `gameSessionId`, `agentSessionId`, or `userId` as a label — these are unbounded and will cause Prometheus series explosion.
+
+### 22.3 SLO recording rule
+
+**Rule name**: `meepleai:slo:live_rag_ttft:p95:5m`  
+**File**: `infra/prometheus-rules.yml` (group `meepleai_slo_live_rag_recording_rules`)  
+**PromQL**:
+```promql
+histogram_quantile(
+  0.95,
+  rate(meepleai_rag_first_token_latency_bucket[5m])
+)
+```
+**Labels**: `service=meepleai-api`, `slo=live_rag_ttft`, `target="3000"`, `provisional="true"`  
+**Target**: p95 ≤ 3 000ms (provisional — see §22.1 buffering caveat).
+
+Mirrors the structure of `meepleai:slo:rag_ttft:p95:5m` (prometheus-rules.yml:132-138).
+
+### 22.4 Retrieval-empty alert
+
+**Alert name**: `LiveRagRetrievalEmptyHigh`  
+**File**: `infra/prometheus-rules.yml` (group `meepleai_live_rag_warning_alerts`)  
+**Severity**: `warning` (NOT critical/paging — signals degraded answer quality, not an outage)  
+**Expression**:
+```promql
+(
+  rate(meepleai_rag_retrieval_empty_total[15m])
+  /
+  (rate(meepleai_rag_first_token_latency_count[15m]) > 0)
+) > 0.05
+```
+**`for`**: 15m  
+**Threshold**: >5% of answers have zero retrieved chunks — **PROVISIONAL**, tune after baseline data.
+
+**Denominator choice**: `meepleai_rag_first_token_latency_count` counts answers served on the live-session RAG path. Both numerator and denominator share identical cardinality (no session tags), ensuring a clean ratio.
+
+**Response steps**:
+1. Check pgvector index health: `docker compose exec postgres psql -U postgres -c "SELECT count(*) FROM text_chunks WHERE search_vector IS NOT NULL;"`
+2. Run the RAG smoke test: `cd infra && make rag-smoke`
+3. Inspect `RagPromptAssemblyService` logs for `filteredChunks.Count == 0` warnings.
+4. If embedding model was recently changed, a re-index (`make seed-index`) may be required.
+
+### 22.5 Grafana panels
+
+**Dashboard**: `infra/monitoring/grafana/dashboards/llm-operational-maturity.json` (uid `llm-operational-maturity`)  
+**Two panels added** (y=22, row 3):
+
+| Panel | Type | PromQL | Purpose |
+|---|---|---|---|
+| Live-RAG Citations per Answer | timeseries | `histogram_quantile(0.95/0.50, rate(meepleai_rag_citations_per_answer_bucket[5m]))` | P50/P95 citations returned per answer; zero = grounded-but-uncited signal |
+| Live-RAG Retrieval-Empty Rate | timeseries | `rate(meepleai_rag_retrieval_empty_total[5m]) / rate(meepleai_rag_first_token_latency_count[5m])` | Fraction of answers with no retrieved chunks; thresholds at 3%/5% |
+
+Both panels are tagged `PROVISIONAL` in their descriptions.
+
+### 22.6 Tuning guidance (post-baseline)
+
+After ≥1 week of production data:
+1. Review `meepleai:slo:live_rag_ttft:p95:5m` distribution. If p95 is reliably < 800ms, lower `target` label to `"800"` and add error-ratio burn-rate rules mirroring `SloRagTtftFastBurn`/`SloRagTtftSlowBurn`.
+2. Review `LiveRagRetrievalEmptyHigh` baseline fraction. Adjust threshold from 5% to an appropriate level; remove `provisional` comment.
+3. Remove `provisional: "true"` label from the recording rule once thresholds are validated.
+
+---
+
+## Slack Delivery Alerts (OPS-02)
+
+Defined in `infra/prometheus/alerts/slack-delivery.yml` (#3112). Metrics are emitted by
+`apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Slack.cs` and routed via
+`severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (email to
+`ALERT_EMAIL_TO`, throttled). All expressions are idle-safe: with no Slack traffic the
+metric series are absent, so the alerts do not fire on absence.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `SlackDeliveryFailureRateHigh` | `failed / (sent + failed) > 20%` over 5m | 10m | A large share of Slack notifications are failing; users miss notifications. Check the Slack app token, per-workspace rate limits, and `SlackNotificationProcessorJob` logs. |
+| `SlackTokenRevoked` | `increase(meepleai_slack_token_revocations_total[1h]) > 0` | — | A workspace token was deactivated (`invalid_auth`/`token_revoked`/`account_inactive`); affected users stop receiving Slack notifications until they reconnect. Confirm whether the disconnect is expected. |
+| `SlackRateLimitedSustained` | `rate(meepleai_slack_rate_limited_total[5m]) > 0` | 15m | Sustained Slack 429s delaying delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning. |
+
+### Investigation steps
+
+1. **Scope the failure** in Grafana (or via `/metrics`):
+   ```promql
+   sum by (error_type) (rate(meepleai_slack_messages_failed_total[15m]))
+   ```
+   `error_type` is one of `rate_limit | token_revoked | http_error | unknown` — this tells you which path to follow.
+2. **Token revocations** (`SlackTokenRevoked`): the affected workspace must re-authorise the Slack app. Until then delivery to that team fails by design; silence the alert only after confirming the disconnect is intended.
+3. **Rate limiting** (`SlackRateLimitedSustained`): sustained 429s mean send volume exceeds Slack's per-workspace limits. Verify the notification processor honours `Retry-After` backoff and is not hot-looping.
+4. **Broad failure with no token/limit cause** (`http_error`/`unknown`): check Slack API status and the processor logs for transport errors.
+
+Alert unit tests live in `infra/prometheus/alerts/slack-delivery.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+## Audit Outbox Alerts
+
+Defined in `infra/prometheus/alerts/audit-outbox.yml` (#3116). The three health gauges are
+emitted by `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.AuditOutbox.cs` (registered
+via `RegisterAuditOutboxGauges` in `Program.cs`) and routed via `severity: warning` → the
+`warning-alerts` receiver in `alertmanager.yml` (throttled email). The gauges report `0` when
+the queue is idle, so the expressions never fire on an empty queue.
+
+| Alert | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|
+| `AuditOutboxBacklogHigh` | `meepleai_audit_outbox_pending_count > 500` | 10m | The audit outbox processor is not draining Pending rows fast enough (or is stalled); audit events accumulate undelivered. Check the processor job logs and DB health. |
+| `AuditOutboxDrainStalled` | `meepleai_audit_outbox_pending_oldest_age_seconds > 60` | 5m | The oldest Pending row is aging past 60s (threshold from the metric source): drain is falling behind ingestion. Check processor cadence and DB latency. |
+| `AuditOutboxFailedMessages` | `meepleai_audit_outbox_failed_count > 0` | — | One or more rows are in Failed status (poison messages) needing operator intervention. Inspect the failed rows and their error payloads via the admin dashboard. |
+
+### Investigation steps
+
+1. **Backlog / drain lag** (`AuditOutboxBacklogHigh` / `AuditOutboxDrainStalled`): confirm the audit outbox processor is running and not throwing. A steadily-rising `pending_count` with a growing `oldest_age_seconds` indicates a stalled or under-provisioned drain — check DB connectivity and the processor job schedule.
+2. **Poison messages** (`AuditOutboxFailedMessages`): inspect the Failed rows via the admin dashboard; a Failed row is a message the processor could not deliver after its retry budget. Resolve the underlying cause, then requeue or discard per the audit-retention policy.
+
+Alert unit tests live in `infra/prometheus/alerts/audit-outbox.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).
+
+## Domain Event Outbox Alerts
+
+Defined in `infra/prometheus/alerts/domain-event-outbox-duplicate-publish.yml` (#1965). This is the
+**companion trigger observability** for the dormant multi-instance work-stealing follow-up
+(`FOR UPDATE SKIP LOCKED`) — NOT its implementation. It makes issue #1965's reactivation condition
+self-detecting instead of relying on a manual dashboard check. The counters are emitted by
+`apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.DomainEventOutbox.cs` (#1535 T6) and routed
+via `severity: warning` → the `warning-alerts` receiver in `alertmanager.yml` (throttled email).
+
+> **Dormant by design.** With a single API instance (the current staging + prod topology — no
+> `deploy.replicas` in `infra/compose.{staging,prod}.yml`) the `dispatched/enqueued` ratio is
+> structurally ~1.0, so this alert cannot fire. It self-fires only once **(a)** the API scales to
+> **≥2 replicas** AND **(b)** the duplicate rate breaches **>1.05** — exactly the #1965 refined
+> reactivation condition. The `enqueued rate > 0` guard suppresses the `0/0=NaN` idle case.
+
+| Rule | Type | Trigger | Sustained | Meaning / first action |
+|---|---|---|---|---|
+| `meepleai_domain_event_outbox:dispatch_enqueue_ratio1h` | recording | — | — | Materialised dispatched/enqueued ratio (1h window) for dashboards + manual gate inspection. |
+| `DomainEventOutboxDuplicatePublish` | alert | `ratio > 1.05 and enqueued rate > 0` | 2h | Domain events are being published more than once. Dominant cause: ≥2 API instances SELECT-ing the same Pending rows concurrently (#1965 premise). |
+
+### Investigation steps
+
+1. **Confirm the topology.** Check whether the API is now running ≥2 replicas. If yes, this is the gate to implement `FOR UPDATE SKIP LOCKED` per issue #1965 (move the Pending `SELECT` inside the batch transaction — see the #1965 audit comment for the spec corrections). If the API is still single-instance, the alert should not have fired: investigate an abnormal crash-recovery re-publish loop instead.
+2. **Duplicate publishing is safe but not free.** Dispatch is at-least-once and consumer idempotency (audited in `docs/for-developers/architecture/domain-events-post-commit-contract.md`) keeps duplicates correct; the concern is wasted downstream I/O (Redis/SSE/email), not data corruption. Do NOT weaken the consumer idempotency contract in response to this alert.
+3. The `2h` window absorbs transient duplicates from crash-recovery re-publish and rolling-deploy windows (old pods do not honour new pods' row-locks); a sustained breach past 2h is the real signal.
+
+Alert unit tests live in `infra/prometheus/alerts/domain-event-outbox-duplicate-publish.test.yml` (run `promtool test rules` per the header comment; there is no CI promtool gate, so run on demand).

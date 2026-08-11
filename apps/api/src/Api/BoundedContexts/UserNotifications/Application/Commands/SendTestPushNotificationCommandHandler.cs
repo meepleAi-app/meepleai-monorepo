@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Application.Commands;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -42,7 +43,7 @@ internal class SendTestPushNotificationCommandHandler : ICommandHandler<SendTest
             prefs.PushAuthKey!,
             "Test Notification",
             "Push notifications are working correctly!",
-            "/settings/notifications",
+            NotificationRoutes.SettingsNotifications,
             cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Test push notification sent to user {UserId}", command.UserId);

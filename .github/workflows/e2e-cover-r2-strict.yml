@@ -1,0 +1,273 @@
+# Issue #3498 — Cover R2-strict E2E.
+#
+# Avvia lo stack reale CON MinIO (`--profile storage`) + l'override storage E2E, seeda un gioco la
+# cui cover vive nel bucket MinIO, ed esegue l'asserzione di caricamento reale
+# (apps/web/e2e/smoke-real-backend/cover-r2-strict.spec.ts). Isolato da e2e-smoke-real-backend.yml
+# così un bug di wiring qui non rompe MAI il job smoke funzionante.
+#
+# Il setup (secrets placeholder, env file, build web, skip del webServer di Playwright) replica
+# e2e-smoke-real-backend.yml: senza quei passi il job non arrivava nemmeno al `docker compose up`.
+name: E2E Cover R2-strict
+
+on:
+  workflow_dispatch: {}
+  # Provato verde il 2026-08-09 (run 31288477838), quindi da manuale a gate reale: un job che gira
+  # solo su richiesta non protegge nulla. `paths` limita il costo (~10 min, build Docker completa)
+  # ai soli file che possono rompere la catena cover → presign → CSP → caricamento nel browser.
+  pull_request:
+    paths:
+      # Presign e risoluzione della cover lato backend.
+      - 'apps/api/src/Api/Services/Pdf/**'
+      - 'apps/api/src/Api/SharedKernel/Domain/Covers/**'
+      - 'apps/api/src/Api/BoundedContexts/SharedGameCatalog/Application/Services/CoverUrlResolver.cs'
+      # CSP: due sorgenti indipendenti che il browser interseca — entrambe possono bloccare
+      # l'immagine presignata senza che nulla lo segnali fuori da questo job.
+      - 'apps/web/src/proxy.ts'
+      - 'apps/web/lib/security/csp.js'
+      - 'apps/web/next.config.js'
+      # L'opt-in CSP passa da un build arg: una modifica qui lo può far sparire silenziosamente.
+      - 'apps/web/Dockerfile'
+      - 'infra/compose.e2e-storage.yml'
+      # Lo spec, la fixture e il workflow stesso.
+      - 'apps/web/e2e/smoke-real-backend/**'
+      - 'tests/fixtures/cover-r2-strict.sql'
+      - '.github/workflows/e2e-cover-r2-strict.yml'
+
+concurrency:
+  group: e2e-cover-r2-strict-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Stessi default del servizio `minio` in compose.dev.yml. Esportati QUI perché
+  # compose.e2e-storage.yml li interpola a livello di parser compose (non li legge da `env_file`):
+  # senza export l'API firmerebbe i presign con credenziali vuote e il browser prenderebbe 403.
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin123
+  # Deve combaciare con tests/fixtures/cover-r2-strict.sql.
+  COVER_GAME_ID: 00000000-0000-4000-8000-0000000c0e21
+
+jobs:
+  cover-r2-strict:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+
+      - name: Generate placeholder secrets (CI cannot secrets-sync — no SSH key)
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Generate placeholder env files for CI (gitignored locally, missing in runner)
+        working-directory: infra/env
+        run: |
+          cat > web.env.dev <<'WEBENV'
+          NEXT_PUBLIC_API_URL=http://localhost:8080
+          NEXT_PUBLIC_WS_URL=ws://localhost:8080
+          API_BASE_URL=http://api:8080
+          NODE_ENV=production
+          NEXT_TELEMETRY_DISABLED=1
+          NEXT_PUBLIC_HYPERDX_API_KEY=demo
+          PLAYWRIGHT_AUTH_BYPASS=true
+          NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1
+          # Opt-in CSP per gli URL presignati di MinIO (apps/web/lib/security/csp.js). Serve allo
+          # step `pnpm build` sull'host; il container `web` NON lo legge da qui — `headers()` di
+          # next.config.js è valutata a build time, quindi per l'immagine Docker l'opt-in passa dal
+          # build arg in compose.e2e-storage.yml. Tenere i due allineati.
+          NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=true
+          WEBENV
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          OLLAMA_URL=http://ollama:11434
+          EMBEDDING_SERVICE_URL=http://embedding-service:8000
+          UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
+          SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
+          RERANKER_SERVICE_URL=http://reranker-service:8003
+          Email__EnableSsl=false
+          HYPERDX_OTLP_ENDPOINT=http://meepleai-hyperdx:4317
+          HYPERDX_API_KEY=demo
+          INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
+          INITIAL_ADMIN_PASSWORD=SmokeUser1!!
+          INITIAL_ADMIN_DISPLAY_NAME=Smoke User
+          Authentication__SessionCookie__Secure=false
+          APIENV
+          ls -la
+
+      - name: Boot stack with storage (postgres + redis + api + web + MinIO)
+        working-directory: infra
+        env:
+          DISABLE_RATE_LIMITING: "true"
+        run: |
+          # --profile storage porta su minio + minio-init (auto-provisioning del bucket);
+          # l'override punta l'API a S3 con un host di presign raggiungibile dal browser.
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage up -d
+
+          # Gate su /health/live (liveness), NON su /health: quest'ultimo aggrega ~20 check, molti
+          # dei quali su servizi che questo job non avvia di proposito (ollama, embedding, reranker).
+          # `curl -f` fallisce su qualunque status >= 400, quindi un check non-critico degradato
+          # bloccherebbe un E2E che non ne dipende. /health/live è lo stesso endpoint usato dal
+          # healthcheck del container.
+          for i in {1..40}; do
+            curl -fs http://localhost:8080/health/live >/dev/null 2>&1 && { echo "API up"; break; }
+            sleep 5
+          done
+          if ! curl -fs http://localhost:8080/health/live >/dev/null 2>&1; then
+            echo "::error::API non risponde su /health/live"
+            echo "--- stato container ---"; docker ps -a --format '{{.Names}}\t{{.Status}}'
+            echo "--- /health/live (verbose) ---"; curl -sS -o /dev/stdout -w '\nHTTP %{http_code}\n' http://localhost:8080/health/live || true
+            exit 1
+          fi
+
+          # Diagnostica NON bloccante: mostra quali check sono degradati, utile se il test fallisse
+          # più avanti per una dipendenza che qui risulta già rossa.
+          echo "--- /health (diagnostica, non bloccante) ---"
+          curl -sS -o /dev/stdout -w '\nHTTP %{http_code}\n' http://localhost:8080/health || true
+
+      - name: Verify MinIO reachable from the runner host (== browser reachability)
+        run: |
+          # BLOCCANTE, non un warning: se il browser non raggiunge :9000 il test fallirebbe più
+          # tardi con un messaggio fuorviante ("nessuna immagine") invece che sulla causa vera.
+          for i in {1..20}; do
+            curl -fs http://localhost:9000/minio/health/ready >/dev/null 2>&1 && { echo "MinIO up"; break; }
+            sleep 3
+          done
+          curl -fs http://localhost:9000/minio/health/ready >/dev/null 2>&1 \
+            || { echo "::error::MinIO non raggiungibile su localhost:9000"; exit 1; }
+
+      - name: Seed the DB fixture (game + library entry)
+        run: |
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db \
+            < tests/fixtures/cover-r2-strict.sql
+
+      - name: Put the cover object into MinIO at the resolver's key
+        working-directory: infra
+        run: |
+          # La chiave DEVE combaciare con quella che il resolver presigna:
+          #   wikidata_cover_r2_key = covers/{gameId}/cover  (senza suffisso, dal DB)
+          #   chiave fisica         = covers/{gameId}/cover.webp  (CoverKeyBuilder.SuffixFor)
+          # GetPresignedUrlForRawKeyAsync fa una HEAD prima di firmare e ritorna null se l'oggetto
+          # manca → il DTO cadrebbe sul placeholder e il test fallirebbe senza dire perché.
+          KEY="covers/${COVER_GAME_ID}/cover.webp"
+          echo "Uploading fixture cover to meepleai-uploads/${KEY}"
+          # WebP 1x1 valido (naturalWidth = 1 > 0 basta all'assert di caricamento reale).
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage run --rm --entrypoint sh minio-init -c "
+              set -e
+              echo 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==' | base64 -d > /tmp/cover.webp
+              mc alias set myminio http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD
+              mc cp /tmp/cover.webp myminio/meepleai-uploads/${KEY}
+              mc stat myminio/meepleai-uploads/${KEY}
+            "
+
+      - name: Verify the API resolves the cover from MinIO (diagnostica pre-Playwright)
+        run: |
+          # Se questo step mostra un coverUrl vuoto o un placeholder, il problema è nella catena
+          # backend (chiave/presign) e NON nel test: MeepleCard rende un <div cover-emoji-band>
+          # invece di un <img> quando imageUrl manca, e lo spec fallirebbe con "img non visibile",
+          # che è il sintomo, non la causa.
+          COOKIE_JAR=$(mktemp)
+          curl -sS -c "$COOKIE_JAR" -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"smoke-user@meepleai.test","password":"SmokeUser1!!"}' \
+            -o /dev/null -w 'login HTTP %{http_code}\n'
+          echo "--- contenuto reale del bucket (conferma chiave + prefissi) ---"
+          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.e2e-storage.yml \
+            --profile storage run --rm --entrypoint sh minio-init -c "
+              mc alias set myminio http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD >/dev/null
+              mc ls --recursive myminio/meepleai-uploads
+            " || echo "WARN: ls del bucket fallito"
+          echo "--- /api/v1/library (voce seeded) ---"
+          curl -sS -b "$COOKIE_JAR" 'http://localhost:8080/api/v1/library?page=1&pageSize=50' \
+            | python3 -c "
+          import json,sys
+          data = json.load(sys.stdin)
+          items = data.get('items', data if isinstance(data, list) else [])
+          hit = [i for i in items if 'R2 Strict' in json.dumps(i)]
+          print('voci totali:', len(items), '| match fixture:', len(hit))
+          for i in hit:
+              print(json.dumps(i, indent=2)[:1200])
+          " || echo "WARN: parsing della risposta fallito"
+
+      - name: Dump stack logs on failure
+        if: failure()
+        working-directory: infra
+        run: |
+          # `--profile storage` è OBBLIGATORIO anche qui: senza, minio-init non è definito e compose
+          # rifiuta l'intero progetto con "api depends on undefined service minio-init" — il dump
+          # falliva in silenzio proprio quando i log servivano.
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage logs --tail=200 api web minio minio-init || true
+
+      - name: Setup pnpm + Node
+        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d  # v3
+        with:
+          version: 9
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Install web deps
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build web
+        working-directory: apps/web
+        run: pnpm build
+
+      - name: Wait for web container ready
+        run: |
+          for i in {1..30}; do
+            curl -fs http://localhost:3000 >/dev/null 2>&1 && { echo "web up"; break; }
+            sleep 5
+          done
+          curl -fs http://localhost:3000 >/dev/null 2>&1 || { echo "::error::web non risponde su :3000"; exit 1; }
+
+      - name: Run cover R2-strict spec
+        working-directory: apps/web
+        env:
+          SMOKE_API_BASE: http://localhost:8080
+          SMOKE_USER_EMAIL: smoke-user@meepleai.test
+          SMOKE_USER_PASSWORD: SmokeUser1!!
+          E2E_REAL_BACKEND: 'true'
+          # Il container `web` serve già :3000: senza questo Playwright lancerebbe un secondo
+          # `next start` sulla stessa porta.
+          PLAYWRIGHT_SKIP_WEB_SERVER: '1'
+        run: pnpm exec playwright test smoke-real-backend/cover-r2-strict.spec.ts --project=desktop-chrome --reporter=list
+
+      # DOPO il test, non prima: posizionato a monte non veniva mai eseguito quando a fallire era
+      # lo spec (il job non era ancora in stato failure quando lo step veniva raggiunto), e i log
+      # dell'API — dove comparirebbe l'errore S3 del HEAD che fa cadere il resolver sul
+      # placeholder — restavano invisibili.
+      - name: Dump stack logs after a failed spec
+        if: failure()
+        working-directory: infra
+        run: |
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage logs --tail=300 api minio || true
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report-cover-r2-strict
+          # `test-results` (screenshot, video, trace, error-context.md) e non `playwright-report`:
+          # con `--reporter=list` quest'ultima directory non viene generata, quindi l'upload
+          # produceva un artifact vuoto — nessun DOM da ispezionare proprio dopo un fallimento.
+          path: |
+            apps/web/test-results
+            apps/web/playwright-report
+          if-no-files-found: warn

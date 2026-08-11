@@ -47,62 +47,56 @@ const PAGES_TO_AUDIT: PageConfig[] = [
     name: 'Landing Page',
     url: '/',
     requiresAuth: false,
-    description: 'Home page with hero, features, and auth modal'
+    description: 'Home page with hero, features, and auth modal',
   },
   {
     name: 'Chat',
     url: '/chat',
     requiresAuth: true,
-    description: 'Chat interface with Timeline component (UI-04)'
+    description: 'Chat interface with Timeline component (UI-04)',
   },
   {
     name: 'Upload',
     url: '/upload',
     requiresAuth: true,
-    description: 'PDF upload wizard'
+    description: 'PDF upload wizard',
   },
   {
     name: 'Editor',
     url: '/editor',
     requiresAuth: true,
-    description: 'RuleSpec editor'
+    description: 'RuleSpec editor',
   },
   {
     name: 'Versions',
     url: '/versions',
     requiresAuth: true,
-    description: 'Version comparison and diff viewer'
+    description: 'Version comparison and diff viewer',
   },
   {
     name: 'Admin',
     url: '/admin',
     requiresAuth: true,
-    description: 'Admin dashboard with charts'
-  },
-  {
-    name: 'N8N',
-    url: '/n8n',
-    requiresAuth: true,
-    description: 'n8n workflow configuration'
+    description: 'Admin dashboard with charts',
   },
   {
     name: 'Logs',
     url: '/logs',
     requiresAuth: true,
-    description: 'AI logs viewer'
+    description: 'AI logs viewer',
   },
   {
     name: 'Setup',
     url: '/setup',
     requiresAuth: true,
-    description: 'Setup wizard (AI-03)'
+    description: 'Setup wizard (AI-03)',
   },
   {
     name: 'Chess',
     url: '/chess',
     requiresAuth: false,
-    description: 'Chess game UI'
-  }
+    description: 'Chess game UI',
+  },
 ];
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
@@ -161,7 +155,9 @@ async function auditPage(
   const minor = results.violations.filter(v => v.impact === 'minor').length;
 
   console.log(`  ✓ Scan complete`);
-  console.log(`    Violations: ${results.violations.length} (Critical: ${critical}, Serious: ${serious}, Moderate: ${moderate}, Minor: ${minor})`);
+  console.log(
+    `    Violations: ${results.violations.length} (Critical: ${critical}, Serious: ${serious}, Moderate: ${moderate}, Minor: ${minor})`
+  );
   console.log(`    Passes: ${results.passes.length}`);
 
   // Transform violations for report
@@ -171,7 +167,7 @@ async function auditPage(
     description: v.description,
     help: v.help,
     helpUrl: v.helpUrl,
-    nodes: v.nodes.length
+    nodes: v.nodes.length,
   }));
 
   return {
@@ -185,7 +181,7 @@ async function auditPage(
     critical,
     serious,
     moderate,
-    minor
+    minor,
   };
 }
 
@@ -421,7 +417,9 @@ async function main() {
           console.log(`  ⚠️  Login failed, skipping authenticated pages`);
           console.log(`  Error: ${error.message}`);
           // Skip this and all remaining auth-required pages
-          const publicPages = PAGES_TO_AUDIT.filter(p => !p.requiresAuth && !results.some(r => r.page === p.name));
+          const publicPages = PAGES_TO_AUDIT.filter(
+            p => !p.requiresAuth && !results.some(r => r.page === p.name)
+          );
           for (const publicConfig of publicPages) {
             const result = await auditPage(page, publicConfig, false);
             results.push(result);
@@ -461,9 +459,9 @@ async function main() {
         critical: results.reduce((sum, r) => sum + r.critical, 0),
         serious: results.reduce((sum, r) => sum + r.serious, 0),
         moderate: results.reduce((sum, r) => sum + r.moderate, 0),
-        minor: results.reduce((sum, r) => sum + r.minor, 0)
+        minor: results.reduce((sum, r) => sum + r.minor, 0),
       },
-      results
+      results,
     };
 
     const jsonPath = path.join(reportDir, 'ui-05-accessibility-audit.json');
@@ -487,7 +485,6 @@ async function main() {
       console.log('\n✅ PASS: No blocking accessibility errors');
       process.exit(0);
     }
-
   } catch (error) {
     console.error('\n❌ Error during audit:', error);
     process.exit(1);

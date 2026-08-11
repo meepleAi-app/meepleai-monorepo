@@ -12,11 +12,14 @@ import { z } from 'zod';
 import {
   RuleDisputeResponseSchema,
   CreatePauseSnapshotResponseSchema,
+  SessionDisputesResultSchema,
   type RuleDisputeResponse,
+  type RuleDisputeDto,
   type CreatePauseSnapshotResponse,
 } from '../schemas/improvvisata.schemas';
 import {
   LiveSessionDtoSchema,
+  PublicLiveSessionDtoSchema,
   LiveSessionSummaryDtoSchema,
   LiveSessionPlayerDtoSchema,
   LiveSessionRoundScoreDtoSchema,
@@ -24,6 +27,7 @@ import {
   SessionToolsDtoSchema,
   TurnPhasesDtoSchema,
   type LiveSessionDto,
+  type PublicLiveSessionDto,
   type LiveSessionSummaryDto,
   type LiveSessionPlayerDto,
   type LiveSessionRoundScoreDto,
@@ -38,6 +42,9 @@ import {
   type ConfigurePhasesRequest,
   type TriggerSnapshotRequest,
   type UpdateNotesRequest,
+  LiveSessionDiaryEntryDtoSchema,
+  type LiveSessionDiaryEntryDto,
+  type AddDiaryEntryRequest,
 } from '../schemas/live-sessions.schemas';
 import {
   SessionSaveResultSchema,
@@ -87,6 +94,9 @@ export interface LiveSessionsClient {
 
   /** Get a session by join code */
   getByCode(code: string): Promise<LiveSessionDto>;
+
+  /** PUBLIC — anonymous-safe. Get a narrow read-only lobby/scoreboard by join code (#2590). */
+  getPublicByCode(code: string): Promise<PublicLiveSessionDto>;
 
   /** Get scores for a session */
   getScores(sessionId: string): Promise<LiveSessionRoundScoreDto[]>;
@@ -170,6 +180,23 @@ export interface LiveSessionsClient {
 
   /** Update session notes */
   updateNotes(sessionId: string, request: UpdateNotesRequest): Promise<void>;
+
+  /** #3025 L1: replace the opaque live game-state (host/participant only). */
+  updateGameState(sessionId: string, state: unknown): Promise<void>;
+
+  // ========== Diary (SP3 #2570 / write-path #2575) ==========
+
+  /** Append an immutable diary entry to the session. Returns the new entry id. */
+  addDiary(sessionId: string, request: AddDiaryEntryRequest): Promise<string>;
+
+  /** Get all diary entries for the session, ordered by createdAt ascending. */
+  getDiary(sessionId: string): Promise<LiveSessionDiaryEntryDto[]>;
+
+  /**
+   * Get all rule disputes for the session, ordered by timestamp ascending (#3391).
+   * Powers the Arbitro tab's REST hydration on reload (SignalR keeps it live thereafter).
+   */
+  getDisputes(sessionId: string): Promise<RuleDisputeDto[]>;
 
   // ========== AI Score Tracking (Issue #121) ==========
 
@@ -296,11 +323,43 @@ export function createLiveSessionsClient({
       return LiveSessionDtoSchema.parse(response);
     },
 
+    // PUBLIC — anonymous-safe; narrow DTO. Maps to GET /code/{code}/public (#2590).
+    async getPublicByCode(code) {
+      const response = await httpClient.get<PublicLiveSessionDto>(
+        `${BASE}/code/${encodeURIComponent(code)}/public`
+      );
+      if (!response) throw new Error('Session not found');
+      return PublicLiveSessionDtoSchema.parse(response);
+    },
+
     async getScores(sessionId) {
       const response = await httpClient.get<LiveSessionRoundScoreDto[]>(
         `${BASE}/${encodeURIComponent(sessionId)}/scores`
       );
       return z.array(LiveSessionRoundScoreDtoSchema).parse(response ?? []);
+    },
+
+    async addDiary(sessionId, request) {
+      const response = await httpClient.post<string>(
+        `${BASE}/${encodeURIComponent(sessionId)}/diary`,
+        request
+      );
+      return response as string;
+    },
+
+    async getDiary(sessionId) {
+      const response = await httpClient.get<LiveSessionDiaryEntryDto[]>(
+        `${BASE}/${encodeURIComponent(sessionId)}/diary`
+      );
+      return z.array(LiveSessionDiaryEntryDtoSchema).parse(response ?? []);
+    },
+
+    async getDisputes(sessionId) {
+      const response = await httpClient.get<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/disputes`
+      );
+      if (!response) return [];
+      return SessionDisputesResultSchema.parse(response).disputes;
     },
 
     async getPlayers(sessionId) {
@@ -398,6 +457,10 @@ export function createLiveSessionsClient({
 
     async editScore(sessionId, request) {
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/scores`, request);
+    },
+
+    async updateGameState(sessionId, state) {
+      await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/game-state`, { state });
     },
 
     // ========== Turns & Phases ==========

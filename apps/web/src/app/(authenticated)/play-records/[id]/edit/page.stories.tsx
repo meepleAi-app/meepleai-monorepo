@@ -24,12 +24,14 @@ const meta: Meta<typeof PlayRecordEditPage> = {
   title: 'Authenticated / sp4-play-records-edit',
   component: PlayRecordEditPage,
   parameters: {
+    // DS-17 #2063: heuristic can't read named exports/http.get; declare states explicitly.
+    canonicalStates: ['default', 'empty', 'loading', 'error'],
     layout: 'fullscreen',
     nextjs: {
       appDirectory: true,
       navigation: {
         pathname: `/play-records/${ID}/edit`,
-        params: { id: ID },
+        segments: [['id', ID]],
       },
     },
     viewport: { defaultViewport: 'desktop' },
@@ -63,7 +65,7 @@ export const Empty: Story = {
       appDirectory: true,
       navigation: {
         pathname: '/play-records/pr-inprogress-1/edit',
-        params: { id: 'pr-inprogress-1' },
+        segments: [['id', 'pr-inprogress-1']],
       },
     },
     msw: {

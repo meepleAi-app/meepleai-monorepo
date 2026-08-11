@@ -34,7 +34,11 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 
-import { mockAuthEndpoints, seedAuthSession } from '../_helpers/seedAuthSession';
+import {
+  mockAuthEndpoints,
+  mockLibraryHubSiblingSources,
+  seedAuthSession,
+} from '../_helpers/seedAuthSession';
 import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
@@ -43,6 +47,9 @@ async function gotoLibraryReady(page: Page, search = '', waitForGrid = true): Pr
   await seedAuthSession(page);
   await seedCookieConsent(page);
   await mockAuthEndpoints(page);
+  // #3289: mock the 4 sibling hub sources so `useHybridHubItems.isLoading`
+  // settles and the games results grid mounts (fixture only short-circuits games).
+  await mockLibraryHubSiblingSources(page);
   // LibraryHub does not read ?tab= from the URL; navigate to /library then click
   // the Giochi tab. The optional `search` (e.g. 'state=filtered-empty') is applied
   // to the /library URL so the dev/visual-test ?state= override still works.

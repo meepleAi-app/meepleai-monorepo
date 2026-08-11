@@ -111,6 +111,17 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             // Clear stale error from a previous failed run, if any —
             // matches the explicit reset in the legacy IndexPdfCommandHandler path.
             existing.IndexingError = null;
+            // Heal a missing SharedGameId link on the pre-existing "processing" row.
+            // Root cause of the has_knowledge_base drift: when the row was created in
+            // "processing" state without a SharedGameId, the VectorDocumentIndexedEvent
+            // emitted on the completed-transition below carried a null SharedGameId, so
+            // VectorDocumentIndexedForKbFlagHandler skipped the flag update even though the
+            // caller knows the SharedGameId here. Backfill it so the event — and the row —
+            // both carry the link.
+            if (existing.SharedGameId is null && sharedGameId is not null)
+            {
+                existing.SharedGameId = sharedGameId;
+            }
         }
 
         try
@@ -158,7 +169,9 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
                     documentId: existing.Id,
                     gameId: existing.GameId ?? Guid.Empty,
                     chunkCount: existing.ChunkCount,
-                    sharedGameId: existing.SharedGameId),
+                    // Prefer the healed row value; fall back to the caller-supplied id so the
+                    // KB-flag projection never receives a null SharedGameId when the caller knew it.
+                    sharedGameId: existing.SharedGameId ?? sharedGameId),
                 CancellationToken.None).ConfigureAwait(false);
         }
     }

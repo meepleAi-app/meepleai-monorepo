@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -45,7 +46,7 @@ internal sealed class UpdateShareRequestDocumentsCommandHandler : ICommandHandle
 
         if (shareRequest == null)
         {
-            throw new InvalidOperationException($"Share request {command.ShareRequestId} not found");
+            throw new NotFoundException("ShareRequest", command.ShareRequestId.ToString());
         }
 
         // 2. Verify user owns the request
@@ -86,7 +87,7 @@ internal sealed class UpdateShareRequestDocumentsCommandHandler : ICommandHandle
                 var document = documents.FirstOrDefault(d => d.Id == docId);
                 if (document == null)
                 {
-                    throw new InvalidOperationException($"Document {docId} not found");
+                    throw new NotFoundException("Document", docId.ToString());
                 }
 
                 if (document.UploadedByUserId != command.UserId)

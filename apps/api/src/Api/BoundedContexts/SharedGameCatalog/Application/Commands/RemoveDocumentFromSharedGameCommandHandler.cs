@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -40,7 +41,7 @@ internal sealed class RemoveDocumentFromSharedGameCommandHandler : ICommandHandl
         var document = await _repository.GetByIdAsync(command.DocumentId, cancellationToken).ConfigureAwait(false);
         if (document is null)
         {
-            throw new InvalidOperationException($"Document with ID {command.DocumentId} not found");
+            throw new NotFoundException("Document", command.DocumentId.ToString());
         }
 
         // Verify it belongs to the specified game

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 
 import { AccentBorder } from '../AccentBorder';
-import { entityHsl } from '../../tokens';
 
 describe('AccentBorder', () => {
   it('renders horizontal top bar (mockup-conformant: top-0 left-0 right-0 h-[3px])', () => {
@@ -21,12 +20,12 @@ describe('AccentBorder', () => {
     expect(el.className).not.toMatch(/\bw-\[3px\]\b/);
   });
 
-  it('uses entityHsl for inline background', () => {
+  it('uses the theme-aware entity CSS var for inline background (#2862)', () => {
     const { container } = render(<AccentBorder entity="player" />);
     const el = container.firstChild as HTMLElement;
-    // Browser renders HSL as RGB, so just verify it's set
-    expect(el.style.background).toBeTruthy();
-    expect(el.style.background).toContain('rgb');
+    // entityHsl now emits `hsl(var(--c-player))`; assert the var on the raw
+    // style attribute (robust to jsdom's CSSOM color parsing).
+    expect(el.getAttribute('style') ?? '').toContain('--c-player');
   });
 
   it('grows on group-hover via height transition', () => {

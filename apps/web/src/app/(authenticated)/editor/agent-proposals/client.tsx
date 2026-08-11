@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/primitives/button';
+import { canUseEditor } from '@/lib/utils/roles';
 
 import { ProposalsList } from './_components/ProposalsList';
 
@@ -39,7 +40,7 @@ function EditorAuthGuard({
     return <HubPageContainer className="p-6">Loading...</HubPageContainer>;
   }
 
-  if (!user || (user.role !== 'Editor' && user.role !== 'Admin')) {
+  if (!user || !canUseEditor(user.role)) {
     return (
       <HubPageContainer className="p-6">
         <div className="text-center p-12">

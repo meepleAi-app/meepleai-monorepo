@@ -58,7 +58,7 @@ function Row({
         {chunk.usedInChats > 0 ? (
           <span
             aria-label={`Usato in ${chunk.usedInChats} chat`}
-            className="rounded-full bg-entity-kb/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-entity-kb"
+            className="rounded-full bg-entity-kb/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-entity-kb-text"
           >
             {chunk.usedInChats}× chat
           </span>

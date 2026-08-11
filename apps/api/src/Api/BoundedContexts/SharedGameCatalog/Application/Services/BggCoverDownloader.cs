@@ -1,4 +1,5 @@
-using Api.Services.Pdf;
+using Api.Observability;
+using Api.SharedKernel.Infrastructure.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -6,16 +7,21 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 internal sealed class BggCoverDownloader : IBggCoverDownloader
 {
     private readonly HttpClient _httpClient;
-    private readonly IBlobStorageService _blobStorageService;
+    private readonly IBggCoverUploadPipeline _uploadPipeline;
     private readonly ILogger<BggCoverDownloader> _logger;
+
+    // #3495 (finding C5): stream-and-cap the image body to bound memory. The HttpClient-level
+    // MaxResponseContentBufferSize belt is a no-op under ResponseHeadersRead, so the ceiling is
+    // enforced here during the read.
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024;
 
     public BggCoverDownloader(
         HttpClient httpClient,
-        IBlobStorageService blobStorageService,
+        IBggCoverUploadPipeline uploadPipeline,
         ILogger<BggCoverDownloader> logger)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
+        _uploadPipeline = uploadPipeline ?? throw new ArgumentNullException(nameof(uploadPipeline));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -29,7 +35,25 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
             return null;
         }
 
-        var resourceKey = $"bgg-cover-{bggId}";
+        // SSRF guard: reject non-HTTPS / non-default-port / malformed URLs up front (fail-fast),
+        // through the SAME validator the hardened fetch engine applies per hop (#3495 Slice D — one
+        // scheme/port rule for every sink, instead of a private copy that can drift). The public-IP
+        // guarantee is enforced at connect time by the SSRF connect-pin on this client's handler
+        // (ConfigureSsrfPin, #3495) — which, unlike a pre-connect DNS check, is not TOCTOU: every
+        // connection (and each redirect hop) dials only a validated public address.
+        try
+        {
+            HardenedRedirectFetch.ResolveAndValidate(
+                remoteImageUrl, baseAddress: null, MeepleAiMetrics.EgressSinks.BggCover);
+        }
+        catch (HardenedFetchException ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "BGG cover download blocked by SSRF guard ({Reason}): BggId={BggId}, Url={Url}",
+                ex.Reason, bggId, remoteImageUrl);
+            return null;
+        }
 
         try
         {
@@ -45,28 +69,55 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
                 return null;
             }
 
-            var imageStream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            await using var _ = imageStream.ConfigureAwait(false);
-
-            // Derive a safe filename from the URL path
-            var fileName = $"cover-{bggId}{GetExtension(remoteImageUrl)}";
-
-            var storageResult = await _blobStorageService
-                .StoreAsync(imageStream, fileName, BlobCategory.GameImage, resourceKey, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!storageResult.Success)
+            // Reject early on an advertised over-cap length; Content-Length is spoofable/absent
+            // (chunked), so the ceiling is ALSO enforced during the streamed read below.
+            if (response.Content.Headers.ContentLength > MaxImageSizeBytes)
             {
-                _logger.LogWarning(
-                    "BGG cover upload failed: BggId={BggId}, Error={Error}",
-                    bggId, storageResult.ErrorMessage);
+                _logger.LogWarning("BGG cover exceeds size cap (Content-Length): BggId={BggId}", bggId);
                 return null;
             }
 
+            byte[] imageBytes;
+            using (var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
+            using (var buffer = new MemoryStream())
+            {
+                var chunk = new byte[81920];
+                long total = 0;
+                int read;
+                while ((read = await stream.ReadAsync(chunk, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    total += read;
+                    if (total > MaxImageSizeBytes)
+                    {
+                        _logger.LogWarning(
+                            "BGG cover exceeds {Cap}-byte cap mid-stream: BggId={BggId}", MaxImageSizeBytes, bggId);
+                        return null;
+                    }
+
+                    await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                }
+
+                imageBytes = buffer.ToArray();
+            }
+
+            if (imageBytes.Length == 0)
+            {
+                _logger.LogWarning("BGG cover download returned empty body: BggId={BggId}", bggId);
+                return null;
+            }
+
+            var extension = GetExtension(remoteImageUrl);
+
+            // Issue #2947: raw R2 PutObject to a deterministic key so
+            // CoverUrlResolver can reconstruct it via GetPresignedUrlForRawKeyAsync.
+            var r2Key = await _uploadPipeline
+                .UploadAsync(bggId, imageBytes, extension, cancellationToken)
+                .ConfigureAwait(false);
+
             _logger.LogInformation(
                 "BGG cover uploaded successfully: BggId={BggId}, R2Key={Key}",
-                bggId, resourceKey);
-            return resourceKey;
+                bggId, r2Key);
+            return r2Key;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

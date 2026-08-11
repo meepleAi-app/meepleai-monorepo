@@ -57,6 +57,10 @@ services:
   # Application Services
   # ===========================================================================
 
+  # DO NOT scale to >1 replica — single-instance BY CONTRACT (ADR-087 / DEC-3e, #3373 D4):
+  # the enrichment tier's in-process Wikimedia rate-limiter (5 RPS) + dead-letter gauge are
+  # correct only at one instance. The `MultipleApiInstances` Prometheus tripwire alerts on a
+  # second scraped instance; promote to the distributed rate-limiter+gauge before scaling.
   api:
     restart: always
     env_file:
@@ -72,6 +76,10 @@ services:
       - ./secrets/prod/storage.secret
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      # #2893: pin the seed profile explicitly so production never falls back to the
+      # Dev default (which would seed dev.yml + LivedIn synthetic data). Prod runs the
+      # Core layer only (admin + AI models); the game catalog is populated separately.
+      SEED_PROFILE: Prod
       ASPNETCORE_URLS: http://+:8080
       POSTGRES_HOST: postgres
       POSTGRES_USER: ${POSTGRES_USER:-meeple}
@@ -82,6 +90,9 @@ services:
       LOCAL_EMBEDDING_URL: http://embedding-service:8000
       Embedding__LocalServiceUrl: http://embedding-service:8000
       RERANKER_URL: http://reranker-service:8003
+      # #3339: prod runs orchestration under `--profile ai`; set the URL so the
+      # orchestration health check is registered and monitored.
+      ORCHESTRATION_SERVICE_URL: http://orchestration-service:8004
       EMBEDDING_MODEL: intfloat/multilingual-e5-base
       Embedding__Model: intfloat/multilingual-e5-base
       Embedding__Dimensions: 768
@@ -89,6 +100,11 @@ services:
       Frontend__BaseUrl: "https://${PROD_DOMAIN}"
       Authentication__SessionCookie__Secure: "true"
       Authentication__SessionCookie__SameSite: "Lax"
+      # OPS-07 / #3250: health/monitoring alert recipient — overrides the appsettings.json
+      # placeholder (ops@meepleai.app). Without this, prod alerts go to an unowned mailbox
+      # and are lost. From/transport are owned by EmailService (Resend via prod/email.secret).
+      # Not a secret, just the mailbox that receives alert emails.
+      Alerting__Email__To__0: badsworm@gmail.com
     logging:
       driver: "json-file"
       options: { max-size: "50m", max-file: "10" }
@@ -197,9 +213,13 @@ services:
   grafana:
     restart: always
     env_file: [./secrets/prod/monitoring.secret]
+    # External access via Cloudflare Tunnel: grafana.${PROD_DOMAIN} → localhost:3001 → container :3000.
+    # Aligned with staging (subdomain, not subpath) — #2911.
+    ports:
+      - "127.0.0.1:3001:3000"
     environment:
-      GF_SERVER_ROOT_URL: "https://${PROD_DOMAIN}/grafana"
-      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SERVER_ROOT_URL: "https://grafana.${PROD_DOMAIN}"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
     volumes:
       - grafana-prod:/var/lib/grafana
       - ./grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
@@ -219,6 +239,20 @@ services:
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       # Issue #2470 — Wikidata SSE plane starvation alert.
       - ./prometheus/alerts/wikidata-sse.yml:/etc/prometheus/wikidata-sse.yml:ro
+      - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
+      # Issue #3082 — BGG ToS-compliance SLO=0 alert.
+      - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      - ./prometheus/alerts/egress-guard.yml:/etc/prometheus/egress-guard.yml:ro
+      - ./prometheus/alerts/api-single-instance.yml:/etc/prometheus/api-single-instance.yml:ro
+      # Issue #3112 — OPS-02 Slack delivery observability alerts.
+      - ./prometheus/alerts/slack-delivery.yml:/etc/prometheus/slack-delivery.yml:ro
+      - ./prometheus/alerts/audit-outbox.yml:/etc/prometheus/audit-outbox.yml:ro
+      # Issue #1965 — domain_event_outbox duplicate-publish trigger (referenced from prometheus.prod.yml rule_files).
+      - ./prometheus/alerts/domain-event-outbox-duplicate-publish.yml:/etc/prometheus/domain-event-outbox-duplicate-publish.yml:ro
+      # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
+      - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
+      # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.prod.yml rule_files).
+      - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
       - prometheus-prod:/prometheus
     deploy:
       resources:
@@ -239,9 +273,6 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
-
-  n8n:
-    restart: always
 
 # =============================================================================
 # Production volumes

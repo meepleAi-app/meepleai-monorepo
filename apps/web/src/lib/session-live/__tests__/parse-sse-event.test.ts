@@ -622,17 +622,6 @@ describe('parseSseEvent — session:diary', () => {
     }
   });
 
-  it('normalizes noteId → entryId (v1 BE NoteSavedEvent field name)', () => {
-    const result = parseSseEvent(
-      'session:diary',
-      makeJson({ noteId: 'note-2', authorId: 'p1', content: 'Note', timestamp: 'ts' }),
-      SESSION_ID
-    );
-    if (result?.type === 'session:diary') {
-      expect(result.entryId).toBe('note-2');
-    }
-  });
-
   it('normalizes participantId → authorId', () => {
     const result = parseSseEvent(
       'session:diary',
@@ -644,7 +633,7 @@ describe('parseSseEvent — session:diary', () => {
     }
   });
 
-  it('returns null when entryId/noteId missing', () => {
+  it('returns null when entryId missing', () => {
     expect(
       parseSseEvent(
         'session:diary',
@@ -662,6 +651,196 @@ describe('parseSseEvent — session:diary', () => {
         SESSION_ID
       )
     ).toBeNull();
+  });
+});
+
+// ============================================================================
+// session:chat — citations (Task 9 / #2561 SP2)
+// ============================================================================
+
+describe('parseSseEvent — session:chat citations (T9 #2561)', () => {
+  it('parses session:chat with citations array (full tier)', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-cit-1',
+        senderId: 'agent-1',
+        content: 'Here are the rules.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:30:00Z',
+        citations: [
+          {
+            documentId: 'doc-guid-001',
+            pageNumber: 5,
+            relevanceScore: 0.91,
+            snippetPreview: 'Regola del gioco: muovi la pedina.',
+            copyrightTier: 'full',
+            isPublic: true,
+          },
+        ],
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toBeDefined();
+      expect(result.citations).toHaveLength(1);
+      expect(result.citations![0].documentId).toBe('doc-guid-001');
+      expect(result.citations![0].pageNumber).toBe(5);
+      expect(result.citations![0].copyrightTier).toBe('full');
+    }
+  });
+
+  it('parses session:chat with protected-tier citation (null snippetPreview → paraphrasedSnippet)', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-cit-2',
+        senderId: 'agent-1',
+        content: 'Protected source answer.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:31:00Z',
+        citations: [
+          {
+            documentId: 'doc-protected-001',
+            pageNumber: 12,
+            relevanceScore: 0.85,
+            snippetPreview: null,
+            copyrightTier: 'protected',
+            paraphrasedSnippet: 'Sintesi del contenuto protetto.',
+            isPublic: false,
+          },
+        ],
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toHaveLength(1);
+      const cit = result.citations![0];
+      expect(cit.copyrightTier).toBe('protected');
+      expect(cit.paraphrasedSnippet).toBe('Sintesi del contenuto protetto.');
+      expect(cit.snippetPreview).toBeNull();
+    }
+  });
+
+  it('parses session:chat without citations (citations undefined when absent)', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-nocit',
+        senderId: 'p1',
+        content: 'No citations here.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:32:00Z',
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toBeUndefined();
+    }
+  });
+
+  it('parses session:chat with empty citations array', () => {
+    const result = parseSseEvent(
+      'session:chat',
+      makeJson({
+        messageId: 'msg-emptycit',
+        senderId: 'p1',
+        content: 'Empty citations.',
+        visibility: 'shared',
+        timestamp: '2026-01-01T10:33:00Z',
+        citations: [],
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:chat');
+    if (result?.type === 'session:chat') {
+      expect(result.citations).toEqual([]);
+    }
+  });
+});
+
+// ============================================================================
+// session:phase (Task 9 / #2561 SP2)
+// ============================================================================
+
+describe('parseSseEvent — session:phase (T9 #2561)', () => {
+  it('parses session:phase with required fields', () => {
+    const result = parseSseEvent(
+      'session:phase',
+      makeJson({ turnIndex: 2, newPhaseIndex: 1, phaseName: 'Combat', totalPhases: 3 }),
+      SESSION_ID
+    );
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('session:phase');
+    if (result?.type === 'session:phase') {
+      expect(result.turnIndex).toBe(2);
+      expect(result.newPhaseIndex).toBe(1);
+      expect(result.phaseName).toBe('Combat');
+      expect(result.totalPhases).toBe(3);
+      expect(result.sessionId).toBe(SESSION_ID);
+    }
+  });
+
+  it('parses session:phase without optional phaseName', () => {
+    const result = parseSseEvent(
+      'session:phase',
+      makeJson({ turnIndex: 0, newPhaseIndex: 0 }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:phase');
+    if (result?.type === 'session:phase') {
+      expect(result.phaseName).toBeUndefined();
+    }
+  });
+
+  it('parses session:phase without optional totalPhases', () => {
+    const result = parseSseEvent(
+      'session:phase',
+      makeJson({ turnIndex: 1, newPhaseIndex: 2, phaseName: 'Planning' }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:phase');
+    if (result?.type === 'session:phase') {
+      expect(result.totalPhases).toBeUndefined();
+    }
+  });
+
+  it('returns null for session:phase missing both turnIndex and newPhaseIndex', () => {
+    expect(parseSseEvent('session:phase', makeJson({ phaseName: 'X' }), SESSION_ID)).toBeNull();
+  });
+
+  it('returns null for session:phase with invalid turnIndex (non-number)', () => {
+    expect(
+      parseSseEvent('session:phase', makeJson({ turnIndex: 'bad', newPhaseIndex: 1 }), SESSION_ID)
+    ).toBeNull();
+  });
+});
+
+// ============================================================================
+// session:endgame — BE canonical shape (completedAt/totalTurns/gameName)
+// ============================================================================
+
+describe('parseSseEvent — session:endgame BE canonical shape (T9 #2561)', () => {
+  it('parses session:endgame with BE canonical payload {completedAt, totalTurns, gameName}', () => {
+    const result = parseSseEvent(
+      'session:endgame',
+      makeJson({
+        completedAt: '2026-01-01T12:00:00Z',
+        totalTurns: 8,
+        gameName: 'Mage Knight',
+        timestamp: '2026-01-01T12:00:00Z',
+      }),
+      SESSION_ID
+    );
+    expect(result?.type).toBe('session:endgame');
+    if (result?.type === 'session:endgame') {
+      // FE fetches scores via REST; endgame event carries metadata only
+      expect(result.finalScores).toHaveLength(0);
+      expect(result.sessionId).toBe(SESSION_ID);
+    }
   });
 });
 
@@ -690,6 +869,44 @@ describe('parseSseEvent — heartbeat', () => {
 });
 
 // ============================================================================
+// Canonical BE payload contract (C1/C2 fix — #2561 SP2 final-review)
+// ============================================================================
+
+describe('parseSseEvent — canonical BE payload shapes (C1/C2 #2561)', () => {
+  const PLAYER_GUID = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+
+  it('C1: parses session:score with BE round-based payload {playerId, round, dimension, value}', () => {
+    // BE LiveSessionStreamForwarder emits: { playerId, round, dimension, value }
+    const result = parseSseEvent(
+      'session:score',
+      JSON.stringify({ playerId: PLAYER_GUID, round: 1, dimension: 'vp', value: 5 }),
+      SESSION_ID
+    );
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('session:score');
+    if (result?.type === 'session:score') {
+      expect(result.score).toBe(5);
+      expect(result.participantId).toBe(PLAYER_GUID);
+    }
+  });
+
+  it('C2: parses session:turn with BE payload {newTurnIndex, currentPlayerId}', () => {
+    // BE LiveSessionStreamForwarder emits: { newTurnIndex, currentPlayerId }
+    const result = parseSseEvent(
+      'session:turn',
+      JSON.stringify({ newTurnIndex: 2, currentPlayerId: PLAYER_GUID }),
+      SESSION_ID
+    );
+    expect(result).not.toBeNull();
+    expect(result?.type).toBe('session:turn');
+    if (result?.type === 'session:turn') {
+      expect(result.turnNumber).toBe(2);
+      expect(result.activePlayerId).toBe(PLAYER_GUID);
+    }
+  });
+});
+
+// ============================================================================
 // sessionId resolution
 // ============================================================================
 
@@ -713,6 +930,73 @@ describe('parseSseEvent — sessionId resolution', () => {
     );
     if (result?.type === 'session:score') {
       expect(result.sessionId).toBe('data-session');
+    }
+  });
+});
+
+// ============================================================================
+// #3025 L1 — session:game-state (opaque game-agnostic state)
+// ============================================================================
+
+describe('parseSseEvent — session:game-state (#3025 L1)', () => {
+  it('parses an object state', () => {
+    const state = { round: 2, activePlayer: 'p1', dev: { catan: { longestRoad: 'p2' } } };
+    const result = parseSseEvent('session:game-state', makeJson({ state }), SESSION_ID);
+    expect(result).toMatchObject({ type: 'session:game-state', sessionId: SESSION_ID, state });
+    if (result?.type === 'session:game-state') {
+      expect(typeof result.timestamp).toBe('string');
+    }
+  });
+
+  it('parses a null state (state key present, value null)', () => {
+    const result = parseSseEvent('session:game-state', makeJson({ state: null }), SESSION_ID);
+    expect(result).toMatchObject({
+      type: 'session:game-state',
+      sessionId: SESSION_ID,
+      state: null,
+    });
+  });
+
+  it('carries a server-provided timestamp when present', () => {
+    const result = parseSseEvent(
+      'session:game-state',
+      makeJson({ state: { x: 1 }, timestamp: '2026-01-02T03:04:05Z' }),
+      SESSION_ID
+    );
+    if (result?.type === 'session:game-state') {
+      expect(result.timestamp).toBe('2026-01-02T03:04:05Z');
+    } else {
+      throw new Error('expected session:game-state');
+    }
+  });
+
+  it('preserves a primitive/array state verbatim (opaque at L1)', () => {
+    const result = parseSseEvent('session:game-state', makeJson({ state: [1, 2, 3] }), SESSION_ID);
+    if (result?.type === 'session:game-state') {
+      expect(result.state).toEqual([1, 2, 3]);
+    } else {
+      throw new Error('expected session:game-state');
+    }
+  });
+
+  it('returns null when the `state` key is absent', () => {
+    expect(parseSseEvent('session:game-state', makeJson({ round: 1 }), SESSION_ID)).toBeNull();
+  });
+
+  it('returns null for malformed JSON', () => {
+    expect(parseSseEvent('session:game-state', '{not-json}', SESSION_ID)).toBeNull();
+  });
+
+  it('resolves sessionId from data when the param is empty', () => {
+    const result = parseSseEvent(
+      'session:game-state',
+      makeJson({ state: { x: 1 }, sessionId: 'data-session' }),
+      ''
+    );
+    if (result?.type === 'session:game-state') {
+      expect(result.sessionId).toBe('data-session');
+    } else {
+      throw new Error('expected session:game-state');
     }
   });
 });

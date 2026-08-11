@@ -19,10 +19,14 @@
 
 import { useState, type ReactElement } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { GameBookList } from '@/components/features/gamebook/GameBookList';
 import { NanolithCampaignCTA } from '@/components/features/gamebook/NanolithCampaignCTA';
 import type { LibraryGameDetail } from '@/hooks/queries/useLibrary';
+import type { GameBookDto } from '@/lib/api/gamebook';
+import { useChatPanelStore } from '@/lib/stores/chat-panel-store';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -30,12 +34,23 @@ type TabId = 'info' | 'chat' | 'toolbox' | 'toolkit';
 
 export interface LibroGameDetailViewProps {
   readonly gameDetail: LibraryGameDetail;
+  /**
+   * The game's 1..N GameBooks (SI-6). Fetched by the page via `useGameBooks`
+   * and threaded down so this presentational view stays provider-free.
+   */
+  readonly books?: readonly GameBookDto[];
+  readonly booksLoading?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): ReactElement {
+export function LibroGameDetailView({
+  gameDetail,
+  books,
+  booksLoading,
+}: LibroGameDetailViewProps): ReactElement {
   const router = useRouter();
+  const openChat = useChatPanelStore(s => s.open);
   const [tab, setTab] = useState<TabId>('info');
 
   const playersLabel =
@@ -170,10 +185,36 @@ export function LibroGameDetailView({ gameDetail }: LibroGameDetailViewProps): R
           aria-labelledby={`tab-${tab}`}
           className="py-4"
         >
-          {tab === 'info' && <InfoPanel detail={gameDetail} />}
-          {tab === 'chat' && <PlaceholderPanel label="AI Chat" />}
-          {tab === 'toolbox' && <PlaceholderPanel label="Toolbox" />}
-          {tab === 'toolkit' && <PlaceholderPanel label="Toolkit" />}
+          {tab === 'info' && (
+            <InfoPanel detail={gameDetail} books={books} booksLoading={booksLoading} />
+          )}
+          {/* #2750 C1 — the 3 non-Info tabs wire to real surfaces (was a placeholder). */}
+          {tab === 'chat' && (
+            <ChatTabPanel
+              onOpen={() =>
+                openChat({
+                  id: gameDetail.gameId,
+                  name: gameDetail.gameTitle,
+                  pdfCount: gameDetail.chunkCount ?? 0,
+                  kbStatus: 'ready',
+                })
+              }
+            />
+          )}
+          {tab === 'toolbox' && (
+            <ToolLinkPanel
+              label="Toolbox"
+              href={`/library/${gameDetail.gameId}/toolbox`}
+              description="Mazzi, fasi e strumenti di sessione per questo gioco."
+            />
+          )}
+          {tab === 'toolkit' && (
+            <ToolLinkPanel
+              label="Toolkit"
+              href={`/library/${gameDetail.gameId}/toolkit`}
+              description="Suggerimenti AI e strumenti generati dalla knowledge base."
+            />
+          )}
         </section>
       </main>
     </div>
@@ -256,7 +297,15 @@ function TabButton({
   );
 }
 
-function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
+function InfoPanel({
+  detail,
+  books,
+  booksLoading,
+}: {
+  detail: LibraryGameDetail;
+  books?: readonly GameBookDto[];
+  booksLoading?: boolean;
+}): ReactElement {
   return (
     <div className="grid gap-4">
       <div>
@@ -267,6 +316,15 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
           {detail.description ??
             `${detail.gameTitle} — campagna libro game. Avvia la modalità per setup tutorial, Q&A regole e traduzione storybook.`}
         </p>
+      </div>
+
+      {/* Libri — 1..N GameBook aggregate (SI-6 #2637); replaces the retired
+          hardcoded "Press Start + Rules" 2-PDF model. */}
+      <div>
+        <h2 className="mb-2 font-quicksand text-[15px] font-bold uppercase tracking-wide text-[#9a8870]">
+          Libri
+        </h2>
+        <GameBookList books={books ?? []} isLoading={booksLoading} />
       </div>
 
       {/* KB status row */}
@@ -293,12 +351,46 @@ function InfoPanel({ detail }: { detail: LibraryGameDetail }): ReactElement {
   );
 }
 
-function PlaceholderPanel({ label }: { label: string }): ReactElement {
+// #2750 C1 — AI Chat tab: opens the global chat panel (chat-panel-store) preseeded
+// with this game's context, mirroring GamebookPlayShell's "Apri chat con agente".
+function ChatTabPanel({ onOpen }: { onOpen: () => void }): ReactElement {
   return (
     <div className="rounded-[14px] border border-dashed border-[rgba(180,130,80,0.32)] bg-card p-6 text-center">
-      <p className="text-[15px] text-[#5a4a38]">
-        Pannello <strong>{label}</strong> · in arrivo con la prossima iter.
+      <p className="mb-3 text-[15px] text-[#5a4a38]">
+        Chatta con l&rsquo;<strong>agente Tutor</strong> per Q&amp;A sulle regole, con citazioni
+        dalla knowledge base.
       </p>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex items-center gap-2 rounded-[10px] bg-[hsl(var(--c-agent))] px-4 py-2 font-quicksand text-sm font-semibold text-white hover:opacity-90"
+      >
+        <span aria-hidden="true">💬</span> Apri chat con l&rsquo;agente
+      </button>
+    </div>
+  );
+}
+
+// #2750 C1 — Toolbox/Toolkit tabs: link to the dedicated in-app sub-pages
+// (/library/[gameId]/toolbox|toolkit) that already exist.
+function ToolLinkPanel({
+  label,
+  href,
+  description,
+}: {
+  label: string;
+  href: string;
+  description: string;
+}): ReactElement {
+  return (
+    <div className="rounded-[14px] border border-dashed border-[rgba(180,130,80,0.32)] bg-card p-6 text-center">
+      <p className="mb-3 text-[15px] text-[#5a4a38]">{description}</p>
+      <Link
+        href={href}
+        className="inline-flex items-center gap-2 rounded-[10px] bg-[hsl(var(--c-game))] px-4 py-2 font-quicksand text-sm font-semibold text-white hover:opacity-90"
+      >
+        Apri {label}
+      </Link>
     </div>
   );
 }

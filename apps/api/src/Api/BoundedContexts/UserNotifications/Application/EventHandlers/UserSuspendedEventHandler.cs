@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -55,7 +56,7 @@ internal sealed class UserSuspendedEventHandler : INotificationHandler<UserSuspe
                 Payload = new GenericPayload(
                     "Account Suspended",
                     $"Your account has been suspended. Reason: {notification.Reason}"),
-                DeepLinkPath = "/account/suspended",
+                DeepLinkPath = NotificationRoutes.AccountSuspended,
                 // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                 SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);

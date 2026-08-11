@@ -33,11 +33,9 @@ vi.mock('@/hooks/useTranslation', () => ({
 }));
 
 const pushMock = vi.fn().mockResolvedValue(undefined);
-const searchParamsMock = { get: vi.fn<(key: string) => string | null>() };
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
-  useSearchParams: () => searchParamsMock,
 }));
 
 // Controllable hook state
@@ -70,10 +68,15 @@ import { VerificationPendingContent } from '../_content';
 // Helpers
 // ---------------------------------------------------------------------------
 
+// #2773: ?email= now flows as the `emailParam` prop from the async page.tsx.
+// This helper stores the value; renderContent() forwards it to the component.
+let emailParamValue: string | null = null;
 function setSearchParams(params: Record<string, string | null>) {
-  searchParamsMock.get.mockImplementation((key: string) =>
-    Object.prototype.hasOwnProperty.call(params, key) ? (params[key] ?? null) : null
-  );
+  emailParamValue = params.email ?? null;
+}
+
+function renderContent() {
+  return render(<VerificationPendingContent emailParam={emailParamValue} />);
 }
 
 function setHookState(partial: Partial<typeof hookState>) {
@@ -97,7 +100,7 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
   describe('Email resolution', () => {
     it('renders with email from ?email query param', () => {
       setSearchParams({ email: 'user@example.com' });
-      render(<VerificationPendingContent />);
+      renderContent();
       // Card title rendered verbatim (t returns key)
       expect(
         screen.getByRole('heading', { name: 'auth.emailVerification.pending.title' })
@@ -108,20 +111,20 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
 
     it('persists query-param email into sessionStorage', () => {
       setSearchParams({ email: 'user@example.com' });
-      render(<VerificationPendingContent />);
+      renderContent();
       expect(sessionStorage.getItem('pendingVerificationEmail')).toBe('user@example.com');
     });
 
     it('falls back to sessionStorage when no query param', () => {
       sessionStorage.setItem('pendingVerificationEmail', 'stored@example.com');
       setSearchParams({});
-      render(<VerificationPendingContent />);
+      renderContent();
       expect(screen.getByText(/s\*\*\*d@example\.com/)).toBeInTheDocument();
     });
 
     it('renders no-email redirect CTA when neither source has email', () => {
       setSearchParams({});
-      render(<VerificationPendingContent />);
+      renderContent();
       expect(screen.getByText('auth.emailVerification.pending.noEmail')).toBeInTheDocument();
       const cta = screen.getByRole('button', {
         name: 'auth.emailVerification.pending.goToRegister',
@@ -131,7 +134,7 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
 
     it('no-email CTA navigates to /register on click', () => {
       setSearchParams({});
-      render(<VerificationPendingContent />);
+      renderContent();
       const cta = screen.getByRole('button', {
         name: 'auth.emailVerification.pending.goToRegister',
       });
@@ -147,7 +150,7 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
 
     it('calls resendVerificationEmail(email) when resend button clicked', () => {
       setSearchParams({ email: 'user@example.com' });
-      render(<VerificationPendingContent />);
+      renderContent();
       const button = getResendButton();
       fireEvent.click(button);
       expect(resendMock).toHaveBeenCalledWith('user@example.com');
@@ -156,14 +159,14 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
     it('disables resend button when cooldownSeconds > 0', () => {
       setSearchParams({ email: 'user@example.com' });
       setHookState({ cooldownSeconds: 30 });
-      render(<VerificationPendingContent />);
+      renderContent();
       expect(getResendButton()).toBeDisabled();
     });
 
     it('shows cooldown message when cooldownSeconds > 0', () => {
       setSearchParams({ email: 'user@example.com' });
       setHookState({ cooldownSeconds: 30 });
-      render(<VerificationPendingContent />);
+      renderContent();
       expect(
         screen.getByText(/auth\.emailVerification\.pending\.cooldownMessage/)
       ).toBeInTheDocument();
@@ -172,7 +175,7 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
     it('enables resend button when cooldownSeconds is 0 and not resending', () => {
       setSearchParams({ email: 'user@example.com' });
       setHookState({ cooldownSeconds: 0, isResending: false });
-      render(<VerificationPendingContent />);
+      renderContent();
       expect(getResendButton()).not.toBeDisabled();
     });
   });
@@ -181,7 +184,7 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
     it('renders error from hook in alert role', () => {
       setSearchParams({ email: 'user@example.com' });
       setHookState({ error: 'Failed to resend email' });
-      render(<VerificationPendingContent />);
+      renderContent();
       const alert = screen.getByRole('alert');
       expect(alert).toHaveTextContent('Failed to resend email');
     });

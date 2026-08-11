@@ -120,6 +120,27 @@ public class WebpVariantGeneratorTests
         decoded.Height.Should().Be((uint)TargetHeight);
     }
 
+    [Theory]
+    [InlineData(MagickFormat.Gif)]
+    [InlineData(MagickFormat.Bmp)]
+    [InlineData(MagickFormat.Tiff)]
+    [InlineData(MagickFormat.WebP)]
+    public async Task GenerateWebpAsync_AllowlistedRasterSource_ProducesWebp(MagickFormat sourceFormat)
+    {
+        // #3495 M1 — the raster-only allowlist gates decode on a 6-branch magic-byte sniff.
+        // Prove each allow-listed source format (beyond PNG/JPEG) is correctly sniffed + decoded,
+        // so a typo'd offset/byte in the GIF/BMP/TIFF/WebP branch would fail CI, not ship silently.
+        var source = CreateSolidImage(width: 400, height: 400, MagickColors.Teal, sourceFormat);
+        var sut = CreateSut();
+
+        var output = await sut.GenerateWebpAsync(source, TargetWidth, TargetHeight, CancellationToken.None);
+
+        output.Should().NotBeNullOrEmpty();
+        System.Text.Encoding.ASCII.GetString(output, 0, 4).Should().Be("RIFF",
+            $"a {sourceFormat} source must be accepted by the allowlist and re-encoded to WebP");
+        System.Text.Encoding.ASCII.GetString(output, 8, 4).Should().Be("WEBP");
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Input validation (ArgumentException)
     // ──────────────────────────────────────────────────────────────────────────
@@ -200,6 +221,42 @@ public class WebpVariantGeneratorTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Decoder hardening (#3495 M1) — decompression-bomb + non-raster coder defense
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GenerateWebpAsync_SourceExceedingDimensionCap_ThrowsImageProcessingException()
+    {
+        // Decompression-bomb defense: a source whose declared dimensions exceed the guard
+        // cap must be rejected at header-inspection (ping) time, before any full-raster
+        // allocation. A 20001x1 image is trivial to allocate here but trips the dimension cap.
+        var oversized = CreateSolidImagePng(width: 20001, height: 1, color: MagickColors.Red);
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(oversized, TargetWidth, TargetHeight, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ImageProcessingException>(
+            "sources beyond the dimension/megapixel cap must be rejected before decode (decompression-bomb defense)");
+    }
+
+    [Fact]
+    public async Task GenerateWebpAsync_SvgPayload_ThrowsImageProcessingException()
+    {
+        // Non-raster formats (SVG + delegate-backed coders) are an XXE / SSRF / RCE surface
+        // and must never reach Magick's coder — reject via the raster-only magic-byte allowlist
+        // before any decode.
+        var svg = System.Text.Encoding.UTF8.GetBytes(
+            "<?xml version=\"1.0\"?><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"64\">" +
+            "<rect width=\"64\" height=\"64\" fill=\"red\"/></svg>");
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(svg, TargetWidth, TargetHeight, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ImageProcessingException>(
+            "vector/non-raster formats must be rejected by the raster-only allowlist");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Cancellation
     // ──────────────────────────────────────────────────────────────────────────
 
@@ -220,10 +277,107 @@ public class WebpVariantGeneratorTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // Epic #3470 Slice 1d-b — focal-point crop overload
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task GenerateWebpAsync_FocalOverload_ProducesTargetDimensions()
+    {
+        var pngBytes = CreateSolidImagePng(width: 900, height: 300, color: MagickColors.Red);
+        var sut = CreateSut();
+
+        var output = await sut.GenerateWebpAsync(pngBytes, 300, 300, focalX: 0.2, focalY: 0.8, CancellationToken.None);
+
+        using var decoded = new MagickImage(output);
+        decoded.Width.Should().Be(300u);
+        decoded.Height.Should().Be(300u);
+    }
+
+    [Fact]
+    public async Task GenerateWebpAsync_CenterFocal_IsByteIdenticalToThreeArgOverload()
+    {
+        // The 3-arg overload delegates to the focal one with (0.5, 0.5), and the
+        // center path keeps the original Extent(Center) crop — so a center focal
+        // must reproduce the legacy output exactly (no re-render drift).
+        var pngBytes = CreateSolidImagePng(width: 800, height: 600, color: MagickColors.Green);
+        var sut = CreateSut();
+
+        var legacy = await sut.GenerateWebpAsync(pngBytes, TargetWidth, TargetHeight, CancellationToken.None);
+        var centered = await sut.GenerateWebpAsync(pngBytes, TargetWidth, TargetHeight, 0.5, 0.5, CancellationToken.None);
+
+        centered.Should().Equal(legacy);
+    }
+
+    [Theory]
+    [InlineData(-0.01, 0.5)]
+    [InlineData(1.01, 0.5)]
+    [InlineData(0.5, -0.01)]
+    [InlineData(0.5, 1.01)]
+    public async Task GenerateWebpAsync_OutOfRangeFocal_ThrowsArgumentException(double focalX, double focalY)
+    {
+        var pngBytes = CreateSolidImagePng(width: 400, height: 400, color: MagickColors.Red);
+        var sut = CreateSut();
+
+        var act = async () => await sut.GenerateWebpAsync(pngBytes, TargetWidth, TargetHeight, focalX, focalY, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GenerateWebpAsync_NonFiniteFocal_ThrowsArgumentException()
+    {
+        var pngBytes = CreateSolidImagePng(width: 400, height: 400, color: MagickColors.Red);
+        var sut = CreateSut();
+
+        var actNan = async () => await sut.GenerateWebpAsync(pngBytes, TargetWidth, TargetHeight, double.NaN, 0.5, CancellationToken.None);
+        var actInf = async () => await sut.GenerateWebpAsync(pngBytes, TargetWidth, TargetHeight, 0.5, double.PositiveInfinity, CancellationToken.None);
+
+        await actNan.Should().ThrowAsync<ArgumentException>();
+        await actInf.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GenerateWebpAsync_HorizontalFocal_KeepsTheFocusedHalf()
+    {
+        // 900x300 source, left half red / right half blue. A 300x300 crop must slide
+        // horizontally with the focal X: focal 0 keeps the red left edge, focal 1 the
+        // blue right edge. Proves the focal point drives the crop window.
+        var split = CreateHorizontalSplitPng(900, 300, MagickColors.Red, MagickColors.Blue);
+        var sut = CreateSut();
+
+        var left = await sut.GenerateWebpAsync(split, 300, 300, focalX: 0.0, focalY: 0.5, CancellationToken.None);
+        var right = await sut.GenerateWebpAsync(split, 300, 300, focalX: 1.0, focalY: 0.5, CancellationToken.None);
+
+        left.Should().NotEqual(right, "different focal points must crop different regions");
+        DominantIsRed(left).Should().BeTrue("focal 0 keeps the red left edge");
+        DominantIsRed(right).Should().BeFalse("focal 1 keeps the blue right edge");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
 
     private static WebpVariantGenerator CreateSut() => new(NullLogger<WebpVariantGenerator>.Instance);
+
+    private static byte[] CreateHorizontalSplitPng(int width, int height, MagickColor left, MagickColor right)
+    {
+        using var image = new MagickImage(left, (uint)width, (uint)height);
+        using var rightHalf = new MagickImage(right, (uint)(width / 2), (uint)height);
+        image.Composite(rightHalf, width / 2, 0, CompositeOperator.Over);
+        image.Format = MagickFormat.Png;
+        using var ms = new MemoryStream();
+        image.Write(ms);
+        return ms.ToArray();
+    }
+
+    private static bool DominantIsRed(byte[] webp)
+    {
+        using var decoded = new MagickImage(webp);
+        using var pixels = decoded.GetPixels();
+        var color = pixels.GetPixel((int)(decoded.Width / 2), (int)(decoded.Height / 2)).ToColor();
+        color.Should().NotBeNull();
+        return color!.R > color.B;
+    }
 
     private static byte[] CreateSolidImagePng(int width, int height, MagickColor color)
     {
@@ -239,6 +393,15 @@ public class WebpVariantGeneratorTests
         using var image = new MagickImage(color, (uint)width, (uint)height);
         image.Format = MagickFormat.Jpeg;
         image.Quality = 90;
+        using var ms = new MemoryStream();
+        image.Write(ms);
+        return ms.ToArray();
+    }
+
+    private static byte[] CreateSolidImage(int width, int height, MagickColor color, MagickFormat format)
+    {
+        using var image = new MagickImage(color, (uint)width, (uint)height);
+        image.Format = format;
         using var ms = new MemoryStream();
         image.Write(ms);
         return ms.ToArray();

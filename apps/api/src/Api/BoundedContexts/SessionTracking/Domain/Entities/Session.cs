@@ -57,6 +57,14 @@ public class Session : IDomainEventSource
     public Guid GameId { get; private set; }
 
     /// <summary>
+    /// Optional link to the libro-game campaign this sitting advances (#2632, SI-1).
+    /// Non-null only for GameNight-attached gamebook play (D-WHEN); standalone play
+    /// stays Session-less. The persistent reading position remains in SessionBookProgress —
+    /// this Session is the spine attachment + lifecycle carrier only.
+    /// </summary>
+    public Guid? GamebookCampaignId { get; private set; }
+
+    /// <summary>
     /// Unique 6-character session code for easy sharing.
     /// </summary>
     [MaxLength(6)]
@@ -192,6 +200,13 @@ public class Session : IDomainEventSource
     public IReadOnlyCollection<Participant> Participants => _participants.AsReadOnly();
 
     /// <summary>
+    /// Whether <paramref name="userId"/> may read this session: the owner or any
+    /// participant. Single source of truth for session read-access authorization (#3119).
+    /// </summary>
+    public bool IsAccessibleBy(Guid userId) =>
+        UserId == userId || _participants.Any(p => p.UserId == userId);
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
     private Session()
@@ -206,13 +221,15 @@ public class Session : IDomainEventSource
     /// <param name="sessionType">Session type.</param>
     /// <param name="location">Optional location.</param>
     /// <param name="sessionDate">Optional session date (defaults to now).</param>
+    /// <param name="gamebookCampaignId">Optional libro-game campaign link (#2632 SI-1); non-null only for GameNight-attached gamebook play.</param>
     /// <returns>New session instance.</returns>
     public static Session Create(
         Guid userId,
         Guid gameId,
         SessionType sessionType,
         string? location = null,
-        DateTime? sessionDate = null)
+        DateTime? sessionDate = null,
+        Guid? gamebookCampaignId = null)
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("User ID cannot be empty.", nameof(userId));
@@ -225,6 +242,7 @@ public class Session : IDomainEventSource
             Id = Guid.NewGuid(),
             UserId = userId,
             GameId = gameId,
+            GamebookCampaignId = gamebookCampaignId,
             SessionCode = GenerateSessionCode(),
             SessionType = sessionType,
             Status = SessionStatus.Active,

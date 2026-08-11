@@ -92,8 +92,24 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     // Issue #1852: L4 PDF cover extraction state (mirrors PdfDocumentEntity columns).
     public string? CoverR2Key { get; private set; }
     public PdfCoverGenerationStatus CoverGenerationStatus { get; private set; } = PdfCoverGenerationStatus.Pending;
+    /// <summary>
+    /// Zero-based index of the PDF page the cover was rendered from (or heuristically
+    /// rejected/attempted, per <see cref="CoverGenerationStatus"/>). Mirrors the
+    /// zero-based convention of <c>ShareRequest.CoverPageIndex</c>. Callers passing a
+    /// 1-based page number (e.g. <c>MaterializePdfCoverCommand.PageNumber</c>) must
+    /// convert before calling <see cref="MarkCoverGenerated"/>.
+    /// </summary>
     public int? CoverPageIndex { get; private set; }
     public string? CoverGenerationError { get; private set; }
+
+    /// <summary>
+    /// #3373 D1 / #3401: transient-failure retry budget counter, mirrored from
+    /// <c>PdfDocumentEntity.CoverGenerationAttempts</c>. Managed by the cover jobs
+    /// directly on the entity; carried on the aggregate purely so the repository
+    /// round-trip (<c>UpdateAsync</c> rebuilds + <c>DbSet.Update</c> the whole row)
+    /// does not silently zero it.
+    /// </summary>
+    public int CoverGenerationAttempts { get; private set; }
 
     // Issue #4219: Per-state timing tracking for metrics and ETA
     public DateTime? UploadingStartedAt { get; private set; }
@@ -213,7 +229,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         string? coverR2Key = null,
         string? coverGenerationStatus = null,
         int? coverPageIndex = null,
-        string? coverGenerationError = null)
+        string? coverGenerationError = null,
+        int coverGenerationAttempts = 0)
     {
         var document = new PdfDocument
         {
@@ -287,7 +304,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
                 ? PdfCoverGenerationStatus.Pending
                 : Enum.Parse<PdfCoverGenerationStatus>(coverGenerationStatus, ignoreCase: true),
             CoverPageIndex = coverPageIndex,
-            CoverGenerationError = coverGenerationError
+            CoverGenerationError = coverGenerationError,
+            CoverGenerationAttempts = coverGenerationAttempts
         };
 
         if (tags is { Count: > 0 })
@@ -416,15 +434,20 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
         RetryCount++;
 
-        // Resume from failed state or restart from Extracting
-        var resumeState = FailedAtState ?? PdfProcessingState.Extracting;
-        TransitionTo(resumeState);
+        // Reset to Pending so the pipeline re-claims and re-runs the document from the start.
+        // The pipeline has NO true mid-pipeline resume (ProcessAsync always restarts from Extract),
+        // and only a Pending PDF is claimable by IPdfClaimService.TryClaimPendingAsync. The old
+        // "resume from FailedAtState ?? Extracting" left the document in a non-Pending state that
+        // no runtime rail could claim, so a retry never actually reprocessed (bug-hunt B11, #3269).
+        // Failed → Pending is permitted by ValidateStateTransition (Failed → any recovery state).
+        TransitionTo(PdfProcessingState.Pending);
 
         // Clear error state
         ProcessingError = null;
         ProcessedAt = null;
 
-        // Emit event to trigger pipeline resumption
+        // Emit event to trigger the retry notification. The actual pipeline resumption is driven by
+        // the EnqueuePdfCommand dispatched by RetryPdfProcessingCommandHandler after this returns.
         AddDomainEvent(new PdfRetryInitiatedEvent(Id, RetryCount, UploadedByUserId));
     }
 
@@ -840,6 +863,11 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
     /// Records successful PDF cover extraction and raises <see cref="PdfCoverGeneratedEvent"/>
     /// so SharedGame catalog can propagate the key. Issue #1852 (Gap A).
     /// </summary>
+    /// <param name="coverR2Key">The R2 object key (DB-stored, un-suffixed) of the generated cover.</param>
+    /// <param name="pageIndex">
+    /// Zero-based index of the source PDF page. Callers with a 1-based page number
+    /// must subtract 1 before calling this method.
+    /// </param>
     public void MarkCoverGenerated(string coverR2Key, int pageIndex)
     {
         if (string.IsNullOrWhiteSpace(coverR2Key))

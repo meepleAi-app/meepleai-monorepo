@@ -7,6 +7,17 @@ namespace Api.Infrastructure.Entities;
 
 public class PdfDocumentEntity
 {
+    /// <summary>
+    /// FilePath prefix that marks a demo/dogfood mock placeholder row (no real blob, no
+    /// text_chunks), seeded by <c>SeedBadswormPersonaCommandHandler</c> as
+    /// <c>seed/badsworm/&lt;game&gt;/rulebook.pdf</c>. Real content always lives under
+    /// <c>pdfs/{id}/…</c>. Rows with this prefix are excluded from the RAG readiness signal
+    /// (<c>SeedStateHealthCheck</c>) and from <c>StalePdfRecoveryService</c>, so their deliberate
+    /// non-Ready demo states neither degrade <c>seed_state</c> nor get force-processed into
+    /// <c>Failed</c> on the missing blob. Single source of truth for the marker (#3075).
+    /// </summary>
+    public const string DemoMockFilePathPrefix = "seed/";
+
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid Id { get; set; } = Guid.NewGuid();
     public string FileName { get; set; } = default!;
@@ -21,6 +32,11 @@ public class PdfDocumentEntity
     // PDF-02: Text extraction fields
     public string? ExtractedText { get; set; }
 
+    // Slice D: heading-aware re-index — persisted structured elements (JSON array
+    // of ExtractedElement) captured at extraction time so a later re-index can
+    // rebuild the heading-aware document without re-running the extractor.
+    public string? StructuredElementsJson { get; set; }
+
     // Issue #4215: Granular 7-state tracking
     public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
 
@@ -31,7 +47,7 @@ public class PdfDocumentEntity
 
     // Issue #4216: Retry mechanism tracking
     public int RetryCount { get; set; }
-    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, Unknown
+    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, Unknown
     public string? FailedAtState { get; set; } // PdfProcessingState where failure occurred
 
     // PDF-03: Structured data extraction fields
@@ -98,12 +114,20 @@ public class PdfDocumentEntity
     // Nullable for backwards compat — backfilled to 'v0' on migration.
     public string? IndexerVersion { get; set; }
 
-    // Issue #1802: Optimistic concurrency control via PostgreSQL xmin system column.
-    // Auto-mapped to xmin by Npgsql when configured with .IsRowVersion(). Nullable
-    // to avoid PhotoBatchUpload landmine (migration 20260524190307: NOT NULL caused
-    // InsertCommand double-mapping bug under Npgsql).
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    // Issue #1802: concorrenza ottimistica. #3651: ora sulla colonna di sistema `xmin`, come le
+    // altre entità migrate da #2305.
+    //
+    // Prima era `[Timestamp] byte[]? RowVersion` su una colonna `bytea`. Quel meccanismo funzionava
+    // grazie al trigger `ef_update_row_version()`, che #2305 ha rimosso migrando a xmin — ma questa
+    // entità è rimasta indietro. Senza trigger Postgres non valorizza una `bytea`: il token restava
+    // NULL, non cambiava mai fra un update e l'altro, e nessun conflitto veniva rilevato. Misurato:
+    // `Reindex_RacesWithDelete_FirstWinsSecondGets409` osservava successCount=2 dove il dominio ne
+    // prevede 1 — due operazioni che devono escludersi riuscivano entrambe.
+    //
+    // `uint` e non `byte[]`: xmin è di tipo `xid`. La proprietà non è esposta da alcun DTO (a
+    // differenza di RuleSpec, dove RowVersion diventa un ETag base64 in GameDto), quindi il cambio
+    // di tipo non tocca contratti pubblici.
+    public uint Xmin { get; set; }
 
     // Issue #1687: User-editable display title (distinct from immutable FileName).
     public string? Title { get; set; }
@@ -160,4 +184,23 @@ public class PdfDocumentEntity
 
     // Last error string when CoverGenerationStatus = Failed; for diagnostics + retry.
     public string? CoverGenerationError { get; set; }
+
+    // #3373 D1: bounded-retry counter. Incremented on each TRANSIENT cover-generation
+    // failure (R2/DB infra); at PdfCoverRetryPolicy.MaxAttempts the status becomes terminal
+    // Failed instead of returning to Pending. 0 for never-failed / permanently-failed rows.
+    public int CoverGenerationAttempts { get; set; }
+
+    // Issue #3435 (SP1): timestamp of the last automatic image-region hi_res seed pass.
+    // NULL = never seeded → the SeedImageRegionsBatch selector picks the PDF up exactly once and
+    // avoids re-running the ~200s hi_res pass on every run. This slice has no image-candidacy
+    // pre-filter (router = SP2, deferred), so text-only PDFs also get one pass and are marked even
+    // when 0 regions were found, so they are not re-processed.
+    public DateTime? ImageRegionsSeededAt { get; set; }
+
+    // Issue #3435 (SP1 slice 2): failed hi_res-seed attempts. Incremented on each failure; once it
+    // reaches RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts the selector stops picking the
+    // PDF up (dead-letter), so a persistently-failing document doesn't re-run the ~200s hi_res pass
+    // forever and starve newer PDFs (oldest-first). Reset implicitly by a successful seed (which sets
+    // ImageRegionsSeededAt and removes the PDF from the selector).
+    public int ImageRegionSeedAttempts { get; set; }
 }

@@ -148,7 +148,7 @@ internal static class GameSeeder
     {
         return new SharedGameEntity
         {
-            Id = Guid.NewGuid(),
+            Id = GenerateDeterministicGameId(bgg.BggId, bgg.Name),
             BggId = bgg.BggId,
             Title = bgg.Name,
             YearPublished = bgg.YearPublished ?? DateTime.UtcNow.Year,
@@ -179,7 +179,7 @@ internal static class GameSeeder
     {
         return new SharedGameEntity
         {
-            Id = Guid.NewGuid(),
+            Id = GenerateDeterministicGameId(entry.BggId, entry.Title),
             BggId = entry.BggId is > 0 ? entry.BggId.Value : null,
             Title = entry.Title,
             YearPublished = Math.Clamp(entry.YearPublished ?? 2020, 1901, 2100),
@@ -211,7 +211,7 @@ internal static class GameSeeder
     {
         return new SharedGameEntity
         {
-            Id = Guid.NewGuid(),
+            Id = GenerateDeterministicGameId(entry.BggId, entry.Title),
             BggId = entry.BggId is > 0 ? entry.BggId.Value : null,
             Title = entry.Title,
             YearPublished = 2020,
@@ -232,5 +232,20 @@ internal static class GameSeeder
             CreatedAt = DateTime.UtcNow,
             IsDeleted = false
         };
+    }
+
+    /// <summary>
+    /// Deterministic SharedGame id derived from the game's stable identity (bggId when present,
+    /// otherwise the normalized title). Re-seeding after a DB wipe therefore reuses the same id,
+    /// so PdfSeeder recognizes existing PDFs (no orphans, embeddings preserved) — Issue #2904 / #964.
+    /// SHA-256 of a namespaced key truncated to 16 bytes; NOT for cryptographic use.
+    /// </summary>
+    internal static Guid GenerateDeterministicGameId(int? bggId, string? title)
+    {
+        var key = bggId is > 0
+            ? $"sharedgame:bgg:{bggId.Value}"
+            : $"sharedgame:title:{(title ?? string.Empty).Trim().ToLowerInvariant()}";
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key));
+        return new Guid(hash[..16]);
     }
 }

@@ -4,7 +4,7 @@
  * useSessionLiveStream Hook (Wave D.2, Issue #750)
  *
  * Wraps native EventSource for SSE subscription to
- * GET /api/v1/game-sessions/{sessionId}/stream/v2.
+ * GET /api/v1/live-sessions/{sessionId}/stream.
  *
  * ## Features
  * - Typed event accumulation via useReducer (idempotent dedup by event.id)
@@ -106,7 +106,8 @@ type StreamAction =
   | { type: 'RETRY'; retryCount: number; retryAt: Date }
   | { type: 'DEGRADED_POLLING' }
   | { type: 'FAILED' }
-  | { type: 'RESET' };
+  | { type: 'RESET' }
+  | { type: 'CLEAR' };
 
 const INITIAL_STATE: StreamState = {
   events: [],
@@ -169,6 +170,13 @@ function streamReducer(state: StreamState, action: StreamAction): StreamState {
         lastEventId: state.lastEventId,
       };
 
+    case 'CLEAR':
+      // #3050: full reset (events + seenIds + lastEventId) on a genuine sessionId
+      // change, so a previous session's accumulated events / Last-Event-ID never
+      // bleed into the new session's stream or the shared game-state store. Distinct
+      // from RESET, which deliberately preserves events across same-session reconnects.
+      return { ...INITIAL_STATE, seenIds: new Set<string>() };
+
     default:
       return state;
   }
@@ -203,37 +211,65 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
     }
   }, []);
 
-  const connect = useCallback(() => {
-    if (!isMountedRef.current || !sessionId || !enabled) return;
+  const connect = useCallback(
+    (forceFreshCursor = false) => {
+      if (!isMountedRef.current || !sessionId || !enabled) return;
 
-    cleanup();
-    receivedFirstMessageRef.current = false;
-    dispatch({ type: 'CONNECTING' });
+      cleanup();
+      receivedFirstMessageRef.current = false;
+      dispatch({ type: 'CONNECTING' });
 
-    const lastEventId = state.lastEventId;
-    const url = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2${
-      lastEventId ? `?lastEventId=${encodeURIComponent(lastEventId)}` : ''
-    }`;
+      // #3055: on a genuine session change the reducer CLEAR that nulls lastEventId
+      // has not flushed yet, so state.lastEventId still holds the previous session's
+      // cursor. Force a fresh (cursor-less) connect for the new session; same-session
+      // reconnects (retry timer, manual reconnect) pass no arg and keep replaying.
+      const lastEventId = forceFreshCursor ? null : state.lastEventId;
+      const url = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream${
+        lastEventId ? `?lastEventId=${encodeURIComponent(lastEventId)}` : ''
+      }`;
 
-    let es: EventSource;
-    try {
-      es = new EventSource(url, { withCredentials: true });
-    } catch {
-      // EventSource not supported or CORS error
-      dispatch({ type: 'DEGRADED_POLLING' });
-      return;
-    }
-    eventSourceRef.current = es;
+      let es: EventSource;
+      try {
+        es = new EventSource(url, { withCredentials: true });
+      } catch {
+        // EventSource not supported or CORS error
+        dispatch({ type: 'DEGRADED_POLLING' });
+        return;
+      }
+      eventSourceRef.current = es;
 
-    es.onopen = () => {
-      if (!isMountedRef.current) return;
-      dispatch({ type: 'CONNECTED' });
-      retryCountRef.current = 0;
-    };
+      es.onopen = () => {
+        if (!isMountedRef.current) return;
+        dispatch({ type: 'CONNECTED' });
+        retryCountRef.current = 0;
+      };
 
-    // Listen for each typed event by name
-    const handleTypedEvent = (eventType: SessionEventType) => {
-      es.addEventListener(eventType, (e: MessageEvent) => {
+      // Listen for each typed event by name
+      const handleTypedEvent = (eventType: SessionEventType) => {
+        es.addEventListener(eventType, (e: MessageEvent) => {
+          if (!isMountedRef.current) return;
+
+          if (!receivedFirstMessageRef.current) {
+            receivedFirstMessageRef.current = true;
+            dispatch({ type: 'CONNECTED' });
+            retryCountRef.current = 0;
+          }
+
+          // sessionId comes from the URL, not the SSE envelope; e.lastEventId is the dedup key
+          const sseId = e.lastEventId || '';
+          const event = parseSseEvent(eventType, e.data, sessionId ?? '');
+          if (event) {
+            dispatch({ type: 'EVENT', event, sseId });
+          }
+        });
+      };
+
+      for (const eventType of SESSION_EVENT_TYPES) {
+        handleTypedEvent(eventType);
+      }
+
+      // Fallback: handle unnamed messages (onmessage) for servers sending default event type
+      es.onmessage = (e: MessageEvent) => {
         if (!isMountedRef.current) return;
 
         if (!receivedFirstMessageRef.current) {
@@ -242,81 +278,64 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
           retryCountRef.current = 0;
         }
 
-        // sessionId comes from the URL, not the SSE envelope; e.lastEventId is the dedup key
-        const sseId = e.lastEventId || '';
-        const event = parseSseEvent(eventType, e.data, sessionId ?? '');
-        if (event) {
-          dispatch({ type: 'EVENT', event, sseId });
+        // Try to parse as heartbeat or typed via type field in data
+        try {
+          const parsed = JSON.parse(e.data) as Record<string, unknown>;
+          const type = typeof parsed['type'] === 'string' ? parsed['type'] : 'heartbeat';
+          const sseId = e.lastEventId || '';
+          const event = parseSseEvent(type, e.data, sessionId ?? '');
+          if (event) {
+            dispatch({ type: 'EVENT', event, sseId });
+          }
+        } catch {
+          // Ignore malformed messages
         }
-      });
-    };
+      };
 
-    for (const eventType of SESSION_EVENT_TYPES) {
-      handleTypedEvent(eventType);
-    }
+      es.onerror = () => {
+        if (!isMountedRef.current) return;
 
-    // Fallback: handle unnamed messages (onmessage) for servers sending default event type
-    es.onmessage = (e: MessageEvent) => {
-      if (!isMountedRef.current) return;
+        // 429 heuristic: immediate CLOSED state with no messages received
+        const isImmediateClosed =
+          !receivedFirstMessageRef.current && es.readyState === EventSource.CLOSED;
 
-      if (!receivedFirstMessageRef.current) {
-        receivedFirstMessageRef.current = true;
-        dispatch({ type: 'CONNECTED' });
-        retryCountRef.current = 0;
-      }
+        cleanup();
 
-      // Try to parse as heartbeat or typed via type field in data
-      try {
-        const parsed = JSON.parse(e.data) as Record<string, unknown>;
-        const type = typeof parsed['type'] === 'string' ? parsed['type'] : 'heartbeat';
-        const sseId = e.lastEventId || '';
-        const event = parseSseEvent(type, e.data, sessionId ?? '');
-        if (event) {
-          dispatch({ type: 'EVENT', event, sseId });
+        if (isImmediateClosed && retryCountRef.current === 0) {
+          // Treat as 429 — backend closed before any data
+          dispatch({ type: 'FAILED' });
+          return;
         }
-      } catch {
-        // Ignore malformed messages
-      }
-    };
 
-    es.onerror = () => {
-      if (!isMountedRef.current) return;
+        const nextRetryCount = retryCountRef.current + 1;
 
-      // 429 heuristic: immediate CLOSED state with no messages received
-      const isImmediateClosed =
-        !receivedFirstMessageRef.current && es.readyState === EventSource.CLOSED;
-
-      cleanup();
-
-      if (isImmediateClosed && retryCountRef.current === 0) {
-        // Treat as 429 — backend closed before any data
-        dispatch({ type: 'FAILED' });
-        return;
-      }
-
-      const nextRetryCount = retryCountRef.current + 1;
-
-      if (nextRetryCount > MAX_RETRIES) {
-        dispatch({ type: 'DEGRADED_POLLING' });
-        return;
-      }
-
-      retryCountRef.current = nextRetryCount;
-      const delayMs = RETRY_BUDGET_MS[nextRetryCount - 1] ?? RETRY_BUDGET_MS[MAX_RETRIES - 1];
-      const retryAt = new Date(Date.now() + delayMs);
-
-      dispatch({ type: 'RETRY', retryCount: nextRetryCount, retryAt });
-
-      retryTimerRef.current = setTimeout(() => {
-        if (isMountedRef.current) {
-          connectRef.current();
+        if (nextRetryCount > MAX_RETRIES) {
+          dispatch({ type: 'DEGRADED_POLLING' });
+          return;
         }
-      }, delayMs);
-    };
-  }, [sessionId, enabled, baseUrl, cleanup, state.lastEventId]);
+
+        retryCountRef.current = nextRetryCount;
+        const delayMs = RETRY_BUDGET_MS[nextRetryCount - 1] ?? RETRY_BUDGET_MS[MAX_RETRIES - 1];
+        const retryAt = new Date(Date.now() + delayMs);
+
+        dispatch({ type: 'RETRY', retryCount: nextRetryCount, retryAt });
+
+        retryTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current) {
+            connectRef.current();
+          }
+        }, delayMs);
+      };
+    },
+    [sessionId, enabled, baseUrl, cleanup, state.lastEventId]
+  );
 
   // Keep connectRef stable for retry timer closures
   connectRef.current = connect;
+
+  // #3050: track the sessionId across renders to detect a genuine session change
+  // (vs. a same-session reconnect) so the accumulator can be fully cleared.
+  const prevSessionIdRef = useRef<string | null>(sessionId);
 
   // Manual reconnect — resets retry state
   const reconnect = useCallback(() => {
@@ -330,8 +349,20 @@ export function useSessionLiveStream(input: UseSessionLiveStreamInput): UseSessi
   useEffect(() => {
     isMountedRef.current = true;
 
+    // #3050: on a genuine sessionId change, clear the previous session's accumulated
+    // events/seenIds/lastEventId so they cannot bleed into this session (App Router
+    // reuses the /sessions/[id]/live component across navigations — no remount).
+    const sessionChanged = prevSessionIdRef.current !== sessionId;
+    if (sessionChanged) {
+      prevSessionIdRef.current = sessionId;
+      retryCountRef.current = 0;
+      receivedFirstMessageRef.current = false;
+      dispatch({ type: 'CLEAR' });
+    }
+
     if (sessionId && enabled) {
-      connect();
+      // #3055: pass the change flag so B's first connect omits A's stale cursor.
+      connect(sessionChanged);
     } else {
       cleanup();
     }

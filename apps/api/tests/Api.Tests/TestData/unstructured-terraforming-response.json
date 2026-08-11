@@ -1,0 +1,25 @@
+{
+  "_note": "Trimmed regression fixture (ADR-059 de-risk of verbatim third-party content). The original 217KB capture was a full extraction of the Terraforming Mars rulebook (82 Title / 307 total elements) via the real unstructured-service; that finding is documented in .superpowers/sdd/task-5-report.md and is NOT reproduced here. This trimmed fixture keeps only the 6 real, verbatim-captured key-section Title texts + page numbers (generic section names, low copyright sensitivity) needed by ExtractedDocumentFactoryDeriskTests, each paired with a short SYNTHETIC placeholder body (not copied from the real rulebook) so the extractor->factory grouping path still has content to exercise.",
+  "text": "Section body placeholder for the de-risk regression fixture.",
+  "chunks": [],
+  "elements": [
+    { "text": "CONTESTO", "page_number": 2, "category": "Title" },
+    { "text": "Section body placeholder for the de-risk regression fixture.", "page_number": 2, "category": "NarrativeText" },
+    { "text": "PARAMETRI GLOBALI", "page_number": 3, "category": "Title" },
+    { "text": "Section body placeholder for the de-risk regression fixture.", "page_number": 3, "category": "NarrativeText" },
+    { "text": "GENERAZIONI", "page_number": 8, "category": "Title" },
+    { "text": "Section body placeholder for the de-risk regression fixture.", "page_number": 8, "category": "NarrativeText" },
+    { "text": "AZIONI", "page_number": 9, "category": "Title" },
+    { "text": "Section body placeholder for the de-risk regression fixture.", "page_number": 9, "category": "NarrativeText" },
+    { "text": "FINE DEL GIOCO", "page_number": 12, "category": "Title" },
+    { "text": "Section body placeholder for the de-risk regression fixture.", "page_number": 12, "category": "NarrativeText" },
+    { "text": "VARIANTI", "page_number": 13, "category": "Title" },
+    { "text": "Section body placeholder for the de-risk regression fixture.", "page_number": 13, "category": "NarrativeText" }
+  ],
+  "quality_score": 0.85,
+  "page_count": 13,
+  "metadata": {
+    "strategy_used": "fast",
+    "language": "ita"
+  }
+}

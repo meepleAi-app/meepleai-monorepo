@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Administration.Application.Queries.Gamebook;
 using Api.BoundedContexts.Administration.Application.Queries.Usage;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
@@ -49,6 +50,28 @@ internal static class UserUsageEndpoints
 - Session save enabled flag
 - Catalog proposals this week vs. max")
         .Produces<UsageSnapshot>(200)
+        .Produces(401);
+
+        // #2750 (C14): monthly gamebook paragraph-translation quota (display-only).
+        group.MapGet("/users/me/quota", async (
+            HttpContext context,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var userId = session!.Principal!.Subject.Id;
+
+            var query = new GetGamebookQuotaQuery(userId);
+            var quota = await mediator.Send(query, ct).ConfigureAwait(false);
+
+            return Results.Ok(quota);
+        })
+        .RequireSession()
+        .RequireAuthorization()
+        .WithName("GetMyGamebookQuota")
+        .WithTags("User", "Gamebook", "Quota")
+        .WithSummary("Get monthly gamebook paragraph-translation quota for authenticated user")
+        .Produces<GamebookQuotaDto>(200)
         .Produces(401);
 
         return group;

@@ -18,6 +18,15 @@ row binds a mockup definition to a target component path, route, and acceptance 
 so that downstream PRs can pick up an entry and turn it from `pending` → `done` without
 ambiguity. Each route is also classified by **Tier** (S/M/L) to gate dispatch strategy.
 
+> **🔗 Automated sync (2026-07-16, #2998)**: consistency between this matrix and the
+> codebase is no longer maintained purely by hand. The **State Matrix Sync + Enforcement**
+> CI gate (`.github/workflows/state-matrix-sync.yml`, driven by `scripts/v2_audit/run.py --check`)
+> runs on PRs that touch this matrix, `apps/web/src/components/**`, `admin-mockups/design_files/**`,
+> or `scripts/v2_audit/**`, and reports every `done` row whose component/mockup path no longer
+> exists as a **non-blocking** `::warning::` annotation + a step summary. It never blocks merge
+> (registered `severity: warning` in `.github/release-gates.yml`); reconcile flagged rows
+> fix-forward. Run it locally with `python -m scripts.v2_audit.run --check`.
+
 > **Updated 2026-04-30** (Wave B.2 spec-panel review): count refined 46 → 45.
 > `AgentsSidebarList` + `AgentDetailPanel` removed from `/agents` row set (mockup
 > `sp4-agents-index.jsx` is grid-pattern only, not master-detail). `AgentsResultsGrid`
@@ -703,7 +712,7 @@ instead.
 | `/discover` | `sp4-discover.html` | Tier L, pending |
 | `/profile` · `/profile/achievements` | `sp4-player-detail.html` ↻ + `sp5-profile-settings.html` [partial] | `/profile?tab=settings` coperto da sp5; self-view + achievements via sp4-player-detail reuse |
 | `/settings` (+ `/ai-consent`, `/api-keys`, `/notifications`, `/preferences`, `/profile`, `/security`, `/services`) | `settings.html` | Shell unica per 7 sub-route |
-| `/notifications` · `/notifications/preferences` | `notifications.html` | — |
+| `/notifications` · `/notifications/preferences` | `sp7-notifications-hub.html` · `sp7-notifications-preferences.html` | SP7 v2 (#2028); `notifications.html` SP1 legacy archive |
 | `/versions` | — | gap (changelog) |
 
 ### Authenticated — Library

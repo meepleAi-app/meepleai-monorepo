@@ -8,7 +8,7 @@
  * - Save strokes (debounced 500ms)
  * - Save structured layer (tokens, grid settings) – debounced 500ms
  * - Clear the whiteboard
- * - Real-time sync via v2 SSE stream (session:toolkit events)
+ * - Real-time sync via native SSE stream (session:whiteboard events)
  * - Exposes applySSEEvent for manual SSE integration
  *
  * Backend endpoints (wired when BE is available):
@@ -224,10 +224,30 @@ export function useWhiteboardTool({
     });
   }, []);
 
-  // ── SSE v2 listener ──────────────────────────────────────────────────────────
+  // ── SSE listener — native live-session stream ─────────────────────────────────
+  // Consumes `session:whiteboard` events from the native /api/v1/live-sessions stream.
+  //
+  // WHY re-fetch instead of delta-apply:
+  // The backend emits per-event payloads with opaque fields (`dataJson` / `structuredJson`
+  // as raw JSON strings) and per-stroke granularity, while the FE save-path is bulk
+  // (POST /strokes with the full strokes array). There is no reliable field mapping between
+  // the BE event shape and the FE WhiteboardSSEEvent shape — attempting delta-parse would
+  // silently drop all events (the `type` discriminator field does NOT exist on BE payloads).
+  // Re-fetching the authoritative GET /whiteboard state is correct for all four sub-types
+  // (StrokeAdded / StrokeRemoved / StructuredUpdated / WhiteboardCleared) and is
+  // shape-agnostic. Known MVP limitation: a remote event arriving during a local
+  // unsaved-stroke window may momentarily reload server state, discarding in-flight
+  // local strokes until the next local save completes.
+
+  // Hold loadWhiteboard in a ref so the SSE effect doesn't need it in deps
+  // (which would reopen the EventSource on every state change).
+  const loadWhiteboardRef = useRef(loadWhiteboard);
+  useEffect(() => {
+    loadWhiteboardRef.current = loadWhiteboard;
+  }, [loadWhiteboard]);
 
   useEffect(() => {
-    const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream/v2`;
+    const endpoint = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream`;
 
     let source: EventSource | null = null;
     try {
@@ -236,22 +256,24 @@ export function useWhiteboardTool({
       return;
     }
 
-    const handleToolkitEvent = (event: MessageEvent<string>) => {
-      try {
-        const payload = JSON.parse(event.data) as Record<string, unknown>;
-        if (typeof payload['type'] === 'string') {
-          applySSEEvent(payload as unknown as WhiteboardSSEEvent);
-        }
-      } catch {
-        // Silently ignore malformed events
-      }
+    // Debounce timer for coalescing rapid stroke-burst events into a single refetch.
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleWhiteboardEvent = (_event: MessageEvent<string>) => {
+      // The SSE event is a pure signal — we do NOT parse the payload for delta fields.
+      // Schedule a debounced re-fetch of the canonical whiteboard state.
+      if (refetchTimer !== null) clearTimeout(refetchTimer);
+      refetchTimer = setTimeout(() => {
+        void loadWhiteboardRef.current();
+      }, 200);
     };
 
-    source.addEventListener('session:toolkit', handleToolkitEvent);
+    source.addEventListener('session:whiteboard', handleWhiteboardEvent);
     return () => {
       source?.close();
+      if (refetchTimer !== null) clearTimeout(refetchTimer);
     };
-  }, [sessionId, baseUrl, applySSEEvent]);
+  }, [sessionId, baseUrl]);
 
   // ── Load on mount ────────────────────────────────────────────────────────────
 

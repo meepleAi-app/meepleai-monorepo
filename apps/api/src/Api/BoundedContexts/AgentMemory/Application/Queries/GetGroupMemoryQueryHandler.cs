@@ -26,7 +26,14 @@ internal sealed class GetGroupMemoryQueryHandler : IQueryHandler<GetGroupMemoryQ
             .GetByIdAsync(query.GroupId, cancellationToken)
             .ConfigureAwait(false);
 
-        return group != null ? MapToDto(group) : null;
+        // #2655 IDOR guard: only the creator or a member may read the group.
+        // Returning null for non-members also hides the group's existence (404).
+        if (group is null || !group.IsMemberOrCreator(query.RequesterId))
+        {
+            return null;
+        }
+
+        return MapToDto(group);
     }
 
     private static GroupMemoryDto MapToDto(GroupMemory group) => new(

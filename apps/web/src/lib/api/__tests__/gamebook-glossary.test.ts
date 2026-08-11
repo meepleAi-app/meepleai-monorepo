@@ -36,6 +36,35 @@ describe('GamebookGlossaryEntrySchema', () => {
   it('rejects unknown source', () => {
     expect(() => GamebookGlossaryEntrySchema.parse({ ...validEntry, source: 'Unknown' })).toThrow();
   });
+
+  // #2638 / SI-7 — contexts uses .default([]) so legacy payloads still parse.
+  it('defaults contexts to [] when the field is absent', () => {
+    const result = GamebookGlossaryEntrySchema.parse(validEntry);
+    expect(result.contexts).toEqual([]);
+  });
+
+  it('parses an entry WITH a populated contexts array', () => {
+    const result = GamebookGlossaryEntrySchema.parse({
+      ...validEntry,
+      contexts: [
+        { bookId: '11111111-1111-4111-8111-111111111111', paragraphRef: '§147', definition: null },
+        { bookId: '22222222-2222-4222-8222-222222222222', paragraphRef: null, definition: 'def' },
+      ],
+    });
+    expect(result.contexts).toHaveLength(2);
+    expect(result.contexts[0].bookId).toBe('11111111-1111-4111-8111-111111111111');
+    expect(result.contexts[0].paragraphRef).toBe('§147');
+    expect(result.contexts[1].definition).toBe('def');
+  });
+
+  it('rejects a context with a non-uuid bookId', () => {
+    expect(() =>
+      GamebookGlossaryEntrySchema.parse({
+        ...validEntry,
+        contexts: [{ bookId: 'not-a-uuid', paragraphRef: null, definition: null }],
+      })
+    ).toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------

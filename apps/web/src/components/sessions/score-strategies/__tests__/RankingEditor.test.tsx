@@ -10,7 +10,7 @@
  * Asse D follow-up P1 (#1899) T3.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { RankingEditor } from '../RankingEditor';
@@ -107,5 +107,57 @@ describe('RankingEditor', () => {
     );
     expect(screen.getByTestId('ranking-item-p1')).toBeInTheDocument();
     expect(screen.queryByTestId('ranking-item-p2')).not.toBeInTheDocument();
+  });
+
+  // #3196: mobile touch-targets — enlarged handle + touch-friendly up/down reorder.
+  it('enlarges the drag handle to a 44px touch target', () => {
+    render(<RankingEditor players={PLAYERS} onChange={vi.fn()} />);
+    const handle = screen.getByTestId('ranking-handle-p1');
+    expect(handle).toHaveClass('min-h-[44px]');
+    expect(handle).toHaveClass('min-w-[44px]');
+  });
+
+  it('reorders via the mobile up arrow', () => {
+    const onChange = vi.fn();
+    render(<RankingEditor players={PLAYERS} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId('ranking-up-p2'));
+    expect(onChange).toHaveBeenLastCalledWith({
+      positions: [
+        { playerId: 'p2', position: 1 },
+        { playerId: 'p1', position: 2 },
+        { playerId: 'p3', position: 3 },
+      ],
+    });
+  });
+
+  it('reorders via the mobile down arrow', () => {
+    const onChange = vi.fn();
+    render(<RankingEditor players={PLAYERS} onChange={onChange} />);
+    fireEvent.click(screen.getByTestId('ranking-down-p1'));
+    expect(onChange).toHaveBeenLastCalledWith({
+      positions: [
+        { playerId: 'p2', position: 1 },
+        { playerId: 'p1', position: 2 },
+        { playerId: 'p3', position: 3 },
+      ],
+    });
+  });
+
+  it('disables up on the first item and down on the last', () => {
+    render(<RankingEditor players={PLAYERS} onChange={vi.fn()} />);
+    expect(screen.getByTestId('ranking-up-p1')).toBeDisabled();
+    expect(screen.getByTestId('ranking-down-p3')).toBeDisabled();
+  });
+
+  it('disables reorder arrows when the disabled prop is set', () => {
+    render(<RankingEditor players={PLAYERS} onChange={vi.fn()} disabled />);
+    expect(screen.getByTestId('ranking-up-p2')).toBeDisabled();
+    expect(screen.getByTestId('ranking-down-p2')).toBeDisabled();
+  });
+
+  it('hides the reorder arrows on desktop (md:hidden wrapper)', () => {
+    render(<RankingEditor players={PLAYERS} onChange={vi.fn()} />);
+    // The md:hidden lives on the wrapper div, not the buttons.
+    expect(screen.getByTestId('ranking-up-p2').closest('div')).toHaveClass('md:hidden');
   });
 });

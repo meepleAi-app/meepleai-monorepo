@@ -55,7 +55,7 @@ export function CitationPill({
       onClick={() => onClick?.(chunkId ? { docId, page, chunkId } : { docId, page })}
       className={cn(
         'inline-flex items-center gap-1 px-1.5 py-0 rounded-full align-baseline',
-        'border border-entity-kb/25 bg-entity-kb/10 text-entity-kb',
+        'border border-entity-kb/25 bg-entity-kb/10 text-entity-kb-text',
         'font-mono text-[10px] font-bold cursor-pointer',
         'focus:outline-none focus:ring-2 focus:ring-entity-kb/40 focus:ring-offset-1',
         'transition-colors duration-150 hover:bg-entity-kb/20',

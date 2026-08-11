@@ -14,7 +14,6 @@ Workflows are organized by category with consistent naming prefixes:
 ├── # Testing (test- prefix)
 ├── test-e2e.yml              # Full E2E suite (6-shard parallel)
 ├── test-performance.yml      # K6 + Lighthouse performance
-├── test-visual.yml           # Playwright + Chromatic visual
 │
 ├── # Security (security- prefix)
 ├── security-scan.yml         # CodeQL + dependency scan + secrets
@@ -61,11 +60,6 @@ Workflows are organized by category with consistent naming prefixes:
 - **Jobs**: K6 load tests, Lighthouse CI
 - **Features**: Smoke/load/stress test types, Core Web Vitals, failure notifications
 
-### test-visual.yml - Visual Regression
-- **Triggers**: Push/PR with web changes
-- **Jobs**: Playwright snapshots, Chromatic Storybook review
-- **Features**: Visual diff detection, PR comments with review links
-
 ## Security Workflows
 
 ### security-scan.yml - Security Scanning
@@ -109,7 +103,6 @@ Workflows are organized by category with consistent naming prefixes:
 | ci.yml (E2E) | 3-5 min | Critical paths only |
 | test-e2e.yml | 10-15 min | Full 6-shard suite |
 | test-performance.yml | 15-20 min | K6 + Lighthouse |
-| test-visual.yml | 5-10 min | Playwright + Chromatic |
 | security-scan.yml | 8-12 min | Full security suite |
 
 ## Configuration
@@ -153,52 +146,42 @@ PRs targeting `main-staging` receive an automated comment showing:
 
 ## Self-Hosted ARM64 Runner
 
-Workflows use a tiered runner selection strategy to balance cost and concurrency:
+> **⚠️ Reality note (2026-07-28, #3331)** — this section had drifted from the
+> deployed setup:
+> - `ci.yml` runs **entirely on GitHub-hosted `ubuntu-latest`** — its
+>   `select-runner` step hardcodes cloud (`ci.yml:74`). **CI does not use the
+>   self-hosted runner.**
+> - The self-hosted runner is **co-located on the Hetzner staging VPS
+>   (~8GB ARM64)**, sharing the box with the app containers — **not** a dedicated
+>   24GB Oracle VM. Today it runs only the deploy-staging orchestration (SSH),
+>   rollback, e2e, and ops one-offs.
+> - The co-location is being unwound (a build OOM already broke a deploy). See
+>   [ADR-044 § Update 2026-07-28](../../docs/for-claude/architecture/adr/adr-044-self-hosted-arm64-runner.md)
+>   and the #3331 spec. **Do not add build-heavy steps to the self-hosted runner.**
 
-| Branch target | Runner | Rationale |
-|--------------|--------|-----------|
-| `main-dev` | `ubuntu-latest` | High PR concurrency, no queue |
-| `main-staging`, `main` | Self-hosted (ARM64) | Low frequency, saves GH Actions minutes |
-| Deploy workflows | Self-hosted (ARM64) | Always staging/prod, free compute |
-
-**CI (`ci.yml`)** uses dynamic selection via the `changes` job output:
+Workflows that still use the self-hosted runner select it via the static toggle:
 ```yaml
-# In changes job:
-runner: ${{ steps.select-runner.outputs.runner }}
-
-# In downstream jobs:
-runs-on: ${{ needs.changes.outputs.runner }}
+runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
 ```
+- **`vars.RUNNER` set** → self-hosted (co-located staging VPS, label `self-hosted,linux,ARM64`)
+- **`vars.RUNNER` unset** → GitHub-hosted `ubuntu-latest`
 
-**Other workflows** use the static toggle pattern:
-```yaml
-runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
-```
+**Architecture Decision**: [ADR-044](../../docs/for-claude/architecture/adr/adr-044-self-hosted-arm64-runner.md) — read the **2026-07-28 Update** for the current (drift-corrected) reality.
 
-**Architecture Decision**: [ADR-044](../../docs/architecture/adr/adr-044-self-hosted-arm64-runner.md)
-
-### Runner Specs
+### Runner Specs (actual, 2026-07-28)
 
 | Resource | Value |
 |----------|-------|
-| Provider | Oracle Cloud Free Tier |
-| CPU | Ampere A1, 4 OCPUs (ARM64) |
-| Memory | 24 GB |
-| Disk | 200 GB |
-| Max concurrent jobs | 2 (recommended) |
+| Host | Hetzner staging VPS (~8GB ARM64), **co-located with app containers** |
+| Runner dir | `/home/deploy/actions-runner` (user `deploy`) |
+| Memory | `MemoryMax=3G` cgroup cap (systemd override, #2019) |
+| Jobs | deploy-staging orchestration, rollback, e2e, ops one-offs (**not** `ci.yml`) |
 
 ### ARM64 Exclusions
 
 | Workflow | Job | Reason |
 |----------|-----|--------|
 | `security-scan.yml` | `codeql` | CodeQL CLI has no linux/arm64 binary |
-
-### Operational Workflows
-
-| Workflow | Schedule | Purpose |
-|----------|----------|---------|
-| `runner-health-check.yml` | Every 15 min | Docker, disk, memory monitoring |
-| `runner-maintenance.yml` | Weekly Sun 3 AM | Docker prune, temp cleanup, disk alerts |
 
 ### Rollback Procedure
 
@@ -216,17 +199,6 @@ runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
 **Per-job rollback** (single job within a workflow):
 1. Override only the specific job's `runs-on` to `ubuntu-latest`
 2. Other jobs in the same workflow continue using the self-hosted runner
-
-### Visual Test Baselines
-
-When switching runner architecture (x86 ↔ ARM64), Playwright visual test baselines must be regenerated:
-
-```bash
-cd apps/web
-pnpm test:e2e:visual --update-snapshots --project=desktop-chrome
-```
-
-Font rendering differs between architectures, causing false-positive visual diffs.
 
 ### Performance Notes
 
@@ -257,10 +229,15 @@ act -W .github/workflows/ci.yml --dryrun
 3. Verify secrets are configured
 
 ### Runner Issues
-1. Check runner status: GitHub → Settings → Actions → Runners
-2. Check health: Review latest `runner-health-check.yml` run
-3. Check disk: Review latest `runner-maintenance.yml` run or trigger manually
-4. Full rollback: Clear `vars.RUNNER` variable (see Rollback Procedure above)
+> The self-hosted runner is being retired (Option E, #3331): `vars.RUNNER` has been
+> cleared and all workflows run on GitHub-hosted. The `runner-health-check` /
+> `runner-maintenance` / `monitor-runner-queue` workflows were removed. To
+> re-introduce a self-hosted runner (Option D fallback), provision it from
+> `infra/runner/cloud-init.yml` + `setup-vm.sh` + `setup-runner.sh` and re-add the
+> `RUNNER` repo variable.
+
+1. Check runner status (if any registered): GitHub → Settings → Actions → Runners
+2. Full rollback to self-hosted: re-create the `RUNNER` variable (see Rollback Procedure above)
 
 ### Performance Issues
 1. Check K6/Lighthouse reports in artifacts

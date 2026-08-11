@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
+import type { TurnOrderType } from '@/lib/session-live/turn-state';
 
 export interface PlayerInfo {
   id: string;
@@ -59,6 +60,18 @@ interface LiveSessionState {
   scoringType: ScoreType | null;
   scoreData: ScoreDataByType[ScoreType] | null;
   /**
+   * #3025 L1: opaque live game-state (game-agnostic JSON). Hydrated from the REST DTO
+   * (`gameState`) + kept live by the `session:game-state` SSE event. Per-game typing is L2.
+   */
+  gameState: unknown | null;
+  /**
+   * Turn order type for the session — populated from the REST DTO on initial load.
+   * Static for the session lifecycle (path B, no SignalR event).
+   * Null until the DTO is loaded (or if the session has no toolkit wired).
+   * Issue #2483 Task 2.
+   */
+  turnOrderType: TurnOrderType | null;
+  /**
    * Rate-limit deadline (Unix timestamp in ms). `null` when not rate-limited.
    * Set by `ScoreTabContent` on 429 response (Date.now() + 30000).
    * Persists across tab change (ScoreTabContent unmount/remount) so the
@@ -79,10 +92,20 @@ interface LiveSessionState {
     scoringType: T;
     scoreData: ScoreDataByType[T];
   }) => void;
+  /** #3025 L1: set the opaque live game-state (hydrate from DTO or a SSE update). */
+  setGameState: (next: unknown | null) => void;
+  /** Sets the turn order type from the REST DTO. Issue #2483 Task 2. */
+  setTurnOrderType: (type: TurnOrderType | null) => void;
   setRateLimitedUntil: (ts: number | null) => void;
   addProposal: (proposal: ScoreProposal) => void;
   resolveProposal: (proposalId: string, accepted: boolean) => void;
   addDispute: (dispute: RuleDispute) => void;
+  /**
+   * #3391 (finding C8): bulk-hydrate the dispute list from the REST snapshot on reload.
+   * Replaces (not appends) so the authoritative server history supersedes SignalR-appended
+   * entries when the Arbitro tab remounts. `addDispute` remains the live SignalR append path.
+   */
+  setDisputes: (disputes: RuleDispute[]) => void;
   setConnected: (connected: boolean) => void;
   setOffline: (offline: boolean) => void;
   reset: () => void;
@@ -92,10 +115,13 @@ const initialState: Omit<
   LiveSessionState,
   | 'setSession'
   | 'setScoringConfig'
+  | 'setGameState'
+  | 'setTurnOrderType'
   | 'setRateLimitedUntil'
   | 'addProposal'
   | 'resolveProposal'
   | 'addDispute'
+  | 'setDisputes'
   | 'setConnected'
   | 'setOffline'
   | 'reset'
@@ -108,6 +134,8 @@ const initialState: Omit<
   players: [],
   scoringType: null,
   scoreData: null,
+  gameState: null,
+  turnOrderType: null,
   rateLimitedUntil: null,
   pendingProposals: [],
   disputes: [],
@@ -125,6 +153,10 @@ export const useLiveSessionStore = create<LiveSessionState>()(
 
       setScoringConfig: ({ scoringType, scoreData }) =>
         set({ scoringType, scoreData }, false, 'setScoringConfig'),
+
+      setGameState: next => set({ gameState: next }, false, 'setGameState'),
+
+      setTurnOrderType: type => set({ turnOrderType: type }, false, 'setTurnOrderType'),
 
       setRateLimitedUntil: ts => set({ rateLimitedUntil: ts }, false, 'setRateLimitedUntil'),
 
@@ -164,6 +196,8 @@ export const useLiveSessionStore = create<LiveSessionState>()(
           false,
           'addDispute'
         ),
+
+      setDisputes: disputes => set({ disputes: [...disputes] }, false, 'setDisputes'),
 
       setConnected: connected => set({ isConnected: connected }, false, 'setConnected'),
 

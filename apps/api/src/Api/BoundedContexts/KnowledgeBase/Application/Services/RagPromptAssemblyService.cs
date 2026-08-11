@@ -4,6 +4,7 @@ using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -25,6 +26,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 {
     private readonly IEmbeddingService _embeddingService;
+    private readonly IEmbeddingRepository _embeddingRepository;
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILlmService _llmService;
     private readonly ITextChunkSearchService _textSearch;
@@ -63,6 +65,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
     public RagPromptAssemblyService(
         IEmbeddingService embeddingService,
+        IEmbeddingRepository embeddingRepository,
         ICrossEncoderReranker reranker,
         ILlmService llmService,
         ITextChunkSearchService textSearch,
@@ -75,6 +78,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         ILogger<RagPromptAssemblyService> logger)
     {
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
+        _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _textSearch = textSearch ?? throw new ArgumentNullException(nameof(textSearch));
@@ -98,7 +102,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         string agentLanguage,
         CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null,
-        RetrievalProfile? profileOverride = null)
+        RetrievalProfile? profileOverride = null,
+        RetrievalPolicy? retrievalPolicy = null)
     {
         ArgumentNullException.ThrowIfNull(agentTypology);
         ArgumentNullException.ThrowIfNull(gameTitle);
@@ -111,7 +116,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         var hasExpansions = expansionGameIds.Count > 0;
 
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride).ConfigureAwait(false);
+        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride, retrievalPolicy).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
@@ -161,17 +166,31 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
         string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null,
-        RetrievalProfile? profileOverride = null)
+        RetrievalProfile? profileOverride = null,
+        RetrievalPolicy? retrievalPolicy = null)
     {
         var citations = new List<ChunkCitation>();
 
         try
         {
             // === ADAPTIVE RAG ===
-            var profile = RetrievalProfile.Default;
+            // #3389: an explicit RetrievalPolicy decouples the base profile AND the enhancement gating
+            // from the user tier. A null policy preserves legacy behaviour (Default profile, enhancements
+            // gated only by tier presence). The in-session live path passes RetrievalPolicy.LiveSession so
+            // a null tier no longer silently means "Default profile + all enhancements off": the profile is
+            // an explicit named choice and enhancements are explicitly gated off (wiring deferred to #3390).
+            var profile = retrievalPolicy?.BaseProfile ?? RetrievalProfile.Default;
             var activeEnhancements = RagEnhancement.None;
-            if (userTier != null)
+            if (retrievalPolicy?.EnabledEnhancements is { } explicitEnhancements)
             {
+                // #3390 Slice 4 (D1): explicit, tier-independent enhancement set. Used directly — the live
+                // path resolves enhancements from the global rag.enhancement.* flags at the boundary, not
+                // from the user's tier (grounding is a correctness property, not a tier perk).
+                activeEnhancements = explicitEnhancements;
+            }
+            else if ((retrievalPolicy?.EnhancementsEnabled ?? true) && userTier != null)
+            {
+                // Legacy: enhancements gated by tier presence (classic QA paths, admin debug).
                 activeEnhancements = await _ragEnhancementService
                     .GetActiveEnhancementsAsync(userTier, ct).ConfigureAwait(false);
             }
@@ -246,9 +265,14 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 queries = await ExpandQueryAsync(userQuestion, ct).ConfigureAwait(false);
             }
 
-            // Step 2: Generate embeddings for all queries
+            // Step 2: Generate query embeddings and run pgvector semantic search.
+            // Issue #2705: this branch was dropped in commit 5d00be387 (#504), which left the
+            // retrieval FTS-only. FTS-only RRF scores are capped at NormalizeRrfScore(1/61) ≈ 0.49,
+            // below the 0.55 MinScore, so filteredChunks was ALWAYS empty and the agent answered
+            // "non sono certo" regardless of the question. Restoring the semantic branch feeds real
+            // cosine similarities (multilingual-e5, cross-lingual) into the fusion via Math.Max, so
+            // relevant chunks clear MinScore again.
             var allChunks = new List<SearchResultItem>();
-            // Embeddings are still generated for potential future use.
             foreach (var query in queries)
             {
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct).ConfigureAwait(false);
@@ -259,10 +283,39 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         _logger.LogWarning("Embedding generation failed for primary query: {Error}", embeddingResult.ErrorMessage);
                         return (string.Empty, citations);
                     }
+
+                    continue;
+                }
+
+                var queryVector = new Vector(embeddingResult.Embeddings[0]);
+                var scoredEmbeddings = await _embeddingRepository
+                    .SearchByVectorWithScoresAsync(gameId, queryVector, profile.TopK, profile.MinScore, documentIds: null, ct)
+                    .ConfigureAwait(false);
+
+                foreach (var scored in scoredEmbeddings)
+                {
+                    allChunks.Add(new SearchResultItem
+                    {
+                        Score = (float)scored.Score,
+                        Text = scored.Embedding.TextContent,
+                        // #3390 Slice-4 follow-up: cite the owning PDF document id (pdf_documents.Id,
+                        // resolved by the scored pgvector read via vector_documents.PdfDocumentId), NOT
+                        // the vector-store document id (vector_documents.Id). CitationValidationService
+                        // keys structural validity on pdf_documents.Id, and the FE resolves citations to
+                        // the source PDF by the same id — VectorDocumentId failed both. The legacy hybrid
+                        // path (HybridSearchService.cs:287) already keys on PdfDocumentId; this is parity.
+                        PdfId = scored.Embedding.PdfDocumentId.ToString(),
+                        Page = scored.Embedding.PageNumber,
+                        ChunkIndex = scored.Embedding.ChunkIndex,
+                        // SP-C (#3407): carry region-grounding primitives from the vector arm.
+                        BoundingBoxesJson = scored.Embedding.BoundingBoxesJson,
+                        CharStart = scored.Embedding.CharStart,
+                        CharEnd = scored.Embedding.CharEnd,
+                    });
                 }
             }
 
-            // Step 2b: Hybrid search — PostgreSQL FTS + RRF fusion (graceful degradation)
+            // Step 2b: Hybrid search — semantic vector chunks + PostgreSQL FTS + RRF fusion (graceful degradation)
             allChunks = await TryHybridSearchAsync(userQuestion, gameId, allChunks, profile, ct).ConfigureAwait(false);
 
             // Deduplicate by PdfId+ChunkIndex, keep highest score
@@ -282,6 +335,9 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             if (filteredChunks.Count == 0)
             {
                 _logger.LogInformation("No chunks above minScore {MinScore} for game {GameId}", profile.MinScore, gameId);
+                // SP5-b T3: single-source detection site — increment counter here, NOT in the handler.
+                // Guarded: metrics must never abort the retrieval path.
+                try { MeepleAiMetrics.RecordRetrievalEmpty(); } catch { /* metrics must not break retrieval */ }
                 return (string.Empty, citations);
             }
 
@@ -323,7 +379,19 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         filteredChunks = filteredChunks
                             .Concat(expandedChunks)
                             .GroupBy(c => $"{c.PdfId}:{c.ChunkIndex}", StringComparer.Ordinal)
-                            .Select(g => g.OrderByDescending(c => c.Score).First())
+                            .Select(g =>
+                            {
+                                var best = g.OrderByDescending(c => c.Score).First();
+                                // SP-C (#3407): this GroupBy is a DROP SITE (mirrors the hybrid-fusion
+                                // merge). The expanded arm is FTS-only (no bbox); coalesce the region
+                                // carriers across the group so the original vector chunk's bbox survives.
+                                return best with
+                                {
+                                    BoundingBoxesJson = g.Select(c => c.BoundingBoxesJson).FirstOrDefault(b => b != null),
+                                    CharStart = g.Select(c => c.CharStart).FirstOrDefault(v => v != null),
+                                    CharEnd = g.Select(c => c.CharEnd).FirstOrDefault(v => v != null),
+                                };
+                            })
                             .OrderByDescending(c => c.Score)
                             .Take(profile.TopK * 2)
                             .ToList();
@@ -413,6 +481,11 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 {
                     FullText = chunk.Text,  // #447: preserve full text for copyright leak guard
                     ChunkIndex = chunk.ChunkIndex,
+                    // SP-C (#3407): raw region carriers (transient, [JsonIgnore]) — parsed + Full-gated
+                    // into CitationDto.Regions at the handler boundary.
+                    BoundingBoxesJson = chunk.BoundingBoxesJson,
+                    CharStart = chunk.CharStart,
+                    CharEnd = chunk.CharEnd,
                 };
 
                 citations.Add(citation);
@@ -579,7 +652,13 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                         Text = best.Text,
                         PdfId = best.PdfId,
                         Page = best.Page,
-                        ChunkIndex = best.ChunkIndex
+                        ChunkIndex = best.ChunkIndex,
+                        // SP-C (#3407): this GroupBy rebuild is a DROP SITE. Coalesce the region
+                        // carriers across the group (the vector arm has them; the FTS arm never
+                        // does) so bbox survives even when the FTS copy wins `best` on score.
+                        BoundingBoxesJson = g.Select(c => c.BoundingBoxesJson).FirstOrDefault(b => b != null),
+                        CharStart = g.Select(c => c.CharStart).FirstOrDefault(v => v != null),
+                        CharEnd = g.Select(c => c.CharEnd).FirstOrDefault(v => v != null),
                     };
                 })
                 .ToList();

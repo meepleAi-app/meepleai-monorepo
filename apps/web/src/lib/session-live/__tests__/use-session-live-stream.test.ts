@@ -145,9 +145,14 @@ describe('useSessionLiveStream — mount/unmount lifecycle', () => {
   it('creates EventSource when sessionId and enabled are set', () => {
     makeHook();
     expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.lastInstance()?.url).toContain(
-      '/api/v1/game-sessions/session-1/stream/v2'
-    );
+    expect(MockEventSource.lastInstance()?.url).toContain('/api/v1/live-sessions/session-1/stream');
+  });
+
+  it('connects to the native live-sessions stream, never the legacy game-sessions route', () => {
+    renderHook(() => useSessionLiveStream({ sessionId: 'session-1', enabled: true }));
+    const url = MockEventSource.lastInstance()!.url;
+    expect(url).toContain('/api/v1/live-sessions/session-1/stream');
+    expect(url).not.toContain('/game-sessions/');
   });
 
   it('does not create EventSource when sessionId is null', () => {
@@ -411,6 +416,169 @@ describe('useSessionLiveStream — sessionId change', () => {
     expect(firstEs.readyState).toBe(MockEventSource.CLOSED);
     expect(MockEventSource.instances).toHaveLength(2);
     expect(MockEventSource.lastInstance()?.url).toContain('session-B');
+  });
+
+  it('#3050: clears accumulated events on sessionId change (no cross-session bleed)', () => {
+    const { result, rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-1'
+      );
+    });
+    expect(result.current.events).toHaveLength(1);
+
+    // Navigating to another session must not carry session-A's events over.
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+    expect(result.current.events).toHaveLength(0);
+    expect(result.current.lastEventId).toBeNull();
+
+    // A fresh session-B event accumulates onto the cleared array.
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p9', score: 3, sessionId: 'session-B' }),
+        'evt-B-1'
+      );
+    });
+    expect(result.current.events).toHaveLength(1);
+  });
+
+  it('#3050: does NOT clear events on a same-session reconnect (RESET preserves)', () => {
+    const { result } = makeHook({ sessionId: 'session-1' });
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+    expect(result.current.events).toHaveLength(1);
+
+    // A manual reconnect (same session) must preserve accumulated events.
+    act(() => {
+      result.current.reconnect();
+    });
+    expect(result.current.events).toHaveLength(1);
+  });
+
+  it("#3055: session B first connect URL omits the previous session's lastEventId cursor", () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-9'
+      );
+    });
+
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+
+    const bUrl = MockEventSource.lastInstance()!.url;
+    expect(bUrl).toContain('/api/v1/live-sessions/session-B/stream');
+    // Before the fix this opened as ?lastEventId=evt-A-9 (session A's cursor bleeding into B).
+    expect(bUrl).not.toContain('lastEventId');
+  });
+
+  it('#3055: same-session retry reconnect still sends the last cursor for replay', () => {
+    const { result } = makeHook({ sessionId: 'session-1' });
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+
+    // Retryable error (not 429) → schedules a same-session reconnect at RETRY_BUDGET_MS[0].
+    act(() => {
+      MockEventSource.lastInstance()!.triggerError(false);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+
+    // The reconnect MUST replay from the last cursor — the fix only strips it on session change.
+    expect(result.current).toBeDefined();
+    expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
+  });
+
+  it('#3055: a retry AFTER a session change does not resurrect the previous session cursor', () => {
+    const { rerender } = renderHook(
+      ({ sessionId }) => useSessionLiveStream({ sessionId, enabled: true }),
+      { initialProps: { sessionId: 'session-A' } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-A' }),
+        'evt-A-9'
+      );
+    });
+
+    // Switch to B (first connect already omits A's cursor); then B errors before any B event.
+    act(() => {
+      rerender({ sessionId: 'session-B' });
+    });
+    act(() => {
+      MockEventSource.lastInstance()!.triggerError(false);
+    });
+    act(() => {
+      vi.advanceTimersByTime(1001);
+    });
+
+    // The retry reads the CLEARed (null) cursor, not A's evt-A-9 — the connect(false)-after-CLEAR branch.
+    const retryUrl = MockEventSource.lastInstance()!.url;
+    expect(retryUrl).toContain('/api/v1/live-sessions/session-B/stream');
+    expect(retryUrl).not.toContain('lastEventId');
+  });
+
+  it('#3055: toggling enabled false→true on the same session preserves the replay cursor', () => {
+    const { rerender } = renderHook(
+      ({ sessionId, enabled }) => useSessionLiveStream({ sessionId, enabled }),
+      { initialProps: { sessionId: 'session-1', enabled: true } }
+    );
+
+    act(() => {
+      MockEventSource.lastInstance()!.triggerOpen();
+      MockEventSource.lastInstance()!.triggerEvent(
+        'session:score',
+        JSON.stringify({ participantId: 'p1', score: 5, sessionId: 'session-1' }),
+        'evt-1'
+      );
+    });
+
+    // Disable (no CLEAR — same session) then re-enable: the reconnect must still replay from evt-1.
+    act(() => {
+      rerender({ sessionId: 'session-1', enabled: false });
+    });
+    act(() => {
+      rerender({ sessionId: 'session-1', enabled: true });
+    });
+
+    expect(MockEventSource.lastInstance()!.url).toContain('lastEventId=evt-1');
   });
 });
 

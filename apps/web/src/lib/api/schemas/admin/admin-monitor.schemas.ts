@@ -105,9 +105,32 @@ export const MetricsTimeSeriesResponseSchema = z.object({
   cpu: z.array(MetricsTimeSeriesDataPointSchema),
   memory: z.array(MetricsTimeSeriesDataPointSchema),
   requests: z.array(MetricsTimeSeriesDataPointSchema),
+  // #3045: disponibilità PER-METRICA (false = quella query Prometheus ha fallito, distinto
+  // da 0 reale). Un fallimento della sola query CPU non deve mascherare la RAM (e viceversa).
+  // Optional+default per backward-compat con payload BE pre-deploy.
+  cpuAvailable: z.boolean().optional().default(true),
+  memoryAvailable: z.boolean().optional().default(true),
 });
 
 export type MetricsTimeSeriesResponse = z.infer<typeof MetricsTimeSeriesResponseSchema>;
+
+// ========== System Resources (Issue #3041) ==========
+
+/**
+ * Response from GET /api/v1/resources/system — self-contained host/process
+ * metrics via System.Diagnostics (independent from Prometheus/exporters).
+ */
+export const SystemResourcesResponseSchema = z.object({
+  processWorkingSetBytes: z.number(),
+  gcHeapBytes: z.number(),
+  processorCount: z.number(),
+  processCpuPercent: z.number(),
+  processUptimeSeconds: z.number(),
+  hostMemoryTotalBytes: z.number(),
+  measuredAt: z.string().datetime({ offset: true }),
+});
+
+export type SystemResourcesResponse = z.infer<typeof SystemResourcesResponseSchema>;
 
 // ========== Infrastructure Resources (Issue #125) ==========
 

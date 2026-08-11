@@ -44,6 +44,15 @@ internal static class FeatureFlagSeeder
         // Admin tools
         new("Features.DatabaseSync", "Enable Database Sync admin tool", false, false, false, false),
 
+        // R1 (issue #3416, ADR-088): approved mechanic-card claim injection into RAG. Default OFF (all tiers).
+        new("rag.mechanic-card-injection", "Inject approved mechanic-card claims into RAG answers", false, false, false, false),
+
+        // #3390 Slice 2: route the in-session image agent path through RAG retrieval (grounded). Default OFF (all tiers).
+        new("rag.live-image-retrieval", "Route the in-session image agent path through grounded RAG retrieval", false, false, false, false),
+
+        // #3390 Slice 3: derive the retrieval query from the vision board-state when the turn has no text. Default OFF (all tiers).
+        new("rag.live-vision-query-expansion", "Derive the in-session retrieval query from vision when the turn text is empty", false, false, false, false),
+
         // RAG Enhancement flags
         new("rag.enhancement.adaptive-routing", "Adaptive RAG: skip retrieval for simple queries", true, false, true, true),
         new("rag.enhancement.crag-evaluation", "CRAG: evaluate retrieval quality before generation", true, false, false, true),

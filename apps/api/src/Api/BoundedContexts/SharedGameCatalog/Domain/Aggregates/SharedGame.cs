@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -49,6 +50,12 @@ public sealed class SharedGame : AggregateRoot<Guid>
     // Issue #1852: L4 PDF cover key, denormalized from PdfDocumentEntity.CoverR2Key
     // via PdfCoverGeneratedEventHandler. Set via SetPdfCoverR2Key().
     private string? _pdfCoverR2Key;
+    // #3590 Slice B: L2.5 BGG cover key, ri-ospitata dal re-upload server-to-server admin
+    // (ADR-059 §2). Set via SetBggCover(). Prima di #3590 questa colonna NON era sull'aggregato:
+    // il mapper del repository non la leggeva né la scriveva, e siccome Update() rimappa un grafo
+    // detached (tutte le colonne Modified) ogni load-modify-save emetteva
+    // `SET bgg_cover_r2_key = NULL`, cancellando silenziosamente la cover.
+    private string? _bggCoverR2Key;
     // Issue #1823 Phase B M8: Wikidata cover state. Set via SetWikidataCover()
     // after successful enrichment orchestration (M3 SPARQL + M4 license + M6
     // WebP + M7 R2 upload). QID itself is set independently via
@@ -60,6 +67,14 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private string? _wikidataCoverAttribution;
     private string? _wikidataCoverSourceUrl;
     private DateTime? _wikidataQidLastVerifiedAt;
+    // Epic #3470 Slice 3a — admin manual cover (URL path): the pinned source's R2 key plus the
+    // attested license/attribution/source URL and who attested it, when.
+    private string? _manualCoverR2Key;
+    private string? _manualCoverLicense;
+    private string? _manualCoverAttribution;
+    private string? _manualCoverSourceUrl;
+    private Guid? _manualCoverAttestedBy;
+    private DateTime? _manualCoverAttestedAt;
     private bool _isDeleted;
     private Guid _createdBy;
     private Guid? _modifiedBy;
@@ -75,6 +90,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private readonly List<GameErrata> _erratas = new();
     private readonly List<QuickQuestion> _quickQuestions = new();
     private readonly List<Contributor> _contributors = new();
+    // Epic #3470: admin per-context cover assignments (child collection).
+    private readonly List<GameCoverAssignment> _coverAssignments = new();
 
     /// <summary>
     /// Gets the unique identifier of this game.
@@ -177,6 +194,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public string? PdfCoverR2Key => _pdfCoverR2Key;
 
     /// <summary>
+    /// Chiave R2 della cover BGG ri-ospitata (layer L2.5). Scritta dal re-upload
+    /// server-to-server admin, legittimo per ADR-059 §2; MAI da un URL arbitrario, path che
+    /// <see cref="Api.SharedKernel.Infrastructure.Http.BggHostDenyList"/> sbarra per il ban #2123.
+    /// </summary>
+    public string? BggCoverR2Key => _bggCoverR2Key;
+
+    /// <summary>
     /// Gets the Wikidata QID identifying this game on Wikidata (e.g. <c>"Q98056728"</c>).
     /// Set by <see cref="AssignWikidataQid"/> when the catalog seed pipeline resolves
     /// a match. Read by the M8 cover enrichment orchestrator to issue the
@@ -208,6 +232,24 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// (e.g. <c>https://www.wikidata.org/wiki/Q98056728</c>). Issue #1823.
     /// </summary>
     public string? WikidataCoverSourceUrl => _wikidataCoverSourceUrl;
+
+    /// <summary>Epic #3470 Slice 3a — suffix-free R2 key of the admin manual cover, or null.</summary>
+    public string? ManualCoverR2Key => _manualCoverR2Key;
+
+    /// <summary>Epic #3470 Slice 3a — attested license of the manual cover (whitelisted at set time).</summary>
+    public string? ManualCoverLicense => _manualCoverLicense;
+
+    /// <summary>Epic #3470 Slice 3a — attribution of the manual cover, or null.</summary>
+    public string? ManualCoverAttribution => _manualCoverAttribution;
+
+    /// <summary>Epic #3470 Slice 3a — source URL the manual cover was fetched from.</summary>
+    public string? ManualCoverSourceUrl => _manualCoverSourceUrl;
+
+    /// <summary>Epic #3470 Slice 3a — admin who attested the manual cover's license.</summary>
+    public Guid? ManualCoverAttestedBy => _manualCoverAttestedBy;
+
+    /// <summary>Epic #3470 Slice 3a — UTC instant the manual cover was attested.</summary>
+    public DateTime? ManualCoverAttestedAt => _manualCoverAttestedAt;
 
     /// <summary>
     /// Gets the timestamp of the last successful enrichment / re-verification of
@@ -287,6 +329,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
     /// Gets the contributors who have contributed to this game.
     /// </summary>
     public IReadOnlyCollection<Contributor> Contributors => _contributors.AsReadOnly();
+
+    /// <summary>
+    /// Gets the admin per-context cover assignments (epic #3470). Hydrated only
+    /// when the caller eager-loaded the navigation (else empty, like the other
+    /// aggregate collections). At most one entry per <see cref="CoverContext"/>.
+    /// </summary>
+    public IReadOnlyCollection<GameCoverAssignment> CoverAssignments => _coverAssignments.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor for EF Core.
@@ -369,7 +418,14 @@ public sealed class SharedGame : AggregateRoot<Guid>
         string? wikidataCoverLicense = null,
         string? wikidataCoverAttribution = null,
         string? wikidataCoverSourceUrl = null,
-        DateTime? wikidataQidLastVerifiedAt = null) : base(id)
+        DateTime? wikidataQidLastVerifiedAt = null,
+        string? manualCoverR2Key = null,
+        string? manualCoverLicense = null,
+        string? manualCoverAttribution = null,
+        string? manualCoverSourceUrl = null,
+        Guid? manualCoverAttestedBy = null,
+        DateTime? manualCoverAttestedAt = null,
+        string? bggCoverR2Key = null) : base(id)
     {
         _id = id;
         _title = title;
@@ -388,12 +444,19 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _gameDataStatus = gameDataStatus;
         _hasUploadedPdf = hasUploadedPdf;
         _pdfCoverR2Key = pdfCoverR2Key;
+        _bggCoverR2Key = bggCoverR2Key;
         _wikidataQid = wikidataQid;
         _wikidataCoverR2Key = wikidataCoverR2Key;
         _wikidataCoverLicense = wikidataCoverLicense;
         _wikidataCoverAttribution = wikidataCoverAttribution;
         _wikidataCoverSourceUrl = wikidataCoverSourceUrl;
         _wikidataQidLastVerifiedAt = wikidataQidLastVerifiedAt;
+        _manualCoverR2Key = manualCoverR2Key;
+        _manualCoverLicense = manualCoverLicense;
+        _manualCoverAttribution = manualCoverAttribution;
+        _manualCoverSourceUrl = manualCoverSourceUrl;
+        _manualCoverAttestedBy = manualCoverAttestedBy;
+        _manualCoverAttestedAt = manualCoverAttestedAt;
         _isDeleted = isDeleted;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
@@ -592,6 +655,80 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Partially enriches this aggregate from sparse catalog-seed provenance
+    /// (Wikidata-primary, BGG fallback) at draft → game promotion. Issues #3147, #3154.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="EnrichFromBgg"/>, this is <b>lenient and stateless</b>:
+    /// each scalar is applied only when present AND internally consistent;
+    /// missing / implausible values are skipped rather than throwing, because
+    /// catalog-seed provenance is frequently partial (a Wikidata entity may
+    /// expose player counts but no year, a year but no playtime, etc.). It does
+    /// <b>not</b> drive the <see cref="GameDataStatus"/> state machine — the
+    /// aggregate stays a <c>Skeleton</c> so the BGG enrichment queue (#1874) can
+    /// still complete it later. Audit fields are stamped only when something
+    /// actually changed (mirrors <see cref="AssignWikidataQid"/>), so a no-op
+    /// call (all fields absent / implausible) leaves the aggregate untouched.
+    /// <para>Scope: <b>scalars only</b>, by design. Designers/publishers are NOT
+    /// applied here — the <c>_designers</c>/<c>_publishers</c> aggregate collections
+    /// are read-only through <c>SharedGameRepository</c> (<c>MapToEntity</c> maps no
+    /// M:N navigation) and carry throwaway Guids. Wikidata designers/publishers are
+    /// instead persisted as M:N links by the repository's get-or-create-by-name
+    /// resolver, fed RAW NAMES from the seed handler (#3153) — never routed through
+    /// this method or <c>AddDesigner</c>.</para>
+    /// </remarks>
+    /// <param name="yearPublished">Publication year (Wikidata P577); applied when in <c>1901..currentYear+1</c>.</param>
+    /// <param name="minPlayers">Minimum player count (P1872).</param>
+    /// <param name="maxPlayers">
+    /// Maximum player count (P1873). The pair is applied together only when
+    /// <c>min &gt; 0 &amp;&amp; max &gt;= min</c> — we never persist a nonsensical
+    /// range such as "3–0 players" from a lone <paramref name="minPlayers"/>.
+    /// </param>
+    /// <param name="playingTimeMinutes">Playing time in minutes (P2047); applied when &gt; 0.</param>
+    /// <param name="modifiedBy">The actor (approving admin) performing the enrichment.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="modifiedBy"/> is <see cref="Guid.Empty"/>.</exception>
+    public void EnrichFromProvenance(
+        int? yearPublished,
+        int? minPlayers,
+        int? maxPlayers,
+        int? playingTimeMinutes,
+        Guid modifiedBy)
+    {
+        if (modifiedBy == Guid.Empty)
+            throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
+
+        var changed = false;
+
+        // Year — plausibility mirrors ValidateYear bounds but SKIPS instead of throwing.
+        if (yearPublished is int year && year > 1900 && year <= DateTime.UtcNow.Year + 1)
+        {
+            _yearPublished = year;
+            changed = true;
+        }
+
+        // Player counts — applied as a consistent PAIR only (never a min without a
+        // max >= min), so a partial Wikidata entity can't persist a broken range.
+        if (minPlayers is int min && maxPlayers is int max && min > 0 && max >= min)
+        {
+            _minPlayers = min;
+            _maxPlayers = max;
+            changed = true;
+        }
+
+        if (playingTimeMinutes is int playtime && playtime > 0)
+        {
+            _playingTimeMinutes = playtime;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            _modifiedBy = modifiedBy;
+            _modifiedAt = DateTime.UtcNow;
+        }
+    }
+
+    /// <summary>
     /// Marks this game as complete (no PDF needed or PDF already handled).
     /// Must be in Enriched state.
     /// </summary>
@@ -622,6 +759,51 @@ public sealed class SharedGame : AggregateRoot<Guid>
             return;
 
         _pdfCoverR2Key = coverR2Key;
+        InvalidateCropsDerivedFrom(CoverAssignmentSource.Pdf);
+    }
+
+    /// <summary>
+    /// #3590 Slice B — registra la chiave R2 della cover BGG ri-ospitata (layer L2.5).
+    /// Idempotente: ritorna senza effetti se la chiave coincide con quella corrente.
+    /// <para>
+    /// La sorgente è l'immagine che BGG espone per il <c>BggId</c> del gioco, scaricata dal path
+    /// server-to-server admin (ADR-059 §2). Questo metodo NON è una via per aggirare
+    /// <see cref="Api.SharedKernel.Infrastructure.Http.BggHostDenyList"/>: quella deny-list
+    /// protegge il campo cover manuale a URL libero, dove un host geekdo resta bandito (#2123).
+    /// </para>
+    /// </summary>
+    public void SetBggCover(string coverR2Key)
+    {
+        if (string.IsNullOrWhiteSpace(coverR2Key))
+            throw new ArgumentException("Cover R2 key cannot be empty", nameof(coverR2Key));
+
+        if (string.Equals(_bggCoverR2Key, coverR2Key, StringComparison.Ordinal))
+            return;
+
+        _bggCoverR2Key = coverR2Key;
+        InvalidateCropsDerivedFrom(CoverAssignmentSource.Bgg);
+    }
+
+    /// <summary>
+    /// Issue #3615 — drops the rendered per-context crops pinned to <paramref name="source"/>,
+    /// because the base image they were derived from has just been replaced.
+    ///
+    /// <para>
+    /// Called from the base-cover setters AFTER their idempotency guard, so a re-write of the same
+    /// key changes nothing. Only assignments pinned to that exact source are touched: a Social crop
+    /// of the Wikidata cover is unaffected by the PDF pipeline regenerating its own image.
+    /// </para>
+    /// <para>
+    /// Without this the crop keeps serving the OLD image indefinitely — nothing regenerates it, and
+    /// the staleness is invisible because the assignment row still looks perfectly valid.
+    /// </para>
+    /// </summary>
+    private void InvalidateCropsDerivedFrom(CoverAssignmentSource source)
+    {
+        foreach (var assignment in _coverAssignments.Where(a => a.Source == source))
+        {
+            assignment.InvalidateGeneratedCrop();
+        }
     }
 
     /// <summary>
@@ -716,11 +898,105 @@ public sealed class SharedGame : AggregateRoot<Guid>
         if (string.IsNullOrWhiteSpace(sourceUrl))
             throw new ArgumentException("Source URL cannot be empty.", nameof(sourceUrl));
 
+        // #3615: unlike SetPdfCoverR2Key/SetBggCover this method has no idempotency guard — the
+        // quarterly re-verification calls it with the SAME key just to refresh verifiedAt. Compare
+        // before writing so a no-op re-verification does not throw away a perfectly valid crop.
+        var coverImageChanged = !string.Equals(_wikidataCoverR2Key, r2Key, StringComparison.Ordinal);
+
         _wikidataCoverR2Key = r2Key;
         _wikidataCoverLicense = license;
         _wikidataCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
         _wikidataCoverSourceUrl = sourceUrl;
         _wikidataQidLastVerifiedAt = verifiedAt;
+
+        if (coverImageChanged)
+        {
+            InvalidateCropsDerivedFrom(CoverAssignmentSource.Wikidata);
+        }
+    }
+
+    /// <summary>
+    /// Epic #3470 Slice 3a — pins an admin-supplied manual cover (fetched from a URL, re-encoded to
+    /// WebP, uploaded to R2). Captures the attested license/attribution/source URL and the attester
+    /// so the manual path carries its own copyright evidence (the caller MUST have validated the
+    /// license against the whitelist and persisted the R2 object before calling this).
+    /// </summary>
+    /// <exception cref="ArgumentException">Any required field is empty, or attestedBy is empty.</exception>
+    public void SetManualCover(
+        string r2Key,
+        string license,
+        string? attribution,
+        string sourceUrl,
+        Guid attestedBy,
+        DateTime attestedAt)
+    {
+        if (string.IsNullOrWhiteSpace(r2Key))
+            throw new ArgumentException("R2 key cannot be empty.", nameof(r2Key));
+
+        if (string.IsNullOrWhiteSpace(license))
+            throw new ArgumentException("License cannot be empty.", nameof(license));
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+            throw new ArgumentException("Source URL cannot be empty.", nameof(sourceUrl));
+
+        if (attestedBy == Guid.Empty)
+            throw new ArgumentException("AttestedBy cannot be empty.", nameof(attestedBy));
+
+        // #3615: as in SetWikidataCover, compare before writing — a re-attestation that keeps the
+        // same image must not discard a crop rendered from it.
+        var coverImageChanged = !string.Equals(_manualCoverR2Key, r2Key, StringComparison.Ordinal);
+
+        _manualCoverR2Key = r2Key;
+        _manualCoverLicense = license;
+        _manualCoverAttribution = string.IsNullOrWhiteSpace(attribution) ? null : attribution;
+        _manualCoverSourceUrl = sourceUrl;
+        _manualCoverAttestedBy = attestedBy;
+        _manualCoverAttestedAt = attestedAt;
+
+        if (coverImageChanged)
+        {
+            InvalidateCropsDerivedFrom(CoverAssignmentSource.Manual);
+        }
+    }
+
+    /// <summary>
+    /// Epic #3470 Slice 3a-3 / 3f — revokes the admin-set manual cover: clears the six manual
+    /// cover / attestation fields AND drops any per-context assignment still pinned to the Manual
+    /// source (so no phantom pin survives to auto-resurface a future manual cover). Returns
+    /// <c>true</c> when anything was cleared, <c>false</c> when there was nothing to revoke — an
+    /// idempotent no-op the caller turns into a 204 without persisting or evicting caches.
+    /// </summary>
+    /// <remarks>
+    /// The handler persists the removed assignments via <c>ReconcileCoverAssignmentsAsync</c> and
+    /// best-effort deletes each removed assignment's rendered crop object (<c>GeneratedR2Key</c>).
+    /// Today <c>AssignCover</c> renders no crop for a Manual assignment, so there is nothing to
+    /// delete yet — but removing the assignment row is still correct (a dangling Manual pin would
+    /// otherwise silently re-apply the next manual cover to that context).
+    /// </remarks>
+    public bool RevokeManualCover()
+    {
+        var hadColumns = _manualCoverR2Key is not null
+            || _manualCoverLicense is not null
+            || _manualCoverAttribution is not null
+            || _manualCoverSourceUrl is not null
+            || _manualCoverAttestedBy is not null
+            || _manualCoverAttestedAt is not null;
+
+        var removedAssignments =
+            _coverAssignments.RemoveAll(a => a.Source == CoverAssignmentSource.Manual) > 0;
+
+        if (!hadColumns && !removedAssignments)
+        {
+            return false;
+        }
+
+        _manualCoverR2Key = null;
+        _manualCoverLicense = null;
+        _manualCoverAttribution = null;
+        _manualCoverSourceUrl = null;
+        _manualCoverAttestedBy = null;
+        _manualCoverAttestedAt = null;
+        return true;
     }
 
     /// <summary>
@@ -1359,6 +1635,78 @@ public sealed class SharedGame : AggregateRoot<Guid>
     {
         _isRagPublic = isPublic;
         _modifiedAt = DateTime.UtcNow;
+    }
+
+    // Cover Assignment Methods (Epic #3470)
+
+    /// <summary>
+    /// Pins a cover source (and crop focal point) for a UI context, creating the
+    /// assignment when the context has none or updating the existing one in place —
+    /// there is at most one assignment per context (mirrors the DB unique
+    /// constraint). Re-assigning invalidates any stale rendered crop; the render
+    /// pipeline produces a fresh per-context WebP.
+    /// </summary>
+    /// <param name="context">The UI context to pin.</param>
+    /// <param name="source">The cover source to pin for the context.</param>
+    /// <param name="adminId">The admin/editor performing the assignment.</param>
+    /// <param name="focalX">Crop focal point X in [0,1] (0.5 = center).</param>
+    /// <param name="focalY">Crop focal point Y in [0,1] (0.5 = center).</param>
+    /// <returns>The created or updated assignment.</returns>
+    public GameCoverAssignment AssignCover(
+        CoverContext context,
+        CoverAssignmentSource source,
+        Guid adminId,
+        double focalX = 0.5,
+        double focalY = 0.5)
+    {
+        var existing = _coverAssignments.FirstOrDefault(a => a.Context == context);
+        if (existing is null)
+        {
+            var created = GameCoverAssignment.Create(_id, context, source, adminId, focalX, focalY);
+            _coverAssignments.Add(created);
+            return created;
+        }
+
+        // Idempotent upsert: a resave with the SAME source and focal is a true no-op —
+        // skip it so a duplicate / retried submission doesn't wipe an already-rendered
+        // crop (GeneratedR2Key) or bump the audit stamp. .Equals avoids the SonarAnalyzer
+        // S1244 floating-point-equality trap (focal values are stored/compared verbatim,
+        // never the result of arithmetic).
+        if (existing.Source == source && existing.FocalX.Equals(focalX) && existing.FocalY.Equals(focalY))
+        {
+            return existing;
+        }
+
+        existing.ChangeSource(source, adminId);
+        existing.SetFocalPoint(focalX, focalY, adminId);
+        return existing;
+    }
+
+    /// <summary>
+    /// Removes the cover assignment for a context, if any. The context then falls
+    /// back to the resolver's implicit precedence.
+    /// </summary>
+    /// <returns><see langword="true"/> when an assignment was removed; otherwise <see langword="false"/>.</returns>
+    public bool RemoveCoverAssignment(CoverContext context)
+    {
+        var existing = _coverAssignments.FirstOrDefault(a => a.Context == context);
+        if (existing is null)
+        {
+            return false;
+        }
+
+        _coverAssignments.Remove(existing);
+        return true;
+    }
+
+    /// <summary>
+    /// Reconstitution hook for the repository: appends a persisted assignment to
+    /// the aggregate WITHOUT re-running creation validation or raising events.
+    /// </summary>
+    internal void LoadCoverAssignment(GameCoverAssignment assignment)
+    {
+        ArgumentNullException.ThrowIfNull(assignment);
+        _coverAssignments.Add(assignment);
     }
 
     // Validation Methods

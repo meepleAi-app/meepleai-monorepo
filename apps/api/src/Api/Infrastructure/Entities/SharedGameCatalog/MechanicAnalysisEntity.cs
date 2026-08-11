@@ -23,6 +23,9 @@ public class MechanicAnalysisEntity
     public DateTime? ReviewedAt { get; set; }
     public string? RejectionReason { get; set; }
 
+    /// <summary>FK to the published <c>mechanic_cards</c> row (#527). Null until explicitly published.</summary>
+    public Guid? PublishedCardId { get; set; }
+
     // === LLM execution snapshot ===
     public int TotalTokensUsed { get; set; }
     public decimal EstimatedCostUsd { get; set; }

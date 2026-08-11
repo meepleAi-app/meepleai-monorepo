@@ -152,7 +152,7 @@ function RagBlockNodeComponent({ id, data, selected }: RagBlockNodeProps) {
   const { setNodes } = useReactFlow();
 
   const handleDelete = useCallback(() => {
-    setNodes((nodes) => nodes.filter((n) => n.id !== id));
+    setNodes(nodes => nodes.filter(n => n.id !== id));
   }, [id, setNodes]);
 
   return (
@@ -187,9 +187,10 @@ function RagBlockNodeComponent({ id, data, selected }: RagBlockNodeProps) {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={(e) => {
+                  aria-label="Configure"
+                  onClick={e => {
                     e.stopPropagation();
-                    // TODO: Open config modal
+                    data.onConfigure?.(id);
                   }}
                 >
                   <Settings className="h-3.5 w-3.5" />
@@ -205,7 +206,7 @@ function RagBlockNodeComponent({ id, data, selected }: RagBlockNodeProps) {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-destructive hover:text-destructive"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     handleDelete();
                   }}
@@ -222,9 +223,7 @@ function RagBlockNodeComponent({ id, data, selected }: RagBlockNodeProps) {
       {/* Body */}
       <div className="px-3 py-2 space-y-2">
         {/* Description */}
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {block.description}
-        </p>
+        <p className="text-xs text-muted-foreground line-clamp-2">{block.description}</p>
 
         {/* Metrics */}
         {metrics && (

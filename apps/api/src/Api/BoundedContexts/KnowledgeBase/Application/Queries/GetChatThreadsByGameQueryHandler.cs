@@ -44,7 +44,12 @@ internal class GetChatThreadsByGameQueryHandler : IQueryHandler<GetChatThreadsBy
             IsDeleted: m.IsDeleted,
             DeletedAt: m.DeletedAt,
             DeletedByUserId: m.DeletedByUserId,
-            IsInvalidated: m.IsInvalidated
+            IsInvalidated: m.IsInvalidated,
+            // Issue #2500: map agent metadata so citations survive thread reload
+            AgentType: m.AgentType,
+            Confidence: m.Confidence,
+            CitationsJson: m.CitationsJson,
+            TokenCount: m.TokenCount
         )).ToList();
 
         return new ChatThreadDto(

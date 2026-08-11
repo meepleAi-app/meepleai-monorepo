@@ -139,7 +139,7 @@ public class OpenStructuredDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task OpenStructuredDispute_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task OpenStructuredDispute_FeatureDisabled_ThrowsConflict()
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
@@ -152,9 +152,27 @@ public class OpenStructuredDisputeCommandHandlerTests
         // Act & Assert
         var act =
             () => _openHandler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Contain("disabled");
+    }
+
+    [Fact]
+    public async Task OpenStructuredDispute_SessionWithoutGameId_ThrowsConflictException()
+    {
+        // Arrange — a free-form session (no GameId) cannot host a dispute. This is
+        // a precondition conflict (409), not an unhandled InvalidOperationException (500).
+        SetupFeatureFlagEnabled();
+        SetupSessionGetById(DefaultSessionId, CreateSessionWithoutGameId());
+
+        var command = new OpenStructuredDisputeCommand(
+            DefaultSessionId,
+            DefaultInitiatorPlayerId,
+            "Some claim");
+
+        // Act & Assert
+        var act = () => _openHandler.Handle(command, CancellationToken.None);
+        await act.Should().ThrowAsync<ConflictException>();
     }
 
     [Fact]
@@ -175,26 +193,6 @@ public class OpenStructuredDisputeCommandHandlerTests
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
-    [Fact]
-    public async Task OpenStructuredDispute_SessionWithoutGameId_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var session = CreateSessionWithoutGameId();
-        SetupFeatureFlagEnabled();
-        SetupSessionGetById(DefaultSessionId, session);
-
-        var command = new OpenStructuredDisputeCommand(
-            DefaultSessionId,
-            DefaultInitiatorPlayerId,
-            "Some claim");
-
-        // Act & Assert
-        var act =
-            () => _openHandler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
-
-        ex.Message.Should().Contain("no associated game");
-    }
 
     [Fact]
     public async Task OpenStructuredDispute_WithExistingGameHistory_SetsRelatedDisputeIds()
@@ -248,6 +246,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
 
         var command = new RespondToDisputeCommand(
+            DefaultSessionId,
             disputeId,
             DefaultRespondentPlayerId,
             "I disagree, the rule says otherwise");
@@ -272,6 +271,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, null);
 
         var command = new RespondToDisputeCommand(
+            DefaultSessionId,
             disputeId,
             DefaultRespondentPlayerId,
             "Some response");
@@ -296,7 +296,7 @@ public class OpenStructuredDisputeCommandHandlerTests
 
         SetupDisputeGetById(disputeId, dispute);
 
-        var command = new RespondentTimeoutCommand(disputeId);
+        var command = new RespondentTimeoutCommand(DefaultSessionId, disputeId);
 
         // Act — should not throw (no-op)
         await _timeoutHandler.Handle(command, CancellationToken.None);
@@ -313,7 +313,7 @@ public class OpenStructuredDisputeCommandHandlerTests
         var disputeId = Guid.NewGuid();
         SetupDisputeGetById(disputeId, null);
 
-        var command = new RespondentTimeoutCommand(disputeId);
+        var command = new RespondentTimeoutCommand(DefaultSessionId, disputeId);
 
         // Act & Assert
         var act =

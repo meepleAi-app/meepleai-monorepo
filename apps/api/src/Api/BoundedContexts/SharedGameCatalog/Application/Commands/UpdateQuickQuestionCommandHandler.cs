@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -43,16 +44,16 @@ internal sealed class UpdateQuickQuestionCommandHandler
             .AsNoTracking()
             .FirstOrDefaultAsync(q => q.Id == command.QuestionId, cancellationToken)
             .ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Quick question with ID {command.QuestionId} not found");
+            ?? throw new NotFoundException("QuickQuestion", command.QuestionId.ToString());
 
         // Fetch aggregate (SharedGame owns QuickQuestion)
         var game = await _gameRepository.GetByIdAsync(questionEntity.SharedGameId, cancellationToken)
             .ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Shared game with ID {questionEntity.SharedGameId} not found");
+            ?? throw new NotFoundException("SharedGame", questionEntity.SharedGameId.ToString());
 
         // Find domain entity within aggregate
         var question = game.QuickQuestions.FirstOrDefault(q => q.Id == command.QuestionId)
-            ?? throw new InvalidOperationException($"Quick question {command.QuestionId} not found in aggregate");
+            ?? throw new NotFoundException("QuickQuestion", command.QuestionId.ToString());
 
         // Update via domain methods (preserves encapsulation)
         question.UpdateText(command.Text);

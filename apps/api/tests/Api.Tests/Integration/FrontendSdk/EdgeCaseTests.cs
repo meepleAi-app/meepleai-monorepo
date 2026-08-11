@@ -91,7 +91,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var email = $"streaming-test-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Streaming Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Streaming Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Prepare chat request
@@ -136,7 +136,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var email = $"stream-interrupt-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Interrupt Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Interrupt Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Create request with cancellation
@@ -172,7 +172,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var email = $"upload-test-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Upload Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Upload Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Create minimal valid PDF (PDF header)
@@ -208,7 +208,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var email = $"large-upload-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Large Upload Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Large Upload Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Create large PDF (10MB)
@@ -247,7 +247,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var email = $"invalid-upload-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Invalid Upload Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Invalid Upload Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Create non-PDF file
@@ -330,7 +330,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var email = $"unicode-test-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Unicode Test" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Unicode Test", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         var request = new
@@ -367,7 +367,8 @@ public class EdgeCaseTests : IAsyncLifetime
         {
             email,
             password,
-            displayName
+            displayName,
+            termsAccepted = true
         });
 
         // Assert

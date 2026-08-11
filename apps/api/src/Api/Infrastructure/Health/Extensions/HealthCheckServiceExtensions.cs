@@ -23,6 +23,24 @@ public static class HealthCheckServiceExtensions
     /// registered at all — this prevents the global /health endpoint from reporting Degraded for
     /// services that are intentionally not deployed (avoiding alert fatigue and SLA noise).
     /// </remarks>
+    /// <remarks>
+    /// 🔴 INVARIANT (#3618): a check registered <c>NonCritical</c> MUST NOT return
+    /// <see cref="HealthCheckResult.Unhealthy"/> — it must return <c>Degraded</c> instead.
+    /// <para>
+    /// The <c>failureStatus</c> argument below is NOT a cap on the reported status: ASP.NET Core
+    /// applies it only when a check throws an unhandled exception. A check that catches its own
+    /// exception and returns <c>HealthCheckResult.Unhealthy(...)</c> bypasses it entirely, and that
+    /// value propagates to the aggregate report. Since <c>/health</c> (Program.cs) uses the default
+    /// <c>ResultStatusCodes</c> — Healthy/Degraded → 200, Unhealthy → 503 — a single NonCritical
+    /// check returning Unhealthy 503s the whole endpoint. That was the root cause behind #3339
+    /// (orchestrator) and the reason the staging smoke gate had to tolerate a 503.
+    /// </para>
+    /// <para>
+    /// Returning Degraded does NOT lose the alerting signal: <c>HealthStateMachine</c> treats every
+    /// non-Healthy result as a failure and runs its own Healthy → Degraded → Unhealthy escalation
+    /// on consecutive-failure counts. Only checks tagged <c>Critical</c> may produce a 503.
+    /// </para>
+    /// </remarks>
     public static IHealthChecksBuilder AddComprehensiveHealthChecks(
         this IHealthChecksBuilder builder,
         IConfiguration configuration)
@@ -44,7 +62,9 @@ public static class HealthCheckServiceExtensions
             "embedding",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+            // ML microservice: 12s registration ceiling above the check's 10s internal
+            // cts, so model-load / cold-start latency does not flap Degraded.
+            timeout: TimeSpan.FromSeconds(12));
 
         // Embedding dimension validation — catches provider/schema mismatch at startup.
         // Uses factory registration because IEmbeddingService is internal (CS0051 prevents
@@ -62,7 +82,9 @@ public static class HealthCheckServiceExtensions
             "reranker",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+            // ML microservice: 12s registration ceiling above the check's 10s internal
+            // cts, so model-load / cold-start latency does not flap Degraded.
+            timeout: TimeSpan.FromSeconds(12));
 
         // Conditional: PDF extractor providers — only register the check when the
         // provider is actually in use. The "Orchestrator" provider routes to both
@@ -95,11 +117,21 @@ public static class HealthCheckServiceExtensions
                 timeout: TimeSpan.FromSeconds(5));
         }
 
-        builder.AddCheck<OrchestrationHealthCheck>(
-            "orchestrator",
-            HealthStatus.Degraded,
-            tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+        // Conditional: orchestration (LangGraph) is opt-in — it runs only under the
+        // `tutor-agents` compose profile, not the standard deploy profile. Register the
+        // health check only when ORCHESTRATION_SERVICE_URL is set (mirrors the Ollama
+        // pattern below), so /health does not 503 for an intentionally-not-deployed
+        // service (#3339). Environments that DO run orchestration (dev/prod) set
+        // ORCHESTRATION_SERVICE_URL on the api service.
+        var orchestrationUrl = configuration["ORCHESTRATION_SERVICE_URL"];
+        if (!string.IsNullOrWhiteSpace(orchestrationUrl))
+        {
+            builder.AddCheck<OrchestrationHealthCheck>(
+                "orchestrator",
+                HealthStatus.Degraded,
+                tags: new[] { HealthCheckTags.Ai, HealthCheckTags.NonCritical, HealthCheckTags.Optional },
+                timeout: TimeSpan.FromSeconds(5));
+        }
 
         // Conditional: Ollama is opt-in — register only when OLLAMA_URL is set.
         var ollamaUrl = configuration["OLLAMA_URL"];
@@ -117,7 +149,9 @@ public static class HealthCheckServiceExtensions
             "bggapi",
             HealthStatus.Degraded,
             tags: new[] { HealthCheckTags.External, HealthCheckTags.NonCritical },
-            timeout: TimeSpan.FromSeconds(5));
+            // External third-party API: 10s registration ceiling above the check's 8s
+            // internal cts, so routine BGG latency/rate-limiting does not flap Degraded.
+            timeout: TimeSpan.FromSeconds(10));
 
         builder.AddCheck<OAuthProvidersHealthCheck>(
             "oauth",

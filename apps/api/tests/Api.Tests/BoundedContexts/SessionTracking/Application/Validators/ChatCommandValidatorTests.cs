@@ -95,9 +95,22 @@ public class AskSessionAgentCommandValidatorTests
     [Fact]
     public void Validate_EmptyQuestion_ShouldFail()
     {
+        // Text-only turn (no image) still requires a question.
         var cmd = new AskSessionAgentCommand(Guid.NewGuid(), Guid.NewGuid(), "", 1);
         var result = _validator.Validate(cmd);
         result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Validate_EmptyQuestion_WithImage_ShouldPass()
+    {
+        // #3390 Slice 3: an image turn may omit the question — the retrieval query is derived from
+        // the vision board-state. This is the guard the endpoint previously rejected upstream.
+        var cmd = new AskSessionAgentCommand(
+            Guid.NewGuid(), Guid.NewGuid(), "", 1,
+            new List<ChatImageAttachment> { new(new byte[] { 1, 2, 3 }, "image/jpeg", "board.jpg") });
+        var result = _validator.Validate(cmd);
+        result.IsValid.Should().BeTrue("an image turn may omit the question");
     }
 }
 
@@ -124,7 +137,7 @@ public class DeleteChatMessageCommandValidatorTests
     }
 
     [Fact]
-    public void Validate_EmptyRequesterId_ShouldFail()
+    public void Validate_EmptyRequesterUserId_ShouldFail()
     {
         var cmd = new DeleteChatMessageCommand(Guid.NewGuid(), Guid.Empty);
         var result = _validator.Validate(cmd);

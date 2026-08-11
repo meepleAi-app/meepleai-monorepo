@@ -6,6 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// Adds a respondent's counter-claim to an existing dispute.
 /// </summary>
 internal record RespondToDisputeCommand(
+    Guid SessionId,
     Guid DisputeId,
     Guid RespondentPlayerId,
     string RespondentClaim

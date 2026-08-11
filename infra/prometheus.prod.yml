@@ -23,6 +23,27 @@ rule_files:
   - '/etc/prometheus/prometheus-rules.yml'
   # Issue #2470 — Wikidata SSE plane starvation alerts.
   - '/etc/prometheus/wikidata-sse.yml'
+  # Issue #3117 — Wikidata enrichment pipeline-health alerts (dead-letter / queue depth).
+  - '/etc/prometheus/wikidata-enrichment.yml'
+  # Issue #3082 — BGG ToS-compliance SLO=0 alert (any nonzero render attempt = P1).
+  - '/etc/prometheus/bgg-tos-compliance.yml'
+  # #3495 M2 — SSRF egress guard (private_ip = P1) + #3583 policy alert (denylist_hit = warning).
+  # Il file era già montato ma mai referenziato in staging/prod: regole caricate solo da #3583.
+  - '/etc/prometheus/egress-guard.yml'
+  # #3373 D4 / #3383 — tripwire single-pod: count(up{job="meepleai-api"}) > 1.
+  # Il file esisteva dal #3373 ma non era montato ne' referenziato in ALCUN ambiente,
+  # quindi l'alert non e' mai stato attivo: era il presupposto dichiarato di ADR-087 D4.
+  - '/etc/prometheus/api-single-instance.yml'
+  # Issue #3112 — OPS-02 Slack delivery observability alerts.
+  - '/etc/prometheus/slack-delivery.yml'
+  # Issue #3116 — SP5 Admin Security audit_outbox health alerts.
+  - '/etc/prometheus/audit-outbox.yml'
+  # Issue #1965 — domain_event_outbox duplicate-publish trigger (dormant until API >=2 replicas).
+  - '/etc/prometheus/domain-event-outbox-duplicate-publish.yml'
+  # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
+  - '/etc/prometheus/copyright-enforcement.yml'
+  # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (ungrounded-rate on RAG live path).
+  - '/etc/prometheus/agent-grounding.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

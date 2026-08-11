@@ -11,9 +11,13 @@
  * a name→id map.
  */
 
-export type ChipKey = 'with-toolkit' | 'with-agent' | 'top-rated' | 'new';
+export type ChipKey = 'with-kb' | 'with-toolkit' | 'with-agent' | 'top-rated' | 'new';
 
 export const FILTER_CHIPS: readonly { readonly key: ChipKey; readonly i18nKey: string }[] = [
+  // "Solo con KB pronta" — filter to AI-ready games (SharedGame.HasKnowledgeBase).
+  // Backend maps ?hasKb=true → SearchSharedGamesQuery.HasKnowledgeBase; when this
+  // chip is OFF the default Title sort already lists KB-ready games first.
+  { key: 'with-kb', i18nKey: 'pages.sharedGames.chips.withKb' },
   { key: 'with-toolkit', i18nKey: 'pages.sharedGames.chips.withToolkit' },
   { key: 'with-agent', i18nKey: 'pages.sharedGames.chips.withAgent' },
   { key: 'top-rated', i18nKey: 'pages.sharedGames.chips.topRated' },

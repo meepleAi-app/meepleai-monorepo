@@ -47,6 +47,8 @@ Driver della decisione:
 6. **Takedown policy**: un editore può richiedere la soppressione di `mechanic_cards` per i propri giochi; effetto immediato senza deploy via flag `is_suppressed`.
 7. **Review gate umano obbligatorio**: nessuna `mechanic_card` viene pubblicata senza approvazione esplicita di un admin (per-claim review); questo è anche un controllo di qualità, non solo IP.
 
+> **Handoff lifecycle ↔ pubblicazione (#2783):** `Approve` porta l'analisi allo stato *lifecycle* `Published` ma **non** crea la card. La `mechanic_card` user-facing è coniata solo dall'atto esplicito e distinto `PublishMechanicCardCommand` (#527), che richiede `Status == Published` e poi chiama `analysis.MarkPublished(cardId)`. Non esiste una transizione `MechanicAnalysis.Finalize`: `Finalize*` è esclusivamente il verbo del flusso Variant-C draft (`FinalizeMechanicDraftCommand` → `RulebookAnalysis`). Il gate di revisione (questo punto 7) e l'atto di pubblicazione sono due passi separati.
+
 ### Vincoli tecnici enforced dal sistema
 
 | # | Vincolo | Implementazione |

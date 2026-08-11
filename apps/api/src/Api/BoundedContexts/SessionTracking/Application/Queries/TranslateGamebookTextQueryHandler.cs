@@ -10,6 +10,7 @@ using Api.Models;
 using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Services;
 using Api.SharedKernel.Translation;
 using Microsoft.Extensions.Logging;
 
@@ -32,24 +33,28 @@ internal sealed class TranslateGamebookTextQueryHandler
     private readonly ILlmService _llm;
     private readonly ICampaignOwnershipGuard _ownershipGuard;
     private readonly ILogger<TranslateGamebookTextQueryHandler> _logger;
+    private readonly ITierEnforcementService _tierService;
 
     public TranslateGamebookTextQueryHandler(
         IGamebookCampaignSessionRepository campaigns,
         IGamebookGlossaryRepository glossary,
         ILlmService llm,
         ICampaignOwnershipGuard ownershipGuard,
-        ILogger<TranslateGamebookTextQueryHandler> logger)
+        ILogger<TranslateGamebookTextQueryHandler> logger,
+        ITierEnforcementService tierService)
     {
         ArgumentNullException.ThrowIfNull(campaigns);
         ArgumentNullException.ThrowIfNull(glossary);
         ArgumentNullException.ThrowIfNull(llm);
         ArgumentNullException.ThrowIfNull(ownershipGuard);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(tierService);
         _campaigns = campaigns;
         _glossary = glossary;
         _llm = llm;
         _ownershipGuard = ownershipGuard;
         _logger = logger;
+        _tierService = tierService;
     }
 
     public async IAsyncEnumerable<TranslateChunk> Handle(
@@ -61,6 +66,8 @@ internal sealed class TranslateGamebookTextQueryHandler
         double? streamingLatencySec = null;
         long? promptTokens = null;
         long? completionTokens = null;
+        double? costUsd = null;          // #2752: captured from StreamChunk.Cost on the final chunk
+        string provider = "unknown";     // #2752: LLM provider that served the request
         int totalApplicableTerms = 0;
         int matchedTerms = 0;
 
@@ -112,6 +119,13 @@ internal sealed class TranslateGamebookTextQueryHandler
                         "gamebook.text.translate.cost campaign={CampaignId} tokens_in={In} tokens_out={Out}",
                         query.CampaignId, chunk.Usage.PromptTokens, chunk.Usage.CompletionTokens);
                 }
+                // #2752: cost + provider ride on StreamChunk.Cost (sibling of Usage), populated
+                // per-provider by OpenRouterLlmClient / DeepSeekLlmClient on the final chunk.
+                if (chunk.Cost is not null)
+                {
+                    costUsd = (double)chunk.Cost.TotalCost;
+                    provider = chunk.Cost.Provider;
+                }
             }
 
             var translatedIt = fullText.ToString().Trim();
@@ -157,20 +171,33 @@ internal sealed class TranslateGamebookTextQueryHandler
                 status = "cancelled";
             }
 
+            // #2752: cost_eur derived (USD x UsdToEurRate) inside the helper from StreamChunk.Cost,
+            // captured above. costUsd stays null when the provider does not report cost (or on a
+            // failed/cancelled stream) — the helper skips the EUR record then.
             MeepleAiMetrics.RecordGamebookTranslationRequest(
                 status: status,
                 latencyFullSeconds: stopwatch.Elapsed.TotalSeconds,
                 latencyStreamingSeconds: streamingLatencySec,
                 promptTokens: promptTokens,
                 completionTokens: completionTokens,
-                costUsd: null,
-                provider: "unknown",
+                costUsd: costUsd,
+                provider: provider,
                 sourceMethod: "manual");
 
             if (totalApplicableTerms > 0)
             {
                 var rate = (double)matchedTerms / totalApplicableTerms;
                 MeepleAiMetrics.RecordGamebookGlossaryConsistency(rate, HashCampaignId(query.CampaignId));
+            }
+
+            // #2750 (C14): count one successful paragraph translation toward the monthly quota.
+            // CancellationToken.None so a request whose SSE stream was aborted AFTER the
+            // translation completed still counts (mirrors the metrics emit above).
+            if (string.Equals(status, "success", StringComparison.Ordinal))
+            {
+                await _tierService
+                    .RecordUsageAsync(query.CallerUserId, TierAction.TranslateGamebookParagraph, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
         }
     }

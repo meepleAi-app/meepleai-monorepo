@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -21,10 +22,16 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Jobs;
 /// "Failed is terminal today, manual reset". This job automates the
 /// orphan-detection loop without requiring operator intervention.</para>
 /// <para>Daily cadence (03:00 UTC) because orphans are rare. The HEAD check
-/// via <see cref="IBlobStorageService.ExistsAsync"/> is cheap, but bounded by
-/// <see cref="BatchSize"/> = 50 per run to avoid runaway scans on very large
-/// catalogs. The inter-item sleep of <see cref="DelayBetweenItemsMs"/> = 1000ms
+/// via <see cref="IBlobStorageService.GetPresignedUrlForRawKeyAsync"/> is cheap,
+/// but bounded by <see cref="BatchSize"/> = 50 per run to avoid runaway scans on
+/// very large catalogs. The inter-item sleep of <see cref="DelayBetweenItemsMs"/> = 1000ms
 /// keeps the blob storage call rate at ~1 RPS.</para>
+/// <para>Issue #2947 fix: the PDF cover R2 key convention became a deterministic,
+/// slash-containing key (<c>covers/pdf/{pdfId:D}/cover</c>), which the categorized
+/// <see cref="IBlobStorageService.ExistsAsync"/> cannot check — it runs
+/// <c>PathSecurity.ValidateIdentifier</c>, which rejects <c>/</c> and <c>.</c>, so it
+/// always returned false and the job reset every valid cover. The existence
+/// check now mirrors <c>CoverUrlResolver</c> and uses the raw-key primitive.</para>
 /// </remarks>
 [DisallowConcurrentExecution]
 public sealed class PdfCoverOrphanRecoveryJob : IJob
@@ -87,12 +94,8 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
             .ToListAsync(ct)
             .ConfigureAwait(false);
 
-        if (batch.Count == 0)
-        {
-            _logger.LogDebug("PdfCoverOrphanRecoveryJob: no eligible PDFs to check");
-            return;
-        }
-
+        // NOTE: do NOT early-return when the Generated batch is empty — the D3
+        // reconcile scan below (Failed-without-key) must still run.
         _logger.LogDebug(
             "PdfCoverOrphanRecoveryJob: checking {Count} Generated PDFs for orphan covers",
             batch.Count);
@@ -107,14 +110,13 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
 
             try
             {
-                // Check for the preview variant as the canonical existence signal.
-                // If preview is missing, thumb is likely gone too — reset for full re-generation.
-                var previewFileId = $"{pdf.CoverR2Key}-preview.webp";
-                var exists = await blob.ExistsAsync(
-                    previewFileId,
-                    BlobCategory.GameImage,
-                    pdf.CoverR2Key!,
-                    ct).ConfigureAwait(false);
+                // Check for the preview variant as the canonical existence signal,
+                // via the RAW-KEY primitive (mirrors CoverUrlResolver): CoverR2Key
+                // is a deterministic key containing '/' (e.g. "covers/pdf/{id:D}/cover"),
+                // which the categorized ExistsAsync cannot validate/resolve.
+                var previewRawKey = CoverKeyBuilder.PhysicalKeyFor(CoverKind.Pdf, pdf.CoverR2Key!);
+                var exists = await blob.GetPresignedUrlForRawKeyAsync(previewRawKey)
+                    .ConfigureAwait(false) is not null;
 
                 if (!exists)
                 {
@@ -127,6 +129,11 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
                     pdf.CoverR2Key = null;
                     pdf.CoverGenerationError = null;
                     pdf.CoverPageIndex = null;
+                    // #3373 D1: the re-opened generation cycle must start with a clean retry budget,
+                    // mirroring ReconcileFailedOrphansAsync — otherwise a Generated cover that had
+                    // succeeded after 1-2 transient retries would carry the residual count and could
+                    // go terminal on the very first failure of the new cycle.
+                    pdf.CoverGenerationAttempts = 0;
                     pdf.UpdatedAt = DateTime.UtcNow;
                     orphanCount++;
                 }
@@ -153,16 +160,87 @@ public sealed class PdfCoverOrphanRecoveryJob : IJob
             }
         }
 
-        if (orphanCount > 0)
+        // #3373 D3: reconcile the INVERSE orphan — a Failed row WITHOUT a CoverR2Key whose
+        // deterministic preview blob exists in R2 (the upload succeeded but the DB save failed,
+        // per the BackfillPdfCoversJob save-failure comment). Reset it to Pending so
+        // BackfillPdfCoversJob regenerates it: the re-upload overwrites the orphan and raises the
+        // propagation event. A Failed row with no orphan blob is a genuine failure, left as-is.
+        var reconciledCount = await ReconcileFailedOrphansAsync(db, blob, ct).ConfigureAwait(false);
+
+        if (orphanCount > 0 || reconciledCount > 0)
         {
             await db.SaveChangesAsync(ct).ConfigureAwait(false);
             _logger.LogInformation(
-                "PdfCoverOrphanRecoveryJob: reset {Count} orphan cover(s) to Pending for re-generation",
-                orphanCount);
+                "PdfCoverOrphanRecoveryJob: reset {OrphanCount} orphan Generated cover(s) + reconciled " +
+                "{ReconciledCount} Failed-with-orphan cover(s) to Pending",
+                orphanCount, reconciledCount);
         }
         else
         {
             _logger.LogDebug("PdfCoverOrphanRecoveryJob: no orphan covers found in this batch");
         }
+    }
+
+    /// <summary>
+    /// #3373 D3: scans Failed rows with no <c>CoverR2Key</c> and, when the deterministic preview
+    /// blob exists in R2 (an orphan from a save-failure-after-upload), resets them to Pending with
+    /// a cleared attempt budget so <see cref="BackfillPdfCoversJob"/> regenerates them. Returns the
+    /// number reconciled.
+    /// </summary>
+    private async Task<int> ReconcileFailedOrphansAsync(
+        MeepleAiDbContext db,
+        IBlobStorageService blob,
+        CancellationToken ct)
+    {
+        var failedStatus = nameof(PdfCoverGenerationStatus.Failed);
+        var batch = await db.PdfDocuments
+            .AsTracking()
+            .Where(p => p.CoverGenerationStatus == failedStatus && p.CoverR2Key == null)
+            .OrderBy(p => p.UpdatedAt)
+            .Take(BatchSize)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var reconciled = 0;
+        for (var i = 0; i < batch.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var pdf = batch[i];
+            try
+            {
+                var previewRawKey = CoverKeyBuilder.ForPdf(pdf.Id).PhysicalKey;
+                var orphanExists = await blob.GetPresignedUrlForRawKeyAsync(previewRawKey).ConfigureAwait(false) is not null;
+                if (orphanExists)
+                {
+                    _logger.LogWarning(
+                        "PdfCoverOrphanRecoveryJob: orphan preview exists for Failed PDF {Id} (key {Key}) — " +
+                        "resetting to Pending for regeneration (the re-upload overwrites the orphan)",
+                        pdf.Id, previewRawKey);
+                    pdf.CoverGenerationStatus = nameof(PdfCoverGenerationStatus.Pending);
+                    pdf.CoverGenerationAttempts = 0;
+                    pdf.CoverGenerationError = null;
+                    pdf.UpdatedAt = DateTime.UtcNow;
+                    reconciled++;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+#pragma warning disable CA1031 // Do not catch general exception types
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogWarning(ex,
+                    "PdfCoverOrphanRecoveryJob: failed reconcile check for Failed PDF {Id}; skipping", pdf.Id);
+            }
+
+            if (i < batch.Count - 1)
+            {
+                await Task.Delay(DelayBetweenItemsMs, ct).ConfigureAwait(false);
+            }
+        }
+
+        return reconciled;
     }
 }

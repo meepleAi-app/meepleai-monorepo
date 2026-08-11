@@ -196,7 +196,7 @@ internal static class AiEndpoints
 
         try
         {
-            await ExecuteQaStreamingAsync(req, context, mediator, logger, generateFollowUps, streamContext, ct).ConfigureAwait(false);
+            await ExecuteQaStreamingAsync(req, context, mediator, logger, generateFollowUps, streamContext, session, ct).ConfigureAwait(false);
             logger.LogInformation("Streaming QA completed for game {GameId}, query: {Query}", req.gameId, req.query);
         }
         catch (OperationCanceledException ex)
@@ -254,6 +254,7 @@ internal static class AiEndpoints
         ILogger<Program> logger,
         bool generateFollowUps,
         QaStreamContext streamContext,
+        SessionStatusDto session,
         CancellationToken ct)
     {
         // CHAT-02: Follow-up question generation (fire-and-forget after Complete event)
@@ -279,7 +280,12 @@ internal static class AiEndpoints
         }
 
         var responseStyle = !string.IsNullOrWhiteSpace(req.continuationToken) ? "continuation" : req.responseStyle;
-        var query = new StreamQaQuery(req.gameId, req.query, req.chatId, req.documentIds, responseStyle, continuationContext); // Issue #2051
+        // Bug B5: thread the authenticated identity into the streaming query so the handler enforces
+        // per-game RAG access (mirror the non-stream AskQuestion path). Subject.Id = the acting user;
+        // EffectiveActor.Role = the role used for authorization (admin bypass), per Principal semantics.
+        var query = new StreamQaQuery(
+            req.gameId, req.query, req.chatId, req.documentIds, responseStyle, continuationContext, // Issue #2051
+            session.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role);
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON
@@ -397,7 +403,12 @@ internal static class AiEndpoints
             ThreadId: null, // No thread context for legacy endpoint
             SearchMode: req.searchMode.ToString(),
             Language: "en",
-            BypassCache: bypassCache
+            BypassCache: bypassCache,
+            // Bug B5 (QA endpoints, plural): thread the authenticated identity so the handler's
+            // per-game RAG access check fires (mirror the stream path + KnowledgeBaseEndpoints).
+            // Subject.Id = acting user; EffectiveActor.Role = role for authz (admin bypass).
+            UserId: session.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role
         );
 
         var qaResponse = await mediator.Send(askQuery, ct).ConfigureAwait(false);
@@ -561,6 +572,14 @@ internal static class AiEndpoints
             return Results.BadRequest(new { error = "gameId is required" });
         }
 
+        // #2504: validate GUID format up-front, mirroring /agents/qa. Without this,
+        // a malformed gameId silently degraded to generic default steps (HTTP 200)
+        // instead of surfacing a 400 — masking frontend integration bugs.
+        if (!Guid.TryParse(req.gameId, out _))
+        {
+            return Results.BadRequest(new { error = "Invalid game ID format" });
+        }
+
         var startTime = DateTime.UtcNow;
         logger.LogInformation("Setup guide streaming request from user {UserId} for game {GameId}",
             session.Principal!.Subject.Id, req.gameId);
@@ -574,7 +593,7 @@ internal static class AiEndpoints
 
         try
         {
-            var query = new StreamSetupGuideQuery(req.gameId);
+            var query = new StreamSetupGuideQuery(req.gameId, req.playerCount);
             await ExecuteSetupGuideStreamingAsync(query, context, mediator, streamContext, ct).ConfigureAwait(false);
 
             logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",

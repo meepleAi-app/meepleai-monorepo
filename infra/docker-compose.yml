@@ -57,6 +57,11 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  # Single-instance BY CONTRACT (ADR-087 / DEC-3e, #3373 D4): the enrichment tier's
+  # in-process Wikimedia rate-limiter (5 RPS) + dead-letter gauge are correct ONLY at one
+  # instance. Do NOT add `replicas:` / scale this service without first promoting the
+  # rate-limiter + gauge to the distributed variant (Redis lease + DB-COUNT gauge). The
+  # `MultipleApiInstances` Prometheus tripwire alerts if a second instance is ever scraped.
   api:
     build:
       context: ..
@@ -271,8 +276,12 @@ services:
     container_name: meepleai-reranker
     restart: unless-stopped
     profiles: [ai, ai-essential]
-    volumes:
-      - reranker_models:/home/reranker/.cache/huggingface
+    # No model volume: the reranker model (BAAI/bge-reranker-v2-m3) is baked into
+    # the image at build time under HF_HOME=/home/reranker/.cache/huggingface
+    # (see apps/reranker-service/Dockerfile). A named volume on that same path
+    # only shadowed the baked cache and duplicated ~2.3GB on disk with no benefit
+    # (the model is never fetched at runtime). embedding-service already runs
+    # volume-less for the same reason.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -344,9 +353,20 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
-      # Issue #2019 — additional rule file for self-hosted GitHub Actions
-      # runner availability (referenced from prometheus.yml + prometheus.staging.yml).
-      - ./prometheus/alerts/runner-availability.yml:/etc/prometheus/runner-availability.yml:ro
+      # Issue #3082 — BGG ToS-compliance SLO=0 alert (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      - ./prometheus/alerts/egress-guard.yml:/etc/prometheus/egress-guard.yml:ro
+      - ./prometheus/alerts/api-single-instance.yml:/etc/prometheus/api-single-instance.yml:ro
+      # Issue #3112 — OPS-02 Slack delivery alerts (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/slack-delivery.yml:/etc/prometheus/slack-delivery.yml:ro
+      - ./prometheus/alerts/audit-outbox.yml:/etc/prometheus/audit-outbox.yml:ro
+      # Issue #1965 — domain_event_outbox duplicate-publish trigger (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/domain-event-outbox-duplicate-publish.yml:/etc/prometheus/domain-event-outbox-duplicate-publish.yml:ro
+      - ./prometheus/alerts/wikidata-enrichment.yml:/etc/prometheus/wikidata-enrichment.yml:ro
+      # Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
+      - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
+      # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.yml rule_files).
+      - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
@@ -480,7 +500,12 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: meepleai-cadvisor
     restart: unless-stopped
-    profiles: [monitoring]
+    # #3039: also in monitoring-essential so per-container metrics reach the
+    # single-tester staging deploy (CI uses --profile monitoring-essential).
+    # Mirrors node-exporter; Prometheus already has a `cadvisor:8080` scrape job
+    # + the Grafana infra dashboard already has container_* panels — both were
+    # DOWN/empty on staging until now. Footprint: 512M limit / 256M reservation.
+    profiles: [monitoring, monitoring-essential]
     devices:
       - /dev/kmsg:/dev/kmsg
     volumes:
@@ -508,29 +533,6 @@ services:
   # ---------------------------------------------------------------------------
   # Automation services (profile: automation)
   # ---------------------------------------------------------------------------
-
-  n8n:
-    image: n8nio/n8n:1.114.4
-    container_name: meepleai-n8n
-    restart: unless-stopped
-    profiles: [automation]
-    volumes:
-      - ./scripts/load-secrets-env.sh:/scripts/load-secrets-env.sh:ro
-    entrypoint: ["/scripts/load-secrets-env.sh"]
-    command: ["n8n"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - meepleai
-    deploy:
-      resources:
-        limits:
-          cpus: '1.0'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
-          memory: 512M
 
   mailpit:
     image: axllent/mailpit:v1.22
@@ -592,10 +594,18 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    # #3498 — senza queste il container non riceveva ALCUNA credenziale: le guard `:?` qui sotto
+    # fallivano a ogni avvio e il bucket NON veniva mai creato. Nota: `storage.secret` NON contiene
+    # MINIO_ROOT_USER/PASSWORD (ha solo le variabili R2), quindi un `env_file` non avrebbe aiutato —
+    # servono gli stessi default che il servizio `minio` usa in compose.dev.yml, altrimenti le
+    # credenziali di init e quelle del server divergono.
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     entrypoint: >
       /bin/sh -c "
-      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set in storage.secret — refusing to use insecure defaults'};
-      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set in storage.secret — refusing to use insecure defaults'};
+      : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set — refusing to run with an empty credential'};
+      : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set — refusing to run with an empty credential'};
       mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
       mc mb myminio/meepleai-uploads --ignore-existing;
       echo 'Bucket meepleai-uploads ready';
@@ -613,7 +623,8 @@ volumes:
   # ML Service Model Caches
   ollama_data:
   smoldocling_models:
-  reranker_models:
+  # reranker_models removed: the reranker model is baked into the image, so the
+  # volume only duplicated it on disk (see reranker-service above).
 
   # Temporary Processing Directories
   unstructured_temp:

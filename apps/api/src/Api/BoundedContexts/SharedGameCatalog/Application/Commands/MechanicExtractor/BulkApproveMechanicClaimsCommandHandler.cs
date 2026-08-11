@@ -1,8 +1,11 @@
+using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +26,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// preserved — the reviewer must explicitly re-approve them via the per-claim endpoint after
 /// addressing the rejection note. The response surfaces a <c>SkippedRejectedCount</c> so the
 /// UI can warn that promotion to <c>Published</c> is still blocked.
+/// </para>
+/// <para>
+/// D8 safety guard (#2782 FU-1): <c>Pending</c> claims carrying any real <c>fail</c> validation
+/// (see <c>MechanicClaim.Validations</c>) are excluded from this implicit approve-all
+/// sweep — an admin must not be able to one-click rubber-stamp a hallucination. Those claims
+/// stay <c>Pending</c> and require explicit per-claim approval. The skipped-fail count is
+/// log-only (no response DTO field) to keep the response contract and FE Zod schema unchanged.
 /// </para>
 /// </remarks>
 internal sealed class BulkApproveMechanicClaimsCommandHandler
@@ -63,12 +73,25 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
         }
 
         var pendingClaimIds = analysis.Claims
-            .Where(c => c.Status == MechanicClaimStatus.Pending)
+            .Where(c => c.Status == MechanicClaimStatus.Pending
+                        && !c.Validations.Any(v => string.Equals(v.Outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal)))
             .Select(c => c.Id)
             .ToList();
 
+        var skippedFailFlaggedCount = analysis.Claims
+            .Count(c => c.Status == MechanicClaimStatus.Pending
+                        && c.Validations.Any(v => string.Equals(v.Outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal)));
+
         var skippedRejectedCount = analysis.Claims
             .Count(c => c.Status == MechanicClaimStatus.Rejected);
+
+        if (skippedFailFlaggedCount > 0)
+        {
+            _logger.LogInformation(
+                "BulkApprove skipped {Count} fail-flagged claim(s) for analysis {AnalysisId}",
+                skippedFailFlaggedCount,
+                analysis.Id);
+        }
 
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
@@ -113,6 +136,8 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
             skippedRejectedCount,
             request.ReviewerId);
 
+        MeepleAiMetrics.MechanicReviewBulkActions.Add(1, new TagList { { "action", "bulk_approve" } });
+
         var claims = analysis.Claims
             .OrderBy(c => c.Section)
             .ThenBy(c => c.DisplayOrder)
@@ -126,6 +151,7 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
                 ReviewedBy: c.ReviewedBy,
                 ReviewedAt: c.ReviewedAt,
                 RejectionNote: c.RejectionNote,
+                ReviewNote: c.ReviewNote,
                 Citations: c.Citations
                     .OrderBy(citation => citation.DisplayOrder)
                     .Select(citation => new MechanicCitationDto(
@@ -133,7 +159,8 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
                         PdfPage: citation.PdfPage,
                         Quote: citation.Quote,
                         DisplayOrder: citation.DisplayOrder))
-                    .ToList()))
+                    .ToList(),
+                Validations: MechanicClaimValidations.FromDomain(c)))
             .ToList();
 
         return new BulkApproveMechanicClaimsResponseDto(

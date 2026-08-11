@@ -18,6 +18,8 @@ import path from 'path';
 
 import { test, expect, type Page } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendGuard';
+
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
@@ -42,6 +44,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
   const testGameTitle = `E2E RAG Flow ${Date.now()}`;
 
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     await loginAsAdmin(page);
   });
 

@@ -3,6 +3,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -55,7 +56,7 @@ internal sealed class CreateShareRequestCommandHandler : ICommandHandler<CreateS
 
         if (libraryEntry == null)
         {
-            throw new InvalidOperationException($"Game {command.SourceGameId} not found in user's library");
+            throw new NotFoundException("Game", command.SourceGameId.ToString());
         }
 
         // 2. Get the shared game to check its BggId and determine contribution type
@@ -65,7 +66,7 @@ internal sealed class CreateShareRequestCommandHandler : ICommandHandler<CreateS
 
         if (sourceSharedGame == null)
         {
-            throw new InvalidOperationException($"SharedGame {command.SourceGameId} not found");
+            throw new NotFoundException("SharedGame", command.SourceGameId.ToString());
         }
 
         // 3. Determine contribution type by checking if a game with same BggId already exists

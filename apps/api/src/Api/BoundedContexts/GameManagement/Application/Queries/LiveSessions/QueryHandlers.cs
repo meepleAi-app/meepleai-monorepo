@@ -55,8 +55,8 @@ internal class GetLiveSessionQueryHandler : IQueryHandler<GetLiveSessionQuery, L
             session.CurrentTurnIndex,
             currentTurnPlayerId == Guid.Empty ? null : currentTurnPlayerId,
             session.AgentMode,
-            session.ChatSessionId,
             session.Notes,
+            session.GameState?.RootElement, // #3025 L1: opaque live game-state (JsonElement?)
             session.Players.Select(p => new LiveSessionPlayerDto(
                 p.Id,
                 p.UserId,

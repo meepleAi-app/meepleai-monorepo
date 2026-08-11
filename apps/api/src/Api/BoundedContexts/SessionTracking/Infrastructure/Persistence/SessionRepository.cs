@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SessionTracking;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -68,6 +69,18 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         return entities.Select(SessionMapper.ToDomain);
     }
 
+    public async Task<IReadOnlyList<Session>> ListByGamebookCampaignAsync(Guid gamebookCampaignId, CancellationToken ct)
+    {
+        var entities = await DbContext.SessionTrackingSessions
+            .Include(s => s.Participants)
+            .Where(s => s.GamebookCampaignId == gamebookCampaignId)
+            .OrderByDescending(s => s.StartedAt)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        return entities.Select(SessionMapper.ToDomain).ToList();
+    }
+
     public async Task AddAsync(Session session, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(session);
@@ -79,7 +92,9 @@ public class SessionRepository : RepositoryBase, ISessionRepository
 
         if (exists)
         {
-            throw new InvalidOperationException($"Session code {session.SessionCode} already exists.");
+            // #2552: a duplicate session code is a 409 Conflict, not a 500. (The DB also has a
+            // unique index idx_sessions_code; the concurrent-race path is documented as deferred.)
+            throw new ConflictException($"Session code {session.SessionCode} already exists.");
         }
 
         // BE-3 #1590 (C2): collect domain events (e.g. session.created) before persistence
@@ -98,8 +113,13 @@ public class SessionRepository : RepositoryBase, ISessionRepository
         // so they are dispatched atomically with the SaveChangesAsync call upstream.
         CollectDomainEvents(session);
 
-        // Retrieve existing entity to preserve EF Core tracking
+        // Retrieve existing entity to preserve EF Core tracking.
+        // #2660: the DbContext default is QueryTrackingBehavior.NoTracking (PERF-06), so
+        // .AsTracking() is REQUIRED here — otherwise `existing` is loaded untracked and every
+        // scalar mutation below (Status/StartedAt/FinalizedAt/ScoreData/...) is a silent no-op
+        // that SaveChangesAsync never persists.
         var existing = await DbContext.SessionTrackingSessions
+            .AsTracking()
             .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.Id == session.Id, ct)
             .ConfigureAwait(false);

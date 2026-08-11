@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 
+import Link from 'next/link';
+
 import { AbortButton } from '@/components/features/gamebook/AbortButton';
 import { BookPicker } from '@/components/features/gamebook/BookPicker';
 import { EnterManualLink } from '@/components/features/gamebook/EnterManualLink';
@@ -30,6 +32,12 @@ import { getLangTier, type LangTier } from '@/lib/gamebook/lang-tier';
 export interface TranslateViewerProps {
   campaignId: string;
   /**
+   * #2750 C9: the route `gameId`, threaded from the translate page so the viewer
+   * can build the encounter-cheatsheet link (`/library/[gameId]/…/encounter`).
+   * Optional: when absent (legacy test-seams / stories) the link is not rendered.
+   */
+  gameId?: string;
+  /**
    * GameRef of the campaign being translated. Required so the viewer can
    * fetch the list of GameBooks (multi-book generalization, Phase E).
    *
@@ -38,6 +46,38 @@ export interface TranslateViewerProps {
    * endpoint validates kind discrimination.
    */
   gameRef: GameRef;
+  /**
+   * Test-seam: pre-seed the internal FSM phase for Storybook / test use.
+   * MUST NOT be used in production code — default-safe (undefined = 'idle').
+   * DS-17 Phase D-2 Task 6 story harness.
+   */
+  _initialPhase?: Phase;
+  /**
+   * Test-seam: pre-seed the photo artifact for Storybook / test use.
+   * Active when `_initialPhase` is 'segments_ready', 'translating', or 'translated'.
+   */
+  _initialArtifact?: GamebookPhotoArtifact | null;
+  /**
+   * Test-seam: pre-seed the active segment for Storybook / test use.
+   * Active when `_initialPhase` is 'translating' or 'translated'.
+   */
+  _initialActiveSegment?: GamebookSegment | null;
+  /**
+   * Test-seam: pre-seed SSE state for Storybook / test use (translated/translating frames).
+   * Keys match TranslateState from useTranslateSegmentSSE.
+   */
+  _initialSseState?: {
+    partialText?: string;
+    isComplete?: boolean;
+    appliedTerms?: readonly string[];
+    detectedSourceLang?: SourceLangCode | null;
+    langDetectionConfidence?: number | null;
+  };
+  /**
+   * Test-seam: pre-seed the lang-override modal open state for Storybook.
+   * When true, the modal mounts open with mode='manual'.
+   */
+  _initialModalOpen?: boolean;
 }
 
 export type Phase =
@@ -65,10 +105,21 @@ function effectiveTier(
   return rawTier;
 }
 
-export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): ReactElement {
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(null);
-  const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(null);
+export function TranslateViewer({
+  campaignId,
+  gameId,
+  gameRef,
+  _initialPhase,
+  _initialArtifact,
+  _initialActiveSegment,
+  _initialSseState,
+  _initialModalOpen,
+}: TranslateViewerProps): ReactElement {
+  const [phase, setPhase] = useState<Phase>(_initialPhase ?? 'idle');
+  const [artifact, setArtifact] = useState<GamebookPhotoArtifact | null>(_initialArtifact ?? null);
+  const [activeSegment, setActiveSegment] = useState<GamebookSegment | null>(
+    _initialActiveSegment ?? null
+  );
   const [kebabOpen, setKebabOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,7 +143,30 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
 
   const upload = usePhotoUpload(campaignId);
   const segment = useSegmentPhoto(campaignId);
-  const sse = useTranslateSegmentSSE();
+  const sseRaw = useTranslateSegmentSSE();
+  // Test-seam: overlay _initialSseState so story frames can drive translated/translating
+  // without actually running the SSE connection. In production _initialSseState is always
+  // undefined, so `sse === sseRaw` with zero overhead.
+  const sse = useMemo(
+    () =>
+      _initialSseState
+        ? {
+            ...sseRaw,
+            partialText: _initialSseState.partialText ?? sseRaw.partialText,
+            isComplete: _initialSseState.isComplete ?? sseRaw.isComplete,
+            appliedTerms: _initialSseState.appliedTerms ?? sseRaw.appliedTerms,
+            detectedSourceLang:
+              _initialSseState.detectedSourceLang !== undefined
+                ? _initialSseState.detectedSourceLang
+                : sseRaw.detectedSourceLang,
+            langDetectionConfidence:
+              _initialSseState.langDetectionConfidence !== undefined
+                ? _initialSseState.langDetectionConfidence
+                : sseRaw.langDetectionConfidence,
+          }
+        : sseRaw,
+    [sseRaw, _initialSseState]
+  );
 
   // T5 — DEC-4: Hard timeout state. Merged into errorMessage below.
   const [timeoutError, setTimeoutError] = useState<string | null>(null);
@@ -106,7 +180,10 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
   const [analyticsDetectedFiredForArtifact, setAnalyticsDetectedFiredForArtifact] = useState<
     string | null
   >(null);
-  const [modalState, setModalState] = useState<ModalState>({ open: false, mode: 'manual' });
+  const [modalState, setModalState] = useState<ModalState>({
+    open: _initialModalOpen ?? false,
+    mode: 'manual',
+  });
 
   // Reset lang state on artifact change (DEC-FE-11)
   useEffect(() => {
@@ -421,6 +498,33 @@ export function TranslateViewer({ campaignId, gameRef }: TranslateViewerProps): 
           error={sse.error}
         />
       )}
+
+      {/* #2750 C9 — encounter-cheatsheet entry point. Available once a segment is
+          translated: the encounter route needs photoId + target paragraph +
+          gameBookId, all resolved at this point. This is the only live surface
+          that carries those params (the play shell lacks photoId). */}
+      {gameId &&
+        artifact &&
+        activeSegment &&
+        effectiveBookId &&
+        phase === 'translated' &&
+        sse.isComplete && (
+          <div className="rounded-lg border border-[var(--c-game)]/20 bg-background p-4">
+            <Link
+              href={`/library/${gameId}/play/${campaignId}/encounter?${new URLSearchParams({
+                photoId: artifact.id,
+                to: String(activeSegment.paragraphNumber),
+                gameBookId: effectiveBookId,
+                from: String(activeSegment.paragraphNumber),
+              }).toString()}`}
+              data-testid="translate-open-encounter"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[var(--c-game)] hover:underline"
+            >
+              <span aria-hidden="true">⚔️</span> Apri scheda incontro §
+              {activeSegment.paragraphNumber}
+            </Link>
+          </div>
+        )}
 
       <LangOverrideModal
         open={modalState.open}

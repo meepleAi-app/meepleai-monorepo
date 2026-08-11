@@ -29,6 +29,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     private readonly List<RoundScore> _roundScores = new();
     private readonly List<TurnRecord> _turnRecords = new();
     private readonly List<RuleDisputeEntry> _disputes = new();
+    private readonly List<DiaryEntry> _diaryEntries = new();
     private SetupChecklistData? _setupChecklist;
 
 #pragma warning disable CS8618
@@ -62,8 +63,27 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public JsonDocument? GameState { get; private set; }
     public string? Notes { get; private set; }
     public AgentSessionMode AgentMode { get; private set; }
-    public Guid? ChatSessionId { get; private set; }
     public TurnAdvancePolicy TurnAdvancePolicy { get; private set; }
+    /// <summary>
+    /// Id of the SessionTracking.Session companion created at-creation (Saga, ADR-083 SP0).
+    /// Non-null for new sessions created with a catalog GameId; null for legacy rows and
+    /// free-form sessions without a GameId (backfill tracked as OQ#5 follow-up).
+    /// This is the real cross-BC correlation bridge (replaces the dead-code ChatSessionId).
+    /// </summary>
+    public Guid? TrackingSessionId { get; private set; }
+
+    /// <summary>
+    /// Id of the GameManagement <c>GameSession</c> aggregate correlated at session-start
+    /// (Direzione A, ADR-083, Issue #2587 Slice 1).
+    /// Non-null for sessions that were started with a catalog <see cref="GameId"/>; null for
+    /// free-form sessions (no <c>GameId</c>) and sessions started before Slice 1 was deployed
+    /// (lazy back-fill tracked separately).
+    /// This link is the quota/lifecycle/history bridge: the <c>GameSession</c> owns
+    /// the per-user quota counter and the public play-history visible in
+    /// <c>UserLibrary</c>.
+    /// </summary>
+    public Guid? CorrelatedGameSessionId { get; private set; }
+
     public uint Xmin { get; private set; }
 
     // === Read-only collections ===
@@ -74,6 +94,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public IReadOnlyList<RoundScore> RoundScores => _roundScores.AsReadOnly();
     public IReadOnlyList<TurnRecord> TurnRecords => _turnRecords.AsReadOnly();
     public IReadOnlyList<RuleDisputeEntry> Disputes => _disputes.AsReadOnly();
+    public IReadOnlyList<DiaryEntry> DiaryEntries => _diaryEntries.AsReadOnly();
     public SetupChecklistData? SetupChecklist => _setupChecklist;
 
     // === Computed Properties ===
@@ -82,6 +103,23 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
     public bool HasPlayers => _players.Any(p => p.IsActive);
     public bool IsActive => Status is LiveSessionStatus.InProgress or LiveSessionStatus.Paused or LiveSessionStatus.Setup;
     public LiveSessionPlayer? Host => _players.FirstOrDefault(p => p.Role == PlayerRole.Host && p.IsActive);
+
+    /// <summary>
+    /// Returns true if <paramref name="userId"/> is authorized to act on this session as a participant:
+    /// the session creator, OR an active linked player. Guest players (UserId == null) never match,
+    /// and a removed/deactivated player (IsActive == false) loses access (#2561).
+    /// Single source of truth for live-session participant authorization. Issue #2573.
+    /// </summary>
+    public bool IsAuthorizedParticipant(Guid userId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return CreatedByUserId == userId
+            || _players.Any(p => p.IsActive && p.UserId == userId);
+    }
 
     // === Factory Methods ===
 
@@ -98,7 +136,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         Guid? groupId = null,
         SessionScoringConfig? scoringConfig = null,
         AgentSessionMode agentMode = AgentSessionMode.None,
-        TurnAdvancePolicy turnAdvancePolicy = TurnAdvancePolicy.Manual)
+        TurnAdvancePolicy turnAdvancePolicy = TurnAdvancePolicy.Manual,
+        Guid? trackingSessionId = null,
+        Guid? correlatedGameSessionId = null)
     {
         if (id == Guid.Empty)
             throw new ValidationException("Session ID cannot be empty");
@@ -134,7 +174,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             CurrentTurnIndex = 0,
             ScoringConfig = scoringConfig ?? SessionScoringConfig.CreateDefault(),
             AgentMode = agentMode,
-            TurnAdvancePolicy = turnAdvancePolicy
+            TurnAdvancePolicy = turnAdvancePolicy,
+            TrackingSessionId = trackingSessionId,
+            CorrelatedGameSessionId = correlatedGameSessionId
         };
 
         session.AddDomainEvent(new LiveSessionCreatedEvent(id, createdByUserId, trimmedName, gameId));
@@ -173,8 +215,8 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         JsonDocument? gameState,
         string? notes,
         AgentSessionMode agentMode,
-        Guid? chatSessionId,
         TurnAdvancePolicy turnAdvancePolicy,
+        Guid? trackingSessionId,
         uint xmin,
         IEnumerable<LiveSessionPlayer> players,
         IEnumerable<LiveSessionTeam> teams,
@@ -182,7 +224,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         IEnumerable<RoundScore> roundScores,
         IEnumerable<TurnRecord> turnRecords,
         IEnumerable<RuleDisputeEntry> disputes,
-        SetupChecklistData? setupChecklist)
+        IEnumerable<DiaryEntry> diaryEntries,
+        SetupChecklistData? setupChecklist,
+        Guid? correlatedGameSessionId = null)
     {
         var session = new LiveGameSession
         {
@@ -210,8 +254,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
             GameState = gameState,
             Notes = notes,
             AgentMode = agentMode,
-            ChatSessionId = chatSessionId,
             TurnAdvancePolicy = turnAdvancePolicy,
+            TrackingSessionId = trackingSessionId,
+            CorrelatedGameSessionId = correlatedGameSessionId,
             Xmin = xmin
         };
 
@@ -226,6 +271,7 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         session._roundScores.AddRange(roundScores);
         session._turnRecords.AddRange(turnRecords);
         session._disputes.AddRange(disputes);
+        session._diaryEntries.AddRange(diaryEntries);
 
         // Critical: Reconstitute MUST NOT raise events (we are not creating anything new).
         session.ClearDomainEvents();
@@ -726,6 +772,31 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         _setupChecklist = checklist ?? throw new ArgumentNullException(nameof(checklist));
     }
 
+    // === Diary ===
+
+    /// <summary>
+    /// Appends an immutable diary entry authored by the given user.
+    /// Only rejects <see cref="LiveSessionStatus.Completed"/> sessions (Paused is allowed — AC-DIARY-3).
+    /// </summary>
+    public void AddDiaryEntry(Guid authorId, string text, TimeProvider? timeProvider = null)
+    {
+        if (Status == LiveSessionStatus.Completed)
+            throw new ConflictException("Cannot add diary entries to a completed session");
+
+        if (authorId == Guid.Empty)
+            throw new ValidationException("Author ID cannot be empty");
+
+        if (string.IsNullOrWhiteSpace(text))
+            throw new ValidationException("Diary entry text cannot be empty");
+
+        var now = new DateTimeOffset((timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime, TimeSpan.Zero);
+        var entry = new DiaryEntry(Guid.NewGuid(), authorId, now, text.Trim());
+
+        _diaryEntries.Add(entry);
+
+        AddDomainEvent(new LiveSessionDiaryEntryAddedEvent(Id, entry.Id, entry.AuthorId, entry.Text, entry.CreatedAt));
+    }
+
     // === State & Notes ===
 
     /// <summary>
@@ -766,6 +837,9 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         GameState = gameState;
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
         UpdatedAt = now;
+        // #3025 L1: stream the change. Carry the raw JSON string (copied now) — NOT the
+        // JsonDocument, which this method disposes on the next call.
+        AddDomainEvent(new LiveSessionGameStateEvent(Id, gameState?.RootElement.GetRawText()));
     }
 
     /// <summary>
@@ -784,22 +858,77 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         UpdatedAt = now;
     }
 
+    // === Companion ===
+
     /// <summary>
-    /// Sets the AI agent mode for the session.
+    /// Lazily assigns the SessionTracking companion id to a legacy live session
+    /// that was created before SP0 (i.e. <see cref="TrackingSessionId"/> is <see langword="null"/>).
+    /// <para>
+    /// Idempotency semantics (explicit, by owner decision B):
+    /// <list type="bullet">
+    ///   <item>If <see cref="TrackingSessionId"/> is <see langword="null"/> → sets the property.</item>
+    ///   <item>If <see cref="TrackingSessionId"/> equals <paramref name="companionId"/> → no-op (idempotent).</item>
+    ///   <item>If <see cref="TrackingSessionId"/> is already set to a <em>different</em> value →
+    ///         throws <see cref="InvalidOperationException"/> (programmer error: two conflicting companions).</item>
+    /// </list>
+    /// </para>
+    /// Invoked exclusively by <c>EnsureCompanionCommandHandler</c> (ADR-083 SP5-c, Issue #2600).
     /// </summary>
-    public void SetAgentMode(AgentSessionMode mode, Guid? chatSessionId = null, TimeProvider? timeProvider = null)
+    /// <param name="companionId">The id of the newly-created <c>SessionTracking.Session</c> companion.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="companionId"/> is <see cref="Guid.Empty"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="TrackingSessionId"/> is already set to a different, non-empty value.
+    /// </exception>
+    public void SetTrackingSessionId(Guid companionId)
     {
-        if (Status == LiveSessionStatus.Completed)
-            throw new ConflictException("Cannot change agent mode on a completed session");
+        if (companionId == Guid.Empty)
+            throw new ArgumentException("Companion id cannot be empty.", nameof(companionId));
 
-        if (mode != AgentSessionMode.None && chatSessionId == null)
-            throw new ValidationException("Chat session ID is required when enabling an AI agent");
+        if (TrackingSessionId == companionId)
+            return; // no-op — idempotent
 
-        AgentMode = mode;
-        ChatSessionId = mode == AgentSessionMode.None ? null : chatSessionId;
+        if (TrackingSessionId.HasValue)
+            throw new InvalidOperationException(
+                $"TrackingSessionId is already set to {TrackingSessionId.Value} on live session {Id}. " +
+                $"Cannot overwrite with a different companion id {companionId}.");
 
-        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
-        UpdatedAt = now;
+        TrackingSessionId = companionId;
+    }
+
+    /// <summary>
+    /// Associates the <c>GameManagement.GameSession</c> quota/lifecycle aggregate with this
+    /// live session (Direzione A, ADR-083, Issue #2587 Slice 1).
+    /// Called by <c>StartLiveSessionCommandHandler</c> immediately after creating the
+    /// correlated <c>GameSession</c> during session start.
+    /// <para>
+    /// Idempotency semantics (mirror of <see cref="SetTrackingSessionId"/>):
+    /// <list type="bullet">
+    ///   <item>If <see cref="CorrelatedGameSessionId"/> is <see langword="null"/> → sets the property.</item>
+    ///   <item>If <see cref="CorrelatedGameSessionId"/> equals <paramref name="companionId"/> → no-op (idempotent re-start guard).</item>
+    ///   <item>If <see cref="CorrelatedGameSessionId"/> is already set to a <em>different</em> value →
+    ///         throws <see cref="InvalidOperationException"/> (programmer error: two conflicting companions).</item>
+    /// </list>
+    /// </para>
+    /// </summary>
+    /// <param name="companionId">The id of the newly-created <c>GameManagement.GameSession</c> aggregate.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="companionId"/> is <see cref="Guid.Empty"/>.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="CorrelatedGameSessionId"/> is already set to a different, non-empty value.
+    /// </exception>
+    public void SetCorrelatedGameSessionId(Guid companionId)
+    {
+        if (companionId == Guid.Empty)
+            throw new ArgumentException("Correlated GameSession id cannot be empty.", nameof(companionId));
+
+        if (CorrelatedGameSessionId == companionId)
+            return; // no-op — idempotent re-start guard
+
+        if (CorrelatedGameSessionId.HasValue)
+            throw new InvalidOperationException(
+                $"CorrelatedGameSessionId is already set to {CorrelatedGameSessionId.Value} on live session {Id}. " +
+                $"Cannot overwrite with a different companion id {companionId}.");
+
+        CorrelatedGameSessionId = companionId;
     }
 
     // === Query Methods ===

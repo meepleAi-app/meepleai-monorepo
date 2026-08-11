@@ -14,6 +14,9 @@ internal sealed class AbandonGameSessionCommandValidator : AbstractValidator<Aba
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
+
         RuleFor(x => x.Reason)
             .MaximumLength(500).WithMessage("Reason must not exceed 500 characters")
             .When(x => x.Reason is not null);
@@ -30,6 +33,9 @@ internal sealed class CompleteGameSessionCommandValidator : AbstractValidator<Co
     {
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
+
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
 
         RuleFor(x => x.WinnerName)
             .MaximumLength(200).WithMessage("Winner name must not exceed 200 characters")
@@ -48,30 +54,12 @@ internal sealed class EndGameSessionCommandValidator : AbstractValidator<EndGame
         RuleFor(x => x.SessionId)
             .NotEmpty().WithMessage("Session ID is required");
 
+        RuleFor(x => x.RequesterId)
+            .NotEmpty().WithMessage("Requester ID is required");
+
         RuleFor(x => x.WinnerName)
             .MaximumLength(200).WithMessage("Winner name must not exceed 200 characters")
             .When(x => x.WinnerName is not null);
-    }
-}
-
-/// <summary>
-/// Validator for StartGameSessionCommand.
-/// Ensures GameId and UserId are non-empty and Players list is provided.
-/// </summary>
-internal sealed class StartGameSessionCommandValidator : AbstractValidator<StartGameSessionCommand>
-{
-    public StartGameSessionCommandValidator()
-    {
-        RuleFor(x => x.GameId)
-            .NotEmpty().WithMessage("Game ID is required");
-
-        RuleFor(x => x.Players)
-            .NotEmpty().WithMessage("At least one player is required")
-            .Must(p => p.Count <= 100).WithMessage("Players list must not exceed 100 entries")
-            .When(x => x.Players is not null);
-
-        RuleFor(x => x.UserId)
-            .NotEmpty().WithMessage("User ID is required");
     }
 }
 

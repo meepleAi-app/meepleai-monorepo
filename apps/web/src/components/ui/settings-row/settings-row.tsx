@@ -1,20 +1,27 @@
-import type { CSSProperties, JSX, ReactNode } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
 
-// Mirror entity-card / btn ENTITY_CSS_VAR_KEY mapping so `kb` resolves to `--c-kb`
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
+/**
+ * Per-entity AA text-on-tint shade for the leading icon (issue #2955, Fase 2).
+ * Literal class strings so Tailwind's content scanner emits the utilities — a
+ * dynamic `text-entity-${entity}-text` would not be generated. The `-text`
+ * variant (verified >=4.5:1 in Fase 0) keeps the blocking axe AA gate green.
+ * `kb` maps to the registered `-kb-text` (teal), NOT `-document` (slate), which
+ * lives only in `@layer tokens` and would not render.
+ */
+const ENTITY_TEXT: Record<EntityType, string> = {
+  game: 'text-entity-game-text',
+  player: 'text-entity-player-text',
+  session: 'text-entity-session-text',
+  agent: 'text-entity-agent-text',
+  kb: 'text-entity-kb-text',
+  chat: 'text-entity-chat-text',
+  event: 'text-entity-event-text',
+  toolkit: 'text-entity-toolkit-text',
+  tool: 'text-entity-tool-text',
 };
 
 export interface SettingsRowProps {
@@ -69,10 +76,6 @@ export function SettingsRow({
   const useButton = Boolean(onClick);
   const useLink = !useButton && Boolean(href);
 
-  const iconStyle: CSSProperties | undefined = entity
-    ? { color: `hsl(var(--e-${ENTITY_CSS_VAR_KEY[entity]}))` }
-    : undefined;
-
   const showAutoChevron = isInteractive && trailing === undefined;
 
   const innerClasses = clsx(
@@ -89,7 +92,10 @@ export function SettingsRow({
   const body = (
     <>
       {icon !== undefined ? (
-        <span data-testid="settings-row-icon" className="flex-shrink-0 text-lg" style={iconStyle}>
+        <span
+          data-testid="settings-row-icon"
+          className={clsx('flex-shrink-0 text-lg', entity && ENTITY_TEXT[entity])}
+        >
           {icon}
         </span>
       ) : null}
@@ -109,7 +115,7 @@ export function SettingsRow({
   );
 
   return (
-    <li className={className}>
+    <li className={className} data-entity={entity}>
       {useButton ? (
         <button
           type="button"

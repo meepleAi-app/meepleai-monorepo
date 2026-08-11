@@ -229,6 +229,48 @@ describe('Hero (Wave A.4)', () => {
     expect(screen.getByRole('group', { name: 'Connections' })).toBeInTheDocument();
   });
 
+  it('renders the coverOverlay slot inside the cover region when provided', () => {
+    const { container } = render(
+      <Hero
+        title="Catan"
+        toolkitsCount={0}
+        agentsCount={0}
+        kbsCount={0}
+        labels={labels}
+        coverOverlay={<button type="button">edit-cover</button>}
+      />
+    );
+    const btn = screen.getByRole('button', { name: 'edit-cover' });
+    const cover = container.querySelector('[data-slot="hero-cover"]');
+    expect(cover).not.toBeNull();
+    expect(cover?.contains(btn)).toBe(true);
+  });
+
+  it('renders the coverFooter slot below the cover region when provided', () => {
+    // Epic #3470 Slice 3c — the winning-source attribution credit is a footer UNDER
+    // the cover (not overlaid on the image), so a licensed cover surfaces its credit
+    // on the detail Hero the same way the catalog cards do.
+    const { container } = render(
+      <Hero
+        title="Catan"
+        toolkitsCount={0}
+        agentsCount={0}
+        kbsCount={0}
+        labels={labels}
+        coverFooter={<span>manual-credit</span>}
+      />
+    );
+    const credit = screen.getByText('manual-credit');
+    const cover = container.querySelector('[data-slot="hero-cover"]');
+    expect(cover).not.toBeNull();
+    expect(cover?.contains(credit)).toBe(false);
+  });
+
+  it('renders no overlay content when coverOverlay is omitted', () => {
+    render(<Hero title="Catan" toolkitsCount={0} agentsCount={0} kbsCount={0} labels={labels} />);
+    expect(screen.queryByRole('button', { name: 'edit-cover' })).toBeNull();
+  });
+
   it('passes through optional className', () => {
     const { container } = render(
       <Hero

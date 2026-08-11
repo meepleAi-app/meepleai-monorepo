@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 using Api.SharedKernel.Domain.Exceptions;
 
@@ -168,13 +169,13 @@ internal sealed class GameSession : AggregateRoot<Guid>
         ArgumentNullException.ThrowIfNull(player);
 
         if (Status.IsFinished)
-            throw new InvalidOperationException($"Cannot add player to finished session (status: {Status})");
+            throw new ConflictException($"Cannot add player to finished session (status: {Status})");
 
         if (_players.Count >= 100)
-            throw new InvalidOperationException("Session cannot have more than 100 players");
+            throw new ConflictException("Session cannot have more than 100 players");
 
         if (HasPlayer(player.PlayerName))
-            throw new InvalidOperationException($"Player '{player.PlayerName}' is already in this session");
+            throw new ConflictException($"Player '{player.PlayerName}' is already in this session");
 
         _players.Add(player);
 
@@ -221,6 +222,39 @@ internal sealed class GameSession : AggregateRoot<Guid>
 
         var normalized = playerName.Trim().ToLowerInvariant();
         return _players.Any(p => string.Equals(p.PlayerName.ToLowerInvariant(), normalized, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Transitions the shadow/correlated GameSession directly to Completed from any
+    /// non-terminal state, WITHOUT raising domain events.
+    ///
+    /// Use ONLY when this GameSession is a quota/history shadow of a
+    /// <c>LiveGameSession</c> — i.e. it was created by the Slice 1 correlation saga
+    /// and its lifecycle side-effects (audit, contributor credits) are owned entirely
+    /// by the <c>LiveGameSession</c> and its own domain events. Raising
+    /// <c>GameSessionStartedEvent</c> or <c>GameSessionCompletedEvent</c> here would
+    /// generate spurious audit entries and unintentionally credit SharedGameCatalog
+    /// contributors for sessions they didn't participate in through the normal flow.
+    ///
+    /// Idempotent: if the session is already in a terminal state
+    /// (<see cref="SessionStatus.IsFinished"/>) this is a safe no-op.
+    /// </summary>
+    /// <param name="timeProvider">
+    /// Time provider used to stamp <see cref="CompletedAt"/>. Pass
+    /// <see cref="TimeProvider.System"/> in production; use a fake in tests.
+    /// </param>
+    public void MarkCorrelatedComplete(TimeProvider timeProvider)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+
+        if (Status.IsFinished)
+            return; // Idempotent: already terminal — no-op.
+
+        Status = SessionStatus.Completed;
+        CompletedAt = timeProvider.GetUtcNow().UtcDateTime;
+
+        // Intentionally NO AddDomainEvent call.
+        // Events for the real session lifecycle are dispatched by LiveGameSession.
     }
 
     /// <summary>

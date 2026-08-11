@@ -1,0 +1,46 @@
+# .dockerignore — ROOT build context for the API image.
+#
+# The API image builds with `context: ..` (repo root) + `apps/api/src/Api/Dockerfile`
+# (infra/docker-compose.yml). Docker transfers the ENTIRE context to the daemon before the
+# COPY steps run, so without this file every rebuild ships ~2GB+ of node_modules, rulebook
+# PDFs, VCS history and agent worktrees. The Dockerfile only COPYs `apps/api/src/Api` + `data`.
+#
+# #2953 (#7): trim the API build context. Keep this in sync with the Dockerfile's COPY steps —
+# never ignore `apps/api/src/Api` (incl. its .csproj) or `data` (except the runtime PDFs below).
+
+# Node dependencies (apps/web + service tooling) — never used by the .NET build.
+**/node_modules/
+
+# .NET build artifacts — the container restores/publishes fresh; local bin/obj are noise.
+**/bin/
+**/obj/
+**/out/
+
+# VCS + agent worktrees (the latter can hold multiple full checkouts).
+.git/
+.claude/
+
+# Rulebook PDFs — seed/runtime data (uploaded to storage at runtime), not needed in the API
+# image. Exclude ONLY the PDFs (~1.2GB, the context-bloat driver), NOT the whole dir:
+# Api.csproj embeds `data/rulebook/golden/**/*.json` as resources, so ignoring `data/rulebook/`
+# wholesale breaks the API build with CS1566 (missing embedded resource). `COPY data` keeps
+# data/rulebook/golden/. Regression fix: the wholesale ignore shipped in #2953 (#7).
+data/rulebook/*.pdf
+data/rulebook/**/*.pdf
+
+# Docs + archives — never part of any image.
+docs/
+docs-archive/
+
+# Test artifacts.
+**/TestResults/
+**/*.trx
+**/*.coverage
+
+# Web build output (belt-and-suspenders; not copied by the API Dockerfile).
+apps/web/.next/
+
+# Local env + secrets (never bake into an image).
+**/.env
+**/.env.*
+infra/secrets/

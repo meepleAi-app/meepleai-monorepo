@@ -44,7 +44,16 @@ const playwrightEnv = {
 
 function run(cmd, args, env = process.env) {
   return new Promise((resolveExit) => {
-    const child = spawn(cmd, args, { stdio: 'inherit', env, cwd: repoWeb, shell: false });
+    // shell:true on Windows so `pnpm.cmd` (a batch file) can be spawned — Node
+    // 20.12+/22 hardened spawn (CVE-2024-27980) throws EINVAL on .cmd/.bat with
+    // shell:false. POSIX keeps shell:false. Enables local `pnpm test:a11y:e2e`
+    // iteration on Windows instead of ~20min CI rounds (issue #3289).
+    const isWin = process.platform === 'win32';
+    // cmd.exe word-splits array args on spaces, so quote any arg containing
+    // whitespace (e.g. the absolute reportPath under "C:\\Users\\John Doe\\...")
+    // — otherwise the summarize step receives a truncated path and exits 65.
+    const spawnArgs = isWin ? args.map(a => (/\s/.test(a) ? `"${a}"` : a)) : args;
+    const child = spawn(cmd, spawnArgs, { stdio: 'inherit', env, cwd: repoWeb, shell: isWin });
     child.on('exit', (code, signal) => {
       if (signal) {
         process.stderr.write(`run-a11y-e2e: ${cmd} killed by ${signal}\n`);

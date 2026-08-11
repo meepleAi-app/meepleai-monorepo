@@ -47,6 +47,9 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             .Setup(b => b.GetPresignedDownloadUrlAsync(
                 It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<int?>()))
             .ReturnsAsync((string?)null);
+        _mockBlobStorage
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync((string?)null);
 
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
 
@@ -394,10 +397,8 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
 
         // Configure blob storage: return the expected URL only for the "-preview.webp" variant key.
         _mockBlobStorage
-            .Setup(b => b.GetPresignedDownloadUrlAsync(
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync(
                 $"{pdfCoverKey}-preview.webp",
-                BlobCategory.GameImage,
-                pdfCoverKey,
                 It.IsAny<int?>()))
             .ReturnsAsync(expectedCoverUrl);
 

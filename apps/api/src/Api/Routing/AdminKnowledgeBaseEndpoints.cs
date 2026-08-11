@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.EstimateAgentCost;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.ExportDocumentChunks;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetCorpusTitleHealth;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetDocumentEmbeddingsMeta;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCounts;
@@ -189,6 +190,18 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithSummary("List shared games with no active Knowledge Base (admin RAG onboarding)")
         .WithDescription("Returns SharedGames where HasKnowledgeBase = false. Supports pagination and search on Title.")
         .Produces<GamesWithoutKbPagedResponse>();
+
+        // GET /api/v1/admin/kb/title-health — Epic #3338 WP3: per-game extraction-quality read-out +
+        // CI regression guard (fails if a previously-green game's title-health drops after a chunking change).
+        kbGroup.MapGet("/title-health", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetCorpusTitleHealthQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetCorpusTitleHealth")
+        .WithSummary("Per-game title-health (extraction quality) across the chunked corpus")
+        .WithDescription("Computes TitleHealthMetric over each shared game's distinct text_chunks.Heading values. Backs the WP3 regression guard + WP4 go/no-go read-out.")
+        .Produces<IReadOnlyList<GameTitleHealthDto>>(StatusCodes.Status200OK);
 
         // GET /api/v1/admin/shared-games (extended for admin - #4654, #4785)
         var gamesGroup = group.MapGroup("/admin/shared-games")

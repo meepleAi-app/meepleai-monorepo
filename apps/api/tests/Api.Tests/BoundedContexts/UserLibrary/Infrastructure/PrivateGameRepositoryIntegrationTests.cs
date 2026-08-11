@@ -429,8 +429,7 @@ public sealed class PrivateGameRepositoryIntegrationTests : IAsyncLifetime
             description: "Updated",
             playingTimeMinutes: 90,
             minAge: 12,
-            complexityRating: 3.0m,
-            imageUrl: "https://example.com/updated.jpg");
+            complexityRating: 3.0m);
 
         // Act
         await _repository.UpdateAsync(existing);

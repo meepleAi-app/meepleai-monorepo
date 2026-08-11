@@ -33,7 +33,7 @@ public sealed class AppBudgetTests
         budget.UpdatedBy.Should().Be("admin@meepleai.dev");
         budget.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         budget.UpdatedAt.Should().Be(budget.CreatedAt);
-        budget.RowVersion.Should().BeEmpty("Fresh aggregates have no DB-assigned token yet");
+        budget.Xmin.Should().Be(0u, "Fresh aggregates have no DB-assigned token yet");
     }
 
     [Theory]
@@ -146,10 +146,10 @@ public sealed class AppBudgetTests
     }
 
     [Fact]
-    public void Reconstitute_PreservesRowVersionAndAuditFields()
+    public void Reconstitute_PreservesXminAndAuditFields()
     {
         var id = Guid.NewGuid();
-        var rowVersion = new byte[] { 9, 8, 7, 6 };
+        const uint xmin = 987u;
         var createdAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var updatedAt = new DateTime(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
 
@@ -163,7 +163,7 @@ public sealed class AppBudgetTests
             updatedAt: updatedAt,
             createdBy: "founder@meepleai.dev",
             updatedBy: "ops@meepleai.dev",
-            rowVersion: rowVersion);
+            xmin: xmin);
 
         budget.Id.Should().Be(id);
         budget.MonthlyLimit.Amount.Should().Be(1500m);
@@ -174,11 +174,11 @@ public sealed class AppBudgetTests
         budget.UpdatedAt.Should().Be(updatedAt);
         budget.CreatedBy.Should().Be("founder@meepleai.dev");
         budget.UpdatedBy.Should().Be("ops@meepleai.dev");
-        budget.RowVersion.Should().BeEquivalentTo(rowVersion);
+        budget.Xmin.Should().Be(xmin);
     }
 
     [Fact]
-    public void Reconstitute_WithNullRowVersion_DefaultsToEmptyBytes()
+    public void Reconstitute_WithZeroXmin_YieldsZeroToken()
     {
         var budget = AppBudgetAggregate.Reconstitute(
             Guid.NewGuid(),
@@ -190,9 +190,8 @@ public sealed class AppBudgetTests
             updatedAt: DateTime.UtcNow,
             createdBy: "x",
             updatedBy: "x",
-            rowVersion: null!);
+            xmin: 0u);
 
-        budget.RowVersion.Should().NotBeNull();
-        budget.RowVersion.Should().BeEmpty();
+        budget.Xmin.Should().Be(0u);
     }
 }

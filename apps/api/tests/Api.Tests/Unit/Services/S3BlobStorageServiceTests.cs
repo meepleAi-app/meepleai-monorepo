@@ -488,6 +488,78 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         result.Should().Be(expectedUrl);
     }
 
+    /// <summary>
+    /// I1 GATE (final whole-branch review of feature/game-cover-configuration): reproduces
+    /// the exact call shape used by <c>CoverUrlResolver.ResolvePublicAsync</c>'s L4 branch —
+    /// <c>GetPresignedDownloadUrlAsync($"{PdfCoverR2Key}-preview.webp", BlobCategory.GameImage,
+    /// PdfCoverR2Key)</c> — where <c>PdfCoverR2Key</c> is the flat, slash-containing key
+    /// written by <c>ProposeCoverChangeCommandHandler</c>
+    /// (<c>covers/{sharedGameId:D}/pdf-cover-pending</c>).
+    ///
+    /// Both the <c>fileId</c> and <c>resourceKey</c> arguments passed here contain <c>/</c>.
+    /// <see cref="S3BlobStorageService.GetPresignedDownloadUrlAsync"/> validates BOTH via
+    /// <c>PathSecurity.ValidateIdentifier</c> (regex <c>^[a-zA-Z0-9_-]+$</c>, which rejects
+    /// <c>/</c>) BEFORE ever touching <see cref="IAmazonS3"/>. This test asserts that
+    /// outcome deterministically (no S3/HTTP call should even be attempted) — settling
+    /// whether the flat-slash L4 key convention can resolve at all, independent of any
+    /// Testcontainers/MinIO transport environment noise.
+    /// </summary>
+    [Fact]
+    public async Task GetPresignedDownloadUrlAsync_FlatSlashPdfCoverKeyShape_ReturnsNullWithoutCallingS3()
+    {
+        // Arrange: exact shape CoverUrlResolver.ResolvePublicAsync passes for L4.
+        var pdfCoverR2Key = $"covers/{Guid.NewGuid():D}/pdf-cover-pending";
+        var fileId = $"{pdfCoverR2Key}-preview.webp";
+
+        // Act
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.GameImage, pdfCoverR2Key);
+
+        // Assert: PathSecurity.ValidateIdentifier throws ArgumentException on the slash
+        // before any S3 call — the catch-all handler converts it to a null return, which
+        // is indistinguishable from "not found" at the CoverUrlResolver call site.
+        result.Should().BeNull(
+            "PathSecurity.ValidateIdentifier rejects '/' in both fileId and resourceKey, " +
+            "so the flat-slash L4 key can never reach S3 — this is the I1 gate verdict");
+
+        _mockS3Client.Verify(x => x.ListObjectsV2Async(
+            It.IsAny<ListObjectsV2Request>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never,
+            "validation must fail before any S3 round-trip is attempted");
+
+        _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
+            It.IsAny<GetPreSignedUrlRequest>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Companion to the I1 gate above: confirms the ALREADY-SHIPPED L2 Wikidata convention
+    /// (<c>GetPresignedDownloadUrlAsync($"{WikidataCoverR2Key}.webp", GameImage,
+    /// WikidataCoverR2Key)</c>, same flat-slash shape) hits the identical validation
+    /// failure — proving this is a pre-existing, shared defect in the flat-slash key
+    /// convention itself, not something unique to the new PDF-cover (L4) feature.
+    /// </summary>
+    [Fact]
+    public async Task GetPresignedDownloadUrlAsync_FlatSlashWikidataKeyShape_ReturnsNullWithoutCallingS3()
+    {
+        // Arrange: exact shape CoverUrlResolver.ResolvePublicAsync passes for L2.
+        var wikidataCoverR2Key = $"covers/{Guid.NewGuid():D}/wikidata-cover";
+        var fileId = $"{wikidataCoverR2Key}.webp";
+
+        // Act
+        var result = await _sut.GetPresignedDownloadUrlAsync(fileId, BlobCategory.GameImage, wikidataCoverR2Key);
+
+        // Assert
+        result.Should().BeNull(
+            "the L2 Wikidata convention uses the identical flat-slash shape as L4 and " +
+            "hits the same PathSecurity.ValidateIdentifier rejection");
+
+        _mockS3Client.Verify(x => x.ListObjectsV2Async(
+            It.IsAny<ListObjectsV2Request>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // ── Issue #2271: non-seekable stream handling ────────────────────────────
     // R2 (and other S3-compatible providers) reject PutObject when the SDK's
     // checksum calculator cannot read a stream's Length. This happens when the
@@ -575,6 +647,324 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         capturedInputIsSameInstance.Should().BeTrue(
             because: "seekable streams must be forwarded as-is, no allocation");
         capturedHeaderContentLength.Should().Be(content.Length);
+    }
+
+    // ── P1 fix (2026-07-14): GetPresignedUrlForRawKeyAsync ──────────────────────
+    // R2 cover resolver defect: CoverUrlResolver's L2/L3/L4 branches pass raw,
+    // slash-and-dot-containing physical keys (e.g. "covers/{guid}/cover.webp")
+    // to what used to be GetPresignedDownloadUrlAsync, which validates both
+    // args via PathSecurity.ValidateIdentifier (rejects '/' and '.') — always
+    // throwing internally and returning null. GetPresignedUrlForRawKeyAsync is
+    // the fix: it accepts the exact physical key with no identifier validation
+    // and no prefix discovery, but DOES verify object existence first (HEAD)
+    // so a caller never gets a URL to a non-existent object.
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_ObjectExists_ReturnsUrlForExactKeyNoValidation()
+    {
+        // Arrange: a slash-and-dot key that PathSecurity.ValidateIdentifier would reject.
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var expectedUrl = $"https://test-bucket.s3.amazonaws.com/{rawKey}?presigned=true";
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync(
+            "test-bucket",
+            rawKey,
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        _mockS3Client.Setup(x => x.GetPreSignedURLAsync(
+            It.IsAny<GetPreSignedUrlRequest>()))
+            .ReturnsAsync(expectedUrl);
+
+        // Act
+        var result = await _sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // Assert
+        result.Should().Be(expectedUrl);
+
+        _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
+            It.Is<GetPreSignedUrlRequest>(r =>
+                r.BucketName == "test-bucket" &&
+                r.Key == rawKey &&
+                r.Verb == HttpVerb.GET)),
+            Times.Once);
+
+        // No prefix discovery / list call — this is a direct raw-key lookup.
+        _mockS3Client.Verify(x => x.ListObjectsV2Async(
+            It.IsAny<ListObjectsV2Request>(),
+            It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_SignsWithPresignClient_HeadStaysOnMainClient()
+    {
+        // Issue #3498: when a distinct presign client is supplied it (the public-endpoint client)
+        // must sign the URL, while the HEAD/existence check stays on the main (private/container)
+        // client — SigV4 signs the host, so the browser-reachable host must be the one signed.
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var presignUrl = $"http://localhost:9000/test-bucket/{rawKey}?X-Amz-Signature=sig";
+
+        var presignMock = new Mock<IAmazonS3>();
+        presignMock.Setup(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()))
+            .ReturnsAsync(presignUrl);
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync("test-bucket", rawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        var sut = new S3BlobStorageService(_mockS3Client.Object, _options, _mockLogger.Object, presignMock.Object);
+
+        var result = await sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        result.Should().Be(presignUrl);
+        presignMock.Verify(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()), Times.Once);
+        // The main client signed nothing — it only performed the HEAD existence check.
+        _mockS3Client.Verify(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()), Times.Never);
+        _mockS3Client.Verify(
+            x => x.GetObjectMetadataAsync("test-bucket", rawKey, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── #3498: presigned-URL scheme must follow the configured presign endpoint ──────────
+    //
+    // AWSSDK.S3 3.7.413 signs `https` even when the client is built against a cleartext
+    // ServiceURL and UseHttp is set — verified across every config permutation. Against a
+    // plain-HTTP MinIO the browser then dies on a TLS handshake and the cover silently falls
+    // back to a placeholder, a symptom that reads as a missing object. The service realigns
+    // the scheme afterwards; SigV4 signs host/path/query, never the protocol, so the
+    // signature survives (verified end-to-end against a real MinIO).
+
+    [Theory]
+    [InlineData("http://localhost:9000")]  // E2E / dev MinIO reached from the browser
+    [InlineData("http://minio:9000")]      // container-network MinIO
+    public async Task GetPresignedUrlForRawKeyAsync_CleartextPresignEndpoint_DowngradesSchemeKeepingSignature(
+        string publicEndpoint)
+    {
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var host = new Uri(publicEndpoint).Authority;
+        var signed = $"https://{host}/test-bucket/{rawKey}?X-Amz-Expires=3600&X-Amz-Signature=sig";
+
+        var sut = BuildSutWithPresignEndpoint(publicEndpoint, signed, rawKey);
+
+        var result = await sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // Only the scheme changes: host, path and the whole signed query are byte-identical,
+        // which is exactly what keeps the SigV4 signature valid.
+        result.Should().Be($"http://{host}/test-bucket/{rawKey}?X-Amz-Expires=3600&X-Amz-Signature=sig");
+    }
+
+    [Theory]
+    [InlineData("https://test.r2.cloudflarestorage.com")]  // Cloudflare R2 (production)
+    [InlineData("https://s3.amazonaws.com")]               // AWS S3
+    public async Task GetPresignedUrlForRawKeyAsync_HttpsPresignEndpoint_LeavesUrlUntouched(
+        string publicEndpoint)
+    {
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var signed = $"https://{new Uri(publicEndpoint).Authority}/test-bucket/{rawKey}?X-Amz-Signature=sig";
+
+        var sut = BuildSutWithPresignEndpoint(publicEndpoint, signed, rawKey);
+
+        var result = await sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // A downgrade here would be a security regression, not a fix: production must stay TLS.
+        result.Should().Be(signed);
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_CleartextEndpointWithoutExplicitPort_DropsTheImplicitOne()
+    {
+        // UriBuilder materialises the ORIGINAL scheme's default port (443). Since 443 is not http's
+        // default it would survive the rewrite as a literal ":443", changing the Host header and
+        // invalidating the signature — a corruption invisible until the object 403s at runtime.
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var signed = $"https://storage.internal/test-bucket/{rawKey}?X-Amz-Signature=sig";
+
+        var sut = BuildSutWithPresignEndpoint("http://storage.internal", signed, rawKey);
+
+        var result = await sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        result.Should().Be($"http://storage.internal/test-bucket/{rawKey}?X-Amz-Signature=sig");
+        result.Should().NotContain(":443");
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_NoPublicEndpoint_FollowsTheMainEndpointScheme()
+    {
+        // With no PublicEndpoint the presign client is the main client, so the scheme decision has
+        // to fall back to Endpoint — otherwise a cleartext single-endpoint setup stays broken.
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+        var signed = $"https://localhost:9000/test-bucket/{rawKey}?X-Amz-Signature=sig";
+
+        var options = CloneOptionsWith(publicEndpoint: null, endpoint: "http://localhost:9000");
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync("test-bucket", rawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+        _mockS3Client.Setup(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()))
+            .ReturnsAsync(signed);
+
+        var sut = new S3BlobStorageService(_mockS3Client.Object, options, _mockLogger.Object);
+
+        var result = await sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        result.Should().Be($"http://localhost:9000/test-bucket/{rawKey}?X-Amz-Signature=sig");
+    }
+
+    /// <summary>
+    /// Builds a SUT whose presign client returns <paramref name="signedUrl"/> and whose HEAD check
+    /// on <paramref name="rawKey"/> succeeds, with the presign endpoint set to
+    /// <paramref name="publicEndpoint"/>.
+    /// </summary>
+    private S3BlobStorageService BuildSutWithPresignEndpoint(string publicEndpoint, string signedUrl, string rawKey)
+    {
+        var presignMock = new Mock<IAmazonS3>();
+        presignMock.Setup(x => x.GetPreSignedURLAsync(It.IsAny<GetPreSignedUrlRequest>()))
+            .ReturnsAsync(signedUrl);
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync("test-bucket", rawKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        return new S3BlobStorageService(
+            _mockS3Client.Object,
+            CloneOptionsWith(publicEndpoint, _options.Endpoint),
+            _mockLogger.Object,
+            presignMock.Object);
+    }
+
+    private S3StorageOptions CloneOptionsWith(string? publicEndpoint, string endpoint) => new()
+    {
+        Endpoint = endpoint,
+        PublicEndpoint = publicEndpoint,
+        AccessKey = _options.AccessKey,
+        SecretKey = _options.SecretKey,
+        BucketName = _options.BucketName,
+        Region = _options.Region,
+        PresignedUrlExpirySeconds = _options.PresignedUrlExpirySeconds,
+        EnableEncryption = _options.EnableEncryption,
+        ForcePathStyle = _options.ForcePathStyle
+    };
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_ObjectMissing_ReturnsNull()
+    {
+        // Arrange
+        var rawKey = $"covers/{Guid.NewGuid():D}/cover.webp";
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync(
+            "test-bucket",
+            rawKey,
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("Not found") { StatusCode = HttpStatusCode.NotFound });
+
+        // Act
+        var result = await _sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // Assert
+        result.Should().BeNull();
+
+        _mockS3Client.Verify(x => x.GetPreSignedURLAsync(
+            It.IsAny<GetPreSignedUrlRequest>()),
+            Times.Never,
+            "a presigned URL must never be minted for a non-existent object");
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_SlashAndDotKey_DoesNotThrowValidationException()
+    {
+        // Arrange: exact shape used by CoverUrlResolver's L4 branch (PdfCoverR2Key-preview.webp)
+        // and L2 branch (WikidataCoverR2Key.webp) — both contain '/' AND '.'.
+        var rawKey = $"covers/{Guid.NewGuid():D}/pdf-cover-pending-preview.webp";
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync(
+            "test-bucket",
+            rawKey,
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        _mockS3Client.Setup(x => x.GetPreSignedURLAsync(
+            It.IsAny<GetPreSignedUrlRequest>()))
+            .ReturnsAsync("https://test-bucket.s3.amazonaws.com/presigned");
+
+        // Act
+        var result = await _sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // Assert: unlike GetPresignedDownloadUrlAsync, PathSecurity.ValidateIdentifier
+        // is never invoked, so the slash/dot key resolves instead of throwing internally.
+        result.Should().NotBeNull(
+            "GetPresignedUrlForRawKeyAsync must accept raw physical keys containing '/' and '.' " +
+            "without running PathSecurity.ValidateIdentifier");
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_CustomExpiry_UsesProvidedValue()
+    {
+        // Arrange
+        var rawKey = "covers/game/cover.webp";
+        var customExpiry = 7200;
+        DateTime? capturedExpires = null;
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync(
+            "test-bucket",
+            rawKey,
+            It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectMetadataResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        _mockS3Client.Setup(x => x.GetPreSignedURLAsync(
+            It.IsAny<GetPreSignedUrlRequest>()))
+            .Callback<GetPreSignedUrlRequest>(r => capturedExpires = r.Expires)
+            .ReturnsAsync("https://test-bucket.s3.amazonaws.com/presigned");
+
+        var before = DateTime.UtcNow.AddSeconds(customExpiry);
+
+        // Act
+        var result = await _sut.GetPresignedUrlForRawKeyAsync(rawKey, customExpiry);
+
+        // Assert
+        result.Should().NotBeNull();
+        capturedExpires.Should().NotBeNull();
+        capturedExpires!.Value.Should().BeCloseTo(before, TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_S3ExceptionOnMetadata_ReturnsNull()
+    {
+        // Arrange: a non-404 S3 error on the HEAD check should still degrade to null,
+        // not throw and crash the resolver call chain.
+        var rawKey = "covers/game/cover.webp";
+
+        _mockS3Client.Setup(x => x.GetObjectMetadataAsync(
+            "test-bucket",
+            rawKey,
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("Access denied") { StatusCode = HttpStatusCode.Forbidden });
+
+        // Act
+        var act = async () => await _sut.GetPresignedUrlForRawKeyAsync(rawKey);
+
+        // Assert: outer catch-all handles any AmazonS3Exception not matched by the
+        // inner NotFound-only catch, degrading to null instead of throwing.
+        var result = await act.Should().NotThrowAsync();
+        result.Subject.Should().BeNull();
+    }
+
+    // ── #3611: RetrieveRawKeyAsync ───────────────────────────────────────────
+    // Read-side counterpart of StoreRawKeyAsync: reads an object by its EXACT
+    // physical key, skipping PathSecurity.ValidateIdentifier (which rejects '/'
+    // and '.') — needed to re-read a cover's bytes before cropping (Task 10).
+
+    [Fact]
+    public async Task RetrieveRawKeyAsync_MissingObject_ReturnsNull()
+    {
+        // Arrange: a slash-containing key that PathSecurity.ValidateIdentifier would reject.
+        var rawKey = "covers/pdf/does-not-exist/cover-preview.webp";
+
+        _mockS3Client.Setup(x => x.GetObjectAsync(
+            It.IsAny<GetObjectRequest>(),
+            It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AmazonS3Exception("Not found") { StatusCode = HttpStatusCode.NotFound });
+
+        // Act
+        var stream = await _sut.RetrieveRawKeyAsync(rawKey);
+
+        // Assert
+        stream.Should().BeNull();
     }
 
     /// <summary>

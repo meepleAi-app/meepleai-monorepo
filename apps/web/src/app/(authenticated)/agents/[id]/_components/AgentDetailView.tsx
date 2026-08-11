@@ -30,6 +30,7 @@ import { useMemo, useState, type ReactElement } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { type AgentConfigFieldsValue } from '@/components/agent/config';
 import {
   AgentDangerZone,
   AgentHero,
@@ -49,8 +50,9 @@ import {
   type SettingsState,
 } from '@/components/features/agent-detail';
 import { DetailPageContainer } from '@/components/layout/PageContainer';
+import { toast } from '@/components/layout/Toast';
 import { useAgent } from '@/hooks/queries/useAgent';
-import { useAgentConfig } from '@/hooks/queries/useAgentConfig';
+import { useAgentConfig, useUpdateAgentConfig } from '@/hooks/queries/useAgentConfig';
 import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
 import { useTranslation } from '@/hooks/useTranslation';
 import { deriveAgentDetailUiState } from '@/lib/agents/agent-detail-state';
@@ -59,6 +61,7 @@ import {
   IS_VISUAL_TEST_BUILD,
   tryLoadVisualTestFixture,
 } from '@/lib/agents/agent-detail-visual-test-fixture';
+import { DEFAULT_AGENT_CONFIG } from '@/lib/api/schemas/agent-config.schemas';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 
@@ -242,28 +245,30 @@ function mapChatHistoryState(
 
 function mapSettingsState(
   query: ReturnType<typeof useAgentConfig>,
-  isReadOnly: boolean,
+  isArchived: boolean,
+  agentHasGameId: boolean,
   onRetry: () => void
 ): SettingsState {
   if (query.isLoading) return { kind: 'loading' };
   if (query.isError) return { kind: 'error', retry: onRetry };
 
   const config = query.data;
-  const resolvedConfig = {
-    strategy: config?.modelType ?? 'llama-3.3-70b-free',
-    parameters: config
-      ? {
-          temperature: config.temperature,
-          maxTokens: config.maxTokens,
-          personality: config.personality,
-          detailLevel: config.detailLevel,
-          customInstructions: config.customInstructions,
-        }
-      : {},
-  };
+  const value: AgentConfigFieldsValue = config
+    ? {
+        llmModel: config.llmModel,
+        temperature: config.temperature,
+        maxTokens: config.maxTokens,
+        personality: config.personality,
+        detailLevel: config.detailLevel,
+        personalNotes: config.personalNotes ?? '',
+      }
+    : { ...DEFAULT_AGENT_CONFIG, personalNotes: '' };
 
-  if (isReadOnly) return { kind: 'read-only', config: resolvedConfig };
-  return { kind: 'editable', config: resolvedConfig };
+  // Archived agents and standalone agents (no game) are read-only: the per-game
+  // config cannot be edited/persisted for them.
+  if (isArchived) return { kind: 'read-only', value, readOnlyReason: 'archived' };
+  if (!agentHasGameId) return { kind: 'read-only', value, readOnlyReason: 'standalone' };
+  return { kind: 'editable', value };
 }
 
 // ─── Main orchestrator ───────────────────────────────────────────────────────
@@ -375,6 +380,11 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     configEnabled
   );
 
+  // BUG E (#2727): Settings tab Save persists the per-game agent config.
+  // NOTE: AgentSettingsForm is currently display-only (no editable inputs), so
+  // this round-trips the loaded config; field editability is a follow-up.
+  const updateConfig = useUpdateAgentConfig();
+
   // ── Shell renders (FSM cells 1, 2, 3, 4) ──────────────────────────────────
   if (effectiveKind === 'loading') {
     return <LoadingShell label={t('pages.agentDetail.states.loading.ariaLabel')} />;
@@ -425,12 +435,20 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     activeBadge: t('pages.agentDetail.hero.activeBadge'),
     draftBadge: t('pages.agentDetail.hero.draftBadge'),
     archivedBadge: t('pages.agentDetail.hero.archivedBadge'),
-    metaType: 'Tipo: {type}',
-    metaModel: 'Modello: {model}',
-    metaCreated: 'Creato il {date}',
-    metaLastUsed: 'Ultimo utilizzo: {date}',
+    // #3263 discovery: these were hardcoded Italian literals (EN users saw
+    // Italian) and metaInvocations broke the ICU plural. Resolve them via t()
+    // with values here; AgentHero's .replace('{…}') on the already-resolved
+    // strings is then a no-op. safeAgent is in scope (defined above).
+    metaType: t('pages.agentDetail.hero.metaType', { type: safeAgent.type }),
+    metaModel: t('pages.agentDetail.hero.metaModel', { model: '' }),
+    metaCreated: t('pages.agentDetail.hero.metaCreated', { date: safeAgent.createdAt }),
+    metaLastUsed: t('pages.agentDetail.hero.metaLastUsed', {
+      date: safeAgent.lastInvokedAt ?? '',
+    }),
     metaLastUsedNever: t('pages.agentDetail.hero.metaLastUsedNever'),
-    metaInvocations: '{count} invocazioni',
+    metaInvocations: t('pages.agentDetail.hero.metaInvocations', {
+      count: safeAgent.invocationCount,
+    }),
     metaGameNone: t('pages.agentDetail.hero.metaGameNone'),
     ctaPlay: t('pages.agentDetail.hero.ctaPlay'),
     ctaSetup: t('pages.agentDetail.hero.ctaSetup'),
@@ -494,6 +512,8 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     strategyLabel: t('pages.agentDetail.settings.strategyLabel'),
     parametersLabel: t('pages.agentDetail.settings.parametersLabel'),
     readOnlyBanner: t('pages.agentDetail.settings.readOnlyBanner'),
+    readOnlyStandalone: t('pages.agentDetail.settings.readOnlyStandalone'),
+    perGameNote: t('pages.agentDetail.settings.perGameNote'),
     saveCta: t('pages.agentDetail.settings.saveCta'),
     cancelCta: t('pages.agentDetail.settings.cancelCta'),
     saveSuccess: t('pages.agentDetail.settings.saveSuccess'),
@@ -522,8 +542,11 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
     threadsQueryGated.refetch()
   );
 
-  const settingsState: SettingsState = mapSettingsState(configQueryGated, isArchived, () =>
-    configQueryGated.refetch()
+  const settingsState: SettingsState = mapSettingsState(
+    configQueryGated,
+    isArchived,
+    safeAgent.gameId != null,
+    () => configQueryGated.refetch()
   );
 
   return (
@@ -653,8 +676,22 @@ export function AgentDetailView({ agentId }: AgentDetailViewProps): ReactElement
             <AgentSettingsForm
               state={settingsState}
               labels={settingsLabels}
-              onSave={() => {
-                /* mutations handled by child */
+              onSave={value => {
+                if (updateConfig.isPending) return; // guard against double-fire
+                const gameId = agentQuery.data?.gameId;
+                // Editable state is only produced for agents with a game; guard
+                // defensively (config is per-game and can't persist without one).
+                if (!gameId) {
+                  toast.error(settingsLabels.saveError);
+                  return;
+                }
+                updateConfig.mutate(
+                  { gameId, request: { ...value, personalNotes: value.personalNotes || null } },
+                  {
+                    onSuccess: () => toast.success(settingsLabels.saveSuccess),
+                    onError: () => toast.error(settingsLabels.saveError),
+                  }
+                );
               }}
               onCancel={() => {
                 /* no-op: form handles internally */

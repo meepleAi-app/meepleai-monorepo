@@ -57,6 +57,18 @@ internal sealed class PdfCoverExtractor : IPdfCoverExtractor
     private const double MinScoreThreshold = 0.10;
 
     /// <summary>
+    /// Ceiling on the text-density penalty (Issue #3590). Without it the penalty
+    /// dominates the score — <c>imageRatio</c> maxes at 1.0, so 2000+ characters
+    /// alone drove any page negative regardless of its artwork, rejecting 27 of the
+    /// 28 PDFs that were skipped on staging even though they had a near-full-bleed
+    /// page. 0.5 was chosen by measuring the alternatives against the 89 covers
+    /// already generated: it moves 9 of them to a different page, loses none, and
+    /// recovers 20 of the 28. A wider page scan or a document-relative penalty
+    /// recovered more but rewrote up to 43 of the 89 existing choices.
+    /// </summary>
+    internal const double MaxTextPenalty = 0.5;
+
+    /// <summary>
     /// Quality flag for SkiaSharp webp encoding. 80 balances size (~30-50 KB
     /// per thumbnail) with visible quality. Tune as we collect post-deploy data.
     /// </summary>
@@ -198,10 +210,21 @@ internal sealed class PdfCoverExtractor : IPdfCoverExtractor
         var text = pageReader.GetText() ?? string.Empty;
         var textLen = text.Length;
 
-        // Score: penalise text density by ~one unit per 2000 chars. Tuned so a
-        // page with 4000 chars (typical legal page) drops below a moderately
-        // image-heavy cover (ratio 0.25 → score 0.25 - 2.0 = -1.75).
-        var score = imageRatio - (textLen / 2000.0d);
+        // Score: penalise text density by ~one unit per 2000 chars, but CAPPED.
+        //
+        // #3590: uncapped, the penalty was not a correction but a veto. imageRatio
+        // saturates at 1.0, so any page above 2000 chars scored below zero however
+        // graphic it was — and a modern rulebook cover is full-bleed art *plus*
+        // title, publisher and claim, which PDFium extracts as text. Measured on the
+        // 28 staging PDFs marked Skipped: 27 had a page with imageRatio ≥ 0.20 (most
+        // near 1.0) and were rejected anyway, every one of them above 2000 chars.
+        //
+        // The cap keeps the ordering the penalty was written for — among comparably
+        // graphic pages the wordier one still loses — while stopping a single
+        // text-heavy-but-graphic page from being vetoed outright. Validated against
+        // the 89 covers already generated: 9 change page, 0 are lost, and 20 of the
+        // 28 rejected PDFs recover a cover.
+        var score = imageRatio - Math.Min(textLen / 2000.0d, MaxTextPenalty);
         return score;
     }
 

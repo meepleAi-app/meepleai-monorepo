@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Jobs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -39,7 +40,8 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
     private PdfDocumentEntity SeedPdf(
         string? coverR2Key = null,
         string coverStatus = "Generated",
-        DateTime? updatedAt = null)
+        DateTime? updatedAt = null,
+        int coverAttempts = 0)
     {
         var pdf = new PdfDocumentEntity
         {
@@ -53,6 +55,7 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
             ProcessingState = "Ready",
             CoverGenerationStatus = coverStatus,
             CoverR2Key = coverR2Key,
+            CoverGenerationAttempts = coverAttempts,
             UpdatedAt = updatedAt ?? DateTime.UtcNow,
         };
         _db.PdfDocuments.Add(pdf);
@@ -60,29 +63,33 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
         return pdf;
     }
 
+    // #2947 fix: the job checks existence via the RAW-KEY primitive
+    // (GetPresignedUrlForRawKeyAsync), mirroring CoverUrlResolver, NOT the
+    // categorized ExistsAsync (which runs PathSecurity.ValidateIdentifier and
+    // rejects the '/' in the deterministic "covers/pdf/{id:D}/cover" key
+    // convention). All mocks below target GetPresignedUrlForRawKeyAsync.
+
     [Fact]
     public async Task RunBatchAsync_NoGeneratedPdfs_NoOp()
     {
-        // No PDFs in DB at all → ExistsAsync must never be called
+        // No PDFs in DB at all → the raw-key existence check must never be called
         await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
 
-        _blob.Verify(b => b.ExistsAsync(
-                It.IsAny<string>(), It.IsAny<BlobCategory>(),
-                It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync(
+                It.IsAny<string>(), It.IsAny<int?>()),
             Times.Never);
     }
 
     [Fact]
     public async Task RunBatchAsync_AllGeneratedExist_NoReset()
     {
-        // 3 PDFs, all with CoverR2Key, all returning true from ExistsAsync
+        // 3 PDFs, all with CoverR2Key, all resolving to a non-null presigned URL
         SeedPdf(coverR2Key: "pdf-cover-aaa");
         SeedPdf(coverR2Key: "pdf-cover-bbb");
         SeedPdf(coverR2Key: "pdf-cover-ccc");
 
-        _blob.Setup(b => b.ExistsAsync(It.IsAny<string>(), BlobCategory.GameImage,
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
-             .ReturnsAsync(true);
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+             .ReturnsAsync("https://presigned.example/cover-preview.webp");
 
         await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
 
@@ -98,15 +105,17 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
     [Fact]
     public async Task RunBatchAsync_OrphanDetected_ResetsToPending()
     {
-        // 1 PDF with key, ExistsAsync returns false → orphan → reset all 4 fields
-        var orphan = SeedPdf(coverR2Key: "pdf-cover-missing");
+        // 1 PDF with key, raw-key check returns null (object absent) → orphan → reset all fields.
+        // Seed a NON-zero attempt count (the cover succeeded after 2 transient retries, then its blob
+        // vanished): the re-opened generation cycle must start with a clean retry budget, else the very
+        // first transient failure of the new cycle would go immediately terminal (#3373 D1).
+        var orphan = SeedPdf(coverR2Key: "pdf-cover-missing", coverAttempts: PdfCoverRetryPolicy.MaxAttempts);
         orphan.CoverGenerationError = "stale-error";
         orphan.CoverPageIndex = 2;
         _db.SaveChanges();
 
-        _blob.Setup(b => b.ExistsAsync(It.IsAny<string>(), BlobCategory.GameImage,
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
-             .ReturnsAsync(false);
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+             .ReturnsAsync((string?)null);
 
         await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
 
@@ -115,6 +124,8 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
         reset.CoverR2Key.Should().BeNull();
         reset.CoverGenerationError.Should().BeNull();
         reset.CoverPageIndex.Should().BeNull();
+        reset.CoverGenerationAttempts.Should().Be(0,
+            "the retry budget resets so regeneration of the re-opened cycle is not immediately terminal");
     }
 
     [Fact]
@@ -126,29 +137,26 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
             SeedPdf(coverR2Key: $"pdf-cover-{i:D2}", updatedAt: DateTime.UtcNow.AddMinutes(-i));
         }
 
-        _blob.Setup(b => b.ExistsAsync(It.IsAny<string>(), BlobCategory.GameImage,
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
-             .ReturnsAsync(true); // All exist → no resets, only call count matters
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+             .ReturnsAsync("https://presigned.example/cover-preview.webp"); // All exist → no resets, only call count matters
 
         await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
 
-        _blob.Verify(b => b.ExistsAsync(It.IsAny<string>(), BlobCategory.GameImage,
-                It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        _blob.Verify(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()),
             Times.Exactly(PdfCoverOrphanRecoveryJob.BatchSize));
     }
 
     [Fact]
     public async Task RunBatchAsync_ExistsAsyncThrows_LogsAndContinuesBatch()
     {
-        // First PDF: ExistsAsync throws → skip (stays Generated)
-        // Second PDF: ExistsAsync returns false → reset to Pending
+        // First PDF: raw-key check throws → skip (stays Generated)
+        // Second PDF: raw-key check returns null → reset to Pending
         var first = SeedPdf(coverR2Key: "pdf-cover-throws", updatedAt: DateTime.UtcNow.AddMinutes(-10));
         var second = SeedPdf(coverR2Key: "pdf-cover-missing", updatedAt: DateTime.UtcNow);
 
-        _blob.SetupSequence(b => b.ExistsAsync(It.IsAny<string>(), BlobCategory.GameImage,
-                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _blob.SetupSequence(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
              .ThrowsAsync(new InvalidOperationException("Network error"))
-             .ReturnsAsync(false);
+             .ReturnsAsync((string?)null);
 
         await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
 
@@ -160,5 +168,77 @@ public sealed class PdfCoverOrphanRecoveryJobTests : IDisposable
         secondResult.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending),
             "second orphan must be reset despite first item throwing");
         secondResult.CoverR2Key.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RunBatchAsync_NewConventionKey_RawKeyExists_NoReset()
+    {
+        var pdf = SeedPdf(coverR2Key: $"covers/pdf/{Guid.NewGuid():D}/cover");
+
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(
+                $"{pdf.CoverR2Key}-preview.webp", It.IsAny<int?>()))
+             .ReturnsAsync("https://presigned.example/cover-preview.webp");
+
+        await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
+
+        var result = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        result.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Generated),
+            "the raw object exists in R2 — a valid new-convention cover must not be reset");
+        result.CoverR2Key.Should().Be(pdf.CoverR2Key);
+    }
+
+    [Fact]
+    public async Task RunBatchAsync_NewConventionKey_RawKeyMissing_ResetsToPending()
+    {
+        var pdf = SeedPdf(coverR2Key: $"covers/pdf/{Guid.NewGuid():D}/cover");
+
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(
+                $"{pdf.CoverR2Key}-preview.webp", It.IsAny<int?>()))
+             .ReturnsAsync((string?)null);
+
+        await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
+
+        var result = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        result.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending));
+        result.CoverR2Key.Should().BeNull();
+    }
+
+    // #3373 D3 — reconcile the inverse orphan: Failed rows WITHOUT a CoverR2Key whose
+    // deterministic preview blob exists in R2 (upload succeeded, DB save failed).
+
+    [Fact]
+    public async Task RunBatchAsync_FailedWithoutKey_OrphanExists_ResetsToPendingAndClearsAttempts()
+    {
+        var pdf = SeedPdf(coverR2Key: null, coverStatus: "Failed", coverAttempts: PdfCoverRetryPolicy.MaxAttempts);
+        pdf.CoverGenerationError = "exhausted";
+        _db.SaveChanges();
+
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(
+                $"covers/pdf/{pdf.Id:D}/cover-preview.webp", It.IsAny<int?>()))
+             .ReturnsAsync("https://presigned.example/cover-preview.webp");
+
+        await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
+
+        var reconciled = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        reconciled.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Pending),
+            "an orphan-backed Failed cover is reset for regeneration (the re-upload overwrites the orphan)");
+        reconciled.CoverGenerationAttempts.Should().Be(0,
+            "the retry budget resets so regeneration is not immediately terminal");
+        reconciled.CoverGenerationError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RunBatchAsync_FailedWithoutKey_NoOrphan_LeftFailed()
+    {
+        var pdf = SeedPdf(coverR2Key: null, coverStatus: "Failed", coverAttempts: PdfCoverRetryPolicy.MaxAttempts);
+
+        _blob.Setup(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+             .ReturnsAsync((string?)null);
+
+        await CreateJob().RunBatchAsync(_db, _blob.Object, CancellationToken.None);
+
+        var result = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == pdf.Id);
+        result.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Failed),
+            "no orphan blob to reconcile — leave the genuine failure terminal");
     }
 }

@@ -1,6 +1,9 @@
+using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Api.Infrastructure.Configurations.SharedGameCatalog;
 
@@ -17,9 +20,11 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
                 "ck_mechanic_claims_status_range",
                 "status BETWEEN 0 AND 2");
 
+            // #2974: MechanicSection has 9 values (0-8). Keep in sync with the enum
+            // (MechanicSectionRangeConstraintTests guards against drift).
             t.HasCheckConstraint(
                 "ck_mechanic_claims_section_range",
-                "section BETWEEN 0 AND 5");
+                "section BETWEEN 0 AND 8");
 
             t.HasCheckConstraint(
                 "ck_mechanic_claims_display_order_non_negative",
@@ -50,6 +55,19 @@ internal sealed class MechanicClaimEntityConfiguration : IEntityTypeConfiguratio
         builder.Property(c => c.RejectionNote)
             .HasColumnName("rejection_note")
             .HasMaxLength(2000);
+
+        builder.Property(c => c.ReviewNote)
+            .HasColumnName("review_note")
+            .HasMaxLength(2000);
+
+        var validationsConverter = new ValueConverter<List<MechanicClaimValidation>?, string?>(
+            v => v == null ? null : JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => v == null ? null : JsonSerializer.Deserialize<List<MechanicClaimValidation>>(v, (JsonSerializerOptions?)null));
+
+        builder.Property(c => c.Validations)
+            .HasColumnName("validations")
+            .HasColumnType("jsonb")
+            .HasConversion(validationsConverter);
 
         builder.HasIndex(c => c.AnalysisId).HasDatabaseName("ix_mechanic_claims_analysis_id");
         builder.HasIndex(c => new { c.AnalysisId, c.Section, c.DisplayOrder })

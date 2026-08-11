@@ -120,7 +120,15 @@ export function sortLibraryEntries(
       return copy.sort(compareState);
     case 'recent':
     default:
-      return copy.sort((a, b) => Date.parse(b.addedAt) - Date.parse(a.addedAt));
+      // Default view: surface KB-ready games first (primary tie-breaker), then most
+      // recently added. Mirrors the /games catalog default sort so an unfiltered
+      // library also puts AI-ready entries at the top ("Solo con KB pronta" off).
+      return copy.sort((a, b) => {
+        const aKb = a.hasKb ? 0 : 1;
+        const bKb = b.hasKb ? 0 : 1;
+        if (aKb !== bKb) return aKb - bKb;
+        return Date.parse(b.addedAt) - Date.parse(a.addedAt);
+      });
   }
 }
 

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Configuration;
+using Api.Observability;
 using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Repositories;
@@ -15,9 +16,11 @@ using Api.Infrastructure.Seeders.Catalog;
 using Api.Infrastructure.Seeders.Core;
 using Api.Infrastructure.Seeders.LivedIn;
 using Api.Infrastructure.Seeders.MechanicValidation;
+using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Polly;
 using Polly.CircuitBreaker;
@@ -156,15 +159,20 @@ internal static class AdministrationServiceExtensions
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "Prometheus", sp.GetService<ICircuitBreakerStateTracker>()));
 
+        // #3495 fix 3/N: DNS-resolution seam for the SSRF connect pin. TryAdd — SharedGameCatalog
+        // registers the same singleton; whichever context initializes first wins and both share
+        // the one SystemDnsResolver.
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+
         // Issue #1840 SP5 F4-C7: Slack webhook client for per-channel alert dispatch.
         // Separate from the legacy IAlertChannel-based SlackAlertChannel (OPS-07) — this
         // client accepts the webhook URL as an argument so configuration can come from
         // the AlertChannel aggregate rather than appsettings.json. Retry/CB policies
         // mirror the Prometheus client.
-        services.AddHttpClient<ISlackWebhookClient, SlackWebhookClient>(client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(10);
-            })
+        // #3495 fix 3/N: the webhook URL is admin-controlled config, so the egress is SSRF-pinned
+        // (ConfigureSsrfPin, factored into AddSlackWebhookClient so the prod pipeline and the DI
+        // test seam share the EXACT pin wiring). Retry/CB policies wrap the pinned primary handler.
+        AddSlackWebhookClient(services)
             .AddPolicyHandler(GetRetryPolicy())
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "SlackWebhook", sp.GetService<ICircuitBreakerStateTracker>()));
@@ -295,6 +303,34 @@ internal static class AdministrationServiceExtensions
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Issue #3495 fix 3/N — registers the Slack webhook typed <see cref="HttpClient"/> with the
+    /// SSRF connect-pin (<c>ConfigureSsrfPin</c>) as its primary handler. Extracted so the prod
+    /// pipeline (which additionally wraps it in Polly retry/CB) and the DI test seam
+    /// (<see cref="AddSlackWebhookClientForTests"/>) share the exact same pin wiring — if the pin
+    /// is ever dropped here, both prod and the fail-closed test lose it together.
+    /// </summary>
+    private static IHttpClientBuilder AddSlackWebhookClient(IServiceCollection services) =>
+        services.AddHttpClient<ISlackWebhookClient, SlackWebhookClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(10);
+            })
+            .ConfigureSsrfPin(MeepleAiMetrics.EgressSinks.Slack);
+
+    /// <summary>
+    /// Test seam (issue #3495 fix 3/N): registers ONLY the SSRF-pinned Slack webhook client so a
+    /// DI-resolution test can prove a private-resolving webhook fails closed at the connect-pin.
+    /// Omits the Polly retry/CB handlers on purpose — retrying a fail-closed pin would add the
+    /// 2+4+8s backoff to the test for no added coverage (Polly is exercised separately). The caller
+    /// MUST register an <see cref="IDnsResolver"/> on the same collection before resolving the client.
+    /// </summary>
+    internal static void AddSlackWebhookClientForTests(IServiceCollection services)
+    {
+        services.AddLogging();
+        services.TryAddSingleton<IDnsResolver, SystemDnsResolver>();
+        AddSlackWebhookClient(services);
     }
 
     private static AsyncRetryPolicy<HttpResponseMessage> GetRetryPolicy()

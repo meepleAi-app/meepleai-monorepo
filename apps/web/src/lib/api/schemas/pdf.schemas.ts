@@ -7,11 +7,26 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
+// ========== Image-Table Regions (#3447 slice) ==========
+
+export const ImageRegionSchema = z.object({
+  page: z.number().int(),
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  elementType: z.string(),
+});
+export const ImageRegionsResponseSchema = z.object({ regions: z.array(ImageRegionSchema) });
+export type ImageRegion = z.infer<typeof ImageRegionSchema>;
+
 // ========== PDF Document ==========
 
 export const PdfDocumentDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   fileName: z.string().min(1),
   filePath: z.string().min(1),
   fileSizeBytes: z.number().int().nonnegative(),

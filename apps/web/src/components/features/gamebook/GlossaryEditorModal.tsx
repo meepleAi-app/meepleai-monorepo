@@ -40,8 +40,21 @@ export interface GlossaryEditorModalProps {
   readonly onClose: () => void;
   /** Called after a successful PUT — parent decides whether to also close. */
   readonly onSaved?: (saved: GamebookGlossaryEntry) => void;
+  /**
+   * The game's GameBooks (SI-6 #2637), used to resolve each context's
+   * `bookId` to its human `displayName` instead of showing the raw UUID.
+   * When a context's book is absent the row falls back to the id.
+   */
+  readonly books?: readonly { readonly id: string; readonly displayName: string }[];
   /** Force layout for visual tests; auto-derived from viewport otherwise. */
   readonly forceLayout?: 'mobile' | 'desktop';
+  /**
+   * [Test-seam] Override specific reducer fields for static story rendering.
+   * Merged on top of `makeInitialState(entry)` at mount time.
+   * For Storybook stories only — do NOT use in production code.
+   * @internal
+   */
+  readonly _initialState?: Partial<ModalState>;
 }
 
 // ---------------------------------------------------------------------------
@@ -53,7 +66,8 @@ interface CollidingEntry {
   readonly termEn: string;
 }
 
-type ModalState = {
+/** @internal Exported for test-seam stories only. */
+export type ModalState = {
   itValue: string;
   initialIt: string;
   status: 'idle' | 'saving' | 'error' | 'collision';
@@ -131,16 +145,18 @@ export function GlossaryEditorModal({
   onClose,
   onSaved,
   forceLayout,
+  books,
+  _initialState,
 }: GlossaryEditorModalProps): ReactElement | null {
   const { t } = useTranslation();
   const upsert = useUpsertGlossary(campaignId);
+  const bookNameById = new Map((books ?? []).map(b => [b.id, b.displayName]));
   const titleId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [state, dispatch] = useReducer(
-    modalReducer,
-    entry,
-    e => (e ? makeInitialState(e) : EMPTY_MODAL_STATE)
-  );
+  const [state, dispatch] = useReducer(modalReducer, entry, e => {
+    const base = e ? makeInitialState(e) : EMPTY_MODAL_STATE;
+    return _initialState ? { ...base, ..._initialState } : base;
+  });
 
   // Escape closes — listener attached only while the modal is mounted.
   useEffect(() => {
@@ -208,28 +224,18 @@ export function GlossaryEditorModal({
 
   return (
     <div data-slot="glossary-editor-modal">
-      <div
-        data-testid="glossary-editor-scrim"
-        onClick={onClose}
-        role="presentation"
-      />
+      <div data-testid="glossary-editor-scrim" onClick={onClose} role="presentation" />
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         data-testid={
-          layout === 'desktop'
-            ? 'glossary-editor-dialog-desktop'
-            : 'glossary-editor-dialog-mobile'
+          layout === 'desktop' ? 'glossary-editor-dialog-desktop' : 'glossary-editor-dialog-mobile'
         }
       >
         <header>
           <h2 id={titleId}>{t('gamebook.glossaryEditor.title')}</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('gamebook.glossaryEditor.close')}
-          >
+          <button type="button" onClick={onClose} aria-label={t('gamebook.glossaryEditor.close')}>
             {t('gamebook.glossaryEditor.close')}
           </button>
         </header>
@@ -254,6 +260,47 @@ export function GlossaryEditorModal({
           <p data-slot="glossary-editor-diff-hint">
             <span className="line-through">{state.initialIt}</span>
           </p>
+        )}
+
+        {/* #2638 / SI-7: read-only multi-context list. Rendered only when the entry
+            carries provenance contexts (per-variant editing is a follow-up). */}
+        {entry.contexts.length > 0 && (
+          <section
+            data-slot="glossary-editor-contexts"
+            aria-label={t('gamebook.glossaryEditor.contexts.heading')}
+          >
+            <h3 className="text-sm font-semibold text-foreground">
+              {t('gamebook.glossaryEditor.contexts.heading')}
+            </h3>
+            <ul className="divide-y divide-border border-t border-border">
+              {entry.contexts.map((ctx, i) => (
+                <li
+                  key={`${ctx.bookId}-${ctx.paragraphRef ?? i}`}
+                  data-testid="glossary-context-row"
+                  className="flex flex-col gap-1 py-2"
+                >
+                  <span
+                    data-slot="glossary-context-book"
+                    className="inline-flex w-fit items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                  >
+                    📖 {bookNameById.get(ctx.bookId) ?? ctx.bookId}
+                  </span>
+                  <p className="text-sm text-foreground">
+                    {ctx.definition ?? (
+                      <span className="italic text-muted-foreground">
+                        {t('gamebook.glossaryEditor.contexts.usaBase')}
+                      </span>
+                    )}
+                  </p>
+                  {ctx.paragraphRef && (
+                    <span className="text-xs text-muted-foreground">
+                      {t('gamebook.glossaryEditor.contexts.firstSeen', { ref: ctx.paragraphRef })}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {state.status === 'error' && (
@@ -283,17 +330,15 @@ export function GlossaryEditorModal({
         )}
 
         {/* Issue #1312 AC-6: desktop side-panel surfacing the conflicting entry. */}
-        {layout === 'desktop' &&
-          state.status === 'collision' &&
-          state.collidingEntry !== null && (
-            <aside
-              data-testid="glossary-editor-collision-side-panel"
-              aria-label={t('gamebook.glossaryEditor.collision.sidePanelLabel')}
-            >
-              <p>{state.collidingEntry.termEn}</p>
-              <p>{state.itValue}</p>
-            </aside>
-          )}
+        {layout === 'desktop' && state.status === 'collision' && state.collidingEntry !== null && (
+          <aside
+            data-testid="glossary-editor-collision-side-panel"
+            aria-label={t('gamebook.glossaryEditor.collision.sidePanelLabel')}
+          >
+            <p>{state.collidingEntry.termEn}</p>
+            <p>{state.itValue}</p>
+          </aside>
+        )}
 
         <button
           type="button"

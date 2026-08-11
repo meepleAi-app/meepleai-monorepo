@@ -9,6 +9,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Enums ==========
 
 export const PlayRecordStatusSchema = z.enum(['Planned', 'InProgress', 'Completed', 'Archived']);
@@ -87,7 +89,7 @@ export type ShareLinkResponse = z.infer<typeof ShareLinkResponseSchema>;
 
 export const PlayRecordDtoSchema = z.object({
   id: z.string().uuid(),
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string(),
   sessionDate: z.string(),
   duration: z.string().nullable(), // .NET TimeSpan (e.g., "02:30:00") or ISO 8601 (e.g., "PT2H30M")
@@ -103,9 +105,9 @@ export const PlayRecordDtoSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   // #1663 Phase 1: derived on-read (winner = players with "wins" dimension > 0).
-  // Optional during BE rollout; tighten once the BE ships the fields.
-  winnerPlayerIds: z.array(z.string().uuid()).optional(),
-  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
+  // BE always emits these (PlayRecordDtoMapper -> PlayRecordOutcomeCalculator); required (#3087).
+  winnerPlayerIds: z.array(z.string().uuid()),
+  outcomeType: PlayRecordOutcomeTypeSchema,
   // #2436 PR-C: photos exposed on read. Optional during BE rollout; tighten later.
   photos: z.array(PlayRecordPhotoSchema).optional(),
   // #2437-1: Postgres xmin optimistic-concurrency token (uint). Optional during rollout.
@@ -123,16 +125,17 @@ export const PlayRecordSummarySchema = z.object({
   status: PlayRecordStatusSchema,
   playerCount: z.number().int().nonnegative(),
   // #1663 Phase 1: enable cover/deep-link + outcome badge in the list view.
-  // Optional during BE rollout; tighten once the BE ships the fields.
-  gameId: z.string().uuid().nullable().optional(),
-  winnerPlayerIds: z.array(z.string().uuid()).optional(),
-  outcomeType: PlayRecordOutcomeTypeSchema.optional(),
+  // BE always emits these (PlayRecordSummaryDto non-nullable); required (#3087).
+  // gameId stays nullable (freeform records) but is always present, matching the detail schema.
+  gameId: GameIdString.nullable(),
+  winnerPlayerIds: z.array(z.string().uuid()),
+  outcomeType: PlayRecordOutcomeTypeSchema,
 });
 export type PlayRecordSummary = z.infer<typeof PlayRecordSummarySchema>;
 
 // #1663 Phase 2: per-game win/play stats keyed by gameId (gameName fallback).
 export const GameWinStatsSchema = z.object({
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string(),
   played: z.number().int().nonnegative(),
   won: z.number().int().nonnegative(),
@@ -140,7 +143,7 @@ export const GameWinStatsSchema = z.object({
 export type GameWinStats = z.infer<typeof GameWinStatsSchema>;
 
 export const GamePlayCountSchema = z.object({
-  gameId: z.string().uuid().nullable(),
+  gameId: GameIdString.nullable(),
   gameName: z.string(),
   plays: z.number().int().nonnegative(),
 });
@@ -175,7 +178,7 @@ export type PlayerStatistics = z.infer<typeof PlayerStatisticsSchema>;
 // ========== Request DTOs ==========
 
 export const CreatePlayRecordRequestSchema = z.object({
-  gameId: z.string().uuid().optional(),
+  gameId: GameIdString.optional(),
   gameName: z.string().min(1).max(255),
   sessionDate: z.string(),
   visibility: PlayRecordVisibilitySchema,
@@ -223,7 +226,7 @@ export type PlayHistoryResponse = z.infer<typeof PlayHistoryResponseSchema>;
 
 export const SessionCreateFormSchema = z.object({
   gameType: z.enum(['catalog', 'freeform']),
-  gameId: z.string().uuid().optional(),
+  gameId: GameIdString.optional(),
   // Allow empty string during multi-step navigation; per-step validation enforces non-empty.
   gameName: z.string().max(255),
   sessionDate: z.date(),

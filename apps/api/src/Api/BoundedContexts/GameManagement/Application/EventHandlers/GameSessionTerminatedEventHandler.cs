@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -42,7 +43,7 @@ internal sealed class GameSessionTerminatedEventHandler : DomainEventHandlerBase
                     title: "Session Automatically Closed",
                     message: "One of your game sessions was automatically closed because you reached your session limit. " +
                              "Complete or abandon existing sessions before starting new ones, or upgrade your subscription for higher limits.",
-                    link: "/sessions",
+                    link: NotificationRoutes.Sessions,
                     metadata: System.Text.Json.JsonSerializer.Serialize(new
                     {
                         sessionId = domainEvent.SessionId,

@@ -46,7 +46,6 @@ Api.Tests/
     GameManagement/         # Game command/query handler tests
     KnowledgeBase/          # RAG command/query handler tests
     DocumentProcessing/     # PDF processing handler tests
-    WorkflowIntegration/    # n8n workflow handler tests
     SystemConfiguration/    # Config handler tests
     Administration/         # Admin handler tests
   Integration/              # Integration tests with real dependencies

@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-07-15T07:55:27.529Z",
+  "generatedFrom": "admin-mockups/MOCKUPS_INDEX.md",
+  "canonicalStates": [
+    "default",
+    "empty",
+    "loading",
+    "error",
+    "sse"
+  ],
+  "totalMappableEntries": 68,
+  "baselineMaxCoverageGaps": 3,
+  "counts": {
+    "covered": 50,
+    "coverageGaps": 3,
+    "contractViolations": 0,
+    "skippedObsolete": 1,
+    "skippedDeferred": 14
+  },
+  "coverageGaps": [
+    {
+      "mockup": "sp7-notifications-preferences.html",
+      "routes": [
+        "/notifications/preferences"
+      ],
+      "reason": "no-story-path"
+    },
+    {
+      "mockup": "sp4-session-skeleton-live.html",
+      "routes": [
+        "/sessions/[id]/live"
+      ],
+      "reason": "no-story-path"
+    },
+    {
+      "mockup": "chat-fullscreen.html",
+      "routes": [
+        "/chat/[threadId]",
+        "/chat/new"
+      ],
+      "reason": "no-story-path"
+    }
+  ],
+  "contractViolations": []
+}

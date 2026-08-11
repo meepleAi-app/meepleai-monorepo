@@ -94,6 +94,16 @@ public sealed class PlayRecordPhotoUploadTests : IAsyncLifetime
         // Local storage returns null (handler falls back to raw path).
         public Task<string?> GetPresignedDownloadUrlAsync(string fileId, BlobCategory category, string resourceKey, int? expirySeconds = null)
             => Task.FromResult<string?>(null);
+        public Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+            => Task.FromResult<string?>(null);
+        public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+            => Task.FromResult(true);
+
+        public Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+            => Task.FromResult(true);
+
+        public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+            => Task.FromResult<Stream?>(null);
     }
 
     // ---------------------------------------------------------------------------

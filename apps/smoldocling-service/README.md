@@ -10,7 +10,7 @@ FastAPI microservice for VLM-based PDF extraction using SmolDocling (256M parame
 
 - ✅ **Vision-Language Model**: SmolDocling 256M (Apache 2.0)
 - ✅ **Complex Layouts**: Multi-column, tables, equations detection
-- ✅ **GPU Optional**: Works on CPU (3-5s/page) or GPU (0.5s/page)
+- ✅ **GPU Optional**: runs on CPU or GPU (see measured latency under Benchmarks — the original per-page estimates proved ~100× optimistic; #3435)
 - ✅ **Markdown Output**: Structured Markdown with DocTags
 - ✅ **Quality Scoring**: VLM-specific 4-metric assessment
 - ✅ **Italian Support**: Latin script languages (ita, eng, spa, fra, deu)
@@ -147,18 +147,23 @@ Health check with GPU status.
 
 ## Performance
 
-### Benchmarks (Estimated)
+### Benchmarks
 
-| Hardware | Time/Page | Total (20 pages) |
-|----------|-----------|------------------|
-| **CPU (4 cores)** | 3-5s | 60-100s (~1.5 min) |
-| **GPU (RTX 3060)** | 0.5-0.8s | 10-16s |
-| **GPU (A100)** | 0.35s | 7s |
+> ⚠️ The *Estimated* rows are the original upstream figures and were **never validated**. The first
+> real end-to-end run (#3435, 2026-08-04, agricola rulebook) measured them as **~100× optimistic** —
+> trust the *Measured* row for capacity planning.
+
+| Hardware | Time/Page | Total (20 pages) | Source |
+|----------|-----------|------------------|--------|
+| **GPU (RTX 4070, SDPA)** | **~57s** | **~11 min** | **Measured (#3435)** |
+| CPU (4 cores) | >95s | hours | Measured (#3435) |
+| GPU (RTX 3060) | 0.5-0.8s | 10-16s | Estimated (unvalidated) |
+| GPU (A100) | 0.35s | 7s | Estimated (unvalidated) |
 
 ### Resource Requirements
 
-- **CPU**: 2-4 cores (3-5s/page)
-- **GPU**: Optional, 500MB VRAM (0.5s/page)
+- **CPU**: 2-4 cores (measured >95s/page — impractical for batch, #3435)
+- **GPU**: Optional, ~500MB VRAM (measured ~57s/page on an RTX 4070 with SDPA, #3435)
 - **RAM**: 2-3GB
 - **Disk**: 1GB (model cache: 513MB)
 

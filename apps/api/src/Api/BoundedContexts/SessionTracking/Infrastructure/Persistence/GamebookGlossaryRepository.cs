@@ -39,7 +39,11 @@ internal sealed class GamebookGlossaryRepository : IGamebookGlossaryRepository
     }
 
     public Task<GamebookGlossaryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        => _db.GamebookGlossaryEntries.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        // #2638 / PERF-06: the upsert handler mutates the returned entity (UpdateTermIt /
+        // ReplaceContexts) and expects SaveChanges to persist it. Under the global
+        // QueryTrackingBehavior.NoTracking default the mutation would be a silent no-op
+        // (same class as #2660), so this getter must load .AsTracking().
+        => _db.GamebookGlossaryEntries.AsTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     public async Task AddRangeAsync(IEnumerable<GamebookGlossaryEntry> entries, CancellationToken cancellationToken = default)
     {
@@ -48,6 +52,9 @@ internal sealed class GamebookGlossaryRepository : IGamebookGlossaryRepository
 
     public Task AddAsync(GamebookGlossaryEntry entry, CancellationToken cancellationToken = default)
         => _db.GamebookGlossaryEntries.AddAsync(entry, cancellationToken).AsTask();
+
+    public void Remove(GamebookGlossaryEntry entry)
+        => _db.GamebookGlossaryEntries.Remove(entry);
 
     public Task SaveChangesAsync(CancellationToken cancellationToken = default)
         => _db.SaveChangesAsync(cancellationToken);

@@ -1,0 +1,62 @@
+# Issue #3248 (epic #448 C5) — copyright enforcement observability alerts.
+#
+# Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Rag.cs:297-344,
+# #447 observability). OTel Prometheus exporter (1.13.1-beta.1) sanitizes dots to
+# underscores and appends `_total` to monotonic counters (unit is NOT appended —
+# cf. meepleai_bgg_url_attempted_render_total). Exported names:
+#   - meepleai_rag_copyright_guard_scan_errors_total   (counter; tag error_type)
+#   - meepleai_rag_copyright_guard_scan_duration_*     (histogram; _count/_sum/_bucket)
+#   - meepleai_rag_copyright_verbatim_run_detected_total (counter; tags run_length, document_id)
+#   - meepleai_rag_copyright_instruction_injected_total  (counter; tags has_protected, agent_language)
+#
+# Verify the exact scraped names in staging before relying on these:
+#   curl -s localhost:8080/metrics | grep copyright
+#
+# Two alerts per epic #448 C5: page ops when scan-error rate > 1% (guard failing
+# open) or verbatim-detection rate > 20% (LLM ignoring the prompt-gate).
+# Routing: severity=critical pages immediately (alertmanager.yml critical-alerts);
+# severity=warning goes to the warning route. Unit tests: copyright-enforcement.test.yml.
+groups:
+  - name: meepleai_copyright_enforcement_alerts
+    rules:
+      # CRITICAL: >1% of copyright scans on protected-chunk queries error out.
+      # The guard is fail-open (ChatWithSessionAgentCommandHandler.cs:522), so a
+      # sustained error rate means verbatim leaks can reach clients undetected.
+      - alert: CopyrightScanErrorRateHigh
+        expr: |
+          sum(rate(meepleai_rag_copyright_guard_scan_errors_total[5m]))
+          /
+          (
+            sum(rate(meepleai_rag_copyright_guard_scan_errors_total[5m]))
+            +
+            sum(rate(meepleai_rag_copyright_guard_scan_duration_count[5m]))
+          ) > 0.01
+        for: 15m
+        labels:
+          severity: critical
+          service: meepleai-api
+          category: copyright
+        annotations:
+          summary: "Copyright leak guard is failing open (>1% scan errors)"
+          description: "Copyright leak guard scan-error rate exceeded the 1% threshold of protected-chunk queries; the guard fails open, so verbatim leaks may reach clients undetected. Check LLM latency, scan timeout budget, and the error_type breakdown."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-claude/architecture/copyright-tier-rag.md"
+          dashboard_url: "http://localhost:3001/d/copyright-enforcement"
+
+      # WARNING: >20% of protected-chunk queries trigger a verbatim-run detection,
+      # i.e. the LLM is not following the copyright paraphrase instruction at scale.
+      - alert: CopyrightDetectionRateHigh
+        expr: |
+          sum(rate(meepleai_rag_copyright_verbatim_run_detected_total[5m]))
+          /
+          sum(rate(meepleai_rag_copyright_instruction_injected_total{has_protected="true"}[5m]))
+          > 0.20
+        for: 30m
+        labels:
+          severity: warning
+          service: meepleai-api
+          category: copyright
+        annotations:
+          summary: "Copyright verbatim-detection rate is high (>20%)"
+          description: "Verbatim-run detections exceeded the 20% threshold of protected-chunk queries; the LLM is not following the copyright paraphrase instruction. Review prompt-gate wording and recent model/routing changes."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-claude/architecture/copyright-tier-rag.md"
+          dashboard_url: "http://localhost:3001/d/copyright-enforcement"

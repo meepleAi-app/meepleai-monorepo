@@ -146,12 +146,12 @@ public class ErrorHandlingTests : IAsyncLifetime
         // We need to create an admin user first, then create a regular user
         var adminEmail = $"admin-{Guid.NewGuid()}@example.com";
         var adminPassword = "SecureP@ssw0rd123!";
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email = adminEmail, password = adminPassword, displayName = "Admin User" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email = adminEmail, password = adminPassword, displayName = "Admin User", termsAccepted = true });
 
         // Now create and login as a regular user (second user gets Role.User)
         var email = $"regular-user-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Regular User" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Regular User", termsAccepted = true });
         await _client.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
 
         // Act - Try to access admin-only endpoint
@@ -197,7 +197,7 @@ public class ErrorHandlingTests : IAsyncLifetime
         var email = $"conflict-test-{Guid.NewGuid()}@example.com";
         var password = "SecureP@ssw0rd123!";
 
-        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "First User" });
+        await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "First User", termsAccepted = true });
 
         // Act - Try to register same email again
         var response = await _client.PostAsJsonAsync("/api/v1/auth/register", new { email, password, displayName = "Second User" });

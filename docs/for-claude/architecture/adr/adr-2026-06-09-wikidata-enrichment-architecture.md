@@ -71,6 +71,8 @@ Regex (case-insensitive): `^(public domain|PD|CC0|CC[ -]BY([ -][0-9.]+)?|CC[ -]B
 
 **Rationale**: Spike measured 30k catalog × 2 API calls × 200ms = 3.3 hours per full pass. Well within 24h CRON window. Multi-pod operation would require distributed rate-limiter (Redis token bucket); single-pod constraint eliminates that complexity for similar latency budget. Document `HPA.minReplicas=HPA.maxReplicas=1` in deployment manifest.
 
+**Amendment (ADR-087, #3373 D4, 2026-07-29)**: the single-pod constraint is now *presidiato*. A Prometheus tripwire `MultipleApiInstances` (`count(up{job="meepleai-api"}) > 1`, `infra/prometheus/alerts/api-single-instance.yml`) fires if a second `meepleai-api` instance is ever scraped, converting the previously-**silent** ToS-violation risk (in-process 5 RPS limiter + in-memory dead-letter gauge double under multi-pod) into a loud alert. The Compose deployment (`container_name: meepleai-api`) already pins one instance; the tripwire guards a future `replicas:`/HPA scale-out. Hard prevention (Redis fail-closed lease on the batch) + a DB-`COUNT`-backed dead-letter gauge are **deferred** (#3383) — they only matter at >1 instance, which the tripwire now catches. A distributed Redis rate-limiter remains in reserve for an actual HPA roadmap.
+
 ### DEC-3f — Circuit breaker (NEW post-spike, addresses N-002)
 **Decision**: Polly circuit breaker on `WikidataCatalogProvider` AND `IWikimediaCommonsClient`. OPEN circuit after 3 consecutive 5xx within 60s for 5 min.
 

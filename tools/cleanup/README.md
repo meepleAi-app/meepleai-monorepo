@@ -52,7 +52,7 @@ Scripts for cleaning caches, removing temporary files, and maintaining repositor
 
 ---
 
-### 🧹 **cleanup-caches.sh** & **cleanup-caches.ps1**
+### 🧹 **cleanup-caches.sh**
 **Purpose:** Clean all cache directories and build artifacts to free disk space
 
 **What it does:**
@@ -80,17 +80,7 @@ bash tools/cleanup/cleanup-caches.sh --verbose
 bash tools/cleanup/cleanup-caches.sh --yes
 ```
 
-**PowerShell (Windows):**
-```powershell
-# Dry run
-.\tools\cleanup\cleanup-caches.ps1 -DryRun
-
-# Clean everything
-.\tools\cleanup\cleanup-caches.ps1
-
-# Skip confirmation
-.\tools\cleanup\cleanup-caches.ps1 -Force
-```
+> `cleanup-caches.sh` gira su Windows via Git Bash (la variante `.ps1` è stata rimossa nel cleanup 2026-07-31).
 
 **Output:**
 ```
@@ -340,8 +330,8 @@ Group 2 (similar):
 ### Add to Task Scheduler (Windows):
 ```powershell
 # Monthly cache cleanup
-$action = New-ScheduledTaskAction -Execute "PowerShell.exe" `
-  -Argument "-File C:\meepleai-monorepo\tools\cleanup\cleanup-caches.ps1 -Force"
+$action = New-ScheduledTaskAction -Execute "C:\Program Files\Git\bin\bash.exe" `
+  -Argument "-lc 'cd /c/meepleai-monorepo && bash tools/cleanup/cleanup-caches.sh --yes'"
 $trigger = New-ScheduledTaskTrigger -Monthly -DaysOfMonth 1 -At 2am
 Register-ScheduledTask -TaskName "MeepleAI Cache Cleanup" `
   -Action $action -Trigger $trigger
@@ -365,10 +355,10 @@ Register-ScheduledTask -TaskName "MeepleAI Cache Cleanup" `
 ## Troubleshooting
 
 **Cache cleanup fails on locked files (Windows):**
-```powershell
+```bash
 # Close Visual Studio, VS Code, Docker Desktop
-# Then retry
-.\tools\cleanup\cleanup-caches.ps1
+# Then retry (Git Bash)
+bash tools/cleanup/cleanup-caches.sh
 ```
 
 **Docker cleanup requires sudo (Linux):**

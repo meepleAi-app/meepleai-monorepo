@@ -34,10 +34,13 @@
  * |                      |                            | BE `senderId` nullable matches FE       |
  * | session:tool-execution| DiceRolledEvent/RandomToolEvents | FE `tool: 'dice'|'timer'|'card'` |
  * |                      |                            | v1 gap: BE has CoinFlippedEvent, WheelSpunEvent not in FE enum |
- * | session:diary        | NoteSavedEvent/NoteRevealedEvent | BE `HasObscuredText` not in FE  |
- * | session:turn         | NO backend event           | v1 gap: no TurnAdvancedEvent domain record |
+ * | session:diary        | LiveSessionDiaryEntryAddedEvent  | BE `HasObscuredText` not in FE  |
+ * | session:turn         | TurnAdvancedEvent          | BE `newTurnIndex` + `currentPlayerId`       |
  * | heartbeat            | inline endpoint            | timestamp field matches FE contract     |
  */
+
+import { CitationSchema } from '@/lib/api/schemas/streaming.schemas';
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 
 import { SESSION_EVENT_TYPES, isSessionEvent } from './sse-events';
 
@@ -81,7 +84,9 @@ function parseScore(
       ? data['score']
       : typeof data['newScore'] === 'number'
         ? data['newScore']
-        : null;
+        : typeof data['value'] === 'number'
+          ? data['value']
+          : null;
   if (score === null) return null;
   const updatedBy = typeof data['updatedBy'] === 'string' ? data['updatedBy'] : participantId;
   const timestamp =
@@ -93,15 +98,21 @@ function parseTurn(
   data: Record<string, unknown>,
   sessionId: string
 ): Extract<SessionEvent, { type: 'session:turn' }> | null {
-  // v1 carryover: no backend TurnAdvancedEvent — this is a forward-compat placeholder
   const turnNumber =
     typeof data['turnNumber'] === 'number'
       ? data['turnNumber']
       : typeof data['currentTurn'] === 'number'
         ? data['currentTurn']
-        : null;
+        : typeof data['newTurnIndex'] === 'number'
+          ? data['newTurnIndex']
+          : null;
   if (turnNumber === null) return null;
-  const activePlayerId = typeof data['activePlayerId'] === 'string' ? data['activePlayerId'] : null;
+  const activePlayerId =
+    typeof data['activePlayerId'] === 'string'
+      ? data['activePlayerId']
+      : typeof data['currentPlayerId'] === 'string'
+        ? data['currentPlayerId']
+        : null;
   if (!activePlayerId) return null;
   const timestamp =
     typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
@@ -217,8 +228,13 @@ function parseEndgame(
       }));
   }
 
+  // T9 SP2 #2561: BE canonical shape uses `completedAt` as the event timestamp
   const timestamp =
-    typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
+    typeof data['timestamp'] === 'string'
+      ? data['timestamp']
+      : typeof data['completedAt'] === 'string'
+        ? data['completedAt']
+        : new Date().toISOString();
   return { type: 'session:endgame', sessionId, finalScores, timestamp };
 }
 
@@ -238,7 +254,53 @@ function parseChat(
   const visibility: 'private' | 'shared' = data['visibility'] === 'private' ? 'private' : 'shared';
   const timestamp =
     typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
-  return { type: 'session:chat', sessionId, messageId, senderId, content, visibility, timestamp };
+
+  // Parse citations[] using CitationSchema (T8/T9 SP2 #2561).
+  // Reuses the existing CitationSchema from streaming.schemas.ts (SP1 #2500).
+  // Unknown/malformed citation entries are silently dropped (safeParse).
+  let citations: ReadonlyArray<Citation> | undefined;
+  if (Array.isArray(data['citations'])) {
+    const parsed = (data['citations'] as unknown[])
+      .map(item => CitationSchema.safeParse(item))
+      .filter(r => r.success)
+      .map(r => r.data as Citation);
+    citations = parsed;
+  }
+
+  return {
+    type: 'session:chat',
+    sessionId,
+    messageId,
+    senderId,
+    content,
+    visibility,
+    citations,
+    timestamp,
+  };
+}
+
+function parsePhase(
+  data: Record<string, unknown>,
+  sessionId: string
+): Extract<SessionEvent, { type: 'session:phase' }> | null {
+  // turnIndex and newPhaseIndex are required (canonical BE T5 SP2 #2561)
+  const turnIndex = typeof data['turnIndex'] === 'number' ? data['turnIndex'] : null;
+  if (turnIndex === null) return null;
+  const newPhaseIndex = typeof data['newPhaseIndex'] === 'number' ? data['newPhaseIndex'] : null;
+  if (newPhaseIndex === null) return null;
+  const phaseName = typeof data['phaseName'] === 'string' ? data['phaseName'] : undefined;
+  const totalPhases = typeof data['totalPhases'] === 'number' ? data['totalPhases'] : undefined;
+  const timestamp =
+    typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
+  return {
+    type: 'session:phase',
+    sessionId,
+    turnIndex,
+    newPhaseIndex,
+    phaseName,
+    totalPhases,
+    timestamp,
+  };
 }
 
 function parseToolExecution(
@@ -262,19 +324,26 @@ function parseDiary(
   data: Record<string, unknown>,
   sessionId: string
 ): Extract<SessionEvent, { type: 'session:diary' }> | null {
+  // #2575: the dead `noteId` back-compat alias was removed — the BE always emits `entryId`
+  // for session:diary. `id` is kept as a generic envelope fallback (not the noteId alias).
   const entryId =
     typeof data['entryId'] === 'string'
       ? data['entryId']
-      : typeof data['noteId'] === 'string'
-        ? data['noteId']
-        : typeof data['id'] === 'string'
-          ? data['id']
-          : null;
+      : typeof data['id'] === 'string'
+        ? data['id']
+        : null;
   if (!entryId) return null;
+  // Resolve authorId: check the direct `authorId` field first (the BE diary event field name),
+  // then fall back to resolveParticipantId() (which probes `participantId`/`userId`).
+  // Previously the priority was reversed — this corrects the intent without changing runtime
+  // behaviour (BE never emits `participantId` for diary events).
   const authorId =
-    resolveParticipantId(data) ?? (typeof data['authorId'] === 'string' ? data['authorId'] : null);
+    (typeof data['authorId'] === 'string' ? data['authorId'] : null) ?? resolveParticipantId(data);
   if (!authorId) return null;
-  const content = typeof data['content'] === 'string' ? data['content'] : '';
+  // Guard against missing or empty content — mirrors the BE `NotEmpty` validation.
+  // A silent empty-string diary entry would render as a blank card in the UI.
+  const content = typeof data['content'] === 'string' ? data['content'] : null;
+  if (!content || content.trim() === '') return null;
   const timestamp =
     typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
   return { type: 'session:diary', sessionId, entryId, authorId, content, timestamp };
@@ -338,6 +407,9 @@ export function parseSseEvent(
       case 'session:turn':
         event = parseTurn(data, resolvedSessionId);
         break;
+      case 'session:phase':
+        event = parsePhase(data, resolvedSessionId);
+        break;
       case 'session:player-join':
         event = parsePlayerJoin(data, resolvedSessionId);
         break;
@@ -365,6 +437,9 @@ export function parseSseEvent(
       case 'session:diary':
         event = parseDiary(data, resolvedSessionId);
         break;
+      case 'session:game-state':
+        event = parseGameState(data, resolvedSessionId);
+        break;
       case 'heartbeat':
         event = parseHeartbeat(data);
         break;
@@ -378,4 +453,18 @@ export function parseSseEvent(
   } catch {
     return null;
   }
+}
+
+/**
+ * #3025 L1: parse a `session:game-state` event. `state` is opaque (game-agnostic) JSON —
+ * per-game typing is L2. Returns null if the payload lacks a `state` key (malformed).
+ */
+function parseGameState(
+  data: Record<string, unknown>,
+  sessionId: string
+): Extract<SessionEvent, { type: 'session:game-state' }> | null {
+  if (!('state' in data)) return null;
+  const timestamp =
+    typeof data['timestamp'] === 'string' ? data['timestamp'] : new Date().toISOString();
+  return { type: 'session:game-state', sessionId, state: data['state'], timestamp };
 }

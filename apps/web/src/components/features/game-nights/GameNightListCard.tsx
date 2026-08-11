@@ -15,7 +15,13 @@ import type { GameNightVM } from '@/lib/game-nights/view-model';
 import { PlayerAvatars, type AvatarPlayer } from './PlayerAvatars';
 import { StatusPill, type StatusPillLabels } from './StatusPill';
 
-export type GameNightListCardAction = 'edit' | 'viewSummary' | 'reschedule' | 'accept' | 'maybe';
+export type GameNightListCardAction =
+  | 'edit'
+  | 'viewSummary'
+  | 'reschedule'
+  | 'accept'
+  | 'maybe'
+  | 'decline';
 
 export interface GameNightListCardCtaLabels {
   readonly edit: string;
@@ -23,6 +29,7 @@ export interface GameNightListCardCtaLabels {
   readonly reschedule: string;
   readonly accept: string;
   readonly maybe: string;
+  readonly decline: string;
 }
 
 export interface GameNightListCardLabels {
@@ -30,6 +37,8 @@ export interface GameNightListCardLabels {
   readonly organizingBadge: string;
   readonly participants: (count: number) => string;
   readonly cta: GameNightListCardCtaLabels;
+  // #2978 (invariante #17): label for the pending-invitee "Da confermare" badge.
+  readonly pendingBadge: string;
   readonly monthAbbrev: string;
 }
 
@@ -40,6 +49,9 @@ export interface GameNightListCardProps {
   readonly onAction?: (id: string, action: GameNightListCardAction) => void;
   readonly gameTitle?: string;
   readonly players?: readonly AvatarPlayer[];
+  // #3191: disable the inline RSVP CTAs (offline / in-flight). Gates ONLY the 3 RSVP
+  // buttons — navigation branches (edit/viewSummary/reschedule) stay interactive.
+  readonly ctaDisabled?: boolean;
 }
 
 export function GameNightListCard({
@@ -49,8 +61,11 @@ export function GameNightListCard({
   onAction,
   gameTitle,
   players,
+  ctaDisabled,
 }: GameNightListCardProps): React.JSX.Element {
   const isCancelled = vm.statusKey === 'cancelled';
+  // #2978 (invariante #17): the viewer is an invitee who has not yet responded.
+  const isPendingInvitee = vm.role !== 'organizer' && vm.viewerRsvpStatus === 'Pending';
   const playerList = players ?? [];
   const participantCount = playerList.length > 0 ? playerList.length : vm.playerIds.length;
 
@@ -63,9 +78,11 @@ export function GameNightListCard({
       data-testid="game-nights-list-card"
       data-status={vm.statusKey}
       data-role={vm.role}
+      data-pending={isPendingInvitee ? 'true' : 'false'}
       className={clsx(
         'flex flex-col gap-2.5 rounded-lg border border-l-4 border-border bg-card p-3.5 transition-all md:flex-row md:gap-3.5 md:p-4',
-        isCancelled ? 'border-l-destructive opacity-[0.78]' : 'border-l-entity-event'
+        isCancelled ? 'border-l-destructive opacity-[0.78]' : 'border-l-entity-event',
+        isPendingInvitee && !isCancelled && 'opacity-70'
       )}
     >
       <div className="flex flex-row items-center justify-center gap-2 md:w-[78px] md:flex-col md:gap-0 md:rounded-md md:border md:border-entity-event/22 md:bg-entity-event/8 md:px-2.5 md:py-1.5">
@@ -95,6 +112,14 @@ export function GameNightListCard({
           >
             {vm.title}
           </h3>
+          {isPendingInvitee && (
+            <span
+              data-testid="game-nights-pending-badge"
+              className="inline-flex items-center rounded-full border border-warning/30 bg-warning/12 px-2.5 py-0.5 font-mono text-[10px] font-extrabold uppercase tracking-wider text-warning"
+            >
+              {labels.pendingBadge}
+            </span>
+          )}
           <StatusPill statusKey={vm.statusKey} labels={labels.status} />
         </div>
 
@@ -110,7 +135,7 @@ export function GameNightListCard({
               <span aria-hidden="true" className="opacity-40">
                 ·
               </span>
-              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-entity-game/22 bg-entity-game/12 px-2 py-0.5 font-display text-[10px] font-extrabold text-entity-game">
+              <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-entity-game/22 bg-entity-game/12 px-2 py-0.5 font-display text-[10px] font-extrabold text-entity-game-text">
                 {gameTitle}
               </span>
             </>
@@ -128,7 +153,7 @@ export function GameNightListCard({
             {labels.participants(participantCount)}
           </span>
           <div className="flex-1" />
-          <CardCta vm={vm} labels={labels.cta} onAction={dispatch} />
+          <CardCta vm={vm} labels={labels.cta} onAction={dispatch} rsvpDisabled={ctaDisabled} />
         </div>
       </div>
     </article>
@@ -139,9 +164,33 @@ interface CardCtaProps {
   readonly vm: GameNightVM;
   readonly labels: GameNightListCardCtaLabels;
   readonly onAction: (action: GameNightListCardAction) => void;
+  // #3191: disable the 3 RSVP buttons (offline / in-flight). Nav branches are unaffected.
+  readonly rsvpDisabled?: boolean;
 }
 
-function CardCta({ vm, labels, onAction }: CardCtaProps): React.JSX.Element {
+// #2978 (invariante #17): the 3 RSVP actions, mapped to their RsvpStatus + selected-state style.
+const RSVP_BUTTONS = [
+  {
+    action: 'accept',
+    status: 'Accepted',
+    labelKey: 'accept',
+    selectedClass: 'border-success bg-success/10 text-success',
+  },
+  {
+    action: 'maybe',
+    status: 'Maybe',
+    labelKey: 'maybe',
+    selectedClass: 'border-warning bg-warning/10 text-warning',
+  },
+  {
+    action: 'decline',
+    status: 'Declined',
+    labelKey: 'decline',
+    selectedClass: 'border-destructive bg-destructive/10 text-destructive',
+  },
+] as const;
+
+function CardCta({ vm, labels, onAction, rsvpDisabled }: CardCtaProps): React.JSX.Element | null {
   if (vm.statusKey === 'completed') {
     return (
       <button
@@ -176,22 +225,34 @@ function CardCta({ vm, labels, onAction }: CardCtaProps): React.JSX.Element {
       </button>
     );
   }
+  // #2978 (invariante #17): invited RSVP — 3 buttons (Conferma/Forse/Declina) with the current
+  // response highlighted. A non-invitee (no RSVP row on the aggregate) gets no RSVP CTA.
+  if (vm.viewerRsvpStatus == null) {
+    return null;
+  }
   return (
-    <div className="flex gap-1.5">
-      <button
-        type="button"
-        onClick={() => onAction('accept')}
-        className="rounded-md bg-entity-toolkit px-3 py-1.5 font-display text-xs font-extrabold text-white"
-      >
-        {labels.accept}
-      </button>
-      <button
-        type="button"
-        onClick={() => onAction('maybe')}
-        className="rounded-md border border-border px-3 py-1.5 font-display text-xs font-extrabold text-muted-foreground"
-      >
-        {labels.maybe}
-      </button>
+    <div className="flex flex-wrap gap-1.5">
+      {RSVP_BUTTONS.map(({ action, status, labelKey, selectedClass }) => {
+        const isSelected = vm.viewerRsvpStatus === status;
+        return (
+          <button
+            key={action}
+            type="button"
+            onClick={() => onAction(action)}
+            disabled={rsvpDisabled}
+            data-disabled={rsvpDisabled ? 'true' : 'false'}
+            data-selected={isSelected ? 'true' : 'false'}
+            aria-pressed={isSelected}
+            className={clsx(
+              'rounded-md border px-3 py-1.5 font-display text-xs font-extrabold',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+              isSelected ? selectedClass : 'border-border text-muted-foreground'
+            )}
+          >
+            {labels[labelKey]}
+          </button>
+        );
+      })}
     </div>
   );
 }

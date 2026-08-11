@@ -87,7 +87,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
 
         var command = new CastVoteOnDisputeCommand(
-            disputeId,
+            DefaultSessionId,
+disputeId,
             DefaultVoterPlayerId,
             AcceptsVerdict: true);
 
@@ -105,20 +106,21 @@ public class CastVoteOnDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task CastVote_FeatureDisabled_ThrowsInvalidOperationException()
+    public async Task CastVote_FeatureDisabled_ThrowsConflict()
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
 
         var command = new CastVoteOnDisputeCommand(
-            Guid.NewGuid(),
+            DefaultSessionId,
+Guid.NewGuid(),
             DefaultVoterPlayerId,
             AcceptsVerdict: true);
 
         // Act & Assert
         var act =
             () => _handler.Handle(command, CancellationToken.None);
-        var ex = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var ex = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         ex.Message.Should().Contain("disabled");
     }
@@ -132,7 +134,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, null);
 
         var command = new CastVoteOnDisputeCommand(
-            disputeId,
+            DefaultSessionId,
+disputeId,
             DefaultVoterPlayerId,
             AcceptsVerdict: true);
 
@@ -156,7 +159,8 @@ public class CastVoteOnDisputeCommandHandlerTests
         SetupDisputeGetById(disputeId, dispute);
 
         var command = new CastVoteOnDisputeCommand(
-            disputeId,
+            DefaultSessionId,
+disputeId,
             DefaultVoterPlayerId,
             AcceptsVerdict: false);
 

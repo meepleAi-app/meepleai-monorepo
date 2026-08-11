@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -8,6 +9,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -145,6 +147,179 @@ public class GetSharedGameByIdQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ResolvesHeroContextCover_HonoringAdminOverride()
+    {
+        // Epic #3470 Slice 2 AC-1: the detail page is the sole Hero surface. An admin
+        // Hero override pinning Wikidata must win over the implicit precedence (PDF is
+        // higher in the chain) — proving the handler resolves the HERO context AND
+        // eager-loads CoverAssignments (without the Include the AsNoTracking entity has
+        // no assignments and the override is silently ignored, yielding the PDF cover).
+        var game = SharedGame.Create(
+            "Catan", 1995, "Description", 3, 4, 90, 10, 2.5m, 7.8m,
+            "https://example.com/catan.jpg", "https://example.com/thumb.jpg",
+            GameRules.Create("Rules content", "en"), Guid.NewGuid(), 13);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+            .ReturnsAsync("https://r2/wiki-hero.webp");
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+            .ReturnsAsync("https://r2/pdf.webp");
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = game.Id,
+            Title = "Catan",
+            Description = "desc",
+            Status = 1,
+            PdfCoverR2Key = "pdf-key",        // would win the implicit precedence
+            WikidataCoverR2Key = "wiki-key",  // pinned by the Hero override
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Context = CoverContext.Hero,
+                    Source = CoverAssignmentSource.Wikidata,
+                    CreatedBy = Guid.NewGuid(),
+                },
+            },
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.ChangeTracker.Clear();
+
+        var handler = CreateHandler(db);
+
+        var result = await handler.Handle(new GetSharedGameByIdQuery(game.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.CoverUrl.Should().Be(
+            "https://r2/wiki-hero.webp",
+            "the Hero admin override pins Wikidata; the PDF implicit precedence must NOT win");
+    }
+
+    [Fact]
+    public async Task Handle_ManualCoverWinsHero_SurfacesLicenseAttributionSourceUrl()
+    {
+        // Epic #3470 Slice 3b/3f (copyright guard): a whitelist-admitted Manual cover that WINS
+        // the Hero context MUST surface its attested license + attribution + source URL on the
+        // detail DTO — a CC-BY/CC-BY-SA image cannot render creditless. End-to-end proof that a
+        // game with only ManualCover* columns + a Manual Hero pin flows the triple through the
+        // resolver -> CoverAttribution.ForWinningSource -> DTO.
+        var game = SharedGame.Create(
+            "Catan", 1995, "Description", 3, 4, 90, 10, 2.5m, 7.8m,
+            "https://example.com/catan.jpg", "https://example.com/thumb.jpg",
+            GameRules.Create("Rules content", "en"), Guid.NewGuid(), 13);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("manual-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+            .ReturnsAsync("https://r2/manual-hero.webp");
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = game.Id,
+            Title = "Catan",
+            Description = "desc",
+            Status = 1,
+            ManualCoverR2Key = "manual-key",
+            ManualCoverLicense = "CC-BY-4.0",
+            ManualCoverAttribution = "Jane Artist",
+            ManualCoverSourceUrl = "https://commons.example.org/img",
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Context = CoverContext.Hero,
+                    Source = CoverAssignmentSource.Manual,
+                    CreatedBy = Guid.NewGuid(),
+                },
+            },
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.ChangeTracker.Clear();
+
+        var handler = CreateHandler(db);
+
+        var result = await handler.Handle(new GetSharedGameByIdQuery(game.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.CoverUrl.Should().Be("https://r2/manual-hero.webp", "the Manual Hero pin wins");
+        result.CoverLicense.Should().Be("CC-BY-4.0");
+        result.CoverAttribution.Should().Be("Jane Artist");
+        result.CoverSourceUrl.Should().Be("https://commons.example.org/img");
+    }
+
+    [Fact]
+    public async Task Handle_ResolvesSocialCover_IndependentlyOfHero()
+    {
+        // Epic #3470 Slice 2d AC-2: the detail DTO exposes a Social cover (for OG meta)
+        // resolved for the Social context. A Social override must surface on SocialCoverUrl
+        // WITHOUT affecting the Hero cover (CoverUrl), which here has no override and so
+        // falls through to the implicit PDF precedence.
+        var game = SharedGame.Create(
+            "Catan", 1995, "Description", 3, 4, 90, 10, 2.5m, 7.8m,
+            "https://example.com/catan.jpg", "https://example.com/thumb.jpg",
+            GameRules.Create("Rules content", "en"), Guid.NewGuid(), 13);
+
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("wiki-key.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+            .ReturnsAsync("https://r2/wiki-social.webp");
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync("pdf-key-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds))
+            .ReturnsAsync("https://r2/pdf.webp");
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = game.Id,
+            Title = "Catan",
+            Description = "desc",
+            Status = 1,
+            PdfCoverR2Key = "pdf-key",        // implicit precedence winner (Hero, no override)
+            WikidataCoverR2Key = "wiki-key",  // pinned by the Social override
+            CoverAssignments = new List<GameCoverAssignmentEntity>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Context = CoverContext.Social,
+                    Source = CoverAssignmentSource.Wikidata,
+                    CreatedBy = Guid.NewGuid(),
+                },
+            },
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        db.ChangeTracker.Clear();
+
+        var handler = CreateHandler(db);
+
+        var result = await handler.Handle(new GetSharedGameByIdQuery(game.Id), TestContext.Current.CancellationToken);
+
+        result.Should().NotBeNull();
+        result!.SocialCoverUrl.Should().Be(
+            "https://r2/wiki-social.webp",
+            "the Social override pins Wikidata for the OG image");
+        result.CoverUrl.Should().Be(
+            "https://r2/pdf.webp",
+            "the Hero cover has no override and must fall through to the implicit PDF precedence, unaffected by the Social override");
+    }
+
+    [Fact]
     public async Task Handle_WithGameWithoutRules_ReturnsNullRules()
     {
         // Arrange
@@ -233,13 +408,11 @@ public class GetSharedGameByIdQueryHandlerTests
             .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(game);
 
-        // CoverUrlResolver calls GetPresignedDownloadUrlAsync("{key}-preview.webp", GameImage, key, null)
+        // CoverUrlResolver calls GetPresignedUrlForRawKeyAsync("{key}-preview.webp", CoverUrlResolver.CoverPresignExpirySeconds)
         _blobStorageMock
-            .Setup(b => b.GetPresignedDownloadUrlAsync(
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync(
                 $"{pdfKey}-preview.webp",
-                BlobCategory.GameImage,
-                pdfKey,
-                null))
+                CoverUrlResolver.CoverPresignExpirySeconds))
             .ReturnsAsync(expectedUrl);
 
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();

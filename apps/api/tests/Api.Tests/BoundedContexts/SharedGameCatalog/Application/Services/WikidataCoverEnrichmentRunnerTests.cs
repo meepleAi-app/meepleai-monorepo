@@ -108,7 +108,9 @@ public class WikidataCoverEnrichmentRunnerTests
 
         recorded!.Outcome.Should().Be(WikidataCoverEnrichmentOutcome.Failed);
         recorded.RetryCount.Should().Be(1);
-        recorded.NextRetryAt.Should().Be(FixedNow.AddMinutes(1));
+        // Real policy layers additive [0,30]s anti-herd jitter (#3371) on the 1m base backoff.
+        recorded.NextRetryAt.Should().BeOnOrAfter(FixedNow.AddMinutes(1))
+            .And.BeOnOrBefore(FixedNow.AddMinutes(1).AddSeconds(WikidataCoverEnrichmentRetryPolicy.MaxJitterSeconds));
     }
 
     [Fact]
@@ -255,8 +257,9 @@ public class WikidataCoverEnrichmentRunnerTests
 
         await Sut().EnrichAndRecordAsync(gameId, forceRefresh: false, cancellationToken: default);
 
-        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(6,
-            "F1 hybrid update: runner increments by 1 per persisted DeadLetter attempt");
+        ReadGauge(MeepleAiMetrics.WikidataDeadLetterCount).Should().Be(5,
+            "#3383: il gauge è DB-derivato — il runner NON lo incrementa più; " +
+            "è WikidataDeadLetterMetricsRefreshService a ri-ancorarlo al COUNT reale");
     }
 
     [Fact]

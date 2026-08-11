@@ -71,7 +71,12 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
 
         // Load the SharedGame row, flip the flag if needed, save.
         // Idempotent: returns early if HasKnowledgeBase is already true.
+        // .AsTracking() is REQUIRED: MeepleAiDbContext defaults to NoTracking
+        // (PERF-06), so without it the entity is detached and SaveChangesAsync
+        // below persists nothing — the flag would silently never flip (the
+        // production root cause of the has_knowledge_base drift).
         var sharedGame = await _context.SharedGames
+            .AsTracking()
             .FirstOrDefaultAsync(g => g.Id == sharedGameId.Value, cancellationToken)
             .ConfigureAwait(false);
 

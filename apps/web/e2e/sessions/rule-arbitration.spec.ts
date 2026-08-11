@@ -28,7 +28,7 @@ test.describe('Arbitro Mode — Rule Dispute Resolution', () => {
   });
 
   test('should open arbitro sheet with suggestion chips', async ({ page }) => {
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live?tab=agent`);
     await page.waitForLoadState('domcontentloaded');
 
     const arbiterBtn = page.getByTestId('quick-action-arbiter').first();
@@ -46,7 +46,7 @@ test.describe('Arbitro Mode — Rule Dispute Resolution', () => {
   });
 
   test('should display quick actions including Arbitro button', async ({ page }) => {
-    await page.goto(`/sessions/live/${MOCK_SESSION_ID}`);
+    await page.goto(`/sessions/${MOCK_SESSION_ID}/live?tab=agent`);
     await page.waitForLoadState('domcontentloaded');
 
     const quickActions = page.getByTestId('quick-actions').first();

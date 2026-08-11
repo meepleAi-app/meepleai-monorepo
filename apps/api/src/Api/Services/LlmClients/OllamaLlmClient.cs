@@ -69,6 +69,19 @@ internal class OllamaLlmClient : ILlmClient
         {
             return false;
         }
+        // Reject bare cloud-provider model ids (e.g. "claude-haiku-4-5-20251001", "gpt-4o").
+        // Without this, an agent misconfigured with an unprefixed Anthropic/OpenAI model id
+        // silently routes here (catch-all) and returns an empty completion, so the caller
+        // falls back to dumping raw retrieved chunks. Rejecting makes GetClientForModel raise
+        // a loud "no client supports model" error that surfaces the misconfiguration instead.
+        // Shared with the agent-definition validators so routing rules cannot drift.
+        foreach (var prefix in LlmModelRouting.BareCloudProviderPrefixes)
+        {
+            if (modelId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
         return true;
     }
 

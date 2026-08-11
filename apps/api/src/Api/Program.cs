@@ -14,6 +14,7 @@ using Api.Routing.Admin;
 using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
+using Api.Routing.KnowledgeBase;
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -35,7 +36,6 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserLibrary.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.UserNotifications.Infrastructure.DependencyInjection;
-using Api.BoundedContexts.WorkflowIntegration.Infrastructure.DependencyInjection;
 using Api.Services;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -399,9 +399,6 @@ builder.Services.AddKnowledgeBaseServices();
 // Issue #1675: KbQuality bounded context (per-doc quality eval)
 builder.Services.AddKbQualityModule(builder.Configuration);
 
-// DDD-PHASE3: WorkflowIntegration bounded context
-builder.Services.AddWorkflowIntegrationContext(builder.Configuration);
-
 // DDD-PHASE3: SystemConfiguration bounded context
 builder.Services.AddSystemConfigurationContext();
 
@@ -515,7 +512,10 @@ builder.Services.AddCors(options =>
             )
             .AllowAnyMethod()
             .AllowCredentials()
-            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate"); // Issue #1563 (P0-3): Expose trace headers for frontend correlation
+            // Issue #1563 (P0-3): trace headers for frontend correlation.
+            // #3146 / Invariante 4: X-Warning-Code + X-Live-Session-Id must be exposed so the
+            // cross-origin FE (dev/demo :3000→:8080) can read the non-blocking save warning.
+            .WithExposedHeaders("X-Trace-Id", "X-Span-Id", "traceparent", "tracestate", "X-Warning-Code", "X-Live-Session-Id");
     });
 });
 
@@ -570,6 +570,20 @@ using (var scope = app.Services.CreateScope())
 
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
+    }
+
+    // Slice E: surface a misconfigured OPENROUTER_DEFAULT_MODEL at boot (loud) instead of as a
+    // chat-time 500. AgentDefaults.DefaultModel feeds the seeded system agent + routing fallbacks
+    // unguarded (only user-supplied models hit the AgentDefinition validators), so a bare
+    // cloud-provider id here routes to no LLM client.
+    if (Api.Services.LlmClients.LlmModelRouting.IsUnroutableBareCloudId(
+        Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel))
+    {
+        app.Logger.LogError(
+            "OPENROUTER_DEFAULT_MODEL='{Model}' is a bare cloud-provider id that routes to no LLM client — " +
+            "seeded agents and routing fallbacks will fail at chat time. Use a 'provider/model' OpenRouter " +
+            "slug (e.g. 'anthropic/claude-3.5-haiku'), a 'deepseek-*' id, or a local Ollama model.",
+            Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
     }
 
     // Create read-only projection views for bounded context entity decomposition.
@@ -847,6 +861,7 @@ Api.Routing.SharedGameCatalogPublicEndpoints.Map(v1Api);
 v1Api.MapPermissionEndpoints(); // Epic #4068: Permission system endpoints
 v1Api.MapShareLinkEndpoints(); // ISSUE-2052: Shareable chat thread links
 v1Api.MapUserAiConsentEndpoints(); // Issue #5512: GDPR AI consent
+v1Api.MapTermsConsentEndpoints(); // #2954 F1: ToS acceptance foundation
 v1Api.MapUserLlmDataEndpoints(); // Issue #5509: GDPR right to erasure for LLM data
 v1Api.MapUserUsageEndpoints(); // E2-2: User tier usage endpoint
 v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and management
@@ -923,6 +938,7 @@ v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage he
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
 v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint
 v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
+v1Api.MapAdminEvalEndpoints();          // Issue #3433: RAG evaluation suite (retrieval + labeling-assist)
 v1Api.MapAdminStorageMigrationEndpoints(); // S3 storage migration (local → S3)
 v1Api.MapAdminRagBackupEndpoints();        // RAG data backup & import
 v1Api.MapAdminEmailEndpoints();        // Issue #4430: Email queue dashboard monitoring
@@ -987,10 +1003,6 @@ v1Api.MapAdminServiceCallEndpoints();  // Service call history and statistics
 v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibility
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
-// Workflows
-v1Api.MapWorkflowEndpoints();          // n8n workflow integration
-v1Api.MapN8nWebhookEndpoints();        // Issue #57: n8n → API webhook callbacks
-
 // AI extended
 v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
@@ -1020,7 +1032,6 @@ v1Api.MapAdminKBSettingsEndpoints();   // KB settings read-only (Issue #4881)
 v1Api.MapTierStrategyAdminEndpoints(); // Tier-strategy configuration (Issue #3440)
 v1Api.MapRagPipelineAdminEndpoints();  // RAG Pipeline builder (Issue #3463)
 v1Api.MapRagExecutionAdminEndpoints(); // RAG Execution replay & compare (Issue #4459)
-v1Api.MapAdminMechanicExtractorEndpoints(); // Mechanic Extractor: Variant C copyright-compliant analysis
 v1Api.MapAdminMechanicAnalysesEndpoints();  // ISSUE-524 / M1.2: AI-generated mechanic analyses (async pipeline)
 v1Api.MapAdminMechanicExtractorValidationEndpoints(); // ADR-051 Sprint 1 / Task 32: Mechanic validation admin surface
 v1Api.MapReportingEndpoints();         // ISSUE-916: Report generation & scheduling

@@ -64,7 +64,7 @@ internal sealed record EvaluationSampleResult
     public double IdealDcgAt10 { get; init; }
 
     /// <summary>
-    /// Answer correctness score from keyword matching or LLM judge.
+    /// Answer correctness score from the deterministic keyword / word-overlap heuristic (not an LLM judge).
     /// </summary>
     public double AnswerCorrectness { get; init; }
 
@@ -77,6 +77,29 @@ internal sealed record EvaluationSampleResult
     /// Confidence score from RAG system.
     /// </summary>
     public double Confidence { get; init; }
+
+    /// <summary>
+    /// Pages the generated answer actually cited inline (distinct, from InlineCitationMatcher).
+    /// </summary>
+    public IReadOnlyList<int> ActualCitationPages { get; init; } = [];
+
+    /// <summary>
+    /// Ground-truth expected citation pages for this sample (from <c>ExpectedCitations.PrimaryPages</c>).
+    /// </summary>
+    public IReadOnlyList<int> ExpectedCitationPages { get; init; } = [];
+
+    /// <summary>
+    /// Whether the actual cited pages satisfy the sample's expected citations per its match policy.
+    /// Null = the sample has no <c>ExpectedCitations</c> (not citation-graded; excluded from CitationAccuracy).
+    /// </summary>
+    public bool? CitationMatched { get; init; }
+
+    /// <summary>
+    /// Structural validity sub-score (0..1): fraction of the response's citations that are well-formed
+    /// (PDF:guid + existing document + page in range), via CitationValidationService. Defaults to 1.0
+    /// (vacuously valid when the response cited nothing).
+    /// </summary>
+    public double CitationStructuralValidity { get; init; } = 1.0;
 
     /// <summary>
     /// Error message if evaluation failed.
@@ -197,38 +220,7 @@ internal sealed record EvaluationResult
 
     private static EvaluationMetrics CalculateMetrics(IReadOnlyList<EvaluationSampleResult> results)
     {
-        if (results.Count == 0)
-        {
-            return EvaluationMetrics.Empty;
-        }
-
-        var successfulResults = results.Where(r => r.IsSuccess).ToList();
-
-        if (successfulResults.Count == 0)
-        {
-            return EvaluationMetrics.Empty;
-        }
-
-        var recallAt5 = successfulResults.Average(r => r.HitAt5 ? 1.0 : 0.0);
-        var recallAt10 = successfulResults.Average(r => r.HitAt10 ? 1.0 : 0.0);
-        var ndcgAt10 = successfulResults.Average(r => r.NdcgAt10);
-        var mrr = successfulResults.Average(r => r.ReciprocalRank);
-        var answerCorrectness = successfulResults.Average(r => r.AnswerCorrectness);
-
-        // Calculate P95 latency
-        var latencies = successfulResults.Select(r => r.LatencyMs).OrderBy(l => l).ToList();
-        var p95Index = (int)Math.Ceiling(latencies.Count * 0.95) - 1;
-        var p95Latency = latencies.Count > 0 ? latencies[Math.Max(0, p95Index)] : 0.0;
-
-        return EvaluationMetrics.Create(
-            recallAt5: recallAt5,
-            recallAt10: recallAt10,
-            ndcgAt10: ndcgAt10,
-            mrr: mrr,
-            p95LatencyMs: p95Latency,
-            answerCorrectness: answerCorrectness,
-            sampleCount: successfulResults.Count
-        );
+        return EvaluationMetrics.Compute(results);
     }
 
     private static Dictionary<string, EvaluationMetrics> CalculateMetricsByGroup(

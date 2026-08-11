@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Infrastructure.BackgroundTasks;
 using Api.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -61,6 +62,16 @@ public sealed class WikidataCoverEnrichmentJob : IJob
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// TTL del lease (#3383). Molto sopra la durata attesa di un tick (fino a <see cref="BatchSize"/>
+    /// giochi con throttle di <see cref="DelayBetweenItemsMs"/>ms ciascuno): se un'istanza muore a
+    /// metà batch, l'enrichment resta fermo al più per questo tempo — preferibile a due istanze che
+    /// raddoppiano il rate verso Wikimedia (DEC-3e, violazione ToS).
+    /// </summary>
+    private static readonly TimeSpan LeaseTtl = TimeSpan.FromMinutes(10);
+
+    private const string LeaseKey = "wikidata-cover-enrichment-batch";
+
     public async Task Execute(IJobExecutionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -71,8 +82,32 @@ public sealed class WikidataCoverEnrichmentJob : IJob
 
         var attempts = scope.ServiceProvider.GetRequiredService<IWikidataCoverEnrichmentAttemptRepository>();
         var runner = scope.ServiceProvider.GetRequiredService<IWikidataCoverEnrichmentRunner>();
+        var orchestrator = scope.ServiceProvider.GetRequiredService<IBackgroundTaskOrchestrator>();
 
-        await RunBatchAsync(attempts, runner, ct).ConfigureAwait(false);
+        // #3383 — hard-prevention del vincolo single-pod (ADR-087 D4). [DisallowConcurrentExecution]
+        // garantisce l'unicità solo DENTRO un processo: non impedisce a due istanze di eseguire lo
+        // stesso batch e raddoppiare il rate verso Wikidata/Commons.
+        //
+        // FAIL-CLOSED, e non è gratis: se il lease non si acquisisce il tick viene saltato, e se
+        // Redis è irraggiungibile l'orchestrator RILANCIA (l'eccezione risale a Quartz come job
+        // fallito), quindi l'enrichment SI FERMA. È voluto — non arricchire è preferibile a violare
+        // il rate cap Wikimedia — ma significa che un'indisponibilità di Redis ferma anche questa
+        // pipeline: vedi il runbook, sezione "Enrichment Wikidata fermo senza errori applicativi".
+        var acquired = await orchestrator
+            .ExecuteWithDistributedLockAsync(
+                LeaseKey,
+                innerCt => RunBatchAsync(attempts, runner, innerCt),
+                LeaseTtl,
+                ct)
+            .ConfigureAwait(false);
+
+        if (!acquired)
+        {
+            _logger.LogInformation(
+                "WikidataCoverEnrichmentJob: lease '{LeaseKey}' già detenuto da un'altra istanza — tick saltato. " +
+                "Se accade in modo persistente con una sola istanza attiva, il lease è orfano: scadrà entro {TtlMinutes} minuti.",
+                LeaseKey, LeaseTtl.TotalMinutes);
+        }
     }
 
     /// <summary>

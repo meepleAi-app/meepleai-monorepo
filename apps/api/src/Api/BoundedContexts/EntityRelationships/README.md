@@ -20,7 +20,6 @@ Permette agli utenti di creare relazioni semantiche tra giochi, agenti, sessioni
 Logica di business pura e modelli di dominio:
 - **Aggregates/**: `EntityLink` aggregate root
 - **Enums/**: `EntityLinkType`, `EntityLinkScope`, `MeepleEntityType`
-- **Events/**: `EntityLinkCreated`, `EntityLinkDeleted`
 - **Exceptions/**: `EntityLinkNotFoundException`, `DuplicateEntityLinkException`
 - **Repositories/**: `IEntityLinkRepository`
 - **Constants/**: `EntityRelationshipsConstants`

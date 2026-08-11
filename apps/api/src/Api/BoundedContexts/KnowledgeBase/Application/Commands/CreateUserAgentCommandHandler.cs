@@ -8,7 +8,9 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
@@ -117,7 +119,19 @@ internal sealed class CreateUserAgentCommandHandler
 
         await _repository.AddAsync(agent, cancellationToken).ConfigureAwait(false);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // AgentDefinition.Name carries a global unique index that is NOT filtered by
+            // is_deleted, so a colliding name (active OR soft-deleted) trips Postgres 23505.
+            // A pre-check cannot cover this: the soft-deleted collider is invisible through the
+            // !IsDeleted query filter, and a concurrent double-submit races any check. Translate
+            // the DB violation to a 409 instead of leaking a 500.
+            throw new ConflictException($"An agent named '{name}' already exists.", ex);
+        }
 
         // Record usage so CanPerformAsync reflects the new count on next call (Redis atomic counter).
         await _tierEnforcementService
@@ -174,4 +188,12 @@ internal sealed class CreateUserAgentCommandHandler
                     : new Dictionary<string, object>(parameters, StringComparer.Ordinal))
         };
     }
+
+    // Postgres SQLSTATE 23505 = unique_violation. Mirrors the pattern used by
+    // JoinWaitlistCommandHandler / RegisterCommandHandler.
+    private const string UniqueViolationSqlState = "23505";
+
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException pgEx &&
+        string.Equals(pgEx.SqlState, UniqueViolationSqlState, StringComparison.Ordinal);
 }

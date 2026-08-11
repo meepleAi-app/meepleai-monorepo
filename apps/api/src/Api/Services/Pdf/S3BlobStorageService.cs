@@ -12,17 +12,23 @@ namespace Api.Services.Pdf;
 internal sealed class S3BlobStorageService : IBlobStorageService
 {
     private readonly IAmazonS3 _s3Client;
+    private readonly IAmazonS3 _presignClient;
     private readonly S3StorageOptions _options;
     private readonly ILogger<S3BlobStorageService> _logger;
 
+    // Issue #3498: `presignClient` (optional) is configured against S3StorageOptions.PublicEndpoint
+    // and used ONLY to sign presigned URLs (SigV4 signs the host). Defaults to `s3Client` when the
+    // store host is already browser-reachable (prod R2/AWS). HEAD/existence checks always use `s3Client`.
     public S3BlobStorageService(
         IAmazonS3 s3Client,
         S3StorageOptions options,
-        ILogger<S3BlobStorageService> logger)
+        ILogger<S3BlobStorageService> logger,
+        IAmazonS3? presignClient = null)
     {
         _s3Client = s3Client ?? throw new ArgumentNullException(nameof(s3Client));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _presignClient = presignClient ?? s3Client;
     }
 
     /// <summary>
@@ -301,6 +307,58 @@ internal sealed class S3BlobStorageService : IBlobStorageService
     }
 
     /// <summary>
+    /// Issue #3498 — realigns a presigned URL's scheme with that of the configured presign endpoint.
+    ///
+    /// <para>
+    /// The AWS SDK always emits <c>https://</c> for a presigned URL, even when the client is built
+    /// against a cleartext <c>ServiceURL</c> and <c>UseHttp</c> is set. Verified against AWSSDK.S3
+    /// 3.7.413: every config permutation (with/without <c>UseHttp</c>, <c>AuthenticationRegion</c>,
+    /// <c>ForcePathStyle</c>, trailing slash) still signed <c>https</c>. Pointed at a plain-HTTP
+    /// MinIO the browser then opens a TLS handshake against a cleartext server, the image never
+    /// loads, and the card falls back to its emoji placeholder — a symptom that reads as a missing
+    /// object rather than a scheme mismatch.
+    /// </para>
+    /// <para>
+    /// Rewriting the scheme keeps the signature valid: SigV4 signs host, path and query, never the
+    /// protocol. Verified end-to-end against a real MinIO — the rewritten URL returns 200 where the
+    /// as-signed one dies on the TLS handshake.
+    /// </para>
+    /// <para>
+    /// The downgrade happens ONLY when the operator explicitly configured a cleartext endpoint
+    /// (MinIO in dev/E2E). Production endpoints (R2/AWS) are https, so the URL is returned untouched.
+    /// </para>
+    /// </summary>
+    private string AlignSchemeWithPresignEndpoint(string url)
+    {
+        // The presign client is built against PublicEndpoint when set, and falls back to Endpoint
+        // otherwise (see BlobStorageServiceFactory) — the scheme must follow the same source.
+        var presignEndpoint = string.IsNullOrWhiteSpace(_options.PublicEndpoint)
+            ? _options.Endpoint
+            : _options.PublicEndpoint;
+
+        if (!BlobStorageServiceFactory.UsesPlainHttp(presignEndpoint) ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var signed) ||
+            !string.Equals(signed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            return url;
+        }
+
+        var builder = new UriBuilder(signed) { Scheme = Uri.UriSchemeHttp };
+
+        // An explicit port (MinIO's :9000) is part of the signed Host header and must survive; an
+        // IMPLICIT one must not become literal. UriBuilder materialises the original scheme's default
+        // port (443), which is not http's default and would otherwise be emitted as ":443",
+        // changing the Host header and invalidating the signature. Test on the ORIGINAL Uri: 443 is
+        // only recognisable as a default while the scheme is still https.
+        if (signed.IsDefaultPort)
+        {
+            builder.Port = -1;
+        }
+
+        return builder.Uri.ToString();
+    }
+
+    /// <summary>
     /// Generates a pre-signed URL for secure, temporary file downloads.
     /// </summary>
     /// <param name="fileId">File ID to generate URL for.</param>
@@ -333,7 +391,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 Verb = HttpVerb.GET
             };
 
-            var url = await _s3Client.GetPreSignedURLAsync(request).ConfigureAwait(false);
+            var url = AlignSchemeWithPresignEndpoint(
+                await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false));
 
             _logger.LogInformation(
                 "Generated pre-signed URL for {Key} (expires in {Expiry}s)",
@@ -350,6 +409,230 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error generating pre-signed URL for {FileId} in {Category}/{ResourceKey}", fileId, category, resourceKey);
+            return null;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+    }
+
+    /// <summary>
+    /// Generates a pre-signed GET URL for an EXACT physical S3 object key.
+    /// Deliberately skips <c>PathSecurity.ValidateIdentifier</c> and prefix
+    /// discovery — the caller (business logic that composed the key) is
+    /// trusted. An existence check (HEAD via <c>GetObjectMetadataAsync</c>) is
+    /// performed FIRST: this is load-bearing, because returning a presigned
+    /// URL for a non-existent object would render as a broken image on the
+    /// client instead of falling back to a placeholder.
+    /// </summary>
+    public async Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+            {
+                return null;
+            }
+
+            try
+            {
+                await _s3Client.GetObjectMetadataAsync(_options.BucketName, rawKey, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (AmazonS3Exception ex) when (
+                ex.StatusCode == System.Net.HttpStatusCode.NotFound ||
+                string.Equals(ex.ErrorCode, "NotFound", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(ex.ErrorCode, "NoSuchKey", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning(ex, "Cannot generate pre-signed URL: raw key not found in S3: {Key}", rawKey);
+                return null;
+            }
+
+            var expiry = expirySeconds ?? _options.PresignedUrlExpirySeconds;
+
+            var request = new GetPreSignedUrlRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey,
+                Expires = DateTime.UtcNow.AddSeconds(expiry),
+                Verb = HttpVerb.GET
+            };
+
+            var url = AlignSchemeWithPresignEndpoint(
+                await _presignClient.GetPreSignedURLAsync(request).ConfigureAwait(false));
+
+            _logger.LogInformation(
+                "Generated pre-signed URL for raw key {Key} (expires in {Expiry}s)",
+                rawKey, expiry);
+
+            return url;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogError(ex, "S3 error generating pre-signed URL for raw key {Key}: {ErrorCode}", rawKey, ex.ErrorCode);
+            return null;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // SERVICE BOUNDARY PATTERN: S3 storage service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that interacts with external S3 storage. Network and
+            // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
+            // We must catch all exceptions to return null instead of crashing the service.
+            _logger.LogError(ex, "Unexpected error generating pre-signed URL for raw key {Key}", rawKey);
+            return null;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+    }
+
+    /// <summary>
+    /// Deletes an object at an EXACT physical S3 key. Deliberately skips
+    /// <c>PathSecurity.ValidateIdentifier</c> and prefix discovery — the caller
+    /// (business logic that composed the key) is trusted. Mirrors
+    /// <see cref="GetPresignedUrlForRawKeyAsync"/>'s raw-key contract.
+    /// </summary>
+    public async Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(rawKey))
+            {
+                return false;
+            }
+
+            await _s3Client.DeleteObjectAsync(new DeleteObjectRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey,
+            }, ct).ConfigureAwait(false);
+
+            _logger.LogInformation("Deleted file from S3 (raw key): {Key}", rawKey);
+            return true;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogWarning(ex, "S3 error deleting raw key {Key}: {ErrorCode}", rawKey, ex.ErrorCode);
+            return false;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // SERVICE BOUNDARY PATTERN: S3 storage service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that deletes files from S3 storage. Network and
+            // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
+            // We must catch all exceptions to return false instead of crashing the service.
+            _logger.LogWarning(ex, "Unexpected error deleting raw key {Key}", rawKey);
+            return false;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+    }
+
+    /// <summary>
+    /// #3384 — writes an object to an EXACT physical key (write-side counterpart of
+    /// <see cref="GetPresignedUrlForRawKeyAsync"/>). No <c>ValidateIdentifier</c>, no
+    /// category folder, no random file-id segment: the key is written verbatim so the
+    /// resolver's raw-key read reconstructs it deterministically. Mirrors the cover
+    /// upload pipelines' <c>DisablePayloadSigning</c> requirement for S3-compatible
+    /// providers (R2/MinIO) that don't support the streaming payload trailer.
+    /// </summary>
+    public async Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(rawKey) || stream is null)
+        {
+            return false;
+        }
+
+        MemoryStream? buffered = null;
+        try
+        {
+            // Pre-buffer non-seekable streams so PutObject can declare a length (#2271).
+            Stream uploadStream;
+            if (stream.CanSeek)
+            {
+                uploadStream = stream;
+            }
+            else
+            {
+                buffered = new MemoryStream();
+                await stream.CopyToAsync(buffered, ct).ConfigureAwait(false);
+                buffered.Position = 0;
+                uploadStream = buffered;
+            }
+
+            var request = new PutObjectRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey,
+                InputStream = uploadStream,
+                ContentType = contentType,
+                AutoCloseStream = false,
+                DisablePayloadSigning = true,
+            };
+
+            await _s3Client.PutObjectAsync(request, ct).ConfigureAwait(false);
+            _logger.LogInformation("Stored file in S3 (raw key): {Key}", rawKey);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (AmazonS3Exception ex)
+        {
+            _logger.LogWarning(ex, "S3 error storing raw key {Key}: {ErrorCode}", rawKey, ex.ErrorCode);
+            return false;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Unexpected error storing raw key {Key}", rawKey);
+            return false;
+        }
+#pragma warning restore CA1031 // Do not catch general exception types
+        finally
+        {
+            if (buffered is not null)
+            {
+                await buffered.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reads an object at an EXACT physical S3 key — the read-side counterpart of
+    /// <see cref="StoreRawKeyAsync"/>. Deliberately skips <c>PathSecurity.ValidateIdentifier</c>
+    /// and prefix discovery, mirroring <see cref="DeleteRawKeyAsync"/>'s raw-key contract.
+    /// Needed by the cover editor (#3611) to re-read a cover's bytes before cropping.
+    /// </summary>
+    public async Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        try
+        {
+            var getRequest = new GetObjectRequest
+            {
+                BucketName = _options.BucketName,
+                Key = rawKey
+            };
+
+            var response = await _s3Client.GetObjectAsync(getRequest, ct).ConfigureAwait(false);
+
+            _logger.LogInformation("Retrieved file from S3 (raw key): {Key}", rawKey);
+
+            // Return the response stream (caller must dispose)
+            return response.ResponseStream;
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning(ex, "Raw key not found in S3: {Key}", rawKey);
+            return null;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+        {
+            // SERVICE BOUNDARY PATTERN: S3 storage service boundary - must handle all errors gracefully
+            // Rationale: This is a service entry point that retrieves files from S3 storage. Network and
+            // S3 operations can throw various runtime exceptions (timeouts, network errors, authentication failures).
+            // We must catch all exceptions to return null instead of crashing the service.
+            // Context: S3 operations can fail in unpredictable ways across different network conditions
+            _logger.LogError(ex, "Error retrieving raw key {Key}", rawKey);
             return null;
         }
 #pragma warning restore CA1031 // Do not catch general exception types

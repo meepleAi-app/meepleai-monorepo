@@ -29,6 +29,5 @@ internal static class KnownMockServices
         "unstructured",
         "bgg",
         "s3",
-        "n8n",
     };
 }

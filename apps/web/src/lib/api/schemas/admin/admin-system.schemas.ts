@@ -1,34 +1,10 @@
 /**
  * Admin System Configuration Schemas
  *
- * N8N configuration, batch jobs, processing queue, emergency controls, and audit logs.
+ * Batch jobs, processing queue, emergency controls, and audit logs.
  */
 
 import { z } from 'zod';
-
-// ========== N8N Configuration (Issue #60) ==========
-
-export const N8nConfigDtoSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  baseUrl: z.string(),
-  webhookUrl: z.string().nullable().optional(),
-  isActive: z.boolean(),
-  lastTestedAt: z.string().datetime({ offset: true }).nullable().optional(),
-  lastTestResult: z.string().nullable().optional(),
-  createdAt: z.string().datetime({ offset: true }),
-  updatedAt: z.string().datetime({ offset: true }),
-});
-
-export type N8nConfigDto = z.infer<typeof N8nConfigDtoSchema>;
-
-export const N8nTestResultDtoSchema = z.object({
-  success: z.boolean(),
-  message: z.string(),
-  latencyMs: z.number().nullable().optional(),
-});
-
-export type N8nTestResultDto = z.infer<typeof N8nTestResultDtoSchema>;
 
 // ========== Batch Jobs (Issue #3693) ==========
 

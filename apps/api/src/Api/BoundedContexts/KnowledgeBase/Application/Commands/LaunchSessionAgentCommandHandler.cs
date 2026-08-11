@@ -52,8 +52,12 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
                 $"An active agent session already exists for GameSession {request.GameSessionId}");
         }
 
-        // Parse and validate initial game state
-        var initialGameState = GameState.FromJson(request.InitialGameStateJson);
+        // C1 fix: empty/whitespace InitialGameStateJson means "use server default".
+        // GameState.FromJson('{}') throws because ActivePlayer == Guid.Empty;
+        // GameState.Initial(UserId) produces a valid baseline state.
+        var initialGameState = string.IsNullOrWhiteSpace(request.InitialGameStateJson)
+            ? GameState.Initial(request.UserId)
+            : GameState.FromJson(request.InitialGameStateJson);
 
         // Create agent session
         var agentSession = new AgentSession(

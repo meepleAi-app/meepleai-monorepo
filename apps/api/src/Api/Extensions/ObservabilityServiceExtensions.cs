@@ -26,7 +26,6 @@ internal static class ObservabilityServiceExtensions
 
     private static readonly string[] PostgresTags = new[] { "db", "sql", HealthCheckTags.Core, HealthCheckTags.Critical };
     private static readonly string[] RedisTags = new[] { "cache", "redis", HealthCheckTags.Core, HealthCheckTags.Critical };
-    private static readonly string[] N8nTags = new[] { "automation", "workflow" };
     private static readonly string[] SharedCatalogTags = new[] { "database", "fts", "shared-catalog" };
     private static readonly string[] ConfigurationTags = new[] { "configuration", "startup" };
 
@@ -170,11 +169,6 @@ internal static class ObservabilityServiceExtensions
 
     private static void AddExternalHealthChecks(IHealthChecksBuilder builder, IConfiguration configuration)
     {
-        // S1075: Default URLs extracted to const
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback values
-        const string DefaultN8nUrl = "http://n8n:5678";
-#pragma warning restore S1075
-
         // Issue #2152: Build Redis connection string with password (same as InfrastructureServiceExtensions)
         var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST")
             ?? configuration["REDIS_HOST"]
@@ -189,8 +183,6 @@ internal static class ObservabilityServiceExtensions
             ? $"{redisHost}:{redisPort}"
             : $"{redisHost}:{redisPort},password={redisPassword}";
 
-        var n8nUrl = configuration["N8N_URL"] ?? DefaultN8nUrl;
-
         builder
             .AddRedis(
                 healthCheckRedisConnectionString,
@@ -200,10 +192,6 @@ internal static class ObservabilityServiceExtensions
                 "shared-catalog-fts",
                 failureStatus: HealthStatus.Degraded,
                 tags: SharedCatalogTags)
-            .AddUrlGroup(
-                new Uri($"{n8nUrl}/healthz"),
-                name: "n8n",
-                tags: N8nTags)
             .AddCheck<Api.Infrastructure.HealthChecks.ConfigurationHealthCheck>(
                 "configuration",
                 failureStatus: HealthStatus.Degraded,

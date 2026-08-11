@@ -21,7 +21,7 @@ public sealed class UpsertAppBudgetCommandValidatorTests
         MonthlyLimitCurrency: "USD",
         AlertThresholdPct: 80,
         CriticalThresholdPct: 95,
-        RowVersion: null,
+        Xmin: null,
         UpdatedBy: "admin@meepleai.dev");
 
     [Fact]

@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 
 // CommonJS import — csp.js is consumed by next.config.js which is CJS.
-import { buildCspHeader, isCfAccessAllowed } from '../csp';
+import { buildCspHeader, isCfAccessAllowed, isLocalBlobAllowed } from '../csp';
 
 const PROD_API = 'https://api.meepleai.app';
 const STAGING_API = 'https://api.meepleai-staging.cloudflareaccess.com';
@@ -83,6 +83,45 @@ describe('buildCspHeader — #1816 P2-3 per-env CSP manifest-src', () => {
         ])
       );
     });
+  });
+});
+
+describe('buildCspHeader — #3498 E2E-only img-src opt-in', () => {
+  it('keeps img-src closed by default (no localhost blob host)', () => {
+    const csp = buildCspHeader({ apiBaseUrl: PROD_API });
+
+    expect(csp).toContain("img-src 'self' data: https:");
+    // 🔴 Security regression guard — prod CSP must NOT allow an http loopback origin.
+    expect(csp).not.toContain('http://localhost:9000');
+  });
+
+  it('widens img-src to the MinIO presign host when opted in', () => {
+    const csp = buildCspHeader({ apiBaseUrl: PROD_API, allowLocalBlobImages: true });
+
+    expect(csp).toContain("img-src 'self' data: https: http://localhost:9000");
+  });
+
+  it('leaves every other directive untouched when opted in', () => {
+    const csp = buildCspHeader({ apiBaseUrl: PROD_API, allowLocalBlobImages: true });
+
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("manifest-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain('cloudflareaccess.com');
+  });
+});
+
+describe('isLocalBlobAllowed — defensive env var parsing', () => {
+  it.each([
+    ['true', true],
+    ['false', false],
+    ['1', false],
+    ['yes', false],
+    ['TRUE', false], // case-sensitive on purpose — opt-in must be explicit "true"
+    ['', false],
+    [undefined, false],
+  ])('isLocalBlobAllowed(%j) === %s', (input, expected) => {
+    expect(isLocalBlobAllowed(input as string | undefined)).toBe(expected);
   });
 });
 

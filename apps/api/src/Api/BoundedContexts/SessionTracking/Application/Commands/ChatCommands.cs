@@ -1,3 +1,4 @@
+using Api.SharedKernel.Domain.Enums;
 using MediatR;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Commands;
@@ -47,13 +48,16 @@ public record AskSessionAgentResult(
     string Answer,
     string AgentType,
     float? Confidence,
-    string? CitationsJson
+    string? CitationsJson,
+    GroundingStatus GroundingStatus
 );
 
 /// <summary>
 /// Command to delete a chat message.
 /// </summary>
+/// <param name="MessageId">Message to soft-delete.</param>
+/// <param name="RequesterUserId">Authenticated caller — must own the participant that sent the message (#2655 IDOR guard). Never sourced from the client query string.</param>
 public record DeleteChatMessageCommand(
     Guid MessageId,
-    Guid RequesterId
+    Guid RequesterUserId
 ) : IRequest<Unit>;

@@ -119,7 +119,7 @@
     }
   },
   "postman.settings.dotenv-detection-notification-visibility": false,
-  "liveServer.settings.port": 5506,
+  "liveServer.settings.port": 5507,
   "githubPullRequests.ignoredPullRequestBranches": [
     "main-dev"
   ]

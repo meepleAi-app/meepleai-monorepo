@@ -1,12 +1,15 @@
 using Amazon.S3;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Resilience;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Observability;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
@@ -57,6 +60,10 @@ internal sealed class EnrichCatalogCoverCommandHandler
     public const string SkipReasonImageNotAvailable = "image-not-available-p18";
     public const string SkipReasonLicenseNotWhitelisted = "license-not-whitelisted";
     public const string SkipReasonImageBytesNotAvailable = "image-bytes-not-available";
+
+    /// <summary>#3373 D3: the game was soft-deleted concurrently between the enrichment
+    /// load and a retry after a <see cref="DbUpdateConcurrencyException"/> — nothing to persist.</summary>
+    public const string SkipReasonConcurrentDelete = "concurrent-delete";
     public const string FailReasonImageProcessing = "image-processing-error";
     public const string FailReasonR2Upload = "r2-upload-error";
     /// <summary>Issue #1823 Wave 3 M13 (M10 follow-up): Polly circuit OPEN — short-circuit retry until breaker recovers.</summary>
@@ -72,6 +79,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
     private readonly IWebpVariantGenerator _webpGenerator;
     private readonly ICoverR2UploadPipeline _r2UploadPipeline;
     private readonly TimeProvider _timeProvider;
+    private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
     private readonly ILogger<EnrichCatalogCoverCommandHandler> _logger;
 
     public EnrichCatalogCoverCommandHandler(
@@ -82,6 +91,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
         IWebpVariantGenerator webpGenerator,
         ICoverR2UploadPipeline r2UploadPipeline,
         TimeProvider timeProvider,
+        IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy cacheRetryPolicy,
         ILogger<EnrichCatalogCoverCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
@@ -91,6 +102,8 @@ internal sealed class EnrichCatalogCoverCommandHandler
         _webpGenerator = webpGenerator ?? throw new ArgumentNullException(nameof(webpGenerator));
         _r2UploadPipeline = r2UploadPipeline ?? throw new ArgumentNullException(nameof(r2UploadPipeline));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -208,6 +221,10 @@ internal sealed class EnrichCatalogCoverCommandHandler
         }
         catch (ImageProcessingException ex)
         {
+            // #3583 — il payload scaricato da Commons è stato rifiutato dal decoder. L'esito
+            // (Failed/image_processing) resta invariato; qui si aggiunge la visibilità su egress.
+            MeepleAiMetrics.RecordEgressBlocked(
+                MeepleAiMetrics.EgressSinks.Wikimedia, MeepleAiMetrics.EgressBlockReasons.DecodeFail);
             EmitOutcomeMetric(OutcomeFailed, FailReasonImageProcessing);
             _logger.LogWarning(ex,
                 "SharedGame {GameId} QID {Qid} WebP encoding failed for file '{Filename}'.",
@@ -242,7 +259,66 @@ internal sealed class EnrichCatalogCoverCommandHandler
             nowUtc);
 
         _repository.Update(game);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // #3373 D3 (ADR-087): M9 cron and admin force-refresh can write the same game
+            // concurrently. The enrichment is idempotent (deterministic R2 key + same
+            // license/attribution), so reload the fresh aggregate, re-apply the cover, and
+            // save once more — last-writer-wins is benign by design.
+            var fresh = await _repository
+                .GetByIdAsync(request.GameId, cancellationToken)
+                .ConfigureAwait(false);
+            if (fresh is null)
+            {
+                // Game soft-deleted concurrently — nothing to persist. The R2 object becomes
+                // an orphan the cover-cleanup path reconciles.
+                _logger.LogWarning(
+                    ex,
+                    "SharedGame {GameId} was deleted concurrently during cover enrichment; skipping persistence.",
+                    request.GameId);
+                EmitOutcomeMetric(OutcomeSkipped, SkipReasonConcurrentDelete);
+                return new EnrichCatalogCoverResult.Skipped(SkipReasonConcurrentDelete);
+            }
+
+            fresh.SetWikidataCover(
+                r2Key,
+                licenseResult.RawLicense,
+                licenseResult.Attribution,
+                coverImage.SourceUrl,
+                nowUtc);
+            _repository.Update(fresh);
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            game = fresh;
+        }
+
+        // #3615: the Wikidata base image was replaced, so a Social crop rendered from the previous
+        // one now shows the wrong picture and nothing regenerates it. Clearing the key falls back
+        // to the new base cover. Placed after BOTH persistence paths (first attempt and the
+        // concurrency retry) so it runs exactly once, on a committed change.
+        await _repository
+            .InvalidateGeneratedCropsAsync(game.Id, CoverAssignmentSource.Wikidata, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Issue #3138: the cover columns changed — evict the SharedGameCatalog read-model
+        // caches so /shared-games (list) and /shared-games/{id} (detail) reflect the new
+        // coverUrl immediately instead of waiting for the 15min/1h TTL. Cross-replica L1+L2
+        // eviction via Redis Pub/Sub, mirroring VectorDocumentIndexedForKbFlagHandler (ADR-062).
+        // Runs only on this success path (every Skipped/Failed branch returns earlier), so no
+        // wasted eviction when the cover did not change; covers admin-single, admin-batch and
+        // cron since all three dispatch EnrichCatalogCoverCommand into this handler.
+        await _cacheRetryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
+            "shared-games.list",
+            cancellationToken).ConfigureAwait(false);
+
+        await _cacheRetryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", token)),
+            "shared-games.detail",
+            cancellationToken).ConfigureAwait(false);
 
         // 10. Success metric + result.
         EmitOutcomeMetric(OutcomeSuccess);

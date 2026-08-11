@@ -242,7 +242,7 @@ export const SearchFilters = React.memo<SearchFiltersProps>(function SearchFilte
         </div>
       </div>
 
-      {/* TODO: Issue #2029 - PDF Language Filter (requires backend support) */}
+      {/* TODO(BE-gated): PDF Language Filter — enable when the backend exposes PDF language metadata */}
       {/* <div className="space-y-2">
         <Label htmlFor="filter-language" className="text-xs">
           PDF Language

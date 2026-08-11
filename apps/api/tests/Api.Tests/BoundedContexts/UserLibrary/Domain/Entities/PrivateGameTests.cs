@@ -398,8 +398,7 @@ public sealed class PrivateGameTests
             description: "Updated description",
             playingTimeMinutes: 90,
             minAge: 12,
-            complexityRating: 3.5m,
-            imageUrl: "https://example.com/new.jpg");
+            complexityRating: 3.5m);
 
         // Assert
         game.Title.Should().Be("Updated Title");
@@ -410,7 +409,7 @@ public sealed class PrivateGameTests
         game.PlayingTimeMinutes.Should().Be(90);
         game.MinAge.Should().Be(12);
         game.ComplexityRating.Should().Be(3.5m);
-        game.ImageUrl.Should().Be("https://example.com/new.jpg");
+        game.ImageUrl.Should().BeNull(); // preserved: UpdateInfo no longer sets ImageUrl (BGG freeze #2123 / ADR-059)
         game.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         game.CreatedAt.Should().Be(originalCreatedAt);
     }
@@ -430,8 +429,7 @@ public sealed class PrivateGameTests
             description: null,
             playingTimeMinutes: null,
             minAge: null,
-            complexityRating: null,
-            imageUrl: null);
+            complexityRating: null);
 
         // Assert
         action.Should().Throw<ArgumentException>()
@@ -453,8 +451,7 @@ public sealed class PrivateGameTests
             description: null,
             playingTimeMinutes: null,
             minAge: null,
-            complexityRating: null,
-            imageUrl: null);
+            complexityRating: null);
 
         // Assert
         action.Should().Throw<ArgumentException>()

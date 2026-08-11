@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Session Chat Message ==========
 
 export const SessionChatMessageDtoSchema = z.object({
@@ -24,7 +26,7 @@ export type SessionChatMessageDto = z.infer<typeof SessionChatMessageDtoSchema>;
 export const ChatSessionDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string().nullable().optional(),
   title: z.string().nullable(),
   messageCount: z.number().int().nonnegative(),
@@ -41,7 +43,7 @@ export type ChatSessionDto = z.infer<typeof ChatSessionDtoSchema>;
 export const ChatSessionSummaryDtoSchema = z.object({
   id: z.string().uuid(),
   userId: z.string().uuid(),
-  gameId: z.string().uuid(),
+  gameId: GameIdString,
   gameTitle: z.string().nullable().optional(),
   agentId: z.string().uuid().nullable().optional(),
   agentType: z.string().nullable().optional(),

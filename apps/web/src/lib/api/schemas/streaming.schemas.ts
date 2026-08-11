@@ -40,21 +40,49 @@ export type StreamingStateUpdate = z.infer<typeof StreamingStateUpdateSchema>;
 
 /**
  * Citation/source reference
- * Matches backend Citation structure
+ * Matches backend Citation structure (CitationDto in Contracts.cs).
+ *
+ * Real wire fields (BE CitationDto, Contracts.cs:137-144):
+ *   documentId, pageNumber, relevanceScore, snippetPreview, copyrightTier, paraphrasedSnippet, isPublic
+ *
+ * Legacy fields kept optional for backward compat with other consumers (kb-ask, RulesExplainer):
+ *   source, page, line, text, snippet, score
+ *
+ * C2 (#2500): `source` was required — relaxed to optional so safeParse succeeds on the real wire
+ * (which does not carry `source`). This is additive/backward-compat: callers that provide `source`
+ * continue to work unchanged.
  */
 export const CitationSchema = z.object({
   documentId: z.string().optional().nullable(),
-  source: z.string(), // e.g., "rules.pdf", "game_manual.pdf"
+  source: z.string().optional().nullable(), // Relaxed: real wire has no `source` (C2 #2500)
   page: z.number().optional().nullable(),
-  pageNumber: z.number().optional().nullable(), // Alternative field name
+  pageNumber: z.number().optional().nullable(), // Real wire field name
   line: z.number().optional().nullable(),
   text: z.string().optional().nullable(),
-  snippet: z.string().optional().nullable(), // Alternative field name
+  snippet: z.string().optional().nullable(),
+  snippetPreview: z.string().optional().nullable(), // Real wire field (C2 #2500)
   score: z.number().optional().nullable(),
-  relevanceScore: z.number().optional().nullable(), // Alternative field name
+  relevanceScore: z.number().optional().nullable(), // Real wire field name
   copyrightTier: z.enum(['full', 'protected']).default('full'), // Default 'full' for backward compat
   paraphrasedSnippet: z.string().optional().nullable(),
   isPublic: z.boolean().optional().default(false),
+  // SP-C (#3407): Full-gated region grounding. `regions` are normalized [0,1] top-left bounding
+  // boxes for the PDF overlay (SP-D); BE emits them only for Full-tier citations. Additive/nullable
+  // so the current wire (no region fields) keeps safeParse-ing.
+  regions: z
+    .array(
+      z.object({
+        page: z.number(),
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      })
+    )
+    .optional()
+    .nullable(),
+  charStart: z.number().optional().nullable(),
+  charEnd: z.number().optional().nullable(),
 });
 
 export type Citation = z.infer<typeof CitationSchema>;
@@ -83,6 +111,8 @@ export type StreamingToken = z.infer<typeof StreamingTokenSchema>;
 /**
  * Complete event data
  * Sent when streaming finishes successfully
+ *
+ * C2 (#2500): added `chatThreadId` — real wire field for session chat thread ID.
  */
 export const StreamingCompleteSchema = z.object({
   totalTokens: z.number(),
@@ -90,6 +120,7 @@ export const StreamingCompleteSchema = z.object({
   completionTokens: z.number().optional().nullable(),
   confidence: z.number().optional().nullable(), // 0.0 - 1.0
   estimatedReadingTimeMinutes: z.number().optional().nullable(),
+  chatThreadId: z.string().optional().nullable(), // Real wire field (C2 #2500)
   snippets: z.array(CitationSchema).optional().default([]), // Final citations
   citations: z.array(CitationSchema).optional().default([]), // Copyright-aware citations
 });

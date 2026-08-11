@@ -100,4 +100,44 @@ internal sealed class MockBlobStorageService : IBlobStorageService
         return Task.FromResult<string?>(
             $"http://localhost/mock-s3/{resourceKey}/{fileId}?expiry={expirySeconds ?? 3600}");
     }
+
+    /// <inheritdoc />
+    public Task<string?> GetPresignedUrlForRawKeyAsync(string rawKey, int? expirySeconds = null)
+    {
+        // Always return a synthetic URL — the mock assumes every blob exists.
+        return Task.FromResult<string?>(
+            $"http://localhost/mock-s3/raw?key={Uri.EscapeDataString(rawKey)}&expiry={expirySeconds ?? 3600}");
+    }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = (rawKey, ct);
+        // Return true for the same "everything is present" mock semantics as DeleteAsync.
+        return Task.FromResult(true);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> StoreRawKeyAsync(string rawKey, Stream stream, string contentType, CancellationToken ct = default)
+    {
+        _ = (contentType);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms, ct).ConfigureAwait(false);
+        _store[rawKey] = ms.ToArray();
+        // "Everything succeeds" mock semantics (mirrors StoreAsync).
+        return true;
+    }
+
+    /// <inheritdoc />
+    public Task<Stream?> RetrieveRawKeyAsync(string rawKey, CancellationToken ct = default)
+    {
+        _ = ct;
+        // Honors this mock's own in-memory _store (mirrors RetrieveAsync above), so a raw
+        // key written via StoreRawKeyAsync (e.g. a rendered cover crop) can be read back
+        // in DevTools/mock mode without R2. Unknown keys return null — unlike RetrieveAsync,
+        // there is no placeholder fallback here: callers of raw-key reads (cover resolution)
+        // treat null as "fall through to the next source", which is the behavior under test.
+        Stream? result = _store.TryGetValue(rawKey, out var bytes) ? new MemoryStream(bytes) : null;
+        return Task.FromResult(result);
+    }
 }

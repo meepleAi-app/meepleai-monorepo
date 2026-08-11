@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Quartz;
 
@@ -86,9 +87,17 @@ internal sealed class GameNightReminderJob : IJob
                         new GameNightReminder24hEvent(gameNight.Id, gameNight.Title, gameNight.ScheduledAt, gameNight.Location),
                         ct).ConfigureAwait(false);
 
-                    gameNight.MarkReminder24hSent();
-                    await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
-                    await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+                    // Persist the SentAt flag via a direct column UPDATE (#2720). The previous
+                    // detached UpdateAsync threw an EF identity conflict (the event was loaded
+                    // tracked by GetEventsNeedingReminderAsync) that the catch swallowed, leaving
+                    // the flag unwritten so every run re-sent the reminder. ExecuteUpdate bypasses
+                    // the change tracker + the xmin concurrency token.
+                    await _dbContext.GameNightEvents
+                        .Where(e => e.Id == gameNight.Id)
+                        .ExecuteUpdateAsync(
+                            s => s.SetProperty(e => e.Reminder24hSentAt, DateTimeOffset.UtcNow),
+                            ct)
+                        .ConfigureAwait(false);
 
                     reminder24hCount++;
                     _logger.LogInformation(
@@ -125,9 +134,13 @@ internal sealed class GameNightReminderJob : IJob
                         new GameNightReminder1hEvent(gameNight.Id, gameNight.Title, gameNight.ScheduledAt),
                         ct).ConfigureAwait(false);
 
-                    gameNight.MarkReminder1hSent();
-                    await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
-                    await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+                    // Direct column UPDATE — see the 24h branch (#2720).
+                    await _dbContext.GameNightEvents
+                        .Where(e => e.Id == gameNight.Id)
+                        .ExecuteUpdateAsync(
+                            s => s.SetProperty(e => e.Reminder1hSentAt, DateTimeOffset.UtcNow),
+                            ct)
+                        .ConfigureAwait(false);
 
                     reminder1hCount++;
                     _logger.LogInformation(

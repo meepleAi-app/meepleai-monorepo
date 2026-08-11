@@ -20,7 +20,11 @@ internal record RegisterCommand(
     // hasn't been set yet, the resulting user is provisioned as Admin. All
     // other inputs land Role.User regardless of the registration order
     // (replaces the race-prone HasAnyUsersAsync first-user-is-admin path).
-    string? BootstrapToken = null
+    string? BootstrapToken = null,
+    // #2954 F1: whether the user accepted the ToS on the register form. When true,
+    // the handler records an append-only TermsAcceptance (Context=Registration) in
+    // the same transaction as the new user. Enforced server-side at the endpoint.
+    bool TermsAccepted = false
 ) : ICommand<RegisterResponse>;
 
 /// <summary>

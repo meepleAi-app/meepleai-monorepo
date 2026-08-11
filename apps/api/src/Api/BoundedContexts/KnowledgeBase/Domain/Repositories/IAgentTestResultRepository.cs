@@ -56,6 +56,24 @@ internal interface IAgentTestResultRepository
     Task<int> GetCountByTypologyIdAsync(Guid typologyId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the total count of saved/favorited test results, optionally scoped to a user.
+    /// Mirrors the predicate of <see cref="GetSavedAsync"/>.
+    /// </summary>
+    Task<int> GetSavedCountAsync(Guid? userId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the total count of test results executed by a specific user.
+    /// Mirrors the predicate of <see cref="GetByExecutedByAsync"/>.
+    /// </summary>
+    Task<int> GetCountByExecutedByAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the total count of test results within a date range.
+    /// Mirrors the predicate of <see cref="GetByDateRangeAsync"/>.
+    /// </summary>
+    Task<int> GetCountByDateRangeAsync(DateTime from, DateTime to, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds a new test result.
     /// </summary>
     Task AddAsync(AgentTestResult testResult, CancellationToken cancellationToken = default);

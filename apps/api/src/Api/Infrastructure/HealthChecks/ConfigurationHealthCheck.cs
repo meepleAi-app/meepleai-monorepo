@@ -228,10 +228,6 @@ internal class ConfigurationHealthCheck : IHealthCheck
 
     private void ValidateExternalServicesConfiguration(List<string> errors, List<string> warnings, Dictionary<string, object> data)
     {
-        // n8n workflow integration
-        var n8nUrl = _configuration["N8N_URL"];
-        data["n8n_configured"] = !string.IsNullOrEmpty(n8nUrl);
-
         // Unstructured PDF service
         var unstructuredUrl = _configuration["PdfProcessing:UnstructuredApiUrl"] ??
                              _configuration["UNSTRUCTURED_API_URL"];

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -36,7 +37,7 @@ internal sealed class AddGameFaqCommandHandler : ICommandHandler<AddGameFaqComma
         var game = await _repository.GetByIdAsync(command.SharedGameId, cancellationToken).ConfigureAwait(false);
         if (game is null)
         {
-            throw new InvalidOperationException($"Shared game with ID {command.SharedGameId} not found");
+            throw new NotFoundException("SharedGame", command.SharedGameId.ToString());
         }
 
         // Create the FAQ

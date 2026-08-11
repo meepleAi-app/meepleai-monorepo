@@ -5,6 +5,7 @@ catalog:
   - title: Love Letter
     bggId: 129622
     language: en
+    description: Quick card game of risk and deduction for 2-4 players. Each turn you draw and play one of sixteen numbered cards to knock rivals out of the round or end it holding the highest-ranked card, courting the Princess.
     yearPublished: 2012
     minPlayers: 2
     maxPlayers: 4
@@ -20,6 +21,7 @@ catalog:
   - title: Patchwork
     bggId: 163412
     language: en
+    description: Two-player abstract strategy game. Players spend time and buttons to place polyomino fabric patches onto a personal quilt board, racing to fill space efficiently and minimise empty squares when scoring.
     yearPublished: 2014
     minPlayers: 2
     maxPlayers: 2
@@ -34,6 +36,7 @@ catalog:
   - title: Jaipur
     bggId: 54043
     language: en
+    description: Fast two-player trading game set in the markets of Jaipur. Collect and sell sets of goods for rupees, manage your camels, and earn the most over rounds to become the Maharaja's personal trader.
     yearPublished: 2009
     minPlayers: 2
     maxPlayers: 2

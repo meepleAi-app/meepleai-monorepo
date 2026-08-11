@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { extractInitials, hashToHue, shouldUsePlaceholder } from '../cover-utils';
+import {
+  extractInitials,
+  hashToHue,
+  isBlockedImageHost,
+  shouldUsePlaceholder,
+} from '../cover-utils';
 
 describe('shouldUsePlaceholder', () => {
   it.each([
@@ -46,6 +51,45 @@ describe('shouldUsePlaceholder', () => {
   it('returns false for arbitrary first-party HTTPS hosts', () => {
     expect(shouldUsePlaceholder('https://meepleai.app/static/foo.png')).toBe(false);
     expect(shouldUsePlaceholder('https://cdn.wikimedia.org/foo.jpg')).toBe(false);
+  });
+});
+
+describe('isBlockedImageHost (#2655 — hostname-anchored BGG detection)', () => {
+  it('returns true only for a parsed hostname that is a blocked BGG image CDN', () => {
+    expect(isBlockedImageHost('https://cf.geekdo-images.com/foo.jpg')).toBe(true);
+    expect(isBlockedImageHost('https://images.geekdo.com/foo.png')).toBe(true);
+    expect(isBlockedImageHost('https://geekdo-images.com/foo.png')).toBe(true);
+  });
+
+  it('returns true for subdomains of blocked hosts', () => {
+    expect(isBlockedImageHost('https://eu.cf.geekdo-images.com/foo.png')).toBe(true);
+  });
+
+  it.each([null, undefined, '', '   '])('returns false for missing input %p', input => {
+    expect(isBlockedImageHost(input)).toBe(false);
+  });
+
+  it('returns false for unparseable src even when it contains a BGG host substring', () => {
+    // Regression for the js/regex/missing-regexp-anchor finding: the old
+    // unanchored `/…geekdo-images\.com…/.test(src)` matched a raw substring, so
+    // a garbage/unparseable src that merely CONTAINS a BGG host token was
+    // mis-detected. A parsed hostname check rejects it (no real BGG request).
+    expect(isBlockedImageHost('not-a-real-url-boardgamegeek.com-marketing')).toBe(false);
+    expect(isBlockedImageHost('cf.geekdo-images.com.evil.example/pic.jpg')).toBe(false);
+  });
+
+  it('returns false when a BGG token appears only in the path/query of a non-BGG host', () => {
+    // Attacker-style URL whose real hostname is benign but whose path embeds a
+    // BGG token. Substring matching would flag it; hostname matching must not.
+    expect(
+      isBlockedImageHost('https://evil.example/redirect?to=cf.geekdo-images.com%2Fx.jpg')
+    ).toBe(false);
+  });
+
+  it('returns false for first-party and data/relative sources', () => {
+    expect(isBlockedImageHost('https://covers.meepleai.app/abc/cover.webp')).toBe(false);
+    expect(isBlockedImageHost('data:image/png;base64,iVBORw0KGgo=')).toBe(false);
+    expect(isBlockedImageHost('/uploads/covers/abc.webp')).toBe(false);
   });
 });
 

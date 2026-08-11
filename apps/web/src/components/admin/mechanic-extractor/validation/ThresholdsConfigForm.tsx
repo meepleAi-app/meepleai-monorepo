@@ -44,7 +44,7 @@ import type { CertificationThresholdsDto } from '@/lib/api/schemas/admin-mechani
 // network round-trip and surfaces FluentValidation-style messages locally.
 // ──────────────────────────────────────────────────────────────────────────
 
-export const ThresholdsConfigFormSchema = z.object({
+const ThresholdsConfigFormSchema = z.object({
   minCoveragePct: z.coerce
     .number()
     .min(0, 'Minimum coverage must be between 0 and 100')

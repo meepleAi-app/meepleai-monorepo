@@ -18,8 +18,7 @@ interface DrawerActionFooterProps {
 }
 
 const variantStyles: Record<DrawerAction['variant'], string> = {
-  primary:
-    'bg-[var(--bg-card)] text-[var(--text)] font-bold hover:bg-[var(--nh-bg-surface-hover)]',
+  primary: 'bg-card text-foreground font-bold hover:bg-muted',
   secondary: 'bg-transparent text-[var(--text-sec)] hover:bg-[var(--bg-card)]',
   danger: 'bg-transparent text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20',
 };
@@ -30,10 +29,7 @@ export function DrawerActionFooter({ actions, className }: DrawerActionFooterPro
 
   return (
     <div
-      className={cn(
-        'flex items-center gap-2 border-t border-[var(--border)] px-4 py-3',
-        className
-      )}
+      className={cn('flex items-center gap-2 border-t border-[var(--border)] px-4 py-3', className)}
       data-testid="drawer-action-footer"
     >
       {visible.map(action => {

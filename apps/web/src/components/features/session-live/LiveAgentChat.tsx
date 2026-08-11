@@ -3,6 +3,7 @@
 /**
  * LiveAgentChat — Wave D.2 Interactions sub-PR (Issue #750).
  * Extended by Issue #2375 G3 with sessionStorage draft + smart auto-scroll.
+ * Extended by Issue #2588 A3 with image-attach dual-path.
  *
  * Role variants:
  *   Spectator: visibility forced 'shared' (no private toggle visible)
@@ -13,6 +14,12 @@
  *   - useScrollAnchor → smart auto-scroll: auto when at bottom, toast when scrolled up
  *   - data-at-bottom attribute reflects current anchor state (E2E selector)
  *
+ * #2588 A3:
+ *   - Image attach button (hidden file input + Paperclip trigger)
+ *   - Preview strip with per-image remove button
+ *   - onSendMessage extended with optional images param (backward-compatible)
+ *   - Submit enabled when draft.trim() OR hasImages
+ *
  * Gate C: DIVERGES from MeepleCard — live chat panel, not a card pattern.
  *
  * data-slot="live-agent-chat" — required by unit tests.
@@ -22,9 +29,12 @@
 
 import { type ReactElement, useEffect, useRef, useState, type RefObject } from 'react';
 
-import { Send } from 'lucide-react';
+import { Paperclip, Send, X } from 'lucide-react';
 import { useIntl } from 'react-intl';
 
+import { type ChatCitation, ChatCitationCard } from '@/components/chat/panel/ChatCitationCard';
+import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
+import { useChatImageAttachments } from '@/hooks/useChatImageAttachments';
 import type { ParticipantRole } from '@/lib/session-live/participant-role';
 import { useChatDraft } from '@/lib/session-live/use-chat-draft';
 import { useScrollAnchor } from '@/lib/session-live/use-scroll-anchor';
@@ -38,6 +48,26 @@ export interface ChatMessage {
   readonly content: string;
   readonly visibility: 'private' | 'shared';
   readonly timestamp: string;
+  readonly citations?: readonly ChatCitation[];
+  /**
+   * Task 3 (#3388): server-authoritative grounding contract, propagated verbatim from
+   * `useSessionAgentChat.ChatMessage.groundingStatus` (SSE path) or set directly from
+   * the `/chat/ask-agent` JSON response (image path). Absent on system status messages.
+   */
+  readonly groundingStatus?: 'Grounded' | 'Partial' | 'Ungrounded';
+  /**
+   * AC-CHAT-3: when true, the agent answered without any grounding citations.
+   * Shows a discrete disclaimer below the bubble. NEVER true on system status messages
+   * (those are injected by SessionLiveView without this flag).
+   */
+  readonly isNonGrounded?: boolean;
+  /**
+   * Task 4 (#3388): source modality of the answer, used to pick the per-modality
+   * non-grounded disclaimer copy. Absent/'text' → text-RAG SSE path copy;
+   * 'image' → multimodal /ask-agent JSON path copy (SessionLiveView sets this on
+   * the image-branch agent message).
+   */
+  readonly modality?: 'text' | 'image';
 }
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -51,6 +81,8 @@ export interface LiveAgentChatLabels {
   readonly emptyMessage: string;
   /** #2375 G3: aria-label on the "N nuovi messaggi" toast button. */
   readonly newMessagesToastAriaLabel: string;
+  /** #2588 A3: aria-label on the image attach button. */
+  readonly attachAriaLabel: string;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -61,7 +93,15 @@ export interface LiveAgentChatProps {
   readonly messages: ReadonlyArray<ChatMessage>;
   readonly viewerRole: ParticipantRole;
   readonly viewerId: string;
-  readonly onSendMessage: (content: string, visibility: 'private' | 'shared') => void;
+  /**
+   * #2588 A3: extended with optional images param (backward-compatible).
+   * Existing callers that pass only (content, visibility) continue to work.
+   */
+  readonly onSendMessage: (
+    content: string,
+    visibility: 'private' | 'shared',
+    images?: ChatImagePreview[]
+  ) => void;
   readonly compact?: boolean;
   readonly labels: LiveAgentChatLabels;
   readonly className?: string;
@@ -87,6 +127,7 @@ export function LiveAgentChat({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { isAtBottom, scrollToBottom } = useScrollAnchor({
     // Cast: HTMLDivElement extends HTMLElement; hook only reads .current via null guard.
@@ -94,6 +135,9 @@ export function LiveAgentChat({
     bottomRef: bottomRef as RefObject<HTMLElement | null>,
     trigger: messages.length,
   });
+
+  // #2588 A3: image attachments
+  const { images, addImage, removeImage, clearImages, hasImages } = useChatImageAttachments();
 
   // Track new arrivals while scrolled up to display "N nuovi messaggi" toast.
   const [newMessageCount, setNewMessageCount] = useState<number>(0);
@@ -132,14 +176,22 @@ export function LiveAgentChat({
   const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault();
     const trimmed = draft.trim();
-    if (!trimmed) return;
-    onSendMessage(trimmed, isSpectator ? 'shared' : visibility);
+    if (!trimmed && !hasImages) return;
+    onSendMessage(trimmed, isSpectator ? 'shared' : visibility, hasImages ? images : undefined);
     clearDraft();
+    clearImages();
   };
 
   const handleToastClick = (): void => {
     scrollToBottom();
     setNewMessageCount(0);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(e.target.files ?? []);
+    files.forEach(file => addImage(file));
+    // Reset the file input so the same file can be re-attached after removal
+    e.target.value = '';
   };
 
   return (
@@ -188,6 +240,32 @@ export function LiveAgentChat({
                     </span>
                   )}
                 </div>
+                {msg.citations && msg.citations.length > 0 && (
+                  <div data-slot="chat-citations" className="mt-1 flex flex-col gap-1">
+                    {msg.citations.map((c, i) => (
+                      <ChatCitationCard key={i} citation={c} />
+                    ))}
+                  </div>
+                )}
+                {/* AC-CHAT-3: non-grounded disclaimer — only for agent messages with
+                    zero citations and explicit isNonGrounded flag.
+                    NEVER shown on system status messages (those lack the flag).
+                    Task 4 (#3388): copy varies by modality — image path answers are
+                    derived from the photo + model knowledge, not the rulebook. */}
+                {msg.isNonGrounded === true && !isOwn && (
+                  <p
+                    data-slot="chat-nongrounded-disclaimer"
+                    className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"
+                  >
+                    <span aria-hidden="true">⚠️</span>
+                    {intl.formatMessage({
+                      id:
+                        msg.modality === 'image'
+                          ? 'pages.sessionLive.chatAgent.nonGroundedDisclaimerImage'
+                          : 'pages.sessionLive.chatAgent.nonGroundedDisclaimer',
+                    })}
+                  </p>
+                )}
               </div>
             );
           })
@@ -245,7 +323,57 @@ export function LiveAgentChat({
           </div>
         )}
 
+        {/* #2588 A3: image preview strip — shown only when images are attached */}
+        {images.length > 0 && (
+          <div data-slot="chat-image-previews" className="flex flex-wrap gap-2">
+            {images.map((img, i) => (
+              <div key={i} className="relative rounded border border-border/60 bg-muted p-0.5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={img.previewUrl} alt="" className="h-12 w-12 rounded object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  aria-label={intl.formatMessage(
+                    { id: 'pages.sessionLive.chat.removeImageAriaLabel' },
+                    { n: i + 1 }
+                  )}
+                  className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center
+                    justify-center rounded-full bg-muted border border-border/60
+                    text-muted-foreground hover:text-foreground
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <X className="h-2.5 w-2.5" aria-hidden="true" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2">
+          {/* #2588 A3: hidden file input + attach button */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            aria-hidden="true"
+            tabIndex={-1}
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            aria-label={labels.attachAriaLabel}
+            onClick={() => fileInputRef.current?.click()}
+            data-slot="chat-attach-button"
+            className="flex shrink-0 items-center justify-center rounded-lg border
+              border-border/60 bg-card px-3 py-2 text-muted-foreground
+              transition-colors hover:bg-muted hover:text-foreground
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Paperclip className="h-4 w-4" aria-hidden="true" />
+          </button>
+
           <input
             type="text"
             value={draft}
@@ -259,7 +387,8 @@ export function LiveAgentChat({
           <button
             type="submit"
             aria-label={labels.sendAriaLabel}
-            disabled={!draft.trim()}
+            data-testid="live-agent-chat-send"
+            disabled={!draft.trim() && !hasImages}
             className="flex shrink-0 items-center justify-center rounded-lg border
               border-border/60 bg-card px-3 py-2 text-foreground
               transition-colors hover:bg-muted

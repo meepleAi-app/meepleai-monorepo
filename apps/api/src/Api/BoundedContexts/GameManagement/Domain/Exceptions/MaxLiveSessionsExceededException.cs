@@ -22,7 +22,7 @@ public sealed class MaxLiveSessionsExceededException : ConflictException
 
     [SetsRequiredMembers]
     public MaxLiveSessionsExceededException(Guid gameNightEventId)
-        : base($"GameNightEvent {gameNightEventId} already has an active live session. At most 1 session may be InProgress at a time (invariant #10).")
+        : base(Code, $"GameNightEvent {gameNightEventId} already has an active live session. At most 1 session may be InProgress at a time (invariant #10).")
     {
         GameNightEventId = gameNightEventId;
     }

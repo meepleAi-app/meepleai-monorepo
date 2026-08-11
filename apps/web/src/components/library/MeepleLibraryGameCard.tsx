@@ -128,7 +128,7 @@ export function MeepleLibraryGameCard({
   // Fetch agent configuration status
   const { data: agentConfig } = useAgentConfig(game.gameId, true);
   const agentConfigured = agentConfig !== null;
-  const agentModel = agentConfig?.modelType || 'default';
+  const agentModel = agentConfig?.llmModel || 'default';
 
   const toggleFavoriteMutation = useToggleLibraryFavorite();
 
@@ -333,8 +333,8 @@ export function MeepleLibraryGameCard({
 
       {/* Add to Wishlist dialog */}
       <AddToWishlistDialog
-        gameId={game.gameId}
-        gameName={game.gameTitle}
+        mode="add"
+        prefillGameId={game.gameId}
         open={wishlistDialogOpen}
         onOpenChange={setWishlistDialogOpen}
       />

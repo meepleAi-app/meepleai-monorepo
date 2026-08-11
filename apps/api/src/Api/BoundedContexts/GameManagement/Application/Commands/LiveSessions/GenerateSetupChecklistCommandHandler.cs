@@ -52,7 +52,7 @@ internal class GenerateSetupChecklistCommandHandler
 
         if (!isEnabled)
         {
-            throw new InvalidOperationException("Feature SetupWizard.Enabled is disabled");
+            throw new ConflictException("Feature SetupWizard.Enabled is disabled");
         }
 
         // 2. Get session
@@ -61,10 +61,12 @@ internal class GenerateSetupChecklistCommandHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
-        // 3. Verify session has a GameId
+        // 3. Verify session has a GameId. A free-form session (no GameId) cannot
+        // generate a setup checklist — that is a precondition conflict (409), not
+        // an unhandled InvalidOperationException (500). (#3263 discovery)
         if (session.GameId is null)
         {
-            throw new InvalidOperationException("Session has no associated game");
+            throw new ConflictException("Session has no associated game");
         }
 
         // 4. Stream setup guide from KnowledgeBase

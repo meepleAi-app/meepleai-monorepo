@@ -46,10 +46,25 @@ describe('ToggleSwitch', () => {
     expect(onCheckedChange).not.toHaveBeenCalled();
   });
 
-  it('active state sets backgroundColor inline via entity color', () => {
+  it('active (checked) track uses the entity color, not bg-primary', () => {
     render(<ToggleSwitch checked onCheckedChange={() => {}} entity="game" ariaLabel="T" />);
     const sw = screen.getByRole('switch');
-    expect(sw.getAttribute('style')).toMatch(/--e-game/);
+    expect(sw.className).toMatch(/bg-entity-game/);
+    expect(sw.className).not.toMatch(/bg-primary/);
+  });
+
+  it('inactive (unchecked) track uses bg-muted, not the entity color', () => {
+    render(<ToggleSwitch checked={false} onCheckedChange={() => {}} entity="game" ariaLabel="T" />);
+    const sw = screen.getByRole('switch');
+    expect(sw.className).toMatch(/bg-muted/);
+    expect(sw.className).not.toMatch(/bg-entity-game/);
+  });
+
+  it('focus ring uses the entity ring color, not ring-primary', () => {
+    render(<ToggleSwitch checked onCheckedChange={() => {}} entity="event" ariaLabel="T" />);
+    const sw = screen.getByRole('switch');
+    expect(sw.className).toMatch(/ring-entity-event/);
+    expect(sw.className).not.toMatch(/ring-primary/);
   });
 
   it('default entity is "game"', () => {
@@ -57,10 +72,12 @@ describe('ToggleSwitch', () => {
     expect(screen.getByRole('switch')).toHaveAttribute('data-entity', 'game');
   });
 
-  it('kb entity maps to --e-document CSS var', () => {
+  it('kb entity uses the registered -kb (teal) track, not the -document slate', () => {
     render(<ToggleSwitch checked onCheckedChange={() => {}} entity="kb" ariaLabel="T" />);
     const sw = screen.getByRole('switch');
-    expect(sw.getAttribute('style')).toMatch(/--e-document/);
+    expect(sw).toHaveAttribute('data-entity', 'kb');
+    expect(sw.className).toMatch(/bg-entity-kb/);
+    expect(sw.className).not.toMatch(/entity-document/);
   });
 
   it('size "sm" uses smaller track dimensions', () => {

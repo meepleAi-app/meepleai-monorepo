@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Exceptions;
 using FluentAssertions;
 using Xunit;
@@ -670,7 +672,7 @@ public sealed class GameSessionTests
     }
 
     [Fact]
-    public void AddPlayer_WhenCompleted_ThrowsInvalidOperationException()
+    public void AddPlayer_WhenCompleted_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -682,12 +684,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(newPlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot add player to finished session*");
     }
 
     [Fact]
-    public void AddPlayer_WhenAbandoned_ThrowsInvalidOperationException()
+    public void AddPlayer_WhenAbandoned_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -698,12 +700,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(newPlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Cannot add player to finished session*");
     }
 
     [Fact]
-    public void AddPlayer_WhenAtMaxCapacity_ThrowsInvalidOperationException()
+    public void AddPlayer_WhenAtMaxCapacity_ThrowsConflictException()
     {
         // Arrange
         var maxPlayers = Enumerable.Range(1, 100)
@@ -716,12 +718,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(newPlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Session cannot have more than 100 players*");
     }
 
     [Fact]
-    public void AddPlayer_WithDuplicateName_ThrowsInvalidOperationException()
+    public void AddPlayer_WithDuplicateName_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -731,12 +733,12 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(duplicatePlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Player 'Alice' is already in this session*");
     }
 
     [Fact]
-    public void AddPlayer_WithDuplicateNameDifferentCase_ThrowsInvalidOperationException()
+    public void AddPlayer_WithDuplicateNameDifferentCase_ThrowsConflictException()
     {
         // Arrange
         var session = CreateSetupSession();
@@ -746,7 +748,7 @@ public sealed class GameSessionTests
         var action = () => session.AddPlayer(duplicatePlayer);
 
         // Assert
-        action.Should().Throw<InvalidOperationException>()
+        action.Should().Throw<ConflictException>()
             .WithMessage("*Player 'ALICE' is already in this session*");
     }
 
@@ -1041,6 +1043,87 @@ public sealed class GameSessionTests
         // Assert
         session.Status.Should().Be(SessionStatus.Abandoned);
         session.Notes.Should().Contain("Player disconnected");
+    }
+
+    #endregion
+
+    // =============================================================================
+    // region MarkCorrelatedComplete — event-free shadow lifecycle (controller review #2587)
+    // =============================================================================
+
+    #region MarkCorrelatedComplete Tests
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete from Setup → Completed, no domain events")]
+    public void MarkCorrelatedComplete_FromSetup_TransitionsToCompletedWithNoEvents()
+    {
+        // Arrange
+        var session = CreateSetupSession();
+        session.Status.Should().Be(SessionStatus.Setup);
+
+        // Act
+        session.MarkCorrelatedComplete(TimeProvider.System);
+
+        // Assert — status and timestamp
+        session.Status.Should().Be(SessionStatus.Completed);
+        session.CompletedAt.Should().NotBeNull();
+
+        // Assert — no GameSessionStartedEvent or GameSessionCompletedEvent raised
+        session.DomainEvents.Should().NotContain(
+            e => e is GameSessionStartedEvent,
+            because: "MarkCorrelatedComplete must not raise GameSessionStartedEvent");
+        session.DomainEvents.Should().NotContain(
+            e => e is GameSessionCompletedEvent,
+            because: "MarkCorrelatedComplete must not raise GameSessionCompletedEvent");
+    }
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete is idempotent when already Completed")]
+    public void MarkCorrelatedComplete_AlreadyCompleted_IsNoOp()
+    {
+        // Arrange — drive to Completed via normal path
+        var session = CreateSetupSession();
+        session.Start();
+        session.Complete();
+        var completedAt = session.CompletedAt;
+        session.ClearDomainEvents(); // clear events from normal path
+
+        // Act — calling MarkCorrelatedComplete on an already-terminal session must not throw
+        var act = () => session.MarkCorrelatedComplete(TimeProvider.System);
+
+        // Assert
+        act.Should().NotThrow();
+        session.Status.Should().Be(SessionStatus.Completed, because: "status must remain Completed");
+        session.CompletedAt.Should().Be(completedAt, because: "CompletedAt must not be overwritten");
+        session.DomainEvents.Should().BeEmpty(because: "no events for an already-finished shadow");
+    }
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete is idempotent when already Abandoned")]
+    public void MarkCorrelatedComplete_AlreadyAbandoned_IsNoOp()
+    {
+        // Arrange
+        var session = CreateSetupSession();
+        session.Abandon("test");
+        var completedAt = session.CompletedAt;
+        session.ClearDomainEvents();
+
+        // Act
+        var act = () => session.MarkCorrelatedComplete(TimeProvider.System);
+
+        // Assert
+        act.Should().NotThrow();
+        session.Status.Should().Be(SessionStatus.Abandoned, because: "status must remain Abandoned");
+        session.CompletedAt.Should().Be(completedAt, because: "CompletedAt must not be overwritten");
+        session.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact(DisplayName = "#2587-fix: MarkCorrelatedComplete with null TimeProvider throws ArgumentNullException")]
+    public void MarkCorrelatedComplete_NullTimeProvider_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var session = CreateSetupSession();
+
+        // Act & Assert
+        var act = () => session.MarkCorrelatedComplete(null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     #endregion

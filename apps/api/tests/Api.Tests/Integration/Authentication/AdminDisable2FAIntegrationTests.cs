@@ -4,6 +4,7 @@ using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
@@ -13,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Npgsql;
 using Xunit;
@@ -72,6 +74,14 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         _output($"Isolated database created: {_databaseName}");
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+
+        // Issue #2894: these tests assert the E2E email side-effect, which is raised by
+        // TwoFactorDisabledEventHandler (a domain-event handler). CreateBase defaults to OutboxOnly —
+        // out-of-band dispatch via the DomainEventOutboxProcessor, which doesn't run inline here — so the
+        // handler never fires against the mock IEmailService (was 0 times). Override to Hybrid so the event
+        // dispatches inline during SaveChangesAsync, per IntegrationServiceCollectionBuilder's docstring.
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddSingleton<TimeProvider>(TimeProvider.System);

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type MeepleCardGameLabels } from './meeple-card-game';
 import {
@@ -24,6 +24,40 @@ vi.mock('next/link', () => ({
     </a>
   ),
 }));
+
+vi.mock('@/hooks/useAdminRole', () => ({ useAdminRole: vi.fn() }));
+vi.mock('@/components/features/cover-editor', () => ({
+  AdminCoverEditAffordance: ({
+    gameId,
+    needsAttention,
+  }: {
+    gameId: string;
+    needsAttention?: boolean;
+  }) => (
+    <button
+      type="button"
+      data-testid={`cover-edit-${gameId}`}
+      data-needs-attention={needsAttention ? 'true' : 'false'}
+    >
+      edit
+    </button>
+  ),
+}));
+
+import { useAdminRole } from '@/hooks/useAdminRole';
+
+const mockUseAdminRole = useAdminRole as unknown as ReturnType<typeof vi.fn>;
+
+function setRole(isEditorOrAbove: boolean) {
+  mockUseAdminRole.mockReturnValue({
+    user: null,
+    isSuperAdmin: false,
+    isAdminOrAbove: isEditorOrAbove,
+    isEditorOrAbove,
+    hasRole: () => false,
+    isLoading: false,
+  });
+}
 
 const cardLabels: MeepleCardGameLabels = {
   ratingAriaLabel: 'Voto',
@@ -65,6 +99,66 @@ function build(overrides: Partial<SharedGamesGridProps> = {}): SharedGamesGridPr
 }
 
 describe('SharedGamesGrid (v2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    setRole(false);
+  });
+
+  it('does not render cover-edit affordances for a non-admin', () => {
+    setRole(false);
+    render(<SharedGamesGrid {...build()} />);
+    expect(screen.queryAllByTestId(/^cover-edit-/)).toHaveLength(0);
+  });
+
+  it('renders a role-gated cover-edit affordance per card for an editor-or-above', () => {
+    setRole(true);
+    render(<SharedGamesGrid {...build()} />);
+    expect(screen.getByTestId(`cover-edit-${games[0].id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`cover-edit-${games[1].id}`)).toBeInTheDocument();
+  });
+
+  it('segnala come da sistemare le card senza cover (#3611)', () => {
+    setRole(true);
+    render(
+      <SharedGamesGrid
+        {...build({
+          games: [
+            { ...games[0], coverUrl: 'https://r2.example/c.webp' },
+            { ...games[1], coverUrl: null },
+          ],
+        })}
+      />
+    );
+
+    expect(screen.getByTestId(`cover-edit-${games[0].id}`)).toHaveAttribute(
+      'data-needs-attention',
+      'false'
+    );
+    expect(screen.getByTestId(`cover-edit-${games[1].id}`)).toHaveAttribute(
+      'data-needs-attention',
+      'true'
+    );
+  });
+
+  it('inoltra il punto focale del crop fino alla cover renderizzata (#3611)', () => {
+    const { container } = render(
+      <SharedGamesGrid
+        {...build({
+          games: [
+            {
+              ...games[0],
+              coverUrl: 'https://r2.example/c.webp',
+              coverFocalX: 0.3,
+              coverFocalY: 0.7,
+            },
+          ],
+        })}
+      />
+    );
+
+    expect(container.querySelector('img')).toHaveStyle({ objectPosition: '30% 70%' });
+  });
+
   it('emits data-state matching the state prop', () => {
     const { container, rerender } = render(<SharedGamesGrid {...build({ state: 'default' })} />);
     expect(container.querySelector('[data-slot="shared-games-grid"]')).toHaveAttribute(
@@ -85,7 +179,7 @@ describe('SharedGamesGrid (v2)', () => {
 
   it('renders one MeepleCardGame per game when state=default', () => {
     const { container } = render(<SharedGamesGrid {...build()} />);
-    expect(container.querySelectorAll('[data-slot="shared-games-card"]')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(2);
     expect(screen.getByText('Catan')).toBeInTheDocument();
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
   });
@@ -122,8 +216,8 @@ describe('SharedGamesGrid (v2)', () => {
     const { container, rerender } = render(
       <SharedGamesGrid {...build({ state: 'empty-search' })} />
     );
-    expect(container.querySelectorAll('[data-slot="shared-games-card"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(0);
     rerender(<SharedGamesGrid {...build({ state: 'error' })} />);
-    expect(container.querySelectorAll('[data-slot="shared-games-card"]')).toHaveLength(0);
+    expect(container.querySelectorAll('[data-testid="shared-games-card"]')).toHaveLength(0);
   });
 });

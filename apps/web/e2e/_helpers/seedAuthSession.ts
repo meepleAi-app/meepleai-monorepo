@@ -52,12 +52,16 @@ const FIXTURE_SESSION_TOKEN = 'playwright-fixture-session-token';
 
 export type AuthSessionRole = 'user' | 'admin';
 
-export async function seedAuthSession(
-  page: Page,
-  options: { role?: AuthSessionRole } = {}
-): Promise<void> {
-  const role = options.role ?? 'user';
-  await page.context().addCookies([
+/** Role names used by the mock-auth helpers (AdminHelper, AuthHelper, fixtures). */
+export type MockAuthRole = 'Admin' | 'Editor' | 'User';
+
+/**
+ * Builds the two cookies proxy.ts needs to resolve an authenticated session AND
+ * its role under the E2E auth bypass. `role` must already be lower-cased to match
+ * proxy.ts's isAdminRole() expectation.
+ */
+function buildBypassAuthCookies(role: string) {
+  return [
     {
       name: SESSION_COOKIE_NAME,
       value: FIXTURE_SESSION_TOKEN,
@@ -65,7 +69,7 @@ export async function seedAuthSession(
       path: '/',
       httpOnly: true,
       secure: false,
-      sameSite: 'Lax',
+      sameSite: 'Lax' as const,
     },
     {
       name: USER_ROLE_COOKIE,
@@ -74,9 +78,30 @@ export async function seedAuthSession(
       path: '/',
       httpOnly: false,
       secure: false,
-      sameSite: 'Lax',
+      sameSite: 'Lax' as const,
     },
-  ]);
+  ];
+}
+
+export async function seedAuthSession(
+  page: Page,
+  options: { role?: AuthSessionRole } = {}
+): Promise<void> {
+  const role = options.role ?? 'user';
+  await page.context().addCookies(buildBypassAuthCookies(role));
+}
+
+/**
+ * Seeds the session + role cookies for the PascalCase-role mock-auth helpers so
+ * navigating to /admin/** actually resolves the admin role under the E2E bypass
+ * (proxy.ts #2784), instead of the middleware falling back to 'user' and
+ * redirecting away. Call BEFORE the first page.goto in a mock-auth helper.
+ *
+ * The meepleai_user_role cookie is honored by proxy.ts ONLY while the bypass is
+ * engaged (dev/CI); production ignores it, so it cannot escalate privileges.
+ */
+export async function seedMockRoleCookies(page: Page, role: MockAuthRole): Promise<void> {
+  await page.context().addCookies(buildBypassAuthCookies(role.toLowerCase()));
 }
 
 /**
@@ -168,4 +193,77 @@ export async function mockAuthEndpoints(
     }
     await route.continue();
   });
+}
+
+/**
+ * Mocks the four "sibling" data sources that the `/library` hybrid hub
+ * (`useHybridHubItems`) fans out to besides the games source (Issue #3289).
+ *
+ * **Why this is needed** (root cause):
+ *   `useHybridHubItems` computes `isLoading` as the OR of 5 query sources
+ *   (games / sessions / chat / agents / kb). The a11y specs use `?fixture=default`
+ *   (or `?state=…`) which short-circuits ONLY the games source (`useLibrary`)
+ *   client-side. The other 4 sources always issue REAL network calls:
+ *     - `useActiveSessions(20)`      → GET /api/v1/sessions/active
+ *     - `useRecentChatSessions(50)`  → GET /api/v1/users/{id}/chat-sessions/recent
+ *     - `useAgents({scope})`         → GET /api/v1/agents?scope=my-library
+ *     - `useUserKbDocs()`            → GET /api/v1/kb-docs
+ *   In the visual-test prod build there is no backend; those 4 requests hang
+ *   through TanStack retry backoff, so `isLoading` never settles, the hub FSM
+ *   stays stuck in 'loading', `LibraryHybridGrid` never mounts, and the specs
+ *   time out waiting for the first `[data-slot="library-grid-card"]`.
+ *
+ * **Schema-valid EMPTY payloads are mandatory**: a 200 that fails the source's
+ * Zod schema throws a `SchemaValidationError` in `httpClient.validateResponse`
+ * → TanStack retries → the query stays pending past the 5s timeout → still red.
+ * Each payload below therefore includes every required field (empty arrays +
+ * `total`/`page`/`pageSize`), matching the exact response envelope each fetcher
+ * validates. Note `page`/`pageSize` MUST be positive integers, and the chat
+ * source returns a BARE array (not an envelope) per `ChatSessionArraySchema`.
+ *
+ * Host-agnostic regexes (no `^` anchor, `(\?.*)?$` tail) match both the relative
+ * URLs the browser `httpClient` issues (proxied via localhost:3000) and any
+ * absolute `:8080` form, tolerant of trailing query strings — same pattern as
+ * `mockAuthEndpoints`. Non-GET methods fall through via `route.continue()`.
+ *
+ * Call AFTER `mockAuthEndpoints` and BEFORE the first `page.goto`.
+ */
+export async function mockLibraryHubSiblingSources(page: Page): Promise<void> {
+  const fulfillGet = (body: unknown) => async (route: Route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+      return;
+    }
+    await route.continue();
+  };
+
+  // sessions — PaginatedSessionsResponse { sessions, total, page(>0), pageSize(>0) }
+  await page
+    .context()
+    .route(
+      /\/api\/v1\/sessions\/active(\?.*)?$/,
+      fulfillGet({ sessions: [], total: 0, page: 1, pageSize: 20 })
+    );
+
+  // chat — ChatSessionArraySchema is a BARE array of ChatSessionSummaryDto
+  await page
+    .context()
+    .route(/\/api\/v1\/users\/[^/]+\/chat-sessions\/recent(\?.*)?$/, fulfillGet([]));
+
+  // agents — GetAllAgentsResponse { success, agents, count }
+  await page
+    .context()
+    .route(/\/api\/v1\/agents(\?.*)?$/, fulfillGet({ success: true, agents: [], count: 0 }));
+
+  // kb — KbDocsListResponse (STRICT) { items, total, page(>0), pageSize(>0) }
+  await page
+    .context()
+    .route(
+      /\/api\/v1\/kb-docs(\?.*)?$/,
+      fulfillGet({ items: [], total: 0, page: 1, pageSize: 20 })
+    );
 }

@@ -76,18 +76,99 @@ jobs:
       SEED_INDEX_TIMEOUT: '20000' # ~5.5h, just under the job limit
       SEED_INDEX_POLL: '30'
       SEED_INDEX_FAILURE_PCT: ${{ github.event.inputs.failure_pct || '15' }}
+      # On a 2-core runner the full dev.yml startup seed saturates the API; give
+      # the load-tolerant liveness probe more room to report healthy (#2516).
+      SEED_INDEX_HEALTH_TIMEOUT: '600'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install jq + AWS CLI (required by seed-index-publish.sh)
+      - name: Install jq (seed scripts) — AWS CLI v2 is pre-installed on the runner
         run: |
+          # `awscli` was removed from the Ubuntu 24.04 (noble) apt repos
+          # ("no installation candidate"), so we no longer apt-install it.
+          # GitHub-hosted ubuntu-latest ships AWS CLI v2; the publish step adds a
+          # defensive fallback installer if `aws` is ever missing.
           sudo apt-get update
-          sudo apt-get install -y jq awscli
+          sudo apt-get install -y jq
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f  # v3
+
+      # ──────────────────────────────────────────────────────────────────
+      # Boot fixes — mirrored from seed-snapshot-bake-ci.yml (#2516). The full
+      # bake brings up the SAME stack (postgres, redis, api, embedding-service,
+      # smoldocling-service) via `make seed-index`, so it needs the SAME
+      # placeholder secrets + env_file + seed-bucket wiring the CI smoke needed.
+      # Without these the bake aborts in the Core seed layer long before it
+      # processes a single PDF — which is why this workflow had never produced
+      # a snapshot. The ONLY difference vs the CI smoke: no `ci` manifest
+      # override (the full bake bakes `dev.yml`).
+      # ──────────────────────────────────────────────────────────────────
+      - name: Generate placeholder secrets (CI cannot secrets-sync — no SSH key)
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Configure seed bucket (readonly R2) + local primary storage
+        working-directory: infra
+        env:
+          SEED_BUCKET_ENDPOINT: ${{ secrets.SEED_BUCKET_ENDPOINT }}
+          SEED_BUCKET_ACCESS_KEY: ${{ secrets.SEED_BUCKET_ACCESS_KEY }}
+          SEED_BUCKET_SECRET_KEY: ${{ secrets.SEED_BUCKET_SECRET_KEY }}
+        run: |
+          # The bake needs readonly access to the R2 seed bucket to fetch the
+          # ~136 source rulebook PDFs declared by dev.yml. Without SEED_BUCKET_*,
+          # PdfSeeder seeds 0 PDFs and seed-index-wait.sh spins until the job
+          # timeout. STORAGE_PROVIDER=local forces the *primary* blob store to
+          # disk, sidestepping the broken R2 PUT (#2271) — the seeder reads from
+          # SEED_BUCKET and writes processed PDFs locally.
+          #
+          # NOTE: the *publish* step (further down) overwrites storage.secret with
+          # the SEED_BLOB_* destination credentials; the two never run at once.
+          : "${SEED_BUCKET_ENDPOINT:?SEED_BUCKET_ENDPOINT secret not configured}"
+          cat > secrets/storage.secret <<EOF
+          STORAGE_PROVIDER=local
+          SEED_BUCKET_NAME=meepleai-seeds
+          SEED_BUCKET_ENDPOINT=${SEED_BUCKET_ENDPOINT}
+          SEED_BUCKET_REGION=auto
+          SEED_BUCKET_FORCE_PATH_STYLE=false
+          SEED_BUCKET_ACCESS_KEY=${SEED_BUCKET_ACCESS_KEY}
+          SEED_BUCKET_SECRET_KEY=${SEED_BUCKET_SECRET_KEY}
+          EOF
+          chmod 600 secrets/storage.secret
+
+      - name: Generate placeholder env file for the bake API container
+        working-directory: infra/env
+        run: |
+          # `api` is the only bake service with an `./env/` env_file
+          # (compose.dev.yml:50). Hostnames point at the compose service names so
+          # the API can reach the AI sidecars to process PDFs. STORAGE_PROVIDER=local
+          # (last env_file wins) keeps the primary blob store on disk in CI.
+          #
+          # Unlike the CI smoke, NO SEED_CATALOG_MANIFEST_OVERRIDE — the full bake
+          # bakes the default `dev.yml` manifest.
+          #
+          # INITIAL_ADMIN_* are mandatory: the Core seed layer fails fatally if the
+          # admin user can't be seeded (SeedAdminUserCommandHandler requires
+          # INITIAL_ADMIN_EMAIL + a >=12-char complex INITIAL_ADMIN_PASSWORD).
+          # Locally the synced .secret files provide these; in CI the placeholder
+          # secrets don't, so the whole seed aborts before the catalog layer.
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          OLLAMA_URL=http://ollama:11434
+          EMBEDDING_SERVICE_URL=http://embedding-service:8000
+          UNSTRUCTURED_SERVICE_URL=http://unstructured-service:8001
+          SMOLDOCLING_SERVICE_URL=http://smoldocling-service:8002
+          RERANKER_SERVICE_URL=http://reranker-service:8003
+          STORAGE_PROVIDER=local
+          INITIAL_ADMIN_EMAIL=bake-admin@meepleai.test
+          INITIAL_ADMIN_PASSWORD=BakeSeed1!Admin
+          INITIAL_ADMIN_DISPLAY_NAME=Bake Admin
+          APIENV
 
       - name: Bake (dev.yml manifest, ~3–6h on CPU)
         working-directory: infra
@@ -95,6 +176,17 @@ jobs:
           SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
         run: |
           mkdir -p "$SEED_INDEX_OUT_DIR"
+          # seed-index-wait.sh / seed-index-dump.sh default PG_DB to
+          # `meepleai_staging`, but the placeholder database.secret created by
+          # `make secrets-setup` uses POSTGRES_DB=meepleai_db — export the actual
+          # values so the wait/dump scripts query the DB the container created.
+          export POSTGRES_USER="$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)"
+          export POSTGRES_DB="$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)"
+          # NOTE (#2516): without a BGG token in CI, the 17 dev.yml games that
+          # lack an inline `description` take the BGG fallback path and are
+          # skipped (logged per-game, non-fatal). The bake produces ~143 games;
+          # none of the RAG smoke query games are affected. Backfilling those
+          # descriptions (full Path A) is tracked separately.
           make seed-index
 
       - name: Run verify gates (exit codes 2/3/4/5/6)
@@ -142,10 +234,31 @@ jobs:
           SEED_INDEX_OUT_DIR: ${{ github.workspace }}/data/snapshots
         run: |
           set -euo pipefail
-          : "${S3_ENDPOINT:?SEED_BLOB_S3_ENDPOINT secret not configured}"
-          : "${S3_ACCESS_KEY:?SEED_BLOB_S3_ACCESS_KEY secret not configured}"
-          : "${S3_SECRET_KEY:?SEED_BLOB_S3_SECRET_KEY secret not configured}"
-          : "${SEED_BLOB_BUCKET:?SEED_BLOB_BUCKET secret not configured}"
+          # Graceful degradation (#2516): the SEED_BLOB_* publish secrets have
+          # never been configured, and R2 PUT is broken (#2271). Until both are
+          # resolved, a missing-secret publish must NOT turn every weekly cron
+          # red — the bake already produced a verified snapshot uploaded as a
+          # 90-day workflow artifact, which keeps `dev-from-snapshot` / the
+          # #2480 RAG smoke unblocked. Skip loudly instead of failing.
+          #
+          # When the secrets ARE present we keep the strict behavior: a real
+          # publish failure (bad creds, R2 down) still fails the job.
+          if [ -z "${S3_ENDPOINT:-}" ] || [ -z "${S3_ACCESS_KEY:-}" ] || \
+             [ -z "${S3_SECRET_KEY:-}" ] || [ -z "${SEED_BLOB_BUCKET:-}" ]; then
+            echo "::warning::SEED_BLOB_* secrets not configured — snapshot NOT published to R2 (see #2271). Download it from this run's 'seed-snapshot-full-meta' artifact instead."
+            {
+              echo "### ⚠️ Snapshot baked but NOT published to R2"
+              echo ""
+              echo "The \`SEED_BLOB_*\` publish secrets are not configured, so the freshly"
+              echo "baked snapshot was uploaded as a **workflow artifact** but NOT pushed"
+              echo "to the R2 distribution bucket (\`latest.txt\` unchanged)."
+              echo ""
+              echo "To enable R2 publish, configure repo secrets:"
+              echo "\`SEED_BLOB_S3_ENDPOINT\`, \`SEED_BLOB_S3_ACCESS_KEY\`,"
+              echo "\`SEED_BLOB_S3_SECRET_KEY\`, \`SEED_BLOB_BUCKET\` (blocked on #2271)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           # `seed-index-publish.sh` reads storage.secret on disk; synthesize
           # one from the GH Actions secrets for this job.
           mkdir -p secrets
@@ -156,6 +269,13 @@ jobs:
           SEED_BLOB_BUCKET=${SEED_BLOB_BUCKET}
           EOF
           chmod 600 secrets/storage.secret
+          # seed-index-publish.sh uses `aws s3 cp`. AWS CLI v2 is pre-installed on
+          # GitHub-hosted runners; install it on demand only if it's somehow absent.
+          if ! command -v aws >/dev/null 2>&1; then
+            curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+            unzip -q /tmp/awscliv2.zip -d /tmp
+            sudo /tmp/aws/install
+          fi
           bash scripts/seed-index-publish.sh
 
       - name: Notify on failure (placeholder for D6 audit trail)

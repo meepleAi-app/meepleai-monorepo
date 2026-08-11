@@ -2,10 +2,10 @@
 
 /* eslint-disable local/no-hardcoded-color-utility --
  * Avatar + primary CTA render white text on inline `style={{ background:
- * 'linear-gradient(... hsl(var(--e-*)) ...)' }}` (entity-tinted bg). The lint
- * rule inspects className strings only, so it cannot see the entity bg in the
- * style prop. Mockup-faithful (.e-bg pattern). Will be re-evaluated when
- * DS-12 introduces shared <EntityAvatar> / <EntityButton> primitives.
+ * 'linear-gradient(... hsl(var(--c-game)) ...)' }}` (brand-tinted bg). The lint
+ * rule inspects className strings only, so it cannot see the colored bg in the
+ * style prop. Will be re-evaluated when shared <EntityAvatar> / <EntityButton>
+ * primitives are introduced.
  */
 
 import { useRouter } from 'next/navigation';

@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -7,21 +8,46 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
 /// <summary>
+/// Captures the RAW Unstructured hi_res wire JSON for a PDF — the response body that
+/// <see cref="Api.BoundedContexts.DocumentProcessing.Application.Services.ImageRegionExtractor"/>
+/// parses for Image/FigureCaption/Table regions. The normal extraction path drops these
+/// (empty-text elements) so image-table region grounding (#3435) needs the raw body.
+/// </summary>
+internal interface IRawHiResExtractor
+{
+    /// <summary>
+    /// Runs a dedicated <c>strategy=hi_res</c> extraction on the long-timeout client and returns
+    /// the raw response body (matching the wire shape ImageRegionExtractor expects), or null.
+    /// Throws on HTTP failure/timeout — callers (batch runner) handle per-item failures.
+    /// </summary>
+    Task<string?> ExtractRawHiResAsync(Stream pdfStream, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
 /// Unstructured library adapter for PDF text extraction (Stage 1 of 3-stage pipeline)
 /// Calls Python FastAPI microservice running Unstructured library
 /// </summary>
-internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
+internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtractor
 {
+    /// <summary>Named HttpClient for the slow hi_res region pass (~200s, extended timeout,
+    /// no timeout-retry). Registered in DocumentProcessingServiceExtensions (#3435).</summary>
+    public const string HiResClientName = "UnstructuredServiceHiRes";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredPdfTextExtractor> _logger;
+    private readonly IExtractionStrategySelector? _strategySelector;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public UnstructuredPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
-        ILogger<UnstructuredPdfTextExtractor> logger)
+        ILogger<UnstructuredPdfTextExtractor> logger,
+        IExtractionStrategySelector? strategySelector = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        // DC-2 (#3419): optional so DevTools + integration tests can construct without the scoped
+        // selector; production DI always injects it. Null → fall back to the historical "fast".
+        _strategySelector = strategySelector;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -64,6 +90,19 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         }
         catch (HttpRequestException ex)
         {
+            if (ex.StatusCode.HasValue)
+            {
+                // #3589: the connection succeeded and the service responded with an error
+                // status (e.g. 413 payload too large) — ex.Message already carries the
+                // status + body, no "Failed to connect" wrapping needed.
+                _logger.LogError(ex,
+                    "Unstructured service returned an error response. RequestId: {RequestId}, StatusCode: {StatusCode}",
+                    requestId, ex.StatusCode);
+                return TextExtractionResult.CreateFailure(
+                    ex.Message,
+                    isPermanentFailure: ex.StatusCode == HttpStatusCode.RequestEntityTooLarge);
+            }
+
             _logger.LogError(ex,
                 "HTTP request to Unstructured service failed. RequestId: {RequestId}",
                 requestId);
@@ -112,7 +151,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
     /// <summary>
     /// Prepares multipart form data content for Unstructured API request.
     /// </summary>
-    private static MultipartFormDataContent PrepareMultipartContent(Stream pdfStream)
+    private MultipartFormDataContent PrepareMultipartContent(Stream pdfStream, ExtractionStrategy? strategyOverride = null)
     {
         var content = new MultipartFormDataContent();
 #pragma warning disable CA2000 // Dispose objects before losing scope
@@ -120,13 +159,18 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         // OWNERSHIP TRANSFER: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
 #pragma warning restore S125
         var streamContent = new StreamContent(pdfStream);
-        var strategyContent = new StringContent("fast");
+        // DC-2 (#3419): route table-heavy PDFs to hi_res per the pipeline's per-request decision on
+        // the scoped selector. Null selector (DevTools/integration/fresh ingest) → historical "fast".
+        // #3435: strategyOverride forces hi_res for the dedicated region-seed pass regardless of the
+        // (inert-on-corpus) selector.
+        var strategyContent = new StringContent(
+            (strategyOverride ?? _strategySelector?.Current ?? ExtractionStrategy.Fast).ToWireString());
         var languageContent = new StringContent("ita");
 #pragma warning restore CA2000
 
         streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
         content.Add(streamContent, "file", "document.pdf");
-        content.Add(strategyContent, "strategy");  // Use fast strategy for <2s target
+        content.Add(strategyContent, "strategy");
         content.Add(languageContent, "language");
 
         return content;
@@ -150,8 +194,15 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
                 response.StatusCode,
                 errorContent);
 
+            // #3589: carry the actual status code on the exception so callers can tell "the
+            // service answered with an error" (StatusCode set) apart from "the connection
+            // never succeeded" (StatusCode null, thrown by the HTTP stack itself) — collapsing
+            // both into the same "Failed to connect" message sent staging diagnosis toward
+            // network/DNS causes for what was actually a 413 response.
             throw new HttpRequestException(
-                $"Unstructured extraction failed with status {response.StatusCode}: {errorContent}");
+                $"Unstructured extraction failed with status {response.StatusCode}: {errorContent}",
+                inner: null,
+                statusCode: response.StatusCode);
         }
 
         return response;
@@ -225,26 +276,109 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
         bool enableOcrFallback = true,
         CancellationToken cancellationToken = default)
     {
-        // Note: Unstructured returns semantic chunks, not strict page-by-page text
-        // For now, we extract full text and then attempt to map chunks to pages
+        string requestId = Guid.NewGuid().ToString("N");
+        var client = _httpClientFactory.CreateClient("UnstructuredService");
+        var configuredTimeout = client.Timeout;
 
-        var extractionResult = await ExtractTextAsync(pdfStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
-
-        if (!extractionResult.Success)
+        try
         {
-            return PagedTextExtractionResult.CreateFailure(extractionResult.ErrorMessage ?? "Extraction failed");
+            using var content = PrepareMultipartContent(pdfStream);
+            using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
+            var extractionResponse = await ParseExtractionResponseAsync(response, cancellationToken).ConfigureAwait(false);
+            if (extractionResponse == null)
+            {
+                return PagedTextExtractionResult.CreateFailure("Invalid response from Unstructured service");
+            }
+
+            var normalizedText = PdfTextProcessingDomainService.NormalizeText(extractionResponse.Text);
+            var pageChunks = CreatePageChunksFromText(normalizedText, extractionResponse.PageCount);
+            var structuredElements = MapStructuredElements(extractionResponse.Elements);
+
+            return PagedTextExtractionResult.CreateSuccess(
+                pageChunks,
+                extractionResponse.PageCount,
+                normalizedText.Length,
+                ocrTriggered: false,
+                structuredElements: structuredElements);
+        }
+        catch (HttpRequestException ex)
+        {
+            if (ex.StatusCode.HasValue)
+            {
+                // #3589: see ExtractTextAsync's mirrored catch block.
+                _logger.LogError(ex,
+                    "Unstructured service (paged) returned an error response. RequestId: {RequestId}, StatusCode: {StatusCode}",
+                    requestId, ex.StatusCode);
+                return PagedTextExtractionResult.CreateFailure(
+                    ex.Message,
+                    isPermanentFailure: ex.StatusCode == HttpStatusCode.RequestEntityTooLarge);
+            }
+
+            _logger.LogError(ex, "HTTP request to Unstructured service (paged) failed. RequestId: {RequestId}", requestId);
+            return PagedTextExtractionResult.CreateFailure($"Failed to connect to Unstructured service: {ex.Message}");
+        }
+        catch (TaskCanceledException ex) when (ex.CancellationToken == cancellationToken)
+        {
+            throw;
+        }
+        catch (TaskCanceledException)
+        {
+            return PagedTextExtractionResult.CreateFailure($"Unstructured service timeout after {configuredTimeout.TotalSeconds}s");
+        }
+        catch (JsonException)
+        {
+            return PagedTextExtractionResult.CreateFailure("Invalid JSON response from Unstructured service");
+        }
+#pragma warning disable CA1031
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during paged Unstructured extraction. RequestId: {RequestId}", requestId);
+            return PagedTextExtractionResult.CreateFailure($"Unexpected error during PDF extraction: {ex.Message}");
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> ExtractRawHiResAsync(
+        Stream pdfStream,
+        CancellationToken cancellationToken = default)
+    {
+        // Dedicated hi_res pass on the long-timeout client (#3435): forces strategy=hi_res
+        // (the selector is inert on the real corpus) and returns the RAW response body —
+        // the exact JSON discarded by ParseExtractionResponseAsync — so ImageRegionExtractor
+        // can parse Image/FigureCaption/Table regions the normal path drops. Unlike the other methods
+        // here it does NOT swallow failures: the batch runner needs to see timeouts/HTTP errors
+        // to mark the item and continue (a swallowed "" would be indistinguishable from a
+        // genuinely region-free PDF and would wrongly stamp the seed marker).
+        var client = _httpClientFactory.CreateClient(HiResClientName);
+        using var content = PrepareMultipartContent(pdfStream, ExtractionStrategy.HiRes);
+        using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
+        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Maps raw Unstructured elements to the published <see cref="ExtractedElement"/> contract,
+    /// coalescing null/whitespace categories to "NarrativeText" and skipping empty-text elements.
+    /// </summary>
+    private static IReadOnlyList<ExtractedElement>? MapStructuredElements(List<UnstructuredElement>? elements)
+    {
+        if (elements is null || elements.Count == 0)
+        {
+            return null;
         }
 
-        // Create simple page chunks (split by estimated page boundaries)
-        var pageChunks = CreatePageChunksFromText(
-            extractionResult.ExtractedText,
-            extractionResult.PageCount);
+        var mapped = elements
+            .Where(e => !string.IsNullOrWhiteSpace(e.Text))
+            .Select(e => new ExtractedElement(
+                Text: e.Text!,
+                PageNumber: e.PageNumber > 0 ? e.PageNumber : 1,
+                ElementType: string.IsNullOrWhiteSpace(e.Category) ? "NarrativeText" : e.Category!,
+                BoundingBox: e.Bbox is null
+                    ? null
+                    : new ElementBoundingBox(e.Bbox.X, e.Bbox.Y, e.Bbox.Width, e.Bbox.Height)))
+            .ToList();
 
-        return PagedTextExtractionResult.CreateSuccess(
-            pageChunks,
-            extractionResult.PageCount,
-            extractionResult.CharacterCount,
-            extractionResult.OcrTriggered);
+        return mapped.Count > 0 ? mapped : null;
     }
 
     /// <summary>
@@ -304,6 +438,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor
 internal record UnstructuredExtractionResponse(
     [property: JsonPropertyName("text")] string Text,
     [property: JsonPropertyName("chunks")] List<UnstructuredChunk> Chunks,
+    [property: JsonPropertyName("elements")] List<UnstructuredElement>? Elements,
     [property: JsonPropertyName("quality_score")] double QualityScore,
     [property: JsonPropertyName("page_count")] int PageCount,
     [property: JsonPropertyName("metadata")] UnstructuredMetadata? Metadata);
@@ -313,6 +448,19 @@ internal record UnstructuredChunk(
     [property: JsonPropertyName("page_number")] int PageNumber,
     [property: JsonPropertyName("element_type")] string? ElementType,
     [property: JsonPropertyName("metadata")] Dictionary<string, object>? Metadata);
+
+internal record UnstructuredElement(
+    [property: JsonPropertyName("text")] string? Text,
+    [property: JsonPropertyName("page_number")] int PageNumber,
+    [property: JsonPropertyName("category")] string? Category,
+    [property: JsonPropertyName("bbox")] UnstructuredBbox? Bbox = null);
+
+/// <summary>SP-B (#3406): normalized [0,1] bounding box emitted by the Python service.</summary>
+internal record UnstructuredBbox(
+    [property: JsonPropertyName("x")] float X,
+    [property: JsonPropertyName("y")] float Y,
+    [property: JsonPropertyName("width")] float Width,
+    [property: JsonPropertyName("height")] float Height);
 
 internal record UnstructuredMetadata(
     [property: JsonPropertyName("extraction_duration_ms")] int? ExtractionDurationMs,

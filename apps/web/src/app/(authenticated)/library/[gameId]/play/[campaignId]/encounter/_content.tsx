@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type ReactElement } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -9,6 +9,7 @@ import {
   type EncounterCheatsheetLabels,
   type EncounterStoryContext,
 } from '@/components/features/gamebook';
+import { GlossaryLookupModal } from '@/components/features/gamebook/GlossaryLookupModal';
 import { useTranslation } from '@/hooks/useTranslation';
 import { deriveEncounterStatus, mapEncounterError } from '@/lib/gamebook/encounter-fsm';
 import { useEncounterParse } from '@/lib/gamebook/hooks/useEncounterParse';
@@ -39,6 +40,8 @@ export function Content({
   const { t } = useTranslation();
   const router = useRouter();
   const parse = useEncounterParse(campaignId, photoId);
+  // #2750 C11: read-only glossary look-up, opened from the cheatsheet's "Glossario".
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
 
   const paragraphMarker = paragraphNumber > 0 ? `§${paragraphNumber}` : '';
 
@@ -93,7 +96,13 @@ export function Content({
         labels={labels}
         onParse={() => parse.mutate({ paragraphNumber, gameBookId })}
         onResolve={() => router.push(`/library/${gameId}/play/${campaignId}`)}
+        onOpenGlossary={() => setGlossaryOpen(true)}
         onCancel={() => parse.reset()}
+      />
+      <GlossaryLookupModal
+        campaignId={campaignId}
+        isOpen={glossaryOpen}
+        onClose={() => setGlossaryOpen(false)}
       />
     </main>
   );

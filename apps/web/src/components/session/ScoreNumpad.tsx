@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 import React, { useState } from 'react';
@@ -60,25 +59,21 @@ export function ScoreNumpad({
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-4 rounded-2xl bg-[var(--gaming-surface,#1a1a2e)] p-4',
+        'flex flex-col items-center gap-4 rounded-2xl border border-border bg-card p-4',
         className
       )}
       aria-label={`Numpad per ${playerName}`}
     >
       {/* Header */}
       <div className="flex w-full items-center justify-between">
-        <span className="text-sm font-medium text-[var(--text-sec,#ccc)]">
-          {playerName}
-        </span>
+        <span className="text-sm font-medium text-muted-foreground">{playerName}</span>
         {currentScore !== undefined && (
-          <span className="text-xs text-[var(--text-sec,#aaa)]">
-            Attuale: {currentScore}
-          </span>
+          <span className="text-xs text-muted-foreground">Attuale: {currentScore}</span>
         )}
         <button
           aria-label="Chiudi"
           onClick={onClose}
-          className="text-[var(--text-sec,#ccc)] hover:text-white"
+          className="text-muted-foreground hover:text-foreground"
         >
           ✕
         </button>
@@ -88,7 +83,7 @@ export function ScoreNumpad({
       <div
         aria-live="polite"
         aria-label={`Valore corrente: ${displayValue}`}
-        className="text-5xl font-bold tabular-nums text-white"
+        className="text-5xl font-bold tabular-nums text-foreground"
       >
         {displayValue}
       </div>
@@ -102,7 +97,7 @@ export function ScoreNumpad({
                 key="delete"
                 aria-label="Cancella"
                 onClick={action}
-                className="flex items-center justify-center rounded-xl bg-card/10 p-4 text-white hover:bg-card/20 active:scale-95"
+                className="flex items-center justify-center rounded-xl bg-muted p-4 text-foreground hover:bg-muted/80 active:scale-95"
               >
                 <Delete className="h-5 w-5" aria-hidden="true" />
               </button>
@@ -127,7 +122,7 @@ export function ScoreNumpad({
               key={label}
               aria-label={label}
               onClick={action}
-              className="rounded-xl bg-card/10 p-4 text-lg font-semibold text-white hover:bg-card/20 active:scale-95"
+              className="rounded-xl bg-muted p-4 text-lg font-semibold text-foreground hover:bg-muted/80 active:scale-95"
             >
               {label}
             </button>

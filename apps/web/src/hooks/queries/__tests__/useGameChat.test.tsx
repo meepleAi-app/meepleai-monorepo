@@ -69,16 +69,140 @@ describe('useGameChat', () => {
     expect(result.current.messages[1].isLowQuality).toBe(false);
   });
 
-  it('derives isLowQuality=true when confidence < 0.70', async () => {
+  it('derives isLowQuality=true when confidence < 0.70 AND no citations', async () => {
     const lowConfEvents = [
       { type: 7, data: 'Non sono certo.' },
-      { type: 4, data: { confidence: 0.42, Citations: [sampleCitation] } },
+      { type: 4, data: { confidence: 0.42, Citations: [] } },
     ];
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(lowConfEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => { await result.current.ask('edge?'); });
+    await act(async () => {
+      await result.current.ask('edge?');
+    });
     expect(result.current.messages[1].isLowQuality).toBe(true);
     expect(result.current.messages[1].outOfContext).toBe(false);
+  });
+
+  it('does NOT mark isLowQuality when citations are present even if confidence < 0.70 (Issue #2712)', async () => {
+    // A grounded answer with valid citations must be shown, not hidden behind the "Non sono certo" card.
+    const groundedLowConf = [
+      { type: 7, data: 'Il punteggio si calcola contando le carte agente rimaste.' },
+      { type: 4, data: { confidence: 0.53, Citations: [sampleCitation] } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(groundedLowConf) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('come si calcola il punteggio?');
+    });
+    expect(result.current.messages[1].isLowQuality).toBe(false);
+    expect(result.current.messages[1].content).toContain('Il punteggio si calcola');
+    expect(result.current.messages[1].citations).toHaveLength(1);
+  });
+
+  it('accumulates answer text from { token } event shape (Issue #2712)', async () => {
+    // Production SSE sends type-7 events as { token: "..." } (chatClient.qaStream yields raw
+    // event.data), NOT plain strings. The hook must accumulate that shape or the bubble is empty.
+    const tokenObjectEvents = [
+      { type: 7, data: { token: 'Il punteggio ' } },
+      { type: 7, data: { token: 'si calcola alla fine della partita.' } },
+      { type: 4, data: { confidence: 0.79, Citations: [sampleCitation] } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(tokenObjectEvents) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('come si calcola il punteggio?');
+    });
+    expect(result.current.messages[1].content).toBe(
+      'Il punteggio si calcola alla fine della partita.'
+    );
+    expect(result.current.messages[1].isLowQuality).toBe(false);
+  });
+
+  it('surfaces citations from the type-1 Citations-early SSE event when COMPLETE has citations:null (#V)', async () => {
+    // Real backend contract (verified on live SSE): citations arrive in the
+    // type-1 (CITATIONS) event as { text, source:"PDF:{docId}", page, score },
+    // while the type-4 COMPLETE payload carries citations:null. The hook MUST
+    // surface the type-1 citations (mapped to the FE Citation shape) or the chat
+    // renders zero CitationChip and the source PDF is unreachable.
+    const sseRealEvents = [
+      { type: 7, data: { token: 'Alla fine ' } },
+      { type: 7, data: { token: 'della partita si contano i punti.' } },
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'Alice loses a total of 8 points',
+              source: 'PDF:853f6dcc-aaaa',
+              page: 6,
+              line: 0,
+              score: 0.85,
+            },
+            {
+              text: 'tiles directly adjacent',
+              source: 'PDF:853f6dcc-aaaa',
+              page: 5,
+              line: 0,
+              score: 0.83,
+            },
+          ],
+        },
+      },
+      { type: 4, data: { confidence: 0.8, citations: null } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(sseRealEvents) as any);
+    const { result } = renderHook(() => useGameChat('azul'));
+    await act(async () => {
+      await result.current.ask('come si calcolano i punti a fine partita?');
+    });
+    const agent = result.current.messages[1];
+    expect(agent.citations).toHaveLength(2);
+    expect(agent.citations?.[0]).toEqual(
+      expect.objectContaining({
+        documentId: '853f6dcc-aaaa',
+        pageNumber: 6,
+        snippet: 'Alice loses a total of 8 points',
+        relevanceScore: 0.85,
+        copyrightTier: 'full',
+      })
+    );
+    expect(agent.isLowQuality).toBe(false);
+    expect(agent.outOfContext).toBe(false);
+  });
+
+  it('surfaces SP-C region grounding fields (regions/charStart/charEnd) from the type-1 event (#3407)', async () => {
+    // The BE Snippet now Full-gates + emits regions[]/charStart/charEnd on the type-1 CITATIONS
+    // event; mapSseCitation must forward them to the FE Citation so SP-D can draw the overlay.
+    const sseEvents = [
+      { type: 7, data: { token: 'Answer.' } },
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'verbatim rule text',
+              source: 'PDF:doc-1',
+              page: 2,
+              line: 0,
+              score: 0.9,
+              regions: [{ page: 2, x: 0.1, y: 0.2, width: 0.3, height: 0.4 }],
+              charStart: 100,
+              charEnd: 250,
+            },
+          ],
+        },
+      },
+      { type: 4, data: { confidence: 0.8, citations: null } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(sseEvents) as any);
+    const { result } = renderHook(() => useGameChat('azul'));
+    await act(async () => {
+      await result.current.ask('come si calcolano i punti?');
+    });
+    const cite = result.current.messages[1].citations?.[0];
+    expect(cite?.regions).toEqual([{ page: 2, x: 0.1, y: 0.2, width: 0.3, height: 0.4 }]);
+    expect(cite?.charStart).toBe(100);
+    expect(cite?.charEnd).toBe(250);
   });
 
   it('derives outOfContext=true when no citations + confidence < 0.30', async () => {
@@ -88,7 +212,9 @@ describe('useGameChat', () => {
     ];
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(oocEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => { await result.current.ask('tg?'); });
+    await act(async () => {
+      await result.current.ask('tg?');
+    });
     expect(result.current.messages[1].outOfContext).toBe(true);
     expect(result.current.messages[1].citations).toBeUndefined();
   });
@@ -96,16 +222,22 @@ describe('useGameChat', () => {
   it('isLoading transitions correctly during ask', async () => {
     let releaseStream: () => void = () => {};
     const slowStream = async function* () {
-      await new Promise<void>(r => { releaseStream = r; });
+      await new Promise<void>(r => {
+        releaseStream = r;
+      });
       yield happyEvents[2];
     };
     vi.mocked(qaStream).mockReturnValueOnce(slowStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
 
-    act(() => { void result.current.ask('q'); });
+    act(() => {
+      void result.current.ask('q');
+    });
     await waitFor(() => expect(result.current.isLoading).toBe(true));
 
-    await act(async () => { releaseStream(); });
+    await act(async () => {
+      releaseStream();
+    });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
@@ -117,23 +249,33 @@ describe('useGameChat', () => {
     vi.mocked(qaStream).mockReturnValueOnce(errorStream() as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
     await act(async () => {
-      try { await result.current.ask('q'); } catch { /* expected */ }
+      try {
+        await result.current.ask('q');
+      } catch {
+        /* expected */
+      }
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
   it('switchAgent updates currentAgent', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
-    act(() => { result.current.switchAgent('arbitro'); });
+    act(() => {
+      result.current.switchAgent('arbitro');
+    });
     expect(result.current.currentAgent).toBe('arbitro');
   });
 
   it('switchAgent does NOT clear message history', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
     const { result } = renderHook(() => useGameChat('wingspan'));
-    await act(async () => { await result.current.ask('q'); });
+    await act(async () => {
+      await result.current.ask('q');
+    });
     expect(result.current.messages).toHaveLength(2);
-    act(() => { result.current.switchAgent('arbitro'); });
+    act(() => {
+      result.current.switchAgent('arbitro');
+    });
     expect(result.current.messages).toHaveLength(2);
   });
 
@@ -219,11 +361,15 @@ describe('useGameChat', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
     await waitFor(() => expect(result.current.chatThreadId).toBe('thread-existing'));
 
-    await act(async () => { await result.current.ask('new question'); });
+    await act(async () => {
+      await result.current.ask('new question');
+    });
 
-    expect(qaStream).toHaveBeenCalledWith(expect.objectContaining({
-      chatId: 'thread-existing',
-    }));
+    expect(qaStream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chatId: 'thread-existing',
+      })
+    );
   });
 
   it('preserves messages across remount (audit trigger A)', async () => {

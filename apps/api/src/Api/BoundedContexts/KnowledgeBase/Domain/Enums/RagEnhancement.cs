@@ -53,4 +53,44 @@ public static class RagEnhancementExtensions
                 yield return flag;
         }
     }
+
+    /// <summary>
+    /// #3390 Slice 4 Step 1: parses enhancement identifiers (feature-flag key
+    /// <c>rag.enhancement.crag-evaluation</c>, its suffix <c>crag-evaluation</c>, or the enum name
+    /// <c>CragEvaluation</c>) into a combined <see cref="RagEnhancement"/> set. Empty input → None
+    /// (grounded baseline). Fail-loud on an unknown identifier — a typo in an eval request must not
+    /// silently degrade to a different enhancement set (mirrors the eval's fail-loud policy parsing).
+    /// </summary>
+    public static RagEnhancement ParseFlags(IEnumerable<string> identifiers)
+    {
+        ArgumentNullException.ThrowIfNull(identifiers);
+        const string prefix = "rag.enhancement.";
+        var result = RagEnhancement.None;
+        foreach (var raw in identifiers)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            var id = raw.Trim();
+            RagEnhancement? matched = null;
+            foreach (var flag in AllFlags)
+            {
+                var key = flag.ToFeatureFlagKey();
+                var suffix = key[prefix.Length..];
+                if (key.Equals(id, StringComparison.OrdinalIgnoreCase)
+                    || suffix.Equals(id, StringComparison.OrdinalIgnoreCase)
+                    || flag.ToString().Equals(id, StringComparison.OrdinalIgnoreCase))
+                {
+                    matched = flag;
+                    break;
+                }
+            }
+            if (matched is null)
+            {
+                var valid = string.Join(", ", AllFlags.Select(f => f.ToFeatureFlagKey()[prefix.Length..]));
+                throw new ArgumentException(
+                    $"Unknown RAG enhancement '{raw}'. Valid values: {valid}.", nameof(identifiers));
+            }
+            result |= matched.Value;
+        }
+        return result;
+    }
 }

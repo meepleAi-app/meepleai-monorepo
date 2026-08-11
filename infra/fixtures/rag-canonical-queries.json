@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "_comment": "Canonical RAG smoke queries (#2480, IT coverage #3269). Each query targets a well-known game indexed in the dev.yml seed snapshot. The harness (infra/scripts/rag-smoke-assert.sh) POSTs each to /api/v1/knowledge-base/ask/global and asserts the top-3 retrieved chunks (Citations SSE event, type=1) match infra/fixtures/rag-golden-baseline.json. The suite now covers EN + IT: the top-level 'language' is the default, but each query MAY set a per-query 'language' override. The corpus is English rulebooks; multilingual-e5-base does cross-lingual retrieval, so the '-it' queries pin the IT->EN retrieval behavior (epic #3266 LOCKED safety-net: EN+IT non-regression on staging before prod). Newly-added queries report SKIP until their IT baseline is captured via `bash scripts/rag-smoke-assert.sh --update-baseline` on staging (see docs/for-developers/operations/rag-smoke-runbook.md).",
+  "endpoint": "/api/v1/knowledge-base/ask/global",
+  "topK": 3,
+  "language": "en",
+  "queries": [
+    {
+      "queryId": "catan-setup",
+      "game": "Catan",
+      "query": "How do I set up the board and place the two initial settlements and roads in Catan?"
+    },
+    {
+      "queryId": "wingspan-round-goals",
+      "game": "Wingspan",
+      "query": "How does end-of-round goal scoring work in Wingspan?"
+    },
+    {
+      "queryId": "dominion-buy-phase",
+      "game": "Dominion",
+      "query": "During the buy phase how many cards may I buy and how do coins work in Dominion?"
+    },
+    {
+      "queryId": "ark-nova-conservation",
+      "game": "Ark Nova",
+      "query": "How do conservation projects and reputation points work in Ark Nova?"
+    },
+    {
+      "queryId": "seven-wonders-military",
+      "game": "7 Wonders",
+      "query": "How is military conflict resolved at the end of each age in 7 Wonders?"
+    },
+    {
+      "queryId": "catan-setup-it",
+      "game": "Catan",
+      "language": "it",
+      "query": "Come si prepara il tabellone e si piazzano i due insediamenti e le strade iniziali in Catan?"
+    },
+    {
+      "queryId": "wingspan-round-goals-it",
+      "game": "Wingspan",
+      "language": "it",
+      "query": "Come funziona il punteggio degli obiettivi di fine round in Wingspan?"
+    },
+    {
+      "queryId": "dominion-buy-phase-it",
+      "game": "Dominion",
+      "language": "it",
+      "query": "Durante la fase di acquisto quante carte posso comprare e come funzionano le monete in Dominion?"
+    },
+    {
+      "queryId": "ark-nova-conservation-it",
+      "game": "Ark Nova",
+      "language": "it",
+      "query": "Come funzionano i progetti di conservazione e i punti reputazione in Ark Nova?"
+    },
+    {
+      "queryId": "seven-wonders-military-it",
+      "game": "7 Wonders",
+      "language": "it",
+      "query": "Come si risolve il conflitto militare alla fine di ogni età in 7 Wonders?"
+    },
+    {
+      "queryId": "tmars-setup-it",
+      "game": "Terraforming Mars",
+      "language": "it",
+      "_comment": "Epic #3338 WP2/WP3 motivating case ('Setup per N giocatori'). Pins that TM's PREPARAZIONE setup section — recovered by the WP1 heading-repair (Header promotion) after the re-chunk — stays retrievable. SKIPs until its baseline is captured via --update-baseline on staging. The query carries TM-specific nouns (Corporation, ossigeno, plancia dei giocatori) so global-ask isolates TM and does not pin a wrong-game baseline (review #3355).",
+      "query": "Come si prepara Terraforming Mars per N giocatori: quante carte Corporation e progetti in mano, la plancia dei giocatori e i parametri iniziali (ossigeno, temperatura, oceani)?"
+    }
+  ]
+}

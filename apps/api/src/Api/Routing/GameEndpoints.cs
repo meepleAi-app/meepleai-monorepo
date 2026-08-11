@@ -3,6 +3,7 @@ using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Application;
 using Api.BoundedContexts.GameManagement.Application.Commands;
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.DTOs.Leaderboard;
 using Api.BoundedContexts.GameManagement.Application.Queries;
@@ -146,16 +147,6 @@ internal static class GameEndpoints
         // GameSession CQRS Endpoints
         // ========================================
 
-        // Start game session
-        group.MapPost("/sessions", HandleStartSession)
-        .RequireSession() // Issue #1446: Automatic session validation
-        .Produces<GameSessionDto>(201)
-        .Produces(400)
-        .Produces(401)
-        .WithTags("Sessions")
-        .WithSummary("Start a new game session")
-        .WithDescription("Creates a new game session with players. Requires active user session.");
-
         // Add player to session
         group.MapPost("/sessions/{id}/players", HandleAddPlayer)
         .RequireSession() // Issue #1446: Automatic session validation
@@ -217,6 +208,19 @@ internal static class GameEndpoints
         .WithTags("Sessions")
         .WithSummary("End a game session")
         .WithDescription("Ends a game session (alias for complete). Requires active user session.");
+
+        // Go live: promote an existing DRAFT game-night session (Pending link) to InProgress.
+        // Epic #3188 Slice 2 — explicit go-live sub-resource, distinct from create.
+        group.MapPost("/sessions/{id}/go-live", HandleGoLiveSession)
+        .RequireAuthenticatedUser() // Issue #1446: Dual authentication (session OR API key)
+        .Produces<GoLiveSessionResult>(200)
+        .Produces(401)
+        .Produces(403)
+        .Produces(404)
+        .Produces(409)
+        .WithTags("Sessions")
+        .WithSummary("Take a draft game-night session live")
+        .WithDescription("Promotes an existing draft game-night session (Pending) to live (InProgress). Organizer-only. Enforces at most one live session per game night; a concurrent go-live loses with 409. Requires authentication.");
     }
 
     private static void MapSessionQueryEndpoints(RouteGroupBuilder group)
@@ -433,34 +437,6 @@ internal static class GameEndpoints
         return Results.Ok(new { success = true, agents = agentList, count = agentList.Count });
     }
 
-    private static async Task<IResult> HandleStartSession(
-        StartGameSessionRequest request,
-        HttpContext context,
-        IMediator mediator,
-        ILogger<Program> logger,
-        CancellationToken ct)
-    {
-        // Issue #3070: Get user info for session quota enforcement
-        var (authenticated, session, error) = context.TryGetActiveSession();
-        if (!authenticated) return error!;
-
-        var userId = session!.Principal!.Subject.Id;
-        var userTier = UserTier.Parse(session.Principal!.Subject.Tier);
-        var userRole = Role.Parse(session.Principal!.EffectiveActor.Role);
-
-        var command = new StartGameSessionCommand(
-            GameId: request.GameId,
-            Players: request.Players,
-            UserId: userId,
-            UserTier: userTier,
-            UserRole: userRole
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        logger.LogInformation("Started game session {SessionId} for game {GameId} by user {UserId}", result.Id, result.GameId, userId);
-        return Results.Created($"/api/v1/sessions/{result.Id}", result);
-    }
-
     private static async Task<IResult> HandleAddPlayer(
         Guid id,
         SessionPlayerRequest request,
@@ -483,11 +459,19 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleCompleteSession(
         Guid id,
         CompleteSessionRequest? request,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new CompleteGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             WinnerName: request?.WinnerName
         );
 
@@ -497,11 +481,19 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandleAbandonSession(
         Guid id,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new AbandonGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             Reason: null
         );
 
@@ -511,10 +503,17 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandlePauseSession(
         Guid id,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
-        var command = new PauseGameSessionCommand(SessionId: id);
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new PauseGameSessionCommand(SessionId: id, RequesterId: userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
@@ -522,10 +521,17 @@ internal static class GameEndpoints
 
     private static async Task<IResult> HandleResumeSession(
         Guid id,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
-        var command = new ResumeGameSessionCommand(SessionId: id);
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var command = new ResumeGameSessionCommand(SessionId: id, RequesterId: userId);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         return Results.Ok(result);
@@ -534,15 +540,44 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleEndSession(
         Guid id,
         CompleteSessionRequest? request,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
         var command = new EndGameSessionCommand(
             SessionId: id,
+            RequesterId: userId,
             WinnerName: request?.WinnerName
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// Takes an existing draft game-night session live (Pending → InProgress).
+    /// Epic #3188 Slice 2. Organizer-only (403 otherwise), not-found → 404, max-1-live /
+    /// concurrent go-live → 409 (all mapped from domain exceptions by the API exception middleware).
+    /// </summary>
+    private static async Task<IResult> HandleGoLiveSession(
+        Guid id,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var result = await mediator.Send(new GoLiveSessionCommand(id, userId), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

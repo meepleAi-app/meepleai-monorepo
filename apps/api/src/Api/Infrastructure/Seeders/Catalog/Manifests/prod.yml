@@ -1189,9 +1189,6 @@ catalog:
     - Hobby World
     - Korea Boardgames
     - MYBG Co., Ltd.
-    pdfBlobKey: rulebooks/v1/gloomhaven_rulebook.pdf
-    pdfSha256: a8bb3b2e3d875f325d12da48ca4c6fd7807876b3b0353bf4052a74678d339f27
-    pdfVersion: '1.0'
   - title: Small World
     bggId: 40692
     language: en
@@ -1938,9 +1935,6 @@ catalog:
     - Rozum
     - Siam Board Games
     - Super Impulse
-    pdfBlobKey: rulebooks/v1/exploding-kittens_rulebook.pdf
-    pdfSha256: 1585eb968604bd7652b3e8f276e5a7409c5bfca8fc1217ca75792ae3b44b654c
-    pdfVersion: '1.0'
   - title: Agricola
     bggId: 31260
     language: en
@@ -2440,9 +2434,6 @@ catalog:
     - Wizards of the Coast
     - asmodee
     - Hasbro
-    pdfBlobKey: rulebooks/v1/betrayal-at-house-on-the-hill_rulebook.pdf
-    pdfSha256: 806700be2b34ee26d0dee42c4b600bc57b0d1c4c520ddfeaf9db171441ba9f9e
-    pdfVersion: '1.0'
   - title: Ark Nova
     bggId: 342942
     language: en
@@ -2638,9 +2629,6 @@ catalog:
     - Rebel Sp. z o.o.
     - Spilbræt.dk
     - White Goblin Games
-    pdfBlobKey: rulebooks/v1/lost-ruins-of-arnak_rulebook.pdf
-    pdfSha256: d697b0612bbab7b16d183bdaee061d17fea25d6be485329e0c98bc90a1af11c1
-    pdfVersion: '1.0'
   - title: The Castles of Burgundy
     bggId: 84876
     language: en
@@ -3006,9 +2994,6 @@ catalog:
     - Vendetta
     - Zhiyanjia
     - Ігромаг
-    pdfBlobKey: rulebooks/v1/hive-pocket_rulebook.pdf
-    pdfSha256: d5dc5809bc293ef53f13b4aa92bbf833d6f7d95852b14bf491a4e2713478d1d5
-    pdfVersion: '1.0'
   - title: Raiders of the North Sea
     bggId: 170042
     language: en
@@ -3207,9 +3192,6 @@ catalog:
     - Hasbro
     - Play Factory
     - PS-Games
-    pdfBlobKey: rulebooks/v1/guillotine_rulebook.pdf
-    pdfSha256: 6272d65910f05a2a9ada9aa79d1247b3d015cc3b2b402d465f32894ef0928b76
-    pdfVersion: '1.0'
   - title: Harmonies
     bggId: 414317
     language: en
@@ -7577,7 +7559,7 @@ catalog:
     - Zvezda
     - 本长文化
   - title: 'Skytear: Arena of Legends'
-    bggId: 373106
+    bggId: 259061
     language: en
     pdfBlobKey: rulebooks/v1/skytear_rulebook.pdf
     pdfSha256: 2f316d16c5001b55097b9966c7c697bbde6a50e7e5c9b1c3df336ff5c3775960
@@ -8484,9 +8466,6 @@ catalog:
     - Swan Panasia Co., Ltd.
     - テンデイズゲームズ (TendaysGames)
     - White Goblin Games
-    pdfBlobKey: rulebooks/v1/age-of-innovation_rulebook.pdf
-    pdfSha256: 8f1150d295498a2df9ac6da4de3e73eb7efb2e8da8298aa6377afb1af6dc65e5
-    pdfVersion: '1.0'
   - title: 'Clank!: A Deck-Building Adventure'
     bggId: 201808
     language: en
@@ -8596,9 +8575,6 @@ catalog:
     - Portal Games
     - Reflexshop
     - TLAMA games
-    pdfBlobKey: rulebooks/v1/the-white-castle_rulebook.pdf
-    pdfSha256: dd14099d0194afad2402875e6eb6a27e0b8fbdc631713b16eca1026ad4b225b2
-    pdfVersion: '1.0'
   - title: Paladins of the West Kingdom
     bggId: 266810
     language: en
@@ -8745,9 +8721,6 @@ catalog:
     - Maldito Games
     - sternenschimmermeer
     - YOKA Games
-    pdfBlobKey: rulebooks/v1/the-gallerist_rulebook.pdf
-    pdfSha256: 4c1cc0f09c85177e05e890208a2377ab229a8563976b88e7c5d6f38d7e690dea
-    pdfVersion: '1.0'
   - title: 'Android: Netrunner'
     bggId: 124742
     language: en
@@ -8869,7 +8842,7 @@ catalog:
     pdfSha256: 31e496fdc97b9df7a8f38ccbd36561dc16265c142ff1cc3597fe6217f4707cc9
     pdfVersion: '1.0'
   - title: 'Great Western Trail: Argentina'
-    bggId: 380607
+    bggId: 364011
     language: en
     pdfBlobKey: rulebooks/v1/great-western-trail-argentina_rulebook.pdf
     pdfSha256: 88be4a0b83dda037566941e46d1e936ec6280c37e9860c0405a58a9bd412c2fa
@@ -9302,7 +9275,7 @@ catalog:
     pdfSha256: a43d7ee00276e963ea7afd327711cd52cee609712a8128e0f4a164290c2754d4
     pdfVersion: '1.0'
   - title: Voidfall
-    bggId: 338111
+    bggId: 337627
     language: en
     pdfBlobKey: rulebooks/v1/voidfall_rulebook.pdf
     pdfSha256: 29847a547dcec0deac860cfb658cd3ea694dcaab319258fcf286c27161243157

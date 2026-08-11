@@ -15,6 +15,7 @@ internal class NotificationPreferencesEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.EmailOnDocumentReady).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.EmailOnDocumentFailed).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.EmailOnRetryAvailable).IsRequired().HasDefaultValue(false);
+        builder.Property(e => e.EmailOnCardSuppressed).IsRequired().HasDefaultValue(false); // #535
         builder.Property(e => e.PushOnDocumentReady).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.PushOnDocumentFailed).IsRequired().HasDefaultValue(true);
         builder.Property(e => e.PushOnRetryAvailable).IsRequired().HasDefaultValue(false);

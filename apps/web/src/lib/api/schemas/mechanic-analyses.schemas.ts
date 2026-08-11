@@ -13,6 +13,8 @@
  */
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
+
 // ========== Enums ==========
 
 export const MechanicAnalysisStatus = {
@@ -67,6 +69,10 @@ export const MechanicSection = {
   Resources: 3,
   Phases: 4,
   Faq: 5,
+  // v1.1.0 (#2930): Setup / Components / EndgameScoring appended to the C# enum.
+  Setup: 6,
+  Components: 7,
+  EndgameScoring: 8,
 } as const;
 export type MechanicSectionValue = (typeof MechanicSection)[keyof typeof MechanicSection];
 
@@ -77,6 +83,27 @@ export const MECHANIC_SECTION_LABELS: Record<number, string> = {
   3: 'Resources',
   4: 'Phases',
   5: 'FAQ',
+  // v1.1.0 (#539 follow-up): Setup / Components / EndgameScoring.
+  6: 'Preparazione',
+  7: 'Componenti',
+  8: 'Fine partita',
+};
+
+/**
+ * Logical display order for the section groups (card + admin review). The enum values are
+ * append-only (6/7/8), so Setup/Components would otherwise render after FAQ; this map floats
+ * them to their natural reading position. Sections absent here fall back to their numeric value.
+ */
+export const MECHANIC_SECTION_DISPLAY_ORDER: Record<number, number> = {
+  0: 0, // Summary
+  6: 1, // Preparazione (Setup)
+  7: 2, // Componenti (Components)
+  1: 3, // Mechanics
+  3: 4, // Resources
+  4: 5, // Phases
+  2: 6, // Victory
+  8: 7, // Fine partita (EndgameScoring)
+  5: 8, // FAQ
 };
 
 /**
@@ -124,6 +151,10 @@ const MECHANIC_SECTION_NAME_TO_NUM: Record<string, MechanicSectionValue> = {
   FAQ: MechanicSection.Faq,
   // Some older C# emit aliases used "Questions" — keep tolerant.
   Questions: MechanicSection.Faq,
+  // v1.1.0 (#2930): Setup / Components / EndgameScoring.
+  Setup: MechanicSection.Setup,
+  Components: MechanicSection.Components,
+  EndgameScoring: MechanicSection.EndgameScoring,
 };
 
 export const MechanicSectionSchema = z.preprocess(v => {
@@ -166,7 +197,7 @@ export type MechanicSectionRunSummaryDto = z.infer<typeof MechanicSectionRunSumm
 
 export const MechanicAnalysisStatusDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   promptVersion: z.string(),
   status: MechanicAnalysisStatusSchema,
@@ -233,6 +264,19 @@ export const MechanicCitationDtoSchema = z.object({
 });
 export type MechanicCitationDto = z.infer<typeof MechanicCitationDtoSchema>;
 
+/**
+ * Per-rule guardrail validation outcome. As of #2782 FU-1 these are REAL per-claim outcomes
+ * (taxonomy T1/T2/T3a/T3b/T4, 3-state pass/fail/notRun), persisted server-side — no longer a
+ * derived all-pass stub. `score` carries the T3b grounding cosine (null for the other rules).
+ */
+export const MechanicClaimValidationDtoSchema = z.object({
+  rule: z.string(),
+  outcome: z.enum(['pass', 'fail', 'notRun']),
+  message: z.string().nullable().optional(),
+  score: z.number().nullable().optional(),
+});
+export type MechanicClaimValidationDto = z.infer<typeof MechanicClaimValidationDtoSchema>;
+
 export const MechanicClaimDtoSchema = z.object({
   id: z.string().uuid(),
   analysisId: z.string().uuid(),
@@ -244,6 +288,8 @@ export const MechanicClaimDtoSchema = z.object({
   reviewedAt: z.string().nullable(),
   rejectionNote: z.string().nullable(),
   citations: z.array(MechanicCitationDtoSchema),
+  reviewNote: z.string().nullable(),
+  validations: z.array(MechanicClaimValidationDtoSchema),
 });
 export type MechanicClaimDto = z.infer<typeof MechanicClaimDtoSchema>;
 
@@ -258,7 +304,7 @@ export const MechanicClaimsListSchema = z.array(MechanicClaimDtoSchema);
  */
 export const MechanicAnalysisListItemDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   gameTitle: z.string(),
   pdfDocumentId: z.string().uuid(),
   promptVersion: z.string(),
@@ -289,6 +335,21 @@ export type BulkApproveMechanicClaimsResponseDto = z.infer<
   typeof BulkApproveMechanicClaimsResponseDtoSchema
 >;
 
+export const BulkRejectMechanicClaimsResponseDtoSchema = z.object({
+  rejectedCount: z.number().int(),
+  skippedAlreadyRejectedCount: z.number().int(),
+  claims: MechanicClaimsListSchema,
+});
+export type BulkRejectMechanicClaimsResponseDto = z.infer<
+  typeof BulkRejectMechanicClaimsResponseDtoSchema
+>;
+
+/** Body for `POST .../claims/bulk-reject` (#526). Reviewer id comes from the session. */
+export interface BulkRejectMechanicClaimsRequest {
+  claimIds: string[];
+  reason: string;
+}
+
 // ========== Request types ==========
 
 export interface CostCapOverrideRequest {
@@ -301,6 +362,12 @@ export interface GenerateMechanicAnalysisRequest {
   pdfDocumentId: string;
   costCapUsd: number;
   costCapOverride?: CostCapOverrideRequest;
+  /** #539: LLM model override (routes provider by name, e.g. "meta-llama/llama-3.3-70b-instruct" → OpenRouter, "qwen2.5:3b" → Ollama). Null → DeepSeek default. */
+  model?: string;
+  /** #539: provider label for telemetry (e.g. "OpenRouter", "Ollama"). */
+  provider?: string;
+  /** #539: skip the idempotency short-circuit so a re-run with a different model creates a new analysis. */
+  forceRegenerate?: boolean;
 }
 
 export interface SuppressMechanicAnalysisRequest {
@@ -317,6 +384,13 @@ export interface RejectMechanicClaimRequest {
 /** Local validation bounds for the rejection note (mirror backend validator). */
 export const REJECT_CLAIM_NOTE_MIN_LENGTH = 1;
 export const REJECT_CLAIM_NOTE_MAX_LENGTH = 500;
+
+/**
+ * Local validation bound for the (optional) approve reviewer note. Mirrors
+ * `ApproveMechanicClaimCommandValidator.MaximumLength(2000)` and the
+ * `review_note` column (`varchar(2000)`).
+ */
+export const APPROVE_CLAIM_NOTE_MAX_LENGTH = 2000;
 
 // ========== Labels ==========
 
@@ -336,9 +410,25 @@ export const SUPPRESSION_REQUEST_SOURCE_LABELS: Record<number, string> = {
 
 // ========== Routes ==========
 
+/** #539 follow-up: read-only view of the current Mechanic Extractor prompt (system + per-section). */
+export const MechanicPromptDtoSchema = z.object({
+  promptVersion: z.string(),
+  systemPrompt: z.string(),
+  sections: z.array(
+    z.object({
+      section: z.number(),
+      sectionName: z.string(),
+      prompt: z.string(),
+    })
+  ),
+});
+export type MechanicPromptDto = z.infer<typeof MechanicPromptDtoSchema>;
+
 export const MECHANIC_ANALYSES_ROUTES = {
   list: '/api/v1/admin/mechanic-analyses',
   create: '/api/v1/admin/mechanic-analyses',
+  // #539 follow-up: read-only prompt inspection (system + per-section).
+  prompt: '/api/v1/admin/mechanic-analyses/prompt',
   status: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/status`,
   submitReview: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/submit-review`,
   approve: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/approve`,
@@ -350,6 +440,7 @@ export const MECHANIC_ANALYSES_ROUTES = {
   rejectClaim: (id: string, claimId: string) =>
     `/api/v1/admin/mechanic-analyses/${id}/claims/${claimId}/reject`,
   bulkApproveClaims: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/claims/bulk-approve`,
+  bulkRejectClaims: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/claims/bulk-reject`,
 } as const;
 
 export const MECHANIC_ANALYSES_PAGES = {

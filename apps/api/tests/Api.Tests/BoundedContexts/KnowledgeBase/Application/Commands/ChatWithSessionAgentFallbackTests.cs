@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -144,8 +145,10 @@ public class ChatWithSessionAgentFallbackTests
             circuitBreakerRegistry: registry,
             scopeFactory: Mock.Of<IServiceScopeFactory>(),
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,
-            copyrightLeakGuard: Mock.Of<ICopyrightLeakGuard>(),
-            fallbackMessageProvider: Mock.Of<ICopyrightFallbackMessageProvider>(),
-            copyrightOptions: Options.Create(new CopyrightLeakGuardOptions()));
+            groundedAnswerService: new GroundedAnswerService(
+                Mock.Of<ICopyrightLeakGuard>(), Mock.Of<ICopyrightFallbackMessageProvider>(),
+                Options.Create(new CopyrightLeakGuardOptions()),
+                NullLogger<GroundedAnswerService>.Instance),
+            liveSessionStreamGateway: Mock.Of<ILiveSessionStreamGateway>());
     }
 }

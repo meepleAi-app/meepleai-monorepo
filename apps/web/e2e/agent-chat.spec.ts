@@ -10,8 +10,11 @@
 
 import { test, expect } from '@playwright/test';
 
+import { isBackendReachable, NO_BACKEND_SKIP_REASON } from './_helpers/backendGuard';
+
 test.describe('Agent Chat - User Flow', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login
     await page.goto('/login');
     await page.fill('input[name="username"]', 'testuser');
@@ -87,6 +90,7 @@ test.describe('Agent Chat - User Flow', () => {
 
 test.describe('Agent Chat - Admin Flow', () => {
   test.beforeEach(async ({ page }) => {
+    test.skip(!(await isBackendReachable(page)), NO_BACKEND_SKIP_REASON);
     // Login as admin
     await page.goto('/login');
     await page.fill('input[name="username"]', 'admin');

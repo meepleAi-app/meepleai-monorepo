@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.Extensions.Logging;
@@ -98,7 +99,7 @@ public class RejectSharedGamePublicationCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentGame_ThrowsInvalidOperationException()
+    public async Task Handle_WithNonExistentGame_ThrowsNotFoundException()
     {
         // Arrange
         var command = new RejectSharedGamePublicationCommand(Guid.NewGuid(), Guid.NewGuid(), "Reason");
@@ -109,7 +110,7 @@ public class RejectSharedGamePublicationCommandHandlerTests
 
         // Act & Assert
         var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]

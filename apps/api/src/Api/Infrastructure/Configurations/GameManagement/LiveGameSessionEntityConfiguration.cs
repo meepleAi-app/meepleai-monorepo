@@ -107,8 +107,15 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .IsRequired()
             .HasDefaultValue(0);
 
-        builder.Property(e => e.ChatSessionId)
-            .HasColumnName("chat_session_id");
+        // chat_session_id column retained in DB (nullable, all rows null); domain property removed per ADR-083 SP0.
+        // EF no longer maps it — column is unused but safe to leave for a future migration if needed.
+
+        builder.Property(e => e.TrackingSessionId)
+            .HasColumnName("tracking_session_id");
+
+        // ADR-083 #2587 Slice 1: correlated GameManagement.GameSession (quota/lifecycle aggregate).
+        builder.Property(e => e.CorrelatedGameSessionId)
+            .HasColumnName("correlated_game_session_id");
 
         // --- JSON Columns ---
 
@@ -167,6 +174,12 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
             .HasDatabaseName("ix_live_game_sessions_created_at")
             .IsDescending(true);
 
+        // #2552: cross-BC lookups since SP2 filter on tracking_session_id (the companion id).
+        // Partial index (non-null only) keeps it small — legacy pre-SP0 rows have null here.
+        builder.HasIndex(e => e.TrackingSessionId)
+            .HasDatabaseName("ix_live_game_sessions_tracking_session_id")
+            .HasFilter("tracking_session_id IS NOT NULL");
+
         // --- Relationships ---
 
         builder.HasOne(e => e.Game)
@@ -197,6 +210,12 @@ internal sealed class LiveGameSessionEntityConfiguration : IEntityTypeConfigurat
         builder.HasMany(e => e.TurnRecords)
             .WithOne(t => t.LiveGameSession)
             .HasForeignKey(t => t.LiveGameSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // #2570 SP3 T2: diary entries — append-only, cascade on session delete
+        builder.HasMany(e => e.DiaryEntries)
+            .WithOne(d => d.LiveGameSession)
+            .HasForeignKey(d => d.LiveGameSessionId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

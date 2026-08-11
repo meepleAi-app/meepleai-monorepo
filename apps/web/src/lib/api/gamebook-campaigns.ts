@@ -55,13 +55,66 @@ export const GamebookCampaignSchema = z.object({
   lastReadAt: z.string().datetime({ offset: true }),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
+  /**
+   * SI-8 (#2639): terminal close outcome. Mirrors backend `GamebookCampaignOutcome`
+   * (1 = Completed, 2 = Abandoned); `null` = still open/resumable ("Archivia").
+   * Optional for backward-compat with fixtures predating the field.
+   */
+  outcome: z.number().int().nullable().optional().default(null),
+  completedAt: z.string().datetime({ offset: true }).nullable().optional().default(null),
 });
 
+/**
+ * SI-8 (#2639): terminal outcome mirroring backend `GamebookCampaignOutcome`.
+ * "Archivia" (resumable) is NOT one of these — it never closes the campaign.
+ */
+export const GamebookCampaignOutcome = {
+  Completed: 1,
+  Abandoned: 2,
+} as const;
+
+export type GamebookCampaignOutcomeValue =
+  (typeof GamebookCampaignOutcome)[keyof typeof GamebookCampaignOutcome];
+
 export type GamebookCampaign = z.infer<typeof GamebookCampaignSchema>;
+
+/**
+ * #2632 (SI-1b Phase 4): the owning GameNight "Serata" spine for a campaign, returned by
+ * `GET /gamebook/campaigns/{id}/spine`. The endpoint replies 204 (→ `null` here) when the
+ * campaign has no GameNight-attached play (standalone), in which case the FE renders no strip.
+ */
+export const GamebookCampaignSpineSchema = z.object({
+  gameNightId: z.string().uuid(),
+  gameNightTitle: z.string(),
+  organizerId: z.string().uuid(),
+  /** Backend `GameNightStatus.ToString()` — e.g. Published / InProgress / Completed. */
+  gameNightStatus: z.string(),
+  totalSessions: z.number().int().min(0),
+  completedSessions: z.number().int().min(0),
+  hasLiveSession: z.boolean(),
+  /** Derived: "InProgress" (a live sitting exists) or "Resumable". */
+  campaignStatus: z.string(),
+});
+
+export type GamebookCampaignSpine = z.infer<typeof GamebookCampaignSpineSchema>;
 
 export interface CreateCampaignInput {
   gameId: string;
   title: string;
+  /**
+   * Issue #2917: standalone campaign roster (User-linked participants). The
+   * OWNER (authenticated user) is auto-seeded server-side and MUST NOT be sent
+   * here. Reserved for future use — the MVP FE leaves this empty/undefined and
+   * sends every extra player as a free `guestName`. Omitted fields serialize to
+   * `null` on the wire, which the backend treats as "no participants".
+   */
+  participants?: { userId: string | null; displayName: string }[];
+  /**
+   * Issue #2917: free-guest roster names (everyone but the owner). When both
+   * `participants` and `guestNames` are absent the backend keeps the legacy
+   * campaign-only behavior (backward-compatible).
+   */
+  guestNames?: string[];
 }
 
 async function parseJson<T>(res: Response, schema: z.ZodSchema<T>): Promise<T> {
@@ -93,6 +146,18 @@ export async function getCampaign(id: string): Promise<GamebookCampaign> {
     credentials: 'include',
   });
   return parseJson(res, GamebookCampaignSchema);
+}
+
+/**
+ * #2632 (SI-1b Phase 4): fetch the owning GameNight spine for a campaign. Returns `null` when the
+ * backend replies 204 (standalone campaign — no GameNight-attached play, so no strip is rendered).
+ */
+export async function getCampaignSpine(id: string): Promise<GamebookCampaignSpine | null> {
+  const res = await fetch(`${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}/spine`, {
+    credentials: 'include',
+  });
+  if (res.status === 204) return null;
+  return parseJson(res, GamebookCampaignSpineSchema);
 }
 
 export async function listMyCampaigns(gameId?: string): Promise<GamebookCampaign[]> {
@@ -157,6 +222,26 @@ export async function renameCampaign(id: string, title: string): Promise<Gameboo
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title }),
+    credentials: 'include',
+  });
+  return parseJson(res, GamebookCampaignSchema);
+}
+
+/**
+ * SI-8 (#2639): terminally close a campaign with a manual outcome
+ * (Completed / Abandoned). "Archivia" (resumable) does NOT call this — it just
+ * finalizes the evening's Session (SI-3) and leaves the campaign open.
+ * Owner-only (403 for others); a campaign already closed returns 409.
+ */
+export async function closeCampaign(
+  id: string,
+  outcome: GamebookCampaignOutcomeValue
+): Promise<GamebookCampaign> {
+  const outcomeName = outcome === GamebookCampaignOutcome.Completed ? 'Completed' : 'Abandoned';
+  const res = await fetch(`${API_BASE}/api/v1/gamebook/campaigns/${encodeURIComponent(id)}/close`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ outcome: outcomeName }),
     credentials: 'include',
   });
   return parseJson(res, GamebookCampaignSchema);

@@ -12,8 +12,6 @@ Create these files with your production credentials (plain text, single value pe
 | `redis-password.txt` | Redis password | **Critical** |
 | `openrouter-api-key.txt` | OpenRouter API key | **Critical** |
 | `grafana-admin-password.txt` | Grafana admin password | Important |
-| `n8n-encryption-key.txt` | n8n encryption key | Important |
-| `n8n-basic-auth-password.txt` | n8n basic auth | Important |
 | `gmail-app-password.txt` | Gmail app password (alerts) | Optional |
 | `initial-admin-password.txt` | Initial admin user password | Important |
 | `api-cert-password.txt` | SSL certificate password | If using HTTPS |
@@ -54,7 +52,6 @@ secrets:
 # Generate cryptographically secure passwords
 openssl rand -base64 32 > postgres-password.txt
 openssl rand -base64 32 > redis-password.txt
-openssl rand -base64 32 > n8n-encryption-key.txt
 openssl rand -base64 24 > grafana-admin-password.txt
 openssl rand -base64 24 > initial-admin-password.txt
 

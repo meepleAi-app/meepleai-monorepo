@@ -18,7 +18,7 @@
  * viewports / preview cards in future waves.
  */
 
-import type { JSX } from 'react';
+import type { JSX, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
@@ -46,6 +46,13 @@ export interface HeroProps {
   readonly title: string;
   readonly emoji?: string;
   readonly coverUrl?: string | null;
+  /**
+   * Crop focal point for the cover image, in `[0,1]` fractional coordinates
+   * (0,0 = top-left). Converted to a CSS `object-position` percentage so the
+   * PDF-derived 2:3 portrait cover keeps title/illustration in the 16:9 hero
+   * frame instead of a centered crop landing on body text (#3611).
+   */
+  readonly coverFocal?: { x: number; y: number };
   readonly authorName?: string | null;
   readonly year?: number | null;
   readonly minPlayers?: number | null;
@@ -61,6 +68,19 @@ export interface HeroProps {
   readonly labels: HeroLabels;
   readonly compact?: boolean;
   readonly className?: string;
+  /**
+   * Optional overlay rendered over the (relative) cover region — used by the admin
+   * cover-edit affordance on public surfaces (#3470 Slice 1d-c). The cover region is
+   * a `group` so a hover-revealed affordance can react to cover hover.
+   */
+  readonly coverOverlay?: ReactNode;
+  /**
+   * Optional footer rendered directly BELOW the cover region (not overlaid on the image) —
+   * used for the winning cover source's attribution credit (#3470 Slice 3c). Kept generic so
+   * Hero stays domain-agnostic; the shared-games detail wires <MeepleCardAttributionFooter>
+   * into it. Renders nothing when absent, so other Hero consumers are unaffected.
+   */
+  readonly coverFooter?: ReactNode;
 }
 
 function Stars({
@@ -143,6 +163,7 @@ export function Hero({
   title,
   emoji = '🎲',
   coverUrl,
+  coverFocal,
   authorName,
   year,
   minPlayers,
@@ -156,6 +177,8 @@ export function Hero({
   labels,
   compact = false,
   className,
+  coverOverlay,
+  coverFooter,
 }: HeroProps): JSX.Element {
   const coverH = compact ? 'h-[160px]' : 'h-[220px]';
   const titleSize = compact ? 'text-[22px]' : 'text-[30px]';
@@ -189,14 +212,24 @@ export function Hero({
     >
       {/* Cover */}
       <div
-        className={clsx('relative flex items-center justify-center overflow-hidden', coverH)}
+        data-slot="hero-cover"
+        className={clsx('group relative flex items-center justify-center overflow-hidden', coverH)}
         style={{
           backgroundColor: entityHsl('game', 0.12),
         }}
       >
         {coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+          <img
+            src={coverUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            style={
+              coverFocal
+                ? { objectPosition: `${coverFocal.x * 100}% ${coverFocal.y * 100}%` }
+                : undefined
+            }
+          />
         ) : (
           <span aria-hidden="true" className={clsx(emojiSize, 'drop-shadow-lg')}>
             {emoji}
@@ -206,7 +239,11 @@ export function Hero({
           aria-hidden="true"
           className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/35 to-transparent"
         />
+        {coverOverlay}
       </div>
+
+      {/* Attribution credit for the winning cover source (#3470 Slice 3c) — below the cover. */}
+      {coverFooter}
 
       {/* Body */}
       <div className="flex flex-col gap-3 p-4 md:p-5">

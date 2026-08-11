@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetTopContributors;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.Extensions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -144,7 +145,10 @@ internal static class SharedGameCatalogPublicEndpoints
         // Admin/Editor can see all statuses
         if (result is not null)
         {
-            var isAdminOrEditor = context.User.IsInRole("Admin") || context.User.IsInRole("Editor");
+            // Issue #2845/#HH: include SuperAdmin so a superadmin can load the
+            // admin detail page for draft/archived games (IsInRole("Admin")
+            // alone hid non-Published games from a superadmin → "Failed to load").
+            var isAdminOrEditor = context.User.IsAdminOrEditor();
             if (!isAdminOrEditor && result.Status != GameStatus.Published)
             {
                 return Results.NotFound(); // Hide draft/archived games from public

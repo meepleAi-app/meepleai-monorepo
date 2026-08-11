@@ -34,7 +34,7 @@
  *   icon/styling can be layered without touching the component contract.
  */
 
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 
 import clsx from 'clsx';
 
@@ -104,9 +104,9 @@ const ENTITY_CIRCLE_CLASS: Record<EntitySlot, string> = {
 };
 
 const ENTITY_ANCHOR_CLASS: Record<EntitySlot, string> = {
-  game: 'text-entity-game',
+  game: 'text-entity-game-text',
   agent: 'text-entity-agent',
-  kb: 'text-entity-kb',
+  kb: 'text-entity-kb-text',
   session: 'text-entity-session',
   chat: 'text-entity-chat',
 };
@@ -120,6 +120,7 @@ export function RecentActivityRail({
   className,
 }: RecentActivityRailProps): ReactElement {
   const { t } = useTranslation();
+  const [collapsed, setCollapsed] = useState(false);
   const state: RailState = error
     ? 'error'
     : isLoading
@@ -134,145 +135,171 @@ export function RecentActivityRail({
     <aside
       data-slot="library-activity-rail"
       data-state={state}
+      data-collapsed={collapsed || undefined}
       aria-busy={isLoading || undefined}
       aria-live="polite"
       className={clsx(
         // Mockup jsx:950-954 — sidebar 280px, bg-card, left border, padded scrollable.
         // Hidden under `lg` so the rail collapses on tablet/mobile (preserves
-        // pre-Task-2.4 responsive contract).
-        'hidden lg:flex lg:w-[280px] lg:flex-shrink-0 lg:flex-col',
-        'overflow-y-auto border-l border-border bg-card px-4 py-4',
+        // pre-Task-2.4 responsive contract). When collapsed (#564) the aside
+        // narrows to a rail strip; being a flex sibling of the library content
+        // means the grid reclaims the freed width — no parent coordination.
+        'hidden lg:flex lg:flex-shrink-0 lg:flex-col',
+        collapsed ? 'lg:w-[52px] lg:items-center px-2' : 'lg:w-[280px] px-4',
+        'overflow-y-auto border-l border-border bg-card py-4',
         className
       )}
     >
-      {/* Header (jsx:955-969) */}
-      <div className="mb-3.5 flex items-center justify-between">
-        <h3 className="m-0 flex items-center gap-1.5 font-display text-[13px] font-extrabold text-foreground">
-          <span aria-hidden="true">🕐</span>
-          {t('pages.library.activityRail.title')}
-        </h3>
-        {/* Collapse button: static (no onClick) until follow-up wires it.
-            TODO: collapse not yet wired (#follow-up TBD). */}
+      {/* Header (jsx:955-969) — collapse/expand disclosure toggle (#564). */}
+      <div
+        className={clsx(
+          'flex items-center',
+          collapsed ? 'flex-col gap-2' : 'mb-3.5 justify-between'
+        )}
+      >
+        {collapsed ? (
+          <span aria-hidden="true" className="text-[13px]">
+            🕐
+          </span>
+        ) : (
+          <h3 className="m-0 flex items-center gap-1.5 font-display text-[13px] font-extrabold text-foreground">
+            <span aria-hidden="true">🕐</span>
+            {t('pages.library.activityRail.title')}
+          </h3>
+        )}
         <button
           type="button"
-          aria-label={t('pages.library.activityRail.collapseAriaLabel')}
+          aria-label={t(
+            collapsed
+              ? 'pages.library.activityRail.expandAriaLabel'
+              : 'pages.library.activityRail.collapseAriaLabel'
+          )}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed(prev => !prev)}
           className="h-6 w-6 cursor-pointer rounded-sm border border-border bg-transparent text-[11px] text-muted-foreground"
         >
-          <span aria-hidden="true">›</span>
+          <span aria-hidden="true">{collapsed ? '‹' : '›'}</span>
         </button>
       </div>
 
-      {state === 'loading' ? (
-        <div className="flex flex-col gap-2">
-          {Array.from({ length: SKELETON_LINES }, (_, index) => (
-            <Skeleton
-              key={index}
-              data-slot="library-activity-skeleton"
-              data-testid="library-activity-skeleton"
-              className="h-12 w-full rounded-lg"
-            />
-          ))}
-        </div>
-      ) : null}
+      {collapsed ? null : (
+        <>
+          {state === 'loading' ? (
+            <div className="flex flex-col gap-2">
+              {Array.from({ length: SKELETON_LINES }, (_, index) => (
+                <Skeleton
+                  key={index}
+                  data-slot="library-activity-skeleton"
+                  data-testid="library-activity-skeleton"
+                  className="h-12 w-full rounded-lg"
+                />
+              ))}
+            </div>
+          ) : null}
 
-      {state === 'empty' ? (
-        <p
-          className="text-sm text-muted-foreground"
-          data-slot="library-activity-empty"
-          data-testid="library-activity-empty-text"
-        >
-          {t('pages.library.activityRail.empty')}
-        </p>
-      ) : null}
+          {state === 'empty' ? (
+            <p
+              className="text-sm text-muted-foreground"
+              data-slot="library-activity-empty"
+              data-testid="library-activity-empty-text"
+            >
+              {t('pages.library.activityRail.empty')}
+            </p>
+          ) : null}
 
-      {state === 'error' ? (
-        <p
-          className="text-sm text-destructive"
-          role="alert"
-          data-slot="library-activity-error"
-          data-testid="library-activity-error"
-        >
-          {t('pages.library.activityRail.error')}
-        </p>
-      ) : null}
+          {state === 'error' ? (
+            <p
+              className="text-sm text-destructive"
+              role="alert"
+              data-slot="library-activity-error"
+              data-testid="library-activity-error"
+            >
+              {t('pages.library.activityRail.error')}
+            </p>
+          ) : null}
 
-      {state === 'populated' ? (
-        <div className="relative">
-          {visibleItems.map((item, index) => {
-            const entity = ACTIVITY_KIND_ENTITY[item.kind];
-            const isLast = index === visibleItems.length - 1;
-            return (
-              <div
-                key={item.id}
-                data-slot="library-activity-item"
-                data-activity-kind={item.kind}
-                className={clsx('flex gap-2.5', !isLast && 'mb-2.5')}
-              >
-                {/* Left rail: circle + connector */}
-                <div className="flex flex-shrink-0 flex-col items-center">
+          {state === 'populated' ? (
+            <div className="relative">
+              {visibleItems.map((item, index) => {
+                const entity = ACTIVITY_KIND_ENTITY[item.kind];
+                const isLast = index === visibleItems.length - 1;
+                return (
                   <div
-                    data-slot="library-activity-rail-circle"
-                    aria-hidden="true"
-                    className={clsx(
-                      'flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[10px]',
-                      ENTITY_CIRCLE_CLASS[entity]
-                    )}
+                    key={item.id}
+                    data-slot="library-activity-item"
+                    data-activity-kind={item.kind}
+                    className={clsx('flex gap-2.5', !isLast && 'mb-2.5')}
                   >
-                    {KIND_ICON[item.kind]}
+                    {/* Left rail: circle + connector */}
+                    <div className="flex flex-shrink-0 flex-col items-center">
+                      <div
+                        data-slot="library-activity-rail-circle"
+                        aria-hidden="true"
+                        className={clsx(
+                          'flex h-[22px] w-[22px] items-center justify-center rounded-full border text-[10px]',
+                          ENTITY_CIRCLE_CLASS[entity]
+                        )}
+                      >
+                        {KIND_ICON[item.kind]}
+                      </div>
+                      {!isLast ? (
+                        <div
+                          data-slot="library-activity-rail-connector"
+                          aria-hidden="true"
+                          className="mt-0.5 min-h-3.5 w-[1.5px] flex-1 bg-border"
+                        />
+                      ) : null}
+                    </div>
+                    {/* Right column: timestamp + body line */}
+                    <div className="min-w-0 flex-1 pb-0.5">
+                      <div className="font-mono text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                        {item.timestamp}
+                      </div>
+                      <div className="text-[11.5px] leading-[1.4] text-foreground">
+                        <span
+                          className={clsx('font-bold no-underline', ENTITY_ANCHOR_CLASS[entity])}
+                        >
+                          {item.entityTitle}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  {!isLast ? (
-                    <div
-                      data-slot="library-activity-rail-connector"
-                      aria-hidden="true"
-                      className="mt-0.5 min-h-3.5 w-[1.5px] flex-1 bg-border"
-                    />
-                  ) : null}
-                </div>
-                {/* Right column: timestamp + body line */}
-                <div className="min-w-0 flex-1 pb-0.5">
-                  <div className="font-mono text-[9px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-                    {item.timestamp}
-                  </div>
-                  <div className="text-[11.5px] leading-[1.4] text-foreground">
-                    <span className={clsx('font-bold no-underline', ENTITY_ANCHOR_CLASS[entity])}>
-                      {item.entityTitle}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : null}
+                );
+              })}
+            </div>
+          ) : null}
 
-      {/* Keyboard shortcuts box (jsx:1004-1015). Always rendered so the rail
-          has a consistent footer across loading/empty/populated states. */}
-      <div className="mt-3 rounded-md bg-muted px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-        <strong className="mb-0.5 block text-foreground/80">
-          <span aria-hidden="true">⌨ </span>
-          {t('pages.library.activityRail.shortcuts.heading')}
-        </strong>
-        <div className="flex flex-col gap-0.5 font-mono text-[10px]">
-          <span>
-            <kbd className="mr-1 rounded-[3px] border border-border bg-card px-1.5 font-mono font-extrabold text-foreground/80">
-              /
-            </kbd>
-            {t('pages.library.activityRail.shortcuts.focusSearch')}
-          </span>
-          <span>
-            <kbd className="mr-1 rounded-[3px] border border-border bg-card px-1.5 font-mono font-extrabold text-foreground/80">
-              f
-            </kbd>
-            {t('pages.library.activityRail.shortcuts.advancedFilters')}
-          </span>
-          <span>
-            <kbd className="mr-1 rounded-[3px] border border-border bg-card px-1.5 font-mono font-extrabold text-foreground/80">
-              ?
-            </kbd>
-            {t('pages.library.activityRail.shortcuts.allShortcuts')}
-          </span>
-        </div>
-      </div>
+          {/* Keyboard shortcuts box (jsx:1004-1015). Rendered in every
+          expanded state (loading/empty/populated) for a consistent footer;
+          hidden when the rail is collapsed (#564). */}
+          <div className="mt-3 rounded-md bg-muted px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="mb-0.5 block text-foreground/80">
+              <span aria-hidden="true">⌨ </span>
+              {t('pages.library.activityRail.shortcuts.heading')}
+            </strong>
+            <div className="flex flex-col gap-0.5 font-mono text-[10px]">
+              <span>
+                <kbd className="mr-1 rounded-[3px] border border-border bg-card px-1.5 font-mono font-extrabold text-foreground/80">
+                  /
+                </kbd>
+                {t('pages.library.activityRail.shortcuts.focusSearch')}
+              </span>
+              <span>
+                <kbd className="mr-1 rounded-[3px] border border-border bg-card px-1.5 font-mono font-extrabold text-foreground/80">
+                  f
+                </kbd>
+                {t('pages.library.activityRail.shortcuts.advancedFilters')}
+              </span>
+              <span>
+                <kbd className="mr-1 rounded-[3px] border border-border bg-card px-1.5 font-mono font-extrabold text-foreground/80">
+                  ?
+                </kbd>
+                {t('pages.library.activityRail.shortcuts.allShortcuts')}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
     </aside>
   );
 }

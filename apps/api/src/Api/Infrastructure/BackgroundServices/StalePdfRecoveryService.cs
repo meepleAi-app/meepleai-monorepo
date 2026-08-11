@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.DocumentProcessing;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Infrastructure.BackgroundServices;
@@ -71,9 +72,30 @@ internal sealed class StalePdfRecoveryService : BackgroundService
 
         _logger.LogInformation("[StalePdfRecovery] Found {Count} stale PDF(s) to recover", stalePdfs.Count);
 
-        // Process one at a time to avoid overwhelming services
+        var (recovered, failed, stillStuck) = await RecoverAllAsync(stalePdfs, stoppingToken).ConfigureAwait(false);
+
+        _logger.LogInformation(
+            "[StalePdfRecovery] Recovery complete: {Recovered} recovered, {Failed} failed, {StillStuck} still stuck, {Total} total",
+            recovered, failed, stillStuck, stalePdfs.Count);
+    }
+
+    /// <summary>
+    /// Exposed as internal for unit testing: runs the full recovery loop and
+    /// returns honest outcome counts re-read from the DB after each ProcessAsync call.
+    /// </summary>
+    internal async Task<(int recovered, int failed, int stillStuck)> RecoverAllAsync(CancellationToken stoppingToken)
+    {
+        var stalePdfs = await FindStalePdfsAsync(stoppingToken).ConfigureAwait(false);
+        return await RecoverAllAsync(stalePdfs, stoppingToken).ConfigureAwait(false);
+    }
+
+    private async Task<(int recovered, int failed, int stillStuck)> RecoverAllAsync(
+        IReadOnlyList<StalePdfInfo> stalePdfs,
+        CancellationToken stoppingToken)
+    {
         var recovered = 0;
         var failed = 0;
+        var stillStuck = 0;
 
         foreach (var pdf in stalePdfs)
         {
@@ -99,9 +121,29 @@ internal sealed class StalePdfRecoveryService : BackgroundService
                 await pipeline.ProcessAsync(pdf.Id, pdf.FilePath, pdf.UploadedByUserId, stoppingToken)
                     .ConfigureAwait(false);
 
-                recovered++;
+                // Re-read state from DB: ProcessAsync may have returned without reaching Ready
+                // (e.g. claim-skip or concurrency abort). Counting unconditionally was dishonest.
+                var finalState = await ReadProcessingStateAsync(pdf.Id, stoppingToken).ConfigureAwait(false);
 
-                _logger.LogInformation("[StalePdfRecovery] Successfully recovered PDF {PdfId}", pdf.Id);
+                if (string.Equals(finalState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
+                {
+                    recovered++;
+                    _logger.LogInformation("[StalePdfRecovery] Recovered PDF {PdfId} → Ready", pdf.Id);
+                }
+                else if (string.Equals(finalState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal))
+                {
+                    failed++;
+                    _logger.LogWarning(
+                        "[StalePdfRecovery] PDF {PdfId} ended Failed after reprocessing (will be retried by RetryFailedPdfsJob)",
+                        pdf.Id);
+                }
+                else
+                {
+                    stillStuck++;
+                    _logger.LogWarning(
+                        "[StalePdfRecovery] PDF {PdfId} did NOT progress (state={State}); recovery ineffective",
+                        pdf.Id, finalState);
+                }
             }
 #pragma warning disable CA1031 // Non-blocking: log and continue to next PDF
             catch (OperationCanceledException ex) when (stoppingToken.IsCancellationRequested)
@@ -117,9 +159,18 @@ internal sealed class StalePdfRecoveryService : BackgroundService
 #pragma warning restore CA1031
         }
 
-        _logger.LogInformation(
-            "[StalePdfRecovery] Recovery complete: {Recovered} recovered, {Failed} failed, {Total} total",
-            recovered, failed, stalePdfs.Count);
+        return (recovered, failed, stillStuck);
+    }
+
+    private async Task<string?> ReadProcessingStateAsync(Guid pdfDocumentId, CancellationToken ct)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.PdfDocuments
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.ProcessingState)
+            .FirstOrDefaultAsync(ct)
+            .ConfigureAwait(false);
     }
 
     private async Task<List<StalePdfInfo>> FindStalePdfsAsync(CancellationToken cancellationToken)
@@ -140,6 +191,25 @@ internal sealed class StalePdfRecoveryService : BackgroundService
         var indexingState = nameof(PdfProcessingState.Indexing);
 
         return await db.PdfDocuments
+            // #3075: never recover demo mock placeholders (seed/ prefix, no real blob). They are
+            // seeded in deliberate non-Ready states for the dashboard demo; force-processing them
+            // would only fail on the missing blob and flip them to Failed (→ seed_state partial_failed).
+            .Where(p => !p.FilePath.StartsWith(PdfDocumentEntity.DemoMockFilePathPrefix))
+            // #3588: a document with an ACTIVE job row belongs to the queue worker, not to this
+            // service. Driving it here calls ResetToPendingAsync on it, which rewinds a document
+            // mid-flight — and that reset runs BEFORE the pipeline's atomic Pending-claim can refuse
+            // it, so the claim is not a sufficient defence on its own.
+            //
+            // Excluding only Queued was not enough (observed on staging 2026-08-07): a job requeued
+            // by OrphanedProcessingJobRecoveryService is picked up by the worker within seconds, so
+            // by the time this service runs it has already moved Queued → Processing. Both queue
+            // states mean "owned", so both are excluded.
+            //
+            // Terminal jobs (Completed/Failed/Cancelled) and documents with no job row have no owner
+            // and stay in scope — that is the case this service exists for.
+            .Where(p => !db.Set<ProcessingJobEntity>()
+                .Any(j => j.PdfDocumentId == p.Id
+                       && (j.Status == nameof(JobStatus.Queued) || j.Status == nameof(JobStatus.Processing))))
             .Where(p =>
                 (p.ProcessingState == pendingState && p.UploadedAt < pendingCutoff) ||
                 ((p.ProcessingState == uploadingState ||

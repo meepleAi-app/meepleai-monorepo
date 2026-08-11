@@ -19,17 +19,24 @@ import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
 import { EmptyStateCard } from '@/components/features/common';
 import { SkeletonCardGrid } from '@/components/features/common';
 import { MeepleEventCard } from '@/components/game-night/MeepleEventCard';
+import { PendingRsvpCard } from '@/components/game-night/PendingRsvpCard';
 import { MeepleLibraryGameCard } from '@/components/library/MeepleLibraryGameCard';
 import { MeepleCard, entityHsl } from '@/components/ui/data-display/meeple-card';
 import { useActiveSessions } from '@/hooks/queries/useActiveSessions';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
-import { useUpcomingGameNights } from '@/hooks/queries/useGameNights';
+import { useRsvpGameNight, useUpcomingGameNights } from '@/hooks/queries/useGameNights';
 import { useRecentlyAddedGames } from '@/hooks/queries/useLibrary';
 import { useNavigation } from '@/hooks/useNavigation';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+
+import { RecentSection } from './RecentSection';
 
 export function HomeFeed() {
   const router = useRouter();
   const { openDetail } = useNavigation();
+  const rsvpMutation = useRsvpGameNight();
+  // #2989 gap 5: pending-RSVP CTAs are disabled while offline (can't reach the server).
+  const { isOffline } = useNetworkStatus();
 
   const { data: activeSessions, isLoading: sessionsLoading } = useActiveSessions(5);
   const { data: recentGames, isLoading: gamesLoading } = useRecentlyAddedGames(6);
@@ -42,7 +49,7 @@ export function HomeFeed() {
   const chats = chatSessions?.sessions ?? [];
 
   return (
-    <div className="p-4 sm:p-6 space-y-8">
+    <div className="p-3 pb-20 sm:p-6 sm:pb-6 space-y-8">
       {/* Sessioni Attive */}
       <section>
         <h2 className="font-quicksand font-bold text-lg mb-4">Sessioni Attive</h2>
@@ -71,7 +78,7 @@ export function HomeFeed() {
                 headingLevel={2}
                 onClick={() => {
                   if (session.status === 'Setup' || session.status === 'Paused') {
-                    router.push(`/sessions/live/${session.id}`);
+                    router.push(`/sessions/${session.id}/live`);
                   } else {
                     openDetail(session.id, 'session');
                   }
@@ -129,24 +136,44 @@ export function HomeFeed() {
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {nights.map(night => (
-              <MeepleEventCard
-                key={night.id}
-                event={{
-                  id: night.id,
-                  title: night.title,
-                  scheduledAt: night.scheduledAt,
-                  location: night.location ?? null,
-                  participantCount: 0,
-                  gameCount: 0,
-                }}
-                variant="list"
-                onClick={() => openDetail(night.id, 'event')}
-              />
-            ))}
+            {nights.map(night =>
+              night.viewerRsvpStatus === 'Pending' ? (
+                <PendingRsvpCard
+                  key={night.id}
+                  eventId={night.id}
+                  title={night.title}
+                  inviterName={night.organizerName}
+                  disabled={
+                    isOffline || (rsvpMutation.isPending && rsvpMutation.variables?.id === night.id)
+                  }
+                  onConfirm={() => rsvpMutation.mutate({ id: night.id, response: 'Accepted' })}
+                  onDecline={() => rsvpMutation.mutate({ id: night.id, response: 'Declined' })}
+                />
+              ) : (
+                <MeepleEventCard
+                  key={night.id}
+                  event={{
+                    id: night.id,
+                    title: night.title,
+                    scheduledAt: night.scheduledAt,
+                    location: night.location ?? null,
+                    participantCount: 0,
+                    gameCount: 0,
+                  }}
+                  variant="list"
+                  onClick={() => openDetail(night.id, 'event')}
+                />
+              )
+            )}
           </div>
         )}
       </section>
+
+      {/* Recenti (serate completate) — invariante #4 */}
+      <RecentSection
+        onOpenDetail={id => openDetail(id, 'event')}
+        onSeeAll={() => router.push('/game-nights?filter=completed')}
+      />
 
       {/* Chat Recenti */}
       <section>

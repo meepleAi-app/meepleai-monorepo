@@ -456,6 +456,8 @@ ImageSharp 3.x managed C# → 200×300 webp.
 
 **Verifica licenza ImageSharp 3.x** (§ 11): pin major version, audit Six Labors Split License vs Apache 2.0.
 
+> **✅ RESOLVED / MOOT (DEC-3d-1, issue #2055 Phase G)** — l'audit licenza Six Labors è superato: `SixLabors.ImageSharp` è stato **rimosso dal backend** e sostituito da **`Magick.NET-Q8-AnyCPU` 14.x (Apache 2.0)** (`WebpVariantGenerator`, `VisionOcrAdapter`, `GamebookPhotoStorageService`). Nessun package/uso ImageSharp residuo; regressione presidiata dal guard CI `infra/scripts/lint-deps-imagesharp.sh` (dev-fast.yml). Chiude il gate go-live "audit licenza image-lib (Six Labors)" del tracker #3373 / ADR-087.
+
 ### 7.5 R2 upload pipeline
 
 `ICoverR2UploadPipeline` riusa `IBlobStorageService` (`BlobStorageServiceFactory.Create()` factory `STORAGE_PROVIDER=s3` → R2 endpoint). Vedi `Services/Pdf/BlobStorageServiceFactory.cs:32-95`.

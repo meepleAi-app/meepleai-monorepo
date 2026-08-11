@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -96,7 +97,7 @@ internal sealed class StaleShareRequestWarningJob : IJob
                     severity: NotificationSeverity.Warning,
                     title: $"{staleRequests.Count} Share Requests Need Attention",
                     message: $"There are {staleRequests.Count} share requests waiting more than {staleDays} days.",
-                    link: "/admin/share-requests?sort=oldest",
+                    link: NotificationRoutes.AdminShareRequestsOldest,
                     metadata: System.Text.Json.JsonSerializer.Serialize(new
                     {
                         staleCount = staleRequests.Count,

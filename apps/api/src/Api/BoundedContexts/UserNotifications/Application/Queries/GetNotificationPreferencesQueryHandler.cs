@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.UserNotifications.Application.DTOs;
 using Api.BoundedContexts.UserNotifications.Application.Queries;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
@@ -26,7 +27,20 @@ internal class GetNotificationPreferencesQueryHandler : IQueryHandler<GetNotific
             prefs.EmailOnDocumentReady, prefs.EmailOnDocumentFailed, prefs.EmailOnRetryAvailable,
             prefs.PushOnDocumentReady, prefs.PushOnDocumentFailed, prefs.PushOnRetryAvailable,
             prefs.InAppOnDocumentReady, prefs.InAppOnDocumentFailed, prefs.InAppOnRetryAvailable,
-            prefs.HasPushSubscription
+            prefs.HasPushSubscription,
+            prefs.EmailOnCardSuppressed,
+            // Quiet hours (ADR-076) — TimeOnly? formatted as "HH:mm" for a stable FE contract.
+            prefs.TimeZone,
+            FormatTime(prefs.QuietHoursStart),
+            FormatTime(prefs.QuietHoursEnd),
+            // Slack channel preferences.
+            prefs.SlackEnabled,
+            prefs.SlackOnDocumentReady, prefs.SlackOnDocumentFailed, prefs.SlackOnRetryAvailable,
+            prefs.SlackOnGameNightInvitation, prefs.SlackOnGameNightReminder,
+            prefs.SlackOnShareRequestCreated, prefs.SlackOnShareRequestApproved, prefs.SlackOnBadgeEarned
         );
     }
+
+    private static string? FormatTime(TimeOnly? value) =>
+        value?.ToString("HH:mm", CultureInfo.InvariantCulture);
 }

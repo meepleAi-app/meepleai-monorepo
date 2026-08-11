@@ -102,10 +102,17 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
       { label: 'Agent Definitions', href: '/admin/agents/definitions', icon: Database },
       { label: 'RAG Inspector', href: '/admin/agents/inspector', icon: FileSearch },
       { label: 'RAG Quality', href: '/admin/rag-quality', icon: BarChart2 },
+      // AI-first flow (#528+): the primary Mechanic Extractor surface.
       {
-        label: 'Mechanic Extractor',
-        href: '/admin/knowledge-base/mechanic-extractor',
+        label: 'Mechanic Analyses',
+        href: '/admin/knowledge-base/mechanic-extractor/analyses',
         icon: Wrench,
+      },
+      // #532 ME-M2.3: operational metrics dashboard (cost / review-time / approval-rate).
+      {
+        label: 'Mechanic Metrics',
+        href: '/admin/knowledge-base/mechanic-extractor/metrics',
+        icon: BarChart2,
       },
       { label: 'Agent Usage', href: '/admin/agents/usage', icon: BarChart2 },
     ],

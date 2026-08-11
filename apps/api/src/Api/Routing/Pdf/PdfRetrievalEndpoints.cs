@@ -90,6 +90,14 @@ internal static class PdfRetrievalEndpoints
             .Produces(401)
             .Produces(403)
             .Produces(404);
+
+        // #3447 slice: hi_res image-table regions for the viewer overlay (region-only, no VLM).
+        group.MapGet("/pdf/{pdfId:guid}/image-regions", HandleGetImageRegions)
+            .RequireSession()
+            .WithName("GetPdfImageRegions")
+            .WithTags("PDF")
+            .WithSummary("Persisted hi_res Image/FigureCaption regions for the PDF (viewer overlay)")
+            .Produces(401);
     }
 
     private static void MapPdfLanguageEndpoints(RouteGroupBuilder group)
@@ -129,9 +137,10 @@ internal static class PdfRetrievalEndpoints
         .WithName("SetActiveForRag");
 
         // Issue #5447: Reclassify document (category, base document, version label)
+        // Issue #3222: admin-only (was any authenticated user) — reclassify can re-parent
+        // BaseDocumentId across documents owned by other users.
         group.MapPatch("/documents/{pdfId:guid}/classify", HandleReclassifyDocument)
-        .RequireSession()
-        .RequireAuthorization()
+        .RequireAdminSession()
         .WithName("ReclassifyDocument");
     }
 
@@ -155,9 +164,15 @@ internal static class PdfRetrievalEndpoints
         return Results.Json(new { pdfs });
     }
 
-    private static async Task<IResult> HandleGetPdfText(Guid pdfId, IMediator mediator, CancellationToken ct)
+    private static async Task<IResult> HandleGetPdfText(Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct)
     {
-        var pdf = await mediator.Send(new GetPdfTextQuery(pdfId), ct).ConfigureAwait(false);
+        // Issue #3222: pass the caller's id + admin flag so the handler can enforce
+        // owner-or-shared-game access (admins bypass).
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var pdf = await mediator.Send(new GetPdfTextQuery(pdfId, userId, isAdmin), ct).ConfigureAwait(false);
 
         if (pdf == null)
         {
@@ -165,6 +180,18 @@ internal static class PdfRetrievalEndpoints
         }
 
         return Results.Json(pdf);
+    }
+
+    // #3447 slice: owner-or-shared-game scoping (mirror HandleGetPdfText #3222); admins bypass.
+    // The handler returns an empty list (no existence leak) for missing/unauthorized PDFs.
+    private static async Task<IResult> HandleGetImageRegions(Guid pdfId, HttpContext context, IMediator mediator, CancellationToken ct)
+    {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.Principal!.Subject.Id;
+        bool isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase);
+
+        var regions = await mediator.Send(new GetPdfImageRegionsQuery(pdfId, userId, isAdmin), ct).ConfigureAwait(false);
+        return Results.Json(new { regions });
     }
 
     private static async Task<IResult> HandleGetPageText(
@@ -344,13 +371,38 @@ internal static class PdfRetrievalEndpoints
 
     /// <summary>
     /// Issue #5446: Toggle RAG active flag for a PDF document.
+    /// Issue #3222: owner-or-admin only (mirror HandleSetPdfVisibility); the RAG-active flag is a
+    /// shared document-level field, so an arbitrary authenticated user must not toggle it.
     /// </summary>
     private static async Task<IResult> HandleSetActiveForRag(
         Guid pdfId,
+        HttpContext context,
         [FromBody] SetActiveForRagRequest request,
         IMediator mediator,
+        AuditService auditService,
+        ILogger<Program> logger,
         CancellationToken ct)
     {
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var userId = session!.Principal!.Subject.Id;
+
+        var pdf = await mediator.Send(new GetPdfOwnershipQuery(pdfId), ct).ConfigureAwait(false);
+
+        if (pdf == null)
+        {
+            return Results.NotFound(new { error = "PDF not found" });
+        }
+
+        if (!CheckPdfAuthorization(session.Principal!.Subject, pdf))
+        {
+            await LogPdfAccessDeniedAsync(auditService, userId.ToString(), "change RAG-active flag of", pdfId.ToString(), session.Principal!.EffectiveActor.Role ?? "Unknown", pdf.UploadedByUserId, ct).ConfigureAwait(false);
+
+            logger.LogWarning("User {UserId} denied access to change RAG-active flag of PDF {PdfId} (owner: {OwnerId})",
+                userId, pdfId, pdf.UploadedByUserId);
+
+            return Results.Forbid();
+        }
+
         var result = await mediator.Send(new SetActiveForRagCommand(pdfId, request.IsActive), ct).ConfigureAwait(false);
 
         if (!result.Success)

@@ -698,52 +698,6 @@ public sealed class AddPrivateGameCommandValidatorTests
 
     #endregion
 
-    #region ImageUrl Validation
-
-    [Fact]
-    public void ImageUrl_TooLong_HasValidationError()
-    {
-        // Arrange
-        var longUrl = "https://example.com/" + new string('a', 500);
-        var command = new AddPrivateGameCommand(
-            UserId: Guid.NewGuid(),
-            Source: "Manual",
-            BggId: null,
-            Title: "Test",
-            MinPlayers: 2,
-            MaxPlayers: 4,
-            ImageUrl: longUrl);
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.ImageUrl)
-            .WithErrorMessage("ImageUrl cannot exceed 500 characters");
-    }
-
-    [Fact]
-    public void ImageUrl_ValidLength_NoValidationError()
-    {
-        // Arrange
-        var command = new AddPrivateGameCommand(
-            UserId: Guid.NewGuid(),
-            Source: "Manual",
-            BggId: null,
-            Title: "Test",
-            MinPlayers: 2,
-            MaxPlayers: 4,
-            ImageUrl: "https://example.com/image.jpg");
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldNotHaveValidationErrorFor(x => x.ImageUrl);
-    }
-
-    #endregion
-
     #region Description Validation
 
     [Fact]
@@ -787,8 +741,7 @@ public sealed class AddPrivateGameCommandValidatorTests
             Description: "A valid description",
             PlayingTimeMinutes: 60,
             MinAge: 12,
-            ComplexityRating: 3.0m,
-            ImageUrl: "https://example.com/image.jpg");
+            ComplexityRating: 3.0m);
 
         // Act
         var result = _validator.TestValidate(command);
@@ -812,9 +765,7 @@ public sealed class AddPrivateGameCommandValidatorTests
             Description: "A BGG game description",
             PlayingTimeMinutes: 120,
             MinAge: 14,
-            ComplexityRating: 4.2m,
-            ImageUrl: "https://cf.geekdo-images.com/image.jpg",
-            ThumbnailUrl: "https://cf.geekdo-images.com/thumb.jpg");
+            ComplexityRating: 4.2m);
 
         // Act
         var result = _validator.TestValidate(command);

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Domain.Aggregates;
 using Api.BoundedContexts.UserNotifications.Domain.Repositories;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
@@ -165,7 +166,7 @@ internal sealed class OpenRouterRpmAlertBackgroundService : BackgroundService
                 severity: severity,
                 title: $"OpenRouter RPM alert — {utilisationPercent:F0}% of limit used",
                 message: message,
-                link: "/admin/agents/usage",
+                link: NotificationRoutes.AdminAgentsUsage,
                 metadata: metadata);
 
             await notificationRepo.AddAsync(n, cancellationToken).ConfigureAwait(false);

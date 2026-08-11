@@ -35,7 +35,7 @@ export interface DashboardEngineContext {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const SHEET_LABELS: Record<SheetContext, string> = {
+const SHEET_LABELS: Record<SheetContext, string> = {
   scores: 'Punteggi',
   'rules-ai': 'Regole AI',
   timer: 'Timer',

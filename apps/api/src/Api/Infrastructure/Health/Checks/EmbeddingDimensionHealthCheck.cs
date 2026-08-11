@@ -49,7 +49,7 @@ public class EmbeddingDimensionHealthCheck : IHealthCheck
                 "RAG indexing and search will fail. Change Embedding:Provider config or run a schema migration.",
                 providerDimensions, ExpectedSchemaDimensions);
 
-            return Task.FromResult(HealthCheckResult.Unhealthy(
+            return Task.FromResult(HealthCheckResult.Degraded(
                 $"Embedding dimension mismatch: provider={providerDimensions}, schema expects {ExpectedSchemaDimensions}. " +
                 $"Change Embedding:Provider in config or run a schema migration to vector({providerDimensions})."));
         }

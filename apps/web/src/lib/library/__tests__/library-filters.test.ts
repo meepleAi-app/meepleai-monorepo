@@ -202,6 +202,42 @@ describe('sortLibraryEntries', () => {
     expect(result.map(e => e.gameTitle)).toEqual(['Azul', 'Wingspan', 'Catan', 'Brass']);
   });
 
+  it('surfaces KB-ready entries first in the default (recent) sort, then by addedAt', () => {
+    const mixed: readonly UserLibraryEntry[] = [
+      baseEntry({
+        id: 'a',
+        gameId: 'g-a',
+        gameTitle: 'NoKbNewest',
+        addedAt: '2026-04-30T10:00:00.000Z',
+        hasKb: false,
+      }),
+      baseEntry({
+        id: 'b',
+        gameId: 'g-b',
+        gameTitle: 'KbOlder',
+        addedAt: '2026-04-27T10:00:00.000Z',
+        hasKb: true,
+      }),
+      baseEntry({
+        id: 'c',
+        gameId: 'g-c',
+        gameTitle: 'KbNewer',
+        addedAt: '2026-04-29T10:00:00.000Z',
+        hasKb: true,
+      }),
+      baseEntry({
+        id: 'd',
+        gameId: 'g-d',
+        gameTitle: 'NoKbOlder',
+        addedAt: '2026-04-28T10:00:00.000Z',
+        hasKb: false,
+      }),
+    ];
+    const result = sortLibraryEntries(mixed, 'recent');
+    // KB-ready first (by addedAt DESC among them), then the rest (by addedAt DESC).
+    expect(result.map(e => e.gameTitle)).toEqual(['KbNewer', 'KbOlder', 'NoKbNewest', 'NoKbOlder']);
+  });
+
   it('sorts by title alphabetically (case-insensitive)', () => {
     const result = sortLibraryEntries(entries, 'title');
     expect(result.map(e => e.gameTitle)).toEqual(['Azul', 'Brass', 'Catan', 'Wingspan']);

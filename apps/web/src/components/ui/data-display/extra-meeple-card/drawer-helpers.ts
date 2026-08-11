@@ -1,27 +1,15 @@
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { mapProcessingStateToDisplayStatus } from '@/lib/kb/processing-status';
 
 // ============================================================================
 // PDF Document Helpers (Issue #5195)
 // ============================================================================
 
-/** Map PdfProcessingState string → KbDocumentPreview status */
+/** Map PdfProcessingState string → KbDocumentPreview status (#2860: delegates to shared module). */
 export function mapProcessingStateToStatus(
   state: string
 ): 'processing' | 'indexed' | 'failed' | 'none' {
-  switch (state) {
-    case 'Ready':
-      return 'indexed';
-    case 'Failed':
-      return 'failed';
-    case 'Extracting':
-    case 'Chunking':
-    case 'Embedding':
-    case 'Indexing':
-    case 'Uploading':
-      return 'processing';
-    default:
-      return 'none';
-  }
+  return mapProcessingStateToDisplayStatus(state);
 }
 
 /** Map raw JSON object from /api/v1/games/{id}/pdfs → PdfDocumentDto */

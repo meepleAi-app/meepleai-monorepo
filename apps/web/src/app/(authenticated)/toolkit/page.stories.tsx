@@ -34,6 +34,10 @@ const meta: Meta<typeof ToolkitHubPage> = {
           '#2220 DS-17-13. Toolkit hub canonical (P254 multi-route). POST-EPIC #2096 reconciliation: /library/[gameId]/toolbox renders GameToolboxTab placeholder (M4 PR #2207), separate from this Toolkit hub.',
       },
     },
+    // `Default` export (empty args) covers the canonical `default` state — no
+    // `mswForState('default')` string literal for lint:storybook-states to detect
+    // (#2342 Task 4 bonifica).
+    canonicalStates: ['default'],
   },
 };
 

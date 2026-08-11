@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 
@@ -29,7 +30,13 @@ internal class CompleteGameSessionCommandHandler : ICommandHandler<CompleteGameS
         ArgumentNullException.ThrowIfNull(command);
         // Load session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
-.ConfigureAwait(false) ?? throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+.ConfigureAwait(false) ?? throw new NotFoundException("GameSession", command.SessionId.ToString());
+
+        // #2655 IDOR guard: only the session creator may complete it.
+        if (session.CreatedByUserId != command.RequesterId)
+        {
+            throw new ForbiddenException("Only the session creator can complete this session.");
+        }
 
         // Complete via domain method
         session.Complete(command.WinnerName);

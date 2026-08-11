@@ -147,6 +147,25 @@ public sealed class NotificationPayloadSerializationTests
         result.Body.Should().Be("Maintenance window at 2 AM");
     }
 
+    [Fact]
+    public void Deserialize_GenericPayload_WithDiscriminatorNotFirst_Succeeds()
+    {
+        // Regression #3057: the payload column is jsonb, and Postgres reorders object keys by
+        // (length, then bytewise). For GenericPayload that yields {"body":..,"$type":..,"title":..}
+        // — the "$type" discriminator is NOT the first property. STJ polymorphic deserialization
+        // must tolerate this (AllowOutOfOrderMetadataProperties); otherwise MapToDomain throws,
+        // EmailNotificationProcessorJob crash-loops, and one poison row blocks the whole email batch.
+        const string jsonbReordered =
+            """{"body":"Maintenance window at 2 AM","$type":"GenericPayload","title":"System Update"}""";
+
+        var deserialized = JsonSerializer.Deserialize<INotificationPayload>(jsonbReordered, Options);
+
+        deserialized.Should().BeOfType<GenericPayload>();
+        var result = (GenericPayload)deserialized!;
+        result.Title.Should().Be("System Update");
+        result.Body.Should().Be("Maintenance window at 2 AM");
+    }
+
     #endregion
 
     #region Type Discriminator Behavior Tests

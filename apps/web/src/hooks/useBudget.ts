@@ -4,7 +4,7 @@
  * Query + upsert mutation for the singleton AppBudget. Returns `null` when
  * the budget has never been configured (FE shows empty-state CTA).
  *
- * 409 ConflictException on stale `rowVersion` is surfaced via React Query's
+ * 409 ConflictException on stale `xmin` is surfaced via React Query's
  * error path — callers should refetch and retry.
  */
 

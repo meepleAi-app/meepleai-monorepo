@@ -32,6 +32,15 @@ public class AddParticipantCommandHandler : IRequestHandler<AddParticipantComman
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // IDOR guard (security review high-priority): only the session owner or a registered
+        // (User-linked) participant may add participants. Mirrors UpdateSessionScoresCommandHandler.
+        if (session.UserId != request.RequestedBy &&
+            !session.Participants.Any(p => p.UserId == request.RequestedBy))
+        {
+            throw new ForbiddenException(
+                $"User {request.RequestedBy} is not authorized to add participants to session {request.SessionId}.");
+        }
+
         if (session.Status == SessionStatus.Finalized)
         {
             throw new ConflictException("Cannot add participant to finalized session");

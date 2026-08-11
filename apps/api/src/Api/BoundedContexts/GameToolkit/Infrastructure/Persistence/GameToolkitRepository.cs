@@ -134,7 +134,19 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
         ArgumentNullException.ThrowIfNull(toolkit);
         CollectDomainEvents(toolkit);
         var entity = MapToPersistence(toolkit);
-        DbContext.Set<GameToolkitEntity>().Update(entity);
+        var entry = DbContext.Set<GameToolkitEntity>().Update(entity);
+
+        // Issue #1458: the domain aggregate carries no VersionSemver/Description/License,
+        // so MapToPersistence cannot reconstruct them — VersionSemver is synthesized as
+        // "0.{Version}.0" and the other two default to null. Update() marks every column
+        // Modified, which would clobber the published marketplace pointer (e.g. reset
+        // "2.3.1" → "0.1.0") and null the description/license on every non-publish update.
+        // Exclude those three columns so their persisted values survive. PublishToolkitVersion
+        // writes VersionSemver on the tracked entity directly, bypassing this method.
+        entry.Property(e => e.VersionSemver).IsModified = false;
+        entry.Property(e => e.Description).IsModified = false;
+        entry.Property(e => e.License).IsModified = false;
+
         return Task.CompletedTask;
     }
 
@@ -297,18 +309,19 @@ internal class GameToolkitRepository : RepositoryBase, IGameToolkitRepository
 #pragma warning disable CS0618 // Issue #1144 / spec D-5: paired write — legacy int + new semver in same MapToPersistence call.
             Version = toolkit.Version,
 #pragma warning restore CS0618
-#pragma warning disable S1135 // TODO: architectural breadcrumb — active footgun: see comment below.
-            // TODO(#1458): VersionSemver already has a real producer.
+#pragma warning disable S1135 // TODO: architectural breadcrumb — mitigated footgun: see comment below.
+            // TODO(#3670): VersionSemver already has a real producer.
             // PublishToolkitVersionCommandHandler.cs:137 writes the user-input
             // semver and DELIBERATELY bypasses GameToolkitRepository.UpdateAsync
             // (see handler comment at lines 131-136) precisely because this
             // MapToPersistence synthesis would otherwise overwrite the user
-            // value with "0.{Version}.0". Risk: every OTHER UpdateAsync call
-            // (name rename, config change, future commands) silently overwrites
-            // the column. Fix: surface VersionSemver on the domain aggregate
-            // (separate epic — original paired-write context shipped in #1144
-            // 2026-05-14) so MapToPersistence can read it directly and the
-            // synthesis goes away.
+            // value with "0.{Version}.0". This synthesis is only meaningful for
+            // AddAsync (brand-new toolkit → seed "0.1.0"): UpdateAsync now excludes
+            // VersionSemver (and Description/License) from the Update() so no
+            // non-publish update path clobbers the published marketplace pointer.
+            // Full fix: surface VersionSemver on the domain aggregate (#3670 —
+            // original paired-write context shipped in #1144 2026-05-14)
+            // so MapToPersistence can read it directly and the synthesis goes away.
             VersionSemver = $"0.{toolkit.Version}.0",
 #pragma warning restore S1135
             CreatedByUserId = toolkit.CreatedByUserId,

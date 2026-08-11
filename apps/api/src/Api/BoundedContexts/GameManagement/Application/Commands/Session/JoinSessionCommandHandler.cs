@@ -80,14 +80,14 @@ internal sealed class JoinSessionCommandHandler : IRequestHandler<JoinSessionCom
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == request.UserId.Value, cancellationToken)
                 .ConfigureAwait(false);
             var displayName = user?.DisplayName ?? user?.Email;
-            participant = SessionParticipant.CreateRegistered(invite.SessionId, request.UserId.Value, ParticipantRole.Player, displayName);
+            participant = SessionParticipant.CreateRegistered(invite.SessionId, request.UserId.Value, SessionParticipantRole.Player, displayName);
         }
         else
         {
             if (string.IsNullOrWhiteSpace(request.GuestName))
                 throw new SharedKernel.Domain.Exceptions.ValidationException("GuestName", "Guest name is required for anonymous join");
 
-            participant = SessionParticipant.CreateGuest(invite.SessionId, request.GuestName, ParticipantRole.Player);
+            participant = SessionParticipant.CreateGuest(invite.SessionId, request.GuestName, SessionParticipantRole.Player);
         }
 
         _dbContext.SessionParticipants.Add(new SessionParticipantEntity

@@ -41,7 +41,7 @@ export function KBRulesQuickGlance({
           <span aria-hidden="true" className="text-[13px] leading-none">
             📄
           </span>
-          <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-entity-document">
+          <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-entity-document-text">
             {title} · loading…
           </span>
         </div>
@@ -66,7 +66,7 @@ export function KBRulesQuickGlance({
           <span aria-hidden="true" className="text-[13px] leading-none">
             📄
           </span>
-          <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-entity-document">
+          <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-entity-document-text">
             {title}
           </span>
         </div>
@@ -124,7 +124,7 @@ export function KBRulesQuickGlance({
         <span aria-hidden="true" className="text-[13px] leading-none">
           📄
         </span>
-        <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-entity-document">
+        <span className="font-mono text-[10px] font-extrabold uppercase tracking-wider text-entity-document-text">
           {title} · {rules.length} bullet
         </span>
       </div>
@@ -150,7 +150,7 @@ export function KBRulesQuickGlance({
                 className={[
                   'shrink-0 rounded-pill px-1.5 py-px',
                   'font-mono text-[9px] font-extrabold tracking-wider',
-                  'bg-[hsl(var(--c-kb)/0.12)] text-entity-document',
+                  'bg-[hsl(var(--c-kb)/0.12)] text-entity-document-text',
                 ].join(' ')}
               >
                 {rule.src}

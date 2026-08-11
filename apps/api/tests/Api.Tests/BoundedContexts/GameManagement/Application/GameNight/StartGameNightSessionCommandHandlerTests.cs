@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
@@ -6,10 +7,12 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
+using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
 
@@ -34,6 +37,9 @@ public class StartGameNightSessionCommandHandlerTests
         _mockRepository = new Mock<IGameNightEventRepository>();
         _mockMediator = new Mock<IMediator>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
+        // #3636: l'handler consegna il lavoro alla UoW invece di pilotare Begin/Commit. Senza
+        // questo setup il mock non eseguirebbe il delegate e l'handler vedrebbe solo null.
+        _mockUnitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
         _mockAutoSaveScheduler = new Mock<IAutoSaveSchedulerService>();
         _handler = new StartGameNightSessionCommandHandler(
             _mockRepository.Object,
@@ -109,7 +115,14 @@ public class StartGameNightSessionCommandHandlerTests
         Assert.Single(gameNight.Sessions);
 
         _mockRepository.Verify(r => r.UpdateAsync(gameNight, It.IsAny<CancellationToken>()), Times.Once);
-        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        // #3636: il SaveChanges è ora dentro ExecuteInTransactionAsync (lo esegue la UoW insieme al
+        // commit), quindi l'handler non lo chiama più direttamente. Si verifica che il lavoro sia
+        // passato dalla transazione, che è il contratto vero.
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -190,6 +203,48 @@ public class StartGameNightSessionCommandHandlerTests
                 c.Participants[0].IsOwner &&
                 c.Participants[0].UserId == gameNight.OrganizerId &&
                 c.Participants[0].DisplayName == "Alice Organizer"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NoParticipants_SeedsOrganizerOwnerPlusAcceptedRsvpPlayers()
+    {
+        // #2634 C4: when the start command carries no explicit roster, seed from the night —
+        // the organizer as owner + every ACCEPTED-RSVP player (Pending/Declined excluded).
+        var organizerId = Guid.NewGuid();
+        var player2 = Guid.NewGuid();
+        var player3 = Guid.NewGuid();
+        var pendingPlayer = Guid.NewGuid();
+        var gameNight = GameNightEvent.Create(
+            organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [Guid.NewGuid()]);
+        gameNight.Publish([player2, player3, pendingPlayer]); // 3 invited → Pending RSVPs
+        gameNight.GetRsvp(player2)!.Accept();
+        gameNight.GetRsvp(player3)!.Accept();
+        // pendingPlayer stays Pending → excluded from the seeded roster
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetUserByIdQuery q, CancellationToken _) =>
+                CreateOrganizerDto(q.UserId, $"User-{q.UserId.ToString()[..4]}"));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", organizerId);
+
+        await _handler.Handle(command, CancellationToken.None);
+
+        _mockMediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c =>
+                c.Participants.Count == 3 &&
+                c.Participants.Count(p => p.IsOwner) == 1 &&
+                c.Participants.Any(p => p.UserId == organizerId && p.IsOwner) &&
+                c.Participants.Any(p => p.UserId == player2 && !p.IsOwner) &&
+                c.Participants.Any(p => p.UserId == player3 && !p.IsOwner) &&
+                c.Participants.All(p => p.UserId != pendingPlayer)),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -295,6 +350,79 @@ public class StartGameNightSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_HappyPath_WrapsWorkInCommittedTransaction()
+    {
+        // Arrange — the cross-BC Session INSERT + the aggregate link must be ONE atomic tx so a
+        // later failure cannot leave the Session orphaned (WS1 DEC-5 hardening).
+        var gameNight = CreatePublishedEvent();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert — #3636: il lavoro passa da UN SOLO ExecuteInTransactionAsync. Verificare
+        // "Begin una volta, Commit una volta" non direbbe più nulla: quella sequenza è interna alla
+        // UoW ed è coperta dai suoi test. Qui conta che l'handler non apra transazioni per conto
+        // suo (lo farebbe fallire sotto la retry strategy) e che il lavoro sia avvenuto.
+        _mockUnitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockUnitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrentXminLoser_RollsBackTransaction_Throws409()
+    {
+        // Arrange — two concurrent starts both pass the in-memory guard; the xmin loser's aggregate
+        // SaveChanges throws DbUpdateConcurrencyException. The whole tx (incl. the cross-BC Session
+        // INSERT) must roll back so no orphan Session survives, then map to the blocked-modal 409.
+        var gameNight = CreatePublishedEvent();
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                Guid.NewGuid(), "ABC123", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+        // #3636: il conflitto xmin emerge dal SaveChanges che ora è DENTRO la UoW, quindi si simula
+        // facendo fallire ExecuteInTransactionAsync. Mockare SaveChangesAsync non avrebbe più
+        // effetto: l'handler non lo chiama più direttamente.
+        _mockUnitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task<StartGameNightSessionResult>>>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException());
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[0], "Catan", gameNight.OrganizerId);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        // Il rollback è responsabilità della UoW (e testato lì): qui conta che l'handler mappi
+        // l'eccezione al 409 e non prosegua con gli effetti post-commit.
+        // The blocked start must NOT open live mode on a rolled-back session.
+        _mockMediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_SessionStartedAfterAdding()
     {
         // Arrange
@@ -326,5 +454,65 @@ public class StartGameNightSessionCommandHandlerTests
         // Assert — session should be in InProgress status after Start
         var gns = gameNight.Sessions[0];
         Assert.Equal(GameNightSessionStatus.InProgress, gns.Status);
+    }
+
+    [Fact]
+    public async Task Handle_SecondSittingOnInProgressNight_Succeeds()
+    {
+        // SI-4 (#2635): a night already InProgress (first game played & completed) resuming for a 2nd
+        // game. Before the AddSession relax this failed with 409 (Published-only guard) — the WS1
+        // latent multi-game bug. EnsureCanStartSession passes (no live session), AddSession now
+        // accepts an InProgress night, and the aggregate stays InProgress.
+        var gameNight = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        gameNight.AddSession(firstSessionId, gameNight.GameIds[0], "Catan");
+        gameNight.StartCurrentSession();
+        gameNight.HandleFirstSessionStarted(firstSessionId); // Published → InProgress (async #15 in prod)
+        gameNight.CompleteCurrentSession(winnerId: null);     // first game done → no live session
+        Assert.Equal(GameNightStatus.InProgress, gameNight.Status);
+
+        var secondSessionId = Guid.NewGuid();
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _mockMediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateOrganizerDto(gameNight.OrganizerId));
+        _mockMediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CreateSessionResult(
+                secondSessionId, "SND222", [], GameNightEventId: gameNight.Id,
+                GameNightWasCreated: false, AgentDefinitionId: null, ToolkitId: null));
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[1], "Dixit", gameNight.OrganizerId);
+
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        Assert.Equal(secondSessionId, result.SessionId);
+        Assert.Equal(2, result.PlayOrder);
+        Assert.Equal(2, gameNight.Sessions.Count);
+        Assert.Equal(GameNightStatus.InProgress, gameNight.Status);
+    }
+
+    [Fact]
+    public async Task Handle_SecondStartWhileFirstStillLive_Throws409MaxLive_NoSessionCreated()
+    {
+        // AC5: max-1-live holds on resume. A 2nd start while the first session is still InProgress is
+        // rejected by EnsureCanStartSession (guard-before-create) — no cross-BC Session is minted.
+        var gameNight = CreatePublishedEvent();
+        var firstSessionId = Guid.NewGuid();
+        gameNight.AddSession(firstSessionId, gameNight.GameIds[0], "Catan");
+        gameNight.StartCurrentSession();                     // first session InProgress
+        gameNight.HandleFirstSessionStarted(firstSessionId); // night InProgress
+
+        _mockRepository.Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+
+        var command = new StartGameNightSessionCommand(
+            gameNight.Id, gameNight.GameIds[1], "Dixit", gameNight.OrganizerId);
+
+        await Assert.ThrowsAsync<MaxLiveSessionsExceededException>(
+            () => _handler.Handle(command, CancellationToken.None));
+
+        _mockMediator.Verify(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

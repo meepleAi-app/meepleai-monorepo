@@ -38,7 +38,7 @@
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <!-- Mirror DEC-3d-1 (ADR-2026-06-09): Magick.NET-Q8-AnyCPU replaces SixLabors.ImageSharp.
          Test fixtures rely on the same image library used by production code. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.14.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.15.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
@@ -52,18 +52,29 @@
     <PackageReference Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.9.0" />
     <PackageReference Include="Testcontainers.Redis" Version="4.9.0" />
+    <!-- Issue #2662 / GHSA-24c8-4792-22hx (HIGH): WireMock.Net tira transitive
+         Scriban.Signed 7.0.6 (array.insert_at unbounded fill loop → OOM/DoS,
+         vulnerabile <=7.1.0). Override alla versione patchata 7.2.0 per far
+         passare il check CI "Dependency Vulnerabilities" (fail su HIGH/CRITICAL).
+         Solo test project — Scriban non è nel path di produzione (Api pulito). -->
+    <PackageReference Include="Scriban.Signed" Version="7.2.1" />
     <PackageReference Include="WireMock.Net" Version="2.5.0" />
     <PackageReference Include="xunit.abstractions" Version="2.0.3" />
     <PackageReference Include="xunit.v3" Version="3.2.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.11" />
+    <!-- Force the SQLitePCLRaw native bundle to 3.x: the transitive 2.1.10 pulled by
+         Microsoft.Data.Sqlite bundles a vulnerable SQLite (GHSA-2m69-gcr7-jv3q, HIGH,
+         vulnerable <= 2.1.11, no 2.x patch). The 3.x bundle ships SQLite 3.50.x.
+         Test-only dependency (in-memory SQLite for EndpointContractTests). -->
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" />
-    <PackageReference Include="coverlet.collector" Version="6.0.4">
+    <PackageReference Include="coverlet.collector" Version="10.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="coverlet.msbuild" Version="6.0.4">
+    <PackageReference Include="coverlet.msbuild" Version="10.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
@@ -93,7 +104,6 @@
     <ProjectReference Include="..\..\src\Api\Api.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Integration\DocumentProcessing\IndexPdfIntegrationTests.cs" />
     <Compile Remove="Integration\DocumentProcessing\PrivatePdfUploadIntegrationTests.cs" />
   </ItemGroup>
   <!--
@@ -111,7 +121,7 @@
     <None Include="Fixtures\**\*.*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="runtimeconfig.template.json" CopyToOutputDirectory="PreserveNewest" />
-    <!-- Copy n8n templates for integration tests -->
-    <None Include="..\..\..\..\infra\n8n\templates\**\*.json" Link="infra\n8n\templates\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- SP1 de-risk gate: real captured Unstructured service responses used as test fixtures -->
+    <None Update="TestData\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

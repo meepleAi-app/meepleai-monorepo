@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicMetrics;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Filters;
 using MediatR;
@@ -21,6 +22,7 @@ namespace Api.Routing;
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve</c> — per-claim approve.</item>
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/reject</c> — per-claim reject with note.</item>
 ///   <item><c>POST /admin/mechanic-analyses/{id}/claims/bulk-approve</c> — bulk approve every Pending claim.</item>
+///   <item><c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> — bulk reject an explicit set of claims with a shared reason (#526).</item>
 /// </list>
 /// The admin's user id is always read from the validated session (never trusted from the body).
 /// </summary>
@@ -55,6 +57,72 @@ internal static class AdminMechanicAnalysesEndpoints
             "IsSuppressed query filter so suppressed rows remain reachable from the index. " +
             "Page defaults to 1, pageSize to 20 (capped at 100).");
 
+        // #532 ME-M2.3: metrics dashboard endpoints (KPIs, cost time-series, recent table, CSV export).
+        group.MapGet("/metrics/summary", async (
+            Guid? gameId, Guid? reviewerId, DateTime? startDate, DateTime? endDate,
+            IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new GetMechanicMetricsSummaryQuery(gameId, reviewerId, startDate, endDate), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsSummary")
+        .WithSummary("Mechanic Extractor metrics KPIs: cost, review time, approval rate, rejection breakdown (#532)");
+
+        group.MapGet("/metrics/cost-by-day", async (
+            int? days, Guid? gameId, Guid? reviewerId, IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new GetMechanicCostByDayQuery(days ?? 30, gameId, reviewerId), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsCostByDay")
+        .WithSummary("Mechanic Extractor daily cost time-series, gap-filled (#532)");
+
+        group.MapGet("/metrics/recent", async (
+            int? limit, int? offset, Guid? gameId, Guid? reviewerId, int? status,
+            IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new GetMechanicRecentAnalysesQuery(limit ?? 25, offset ?? 0, gameId, reviewerId, status), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsRecent")
+        .WithSummary("Mechanic Extractor recent analyses (paged + filtered by game/reviewer/status) (#532)");
+
+        group.MapGet("/metrics/export", async (
+            Guid? gameId, Guid? reviewerId, int? status, DateTime? startDate, DateTime? endDate,
+            IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator
+                .Send(new ExportMechanicAnalysesQuery(gameId, reviewerId, status, startDate, endDate), ct)
+                .ConfigureAwait(false);
+            return Results.File(result.Content, result.ContentType, result.FileName);
+        })
+        .WithName("AdminMechanicMetricsExport")
+        .WithSummary("Mechanic Extractor analyses CSV export with the same filters as the grid (#532)");
+
+        // #2837: DISTINCT game/reviewer options for the dashboard filter dropdowns (no recency cap).
+        group.MapGet("/metrics/filter-options", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetMechanicMetricsFilterOptionsQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminMechanicMetricsFilterOptions")
+        .WithSummary("DISTINCT game + reviewer options for the metrics filter dropdowns (#2837)");
+
+        // #539 follow-up: read-only view of the current prompt (system + per-section) for inspection.
+        group.MapGet("/prompt", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetMechanicPromptQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("AdminGetMechanicPrompt")
+        .WithSummary("Get the current Mechanic Extractor prompt (system + per-section) for inspection (#539)");
+
         // POST /api/v1/admin/mechanic-analyses
         // Enqueues the async AI pipeline (B5=B). Returns 202 Accepted with polling URL.
         group.MapPost("/", async (
@@ -82,7 +150,10 @@ internal static class AdminMechanicAnalysesEndpoints
                 PdfDocumentId: request.PdfDocumentId,
                 RequestedBy: adminId,
                 CostCapUsd: request.CostCapUsd,
-                CostCapOverride: overrideInput);
+                CostCapOverride: overrideInput,
+                ModelOverride: request.Model,
+                ProviderOverride: request.Provider,
+                ForceRegenerate: request.ForceRegenerate);
 
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
 
@@ -160,6 +231,30 @@ internal static class AdminMechanicAnalysesEndpoints
             "Transitions the aggregate from InReview to Published. All claims must be in " +
             "Approved status; otherwise the endpoint returns 409 with a breakdown.");
 
+        // POST /api/v1/admin/mechanic-analyses/{id}/publish (#527)
+        // Publishes a Published-lifecycle analysis into a user-facing mechanic_cards row.
+        group.MapPost("/{id:guid}/publish", async (
+            Guid id,
+            PublishMechanicCardRequest? body,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var publisherId = session!.Principal!.Subject.Id;
+
+            var command = new PublishMechanicCardCommand(id, body?.Title, body?.PreviousCardId, publisherId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Created($"/api/v1/admin/mechanic-cards/{response.CardId}", response);
+        })
+        .WithName("AdminPublishMechanicCard")
+        .WithSummary("Publish an approved mechanic analysis into a user-facing card")
+        .WithDescription(
+            "Snapshots the approved claims into a new mechanic_cards row (version monotonic per game). " +
+            "The analysis must be Published and not already published; an active card for the game " +
+            "returns 409 unless a suppressed previousCardId is supplied (republish → new version).");
+
         // GET /api/v1/admin/mechanic-analyses/{id}/claims (ISSUE-584)
         // Lists every claim of the analysis with citations, ordered by section then display order.
         group.MapGet("/{id:guid}/claims", async (
@@ -186,6 +281,7 @@ internal static class AdminMechanicAnalysesEndpoints
         group.MapPost("/{id:guid}/claims/{claimId:guid}/approve", async (
             Guid id,
             Guid claimId,
+            ApproveClaimRequest? request,
             HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
@@ -193,7 +289,7 @@ internal static class AdminMechanicAnalysesEndpoints
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
             var reviewerId = session!.Principal!.Subject.Id;
 
-            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId);
+            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId, request?.Note);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(response);
@@ -202,7 +298,9 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithSummary("Approve a single claim (ISSUE-584)")
         .WithDescription(
             "Transitions a single claim from Pending or Rejected to Approved. Idempotent on " +
-            "claims already Approved. Parent analysis must be InReview; otherwise 409.");
+            "claims already Approved. An optional review note (#526 AC-6, ≤ 2000 chars) is " +
+            "persisted alongside the approval; an empty body still approves. Parent analysis " +
+            "must be InReview; otherwise 409.");
 
         // POST /api/v1/admin/mechanic-analyses/{id}/claims/{claimId}/reject (ISSUE-584)
         // Per-claim reject with mandatory note (1–500 chars).
@@ -252,6 +350,32 @@ internal static class AdminMechanicAnalysesEndpoints
             "re-approve them. Returns ApprovedCount, SkippedRejectedCount, and the full " +
             "updated claims list. Parent analysis must be InReview.");
 
+        // POST /api/v1/admin/mechanic-analyses/{id}/claims/bulk-reject (#526 ME-M1.4)
+        // Bulk-reject an explicit set of claims (decision D3: client computes the id set).
+        group.MapPost("/{id:guid}/claims/bulk-reject", async (
+            Guid id,
+            BulkRejectClaimsRequest request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var reviewerId = session!.Principal!.Subject.Id;
+
+            var command = new BulkRejectMechanicClaimsCommand(id, request.ClaimIds, request.Reason, reviewerId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(response);
+        })
+        .WithName("AdminBulkRejectMechanicClaims")
+        .WithSummary("Bulk-reject an explicit set of claims with a shared reason (#526)")
+        .WithDescription(
+            "Rejects the claims whose ids are in the request body (the admin UI computes the set " +
+            "client-side). Claims already Rejected are skipped (idempotent); a missing claim id " +
+            "fails the batch with 404. The shared reason (1–500 chars) is applied to every " +
+            "rejected claim. Returns RejectedCount, SkippedAlreadyRejectedCount, and the full " +
+            "updated claims list. Parent analysis must be InReview; otherwise 409.");
+
         // T5 kill-switch: orthogonal suppression allowed from any status, including Published.
         group.MapPost("/{id:guid}/suppress", async (
             Guid id,
@@ -291,7 +415,13 @@ internal sealed record GenerateMechanicAnalysisRequest(
     Guid SharedGameId,
     Guid PdfDocumentId,
     decimal CostCapUsd,
-    CostCapOverrideRequest? CostCapOverride = null);
+    CostCapOverrideRequest? CostCapOverride = null,
+    // #539 eval: optional LLM model/provider override (e.g. "meta-llama/llama-3.3-70b-instruct"
+    // → OpenRouter, "qwen2.5:3b" → Ollama). Null falls back to the DeepSeek defaults.
+    string? Model = null,
+    string? Provider = null,
+    // #539: force a fresh run (skip the idempotency short-circuit) — used by the "Regenerate" action.
+    bool ForceRegenerate = false);
 
 /// <summary>
 /// Optional planning-time cost cap override (B3=A). Mirrors
@@ -321,3 +451,22 @@ internal sealed record SuppressMechanicAnalysisRequest(
 /// <param name="Note">Reviewer rejection note (1–500 chars). Mandatory — surfaces back
 /// in the claims viewer so the reviewer can act on it before re-approving.</param>
 internal sealed record RejectClaimRequest(string Note);
+
+/// <summary>
+/// Request body for <c>POST /admin/mechanic-analyses/{id}/claims/{claimId}/approve</c>
+/// (#526 AC-6). Optional — an empty body still approves the claim. The reviewer id is
+/// sourced from the validated session, never the body.
+/// </summary>
+/// <param name="Note">Optional free-form review note (≤ 2000 chars) persisted with the approval.</param>
+internal sealed record ApproveClaimRequest(string? Note);
+
+/// <summary>
+/// Request body for <c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> (#526).
+/// The reviewer id is sourced from the validated session, never the body.
+/// </summary>
+/// <param name="ClaimIds">Explicit claim ids to reject (computed client-side, decision D3).</param>
+/// <param name="Reason">Shared rejection reason (1–500 chars) applied to every claim.</param>
+internal sealed record BulkRejectClaimsRequest(IReadOnlyList<Guid> ClaimIds, string Reason);
+
+/// <summary>Body for <c>POST /admin/mechanic-analyses/{id}/publish</c> (#527). Both fields optional.</summary>
+internal sealed record PublishMechanicCardRequest(string? Title, Guid? PreviousCardId);

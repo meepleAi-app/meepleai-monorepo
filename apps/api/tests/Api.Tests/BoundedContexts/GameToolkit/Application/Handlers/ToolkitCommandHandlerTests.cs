@@ -129,6 +129,23 @@ public class ToolkitCommandHandlerTests
         await act3.Should().ThrowAsync<NotFoundException>();
     }
 
+    [Fact]
+    public async Task PublishToolkit_AlreadyPublished_ThrowsConflictException()
+    {
+        // Issue #3224: re-publishing an already-published toolkit is a 409, not a 500.
+        var toolkit = CreateTestToolkit();
+        toolkit.Publish(); // now Published
+        _repoMock.Setup(r => r.GetByIdAsync(toolkit.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(toolkit);
+
+        var handler = new PublishToolkitCommandHandler(_repoMock.Object, _uowMock.Object);
+
+        var act = () =>
+            handler.Handle(new PublishToolkitCommand(toolkit.Id), TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*already published*");
+        _uowMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ========================================================================
     // AddDiceToolCommandHandler
     // ========================================================================

@@ -7,6 +7,7 @@
 
 import { z } from 'zod';
 
+import { GameIdString } from './common.schemas';
 // Import and re-export BGG types from games.schemas for convenience
 import {
   BggGameDetailsSchema,
@@ -126,7 +127,7 @@ export type GameErrata = z.infer<typeof GameErrataSchema>;
  */
 export const SharedGameDocumentSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   documentType: SharedGameDocumentTypeNumericSchema,
   version: z.string().regex(/^\d+\.\d+$/),
@@ -195,7 +196,7 @@ export type SharedGameTranslationDto = z.infer<typeof SharedGameTranslationDtoSc
  * Shared game basic DTO (list view)
  */
 export const SharedGameSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   bggId: z.number().int().nullable(), // 0 is valid (no BGG match)
   title: z.string().min(1),
   yearPublished: z.number().int(),
@@ -227,6 +228,10 @@ export const SharedGameSchema = z.object({
   // populated a cover for this game; consumers MUST fall back to a
   // deterministic placeholder via `lib/games/cover-utils.ts`.
   coverUrl: z.string().url().nullable().optional(),
+  // #3611 — punto focale del crop in [0,1]; il FE lo traduce in object-position.
+  // Optional: le risposte servite dalla cache anteriore al deploy non lo contengono.
+  coverFocalX: z.number().min(0).max(1).optional(),
+  coverFocalY: z.number().min(0).max(1).optional(),
   // Issue #2339 — see SharedGameTranslationDtoSchema docstring above.
   translations: z
     .array(SharedGameTranslationDtoSchema)
@@ -234,10 +239,10 @@ export const SharedGameSchema = z.object({
     .default([])
     .transform(v => v ?? []),
   // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
-  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
-  wikidataCoverLicense: z.string().nullable().default(null),
-  wikidataCoverAttribution: z.string().nullable().default(null),
-  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
+  // FE component <MeepleCardAttributionFooter> renders only when coverLicense is non-null.
+  coverLicense: z.string().nullable().default(null),
+  coverAttribution: z.string().nullable().default(null),
+  coverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGame = z.infer<typeof SharedGameSchema>;
@@ -303,7 +308,7 @@ export type PublishedKbPreview = z.infer<typeof PublishedKbPreviewSchema>;
  * Issue #2373 Phase 4: Extended with FAQs, Errata, Designers, Publishers, Categories, Mechanics
  */
 export const SharedGameDetailSchema = z.object({
-  id: z.string().uuid(),
+  id: GameIdString,
   bggId: z.number().int().nullable(), // 0 is valid (no BGG match)
   title: z.string().min(1),
   yearPublished: z.number().int(),
@@ -316,6 +321,20 @@ export const SharedGameDetailSchema = z.object({
   averageRating: z.number().nullable(),
   imageUrl: z.string().catch(''), // coerce null/missing to empty string
   thumbnailUrl: z.string().catch(''), // coerce null/missing to empty string
+  // Issue #2123 / #3449 — R2-resolved cover URL. Preferred over imageUrl/thumbnailUrl,
+  // which are kept as legacy tombstones. Backend SharedGameDetailDto already returns it
+  // (GetSharedGameByIdQueryHandler, resolved via CoverUrlResolver); null when no cover
+  // has been generated yet — consumers MUST fall back to the deterministic placeholder
+  // via `lib/games/cover-utils.ts`.
+  coverUrl: z.string().url().nullable().optional(),
+  // #3611 — punto focale del crop in [0,1]; il FE lo traduce in object-position.
+  // Optional: le risposte servite dalla cache anteriore al deploy non lo contengono.
+  coverFocalX: z.number().min(0).max(1).optional(),
+  coverFocalY: z.number().min(0).max(1).optional(),
+  // Epic #3470 Slice 2d (AC-2) — cover resolved for the Social (OpenGraph) context,
+  // consumed by the OG meta in `[id]/page.tsx`. Falls through to the implicit cover
+  // when no Social override is pinned, so it is never worse than `coverUrl`.
+  socialCoverUrl: z.string().url().nullable().optional(),
   rules: GameRulesSchema.nullable(),
   status: GameStatusSchema, // Now string enum with JsonStringEnumConverter
   createdBy: z.string().uuid(),
@@ -359,10 +378,10 @@ export const SharedGameDetailSchema = z.object({
     .default([])
     .transform(v => v ?? []),
   // Issue #2055 Phase G AC-G6 — Wikidata cover attribution (plain text, HTML-stripped BE-side per DEC-G6-1).
-  // FE component <MeepleCardAttributionFooter> renders only when wikidataCoverLicense is non-null.
-  wikidataCoverLicense: z.string().nullable().default(null),
-  wikidataCoverAttribution: z.string().nullable().default(null),
-  wikidataCoverSourceUrl: z.string().url().nullable().default(null),
+  // FE component <MeepleCardAttributionFooter> renders only when coverLicense is non-null.
+  coverLicense: z.string().nullable().default(null),
+  coverAttribution: z.string().nullable().default(null),
+  coverSourceUrl: z.string().url().nullable().default(null),
 });
 
 export type SharedGameDetail = z.infer<typeof SharedGameDetailSchema>;
@@ -388,7 +407,7 @@ export type PagedSharedGames = z.infer<typeof PagedSharedGamesSchema>;
  */
 export const DeleteRequestSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   gameTitle: z.string(),
   requestedBy: z.string().uuid(),
   reason: z.string(),
@@ -642,7 +661,7 @@ export const BulkImportResultSchema = z.object({
   successCount: z.number().int().nonnegative(),
   failureCount: z.number().int().nonnegative(),
   errors: z.array(z.string()),
-  importedGameIds: z.array(z.string().uuid()),
+  importedGameIds: z.array(GameIdString),
 });
 
 export type BulkImportResult = z.infer<typeof BulkImportResultSchema>;
@@ -671,7 +690,7 @@ export type BatchApprovalResult = z.infer<typeof BatchApprovalResultSchema>;
  */
 export const BggDuplicateCheckResultSchema = z.object({
   isDuplicate: z.boolean(),
-  existingGameId: z.string().uuid().nullable(),
+  existingGameId: GameIdString.nullable(),
   existingGame: SharedGameDetailSchema.nullable(),
   bggData: BggGameDetailsSchema.nullable(),
 });
@@ -776,7 +795,7 @@ export type GeneratedFaqDto = z.infer<typeof GeneratedFaqDtoSchema>;
  */
 export const RulebookAnalysisDtoSchema = z.object({
   id: z.string().uuid(),
-  sharedGameId: z.string().uuid(),
+  sharedGameId: GameIdString,
   pdfDocumentId: z.string().uuid(),
   gameTitle: z.string(),
   summary: z.string(),

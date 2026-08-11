@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -73,7 +74,7 @@ internal sealed class BadgeEarnedNotificationHandler : INotificationHandler<Badg
                     notification.BadgeId,
                     badge.Name,
                     badge.Description),
-                DeepLinkPath = "/users/me/badges",
+                DeepLinkPath = NotificationRoutes.UserBadges,
                 // Issue #1937 / CF-1: propagate event id for dispatcher dedup
                 SourceEventId = notification.EventId
             }, cancellationToken).ConfigureAwait(false);

@@ -78,4 +78,27 @@ public class GameNightEventEntity
     public List<GameNightRsvpEntity> Rsvps { get; set; } = [];
 
     public List<GameNightSessionEntity> Sessions { get; set; } = [];
+
+    // Candidate voting (approval model) — Issue #2700
+    [Column("voting_winner_game_id")]
+    public Guid? VotingWinnerGameId { get; set; }
+
+    public List<GameNightVoteEntity> Votes { get; set; } = [];
+
+    // Summary share-token + archive — Issue #2702
+    [Column("share_token")]
+    [MaxLength(50)]
+    public string? ShareToken { get; set; }
+
+    [Column("is_shared")]
+    public bool IsShared { get; set; }
+
+    [Column("is_archived")]
+    public bool IsArchived { get; set; }
+
+    // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2703, ADR-060).
+    // Server-owned: Postgres assigns xmin = transaction-id-of-last-write per row.
+    // The repository round-trips this value so the detached Update emits a
+    // WHERE id = @id AND xmin = @original concurrency check.
+    public uint Xmin { get; set; }
 }

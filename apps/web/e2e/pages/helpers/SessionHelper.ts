@@ -71,7 +71,6 @@ export const MOCK_LIVE_SESSION = {
   currentTurnIndex: 5,
   currentTurnPlayerId: 'player-1',
   agentMode: 'Active' as const,
-  chatSessionId: 'chat-session-1',
   notes: null,
   players: MOCK_PLAYERS,
   teams: [],

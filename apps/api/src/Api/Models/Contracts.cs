@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -42,10 +43,32 @@ internal record Snippet(string text, string source, int page, int line, float sc
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? chunkPosition { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): normalized [0,1] top-left bounding boxes of the cited chunk, for the
+    /// FE PDF region overlay. Full-gated: populated ONLY when CopyrightTier=Full (drawing
+    /// the verbatim region on a Protected doc would leak, DA-4). Null for the pre-coordinate
+    /// corpus / non-Unstructured branch / Protected tier → key omitted (additive-only, D-4).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CitationRegion>? regions { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): char offset (inclusive) of the chunk within the source PDF text.
+    /// Full-gated; null when unavailable. NOT to be confused with InlineCitationMatch
+    /// offsets, which index into the ANSWER text.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? charStart { get; init; }
+
+    /// <summary>
+    /// SP-C (#3407): char offset (exclusive) of the chunk within the source PDF text.
+    /// Full-gated; null when unavailable.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? charEnd { get; init; }
 }
 
-internal record IngestPdfResponse(string jobId);
-internal record SeedRequest(string gameId);
 /// <summary>
 /// Issue #3352: AI Response Feedback System - includes optional comment for detailed feedback
 /// </summary>
@@ -132,7 +155,15 @@ internal record StreamingComplete(
     double? routingLatencyMs = null,
     string? strategyTier = null,
     Guid? executionId = null,
-    IReadOnlyList<CitationDto>? Citations = null);
+    IReadOnlyList<CitationDto>? Citations = null,
+    // #3388: grounding-contract invariant. Every producer below explicitly passes this
+    // (derived from its own citation count: Grounded iff count>0, else Ungrounded) rather
+    // than relying on the default — the default only exists because C# requires optional
+    // positional params to trail required ones, and this must stay the LAST param per the
+    // plan. Wire value is the enum NAME string ("Grounded"/"Partial"/"Ungrounded"), NOT the
+    // GroundingStatus enum — SSE serializes C# enums numerically, so a string keeps this
+    // path wire-consistent with the REST path's JsonStringEnumConverter output.
+    string GroundingStatus = "Ungrounded");
 
 internal record CitationDto(
     string DocumentId,
@@ -141,17 +172,54 @@ internal record CitationDto(
     string? SnippetPreview,
     string CopyrightTier,
     string? ParaphrasedSnippet = null,
-    bool IsPublic = false);
+    bool IsPublic = false,
+    IReadOnlyList<CitationRegion>? Regions = null,
+    int? CharStart = null,
+    int? CharEnd = null);
+
+/// <summary>
+/// SP-C (#3407): FE-facing, Full-gated region of a citation on the source PDF.
+/// Coordinates are normalized to [0,1] top-left (page-relative), enabling a
+/// scale/DPR-independent %-based overlay (SP-D). Parsed at the handler boundary from
+/// the persisted <c>text_chunks.bounding_boxes_json</c> array; never carried through the
+/// domain/application layers (those hold the raw JSON string only — no layer deps).
+/// </summary>
+internal record CitationRegion(int Page, double X, double Y, double Width, double Height)
+{
+    /// <summary>
+    /// Parses the persisted bounding-box JSON (<c>[{page,x,y,width,height}]</c>, lowercase
+    /// keys) into regions. Returns null for null/blank/empty/malformed input — never throws,
+    /// so a corrupt column can never break a citation response.
+    /// </summary>
+    public static IReadOnlyList<CitationRegion>? Parse(string? boundingBoxesJson)
+    {
+        if (string.IsNullOrWhiteSpace(boundingBoxesJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var regions = JsonSerializer.Deserialize<List<CitationRegion>>(
+                boundingBoxesJson, RegionParseOptions);
+            return regions is { Count: > 0 } ? regions : null;
+        }
+        catch (JsonException)
+        {
+            // Defensive: a corrupt/unexpected column must never break a citation response.
+            return null;
+        }
+    }
+
+    private static readonly JsonSerializerOptions RegionParseOptions = new()
+    {
+        // Persisted keys are lowercase (page/x/y/width/height) — the record members are PascalCase.
+        PropertyNameCaseInsensitive = true,
+    };
+}
 internal record StreamingError(string errorMessage, string? errorCode = null);
-internal record StreamingHeartbeat(string message = "keep-alive");
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
-internal record StreamingModelDowngrade(
-    string OriginalModel,
-    string FallbackModel,
-    string Reason,
-    bool IsLocalFallback,
-    string? UpgradeMessage);
 
 // #447: Copyright leak guard sanitization event
 internal record StreamingCopyrightSanitized(
@@ -202,13 +270,6 @@ internal record DebugRetrievalItem(
     double Score,
     int PageNumber,
     string? SearchMethod = null);
-
-internal record DebugPluginExecutionData(
-    string PluginId,
-    string PluginName,
-    string? Category,
-    string Phase,
-    double DurationMs);
 
 internal record DebugValidationLayerData(
     int LayerNumber,
@@ -314,18 +375,9 @@ internal record FollowUpQuestionsDto(
     [property: JsonPropertyName("questions")] IList<string> Questions
 );
 
-/// <summary>
-/// Analytics event for tracking follow-up question clicks.
-/// </summary>
-internal record FollowUpQuestionClickEvent(
-    [property: JsonPropertyName("chatId")] Guid chatId,
-    [property: JsonPropertyName("originalQuestion")] string originalQuestion,
-    [property: JsonPropertyName("followUpQuestion")] string followUpQuestion,
-    [property: JsonPropertyName("questionIndex")] int questionIndex
-);
-
 // AI-03: RAG Setup Guide models
-internal record SetupGuideRequest(string gameId, Guid? chatId = null);
+// #2504: playerCount (0 = generic setup, >0 = guide adapted to the player count).
+internal record SetupGuideRequest(string gameId, Guid? chatId = null, int playerCount = 0);
 internal record SetupGuideResponse(
     string gameTitle,
     IReadOnlyList<SetupGuideStep> steps,
@@ -342,121 +394,7 @@ internal record SetupGuideStep(
     bool isOptional = false
 );
 
-// ADM-02: n8n Configuration models
-internal record N8NConfigDto(
-    string Id,
-    string Name,
-    string BaseUrl,
-    string? WebhookUrl,
-    bool IsActive,
-    DateTime? LastTestedAt,
-    string? LastTestResult,
-    DateTime CreatedAt,
-    DateTime UpdatedAt
-);
-
-internal record CreateN8NConfigRequest(
-    string Name,
-    string BaseUrl,
-    string ApiKey,
-    string? WebhookUrl
-);
-
-internal record UpdateN8NConfigRequest(
-    string? Name,
-    string? BaseUrl,
-    string? ApiKey,
-    string? WebhookUrl,
-    bool? IsActive
-);
-
-internal record N8NTestResult(
-    bool Success,
-    string Message,
-    int? LatencyMs
-);
-
-// N8N-04: Workflow template models
-public record WorkflowTemplateDto(
-    string Id,
-    string Name,
-    string Version,
-    string Description,
-    string Category,
-    string Author,
-    IList<string> Tags,
-    string Icon,
-    string? Screenshot,
-    string? Documentation,
-    IList<TemplateParameterDto> Parameters
-);
-
-public record TemplateParameterDto(
-    string Name,
-    string Type,
-    string Label,
-    string Description,
-    bool Required,
-    string? Default,
-    IList<string>? Options,
-    bool Sensitive
-);
-
-public record WorkflowTemplateDetailDto(
-    string Id,
-    string Name,
-    string Version,
-    string Description,
-    string Category,
-    string Author,
-    IList<string> Tags,
-    string Icon,
-    string? Screenshot,
-    string? Documentation,
-    IList<TemplateParameterDto> Parameters,
-    object Workflow
-);
-
-internal record ImportTemplateRequest(
-    IDictionary<string, string> Parameters
-);
-
-public record ImportTemplateResponse(
-    string WorkflowId,
-    string Message
-);
-
-internal record ValidateTemplateRequest(
-    string TemplateJson
-);
-
-public record ValidateTemplateResponse(
-    [property: JsonPropertyName("valid")] bool IsValid,
-    [property: JsonPropertyName("errors")] IList<string>? Errors
-);
-
 // UI-01: Chat management models
-internal record ChatDto(
-    Guid Id,
-    string GameId,
-    string GameName,
-    string AgentId,
-    string AgentName,
-    DateTime StartedAt,
-    DateTime? LastMessageAt
-);
-
-internal record ChatWithHistoryDto(
-    Guid Id,
-    string GameId,
-    string GameName,
-    string AgentId,
-    string AgentName,
-    DateTime StartedAt,
-    DateTime? LastMessageAt,
-    IReadOnlyList<ChatMessageDto> Messages
-);
-
 internal record ChatMessageDto(
     Guid Id,
     string Level,
@@ -530,12 +468,6 @@ internal record SuggestedMove(
 );
 
 // CHAT-05: Chat Export models
-internal record ExportChatRequest(
-    string Format,
-    DateTime? DateFrom = null,
-    DateTime? DateTo = null
-);
-
 internal class ExportResult
 {
     public bool Success { get; init; }
@@ -912,31 +844,6 @@ public record BggGameDetailsDto(
     IList<string> Publishers
 );
 
-public record BggSearchRequest(
-    [Required][MinLength(1)] string Query,
-    bool Exact = false
-);
-
-// N8N-05: Workflow Error Logging models
-internal record LogWorkflowErrorRequest(
-    [Required][MaxLength(255)] string WorkflowId,
-    [Required][MaxLength(255)] string ExecutionId,
-    [Required][MaxLength(5000)] string ErrorMessage,
-    [MaxLength(255)] string? NodeName = null,
-    int RetryCount = 0,
-    [MaxLength(10000)] string? StackTrace = null
-);
-
-internal record WorkflowErrorDto(
-    Guid Id,
-    string WorkflowId,
-    string ExecutionId,
-    string ErrorMessage,
-    string? NodeName,
-    int RetryCount,
-    string? StackTrace,
-    DateTime CreatedAt
-);
 
 internal record WorkflowErrorsQueryParams(
     string? WorkflowId = null,
@@ -1025,16 +932,6 @@ internal record CacheMetricsDto(
 );
 
 /// <summary>
-/// Hot key identification for cache optimization
-/// </summary>
-internal record HotKeyDto(
-    string KeyPattern,
-    long AccessCount,
-    long MemoryBytes,
-    string MemoryFormatted
-);
-
-/// <summary>
 /// Vector store (pgvector) metrics
 /// </summary>
 internal record VectorStoreMetricsDto(
@@ -1058,6 +955,20 @@ internal record CollectionStatsDto(
     string DistanceMetric,
     long MemoryBytes,
     string MemoryFormatted
+);
+
+/// <summary>
+/// Self-contained host/process resource metrics read via System.Diagnostics.
+/// Issue #3041: independent from Prometheus/exporters.
+/// </summary>
+internal record SystemResourcesDto(
+    long ProcessWorkingSetBytes,
+    long GcHeapBytes,
+    int ProcessorCount,
+    double ProcessCpuPercent,
+    double ProcessUptimeSeconds,
+    long HostMemoryTotalBytes,
+    DateTime MeasuredAt
 );
 
 // ADMIN-01: Prompt Management DTOs - See PromptManagementDto.cs for full definitions

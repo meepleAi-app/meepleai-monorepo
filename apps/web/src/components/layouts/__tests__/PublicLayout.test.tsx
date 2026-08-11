@@ -13,7 +13,6 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LayoutProvider } from '@/components/layout/LayoutProvider';
 import { PublicLayout, type PublicUser } from '../PublicLayout';
 
 // Mock Next.js router and Link
@@ -93,11 +92,7 @@ const createTestQueryClient = () =>
 
 const renderWithQueryClient = (ui: React.ReactElement) => {
   const testQueryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={testQueryClient}>
-      <LayoutProvider>{ui}</LayoutProvider>
-    </QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={testQueryClient}>{ui}</QueryClientProvider>);
 };
 
 describe('PublicLayout', () => {

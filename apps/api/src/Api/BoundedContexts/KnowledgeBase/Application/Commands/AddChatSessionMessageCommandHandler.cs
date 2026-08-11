@@ -47,6 +47,13 @@ internal sealed class AddChatSessionMessageCommandHandler : IRequestHandler<AddC
             throw new NotFoundException("ChatSession", request.SessionId.ToString());
         }
 
+        // Ownership check (IDOR): a non-owner gets the same 404 as a non-existent
+        // session, so injecting messages into another user's chat is impossible.
+        if (session.UserId != request.UserId)
+        {
+            throw new NotFoundException("ChatSession", request.SessionId.ToString());
+        }
+
         var sequenceNumber = session.MessageCount;
         var message = new SessionChatMessage(
             content: request.Content,

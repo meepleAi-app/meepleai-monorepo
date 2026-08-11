@@ -10,6 +10,7 @@
  * - Feature flag inheritance and override
  */
 
+import { seedMockRoleCookies } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -104,8 +105,11 @@ async function setupFeatureFlagsMocks(
     ? (options.initialFlags as FeatureFlag[])
     : [...defaultFlags];
 
+  // Seed role cookie FIRST so proxy.ts resolves Admin under the E2E bypass (#2784)
+  await seedMockRoleCookies(page, 'Admin');
+
   // Mock admin auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -122,7 +126,7 @@ async function setupFeatureFlagsMocks(
   });
 
   // Mock feature flags list endpoint
-  await page.route(`${API_BASE}/api/v1/admin/feature-flags`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/feature-flags`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -151,7 +155,7 @@ async function setupFeatureFlagsMocks(
       }
 
       // Check for duplicate key
-      if (currentFlags.some((f) => f.key === body.key)) {
+      if (currentFlags.some(f => f.key === body.key)) {
         await route.fulfill({
           status: 409,
           contentType: 'application/json',
@@ -194,7 +198,7 @@ async function setupFeatureFlagsMocks(
   });
 
   // Mock single feature flag endpoint (update/delete)
-  await page.route(`${API_BASE}/api/v1/admin/feature-flags/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/feature-flags/*`, async route => {
     const method = route.request().method();
     const url = route.request().url();
     const flagIdMatch = url.match(/feature-flags\/([^/]+)/);
@@ -209,7 +213,7 @@ async function setupFeatureFlagsMocks(
       return;
     }
 
-    const flagIndex = currentFlags.findIndex((f) => f.id === flagId);
+    const flagIndex = currentFlags.findIndex(f => f.id === flagId);
 
     if (flagIndex === -1) {
       await route.fulfill({
@@ -253,7 +257,7 @@ async function setupFeatureFlagsMocks(
         }),
       });
     } else if (method === 'DELETE') {
-      currentFlags = currentFlags.filter((f) => f.id !== flagId);
+      currentFlags = currentFlags.filter(f => f.id !== flagId);
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -271,7 +275,7 @@ async function setupFeatureFlagsMocks(
   });
 
   // Mock tiers endpoint
-  await page.route(`${API_BASE}/api/v1/admin/tiers`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/tiers`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -286,7 +290,7 @@ async function setupFeatureFlagsMocks(
   });
 
   // Mock common admin endpoints
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -359,9 +363,13 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       await page.waitForLoadState('networkidle');
 
       // Find a toggle for a specific tier
-      const pdfUploadRow = page.locator('[data-flag="pdf_upload"], tr:has-text("PDF Upload")').first();
+      const pdfUploadRow = page
+        .locator('[data-flag="pdf_upload"], tr:has-text("PDF Upload")')
+        .first();
       if (await pdfUploadRow.isVisible()) {
-        const freeToggle = pdfUploadRow.locator('[data-tier="free"], input[type="checkbox"]').first();
+        const freeToggle = pdfUploadRow
+          .locator('[data-tier="free"], input[type="checkbox"]')
+          .first();
         if (await freeToggle.isVisible()) {
           await freeToggle.click();
 
@@ -424,9 +432,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       await page.goto('/admin/feature-flags');
       await page.waitForLoadState('networkidle');
 
-      await expect(
-        page.getByRole('button', { name: /create|add|new.*flag/i })
-      ).toBeVisible();
+      await expect(page.getByRole('button', { name: /create|add|new.*flag/i })).toBeVisible();
     });
 
     test('should open create flag form', async ({ page }) => {
@@ -440,11 +446,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
         await createButton.click();
 
         // Should show form or dialog
-        await expect(
-          page.getByLabel(/name/i).or(
-            page.getByPlaceholder(/name/i)
-          )
-        ).toBeVisible();
+        await expect(page.getByLabel(/name/i).or(page.getByPlaceholder(/name/i))).toBeVisible();
       }
     });
 
@@ -468,7 +470,9 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
             await keyInput.fill('new_feature');
           }
 
-          const descInput = page.getByLabel(/description/i).or(page.getByPlaceholder(/description/i));
+          const descInput = page
+            .getByLabel(/description/i)
+            .or(page.getByPlaceholder(/description/i));
           if (await descInput.isVisible()) {
             await descInput.fill('A new test feature');
           }
@@ -499,9 +503,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
           await submitButton.click();
 
           // Should show validation error
-          await expect(
-            page.getByText(/required|invalid|please.*fill/i)
-          ).toBeVisible();
+          await expect(page.getByText(/required|invalid|please.*fill/i)).toBeVisible();
         }
       }
     });
@@ -529,9 +531,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
             await submitButton.click();
 
             // Should show duplicate error
-            await expect(
-              page.getByText(/already.*exist|duplicate|conflict/i)
-            ).toBeVisible();
+            await expect(page.getByText(/already.*exist|duplicate|conflict/i)).toBeVisible();
           }
         }
       }
@@ -546,9 +546,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       await page.waitForLoadState('networkidle');
 
       // Flags with null tier overrides should show inherited status
-      await expect(
-        page.getByText(/inherit|default|beta/i)
-      ).toBeVisible();
+      await expect(page.getByText(/inherit|default|beta/i)).toBeVisible();
     });
 
     test('should allow setting tier override', async ({ page }) => {
@@ -595,9 +593,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
         await flagRow.click();
 
         // Should show details panel or modal
-        await expect(
-          page.getByText(/pdf_upload|description|created/i)
-        ).toBeVisible();
+        await expect(page.getByText(/pdf_upload|description|created/i)).toBeVisible();
       }
     });
 
@@ -613,9 +609,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
         await flagRow.click();
 
         // Should show creation date
-        await expect(
-          page.getByText(/created|date/i)
-        ).toBeVisible();
+        await expect(page.getByText(/created|date/i)).toBeVisible();
       }
     });
 
@@ -626,7 +620,10 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       await page.waitForLoadState('networkidle');
 
       // Some implementations show usage stats
-      const statsVisible = await page.getByText(/usage|users.*affected|evaluation/i).isVisible().catch(() => false);
+      const statsVisible = await page
+        .getByText(/usage|users.*affected|evaluation/i)
+        .isVisible()
+        .catch(() => false);
       // Just verify page loaded correctly
       await expect(page.locator('body')).toBeVisible();
     });
@@ -643,8 +640,9 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       const deleteButton = page.getByRole('button', { name: /delete|remove/i }).first();
       const menuButton = page.locator('[data-testid="flag-menu"], button:has-text("...")').first();
 
-      const hasDeleteOption = await deleteButton.isVisible().catch(() => false) ||
-                              await menuButton.isVisible().catch(() => false);
+      const hasDeleteOption =
+        (await deleteButton.isVisible().catch(() => false)) ||
+        (await menuButton.isVisible().catch(() => false));
 
       expect(hasDeleteOption || true).toBeTruthy(); // Some implementations may have different UI
     });
@@ -660,9 +658,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
         await deleteButton.click();
 
         // Should show confirmation
-        await expect(
-          page.getByText(/confirm|are.*you.*sure|delete.*flag/i)
-        ).toBeVisible();
+        await expect(page.getByText(/confirm|are.*you.*sure|delete.*flag/i)).toBeVisible();
       }
     });
 
@@ -697,7 +693,9 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       await page.waitForLoadState('networkidle');
 
       // Find checkboxes for selection
-      const selectCheckboxes = page.locator('input[type="checkbox"][data-select], th input[type="checkbox"]');
+      const selectCheckboxes = page.locator(
+        'input[type="checkbox"][data-select], th input[type="checkbox"]'
+      );
       if ((await selectCheckboxes.count()) > 0) {
         await selectCheckboxes.first().check();
         await expect(selectCheckboxes.first()).toBeChecked();
@@ -717,9 +715,9 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
 
         // Should show bulk action buttons
         await expect(
-          page.getByRole('button', { name: /bulk|selected|action/i }).or(
-            page.locator('[data-testid="bulk-actions"]')
-          )
+          page
+            .getByRole('button', { name: /bulk|selected|action/i })
+            .or(page.locator('[data-testid="bulk-actions"]'))
         ).toBeVisible();
       }
     });

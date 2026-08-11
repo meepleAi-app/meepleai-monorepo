@@ -1,16 +1,33 @@
-using System.Net;
-using System.Net.Sockets;
+using Api.Observability;
+using Api.SharedKernel.Infrastructure.Http;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 
 /// <summary>
-/// HTTP client wrapper that validates URLs against SSRF attacks before downloading.
-/// Blocks private/reserved IP ranges, non-HTTPS schemes, and oversized responses.
+/// Hardened egress client for the manual / arbitrary-URL download path (epic #3470 Slice 3
+/// prerequisite, issue #3495 fix 5/N).
+/// <para>
+/// Two layers guard this sink and neither is optional:
+/// </para>
+/// <list type="bullet">
+///   <item>the connect-pin (<see cref="SsrfPinnedConnect"/>, applied via
+///   <c>ConfigureSsrfPin(allowAutoRedirect: false)</c>) owns the IP boundary — every connection
+///   resolves once and dials a validated public address, closing DNS-rebinding and
+///   redirect-to-internal by construction;</item>
+///   <item><see cref="HardenedRedirectFetch"/> owns everything the pin cannot express — per-hop
+///   HTTPS-only + default-port re-validation, bounded redirect follow with loop detection, a
+///   streamed byte ceiling, and a TOTAL wall-clock budget (#3495 Slice D, findings C4/H2).</item>
+/// </list>
+/// <para>
+/// This type is the DI seam that binds the manual sink's <see cref="HttpClient"/> (and its
+/// <c>manual</c> metric label) to that engine; the fetch logic itself is shared, so the Commons
+/// sink is guarded by exactly the same code path.
+/// </para>
 /// </summary>
 internal sealed class SsrfSafeHttpClient
 {
     private readonly HttpClient _httpClient;
-    private const long MaxPdfSizeBytes = 100 * 1024 * 1024; // 100MB
+    private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10MB (cover images)
 
     public SsrfSafeHttpClient(HttpClient httpClient)
     {
@@ -18,98 +35,20 @@ internal sealed class SsrfSafeHttpClient
     }
 
     /// <summary>
-    /// Downloads a PDF from the given URL after validating it is safe (HTTPS, public IP, valid PDF).
+    /// Epic #3470 Slice 3a — downloads an admin-supplied cover image through the hardened fetch path
+    /// under a 10MB streamed ceiling and the default total deadline. Returns the raw image bytes;
+    /// the caller validates/re-encodes them.
     /// </summary>
-    /// <param name="url">The HTTPS URL to download the PDF from.</param>
-    /// <param name="ct">Cancellation token.</param>
-    /// <returns>A seekable MemoryStream containing the PDF content.</returns>
-    /// <exception cref="ArgumentException">If the URL is invalid or not HTTPS.</exception>
-    /// <exception cref="InvalidOperationException">If the URL resolves to a private IP, the file is too large, or content is not a valid PDF.</exception>
-    public async Task<Stream> DownloadPdfAsync(string url, CancellationToken ct)
-    {
-        ValidateUrlScheme(url);
-        await ValidateResolvedIpAsync(url, ct).ConfigureAwait(false);
-
-        var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
-
-        // Validate size from Content-Length header if available
-        if (response.Content.Headers.ContentLength > MaxPdfSizeBytes)
-            throw new InvalidOperationException($"PDF exceeds maximum size of {MaxPdfSizeBytes / (1024 * 1024)}MB");
-
-        var stream = await response.Content.ReadAsStreamAsync(ct).ConfigureAwait(false);
-
-        // Validate PDF magic bytes (%PDF)
-        var buffer = new byte[4];
-        var bytesRead = await stream.ReadAsync(buffer, ct).ConfigureAwait(false);
-        if (bytesRead < 4 || buffer[0] != 0x25 || buffer[1] != 0x50 || buffer[2] != 0x44 || buffer[3] != 0x46)
-            throw new InvalidOperationException("Downloaded content is not a valid PDF file");
-
-        // Return a new stream that includes the magic bytes we already read
-        var memStream = new MemoryStream();
-        await memStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct).ConfigureAwait(false);
-        await stream.CopyToAsync(memStream, ct).ConfigureAwait(false);
-
-        if (memStream.Length > MaxPdfSizeBytes)
-            throw new InvalidOperationException($"PDF exceeds maximum size of {MaxPdfSizeBytes / (1024 * 1024)}MB");
-
-        memStream.Position = 0;
-        return memStream;
-    }
-
-    /// <summary>
-    /// Validates that the URL uses the HTTPS scheme.
-    /// </summary>
-    internal static void ValidateUrlScheme(string url)
-    {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
-            throw new ArgumentException("Invalid URL", nameof(url));
-
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Only HTTPS URLs are allowed", nameof(url));
-    }
-
-    /// <summary>
-    /// Validates that the URL does not resolve to a private or reserved IP address.
-    /// </summary>
-    internal static async Task ValidateResolvedIpAsync(string url, CancellationToken ct)
-    {
-        var uri = new Uri(url);
-        var addresses = await Dns.GetHostAddressesAsync(uri.Host, ct).ConfigureAwait(false);
-
-        foreach (var ip in addresses)
-        {
-            if (IsPrivateOrReserved(ip))
-                throw new InvalidOperationException($"URL resolves to blocked IP range: {ip}");
-        }
-    }
-
-    /// <summary>
-    /// Checks whether an IP address belongs to a private or reserved range (RFC 1918, link-local, loopback, etc.).
-    /// </summary>
-    internal static bool IsPrivateOrReserved(IPAddress ip)
-    {
-        if (IPAddress.IsLoopback(ip)) return true;
-
-        // IPv4-mapped IPv6 addresses (e.g. ::ffff:10.0.0.1) must be checked as IPv4
-        if (ip.IsIPv4MappedToIPv6)
-            return IsPrivateOrReserved(ip.MapToIPv4());
-
-        var bytes = ip.GetAddressBytes();
-
-        return ip.AddressFamily switch
-        {
-            AddressFamily.InterNetwork => bytes[0] switch
-            {
-                10 => true,                                           // 10.0.0.0/8
-                172 => bytes[1] >= 16 && bytes[1] <= 31,             // 172.16.0.0/12
-                192 => bytes[1] == 168,                               // 192.168.0.0/16
-                169 => bytes[1] == 254,                               // 169.254.0.0/16 (link-local/AWS metadata)
-                0 => true,                                            // 0.0.0.0/8
-                _ => false
-            },
-            AddressFamily.InterNetworkV6 => ip.IsIPv6LinkLocal || ip.IsIPv6SiteLocal || ip.Equals(IPAddress.IPv6Loopback),
-            _ => true // Block unknown address families
-        };
-    }
+    /// <exception cref="HardenedFetchException">A guard refused the fetch (scheme, port, redirect
+    /// budget, size ceiling or deadline) — <see cref="HardenedFetchException.Reason"/> says which.</exception>
+    /// <exception cref="HttpRequestException">The final hop answered a non-success status.</exception>
+    public Task<byte[]> DownloadImageAsync(string url, CancellationToken ct) =>
+        HardenedRedirectFetch.FetchAsync(
+            _httpClient,
+            url,
+            MaxImageSizeBytes,
+            MeepleAiMetrics.EgressSinks.Manual,
+            HardenedRedirectFetch.DefaultDeadline,
+            configureRequest: null,
+            ct);
 }

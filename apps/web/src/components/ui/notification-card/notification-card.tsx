@@ -1,20 +1,37 @@
-import type { CSSProperties, JSX, MouseEvent, ReactNode } from 'react';
+import type { JSX, MouseEvent, ReactNode } from 'react';
 
 import clsx from 'clsx';
 
 import type { EntityType } from '@/components/ui/entity-tokens';
 
-// Map EntityType -> CSS variable key (mirrors EntityCard/EntityPip: kb -> document)
-const ENTITY_CSS_VAR_KEY: Record<EntityType, string> = {
-  game: 'game',
-  player: 'player',
-  session: 'session',
-  agent: 'agent',
-  kb: 'document',
-  chat: 'chat',
-  event: 'event',
-  toolkit: 'toolkit',
-  tool: 'tool',
+/**
+ * Per-entity color maps (issue #2955). Literal class strings so Tailwind's content
+ * scanner emits the utilities (a dynamic `border-l-entity-${entity}` would NOT be
+ * generated). `kb` uses the registered `-kb` (teal) token — NEVER `-document` (slate),
+ * which lives only in `@layer tokens` and is not exposed via `@theme inline`.
+ */
+const ENTITY_BORDER_L: Record<EntityType, string> = {
+  game: 'border-l-entity-game',
+  player: 'border-l-entity-player',
+  session: 'border-l-entity-session',
+  agent: 'border-l-entity-agent',
+  kb: 'border-l-entity-kb',
+  chat: 'border-l-entity-chat',
+  event: 'border-l-entity-event',
+  toolkit: 'border-l-entity-toolkit',
+  tool: 'border-l-entity-tool',
+};
+
+const ENTITY_BG: Record<EntityType, string> = {
+  game: 'bg-entity-game',
+  player: 'bg-entity-player',
+  session: 'bg-entity-session',
+  agent: 'bg-entity-agent',
+  kb: 'bg-entity-kb',
+  chat: 'bg-entity-chat',
+  event: 'bg-entity-event',
+  toolkit: 'bg-entity-toolkit',
+  tool: 'bg-entity-tool',
 };
 
 export interface NotificationCardProps {
@@ -61,17 +78,13 @@ export function NotificationCard({
   dismissAriaLabel = 'Rimuovi notifica',
   className,
 }: NotificationCardProps): JSX.Element {
-  const cssKey = ENTITY_CSS_VAR_KEY[entity];
-  const entityColor = `hsl(var(--e-${cssKey}))`;
-
   const containerClasses = clsx(
     'group relative flex gap-3 rounded-xl border-l-4 bg-card p-4 text-foreground transition-colors',
+    ENTITY_BORDER_L[entity],
     unread && 'bg-muted/20',
     onClick && 'w-full cursor-pointer text-left hover:bg-muted/40',
     className
   );
-
-  const style: CSSProperties = { borderLeftColor: entityColor };
 
   const titleClasses = clsx(
     'text-sm leading-tight',
@@ -92,8 +105,7 @@ export function NotificationCard({
             <span
               data-testid="unread-dot"
               aria-hidden="true"
-              className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
-              style={{ backgroundColor: entityColor }}
+              className={clsx('inline-block h-2 w-2 flex-shrink-0 rounded-full', ENTITY_BG[entity])}
             />
           )}
           <span className={titleClasses}>{title}</span>
@@ -151,27 +163,20 @@ export function NotificationCard({
           onClick={onClick}
           onKeyDown={handleKeyDown}
           className={containerClasses}
-          style={style}
         >
           {content}
         </div>
       );
     }
     return (
-      <button
-        type="button"
-        data-entity={entity}
-        onClick={onClick}
-        className={containerClasses}
-        style={style}
-      >
+      <button type="button" data-entity={entity} onClick={onClick} className={containerClasses}>
         {content}
       </button>
     );
   }
 
   return (
-    <article data-entity={entity} className={containerClasses} style={style}>
+    <article data-entity={entity} className={containerClasses}>
       {content}
     </article>
   );

@@ -78,12 +78,7 @@ vi.mock('@/hooks/queries/useHybridHubItems', () => ({
   PER_SOURCE_CAP: 20,
 }));
 
-// ─── useRemoveGameFromLibrary mocks ──────────────────────────────────────
-
-type MockMutationReturn = {
-  mutateAsync: (gameId: string) => Promise<void>;
-  isPending: boolean;
-};
+// ─── useLibrary mock ──────────────────────────────────────
 
 type MockLibraryReturn = {
   data: { items: UserLibraryEntry[] } | undefined;
@@ -92,7 +87,6 @@ type MockLibraryReturn = {
   error: Error | null;
 };
 
-const useRemoveGameFromLibraryMock = vi.fn<[], MockMutationReturn>();
 const libraryMock = vi.fn<[], MockLibraryReturn>(() => ({
   data: undefined,
   isLoading: false,
@@ -102,9 +96,8 @@ const libraryMock = vi.fn<[], MockLibraryReturn>(() => ({
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   // useHybridHubItems is mocked wholesale, so its internal useLibrary never runs;
-  // the orchestrator only pulls these two from this module directly.
+  // the orchestrator only pulls useLibrary from this module directly.
   useLibrary: () => libraryMock(),
-  useRemoveGameFromLibrary: () => useRemoveGameFromLibraryMock(),
 }));
 
 // ─── useMiniNavConfig mock (verify invocation) ────────────────────────────
@@ -113,23 +106,6 @@ const useMiniNavConfigMock = vi.fn();
 
 vi.mock('@/hooks/useMiniNavConfig', () => ({
   useMiniNavConfig: (cfg: unknown) => useMiniNavConfigMock(cfg),
-}));
-
-// ─── useAdminRole mock (F2 #1975: BGG admin-only gate) ────────────────────
-
-type MockAdminRoleReturn = {
-  user: null;
-  isSuperAdmin: boolean;
-  isAdminOrAbove: boolean;
-  isEditorOrAbove: boolean;
-  hasRole: (role: string) => boolean;
-  isLoading: boolean;
-};
-
-const useAdminRoleMock = vi.fn<[], MockAdminRoleReturn>();
-
-vi.mock('@/hooks/useAdminRole', () => ({
-  useAdminRole: () => useAdminRoleMock(),
 }));
 
 // ─── useActivityFeed mock (Phase 3b #1593) ────────────────────────────────
@@ -170,7 +146,7 @@ const MESSAGES: Record<string, string> = {
   'pages.library.hero.stats.docs': 'Documenti',
   'pages.library.hero.stats.chats': 'Chat',
   'pages.library.hubTabs.all': 'Tutti',
-  'pages.library.hubTabs.games': 'Giochi',
+  'pages.library.hubTabs.games': 'I miei giochi',
   'pages.library.hubTabs.agents': 'Agenti',
   'pages.library.hubTabs.kb': 'KB',
   'pages.library.hubTabs.sessions': 'Sessioni',
@@ -198,25 +174,6 @@ const MESSAGES: Record<string, string> = {
   'pages.library.view.grid': 'Griglia',
   'pages.library.view.list': 'Lista',
   'pages.library.view.compact': 'Compatta',
-  'pages.library.selectionMode.enter': 'Seleziona',
-  'pages.library.selectionMode.enterAriaLabel': 'Entra in modalità selezione',
-  'pages.library.selectionMode.exit': 'Annulla',
-  'pages.library.selectionMode.exitAriaLabel': 'Esci dalla modalità selezione',
-  'pages.library.selectionMode.selectedCount':
-    '{count, plural, =0 {Nessuno selezionato} =1 {1 selezionato} other {# selezionati}}',
-  'pages.library.bulk.counter': '{count, plural, =1 {selezionato} other {selezionati}}',
-  'pages.library.bulk.counterCompact': 'sel.',
-  'pages.library.bulk.closeAriaLabel': 'Annulla selezione',
-  'pages.library.bulk.actions.archive': 'Archivia',
-  'pages.library.bulk.actions.tag': 'Tag',
-  'pages.library.bulk.actions.export': 'Esporta',
-  'pages.library.bulk.actions.delete': 'Elimina',
-  'pages.library.bulk.confirm.deleteTitle':
-    '{count, plural, =1 {Confermi rimozione di 1 gioco?} other {Confermi rimozione di # giochi?}}',
-  'pages.library.bulk.confirm.deleteMessage':
-    'I giochi selezionati saranno rimossi dalla libreria. La PDF KB resterà disponibile.',
-  'pages.library.bulk.confirm.confirmCta': 'Conferma',
-  'pages.library.bulk.confirm.cancelCta': 'Annulla',
   'pages.library.emptyState.empty.title': 'La tua libreria è vuota',
   'pages.library.emptyState.empty.subtitle':
     'Inizia aggiungendo il tuo primo gioco. Importa la collezione da BGG o cerca per titolo.',
@@ -469,25 +426,12 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     hubMock.mockReturnValue(makeHub());
     libraryMock.mockReset();
     libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
-    useRemoveGameFromLibraryMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false,
-    });
     useActivityFeedMock.mockReturnValue({
       data: { items: [], count: 0 },
       isLoading: false,
       isSuccess: true,
       isError: false,
       error: null,
-    });
-    // F2 #1975 default: regular user (BGG CTAs hidden).
-    useAdminRoleMock.mockReturnValue({
-      user: null,
-      isSuperAdmin: false,
-      isAdminOrAbove: false,
-      isEditorOrAbove: false,
-      hasRole: () => false,
-      isLoading: false,
     });
   });
 
@@ -593,25 +537,17 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(
       within(empty).getByRole('button', { name: /Aggiungi il tuo primo gioco/i })
     ).toBeInTheDocument();
-    // F2 #1975: BGG secondary CTA is admin-only; default user → hidden.
+    // BGG import CTA removed from /library (BGG user-side ban #2123) — never rendered.
     expect(within(empty).queryByRole('button', { name: /Importa.*BGG/i })).toBeNull();
   });
 
-  it('renders BGG secondary CTA in empty state only for admin users (F2 #1975)', () => {
-    useAdminRoleMock.mockReturnValue({
-      user: null,
-      isSuperAdmin: false,
-      isAdminOrAbove: true,
-      isEditorOrAbove: true,
-      hasRole: () => true,
-      isLoading: false,
-    });
+  it('does not render the BGG import CTA in the empty state (removed from /library, BGG user-side ban #2123)', () => {
     const { container } = renderHub(
       makeHub({ sources: emptySources, totalCounts: { ...zeroCounts } })
     );
     const empty = container.querySelector('[data-slot="library-empty-state"]') as HTMLElement;
     expect(empty).toHaveAttribute('data-kind', 'empty');
-    expect(within(empty).getByRole('button', { name: /Importa.*BGG/i })).toBeInTheDocument();
+    expect(within(empty).queryByRole('button', { name: /Importa.*BGG/i })).toBeNull();
   });
 
   // ─── FSM: filtered-empty ───────────────────────────────────────────────
@@ -698,75 +634,6 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     fireEvent.click(firstCard);
     // default sort is 'recent' (updatedAt desc) → chat c1 (2026-03) is first.
     expect(routerPush).toHaveBeenCalledWith('/chats/c1');
-  });
-
-  // ─── Click dispatcher: select → toggles Set membership (games tab) ─────
-  // #1566: The games tab now renders GamesResultsGrid (no hybrid grid cards).
-  // #1566: the enter-select-mode button was removed (not moved). There is no
-  // rendered path that shows [data-slot="library-enter-select-mode"]. Confirm
-  // it is absent on the 'all' tab.
-  it('select-mode enter button is absent on the all tab', () => {
-    const { container } = renderHub(makeHub());
-    const enterBtn = container.querySelector(
-      '[data-slot="library-enter-select-mode"]'
-    ) as HTMLButtonElement;
-    expect(enterBtn).toBeNull();
-  });
-
-  // ─── Select mode is game-scoped ──────────────────────────────────────────
-
-  // #1566: The library-enter-select-mode button was deleted. It is absent from
-  // the games branch (GamesFiltersInline replaces the toolbar) and also absent
-  // from the else-branch toolbar (the button was not re-added there). Confirm all tabs.
-  it('select-mode enter button is absent on all tabs (button deleted by #1566)', () => {
-    const { container } = renderHub(makeHub());
-    // default tab is 'all' → no enter-select-mode button
-    expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
-    // switch to games → games branch renders GamesFiltersInline, still no button
-    fireEvent.click(container.querySelector('[data-tab-key="games"]') as HTMLButtonElement);
-    expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
-    // switch to sessions tab → else-branch toolbar, button was not re-added → still absent
-    fireEvent.click(container.querySelector('[data-tab-key="sessions"]') as HTMLButtonElement);
-    expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
-  });
-
-  // #1566: The BulkSelectionBar is still rendered outside the tab branch when
-  // selectionMode === 'select'. Since the enter-button is now dead code, we can
-  // only programmatically verify the bar would still unmount on tab switch via
-  // the useEffect. This test verifies the useEffect clears selection mode when
-  // switching tabs even without entering from a button press.
-  it('select mode is forced to browse when switching away from games tab', async () => {
-    const user = userEvent.setup();
-    const { container } = renderHub(makeHub());
-    // Switch to sessions tab first and back — useEffect on tab change fires.
-    await user.click(screen.getByRole('tab', { name: /sessioni/i }));
-    // BulkSelectionBar never mounted (not in select mode) — should be absent.
-    await waitFor(() => {
-      expect(
-        container.querySelector('[data-slot="library-bulk-selection-bar"]')
-      ).not.toBeInTheDocument();
-    });
-    // The useEffect guard is still present and functional; the FSM for
-    // selectionMode reset is tested via the bulk-delete test which enters select
-    // mode programmatically via handleEnterSelectMode callback.
-  });
-
-  // ─── Bulk delete fan-out ────────────────────────────────────────────────
-  // #1566: The games tab now renders the GamesResultsGrid branch. The BulkSelectionBar
-  // component and handleBulkDelete callback remain in place for future re-wiring;
-  // this test verifies BulkSelectionBar is absent on the games tab because the
-  // enter-select-mode button was deleted (not moved) by #1566.
-  it('bulk-select bar is absent on the games tab (enter-button path removed by #1566)', async () => {
-    useRemoveGameFromLibraryMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false,
-    });
-
-    const { container } = renderHub(makeHub());
-    // Switch to games tab → games branch renders, no toolbar, no enter-select button.
-    fireEvent.click(container.querySelector('[data-tab-key="games"]') as HTMLButtonElement);
-    expect(container.querySelector('[data-slot="library-enter-select-mode"]')).toBeNull();
-    expect(container.querySelector('[data-slot="library-bulk-selection-bar"]')).toBeNull();
   });
 
   // ─── Hero CTA → router.push add-game query ─────────────────────────────
@@ -877,25 +744,12 @@ describe('LibraryHub — games tab (#1566)', () => {
     hubMock.mockReturnValue(makeHub());
     libraryMock.mockReset();
     libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
-    useRemoveGameFromLibraryMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false,
-    });
     useActivityFeedMock.mockReturnValue({
       data: { items: [], count: 0 },
       isLoading: false,
       isSuccess: true,
       isError: false,
       error: null,
-    });
-    // F2 #1975 default: regular user (BGG CTAs hidden).
-    useAdminRoleMock.mockReturnValue({
-      user: null,
-      isSuperAdmin: false,
-      isAdminOrAbove: false,
-      isEditorOrAbove: false,
-      hasRole: () => false,
-      isLoading: false,
     });
   });
 
@@ -999,25 +853,12 @@ describe('LibraryHub — Phase 3b drawer + rail integration (#1593)', () => {
     hubMock.mockReturnValue(makeHub());
     libraryMock.mockReset();
     libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
-    useRemoveGameFromLibraryMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false,
-    });
     useActivityFeedMock.mockReturnValue({
       data: { items: [], count: 0 },
       isLoading: false,
       isSuccess: true,
       isError: false,
       error: null,
-    });
-    // F2 #1975 default: regular user (BGG CTAs hidden).
-    useAdminRoleMock.mockReturnValue({
-      user: null,
-      isSuperAdmin: false,
-      isAdminOrAbove: false,
-      isEditorOrAbove: false,
-      hasRole: () => false,
-      isLoading: false,
     });
     // Force Radix Dialog (desktop) mode for drawer tests.
     installMatchMedia(true);
@@ -1138,25 +979,12 @@ describe('LibraryHub — a11y axe (#1842)', () => {
     hubMock.mockReturnValue(makeHub());
     libraryMock.mockReset();
     libraryMock.mockReturnValue({ data: undefined, isLoading: false, isError: false, error: null });
-    useRemoveGameFromLibraryMock.mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false,
-    });
     useActivityFeedMock.mockReturnValue({
       data: { items: [], count: 0 },
       isLoading: false,
       isSuccess: true,
       isError: false,
       error: null,
-    });
-    // F2 #1975 default: regular user (BGG CTAs hidden).
-    useAdminRoleMock.mockReturnValue({
-      user: null,
-      isSuperAdmin: false,
-      isAdminOrAbove: false,
-      isEditorOrAbove: false,
-      hasRole: () => false,
-      isLoading: false,
     });
     // LibraryHub renders a Drawer (AdvancedFiltersDrawer) which calls
     // window.matchMedia synchronously via useSyncExternalStore. Without this

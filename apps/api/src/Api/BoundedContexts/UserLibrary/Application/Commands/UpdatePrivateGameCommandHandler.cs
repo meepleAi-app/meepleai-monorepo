@@ -47,7 +47,9 @@ internal sealed class UpdatePrivateGameCommandHandler : ICommandHandler<UpdatePr
             throw new ForbiddenException("You can only update your own private games");
         }
 
-        // Update game information
+        // Update game information.
+        // ImageUrl is deliberately not passed: the cover is materialized by the
+        // cover-from-PDF flow (#2943), never from user input (BGG freeze #2123 / ADR-059).
         privateGame.UpdateInfo(
             title: command.Title,
             minPlayers: command.MinPlayers,
@@ -56,8 +58,7 @@ internal sealed class UpdatePrivateGameCommandHandler : ICommandHandler<UpdatePr
             description: command.Description,
             playingTimeMinutes: command.PlayingTimeMinutes,
             minAge: command.MinAge,
-            complexityRating: command.ComplexityRating,
-            imageUrl: command.ImageUrl);
+            complexityRating: command.ComplexityRating);
 
         await _repository.UpdateAsync(privateGame, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

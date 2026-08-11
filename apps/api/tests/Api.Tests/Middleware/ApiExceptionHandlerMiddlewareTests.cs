@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.Middleware;
 using Api.Middleware.Exceptions;
 using Api.Observability;
@@ -35,6 +36,52 @@ public class ApiExceptionHandlerMiddlewareTests
         _httpContext = new DefaultHttpContext();
         _httpContext.Request.Path = "/api/v1/test";
         _httpContext.Request.Method = "GET";
+    }
+
+    private void VerifyLogLevel(LogLevel level, Times times)
+    {
+        _loggerMock.Verify(
+            x => x.Log(
+                level,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            times);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NotFoundException_LogsWarningNotError()
+    {
+        // #2953 (#6): an expected 4xx (NotFound) must log Warning, not Error, so it doesn't
+        // pollute error dashboards or mask real 500s.
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw new NotFoundException("Game", "abc-123"),
+            _loggerMock.Object,
+            _environmentMock.Object);
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(404);
+        VerifyLogLevel(LogLevel.Warning, Times.AtLeastOnce());
+        VerifyLogLevel(LogLevel.Error, Times.Never());
+    }
+
+    [Fact]
+    public async Task InvokeAsync_UnhandledException_LogsError()
+    {
+        // #2953 (#6): a genuine 5xx (unmapped exception → 500) still logs Error.
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw new InvalidOperationException("boom"),
+            _loggerMock.Object,
+            _environmentMock.Object);
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(500);
+        VerifyLogLevel(LogLevel.Error, Times.AtLeastOnce());
     }
 
     [Fact]
@@ -763,6 +810,36 @@ public class ApiExceptionHandlerMiddlewareTests
         errorResponse.RootElement.GetProperty("correlationId").ValueKind
             .Should().NotBe(System.Text.Json.JsonValueKind.Null,
                 "correlationId must be present so the client can report the incident");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_CoverMaterializationException_Returns503WithCoverRenderUnavailable()
+    {
+        // Game Cover-da-PDF (Task 6, review fix): SmolDocling render failure is a
+        // non-blocking failure, not a server bug — the middleware maps it to 503 with
+        // error code "cover_render_unavailable" so the FE (Task 8) can show a
+        // non-blocking retry message instead of a generic 500.
+        var exception = new CoverMaterializationException(
+            "Rendering pagina PDF non disponibile.", new HttpRequestException("503"));
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw exception,
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(503,
+            "SmolDocling being down/404 is a transient rendering failure, not a server bug");
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("cover_render_unavailable",
+            "the FE uses this distinct error code to render a non-blocking retry message");
     }
 
     private static JsonDocument ParseErrorResponse(string responseBody)

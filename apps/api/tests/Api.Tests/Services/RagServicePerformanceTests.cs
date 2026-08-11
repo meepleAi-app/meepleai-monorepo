@@ -245,7 +245,6 @@ public sealed class RagServicePerformanceTests : IDisposable
         var mockCache = CreateMockCacheService();
         var mockPromptTemplateService = CreateMockPromptTemplateService();
         var mockLlmService = CreateMockLlmServiceWithLatency();
-        var mockQueryExpansion = CreateMockQueryExpansionService();
         var mockReranker = CreateMockRerankerService();
         var mockCitationExtractor = new Mock<ICitationExtractorService>();
         var mockLogger = new Mock<ILogger<RagService>>();
@@ -412,20 +411,6 @@ public sealed class RagServicePerformanceTests : IDisposable
                     Metadata = new Dictionary<string, string>()
                 };
             });
-
-        return mock.Object;
-    }
-
-    private IQueryExpansionService CreateMockQueryExpansionService()
-    {
-        var mock = new Mock<IQueryExpansionService>();
-
-        mock.Setup(s => s.GenerateQueryVariationsAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string query, string lang, CancellationToken ct) =>
-                new List<string> { query, $"{query} rules", $"How to {query}" });
 
         return mock.Object;
     }

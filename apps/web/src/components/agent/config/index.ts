@@ -18,6 +18,8 @@ export { TokenQuotaDisplay } from './TokenQuotaDisplay';
 export { SlotCards } from './SlotCards';
 export { ModelTierSelector } from './ModelTierSelector';
 export { CostPreview } from './CostPreview';
+export { AgentConfigFields } from './AgentConfigFields';
 
 export type { TypologySelectorProps } from './TypologySelector';
 export type { StrategySelectorProps } from './StrategySelector';
+export type { AgentConfigFieldsValue, AgentConfigFieldsProps } from './AgentConfigFields';

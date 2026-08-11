@@ -69,6 +69,9 @@ services:
       RERANKER_URL: http://reranker-service:8003
       UNSTRUCTURED_API_URL: http://unstructured-service:8001
       SMOLDOCLING_API_URL: http://smoldocling-service:8002
+      # #3339: registers the orchestration health check (orchestration-service runs
+      # under `--profile ai`). Without ai it reports Degraded, never 503.
+      ORCHESTRATION_SERVICE_URL: http://orchestration-service:8004
       # Issue #1099: passthrough for CI smoke tests to bypass AuthLogin
       # rate limit (10 req/min/IP) which all smoke tests share a single IP.
       # Empty in local dev → code treats it as disabled flag absent → rate
@@ -76,6 +79,24 @@ services:
       DISABLE_RATE_LIMITING: ${DISABLE_RATE_LIMITING:-}
     volumes:
       - ./secrets:/app/infra/secrets:ro
+    # Override the base liveness healthcheck with load-tolerant timings (#2516).
+    # /health/live is a pure liveness probe (Predicate => false, no deps), but on
+    # a 2-core CI runner the synchronous full-bake startup seed (157 games +
+    # ~136 PDF downloads/enqueue + embedding/smoldocling) saturates the CPU and a
+    # 10s curl can't get a response slice in time → the probe times out and the
+    # container can't report healthy before `wait-for-healthy api` gives up. The
+    # key lever is the 30s probe timeout (so a CPU-starved-but-alive API still
+    # answers); the 15s interval just polls more often for a faster healthy flip.
+    # start_period/retries are kept timing-equivalent to the base (60s + 6×15s =
+    # 150s = base 60s + 3×30s) so `make dev` failure detection is unchanged.
+    # wait-for-healthy ignores transient "unhealthy" and waits for "healthy", so
+    # these only govern when Docker labels a genuinely-dead API.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/live || exit 1"]
+      interval: 15s
+      timeout: 30s
+      retries: 6
+      start_period: 60s
 
   web:
     env_file: [./env/web.env.dev]
@@ -156,10 +177,6 @@ services:
   # ===========================================================================
   # Automation (profile: automation)
   # ===========================================================================
-
-  n8n:
-    env_file: [./secrets/database.secret, ./secrets/n8n.secret, ./env/n8n.env.dev]
-    ports: ["127.0.0.1:5678:5678"]
 
   mailpit:
     ports: ["127.0.0.1:1025:1025", "127.0.0.1:8025:8025"]

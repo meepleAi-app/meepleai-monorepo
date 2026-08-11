@@ -34,6 +34,27 @@ internal class GameNightEventEntityConfiguration : IEntityTypeConfiguration<Game
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
         builder.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 
+        // Candidate voting (approval model) — Issue #2700
+        builder.Property(e => e.VotingWinnerGameId).HasColumnName("voting_winner_game_id");
+
+        // Summary share-token + archive — Issue #2702
+        builder.Property(e => e.ShareToken).HasColumnName("share_token").HasMaxLength(50);
+        builder.Property(e => e.IsShared).HasColumnName("is_shared");
+        builder.Property(e => e.IsArchived).HasColumnName("is_archived");
+        builder.HasIndex(e => e.ShareToken)
+            .HasDatabaseName("IX_game_night_events_share_token")
+            .IsUnique()
+            .HasFilter("share_token IS NOT NULL");
+
+        // Optimistic concurrency via PostgreSQL's xmin system column (Issue #2703, ADR-060).
+        // Server-owned, collision-safe (xmin = unique transaction id per row UPDATE).
+        // Mirrors game_night_playlists (#2306) — no bytea row_version, no trigger.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
+
         builder.HasIndex(e => new { e.OrganizerId, e.ScheduledAt })
             .HasDatabaseName("IX_game_night_events_organizer_scheduled");
 
@@ -48,6 +69,11 @@ internal class GameNightEventEntityConfiguration : IEntityTypeConfiguration<Game
         builder.HasMany(e => e.Sessions)
             .WithOne(s => s.GameNightEvent)
             .HasForeignKey(s => s.GameNightEventId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(e => e.Votes)
+            .WithOne(v => v.Event)
+            .HasForeignKey(v => v.EventId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

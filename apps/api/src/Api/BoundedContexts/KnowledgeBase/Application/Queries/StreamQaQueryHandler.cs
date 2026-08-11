@@ -1,11 +1,18 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Helpers;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -29,7 +36,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagStreamingEvent>
 {
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly ICrossEncoderReranker _reranker;
     private readonly QualityTrackingDomainService _qualityTrackingService;
+
+    // Issue #2708: retrieve a wider candidate pool, then let the cross-encoder narrow it to the
+    // final top-K by semantic relevance (improves precision without raising MinScore).
+    private const int RerankCandidatePoolSize = 20;
+    private const int FinalTopK = 5;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
@@ -38,11 +51,17 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
     private readonly IAiResponseCacheService _cache;
     private readonly IPromptTemplateService _promptTemplateService;
     private readonly InlineCitationMatcherService _citationMatcher;
+    private readonly IIntentClassifierService _intentClassifier;
+    private readonly IRagAccessService _ragAccessService;
+    private readonly ICopyrightTierResolver _copyrightTierResolver;
+    private readonly IMechanicCardProvider _mechanicCardProvider;
+    private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<StreamQaQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
 
     public StreamQaQueryHandler(
         SearchQueryHandler searchQueryHandler,
+        ICrossEncoderReranker reranker,
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
@@ -52,10 +71,16 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         IAiResponseCacheService cache,
         IPromptTemplateService promptTemplateService,
         InlineCitationMatcherService citationMatcher,
+        IIntentClassifierService intentClassifier,
+        IRagAccessService ragAccessService,
+        ICopyrightTierResolver copyrightTierResolver,
+        IMechanicCardProvider mechanicCardProvider,
+        IFeatureFlagService featureFlags,
         ILogger<StreamQaQueryHandler> logger,
         TimeProvider? timeProvider = null)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
+        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
@@ -65,6 +90,11 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
+        _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
+        _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
+        _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -73,6 +103,20 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         StreamQaQuery query,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        // Bug B5: streaming QA must enforce per-game RAG access before any retrieval/LLM work
+        // (mirror AskQuestionQueryHandler). Without this, any authenticated user could stream-QA
+        // a non-public game's KB. Enforced only when the endpoint threads the authenticated
+        // identity (UserId present) and the game id is a valid Guid.
+        if (query.UserId.HasValue && Guid.TryParse(query.GameId, out var accessGameId))
+        {
+            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            var canAccess = await _ragAccessService.CanAccessRagAsync(
+                query.UserId.Value, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
+            if (!canAccess)
+                throw new ForbiddenException("Accesso RAG non autorizzato");
+        }
+
         // Issue #1445: Use centralized query validation
         // Skip query validation for continuation requests (query may be empty)
         if (string.IsNullOrWhiteSpace(query.ContinuationContext))
@@ -89,9 +133,19 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         _logger.LogInformation("Starting streaming QA for game {GameId}, query: {Query}",
             query.GameId, query.Query);
 
-        // Check cache first - if cached, return it as streaming events
+        // R1 (issue #3416, ADR-088): resolve approved mechanic-card claims to inject as authoritative
+        // context. Feature-flag gated (default off), best-effort. Computed here — above the cache and
+        // the NO_RESULTS exit — so the claim block still answers when retrieval is empty (spec §6.1).
+        var verifiedBlock = await ResolveVerifiedRulesBlockAsync(query, cancellationToken).ConfigureAwait(false);
+        var injectClaims = !verifiedBlock.IsEmpty;
+
+        // Check cache first - if cached, return it as streaming events.
+        // R1: skip the semantic cache when injecting (the (game,query) key carries no card fingerprint,
+        // so a cached no-card answer must not shadow, nor a claim answer replay after suppression — §6.2).
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
-        var cachedResponse = await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
+        var cachedResponse = injectClaims
+            ? null
+            : await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
 
         if (cachedResponse != null)
         {
@@ -101,9 +155,13 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             yield return CreateEvent(StreamingEventType.StateUpdate,
                 new StreamingStateUpdate("Retrieved from cache"));
 
-            // Emit citations
+            // Emit citations — SP-C (#3407): STRIP regions/char offsets from cache-served snippets.
+            // The QA cache key is (game, query) only, NOT user/tier (AiResponseCacheService), so a
+            // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
+            // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
+            // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
             yield return CreateEvent(StreamingEventType.Citations,
-                new StreamingCitations(cachedResponse.snippets));
+                new StreamingCitations(StripRegions(cachedResponse.snippets)));
 
             // Emit answer as tokens (simulate streaming for consistency)
             var words = cachedResponse.answer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -127,13 +185,14 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
                     cachedResponse.promptTokens,
                     cachedResponse.completionTokens,
                     cachedResponse.totalTokens,
-                    cachedResponse.confidence));
+                    cachedResponse.confidence,
+                    GroundingStatus: cachedResponse.snippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
             yield break;
         }
 
         // Stream fresh QA response
-        await foreach (var evt in AskStreamInternalAsync(query, cancellationToken).ConfigureAwait(false))
+        await foreach (var evt in AskStreamInternalAsync(query, verifiedBlock, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -141,8 +200,10 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
     private async IAsyncEnumerable<RagStreamingEvent> AskStreamInternalAsync(
         StreamQaQuery query,
+        VerifiedRulesBlock verifiedBlock,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var injectClaims = !verifiedBlock.IsEmpty;
         var startTime = _timeProvider.GetUtcNow();
         var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
 
@@ -168,17 +229,30 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Searching knowledge base..."));
 
         var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
-            query.GameId, query.Query, query.DocumentIds, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, query.DocumentIds, query.UserId ?? Guid.Empty, cancellationToken).ConfigureAwait(false);
 
-        if (!searchSuccess)
+        // R1 (spec §6.1): the NO_RESULTS exit is skipped when an approved-claim block is present — the
+        // claims become the answer source in the retrieval-miss case (e.g. Catan/TM "Setup per N").
+        if (!searchSuccess && !injectClaims)
         {
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError("No relevant information found in the rulebook.", "NO_RESULTS"));
             yield break;
         }
 
+        // Normalize retrieval outputs for the claims-only path (empty search but claims present).
+        var ragSnippets = snippets ?? new List<Snippet>();
+        var confidence = searchConfidence ?? Confidence.Zero;
+        var domainResults = domainSearchResults ?? new List<Domain.Entities.SearchResult>();
+
+        // R1 (spec §7.4): claim citations (PdfId/PdfPage + verbatim Quote) ride the same citation channel,
+        // emitted for display but NOT fed to the LLM context (the prompt uses the reformulated Claim via
+        // verifiedBlock, never the Quote — §7.2 copyright). Claim snippets carry no regions (not Full-gated).
+        var claimSnippets = injectClaims ? BuildClaimSnippets(verifiedBlock) : new List<Snippet>();
+        var allSnippets = claimSnippets.Count == 0 ? ragSnippets : ragSnippets.Concat(claimSnippets).ToList();
+
         yield return CreateEvent(StreamingEventType.Citations,
-            new StreamingCitations(snippets!));
+            new StreamingCitations(allSnippets));
 
         // Step 2: Load chat thread context if ThreadId provided
         var chatHistoryContext = await LoadChatThreadContextAsync(
@@ -189,8 +263,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = await BuildLlmPromptsAsync(
-            query.GameId, query.Query, snippets!, chatHistoryContext,
-            query.ResponseStyle, query.ContinuationContext).ConfigureAwait(false);
+            query.GameId, query.Query, ragSnippets, chatHistoryContext,
+            query.ResponseStyle, query.ContinuationContext, verifiedBlock).ConfigureAwait(false);
 
         // Step 4: Stream tokens from LLM
         var answerBuilder = new StringBuilder();
@@ -231,16 +305,18 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
         var answer = answerBuilder.ToString().Trim();
 
-        // Step 5: Calculate quality metrics, cache response, emit completion
+        // Step 5: Calculate quality metrics, cache response, emit completion.
+        // R1: never cache a claim-injected answer (the (game,query) key carries no card fingerprint, §6.2).
         var overallConfidence = await CalculateAndCacheResponseAsync(
-            answer, snippets!, domainSearchResults!, searchConfidence ?? Confidence.Parse(0.5),
-            tokenCount, cacheKey, llmUsage, llmCost, cancellationToken).ConfigureAwait(false);
+            answer, ragSnippets, domainResults, confidence,
+            tokenCount, cacheKey, llmUsage, llmCost, injectClaims, cancellationToken).ConfigureAwait(false);
 
         yield return CreateEvent(StreamingEventType.Complete,
-            new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value));
+            new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value,
+                GroundingStatus: allSnippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
-        // Emit inline citation matches
-        var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), snippets!);
+        // Emit inline citation matches (over RAG + claim citations, so [Vk] claim markers can match too)
+        var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), allSnippets);
         if (inlineCitations.Count > 0)
             yield return CreateEvent(StreamingEventType.InlineCitation, new StreamingInlineCitations(inlineCitations));
 
@@ -269,16 +345,26 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         string gameId,
         string queryText,
         IReadOnlyList<Guid>? documentIds,
+        Guid userId,
         CancellationToken cancellationToken)
     {
+        // Issue #3270 (Task 7): classify user intent into GameBookRole tag(s) so the hybrid
+        // re-ranker can boost chunks whose role_tags overlap (parity with AskQuestionQueryHandler).
+        // The classifier is rule-based, sync, and cheap (~µs); failure modes default to RulesReference.
+        var queryRoleHint = _intentClassifier.ClassifyIntent(queryText);
+        _logger.LogDebug(
+            "[StreamQaHandler] Intent classification: Query={Query}, RoleHint={RoleHint}",
+            queryText, queryRoleHint);
+
         var searchQuery = new SearchQuery(
             GameId: Guid.Parse(gameId),
             Query: queryText,
-            TopK: 5,
+            TopK: RerankCandidatePoolSize,
             MinScore: 0.55,
             SearchMode: "hybrid",
             Language: "en",
-            DocumentIds: documentIds // Issue #2051
+            DocumentIds: documentIds, // Issue #2051
+            QueryRoleHint: queryRoleHint // Issue #3270: bias re-ranker toward role-matching chunks
         );
 
         var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
@@ -288,6 +374,11 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
             return (false, null, null, null);
         }
+
+        // Issue #2708: rerank the wider candidate pool down to the final top-K by semantic relevance
+        // (cross-encoder; graceful degradation to raw top-K if the reranker is unavailable).
+        searchResults = await SearchResultReranker.RerankAsync(
+            _reranker, queryText, searchResults, FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
@@ -303,17 +394,77 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         // Calculate search confidence
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
-        // Build citations
-        var snippets = searchResults.Select(r => new Snippet(
-            r.TextContent,
-            $"PDF:{r.VectorDocumentId}",
-            r.PageNumber,
-            0,
-            (float)r.RelevanceScore
-        )).ToList();
+        // Build citations — Issue #W: the search result's VectorDocumentId is the
+        // vector_documents.Id, but the citation "source" must carry the pdf_documents.Id
+        // so the FE PDF viewer (GET /api/v1/pdfs/{id}/download) can resolve it — otherwise
+        // it 404s and the cited source is unreadable. Resolve VectorDocumentId →
+        // PdfDocumentId via the game's vector documents (typically 1-2 per game).
+        var vectorDocs = await _vectorDocumentRepository
+            .GetByGameIdAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
+        var pdfIdByVectorId = vectorDocs.ToDictionary(v => v.Id, v => v.PdfDocumentId);
+
+        // SP-C (#3407): resolve the copyright tier per citation and gate BOTH the verbatim excerpt and
+        // the region overlay to Full — StreamQa previously emitted verbatim text with NO gate (a leak,
+        // #447/DA-4). The resolver keys on ChunkCitation.DocumentId = the resolved pdf id string (NOT
+        // the vector id, NOT the "PDF:"-prefixed source), matching the session-agent chain.
+        var rawCitations = searchResults.Select(r =>
+        {
+            // Fall back to the vector id if resolution fails (keeps a stable source string).
+            var citationDocId =
+                Guid.TryParse(r.VectorDocumentId, out var vecId)
+                && pdfIdByVectorId.TryGetValue(vecId, out var pdfId)
+                    ? pdfId.ToString()
+                    : r.VectorDocumentId;
+            return new ChunkCitation(
+                DocumentId: citationDocId,
+                PageNumber: r.PageNumber,
+                RelevanceScore: (float)r.RelevanceScore,
+                SnippetPreview: r.TextContent)
+            {
+                BoundingBoxesJson = r.BoundingBoxesJson,
+                CharStart = r.CharStart,
+                CharEnd = r.CharEnd,
+            };
+        }).ToList();
+
+        var resolvedCitations = await _copyrightTierResolver
+            .ResolveAsync(rawCitations, userId, cancellationToken).ConfigureAwait(false);
+
+        var snippets = resolvedCitations.Select(c =>
+        {
+            var isFull = c.CopyrightTier == CopyrightTier.Full;
+            return new Snippet(
+                // Verbatim text is preserved for ALL tiers on purpose: this SAME snippets list grounds
+                // the LLM prompt (BuildLlmPromptsAsync) and feeds the inline-citation matcher, so
+                // redacting it here would starve the model of retrieved context. Only the NEW SP-C
+                // region-grounding surface is Full-gated. (The pre-existing verbatim-text-to-FE
+                // behavior is intentionally unchanged; closing that #447 gap needs a separate
+                // LLM-prompt/FE-citation source split — out of SP-C scope.)
+                c.SnippetPreview,
+                $"PDF:{c.DocumentId}",
+                c.PageNumber,
+                0,
+                c.RelevanceScore)
+            {
+                // Region overlay + char offsets are Full-gated: drawing the verbatim region on a
+                // Protected doc would leak (DA-4). Null → key omitted (additive-only wire, D-4).
+                regions = isFull ? CitationRegion.Parse(c.BoundingBoxesJson) : null,
+                charStart = isFull ? c.CharStart : null,
+                charEnd = isFull ? c.CharEnd : null,
+            };
+        }).ToList();
 
         return (true, snippets, domainSearchResults, searchConfidence);
     }
+
+    /// <summary>
+    /// SP-C (#3407): returns a copy of <paramref name="snippets"/> with the Full-gated region-grounding
+    /// fields (regions/charStart/charEnd) removed. Used on the cache-hit path because the QA cache is
+    /// keyed only by (game, query) — not by user/tier — so cached regions must never be replayed across
+    /// tiers (DA-4). Verbatim text is left intact (its cross-tier caching is pre-existing behavior).
+    /// </summary>
+    private static IReadOnlyList<Snippet> StripRegions(IReadOnlyList<Snippet> snippets) =>
+        snippets.Select(s => s with { regions = null, charStart = null, charEnd = null }).ToList();
 
     /// <summary>
     /// Loads chat thread context if ThreadId provided.
@@ -360,10 +511,19 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         List<Snippet> snippets,
         string chatHistoryContext,
         string? responseStyle = null,
-        string? continuationContext = null)
+        string? continuationContext = null,
+        VerifiedRulesBlock? verifiedBlock = null)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
             $"[Page {s.page}] {s.text}"));
+
+        // R1 (spec §7.1/D8): approved claims rank above raw RAG context (the stream path has no house rules).
+        if (verifiedBlock is { IsEmpty: false })
+        {
+            context = context.Length > 0
+                ? $"{verifiedBlock.PromptText}\n\n{context}"
+                : verifiedBlock.PromptText;
+        }
 
         // Use PromptTemplateService for advanced prompt engineering
         var questionType = _promptTemplateService.ClassifyQuestion(queryText);
@@ -374,6 +534,15 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
 
         // Append response style instruction
         systemPrompt += PromptTemplateService.GetResponseStyleInstruction(responseStyle ?? "concise");
+
+        // R1 (spec §7.1): authorize the [Verified Rules] block as valid provided context so the grounding
+        // constraint does not reject it when the RAG context is empty.
+        if (verifiedBlock is { IsEmpty: false })
+        {
+            systemPrompt += " A section titled '[Verified Rules — human-approved]' may precede the Context; "
+                + "it is human-approved rulebook content and counts as provided context — you MAY answer "
+                + "from it and cite its [Page N].";
+        }
 
         var baseUserPrompt = _promptTemplateService.RenderUserPrompt(template, context, queryText);
 
@@ -407,6 +576,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         string cacheKey,
         LlmUsage? llmUsage,
         LlmCost? llmCost,
+        bool skipCache,
         CancellationToken cancellationToken)
     {
         // ISSUE-1725: Record LLM token usage with OpenTelemetry GenAI semantic conventions
@@ -428,20 +598,60 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             searchConfidence,
             llmConfidence);
 
-        // Build and cache response
+        // Build and cache response — SP-C (#3407): NEVER cache the Full-gated regions/char offsets.
+        // The cache key is (game, query) only (not user/tier), so caching gated data risks a
+        // cross-tier replay leak (DA-4). Fresh, correctly-gated regions are emitted per-request on a
+        // cache MISS; cache hits fall back to the text-quote highlight. (StripRegions on the read path
+        // stays as defense-in-depth for any entry cached before this line shipped.)
         var response = new QaResponse(
             answer,
-            snippets,
+            StripRegions(snippets),
             0,
             tokenCount,
             tokenCount,
             overallConfidence.Value,
             null);
 
-        await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+        // R1 (spec §6.2): claim-injected answers are never cached ((game,query) key has no card fingerprint).
+        if (!skipCache)
+        {
+            await _cache.SetAsync(cacheKey, response, 86400, cancellationToken).ConfigureAwait(false);
+        }
 
         return overallConfidence;
     }
+
+    /// <summary>
+    /// R1 (spec §6.1/§8): resolves the approved-claim block to inject for this query, gated by the
+    /// feature flag (default off) and best-effort. Returns Empty when disabled, no section matches the
+    /// intent, the game id is malformed, or no active card exists (fail-open to raw RAG).
+    /// </summary>
+    private async Task<VerifiedRulesBlock> ResolveVerifiedRulesBlockAsync(
+        StreamQaQuery query, CancellationToken cancellationToken)
+    {
+        var flagRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole : (UserRole?)null;
+        if (!await _featureFlags.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, flagRole)
+                .ConfigureAwait(false))
+        {
+            return VerifiedRulesBlock.Empty;
+        }
+
+        var sections = MechanicSectionRouter.Route(_intentClassifier.ClassifyIntent(query.Query));
+        if (sections.Count == 0 || !Guid.TryParse(query.GameId, out var gameGuid))
+        {
+            return VerifiedRulesBlock.Empty;
+        }
+
+        var card = await _mechanicCardProvider.GetActiveCardAsync(gameGuid, cancellationToken).ConfigureAwait(false);
+        return card is null ? VerifiedRulesBlock.Empty : VerifiedRulesRenderer.Render(card, sections);
+    }
+
+    /// <summary>R1 (spec §7.4): claim citations as Snippets — verbatim Quote text, no region overlay.</summary>
+    private static List<Snippet> BuildClaimSnippets(VerifiedRulesBlock verifiedBlock) =>
+        verifiedBlock.Citations
+            .Select(vc => new Snippet(vc.Quote, $"PDF:{vc.PdfId}", vc.PdfPage, 0, 1.0f))
+            .ToList();
 
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)

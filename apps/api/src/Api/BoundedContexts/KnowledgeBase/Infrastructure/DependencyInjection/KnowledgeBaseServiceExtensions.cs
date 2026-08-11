@@ -68,6 +68,17 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ICopyrightLeakGuard, NgramCopyrightLeakGuard>();
         services.AddSingleton<ICopyrightFallbackMessageProvider, DefaultCopyrightFallbackMessageProvider>();
 
+        // SP5-c #2600: session-agent options (per-chunk LLM stream timeout).
+        var sessionAgentOptionsBuilder = services.AddOptions<SessionAgentOptions>()
+            .Validate(
+                opts => opts.LlmPerChunkTimeoutSeconds > 0,
+                "SessionAgent:LlmPerChunkTimeoutSeconds must be > 0");
+        if (configuration != null)
+        {
+            sessionAgentOptionsBuilder.Bind(configuration.GetSection("SessionAgent"));
+        }
+        sessionAgentOptionsBuilder.ValidateOnStart();
+
         return services;
     }
 
@@ -83,6 +94,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IConversationSummarizer, Application.Services.ConversationSummarizer>(); // Issue #5259: Progressive conversation summarization
         services.AddSingleton<ChunkingStrategySelector>(); // ISSUE-1903: ADR-016 Phase 1 - Chunking strategy selection
         services.AddScoped<IRagPromptAssemblyService, RagPromptAssemblyService>(); // Replaces AgentPromptBuilder: RAG context + chat history + token budget
+        services.AddScoped<IGroundedAnswerService, GroundedAnswerService>(); // #3490 (ADR-090): shared grounded finalize (leak guard + citation map + grounding)
         services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
         services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
@@ -230,11 +242,14 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
-        services.AddHostedService<ProviderHealthCheckService>();
-        services.AddSingleton<IProviderHealthCheckService>(sp =>
-            sp.GetServices<IHostedService>().OfType<ProviderHealthCheckService>().ToList()[0]);
-        services.AddSingleton<ProviderHealthCheckService>(sp =>
-            (ProviderHealthCheckService)sp.GetRequiredService<IProviderHealthCheckService>());
+        // #2865: register the concrete singleton FIRST, then have both the hosted-service role and
+        // the injectable IProviderHealthCheckService role resolve that same instance directly. The
+        // previous registration looked the instance up via the IHostedService collection and took
+        // [0], which threw ArgumentOutOfRangeException wherever hosted services are stripped (the
+        // integration test factory does exactly this to prevent background-service startup).
+        services.AddSingleton<ProviderHealthCheckService>();
+        services.AddHostedService(sp => sp.GetRequiredService<ProviderHealthCheckService>());
+        services.AddSingleton<IProviderHealthCheckService>(sp => sp.GetRequiredService<ProviderHealthCheckService>());
 
         // ISSUE-1725: LLM budget monitoring background service
         services.AddHostedService<LlmBudgetMonitoringService>();
@@ -493,6 +508,11 @@ internal static class KnowledgeBaseServiceExtensions
         // Agent Memory context builder — injects house rules, group preferences into RAG prompts
         services.AddScoped<IAgentMemoryContextBuilder, AgentMemoryContextBuilder>();
 
+        // R1 (issue #3416, ADR-088): read-time provider for approved mechanic-card claim injection into RAG.
+        services.AddScoped<
+            Application.Services.MechanicClaimInjection.IMechanicCardProvider,
+            Application.Services.MechanicClaimInjection.MechanicCardProvider>();
+
         // RAG Copyright KB Cards: per-chunk copyright tier resolution
         services.AddScoped<ICopyrightTierResolver, CopyrightTierResolver>();
 
@@ -539,9 +559,13 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddHttpClient<ICrossEncoderReranker, CrossEncoderRerankerClient>((sp, client) =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
-            var baseUrl = config["Reranking:BaseUrl"] ?? "http://localhost:8003";
-            client.BaseAddress = new Uri(baseUrl);
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.BaseAddress = new Uri(ResolveRerankerBaseUrl(config));
+            // Timeout is governed per-request by RerankerClientOptions.TimeoutMs (each call in
+            // CrossEncoderRerankerClient wraps a CancellationTokenSource.CancelAfter(TimeoutMs);
+            // IsHealthyAsync uses its own 5s CTS). The previous hardcoded 10s HttpClient.Timeout
+            // silently capped that option — raising Reranking:TimeoutMs above 10s had no effect —
+            // so defer entirely to the per-request token.
+            client.Timeout = System.Threading.Timeout.InfiniteTimeSpan;
         });
 
         // Options configuration - use provided configuration or defer to runtime resolution
@@ -561,6 +585,38 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Application Services - Resilient Retrieval with Reranking
         services.AddScoped<IRerankedRetrievalService, ResilientRetrievalService>();
+    }
+
+    /// <summary>
+    /// Resolves the reranker service base URL. Prefers an explicit <c>Reranking:BaseUrl</c> config key,
+    /// then falls back to the <c>RERANKER_URL</c> env var that every compose file sets
+    /// (compose.{dev,staging,prod}.yml), and finally to localhost for local <c>dotnet run</c>.
+    /// <para>
+    /// Before the <c>RERANKER_URL</c> fallback existed the client targeted <c>localhost:8003</c> in
+    /// every deployed environment (which set <c>RERANKER_URL</c>, not <c>Reranking:BaseUrl</c>), so
+    /// cross-encoder reranking silently failed and every RAG query degraded to the vector-dominated
+    /// fusion fallback. NOTE: for the <c>RERANKER_URL</c> fallback to fire, <c>appsettings.json</c>
+    /// MUST NOT define a <c>Reranking:BaseUrl</c> default — a non-empty default there would shadow the
+    /// env var in every environment (issue #3334). Empty/whitespace values are treated as absent so a
+    /// blank override (<c>RERANKER_URL=</c> or <c>Reranking__BaseUrl=</c>) falls through instead of
+    /// producing <c>new Uri("")</c>.
+    /// </para>
+    /// </summary>
+    internal static string ResolveRerankerBaseUrl(IConfiguration config)
+    {
+        var explicitBaseUrl = config["Reranking:BaseUrl"];
+        if (!string.IsNullOrWhiteSpace(explicitBaseUrl))
+        {
+            return explicitBaseUrl;
+        }
+
+        var rerankerUrl = config["RERANKER_URL"];
+        if (!string.IsNullOrWhiteSpace(rerankerUrl))
+        {
+            return rerankerUrl;
+        }
+
+        return "http://localhost:8003";
     }
 
     private static void AddCachingServices(IServiceCollection services, IConfiguration? configuration)

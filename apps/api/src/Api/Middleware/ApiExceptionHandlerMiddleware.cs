@@ -1,4 +1,5 @@
 using System;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.Helpers;
 using Api.Middleware.Exceptions;
@@ -58,14 +59,34 @@ internal class ApiExceptionHandlerMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception ex)
     {
-        // Log the exception with full details
         var sanitizedPath = LogSanitizer.SanitizePath(context.Request.Path);
+        var sanitizedMethod = LogSanitizer.Sanitize(context.Request.Method);
 
-        _logger.LogError(ex,
-            "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
-            sanitizedPath,
-            LogSanitizer.Sanitize(context.Request.Method),
-            context.TraceIdentifier);
+        // #2953 (#6): classify severity up-front. Expected client errors (4xx, e.g. NotFound)
+        // log Warning and are NOT counted as unhandled, so they don't pollute error dashboards
+        // or mask real 500s. The branch-specific handlers below keep their own status + metrics;
+        // this generic mapping drives the shared log level and — on the generic path — the
+        // status/isUnhandled reused further down.
+        var (statusCode, errorType, message) = MapExceptionToResponse(ex);
+        var isServerError = statusCode >= 500;
+
+        if (isServerError)
+        {
+            _logger.LogError(ex,
+                "Unhandled exception in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
+                sanitizedPath,
+                sanitizedMethod,
+                context.TraceIdentifier);
+        }
+        else
+        {
+            _logger.LogWarning(ex,
+                "Handled {StatusCode} client error in API endpoint. Path: {Path}, Method: {Method}, TraceId: {TraceId}",
+                statusCode,
+                sanitizedPath,
+                sanitizedMethod,
+                context.TraceIdentifier);
+        }
 
         // Special handling for FluentValidation exceptions (Issue #1449)
         if (ex is FluentValidation.ValidationException fluentValidationEx)
@@ -114,17 +135,17 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
-        // Determine status code and error type based on exception type
-        var (statusCode, errorType, message) = MapExceptionToResponse(ex);
-
-        // OPS-05: Record error metrics for monitoring and alerting
-        // Use route pattern for endpoint to avoid high cardinality (e.g., /api/v1/games instead of /api/v1/games/{id})
+        // OPS-05: Record error metrics for monitoring and alerting. Reuses the status computed
+        // above. Use route pattern for endpoint to avoid high cardinality (e.g., /api/v1/games
+        // instead of /api/v1/games/{id}).
+        // #2953 (#6): isUnhandled tracks genuine server errors only — an expected 4xx that reached
+        // here (e.g. NotFound) is handled-by-mapping, not an unhandled bug.
         var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
         MeepleAiMetrics.RecordApiError(
             exception: ex,
             httpStatusCode: statusCode,
             endpoint: endpoint,
-            isUnhandled: true); // This is unhandled since it reached middleware
+            isUnhandled: isServerError);
 
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
@@ -382,6 +403,27 @@ internal class ApiExceptionHandlerMiddleware
                 StatusCodes.Status404NotFound,
                 "not_found",
                 "The requested resource was not found"
+            ),
+
+            // Game Cover-da-PDF (Task 6): SmolDocling render failure (503/404) is a
+            // non-blocking failure, not a server bug — 503 lets the FE distinguish it
+            // from a generic 500 and show a retryable "cover unavailable" message.
+            CoverMaterializationException => (
+                StatusCodes.Status503ServiceUnavailable,
+                "cover_render_unavailable",
+                "La copertina non è al momento disponibile per il rendering. Riprova più tardi."
+            ),
+
+            // #3495 Slice D: the egress gate refused a caller-supplied URL (or its redirect chain).
+            // That is bad input, not a server bug — a 500 here would both mislead the caller and
+            // pollute the error-rate SLO. The deadline case is a gateway timeout. The message stays
+            // generic on purpose: the offending host/IP belongs in the log, never in the response.
+            Api.SharedKernel.Infrastructure.Http.HardenedFetchException fetchEx => (
+                fetchEx.Reason == Api.SharedKernel.Infrastructure.Http.HardenedFetchBlockReason.Timeout
+                    ? StatusCodes.Status504GatewayTimeout
+                    : StatusCodes.Status400BadRequest,
+                "egress_blocked",
+                "L'URL indicato non può essere scaricato in sicurezza."
             ),
 
             // Domain exceptions (from SharedKernel)

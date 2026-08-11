@@ -226,10 +226,25 @@ const nextConfig = {
       // sub-route redirects above (they map specific tab paths) but do not
       // add a catch-all here — rely on the explicit list to avoid the
       // aiChat regression that motivated #1004.
-      { source: '/library/wishlist', destination: '/library?tab=wishlist', permanent: true },
-      { source: '/library/private', destination: '/library?tab=private', permanent: true },
+      // Happy-path testing (2026-07-11): removed the legacy `/library/wishlist`
+      // → `?tab=wishlist` and `/library/private` → `?tab=private` redirects. Those
+      // hub tabs were retired (see `library/_content.tsx`) but the redirects
+      // survived and — since Next redirects take precedence over page routing —
+      // shadowed the standalone pages `library/wishlist/page.tsx` ("My Wishlist")
+      // and `library/private/page.tsx` (PrivateGamesClient), leaving both routes
+      // unreachable (they landed on the hub "Tutti" tab). Those pages are the
+      // canonical destinations and nav links (`contextual-tabs.ts`) point to them.
       { source: '/library/proposals', destination: '/discover?tab=proposals', permanent: true },
       { source: '/library/propose', destination: '/discover/propose', permanent: true },
+
+      // ADR-079 (#2701): the legacy standalone `/game-nights/:id/edit` page is
+      // retired in favour of the edit-overlay drawer deep-link. Safety net for any
+      // link that escaped into chat/email before the migration.
+      {
+        source: '/game-nights/:id/edit',
+        destination: '/game-nights/:id?action=edit',
+        permanent: true,
+      },
 
       // Profile / Settings consolidation
       // NOTE: /profile → /settings (Issue #1672) is REMOVED — /profile is now
@@ -320,6 +335,14 @@ const nextConfig = {
       {
         source: '/board-game-ai/ask/:path*',
         destination: '/chat/new',
+        permanent: true,
+      },
+      // Consolidamento private-games: /private-games/[id] era una route orfana
+      // (zero link entranti) duplicata di /library/private/[id], il cui
+      // PrivateGameHub è un superset funzionale del vecchio PrivateGameDetailClient.
+      {
+        source: '/private-games/:id',
+        destination: '/library/private/:id',
         permanent: true,
       },
 
@@ -538,11 +561,6 @@ const nextConfig = {
         permanent: true,
       },
       {
-        source: '/admin/n8n-templates',
-        destination: '/admin/config?tab=n8n',
-        permanent: true,
-      },
-      {
         source: '/admin/wizard',
         destination: '/admin/config?tab=wizard',
         permanent: true,
@@ -604,9 +622,11 @@ const nextConfig = {
   // on staging (where `/manifest.json` is gated by Cloudflare Access). Prod
   // builds keep `manifest-src 'self'`. Flag: `NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS=true`.
   async headers() {
-    const { buildCspHeader, isCfAccessAllowed } = require('./lib/security/csp');
+    const { buildCspHeader, isCfAccessAllowed, isLocalBlobAllowed } = require('./lib/security/csp');
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
     const allowCfAccess = isCfAccessAllowed(process.env.NEXT_PUBLIC_CSP_ALLOW_CF_ACCESS);
+    // #3498: E2E-only — lets the browser load MinIO presigned covers over http loopback.
+    const allowLocalBlobImages = isLocalBlobAllowed(process.env.NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB);
     return [
       {
         source: '/(.*)',
@@ -620,7 +640,7 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: buildCspHeader({ apiBaseUrl, allowCfAccess }),
+            value: buildCspHeader({ apiBaseUrl, allowCfAccess, allowLocalBlobImages }),
           },
         ],
       },

@@ -74,13 +74,10 @@ echo "Service restart commands:"
 
 case "$SECRET_NAME" in
     postgres-password)
-        echo "  docker compose restart postgres api n8n"
+        echo "  docker compose restart postgres api"
         ;;
     openrouter-api-key)
         echo "  docker compose restart api"
-        ;;
-    n8n-encryption-key|n8n-basic-auth-password)
-        echo "  docker compose restart n8n"
         ;;
     gmail-app-password)
         echo "  docker compose restart alertmanager"

@@ -12,6 +12,16 @@ internal sealed class S3StorageOptions
     public required string Endpoint { get; init; }
 
     /// <summary>
+    /// Optional public endpoint used ONLY to generate presigned URLs (issue #3498). SigV4 signs the
+    /// host, so when server-side ops reach the store on a private/container hostname
+    /// (e.g. <c>http://minio:9000</c>) but the browser must fetch presigned covers from a different
+    /// host (e.g. <c>http://localhost:9000</c>), presigns must be signed against THIS endpoint. When
+    /// null/empty (prod: R2/AWS, where the store host is publicly reachable) presigns use
+    /// <see cref="Endpoint"/>. HEAD/existence checks always use <see cref="Endpoint"/>.
+    /// </summary>
+    public string? PublicEndpoint { get; init; }
+
+    /// <summary>
     /// S3 access key ID
     /// </summary>
     public required string AccessKey { get; init; }

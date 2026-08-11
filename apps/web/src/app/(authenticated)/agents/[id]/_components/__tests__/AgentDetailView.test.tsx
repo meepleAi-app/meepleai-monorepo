@@ -128,9 +128,25 @@ const configMockState: MockConfigReturn = {
 };
 
 const useAgentConfigSpy = vi.fn<[string, boolean?], MockConfigReturn>();
+// BUG E (#2727): Settings tab Save must wire the update-config mutation.
+const updateConfigMutate = vi.fn();
 
 vi.mock('@/hooks/queries/useAgentConfig', () => ({
   useAgentConfig: (gameId: string, enabled?: boolean) => useAgentConfigSpy(gameId, enabled),
+  useUpdateAgentConfig: () => ({ mutate: updateConfigMutate, isPending: false }),
+}));
+
+// ─── Toast mock (BUG E #2727) ─────────────────────────────────────────────────
+
+const toastSuccess = vi.fn();
+const toastError = vi.fn();
+
+vi.mock('@/components/layout/Toast', () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+    info: vi.fn(),
+  },
 }));
 
 // ─── Visual fixture mock ──────────────────────────────────────────────────────
@@ -167,7 +183,13 @@ const MESSAGES: Record<string, string> = {
   'pages.agentDetail.hero.activeBadge': 'Attivo',
   'pages.agentDetail.hero.draftBadge': 'In setup',
   'pages.agentDetail.hero.archivedBadge': 'Archiviato',
+  'pages.agentDetail.hero.metaType': 'Tipo: {type}',
+  'pages.agentDetail.hero.metaModel': 'Modello: {model}',
+  'pages.agentDetail.hero.metaCreated': 'Creato il {date}',
+  'pages.agentDetail.hero.metaLastUsed': 'Ultimo utilizzo: {date}',
   'pages.agentDetail.hero.metaLastUsedNever': 'Mai utilizzato',
+  'pages.agentDetail.hero.metaInvocations':
+    '{count, plural, =0 {Nessuna invocazione} =1 {1 invocazione} other {# invocazioni}}',
   'pages.agentDetail.hero.metaGameNone': 'Agente standalone',
   'pages.agentDetail.hero.ctaPlay': 'Avvia chat',
   'pages.agentDetail.hero.ctaSetup': 'Continua setup',
@@ -206,6 +228,8 @@ const MESSAGES: Record<string, string> = {
   'pages.agentDetail.settings.strategyLabel': 'Strategia RAG',
   'pages.agentDetail.settings.parametersLabel': 'Parametri',
   'pages.agentDetail.settings.readOnlyBanner': 'Impostazioni in sola lettura.',
+  'pages.agentDetail.settings.readOnlyStandalone': 'Config solo per agenti con gioco.',
+  'pages.agentDetail.settings.perGameNote': 'Vale per tutti gli agenti del gioco.',
   'pages.agentDetail.settings.saveCta': 'Salva',
   'pages.agentDetail.settings.cancelCta': 'Annulla',
   'pages.agentDetail.settings.saveSuccess': 'Salvato.',
@@ -318,6 +342,9 @@ function resetAll() {
   configMockState.refetch = vi.fn();
   useAgentConfigSpy.mockReset();
   useAgentConfigSpy.mockImplementation(() => ({ ...configMockState }));
+  updateConfigMutate.mockClear();
+  toastSuccess.mockClear();
+  toastError.mockClear();
 
   mockIsVisualTestBuild = false;
   mockFixtureData = null;
@@ -828,6 +855,177 @@ describe('AgentDetailView — FSM integration tests (Phase 0.5 contract, Wave C.
     assertKbDocsNeverCalledWithBadGameId();
   });
 
+  // ─── Settings tab: Save persists config (BUG E #2727) ──────────────────────
+  it('Settings tab Save wires the update-config mutation with per-game payload', () => {
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5 }), // active + gameId → editable variant
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: {
+        llmModel: 'llama-3.3-70b-free',
+        temperature: 0.7,
+        maxTokens: 4096,
+        personality: 'Amichevole',
+        detailLevel: 'Normale',
+        personalNotes: 'note personali',
+      },
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+
+    const saveBtn = screen.getByRole('button', { name: 'Salva' });
+    act(() => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(updateConfigMutate).toHaveBeenCalledTimes(1);
+    expect(updateConfigMutate.mock.calls[0][0]).toEqual({
+      gameId: VALID_GAME_ID,
+      request: {
+        llmModel: 'llama-3.3-70b-free',
+        temperature: 0.7,
+        maxTokens: 4096,
+        personality: 'Amichevole',
+        detailLevel: 'Normale',
+        personalNotes: 'note personali',
+      },
+    });
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: Save on unconfigured active agent persists defaults ─────
+  it('Settings tab Save on an unconfigured active agent persists defaults, no error toast', () => {
+    // BUG E follow-up (#2727 review): an active agent with no saved config
+    // (getAgentConfig → null) must create the config from defaults on Save,
+    // NOT show a misleading "save error" toast.
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5 }), // active + gameId
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: null, // no custom config saved yet
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+
+    const saveBtn = screen.getByRole('button', { name: 'Salva' });
+    act(() => {
+      fireEvent.click(saveBtn);
+    });
+
+    expect(toastError).not.toHaveBeenCalled();
+    expect(updateConfigMutate).toHaveBeenCalledTimes(1);
+    const payload = updateConfigMutate.mock.calls[0][0] as {
+      gameId: string;
+      request: Record<string, unknown>;
+    };
+    expect(payload.gameId).toBe(VALID_GAME_ID);
+    expect(payload.request.llmModel).toBe('llama-3.3-70b-free');
+    expect(payload.request.personality).toBe('Amichevole');
+    expect(payload.request.detailLevel).toBe('Normale');
+    expect(payload.request.personalNotes).toBeNull();
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: editing a field persists the EDITED value (#2732) ───────
+  it('Settings tab editing a field and saving persists the edited value', () => {
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5 }),
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: {
+        llmModel: 'llama-3.3-70b-free',
+        temperature: 0.7,
+        maxTokens: 4096,
+        personality: 'Amichevole',
+        detailLevel: 'Normale',
+        personalNotes: 'note',
+      },
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+    act(() => {
+      fireEvent.change(screen.getByLabelText(/Max Tokens/), { target: { value: '2048' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Salva' }));
+    });
+
+    expect(updateConfigMutate).toHaveBeenCalledTimes(1);
+    const payload = updateConfigMutate.mock.calls[0][0] as {
+      gameId: string;
+      request: Record<string, unknown>;
+    };
+    expect(payload.gameId).toBe(VALID_GAME_ID);
+    expect(payload.request.maxTokens).toBe(2048);
+    expect(payload.request.personalNotes).toBe('note');
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── Settings tab: standalone agent (no game) is read-only (#2732) ──────────
+  it('Settings tab is read-only for a standalone agent (no gameId)', () => {
+    useAgentSpy.mockImplementation(() => ({
+      data: makeAgent({ invocationCount: 5, gameId: null, gameName: null }),
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
+    }));
+    useAgentConfigSpy.mockImplementation(() => ({
+      ...configMockState,
+      data: null,
+      isSuccess: true,
+    }));
+
+    renderWithIntl(<AgentDetailView agentId={VALID_AGENT_ID} />);
+
+    act(() => {
+      fireEvent.click(document.querySelector('[data-tab-key="settings"]')!);
+    });
+
+    expect(
+      document.querySelector(
+        '[data-slot="agent-detail-settings-form"][data-settings-kind="read-only"]'
+      )
+    ).toBeInTheDocument();
+    expect(screen.getByText('Config solo per agenti con gioco.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Salva' })).not.toBeInTheDocument();
+
+    assertKbDocsNeverCalledWithBadGameId();
+  });
+
   // ─── Variant=archived → settings read-only, danger zone hidden ────────────
   it('Variant=archived → settings form read-only, danger zone NOT rendered', () => {
     useAgentSpy.mockImplementation(() => ({
@@ -1056,5 +1254,40 @@ describe('AgentDetailView — FSM integration tests (Phase 0.5 contract, Wave C.
     expect(heroEl).toHaveAttribute('data-variant', 'active');
 
     assertKbDocsNeverCalledWithBadGameId();
+  });
+
+  // ─── #3263 discovery: hero meta labels must localize, not hardcode Italian ──
+  describe('hero meta i18n', () => {
+    const EN_META_MESSAGES: Record<string, string> = {
+      ...MESSAGES,
+      'pages.agentDetail.hero.metaType': 'Type: {type}',
+      'pages.agentDetail.hero.metaCreated': 'Created on {date}',
+      'pages.agentDetail.hero.metaLastUsed': 'Last used: {date}',
+      'pages.agentDetail.hero.metaInvocations':
+        '{count, plural, =0 {No invocations} =1 {1 invocation} other {# invocations}}',
+    };
+
+    it('renders the invocation meta in the active locale, not a hardcoded Italian literal', () => {
+      useAgentSpy.mockImplementation(() => ({
+        data: makeAgent(),
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        refetch: vi.fn(),
+      }));
+
+      render(
+        <IntlProvider locale="en" messages={EN_META_MESSAGES}>
+          <AgentDetailView agentId={VALID_AGENT_ID} />
+        </IntlProvider>
+      );
+
+      // Scope to the hero so the unrelated performance-panel counter does not interfere.
+      const hero = document.querySelector('[data-slot="agent-detail-hero"]');
+      // invocationCount is 42 → English ICU plural "42 invocations".
+      expect(hero?.textContent).toMatch(/42 invocations/i);
+      // The hardcoded Italian literal must NOT leak into an English render.
+      expect(hero?.textContent).not.toMatch(/invocazioni/i);
+    });
   });
 });

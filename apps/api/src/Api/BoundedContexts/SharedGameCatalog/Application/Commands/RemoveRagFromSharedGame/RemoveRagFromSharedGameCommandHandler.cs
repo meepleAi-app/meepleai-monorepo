@@ -89,8 +89,13 @@ internal sealed class RemoveRagFromSharedGameCommandHandler
 
         try
         {
+            // Issue #2949 finding #1: pass the game actually being cleaned as the caller.
+            // Catalog dedup means pdfDoc.SharedGameId may point to a different (uploader)
+            // game than command.SharedGameId when this PDF was reused across games — without
+            // this, DeletePdfCommandHandler's ref-counting branch would remove the wrong
+            // game's EntityLink when this saga's game isn't the original uploader.
             var deleteResult = await _mediator.Send(
-                new DeletePdfCommand(pdfDocumentId.ToString()),
+                new DeletePdfCommand(pdfDocumentId.ToString(), CallerGameId: command.SharedGameId),
                 cancellationToken).ConfigureAwait(false);
 
             if (!deleteResult.Success)

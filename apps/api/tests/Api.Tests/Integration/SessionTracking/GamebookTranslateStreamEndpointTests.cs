@@ -270,9 +270,21 @@ public sealed class GamebookTranslateStreamEndpointTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Scenario 5a–5d: invalid sourceLangOverride values must return 400 BEFORE any SSE
-    /// header is written. Validation runs before the ownership pre-flight so even
-    /// anonymous requests receive 400 (no auth needed — bad request is caught first).
+    /// Scenario 5a–5d: un sourceLangOverride non valido deve dare 400 PRIMA del pre-flight di
+    /// ownership e prima che venga scritto un header SSE.
+    ///
+    /// <para>
+    /// #3633 — la richiesta è autenticata, e prima non lo era. Il test asseriva che «even
+    /// anonymous requests receive 400 (no auth needed)» e riceveva invece 401, perché l'endpoint
+    /// verifica l'autenticazione come prima cosa (<c>TryGetAuthenticatedUser</c>). Il contratto
+    /// documentato — #1559 DEC-12 — dice «validate sourceLangOverride BEFORE the <b>ownership
+    /// check</b>», non prima dell'auth: era il test a pretendere più della decisione, ed era in
+    /// contraddizione con lo Scenario 6 qui sotto, che per una richiesta anonima accetta il 401.
+    /// </para>
+    /// <para>
+    /// Gli id restano inesistenti proprio per provare DEC-12: se la validazione non precedesse
+    /// l'ownership guard, la risposta sarebbe 403/404 invece di 400.
+    /// </para>
     /// </summary>
     [Theory]
     [InlineData("XYZ")]
@@ -280,14 +292,19 @@ public sealed class GamebookTranslateStreamEndpointTests : IAsyncLifetime
     [InlineData("EN-US")]
     [InlineData("PL")]
     [InlineData("  ")]
-    public async Task Translate_InvalidSourceLangOverride_Returns400_BeforeAuth(string invalid)
+    public async Task Translate_InvalidSourceLangOverride_Returns400_BeforeOwnershipCheck(string invalid)
     {
-        // Use non-existent ids — validation fires before ownership guard.
-        var url = BuildUrlWithOverride(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), sourceLangOverride: invalid);
-        var response = await _client.GetAsync(url);
+        var owned = await SeedOwnedCampaignWithLangDetectionAsync();
+
+        // Id inesistenti: senza la validazione anticipata l'ownership guard risponderebbe 403/404.
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            BuildUrlWithOverride(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), sourceLangOverride: invalid),
+            owned.SessionToken);
+        var response = await _client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest,
-            $"invalid sourceLangOverride '{invalid}' should yield 400 before auth/ownership checks");
+            $"invalid sourceLangOverride '{invalid}' should yield 400 before the ownership check (#1559 DEC-12)");
         response.Content.Headers.ContentType?.MediaType.Should().NotBe("text/event-stream",
             "a 400 must never produce an SSE stream");
         var body = await response.Content.ReadAsStringAsync();

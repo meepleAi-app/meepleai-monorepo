@@ -322,7 +322,17 @@ internal static class LiveGameSessionMapper
         var dto = JsonSerializer.Deserialize<ScoringConfigDto>(json, JsonOptions);
         if (dto == null) return SessionScoringConfig.CreateDefault();
 
-        return new SessionScoringConfig(dto.EnabledDimensions, dto.DimensionUnits);
+        // #3633: un JSON sintatticamente valido ma privo di questi campi (una riga scritta da uno
+        // schema precedente, o troncata) deserializza in un DTO con le due proprietà a null, e il
+        // costruttore di SessionScoringConfig fa ArgumentNullException.ThrowIfNull. Attraversando
+        // il middleware quell'eccezione diventa un 400 «Invalid request parameters» su un endpoint
+        // di sola LETTURA — opaco per il chiamante e impossibile da diagnosticare dal solo corpo.
+        //
+        // Le due righe sopra già degradano a CreateDefault() per json vuoto e per dto null: che il
+        // terzo caso lanciasse era un'omissione, non una scelta. Ora la degradazione è coerente.
+        return new SessionScoringConfig(
+            dto.EnabledDimensions ?? SessionScoringConfig.CreateDefault().EnabledDimensions.ToList(),
+            dto.DimensionUnits ?? new Dictionary<string, string>(StringComparer.Ordinal));
     }
 
     /// <summary>

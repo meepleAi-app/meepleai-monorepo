@@ -60,6 +60,17 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
         // which needs to update consuming agents' KbCardIds).
         services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
 
+        // #3633: senza questa registrazione il test fallisce con «Unable to resolve service for
+        // type 'IProcessingJobRepository'». In produzione è registrata da
+        // DocumentProcessingServiceExtensions (#4731 queue commands); questa fixture costruisce il
+        // DI a mano e non carica quel bounded context, quindi la dipendenza va aggiunta qui.
+        services.AddScoped<
+            Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IProcessingJobRepository,
+            Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence.ProcessingJobRepository>();
+        services.AddScoped<
+            Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IPdfDocumentRepository,
+            Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence.PdfDocumentRepository>();
+
         // Blob storage — best-effort in DeleteKbDocumentCommandHandler; mock so no physical I/O.
         var blobMock = new Mock<IBlobStorageService>();
         blobMock.Setup(b => b.DeleteAsync(
@@ -188,7 +199,13 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
         var reloaded = await _dbContext!.PdfDocuments.AsNoTracking()
             .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
         reloaded.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending));
-        reloaded.RowVersion.Should().NotBeNull().And.NotEqual(pdf.RowVersion);
+
+        // #3651: il token è ora `Xmin` (colonna di sistema Postgres) e non più `byte[] RowVersion`
+        // su una `bytea`, che restava NULL da quando #2305 ha rimosso il trigger che la popolava.
+        // L'assert cambia di conseguenza: xmin è un `uint` non nullable, quindi la proprietà che
+        // conta è che sia CAMBIATO dopo l'update — che è ciò che rende rilevabile il conflitto.
+        reloaded.Xmin.Should().NotBe(0u, "xmin è valorizzato dal server a ogni UPDATE");
+        reloaded.Xmin.Should().NotBe(pdf.Xmin, "l'UPDATE deve aver avanzato il token di concorrenza");
     }
 
     // ──────────────────────────────────────────────────────────────────────

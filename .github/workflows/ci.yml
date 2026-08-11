@@ -102,6 +102,11 @@ jobs:
         with:
           dotnet-version: '9.0.x'
           working-directory: apps/api
+          # #3632: senza questo, `cache-version` resta al default 'v1' mentre i job che consumano
+          # l'artifact passano `vars.CACHE_VERSION`. Al primo uso di quella repo variable il job che
+          # POPOLA la cache userebbe una chiave diversa da quelli che la leggono → restore NuGet a
+          # freddo su ogni run. L'action documenta questo input come contratto del chiamante.
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Build Solution (Release)
         run: dotnet build MeepleAI.Api.sln --no-restore --configuration Release
@@ -544,10 +549,22 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+      # #3632 — qui c'era `actions/setup-dotnet` nudo, senza restore né cache NuGet: era LA causa
+      # del gate vuoto. L'artifact porta bin/ e obj/, ma `obj/project.nuget.g.props` importa
+      # `Microsoft.NET.Test.Sdk.props` da ~/.nuget/packages con Condition="Exists(…)". Senza
+      # restore quella cartella è vuota, l'import fallisce IN SILENZIO, `IsTestProject` non viene
+      # impostato, e MSBuild non riconosce più alcun progetto come testabile: il target VSTest
+      # completa in 1,8s senza scendere in un solo progetto e `dotnet test` esce 0 con zero test.
+      #
+      # Misurato: stesso comando, stesso runner — senza restore 0 test in 6s, con restore 22 538
+      # test in 5m02s. `setup-backend` è la stessa action usata da build-backend: cachea i
+      # pacchetti e fa `dotnet restore`. Non ricostruisce nulla, quindi il Build-Once resta intatto.
+      - name: Setup Backend (restore + NuGet cache — #3632)
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Download backend artifact
         uses: actions/download-artifact@v7
@@ -584,10 +601,57 @@ jobs:
               --settings tests/Api.Tests/unit.runsettings \
               --no-build \
               --configuration Release \
-              --blame-hang-timeout 5min" \
+              --blame-hang-timeout 5min \
+              --logger \"trx;LogFileName=unit.trx\"" \
             -f cobertura \
             -o coverage/unit-coverage.xml
-          echo "✅ Unit tests passed"
+
+      # #3632 — il verde va misurato, non dichiarato.
+      #
+      # Qui c'era `echo "✅ Unit tests passed"`, che affermava un esito che lo script non aveva
+      # verificato. `dotnet test --no-build` esce 0 SENZA STAMPARE NULLA quando gli assembly non
+      # ci sono: non lo segnala come errore e non distingue «nessun test eseguito» da «tutti
+      # passati». Con quell'echo subito dopo, il gate era verde per costruzione — misurato: 5,7s
+      # a fronte dei ~22 5xx test attesi.
+      #
+      # Tre dettagli che rendono il guard efficace invece che decorativo:
+      #
+      # 1. SOMMA su tutti i .trx, non il primo trovato. `dotnet test MeepleAI.Api.sln` esegue DUE
+      #    progetti — Api.Tests e Api.Analyzers.Tests — e `unit.runsettings` risolve
+      #    ResultsDirectory per progetto, quindi i file `unit.trx` sono due. Un `find -print -quit`
+      #    ne prendeva uno arbitrario: pescando quello degli analyzer (~36 test) il guard avrebbe
+      #    certificato un verde con Api.Tests a zero, cioè esattamente la regressione da impedire.
+      #
+      # 2. Soglia MINIMA, non `> 0`. 36 > 0: solo un floor vicino al conteggio reale distingue
+      #    «la suite è girata» da «è girato qualcos'altro». Il valore è volutamente sotto il
+      #    conteggio atteso, così non va aggiornato a ogni test aggiunto.
+      #
+      # 3. `executed`, non `total`. `total` conta anche skipped e not-run: se una collection
+      #    fixture esplode e nessun test parte, `total` resta alto ed `executed` va a zero.
+      - name: 'Guard: assert unit tests actually ran (#3632)'
+        run: |
+          set -euo pipefail
+          mapfile -t trx_files < <(find . -name 'unit.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::No .trx produced: dotnet test executed no tests at all."
+            exit 1
+          fi
+          sum=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: unreadable 'executed' counter (malformed trx?)."
+              exit 1
+            fi
+            echo "  $f → executed=$n"
+            sum=$((sum + n))
+          done
+          echo "Total executed across ${#trx_files[@]} trx file(s): $sum"
+          if [ "$sum" -lt 20000 ]; then
+            echo "::error::Only $sum unit tests executed (expected ~22.5k). The gate would have been green without running the suite (#3632)."
+            exit 1
+          fi
+          echo "✅ Unit tests executed: $sum"
 
       - name: Upload Coverage
         if: always()
@@ -678,10 +742,22 @@ jobs:
       - name: Install PDF Dependencies
         run: sudo apt-get update && sudo apt-get install -y libgdiplus
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+      # #3632 — qui c'era `actions/setup-dotnet` nudo, senza restore né cache NuGet: era LA causa
+      # del gate vuoto. L'artifact porta bin/ e obj/, ma `obj/project.nuget.g.props` importa
+      # `Microsoft.NET.Test.Sdk.props` da ~/.nuget/packages con Condition="Exists(…)". Senza
+      # restore quella cartella è vuota, l'import fallisce IN SILENZIO, `IsTestProject` non viene
+      # impostato, e MSBuild non riconosce più alcun progetto come testabile: il target VSTest
+      # completa in 1,8s senza scendere in un solo progetto e `dotnet test` esce 0 con zero test.
+      #
+      # Misurato: stesso comando, stesso runner — senza restore 0 test in 6s, con restore 22 538
+      # test in 5m02s. `setup-backend` è la stessa action usata da build-backend: cachea i
+      # pacchetti e fa `dotnet restore`. Non ricostruisce nulla, quindi il Build-Once resta intatto.
+      - name: Setup Backend (restore + NuGet cache — #3632)
+        uses: ./.github/actions/setup-backend
         with:
           dotnet-version: '9.0.x'
+          working-directory: apps/api
+          cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Download backend artifact
         uses: actions/download-artifact@v7
@@ -762,7 +838,15 @@ jobs:
         # the suite now actually runs to completion (it used to short-circuit
         # on the first wave of failures at ~25 min). 45 min keeps headroom
         # for transient Testcontainers churn on the GitHub-hosted runner.
-        timeout-minutes: 45
+        #
+        # #3634: 45 → 90. Il TestSessionTimeout del runsettings passa a 75 min perché a 45 la
+        # sessione veniva troncata a metà (2148 test su ~2962, `Test Run Aborted.` su tutti e tre
+        # gli shard). Questo timeout deve restare SOPRA quello della sessione: se scattasse prima,
+        # GitHub marcherebbe il job `cancelled` senza riepilogo — il difetto di #3629.
+        #
+        # Nota: la stima «45 min bastano» di PR #1505 non era verificabile, perché nello stesso
+        # periodo questo job non eseguiva alcun test (#3632).
+        timeout-minutes: 90
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
@@ -808,7 +892,44 @@ jobs:
               --blame-hang-dump-type mini" \
             -f cobertura \
             -o coverage/${{ matrix.shard.coverage_file }}
-          echo "✅ Integration tests passed - shard: ${{ matrix.shard.name }}"
+
+      # #3632 — stesso guard del gate unit: il verde va misurato, non dichiarato. Qui c'era
+      # `echo "✅ Integration tests passed"`, che affermava un esito che lo script non aveva
+      # verificato — e infatti lo shard usciva verde in 3-7 secondi senza eseguire nulla.
+      #
+      # Legge il .trx che `integration.runsettings` produce già (`integration-test-results.trx`,
+      # riga 52-54 di quel file). Una prima versione aggiungeva un `--logger trx` da riga di
+      # comando con un nome per shard: duplicava il logger dichiarato nel runsettings, e quale dei
+      # due LogFileName prevalga non è garantito — un guard che cerca un file che potrebbe non
+      # esistere mai sarebbe rosso al 100% invece che vigile.
+      #
+      # Qui il target è il csproj esplicito, quindi c'è un solo .trx; la somma resta per simmetria
+      # col gate unit e per non dipendere da quel dettaglio. La soglia è bassa (100) perché gli
+      # shard hanno conteggi diversi e mobili — serve a distinguere «è girato» da «zero», non a
+      # pinnare un numero.
+      - name: 'Guard: assert integration tests actually ran (#3632)'
+        run: |
+          set -euo pipefail
+          mapfile -t trx_files < <(find . -name 'integration-test-results.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::No .trx for shard ${{ matrix.shard.name }}: no test executed."
+            exit 1
+          fi
+          sum=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: unreadable 'executed' counter (malformed trx?)."
+              exit 1
+            fi
+            echo "  $f → executed=$n"
+            sum=$((sum + n))
+          done
+          if [ "$sum" -lt 100 ]; then
+            echo "::error::Shard ${{ matrix.shard.name }}: only $sum tests executed — would have been green without running anything (#3632)."
+            exit 1
+          fi
+          echo "✅ Integration tests executed (${{ matrix.shard.name }}): $sum"
 
       - name: Upload Coverage
         if: always()

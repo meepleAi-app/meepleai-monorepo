@@ -4,12 +4,15 @@ using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Api.Infrastructure.DomainEventOutbox;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
@@ -45,10 +48,31 @@ public sealed class PdfCoverPropagationIntegrationTests : IAsyncLifetime
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
 
+        // #3633: prerequisito necessario ma non sufficiente — la causa residua era la
+        // registrazione mancante più sotto (ICacheInvalidationRetryPolicy).
+        //
+        // Serve comunque: il default DI è OutboxOnly (cutover T9 di #1535), quindi gli eventi vanno
+        // in domain_event_outbox e NON sono pubblicati inline via MediatR — senza l'override
+        // PdfCoverGeneratedEventHandler non verrebbe invocato in nessun caso. È la terza classe
+        // rimasta indietro rispetto al cutover, dopo DomainEventDispatcherIntegrationTests e
+        // FullStackCrossContextWorkflowTests (#3647).
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
+
         // PdfCoverGeneratedEventHandler depends on ISharedGameRepository, which is not
         // registered in the base builder (it lives in SharedGameCatalogServiceExtensions).
         // Register the real implementation so handler can load and update the SharedGame aggregate.
         services.AddScoped<ISharedGameRepository, SharedGameRepository>();
+
+        // #3633: seconda dipendenza mancante, ed è quella che teneva rosso il test. Senza,
+        // il DI non riesce ad attivare PdfCoverGeneratedEventHandler e `MediatR.Publish`
+        // solleva `InvalidOperationException: Unable to resolve service for type
+        // 'ICacheInvalidationRetryPolicy'`. L'eccezione non arriva mai al test: il dispatch
+        // inline in MeepleAiDbContext.SaveChangesAsync la cattura (CA1031 soppresso) e la
+        // manda solo nel log, quindi il fallimento si presentava come «PdfCoverR2Key è null»
+        // — un handler che non esiste è indistinguibile da un handler che non fa nulla.
+        // In produzione la registra InfrastructureServiceExtensions.cs:371 come Singleton.
+        services.AddSingleton<ICacheInvalidationRetryPolicy, CacheInvalidationRetryPolicy>();
 
         _serviceProvider = services.BuildServiceProvider();
         _eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();

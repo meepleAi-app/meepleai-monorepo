@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using StackExchange.Redis;
 using System.Net;
@@ -67,6 +68,22 @@ public class CorsTestFactory : WebApplicationFactory<Program>
             mockRedis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()))
                 .Returns(mockDatabase.Object);
             services.AddSingleton(mockRedis.Object);
+
+            // #3633: il mock sopra copre GetDatabase() ma non GetSubscriber(), che quindi torna
+            // null. HybridCacheInvalidationSubscriber — hosted service aggiunto dopo questi test —
+            // chiama `_redis.GetSubscriber().SubscribeAsync(...)` in StartAsync: NullReference,
+            // l'host non parte e TUTTI e 13 i test di questa classe falliscono prima di arrivare
+            // alla CORS. Erano fra i 57 rossi emersi quando i gate sono tornati a riportare (#3629,
+            // #3632); nessuno se n'era accorto perché nessun workflow li eseguiva.
+            //
+            // Rimosso invece di mockato: `SubscribeAsync` restituisce `ChannelMessageQueue`, che è
+            // sealed con costruttore internal e non è istanziabile da un test. L'invalidazione
+            // cache cross-replica non c'entra nulla con l'header whitelist di CORS.
+            //
+            // Nota di robustezza (non risolta qui, vedi #3633): in produzione lo stesso percorso
+            // impedisce l'avvio dell'applicazione se Redis non è raggiungibile allo startup. È una
+            // scelta fail-fast difendibile, ma non dichiarata — merita una decisione esplicita.
+            services.RemoveAll(typeof(IHostedService));
 
             // Replace vector/embedding services (used by RagService, HybridSearchService, DocumentProcessing)
             // Scoped lifetime matches production registration (ApplicationServiceExtensions.cs:68,70)

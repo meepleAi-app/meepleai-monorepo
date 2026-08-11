@@ -49,10 +49,20 @@ namespace Api.Infrastructure.Migrations
                 ON CONFLICT (id) DO NOTHING;
                 """);
 
-            // Le 8 categorie di default, perse nello stesso squash. `ON CONFLICT (name) DO NOTHING`
-            // e non `DO UPDATE` come nell'originale: là serviva ad aggiungere emoji/colore a righe
-            // già esistenti, qui sovrascriverebbe personalizzazioni fatte da allora. Su un DB che le
-            // ha già (staging, produzione) questo statement non tocca nulla.
+            // Le 8 categorie di default, perse nello stesso squash. `DO NOTHING` e non `DO UPDATE`
+            // come nell'originale: là serviva ad aggiungere emoji/colore a righe già esistenti, qui
+            // sovrascriverebbe personalizzazioni fatte da allora. Su un DB che le ha già (staging,
+            // produzione) questo statement non tocca nulla.
+            //
+            // #3650: `ON CONFLICT` SENZA target di inferenza, non `ON CONFLICT (name)`.
+            // `game_categories` ha DUE vincoli unique — `ix_game_categories_name` e
+            // `ix_game_categories_slug` — e `UpdateGameCategoryCommand` (#1440) espone `Name` e
+            // `Slug` come campi indipendenti. Un admin che rinomina «Strategy → Strategia» lasciando
+            // `slug = 'strategy'` crea una riga su cui l'INSERT non trova conflitto sul nome,
+            // procede, e viola l'indice sullo slug: `23505 duplicate key value violates unique
+            // constraint "ix_game_categories_slug"` → migration abortita, deploy bloccato.
+            // Senza target, QUALUNQUE violazione di unicità viene assorbita — che è l'intento del
+            // seed: se la riga esiste in qualsiasi forma, non fare nulla.
             migrationBuilder.Sql(
                 """
                 INSERT INTO game_categories (id, name, slug, emoji, color, created_at)
@@ -65,7 +75,7 @@ namespace Api.Infrastructure.Migrations
                     (gen_random_uuid(), 'Abstract',      'abstract',      '🔷', '#06b6d4', NOW()),
                     (gen_random_uuid(), 'Thematic',      'thematic',      '🗺️', '#ef4444', NOW()),
                     (gen_random_uuid(), 'Euro',          'euro',          '🏛️', '#6366f1', NOW())
-                ON CONFLICT (name) DO NOTHING;
+                ON CONFLICT DO NOTHING;
                 """);
         }
 

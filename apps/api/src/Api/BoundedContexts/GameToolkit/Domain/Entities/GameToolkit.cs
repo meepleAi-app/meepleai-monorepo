@@ -21,6 +21,25 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
     public Guid? PrivateGameId { get; private set; }
     public string Name { get; private set; }
     public int Version { get; private set; }
+
+    /// <summary>
+    /// Marketplace version pointer, in semver. Issue #3670.
+    /// </summary>
+    /// <remarks>
+    /// Distinct from <see cref="Version"/>, which is a legacy monotonic counter for session
+    /// immutability. This is the user-authored version published to the marketplace, and it
+    /// is the aggregate's own state — before #3670 the aggregate did not carry it, so the
+    /// persistence mapper synthesised <c>"0.{Version}.0"</c> and every write path had to
+    /// defend against that synthesis overwriting the real value.
+    /// </remarks>
+    public string VersionSemver { get; private set; } = SeedSemver;
+
+    /// <summary>Semver assigned to a toolkit that has never been published to the marketplace.</summary>
+    /// <remarks>
+    /// Matches what the old <c>MapToPersistence</c> synthesis produced for a brand-new toolkit
+    /// (<c>Version</c> starts at 1 → <c>"0.1.0"</c>), so existing rows keep their value.
+    /// </remarks>
+    internal const string SeedSemver = "0.1.0";
     public Guid CreatedByUserId { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }
@@ -89,6 +108,7 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         PrivateGameId = hasPrivateGameId ? privateGameId : null;
         Name = name.Trim();
         Version = 1;
+        VersionSemver = SeedSemver;
         CreatedByUserId = createdByUserId;
         CreatedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
@@ -140,6 +160,27 @@ internal sealed class GameToolkit : AggregateRoot<Guid>
         Version++;
         UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new ToolkitPublishedEvent(Id, Version));
+    }
+
+    /// <summary>
+    /// Moves the marketplace pointer to a newly published semver. Issue #3670.
+    /// </summary>
+    /// <remarks>
+    /// Ordering against the currently published version is enforced by
+    /// <c>PublishToolkitVersionCommandHandler</c> against the ToolkitVersion aggregate, which
+    /// owns version history; this method only moves the parent's pointer. It exists so the
+    /// publish path can go through the repository like every other write: before #3670 the
+    /// handler had to mutate the tracked EF entity directly, because persisting the aggregate
+    /// would have overwritten the user's semver with a synthesised one.
+    /// </remarks>
+    public void PublishMarketplaceVersion(string versionSemver, DateTime publishedAt)
+    {
+        if (string.IsNullOrWhiteSpace(versionSemver))
+            throw new ArgumentException("Version semver cannot be empty", nameof(versionSemver));
+
+        VersionSemver = versionSemver.Trim();
+        IsPublished = true;
+        UpdatedAt = publishedAt;
     }
 
     // ========================================================================

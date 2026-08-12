@@ -371,6 +371,12 @@ security-audit: ## External port-scan against staging (default) — verifies onl
 	bash scripts/security-audit.sh
 	@echo "✅ Security audit passed"
 
+feature-inventory: ## Rigenera docs/for-developers/feature-inventory.md dal codice
+	@bash scripts/generate-feature-inventory.sh
+
+feature-inventory-check: ## Verifica che l'inventario non sia obsoleto (exit 1 se lo è) — per la CI
+	@bash scripts/generate-feature-inventory.sh --check
+
 test-e2e: ## Playwright E2E tests (requires make dev + api + web running) — mirrors test-e2e.yml
 	@echo "🔵 E2E Playwright tests..."
 	cd $(WEB) && pnpm test:e2e

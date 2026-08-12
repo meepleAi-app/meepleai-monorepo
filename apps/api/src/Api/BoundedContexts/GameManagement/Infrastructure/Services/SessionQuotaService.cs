@@ -171,7 +171,7 @@ internal sealed class SessionQuotaService : ISessionQuotaService
         }
 
         // CRITICAL: Save changes to persist terminated sessions and dispatch domain events
-        // Pattern: All command handlers call SaveChangesAsync after UpdateAsync (e.g., CompleteGameSessionCommandHandler)
+        // Pattern: All command handlers call SaveChangesAsync after UpdateAsync (e.g., EndGameSessionCommandHandler)
         // Without this, terminated sessions remain active and notifications are never sent
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

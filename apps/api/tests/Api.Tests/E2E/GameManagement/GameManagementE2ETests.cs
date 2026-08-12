@@ -189,9 +189,10 @@ public sealed class GameManagementE2ETests : E2ETestBase
         // la serata e vi si avvia dentro la sessione.
         var sessionId = await StartSessionAsync(_testGameId);
 
-        // Act - Complete the session
+        // Act — #3662: era `/complete`, rimosso perche' senza chiamanti. `/end` accetta
+        // lo stesso `winnerName` ed e' l'endpoint che il frontend usa davvero.
         var completePayload = new { winnerName = "Player 1" };
-        var completeResponse = await Client.PostAsJsonAsync($"/api/v1/sessions/{sessionId}/complete", completePayload);
+        var completeResponse = await Client.PostAsJsonAsync($"/api/v1/sessions/{sessionId}/end", completePayload);
 
         // Assert
         completeResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -201,29 +202,16 @@ public sealed class GameManagementE2ETests : E2ETestBase
         result!.Status.Should().Be("Completed");
     }
 
-    [Fact]
-    public async Task AbandonSession_ValidSession_MarksAsAbandoned()
-    {
-        // Arrange - Create session first
-        var email = $"abandon_{Guid.NewGuid():N}@example.com";
-        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
-        SetSessionCookie(sessionToken);
-
-        // #3662: il vecchio `POST /api/v1/sessions` non esiste piu'. Una Session
-        // appartiene a una GameNight (invariante «GameNight 1..N Session»): si crea
-        // la serata e vi si avvia dentro la sessione.
-        var sessionId = await StartSessionAsync(_testGameId);
-
-        // Act - Abandon the session
-        var abandonResponse = await Client.PostAsJsonAsync($"/api/v1/sessions/{sessionId}/abandon", new { });
-
-        // Assert
-        abandonResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var result = await abandonResponse.Content.ReadFromJsonAsync<GameSessionDto>();
-        result.Should().NotBeNull();
-        result!.Status.Should().Be("Abandoned");
-    }
+    // #3662 — RIMOSSO `AbandonSession_ValidSession_MarksAsAbandoned`.
+    //
+    // Copriva `POST /api/v1/sessions/{id}/abandon`, endpoint eliminato perche' nessun client
+    // lo chiamava: nel frontend «abandon» compare solo come STATO da disegnare, mai come
+    // azione da invocare.
+    //
+    // Lo stato `Abandoned` resta raggiungibile e resta coperto altrove: ci arriva
+    // `GameSession.TerminateForQuota()`, invocato da SessionQuotaService quando la quota
+    // sessioni e' esaurita. Non e' quindi copertura persa, e' copertura di un percorso che
+    // non esisteva piu'.
 
     [Fact]
     public async Task PauseAndResumeSession_ValidSession_ChangesStatusCorrectly()
@@ -301,7 +289,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
 
         // Step 5: Complete the game with a winner
         var completePayload = new { winnerName = "Bob" };
-        var completeResponse = await Client.PostAsJsonAsync($"/api/v1/sessions/{sessionId}/complete", completePayload);
+        var completeResponse = await Client.PostAsJsonAsync($"/api/v1/sessions/{sessionId}/end", completePayload);
         completeResponse.EnsureSuccessStatusCode();
 
         var completedSession = await completeResponse.Content.ReadFromJsonAsync<GameSessionDto>();
@@ -373,26 +361,31 @@ public sealed class GameManagementE2ETests : E2ETestBase
     /// <summary>
     /// #3662: sostituisce il vecchio <c>POST /api/v1/sessions</c>, che non esiste piu'.
     ///
-    /// Non e' una route rinominata ma un cambio di modello: una Session appartiene a una
-    /// GameNight, quindi il flusso e' in due passi. Il risultato porta DUE id --
-    /// <c>SessionId</c> (l'aggregato <c>GameSession</c>) e <c>GameNightSessionId</c> (il link
-    /// con la serata): gli endpoint <c>/sessions/{id}/complete|abandon|pause|resume|players</c>
-    /// vogliono il PRIMO. Scambiarli darebbe 404 su ogni chiamata successiva.
+    /// <para>Una Session appartiene a una GameNight, quindi il flusso e' a piu' passi, e ogni
+    /// passo e' un requisito verificato: la serata pretende <c>ScheduledAt &gt; UtcNow+1h</c>
+    /// STRETTAMENTE (altrimenti 422), nasce in Draft e va pubblicata (altrimenti 409), e
+    /// l'avvio pretende una knowledge base pronta (altrimenti 422 <c>kb_not_ready</c>).</para>
     ///
-    /// <para><b>LIMITE NOTO (#3662).</b> Questo helper porta il flusso fino all'avvio della
-    /// sessione -- e quello ora funziona -- ma i cinque test del ciclo di vita restano rossi
-    /// con 404. Il motivo e' architetturale, non un URL sbagliato: <c>/sessions/{id}/complete
-    /// |abandon|pause|resume</c> operano su <c>IGameSessionRepository</c>, cioe' l'aggregato
-    /// <b>GameSession</b> (GameManagement), mentre l'avvio da una serata crea un
-    /// <b>SessionTracking.Session</b>. Sono due dei tre aggregati di ADR-089, e il
-    /// <c>SessionId</c> restituito qui NON e' quello che quegli endpoint risolvono.</para>
+    /// <para><b>LIMITE NOTO — mappa completa (#3662).</b> Questo helper si ferma al
+    /// <c>SessionTracking.Session</c>. Gli endpoint <c>/sessions/{id}/pause|resume|end</c>
+    /// operano invece sull'aggregato <b>GameSession</b>, che nasce altrove:</para>
     ///
-    /// <para>Il collegamento (<c>CorrelatedGameSessionId</c>) viene creato piu' avanti nel
-    /// ciclo di vita — <c>LifecycleCommandHandlers.cs:86</c> — e <b>non e' esposto da alcuna
-    /// risposta</b>: <c>GoLiveSessionResult</c> porta SessionId/GameNightId/
-    /// GameNightSessionId/PlayOrder/Status, mai l'id correlato. Serve stabilire quale sia il
-    /// percorso HTTP supportato per ottenere un GameSession: e' una domanda sul contratto,
-    /// non un aggiustamento di test.</para>
+    /// <list type="number">
+    ///   <item>lo crea <c>StartLiveSessionCommandHandler</c> (<c>LifecycleCommandHandlers.cs:80</c>)
+    ///     su <c>POST /live-sessions/{id}/start</c> -- NON <c>/sessions/{id}/go-live</c>, che
+    ///     promuove soltanto il link con la serata;</item>
+    ///   <item>con un Guid NUOVO: il link <c>CorrelatedGameSessionId</c> non compare in nessuna
+    ///     risposta, ma l'id si recupera da
+    ///     <c>GET /games/{gameId}/sessions/active</c> (<c>GetActiveSessionsQueryHandler</c> usa
+    ///     <c>IGameSessionRepository</c>), che e' come fa il frontend;</item>
+    ///   <item>ma l'avvio pretende almeno un giocatore attivo, e
+    ///     <c>POST /sessions/{id}/players</c> NON serve: quel handler usa a sua volta
+    ///     <c>IGameSessionRepository</c>, quindi aggiunge giocatori a un GameSession che ancora
+    ///     non esiste. I partecipanti vanno aggiunti sulla live session, con un altro
+    ///     endpoint.</item>
+    /// </list>
+    ///
+    /// <para>Manca quindi solo l'ultimo anello. Il resto della catena e' verificato.</para>
     /// </summary>
     private async Task<Guid> StartSessionAsync(Guid gameId, string gameTitle = "E2E Test Game")
     {
@@ -415,6 +408,7 @@ public sealed class GameManagementE2ETests : E2ETestBase
             $"/api/v1/game-nights/{gameNightId}/sessions", new { gameId, gameTitle });
         sessionResponse.EnsureSuccessStatusCode();
         var started = await sessionResponse.Content.ReadFromJsonAsync<StartSessionResult>();
+
         return started!.SessionId;
     }
 

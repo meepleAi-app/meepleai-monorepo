@@ -76,9 +76,13 @@ internal sealed class ShareRequestEntityConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.ModifiedBy)
             .HasColumnName("modified_by");
 
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // #3651 — concorrenza ottimistica via `xmin` (colonna di sistema PostgreSQL), al posto
+        // della `bytea` che nessun trigger popolava più dopo #2305.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Issue #3665: Added for Phase 4 - Proposal System
         builder.Property(e => e.SourcePrivateGameId)

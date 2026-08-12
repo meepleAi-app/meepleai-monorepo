@@ -260,13 +260,19 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             tags: entity.Tags, // Issue #1687
             updatedAt: entity.UpdatedAt, // Issue #1687
             updatedBy: entity.UpdatedBy, // Issue #1687
-            // Issue #3401: cover state round-trip — without these the read path defaults
-            // cover fields (null / Pending) and UpdateAsync then zeroes the DB row.
+                                         // Issue #3401: cover state round-trip — without these the read path defaults
+                                         // cover fields (null / Pending) and UpdateAsync then zeroes the DB row.
             coverR2Key: entity.CoverR2Key,
             coverGenerationStatus: entity.CoverGenerationStatus,
             coverPageIndex: entity.CoverPageIndex,
             coverGenerationError: entity.CoverGenerationError,
-            coverGenerationAttempts: entity.CoverGenerationAttempts
+            coverGenerationAttempts: entity.CoverGenerationAttempts,
+            // #3694: il token di concorrenza deve attraversare l'aggregato per la stessa ragione
+            // strutturale delle colonne cover qui sopra — l'UpdateAsync è su grafo detached, e ciò
+            // che non viene riletto qui va perduto o azzerato al primo salvataggio. Per il token
+            // l'effetto è peggiore: resterebbe 0, e `WHERE xmin = 0` non corrisponde mai a una
+            // riga reale, quindi OGNI update fallirebbe con DbUpdateConcurrencyException.
+            xminVersion: entity.Xmin
         );
     }
 
@@ -322,7 +328,14 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             CoverGenerationStatus = domain.CoverGenerationStatus.ToString(),
             CoverPageIndex = domain.CoverPageIndex,
             CoverGenerationError = domain.CoverGenerationError,
-            CoverGenerationAttempts = domain.CoverGenerationAttempts
+            CoverGenerationAttempts = domain.CoverGenerationAttempts,
+            // #3694 — token di concorrenza (ADR-060). UpdateAsync riattacca questa entità con
+            // DbSet.Update() su un grafo detached: EF non ha un original value da cui partire e
+            // usa quello che trova qui. Omettendolo resterebbe 0, e ogni UPDATE emetterebbe
+            // `WHERE xmin = 0` colpendo 0 righe — cioè un DbUpdateConcurrencyException su ogni
+            // scrittura, anche senza concorrenza. Con il valore letto in MapToDomain il confronto
+            // è quello giusto: passa se la riga non è cambiata, fallisce con 409 se lo è.
+            Xmin = domain.XminVersion
         };
     }
 }

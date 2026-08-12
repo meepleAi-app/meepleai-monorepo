@@ -51,10 +51,17 @@ public class SharedGameEntity
     public bool HasKnowledgeBase { get; set; }
 
     /// <summary>
-    /// Optimistic concurrency token. Managed by the database.
-    /// Spec-panel recommendation C-3.
+    /// Token di concorrenza ottimistica, sulla colonna di sistema <c>xmin</c> di PostgreSQL.
+    /// Spec-panel recommendation C-3; #3651 per la conversione.
+    /// <para>
+    /// Prima era <c>byte[]? RowVersion</c> su una colonna <c>bytea</c>. Postgres non popola una
+    /// <c>bytea</c> da solo, e il trigger che lo faceva è stato rimosso da #2305 migrando le altre
+    /// entità a <c>xmin</c>: da allora il token restava NULL, EF confrontava <c>NULL = NULL</c> a
+    /// ogni update e due redattori concorrenti sulla stessa scheda si sovrascrivevano a vicenda in
+    /// silenzio.
+    /// </para>
     /// </summary>
-    public byte[]? RowVersion { get; set; }
+    public uint Xmin { get; set; }
 
     /// <summary>
     /// Issue #1823 (umbrella #1821 L2) — Wikidata/Wikimedia Commons-sourced

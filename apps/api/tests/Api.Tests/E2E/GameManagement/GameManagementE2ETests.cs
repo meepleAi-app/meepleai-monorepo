@@ -250,7 +250,17 @@ public sealed class GameManagementE2ETests : E2ETestBase
     {
         // Step 1: Browse games (public)
         ClearAuthentication();
-        var gamesResponse = await Client.GetAsync("/api/v1/games");
+        // #3662: era `GET /api/v1/games` senza filtro. L'endpoint e' PAGINATO: in isolamento il
+        // catalogo e' piccolo e il gioco di questo test finisce in prima pagina, ma nella suite
+        // completa le altre classi ne seminano a decine e il nostro esce dalla pagina --
+        // l'assert sotto falliva in 11 ms. Dipendeva dalla dimensione del catalogo, cioe'
+        // dall'ordine e dal numero degli altri test.
+        //
+        // Il nome del gioco e' unico per test (`E2E Test Game {Guid}`), quindi il filtro di
+        // ricerca rende il passo deterministico senza cambiare cosa verifica: che il gioco
+        // appena creato sia visibile dal catalogo pubblico.
+        var gamesResponse = await Client.GetAsync(
+            $"/api/v1/games?search={Uri.EscapeDataString(_testGameName)}");
         gamesResponse.EnsureSuccessStatusCode();
 
         var games = await gamesResponse.Content.ReadFromJsonAsync<PaginatedGamesResponse>();

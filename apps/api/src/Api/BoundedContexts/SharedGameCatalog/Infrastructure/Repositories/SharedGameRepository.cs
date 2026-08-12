@@ -413,7 +413,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             manualCoverAttestedAt: entity.ManualCoverAttestedAt,
             // #3590 Slice B — senza questa lettura l'aggregato non conosce la cover BGG, quindi
             // MapToEntity la riscriverebbe come NULL al primo Update() (grafo detached).
-            bggCoverR2Key: entity.BggCoverR2Key);
+            bggCoverR2Key: entity.BggCoverR2Key,
+            // #3651 — il token di concorrenza deve attraversare l'aggregato per la stessa ragione
+            // strutturale delle colonne qui sopra: l'Update() è su grafo detached, quindi EF non ha
+            // una riga tracciata da cui ricavare l'original value e usa quello sulla proprietà.
+            // Senza questa lettura sarebbe 0, e ogni UPDATE emetterebbe `WHERE xmin = 0` — che non
+            // corrisponde mai a un xid reale — fallendo anche senza alcuna concorrenza.
+            xminVersion: entity.Xmin);
 
         // Issue #2035: Hydrate designers from the M:N join — only when the caller
         // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
@@ -496,7 +502,15 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             CreatedAt = game.CreatedAt,
             ModifiedAt = game.ModifiedAt,
             IsDeleted = game.IsDeleted,  // Fix: Use aggregate value, not hardcoded false (Issue #2514 code review)
-            AgentDefinitionId = game.AgentDefinitionId  // Issue #4228
+            AgentDefinitionId = game.AgentDefinitionId,  // Issue #4228
+            // #3651 — token di concorrenza (ADR-060). Su un grafo detached EF non ha una riga
+            // tracciata da cui ricavare l'original value del token e usa quello che trova qui:
+            // omettendolo resterebbe 0, e ogni UPDATE emetterebbe `WHERE xmin = 0` colpendo 0
+            // righe, cioè un DbUpdateConcurrencyException su ogni scrittura anche senza
+            // concorrenza. Con il valore letto in MapToDomain il confronto è quello giusto: la
+            // scrittura passa se la riga non è cambiata, e fallisce con 409 se qualcuno l'ha
+            // modificata nel frattempo.
+            Xmin = game.XminVersion
         };
     }
 

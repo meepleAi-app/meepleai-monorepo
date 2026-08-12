@@ -83,6 +83,17 @@ internal class StartLiveSessionCommandHandler : ICommandHandler<StartLiveSession
                 players: players,
                 createdByUserId: session.CreatedByUserId);
 
+            // #3662: il GameSession correlato deve rispecchiare lo stato della live session che
+            // si sta avviando. Senza questo restava in `Setup` per sempre -- nessun percorso lo
+            // avviava -- e ogni operazione del suo ciclo di vita rispondeva 409:
+            // `Pause()` pretende InProgress, `Complete()` pretende InProgress o Paused.
+            // In pratica la lista delle sessioni attive (che include Setup) mostrava sessioni su
+            // cui nessuna azione funzionava.
+            //
+            // E' la simmetria che mancava rispetto a CompleteLiveSessionCommandHandler, dove il
+            // GameSession correlato riceve esplicitamente il suo stato con MarkCorrelatedComplete.
+            gameSession.Start();
+
             session.SetCorrelatedGameSessionId(gameSession.Id);
 
             await _gameSessionRepository.AddAsync(gameSession, cancellationToken).ConfigureAwait(false);

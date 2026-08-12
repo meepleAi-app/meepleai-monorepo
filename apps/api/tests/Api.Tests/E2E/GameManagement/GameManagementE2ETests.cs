@@ -285,7 +285,8 @@ public sealed class GameManagementE2ETests : E2ETestBase
 
         session.Should().NotBeNull();
         session!.Status.Should().Be("InProgress");
-        session.Players.Should().HaveCount(3);
+        // #3662: 3 aggiunti dal test + 1 seminato da StartSessionAsync per poter avviare.
+        session.Players.Should().HaveCount(4);
 
         // Step 5: Complete the game with a winner
         var completePayload = new { winnerName = "Bob" };
@@ -323,7 +324,9 @@ public sealed class GameManagementE2ETests : E2ETestBase
 
         var updatedSession = await addResponse.Content.ReadFromJsonAsync<GameSessionDto>();
         updatedSession.Should().NotBeNull();
-        updatedSession!.Players.Should().HaveCount(3);
+        // #3662: StartSessionAsync semina UN giocatore, perche' l'avvio della live session
+        // pretende almeno un partecipante attivo. Il test ne aggiunge uno: totale 2.
+        updatedSession!.Players.Should().HaveCount(2);
         updatedSession.Players.Should().Contain(p => p.PlayerName == "Player 3");
     }
 

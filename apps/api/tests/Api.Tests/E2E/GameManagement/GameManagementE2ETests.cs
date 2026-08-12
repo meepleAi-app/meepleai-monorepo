@@ -389,27 +389,39 @@ public sealed class GameManagementE2ETests : E2ETestBase
     /// </summary>
     private async Task<Guid> StartSessionAsync(Guid gameId, string gameTitle = "E2E Test Game")
     {
-        var nightResponse = await Client.PostAsJsonAsync("/api/v1/game-nights", new
+        // 1. LiveGameSession — l'aggregato runtime. E' da qui che parte il ciclo di vita, non
+        //    dalla GameNight: quella crea un SessionTracking.Session, che vive in un altro
+        //    spazio di id (ADR-089, tre aggregati distinti).
+        var createResponse = await Client.PostAsJsonAsync("/api/v1/live-sessions", new
         {
-            title = $"E2E Night {Guid.NewGuid():N}",
-            // Il validator pretende `> UtcNow.AddHours(1)` STRETTAMENTE: con AddHours(1)
-            // esatto la data e' gia' scaduta quando il server la valuta, e la risposta e' 422.
-            scheduledAt = DateTimeOffset.UtcNow.AddDays(1)
+            gameName = gameTitle,
+            gameId
         });
-        nightResponse.EnsureSuccessStatusCode();
-        var gameNightId = await nightResponse.Content.ReadFromJsonAsync<Guid>();
+        createResponse.EnsureSuccessStatusCode();
+        // Il body e' il Guid NUDO (Results.Created(location, sessionId)), non un oggetto.
+        var liveSessionId = await createResponse.Content.ReadFromJsonAsync<Guid>();
 
-        // Una serata nasce in stato Draft e non accetta sessioni («Cannot add sessions to a
-        // Draft game night»): va pubblicata prima.
-        var publishResponse = await Client.PostAsync($"/api/v1/game-nights/{gameNightId}/publish", null);
-        publishResponse.EnsureSuccessStatusCode();
+        // 2. Almeno un giocatore ATTIVO: StartLiveSessionCommandHandler rifiuta con
+        //    ValidationException una sessione senza partecipanti. Va aggiunto QUI:
+        //    `POST /sessions/{id}/players` non servirebbe, perche' quel handler usa
+        //    IGameSessionRepository e scriverebbe su un GameSession che ancora non esiste.
+        var addPlayer = await Client.PostAsJsonAsync(
+            $"/api/v1/live-sessions/{liveSessionId}/players",
+            new { displayName = "E2E Player", color = "Red" });
+        addPlayer.EnsureSuccessStatusCode();
 
-        var sessionResponse = await Client.PostAsJsonAsync(
-            $"/api/v1/game-nights/{gameNightId}/sessions", new { gameId, gameTitle });
-        sessionResponse.EnsureSuccessStatusCode();
-        var started = await sessionResponse.Content.ReadFromJsonAsync<StartSessionResult>();
+        // 3. L'avvio crea il GameSession correlato (LifecycleCommandHandlers.cs:80) con un Guid
+        //    NUOVO, e il link `CorrelatedGameSessionId` non compare in nessuna risposta.
+        var startLive = await Client.PostAsync($"/api/v1/live-sessions/{liveSessionId}/start", null);
+        startLive.EnsureSuccessStatusCode();
 
-        return started!.SessionId;
+        // 4. L'id si recupera cosi', ed e' come fa il frontend: GetActiveSessionsQueryHandler
+        //    usa IGameSessionRepository, quindi restituisce GameSession.
+        var activeResponse = await Client.GetAsync($"/api/v1/games/{gameId}/sessions/active");
+        activeResponse.EnsureSuccessStatusCode();
+        var active = await activeResponse.Content.ReadFromJsonAsync<List<GameSessionDto>>();
+        active.Should().NotBeNullOrEmpty("l'avvio della live session deve aver creato un GameSession");
+        return active![0].Id;
     }
 
     private sealed record StartSessionResult(

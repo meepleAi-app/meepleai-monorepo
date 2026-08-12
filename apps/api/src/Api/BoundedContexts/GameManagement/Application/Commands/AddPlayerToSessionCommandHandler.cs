@@ -1,3 +1,4 @@
+using Api.Middleware.Exceptions;
 using Api.BoundedContexts.GameManagement.Application.Commands;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Application.Mappers;
@@ -31,7 +32,11 @@ internal class AddPlayerToSessionCommandHandler : ICommandHandler<AddPlayerToSes
         // Get existing session
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken).ConfigureAwait(false);
         if (session == null)
-            throw new InvalidOperationException($"Session with ID {command.SessionId} not found");
+            // #3662: era InvalidOperationException. Il codice HTTP usciva giusto per caso (il
+            // middleware mappa quel tipo a 404), ma la convenzione #2568 vuole
+            // NotFoundException, che dichiara l'intento invece di ottenerlo per effetto
+            // collaterale del mapping.
+            throw new NotFoundException("GameSession", command.SessionId.ToString());
 
         // Create SessionPlayer value object
         var player = new SessionPlayer(command.PlayerName, command.PlayerOrder, command.Color);

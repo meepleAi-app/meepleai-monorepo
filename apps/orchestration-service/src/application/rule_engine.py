@@ -241,46 +241,45 @@ class RuleEngine:
         matches = []
 
         for rule in rules:
-            pattern = rule.get("pattern")
             rule_id = UUID(rule["id"])
 
-            # Pattern-based matching
-            if pattern:
-                match = re.match(pattern, move)
-                if match:
-                    matches.append(RuleMatch(
-                        rule_id=rule_id,
-                        rule_name=rule["name"],
-                        rule_type=rule["type"],
-                        matches=True,
-                        reason=rule["description"],
-                        precedence=rule["precedence"],
-                    ))
-
-            # State-based rules are not evaluated: there is no board model to check them
-            # against (#3668).
+            # Constraints are state-based and there is no board model to evaluate them
+            # against, so no RuleMatch is emitted: nothing may claim one passed (#3668).
             #
-            # This branch used to be guarded by `and game_state` and, when reached, appended
-            # a RuleMatch with matches=True — "for MVP, assume constraint passes". Since the
-            # orchestrator always passed game_state=None the branch was dead, which hid how
-            # bad its body was: implementing the accompanying TODO (extract game_state from
-            # board_state) would have flipped the engine from "this rule is not evaluated"
-            # to "this rule is satisfied", asserted without a single check. The second is
-            # worse precisely because it is invisible.
-            #
-            # Emitting no RuleMatch at all keeps the outcome truthful — nothing claims the
-            # constraint passed — and leaves moves to be judged by the rules that CAN be
-            # evaluated. The warning is what makes the gap visible; silence is how this
-            # survived from #3759 to #3668.
-            elif rule["type"] == "Constraint":
-                logger.warning(
-                    "Constraint rule '%s' NOT evaluated: no board model exists to check it "
-                    "(#3668). The move was not verified against this rule.",
-                    rule["name"],
-                )
+            # Keyed on the TYPE, deliberately, not on a missing pattern. `rules` can come
+            # from the Redis cache (arbitrary JSON), so a Constraint that carries a pattern
+            # would otherwise fall into the branch below and be rubber-stamped matches=True.
+            if rule["type"] == "Constraint":
+                self._warn_constraint_unevaluated(rule["name"])
                 continue
 
+            pattern = rule.get("pattern")
+            if pattern and re.match(pattern, move):
+                matches.append(RuleMatch(
+                    rule_id=rule_id,
+                    rule_name=rule["name"],
+                    rule_type=rule["type"],
+                    matches=True,
+                    reason=rule["description"],
+                    precedence=rule["precedence"],
+                ))
+
         return matches
+
+    # Warn once per process, not once per move: the condition is constant and known, and a
+    # per-validation warning would train operators to ignore this service's logs.
+    _warned_constraints: set[str] = set()
+
+    def _warn_constraint_unevaluated(self, rule_name: str) -> None:
+        if rule_name in RuleEngine._warned_constraints:
+            return
+        RuleEngine._warned_constraints.add(rule_name)
+        logger.warning(
+            "Constraint rule '%s' is NOT evaluated: no board model exists to check it "
+            "(#3668). Moves are judged only by the rules that can be evaluated, so a "
+            "verdict of valid does not mean this constraint was satisfied.",
+            rule_name,
+        )
 
     def _determine_validity(
         self,

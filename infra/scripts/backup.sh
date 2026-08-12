@@ -70,7 +70,16 @@ S3_ENDPOINT="${S3_BACKUP_ENDPOINT:-}"
 S3_BUCKET_NAME="${S3_BACKUP_BUCKET_NAME:-meepleai-backups}"
 export AWS_ACCESS_KEY_ID="${S3_BACKUP_ACCESS_KEY:-}"
 export AWS_SECRET_ACCESS_KEY="${S3_BACKUP_SECRET_KEY:-}"
-S3_REGION="${S3_REGION:-auto}"
+# Accept S3_BACKUP_REGION for consistency with the variables above; S3_REGION stays
+# supported because existing secret files may already use it. Default "auto" is a
+# Cloudflare R2 convention — AWS S3 rejects it, so it is validated before use.
+S3_REGION="${S3_BACKUP_REGION:-${S3_REGION:-auto}}"
+
+# Tracks whether the cross-provider copy actually happened, so the final summary can
+# say so. Before #3669 the script logged "All backups completed successfully" even
+# when the upload had been skipped — the offsite copy had been off for months and
+# every run still reported success.
+OFFSITE_STATUS="not-attempted"
 
 # ─────────────────────────────────────────────
 # Webhook notification
@@ -198,16 +207,36 @@ backup_redis() {
 # ─────────────────────────────────────────────
 upload_to_s3() {
   if [[ "${S3_BACKUP_ENABLED}" != "true" ]]; then
-    log "INFO" "S3 upload disabled (S3_BACKUP_ENABLED != true) — skipping"
+    # WARN, not INFO: this is the difference between "backups exist" and "backups
+    # survive losing this provider". Both the backups and production live in the same
+    # Hetzner account, so with the upload off there is no cross-provider redundancy
+    # at all — an incident on the account loses them together (#3669).
+    log "WARN" "OFFSITE COPY NOT MADE — S3_BACKUP_ENABLED != true. Backups exist only on this host/provider."
+    OFFSITE_STATUS="disabled"
     return 0
   fi
 
   if [[ -z "${S3_ENDPOINT}" ]]; then
-    log "ERROR" "S3_BACKUP_ENABLED=true but S3_BACKUP_ENDPOINT is empty — skipping upload"
+    log "ERROR" "S3_BACKUP_ENABLED=true but S3_BACKUP_ENDPOINT is empty — cannot upload"
+    OFFSITE_STATUS="failed"
     return 1
   fi
 
-  log "INFO" "Uploading backup to S3/R2 bucket: ${S3_BUCKET_NAME}..."
+  if ! command -v aws >/dev/null 2>&1; then
+    log "ERROR" "S3_BACKUP_ENABLED=true but the aws CLI is not installed. Local backups were written; the offsite copy was NOT. Install it (e.g. apt-get install -y awscli) and re-run."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  # "auto" is a Cloudflare R2 convention. AWS S3 rejects it, and the resulting error
+  # names neither the variable nor the file it comes from.
+  if [[ "${S3_REGION}" == "auto" && "${S3_ENDPOINT}" == *"amazonaws.com"* ]]; then
+    log "ERROR" "S3_REGION=auto is not valid for AWS S3. Set S3_BACKUP_REGION to the bucket's real region (e.g. eu-central-1) in backup.secret."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  log "INFO" "Uploading backup to S3/R2 bucket: ${S3_BUCKET_NAME} (region ${S3_REGION})..."
 
   local s3_prefix="s3://${S3_BUCKET_NAME}/${TIMESTAMP}/"
 
@@ -217,6 +246,7 @@ upload_to_s3() {
     --storage-class STANDARD \
     --no-progress
 
+  OFFSITE_STATUS="uploaded"
   log "INFO" "S3/R2 upload complete: ${s3_prefix}"
 }
 
@@ -290,8 +320,17 @@ main() {
   clean_s3_backups
   clean_local_backups
 
-  log "INFO" "All backups completed successfully — ${BACKUP_DIR}"
-  notify_webhook "success" "Backup completed successfully: ${TIMESTAMP}"
+  # The summary names the destinations actually written. "Successfully" used to be
+  # unconditional, so a run that had silently skipped the offsite copy read exactly
+  # like a healthy one — which is how the copy stayed off for months without anyone
+  # noticing (#3669). Absence of a step must not look like success.
+  if [[ "${OFFSITE_STATUS}" == "uploaded" ]]; then
+    log "INFO" "Backup complete — local: ${BACKUP_DIR} | offsite: ${S3_BUCKET_NAME}"
+    notify_webhook "success" "Backup completed (local + offsite): ${TIMESTAMP}"
+  else
+    log "WARN" "Backup complete WITHOUT offsite copy — local only: ${BACKUP_DIR} (offsite: ${OFFSITE_STATUS})"
+    notify_webhook "degraded" "Backup completed but offsite copy is ${OFFSITE_STATUS}: ${TIMESTAMP}"
+  fi
 }
 
 main

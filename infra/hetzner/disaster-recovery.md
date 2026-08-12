@@ -60,8 +60,14 @@ aws s3 sync s3://meepleai-backups/<TIMESTAMP>/ ./restore/ \
 find ./restore -name '*.age' -exec sh -c \
   'age -d -i backup-key.txt -o "${1%.age}" "$1"' _ {} \;
 
-gunzip -c ./restore/postgres.sql.gz | docker exec -i meepleai-postgres psql -U meepleai meepleai_db
+# postgres.sql.gz is a pg_dumpall CLUSTER dump: it carries CREATE ROLE and \connect,
+# so it is fed to the maintenance database, NOT to an application database.
+# The app database is "meepleai". Mirrors backup-restore-test.sh:98, which is the
+# reference this procedure must stay in step with.
+gunzip -c ./restore/postgres.sql.gz | docker exec -i meepleai-postgres psql -U meepleai -d postgres -q
 ```
+
+⚠️ That command targets the **live** container. `backup-restore-test.sh` deliberately restores into a throwaway one; if you are validating a backup rather than recovering from a disaster, use the script instead of this.
 
 ⚠️ **Losing the age private key makes every offsite backup unrecoverable.** It is the one artifact that must survive the loss of both providers. Verify it is in the password manager *before* relying on this copy — a restore drill that only ever runs against the local backups will not tell you it is missing.
 
@@ -74,14 +80,14 @@ Measured on staging (2026-08-12): **177 MB per backup**, 7-day retention, ~1.4 G
 ```json
 { "Version": "2012-10-17", "Statement": [
   { "Effect": "Allow",
-    "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+    "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
     "Resource": "arn:aws:s3:::meepleai-backups/*" },
-  { "Effect": "Allow", "Action": ["s3:ListBucket"],
+  { "Effect": "Allow", "Action": ["s3:ListBucket", "s3:ListBucketMultipartUploads"],
     "Resource": "arn:aws:s3:::meepleai-backups" }
 ]}
 ```
 
-`DeleteObject` and `ListBucket` are required: `clean_s3_backups` prunes old prefixes.
+`DeleteObject` and `ListBucket` are required — `clean_s3_backups` prunes old prefixes. `AbortMultipartUpload` matters because a 177 MB dump is well past the CLI's multipart threshold: without it a failed transfer leaves orphaned parts behind, which are billed and do not show up in an object listing.
 
 **2. Lifecycle rules — mandatory if versioning is on.** `clean_s3_backups` deletes with `aws s3 rm --recursive`, which on a **versioned** bucket only writes delete markers: noncurrent versions are kept and billed forever. The prune looks like it works while storage grows without bound. Also expire incomplete multipart uploads — fragments are billed and do not appear in object listings.
 
@@ -97,6 +103,8 @@ Measured on staging (2026-08-12): **177 MB per backup**, 7-day retention, ~1.4 G
 ```
 
 The 14-day expiry is a backstop **independent of the script**: `clean_s3_backups` swallows a failed `aws s3 ls` (`|| true`) and prunes nothing, silently.
+
+⚠️ Keep `Expiration.Days` **strictly greater** than `BACKUP_RETENTION_DAYS`. Raise the retention above 14 and the lifecycle rule starts deleting first — the backstop quietly becomes the real policy, and the script's retention setting stops meaning anything.
 
 **3. AWS Budget at $5/month with email alerts.** Expected spend is cents, so $5 never fires by accident and fires immediately when something is wrong — including things that are not S3 at all.
 

@@ -5,7 +5,12 @@
 # Cron (run daily at 03:00 on the staging server):
 #   0 3 * * * cd /opt/meepleai/repo/infra && bash scripts/backup.sh >> /var/log/meepleai-backup.log 2>&1
 
-set -euo pipefail
+# -E (errtrace) is load-bearing, not decoration: without it bash does NOT inherit the
+# ERR trap into shell functions, so every `return 1` inside backup_postgres,
+# upload_to_s3 & co. unwound the script with the trap below never firing — no webhook,
+# no notification, and clean_local_backups never reached. A backup run that failed
+# looked exactly like one that succeeded, from the outside (#3669).
+set -Eeuo pipefail
 
 # ─────────────────────────────────────────────
 # Error trap — notify on unexpected failure
@@ -98,15 +103,21 @@ notify_webhook() {
     return 0
   fi
 
+  # "text" is what Slack and Discord require: without it an incoming webhook answers
+  # 400 and the notification is dropped. The structured fields are kept alongside for
+  # any receiver that reads them.
   local payload
-  payload=$(printf '{"status":"%s","message":"%s","timestamp":"%s","host":"%s"}' \
+  payload=$(printf '{"text":"[%s] MeepleAI backup on %s: %s","status":"%s","message":"%s","timestamp":"%s","host":"%s"}' \
+    "$status" "$(hostname)" "$message" \
     "$status" "$message" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$(hostname)")
 
-  curl --silent --max-time 10 \
+  # --fail so an HTTP 4xx/5xx is an error: without it curl exits 0 on a rejected
+  # payload and the `||` below never fires — the notification failure was itself silent.
+  curl --silent --fail --max-time 10 \
     -H "Content-Type: application/json" \
     -d "$payload" \
     "$WEBHOOK_URL" \
-    || log "WARN" "Webhook notification failed (non-fatal)"
+    || log "WARN" "Webhook notification failed (non-fatal) — status '${status}' was NOT delivered"
 }
 
 # ─────────────────────────────────────────────
@@ -269,16 +280,42 @@ upload_to_s3() {
   # Staged outside BACKUP_DIR so the encrypted copies never land among the local
   # artifacts, where the next run's sync or the restore test would trip over them.
   mkdir -p "${offsite_dir}"
+  # EXIT, not RETURN: a RETURN trap does not fire when errexit unwinds the script (e.g.
+  # age failing on one file), which left the staging copy on disk.
   # shellcheck disable=SC2064
-  trap "rm -rf '${offsite_dir}'" RETURN
+  trap "rm -rf '${offsite_dir}'" EXIT
 
   log "INFO" "Encrypting backup for offsite copy (age)..."
+
+  local expected
+  expected=$(find "${BACKUP_DIR}" -type f | wc -l)
+  if [[ "${expected}" -eq 0 ]]; then
+    log "ERROR" "No files found under ${BACKUP_DIR} — refusing to report an empty offsite copy as complete."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
   local f rel
   while IFS= read -r -d '' f; do
     rel="${f#"${BACKUP_DIR}/"}"
     mkdir -p "${offsite_dir}/$(dirname "${rel}")"
     age -r "${BACKUP_AGE_RECIPIENT}" -o "${offsite_dir}/${rel}.age" "${f}"
   done < <(find "${BACKUP_DIR}" -type f -print0)
+
+  # Count what was actually produced instead of trusting the loop to have run.
+  # errexit is supposed to abort on a failed `age`, but relying on that makes the
+  # guarantee implicit: a loop that iterates zero times (or partially) would upload
+  # an empty or truncated tree and still report "upload complete" — the worst possible
+  # outcome here, because you would believe an encrypted offsite copy exists. Assert
+  # the invariant rather than inferring it from control flow (#3669).
+  local produced
+  produced=$(find "${offsite_dir}" -type f -name '*.age' | wc -l)
+  if [[ "${produced}" -ne "${expected}" ]]; then
+    log "ERROR" "Encryption produced ${produced} of ${expected} expected files — refusing to upload a partial offsite copy."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+  log "INFO" "Encrypted ${produced}/${expected} files."
 
   log "INFO" "Uploading encrypted backup to S3/R2 bucket: ${S3_BUCKET_NAME} (region ${S3_REGION})..."
 

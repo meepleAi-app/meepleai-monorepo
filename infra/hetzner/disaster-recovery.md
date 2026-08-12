@@ -64,4 +64,45 @@ gunzip -c ./restore/postgres.sql.gz | docker exec -i meepleai-postgres psql -U m
 ```
 
 ⚠️ **Losing the age private key makes every offsite backup unrecoverable.** It is the one artifact that must survive the loss of both providers. Verify it is in the password manager *before* relying on this copy — a restore drill that only ever runs against the local backups will not tell you it is missing.
+
+## Cost guards for the offsite bucket
+
+Measured on staging (2026-08-12): **177 MB per backup**, 7-day retention, ~1.4 GB steady state — roughly **$0.04/month** on S3 Standard. The guards below are not about that figure; they are about the tail.
+
+**1. Scope the IAM credentials to the bucket.** This is the guard that matters. A key sitting on the VPS is a key that can be exfiltrated, and the backup bill is not what an attacker would run up. Dedicated user, no `s3:*`, never root keys:
+
+```json
+{ "Version": "2012-10-17", "Statement": [
+  { "Effect": "Allow",
+    "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"],
+    "Resource": "arn:aws:s3:::meepleai-backups/*" },
+  { "Effect": "Allow", "Action": ["s3:ListBucket"],
+    "Resource": "arn:aws:s3:::meepleai-backups" }
+]}
+```
+
+`DeleteObject` and `ListBucket` are required: `clean_s3_backups` prunes old prefixes.
+
+**2. Lifecycle rules — mandatory if versioning is on.** `clean_s3_backups` deletes with `aws s3 rm --recursive`, which on a **versioned** bucket only writes delete markers: noncurrent versions are kept and billed forever. The prune looks like it works while storage grows without bound. Also expire incomplete multipart uploads — fragments are billed and do not appear in object listings.
+
+```json
+{ "Rules": [
+  { "ID": "expire-noncurrent", "Status": "Enabled", "Filter": {},
+    "NoncurrentVersionExpiration": { "NoncurrentDays": 7 } },
+  { "ID": "abort-multipart", "Status": "Enabled", "Filter": {},
+    "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 } },
+  { "ID": "expire-old-backups", "Status": "Enabled", "Filter": {},
+    "Expiration": { "Days": 14 } }
+]}
+```
+
+The 14-day expiry is a backstop **independent of the script**: `clean_s3_backups` swallows a failed `aws s3 ls` (`|| true`) and prunes nothing, silently.
+
+**3. AWS Budget at $5/month with email alerts.** Expected spend is cents, so $5 never fires by accident and fires immediately when something is wrong — including things that are not S3 at all.
+
+**4. Cost Anomaly Detection** (free) catches a spike before a monthly budget threshold can.
+
+**What not to bother with:** `STANDARD_IA` or Glacier would save ~$0.02/month and add retrieval fees and minimum-duration charges exactly when you are restoring in an emergency. At this scale the optimisation costs more than it saves.
+
+**The real cost driver to watch** is not retention: the nightly backup is **full, not incremental**, so it carries the whole PDF corpus every time. 177 MB is fine; if that corpus reaches several GB, revisit retention before the bill does it for you.
 - **Promtail positions volatility**: positions file at `/tmp/positions.yaml` is lost on container restart, causing log re-ingestion. Action: mount named volume in compose.observability.yml.

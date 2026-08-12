@@ -241,26 +241,20 @@ class RuleEngine:
         matches = []
 
         for rule in rules:
-            pattern = rule.get("pattern")
             rule_id = UUID(rule["id"])
 
-            # Pattern-based matching
-            if pattern:
-                match = re.match(pattern, move)
-                if match:
-                    matches.append(RuleMatch(
-                        rule_id=rule_id,
-                        rule_name=rule["name"],
-                        rule_type=rule["type"],
-                        matches=True,
-                        reason=rule["description"],
-                        precedence=rule["precedence"],
-                    ))
+            # Constraints are state-based and there is no board model to evaluate them
+            # against, so no RuleMatch is emitted: nothing may claim one passed (#3668).
+            #
+            # Keyed on the TYPE, deliberately, not on a missing pattern. `rules` can come
+            # from the Redis cache (arbitrary JSON), so a Constraint that carries a pattern
+            # would otherwise fall into the branch below and be rubber-stamped matches=True.
+            if rule["type"] == "Constraint":
+                self._warn_constraint_unevaluated(rule["name"])
+                continue
 
-            # State-based validation (requires game state)
-            elif rule["type"] == "Constraint" and game_state:
-                # Placeholder: Would check game state for obstruction
-                # For MVP, assume constraint passes
+            pattern = rule.get("pattern")
+            if pattern and re.match(pattern, move):
                 matches.append(RuleMatch(
                     rule_id=rule_id,
                     rule_name=rule["name"],
@@ -271,6 +265,21 @@ class RuleEngine:
                 ))
 
         return matches
+
+    # Warn once per process, not once per move: the condition is constant and known, and a
+    # per-validation warning would train operators to ignore this service's logs.
+    _warned_constraints: set[str] = set()
+
+    def _warn_constraint_unevaluated(self, rule_name: str) -> None:
+        if rule_name in RuleEngine._warned_constraints:
+            return
+        RuleEngine._warned_constraints.add(rule_name)
+        logger.warning(
+            "Constraint rule '%s' is NOT evaluated: no board model exists to check it "
+            "(#3668). Moves are judged only by the rules that can be evaluated, so a "
+            "verdict of valid does not mean this constraint was satisfied.",
+            rule_name,
+        )
 
     def _determine_validity(
         self,

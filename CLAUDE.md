@@ -270,6 +270,14 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 **Baseline currently clean** (0 known failures on `main-dev`). Resolved-triage history (#1349 → #1422 → #1887 → #2270 → #2266): [claude-md-history.md](./docs/for-claude/claude-md-history.md#known-flaky-tests--resolved-history).
 
+**Intermittenti noti** (non contano nella baseline: passano al rerun, ma costano un'indagine a chi li incontra la prima volta):
+
+| Test | Sintomo | Issue |
+|------|---------|-------|
+| `DurationTracking_MultipleStageFallback_RecordsCumulativeTime` | asserzione **wall-clock** (`TotalDurationMs >= 100` su tre `Task.Delay(50)`) in un `Category=Unit`, quindi gira in `Backend Fast`: 1 fallimento su 2 run dello stesso SHA | [#3686](https://github.com/meepleAi-app/meepleai-monorepo/issues/3686) |
+
+Prima di rilassare la soglia di un test di timing, stabilisci **perché** la misura scende: se il cronometro non accumula davvero, il test sta segnalando un difetto vero e la soglia va alzata, non abbassata.
+
 **Policy**: PRs MUST NOT grow the unit-test fail count above baseline (zero). Future regressions: fix the root cause OR skip with `[Trait("Skip", "<issue#>")]` and add a row here in the same PR.
 
 ## AI Assistant Rules

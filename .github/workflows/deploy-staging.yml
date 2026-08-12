@@ -922,6 +922,27 @@ jobs:
           echo "📦 Creating pre-migration backup: ${BACKUP_NAME}"
           $SSH_CMD "set -o pipefail; docker exec meepleai-postgres pg_dump -U meepleai -d meepleai_staging --no-owner --no-acl | gzip > /tmp/${BACKUP_NAME} && gzip -t /tmp/${BACKUP_NAME} && ls -lh /tmp/${BACKUP_NAME} || { echo '❌ backup failed — removing partial file'; rm -f /tmp/${BACKUP_NAME}; exit 1; }"
 
+          # Step 1b (#3689) — retention dei backup.
+          #
+          # Questo dump pesa ~166 MB e fino al 2026-08-12 NON veniva mai rimosso: se ne erano
+          # accumulati 46 in /tmp, 4,9 GB, il piu' vecchio del 5 agosto. Il deploy di quella
+          # notte e' morto sul gate di pre-volo — «Insufficient disk for AI image pull: 12 GB
+          # free < 15 GB» — senza nemmeno arrivare a toccare staging. Su una partizione da
+          # 75 GB gia' all'84%, 166 MB persi a ogni esecuzione sono una scadenza, non un rischio.
+          #
+          # NON si cancella tutto: `rollback-trigger.sh --restore-db` ripristina «from latest
+          # pre-migration backup», quindi questi file sono la rete di sicurezza del rollback.
+          # Se ne tengono 3 (~500 MB): coprono piu' di un deploy indietro senza ricreare il
+          # problema.
+          #
+          # 🔴 L'ORDINE E' PARTE DEL FIX: la retention gira DOPO il `gzip -t` qui sopra, mai
+          # prima. Il comando precedente esce 1 su backup fallito o corrotto e con `set -e`
+          # ferma lo step, quindi non si arriva mai a cancellare il backup buono precedente
+          # per far posto a uno inutilizzabile.
+          BACKUP_KEEP=3
+          echo "🧹 Retention backup: conservo i ${BACKUP_KEEP} piu' recenti"
+          $SSH_CMD "ls -1t /tmp/pre-migration-*.sql.gz 2>/dev/null | tail -n +\$((${BACKUP_KEEP}+1)) | xargs -r rm -f; echo \"   rimasti: \$(ls -1 /tmp/pre-migration-*.sql.gz 2>/dev/null | wc -l)\"; df -h / | tail -1"
+
           # Step 1.5 — pre-flight: detect whether the script's target migration
           # is already in __EFMigrationsHistory. Fixes #2020: after the 81→1
           # squash (PR fab0dc8eb), `dotnet ef migrations script --idempotent`

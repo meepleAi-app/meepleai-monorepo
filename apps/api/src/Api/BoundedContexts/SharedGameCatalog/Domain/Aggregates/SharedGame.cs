@@ -291,6 +291,25 @@ public sealed class SharedGame : AggregateRoot<Guid>
     public DateTime? ModifiedAt => _modifiedAt;
 
     /// <summary>
+    /// Token di concorrenza ottimistica (colonna di sistema PostgreSQL <c>xmin</c>, ADR-060).
+    /// Stesso pattern di <see cref="MechanicCard.XminVersion"/>, <see cref="MechanicAnalysis.XminVersion"/>
+    /// e <see cref="CertificationThresholdsConfig.XminVersion"/>.
+    /// <para>
+    /// Deve attraversare l'aggregato perché <c>SharedGameRepository.Update()</c> persiste un grafo
+    /// <b>detached</b> (<c>MapToEntity</c> + <c>DbSet.Update()</c>): EF non ha una riga tracciata da
+    /// cui ricavare l'<i>original value</i> del token, e usa quello che trova sulla proprietà. Se
+    /// l'aggregato non lo trasportasse, il valore sarebbe <c>0</c> — che non è mai un xid reale —
+    /// e ogni UPDATE emetterebbe <c>WHERE xmin = 0</c>, colpendo 0 righe e sollevando
+    /// <c>DbUpdateConcurrencyException</c> anche <b>senza alcuna concorrenza</b> (#3651).
+    /// </para>
+    /// <para>
+    /// Vale <c>0</c> per un aggregato appena creato con <c>Create()</c>: quel percorso è un INSERT,
+    /// dove il token non viene usato ed è Postgres a valorizzarlo.
+    /// </para>
+    /// </summary>
+    public uint XminVersion { get; private set; }
+
+    /// <summary>
     /// Gets the designers who created this game.
     /// </summary>
     public IReadOnlyCollection<GameDesigner> Designers => _designers.AsReadOnly();
@@ -425,8 +444,10 @@ public sealed class SharedGame : AggregateRoot<Guid>
         string? manualCoverSourceUrl = null,
         Guid? manualCoverAttestedBy = null,
         DateTime? manualCoverAttestedAt = null,
-        string? bggCoverR2Key = null) : base(id)
+        string? bggCoverR2Key = null,
+        uint xminVersion = 0) : base(id)
     {
+        XminVersion = xminVersion;
         _id = id;
         _title = title;
         _yearPublished = yearPublished;

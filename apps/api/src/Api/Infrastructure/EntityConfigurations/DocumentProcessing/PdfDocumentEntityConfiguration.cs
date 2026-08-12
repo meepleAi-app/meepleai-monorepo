@@ -188,10 +188,24 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         builder.HasIndex(e => e.IndexerVersion)
             .HasDatabaseName("ix_pdf_documents_indexer_version");
 
-        // Issue #1802: Optimistic concurrency via xmin (PostgreSQL system column).
-        // Pattern matches RuleSpecEntityConfiguration:38-39 — Npgsql auto-maps to xmin.
-        builder.Property(e => e.RowVersion)
-            .IsRowVersion();
+        // Issue #1802: concorrenza ottimistica via xmin. #3651: ora lo è davvero.
+        //
+        // Qui c'era `builder.Property(e => e.RowVersion).IsRowVersion()` su una `byte[]`, con un
+        // commento che dichiarava «Npgsql auto-maps to xmin». Non è così: Npgsql mappa a xmin solo
+        // una proprietà `uint`, e lo snapshot del modello registrava infatti
+        // `HasColumnType("bytea")` senza `HasColumnName("xmin")`. La colonna `bytea` veniva
+        // popolata dal trigger `ef_update_row_version()`, che #2305 ha rimosso migrando le altre
+        // entità a xmin — questa è rimasta indietro. Senza trigger il token restava NULL, non
+        // cambiava mai fra un update e l'altro, e nessun conflitto veniva rilevato: misurato con
+        // successCount=2 in `Reindex_RacesWithDelete_FirstWinsSecondGets409`, dove il dominio
+        // prevede che esattamente una delle due operazioni concorrenti vinca.
+        //
+        // Stesso pattern di LiveGameSessionEntityConfiguration:148-152 e GameNightPlaylist.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // E5-1: Language confidence and override
         builder.Property(e => e.LanguageConfidence)

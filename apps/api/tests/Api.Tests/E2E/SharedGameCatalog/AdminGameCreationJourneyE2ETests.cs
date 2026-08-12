@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.E2E.Infrastructure;
 using FluentAssertions;
@@ -53,6 +55,57 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         };
 
         DbContext.SharedGames.Add(sharedGame);
+
+        // #3662: `Features.PdfUpload` e' un feature flag con default FALSE
+        // (FeatureFlagService: «Role-specific flag > Global flag > Default false»), e i tre
+        // handler di upload rispondono 403 `feature_disabled` quando non e' attivo
+        // (PdfUploadEndpoints.cs:155). Su un database di test appena migrato quella riga non
+        // esiste, quindi i test di upload non potevano passare in nessuno scenario: il 403 non
+        // era un problema di permessi, era la feature spenta.
+        // `created_by_user_id` e' NOT NULL con FK verso users (delete Restrict): senza questo
+        // utente l'insert fallisce con 23503 e a saltare e' l'INTERA fixture, non un solo test.
+        var seederId = new Guid("c0c0ffee-5eed-4e2e-bbbb-000000003662");
+        if (!await DbContext.Users.AnyAsync(u => u.Id == seederId))
+        {
+            DbContext.Users.Add(new UserEntity
+            {
+                Id = seederId,
+                Email = "e2e-admin-journey-seeder@test.invalid",
+                DisplayName = "E2E Journey Seeder",
+                PasswordHash = "placeholder.NeverLogsIn",
+                Role = "user",
+                Tier = "free",
+                Status = "Active",
+                EmailVerified = false,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        // La collection E2E condivide UN database fra tutti i test, ma SeedTestDataAsync gira
+        // per ogni test: senza questa guardia dal secondo in poi si viola
+        // IX_system_configurations_Key_Environment (23505) e salta l'intera fixture.
+        var flagExists = await DbContext.SystemConfigurations
+            .AnyAsync(c => c.Key == "Features.PdfUpload" && c.Environment == "All");
+        if (!flagExists)
+        {
+        DbContext.SystemConfigurations.Add(new SystemConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            CreatedByUserId = seederId,
+            Key = "Features.PdfUpload",
+            Value = "true",
+            ValueType = "Boolean",
+            Description = "E2E seed: abilita l'upload PDF per i test del percorso admin",
+            Category = "Features",
+            IsActive = true,
+            RequiresRestart = false,
+            Environment = "All",
+            Version = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+        });
+        }
+
         await DbContext.SaveChangesAsync();
         _testSharedGameId = sharedGame.Id;
     }
@@ -830,8 +883,10 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             {
                 var registerResult = await registerResponse.Content.ReadFromJsonAsync<RegisterResponse>();
                 var sessionToken = ExtractSessionCookie(registerResponse);
+                var newUserId = registerResult!.User!.Id;
+                await ElevateToAdminAsync(newUserId);
                 return (sessionToken ?? throw new InvalidOperationException("Session token not found"),
-                    registerResult!.User!.Id);
+                    newUserId);
             }
 
             throw new InvalidOperationException($"Could not login or register admin: {response.StatusCode}");
@@ -839,7 +894,28 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
 
         var loginResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
         var token = ExtractSessionCookie(response);
-        return (token ?? throw new InvalidOperationException("Session token not found"), loginResult!.User!.Id);
+        var userId = loginResult!.User!.Id;
+        await ElevateToAdminAsync(userId);
+        return (token ?? throw new InvalidOperationException("Session token not found"), userId);
+    }
+
+    /// <summary>
+    /// #3662: <c>LoginAsAdminAsync</c> si chiamava «admin» ma non lo era: registrava un utente
+    /// con ruolo <c>user</c>, quindi ogni endpoint sotto <c>/admin/</c> rispondeva 403. Il nome
+    /// dell'helper descriveva l'intenzione, non il risultato.
+    ///
+    /// Il ruolo si imposta sull'entità di persistenza dopo la creazione della sessione: la
+    /// sessione non lo congela, viene risolto per richiesta. È lo stesso approccio già
+    /// verificato in BatchJobE2ETests.
+    /// </summary>
+    private async Task ElevateToAdminAsync(Guid userId)
+    {
+        var user = await DbContext.Users.FindAsync(userId);
+        if (user is not null && !string.Equals(user.Role, "admin", StringComparison.Ordinal))
+        {
+            user.Role = "admin";
+            await DbContext.SaveChangesAsync();
+        }
     }
 
     private static string? ExtractSessionCookie(HttpResponseMessage response)

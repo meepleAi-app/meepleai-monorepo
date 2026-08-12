@@ -38,16 +38,28 @@ public class GoldenDatasetAccuracyIntegrationTests
 
     public GoldenDatasetAccuracyIntegrationTests()
     {
+        // #3655: il dataset è generato e non committato (tests/data/README.md). Se manca, questi
+        // test si saltano dicendo come produrlo — prima erano disattivati con uno `Skip` fisso che
+        // rimandava alla «Issue #1797», che è una PR su PlayerStatistics senza rapporto con questo
+        // lavoro. Uno skip che non dice cosa fare equivale a un test cancellato.
+        var datasetPath = FindGoldenDatasetPath();
+        Assert.SkipUnless(
+            datasetPath is not null,
+            "tests/data/golden_dataset.json non trovato. Generalo dalla root del repository:\n"
+                + "    dotnet run --project tools/golden-dataset-generator/GenerateGoldenDatasetSimple.csproj");
+
         _mockLoaderLogger = new Mock<ILogger<GoldenDatasetLoader>>();
         _mockEvaluatorLogger = new Mock<ILogger<RagAccuracyEvaluator>>();
-        _loader = new GoldenDatasetLoader(_mockLoaderLogger.Object, FindGoldenDatasetPath());
+        _loader = new GoldenDatasetLoader(_mockLoaderLogger.Object, datasetPath!);
         _evaluator = new RagAccuracyEvaluator(_mockEvaluatorLogger.Object);
     }
 
     /// <summary>
-    /// Helper to find golden dataset path from repository root
+    /// Helper to find golden dataset path from repository root.
+    /// Restituisce <c>null</c> se il dataset non c'è: l'assenza è uno stato previsto (file
+    /// generato), non un errore, e il costruttore la traduce in uno skip.
     /// </summary>
-    private static string FindGoldenDatasetPath()
+    private static string? FindGoldenDatasetPath()
     {
         // Start from current directory and walk up to find .git
         var currentDir = Directory.GetCurrentDirectory();
@@ -71,8 +83,7 @@ public class GoldenDatasetAccuracyIntegrationTests
                 return testPath;
         }
 
-        throw new InvalidOperationException(
-            $"Could not find golden_dataset.json searching up from: {currentDir}");
+        return null;
     }
 
     /// <summary>
@@ -88,8 +99,11 @@ public class GoldenDatasetAccuracyIntegrationTests
 
         while (current != null && level < maxLevels)
         {
+            // In un git worktree `.git` è un FILE che punta al repository comune, non una
+            // directory: controllare solo Directory.Exists faceva fallire sempre il percorso
+            // primario e reggeva tutto il fallback a risalita. Il repo usa i worktree di routine.
             var gitPath = Path.Combine(current.FullName, ".git");
-            if (Directory.Exists(gitPath))
+            if (Directory.Exists(gitPath) || File.Exists(gitPath))
                 return current.FullName;
 
             current = current.Parent;
@@ -103,7 +117,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 1: Perfect accuracy scenario - all answers correct
     /// Simulates RAG responses that match all expected criteria
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task PerfectScenario_AllAnswersCorrect_MeetsThreshold()
     {
         // Arrange
@@ -133,7 +147,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 2: 80% accuracy scenario - exactly at threshold
     /// Simulates 80% correct responses (minimum acceptable)
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task ThresholdScenario_80PercentCorrect_MeetsThreshold()
     {
         // Arrange
@@ -166,7 +180,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 3: Below threshold scenario - 60% accuracy
     /// Simulates insufficient accuracy (should fail threshold)
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task BelowThresholdScenario_60PercentCorrect_FailsThreshold()
     {
         // Arrange
@@ -199,7 +213,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 4: Stratified sampling - 50 cases with proportional difficulty distribution
     /// Tests sampling logic maintains difficulty distribution
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task StratifiedSample_50Cases_MaintainsDifficultyDistribution()
     {
         // Arrange
@@ -231,7 +245,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 5: Accuracy by difficulty - verify metrics grouping
     /// Tests that accuracy can be broken down by difficulty level
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task AccuracyByDifficulty_GroupsCorrectly()
     {
         // Arrange
@@ -284,7 +298,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 6: Forbidden keywords detection
     /// Verifies hallucination detection through forbidden keywords
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task ForbiddenKeywords_DetectedCorrectly()
     {
         // Arrange
@@ -316,7 +330,7 @@ public class GoldenDatasetAccuracyIntegrationTests
     /// Test 7: Citation validation
     /// Verifies citation page number matching
     /// </summary>
-    [Fact(Skip = "Requires golden_dataset.json generation (Issue #1797)", Timeout = 30000)]
+    [Fact(Timeout = 30000)]
     public async Task CitationValidation_CorrectPageNumbers_PassesValidation()
     {
         // Arrange

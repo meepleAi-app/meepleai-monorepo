@@ -1,6 +1,7 @@
 {
   "schema_version": "20260401_AddSearchVector",
   "ef_migration_head": "20260401_AddSearchVector",
+  "seed_table_schema_version": 1,
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "embedding_dim": 384,
   "app_commit": "test0000",

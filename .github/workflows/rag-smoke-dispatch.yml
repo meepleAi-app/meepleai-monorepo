@@ -174,12 +174,24 @@ jobs:
           SMOKE_EMAIL: bake-admin@meepleai.test
           SMOKE_PASSWORD: BakeSeed1!Admin
         run: |
+          # Espone i due snapshot: il passo che apre la issue deve poter dire QUALE dei due
+          # problemi si è verificato senza che un umano rilegga i log (#3645).
+          echo "baseline_snapshot=$(jq -r '.snapshot // ""' fixtures/rag-golden-baseline.json)" >> "$GITHUB_OUTPUT"
+          echo "current_snapshot=$(cat "$SEED_INDEX_OUT_DIR/.latest" 2>/dev/null || echo '')" >> "$GITHUB_OUTPUT"
+
+          # GitHub esegue i run: con `bash -e`: senza set +e il codice di uscita si perde
+          # prima di poterlo classificare.
+          set +e
           if [ "${{ github.event.inputs.update_baseline }}" = "true" ]; then
             bash scripts/rag-smoke-assert.sh --update-baseline
-            echo "::notice:: baseline updated — download the diff from the job and commit infra/fixtures/rag-golden-baseline.json"
+            rc=$?
+            [ "$rc" -eq 0 ] && echo "::notice:: baseline updated — download the diff from the job and commit infra/fixtures/rag-golden-baseline.json"
           else
             bash scripts/rag-smoke-assert.sh
+            rc=$?
           fi
+          echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
+          exit "$rc"
 
       # NB: the title-health extraction-quality guard was MOVED to its own workflow
       # (.github/workflows/title-health-staging.yml). The CI seed snapshot is baked with the Docnet
@@ -189,7 +201,10 @@ jobs:
       - name: Diagnose smoke failure
         # always() is required: without it GitHub implicitly ANDs the condition
         # with success(), so the step is skipped after the smoke step fails (#2480).
-        if: ${{ always() && steps.ragsmoke.outcome == 'failure' }}
+        # exit_code 3 = baseline scaduta: il corpus è cambiato, non il retrieval. Conteggi di
+        # righe e log dell'API non dicono nulla su quel guasto, e 70 righe di diagnostica
+        # irrilevante sono ciò che ha reso invisibile il problema per tre settimane (#3645).
+        if: ${{ always() && steps.ragsmoke.outcome == 'failure' && steps.ragsmoke.outputs.exit_code != '3' }}
         working-directory: infra
         env:
           API_BASE_URL: http://localhost:8080
@@ -244,9 +259,29 @@ jobs:
         # → this step is skipped and the issue is never opened. The outcome check still scopes
         # it to a real drift (skipped/successful ragsmoke → not 'failure').
         if: ${{ always() && steps.ragsmoke.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
+        env:
+          EXIT_CODE: ${{ steps.ragsmoke.outputs.exit_code }}
+          BASELINE_SNAPSHOT: ${{ steps.ragsmoke.outputs.baseline_snapshot }}
+          CURRENT_SNAPSHOT: ${{ steps.ragsmoke.outputs.current_snapshot }}
         uses: actions/github-script@v7
         with:
           script: |
+            // #3645: un solo titolo per due guasti diversi ha mandato la diagnosi fuori strada
+            // per tre settimane. exit 3 = la baseline appartiene a un altro snapshot (re-bake,
+            // atteso, si rigenera); exit 1 = il retrieval è cambiato a parità di corpus (da
+            // indagare). Il titolo deve dire quale dei due, perché è la prima cosa che si legge.
+            const stale = process.env.EXIT_CODE === '3';
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const runbook = 'docs/for-developers/operations/rag-smoke-runbook.md';
+
+            const title = stale
+              ? `[RAG SMOKE] baseline scaduta dopo un re-bake — ${new Date().toISOString().slice(0,10)}`
+              : `[RAG SMOKE] retrieval drift — ${new Date().toISOString().slice(0,10)}`;
+
+            const body = stale
+              ? `La golden baseline è stata catturata su uno snapshot diverso da quello in esecuzione: **il retrieval non è regredito**, è cambiato il corpus.\n\n| | |\n|---|---|\n| baseline catturata su | \`${process.env.BASELINE_SNAPSHOT}\` |\n| snapshot in esecuzione | \`${process.env.CURRENT_SNAPSHOT}\` |\n\nRun: ${run}\n\n**Azione**: rigenera la baseline con \`--update-baseline\` (dispatch di questo workflow con \`update_baseline=true\`), scarica l'artifact e committa \`infra/fixtures/rag-golden-baseline.json\` — vedi ${runbook}.\n\n⚠️ Finché questa issue resta aperta il gate non emette altri alert (dedup su label), quindi una regressione autentica resterebbe silenziosa: chiudila appena rigenerata.`
+              : `Canonical RAG queries drifted from the golden baseline, **a parità di snapshot** (\`${process.env.CURRENT_SNAPSHOT || 'sconosciuto'}\`) — quindi è un cambiamento del retrieval, non del corpus.\n\nRun: ${run}\n\nSe il drift è intenzionale (nuovo modello di embedding, nuovo chunker), rigenera via \`--update-baseline\` per ${runbook}. Altrimenti va indagato.`;
+
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo,
               labels: 'rag-smoke-failure', state: 'open'
@@ -254,8 +289,6 @@ jobs:
             if (existing.data.length === 0) {
               await github.rest.issues.create({
                 owner: context.repo.owner, repo: context.repo.repo,
-                title: `[RAG SMOKE] retrieval drift — ${new Date().toISOString().slice(0,10)}`,
-                labels: ['bug', 'rag-smoke-failure'],
-                body: `Canonical RAG queries drifted from the golden baseline. See run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}.\n\nIf the drift is intentional (re-index), regenerate via \`--update-baseline\` per docs/for-developers/operations/rag-smoke-runbook.md.`
+                title, labels: ['bug', 'rag-smoke-failure'], body
               });
             }

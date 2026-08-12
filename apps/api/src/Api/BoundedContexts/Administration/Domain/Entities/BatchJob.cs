@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Domain.Enums;
+using Api.Middleware.Exceptions;
 
 namespace Api.BoundedContexts.Administration.Domain.Entities;
 
@@ -80,17 +81,26 @@ public sealed class BatchJob
         if (StartedAt.HasValue) DurationSeconds = (int)(CompletedAt.Value - StartedAt.Value).TotalSeconds;
     }
 
+    // #3662: erano `InvalidOperationException`, che il middleware non mappa e che quindi
+    // usciva come 500. Annullare un job già completato o riprovarne uno in coda sono
+    // operazioni legittime ma non ammesse nello stato corrente: la risposta corretta è un
+    // 409, non un errore server. È il pitfall #2568 (ConflictException 409 /
+    // NotFoundException 404, mai InvalidOperationException) e lo stesso pattern già usato
+    // da User, ProcessingJob, GameSession e GameNightEvent.
+    //
+    // Emerso solo ora perché i test E2E che lo coprivano non venivano eseguiti da
+    // nessun gate dal 2026-06-22.
     public void Cancel()
     {
         if (Status == JobStatus.Completed || Status == JobStatus.Failed)
-            throw new InvalidOperationException("Cannot cancel completed or failed jobs");
+            throw new ConflictException("Cannot cancel completed or failed jobs");
         Status = JobStatus.Cancelled;
         CompletedAt = DateTime.UtcNow;
     }
 
     public void Retry()
     {
-        if (Status != JobStatus.Failed) throw new InvalidOperationException("Only failed jobs can be retried");
+        if (Status != JobStatus.Failed) throw new ConflictException("Only failed jobs can be retried");
         Status = JobStatus.Queued;
         Progress = 0;
         StartedAt = null;

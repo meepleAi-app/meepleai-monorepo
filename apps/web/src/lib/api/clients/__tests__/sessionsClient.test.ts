@@ -5,7 +5,7 @@
  * - Active sessions: getActive
  * - Session history: getHistory
  * - Session CRUD: getById, start
- * - Session lifecycle: pause, resume, end, complete, abandon
+ * - Session lifecycle: pause, resume, end
  * - Game state: initializeState, getState, updateState, createSnapshot, getSnapshots, restoreSnapshot
  * - Quota: getQuota
  */
@@ -132,8 +132,7 @@ describe('SessionsClient - Issue #3026', () => {
       await client.getHistory();
 
       const schemaArg = vi.mocked(mockHttpClient.get).mock.calls[0]?.[1] as
-        | { safeParse: (x: unknown) => { success: boolean } }
-        | undefined;
+        { safeParse: (x: unknown) => { success: boolean } } | undefined;
       expect(schemaArg?.safeParse([validHistorySession]).success).toBe(true);
     });
 
@@ -277,49 +276,9 @@ describe('SessionsClient - Issue #3026', () => {
       });
     });
 
-    describe('complete', () => {
-      it('should complete a session without request', async () => {
-        const completedSession = { ...mockSession, status: 'Completed' };
-        vi.mocked(mockHttpClient.post).mockResolvedValue(completedSession);
-
-        const client = createSessionsClient({ httpClient: mockHttpClient });
-        const result = await client.complete('session-123');
-
-        expect(result.status).toBe('Completed');
-        expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/sessions/session-123/complete',
-          {},
-          expect.any(Object)
-        );
-      });
-
-      it('should complete a session with winner', async () => {
-        const completedSession = { ...mockSession, status: 'Completed', winnerName: 'Bob' };
-        vi.mocked(mockHttpClient.post).mockResolvedValue(completedSession);
-
-        const client = createSessionsClient({ httpClient: mockHttpClient });
-        const result = await client.complete('session-123', { winnerName: 'Bob' });
-
-        expect(result.winnerName).toBe('Bob');
-      });
-    });
-
-    describe('abandon', () => {
-      it('should abandon a session', async () => {
-        const abandonedSession = { ...mockSession, status: 'Abandoned' };
-        vi.mocked(mockHttpClient.post).mockResolvedValue(abandonedSession);
-
-        const client = createSessionsClient({ httpClient: mockHttpClient });
-        const result = await client.abandon('session-123');
-
-        expect(result.status).toBe('Abandoned');
-        expect(mockHttpClient.post).toHaveBeenCalledWith(
-          '/api/v1/sessions/session-123/abandon',
-          {},
-          expect.any(Object)
-        );
-      });
-    });
+    // #3662: rimossi i blocchi `complete` e `abandon` — i metodi del client non esistono
+    // piu', perche' gli endpoint che chiamavano sono stati eliminati (nessun consumatore).
+    // La conclusione di una sessione resta coperta dai test di `end`, qui sopra.
   });
 
   describe('Game State Management', () => {

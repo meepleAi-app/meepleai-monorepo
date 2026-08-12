@@ -3,45 +3,7 @@ using FluentValidation;
 
 namespace Api.BoundedContexts.GameManagement.Application.Validators;
 
-/// <summary>
-/// Validator for AbandonGameSessionCommand.
-/// Ensures SessionId is a non-empty GUID.
-/// </summary>
-internal sealed class AbandonGameSessionCommandValidator : AbstractValidator<AbandonGameSessionCommand>
-{
-    public AbandonGameSessionCommandValidator()
-    {
-        RuleFor(x => x.SessionId)
-            .NotEmpty().WithMessage("Session ID is required");
 
-        RuleFor(x => x.RequesterId)
-            .NotEmpty().WithMessage("Requester ID is required");
-
-        RuleFor(x => x.Reason)
-            .MaximumLength(500).WithMessage("Reason must not exceed 500 characters")
-            .When(x => x.Reason is not null);
-    }
-}
-
-/// <summary>
-/// Validator for CompleteGameSessionCommand.
-/// Ensures SessionId is a non-empty GUID.
-/// </summary>
-internal sealed class CompleteGameSessionCommandValidator : AbstractValidator<CompleteGameSessionCommand>
-{
-    public CompleteGameSessionCommandValidator()
-    {
-        RuleFor(x => x.SessionId)
-            .NotEmpty().WithMessage("Session ID is required");
-
-        RuleFor(x => x.RequesterId)
-            .NotEmpty().WithMessage("Requester ID is required");
-
-        RuleFor(x => x.WinnerName)
-            .MaximumLength(200).WithMessage("Winner name must not exceed 200 characters")
-            .When(x => x.WinnerName is not null);
-    }
-}
 
 /// <summary>
 /// Validator for EndGameSessionCommand.

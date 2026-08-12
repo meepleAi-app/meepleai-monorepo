@@ -162,49 +162,8 @@ describe('sessionsClient CRUD and lifecycle', () => {
       expect(result).toEqual(mockSession);
     });
 
-    it('should complete a session', async () => {
-      const mockSession = { id: 'session-1', status: 'completed' };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      const result = await client.complete('session-1', { winnerName: 'Winner' });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions/session-1/complete',
-        { winnerName: 'Winner' },
-        expect.any(Object)
-      );
-      expect(result).toEqual(mockSession);
-    });
-
-    it('should complete a session without winner', async () => {
-      const mockSession = { id: 'session-1', status: 'completed' };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      const result = await client.complete('session-1');
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions/session-1/complete',
-        {},
-        expect.any(Object)
-      );
-      expect(result).toEqual(mockSession);
-    });
-
-    it('should abandon a session', async () => {
-      const mockSession = { id: 'session-1', status: 'abandoned' };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockSession);
-
-      const result = await client.abandon('session-1');
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/sessions/session-1/abandon',
-        {},
-        expect.any(Object)
-      );
-      expect(result).toEqual(mockSession);
-    });
+    // #3662: rimossi i test di `complete` e `abandon`. I metodi del client non esistono
+    // piu' perche' gli endpoint che chiamavano sono stati eliminati (nessun consumatore).
+    // La conclusione di una sessione resta coperta dai test di `end`, qui sopra.
   });
 });

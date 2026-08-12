@@ -167,30 +167,11 @@ export function createSessionsClient({ httpClient }: CreateSessionsClientParams)
       );
     },
 
-    /**
-     * Complete a session with winner information
-     * @param id Session ID (GUID format)
-     * @param request Completion request with optional winner name
-     */
-    async complete(id: string, request?: CompleteSessionRequest): Promise<GameSessionDto> {
-      return httpClient.post(
-        `/api/v1/sessions/${encodeURIComponent(id)}/complete`,
-        request || {},
-        GameSessionDtoSchema
-      );
-    },
-
-    /**
-     * Abandon a session
-     * @param id Session ID (GUID format)
-     */
-    async abandon(id: string): Promise<GameSessionDto> {
-      return httpClient.post(
-        `/api/v1/sessions/${encodeURIComponent(id)}/abandon`,
-        {},
-        GameSessionDtoSchema
-      );
-    },
+    // #3662: RIMOSSI i metodi `complete` e `abandon`. Gli endpoint
+    // `/api/v1/sessions/{id}/complete|abandon` sono stati eliminati perche' nessun client
+    // li chiamava: `complete` compariva solo in un esempio dentro un commento, `abandon`
+    // da nessuna parte. Per concludere una sessione si usa `end`, qui sotto, che accetta
+    // `winnerName` ed e' quello che l'app usa davvero (useActiveSessions.ts).
 
     // ========== Game State Management (Issue #2406) ==========
 

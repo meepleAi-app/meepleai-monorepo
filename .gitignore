@@ -60,6 +60,16 @@ infra/secrets/prod/*.txt
 infra/secrets/prod/*.pfx
 !infra/secrets/prod/*.txt.example
 
+# Chiavi di cifratura `age` dei backup (#3669) — la chiave PRIVATA decifra ogni dump
+# `*.age` prodotto da infra/hetzner/backup.sh. Le regole qui sopra coprono solo
+# infra/secrets/**: una chiave generata nella root del repo restava fuori da ogni
+# pattern, quindi un `git add -A` la metteva in stage senza avvisare (successo il
+# 2026-08-12). Pattern volutamente specifici: `*age-key*` matcherebbe anche
+# `storage-key.txt`.
+backup-age-key*
+age-key*.txt
+*.age.key
+
 # Logs
 logs/
 # Exception: Allow admin monitor logs page

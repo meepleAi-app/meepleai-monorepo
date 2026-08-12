@@ -14,17 +14,24 @@ namespace Api.Tests.BoundedContexts.GameToolkit.Infrastructure.Persistence;
 /// Regression tests for <see cref="GameToolkitRepository.UpdateAsync"/> (issue #1458 footgun).
 ///
 /// <para>
-/// <c>MapToPersistence</c> synthesizes <c>VersionSemver = "0.{Version}.0"</c> and omits
-/// <c>Description</c>/<c>License</c> entirely (the domain aggregate has no knowledge of these
-/// three entity-level marketplace columns). Because <c>UpdateAsync</c> calls
+/// <c>MapToPersistence</c> omits <c>Description</c>/<c>License</c> entirely (the domain aggregate
+/// has no knowledge of those entity-level marketplace columns). Because <c>UpdateAsync</c> calls
 /// <c>DbContext.Update(entity)</c>, which marks EVERY scalar column Modified, any non-publish
-/// update path (rename, add/remove tool, override change, …) silently overwrote the published
-/// marketplace pointer: <c>VersionSemver "2.3.1" → "0.1.0"</c> and nulled <c>Description</c>/<c>License</c>.
+/// update path (rename, add/remove tool, override change, …) would null them.
 /// </para>
 ///
-/// InMemory is the correct vehicle: it honors per-property <c>IsModified</c> flags but ignores
-/// the Postgres <c>xmin</c> concurrency token (which would otherwise mask this bug behind a
-/// <c>DbUpdateConcurrencyException</c> on a real database).
+/// <para>
+/// <c>VersionSemver</c> used to be in that list too, synthesized as <c>"0.{Version}.0"</c>, which
+/// silently reset the published marketplace pointer <c>"2.3.1" → "0.1.0"</c>. Since #3670 it is
+/// real aggregate state, loaded by <c>MapToDomain</c> and written back like any other column —
+/// so this test now guards the round-trip rather than an exclusion, and still goes red if the
+/// synthesis returns.
+/// </para>
+///
+/// InMemory honors per-property <c>IsModified</c> flags, which is what this test asserts on. It
+/// has no <c>xmin</c> column, so it says nothing about the Postgres concurrency token — that is
+/// covered by <c>GameToolkitRepositoryPostgresConcurrencyTests</c> (#3670), added after this
+/// provider gap turned out to be hiding a real DbUpdateConcurrencyException on every write.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameToolkit")]

@@ -147,14 +147,30 @@ public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime
     public async Task Update_WithModifiedGame_PersistsChanges()
     {
         // Arrange
-        var game = SharedGame.Create("Ticket to Ride", 2004, "Original description", 2, 5, 60, 8,
+        var created = SharedGame.Create("Ticket to Ride", 2004, "Original description", 2, 5, 60, 8,
             null, null, "https://example.com/ticket.jpg", "https://example.com/ticket-thumb.jpg", null, TestUserId);
-        await _repository.AddAsync(game);
+        await _repository.AddAsync(created);
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear(); // Detach entities to simulate separate request
 
+        // #3651 — la rilettura non è cosmetica, è il contratto.
+        //
+        // Prima questo test mutava e ripersisteva la STESSA istanza restituita da Create(), senza
+        // mai rileggerla. Funzionava perché il token di concorrenza era una `bytea` sempre NULL su
+        // ogni riga (nessun trigger la popolava): EF generava `row_version IS NULL`, che
+        // corrispondeva sempre. Cioè funzionava proprio perché la protezione non esisteva — lo
+        // stesso difetto che #3651 corregge.
+        //
+        // Con `xmin` attivo, aggiornare un aggregato mai letto dal DB non è più un'operazione
+        // definibile: non si sa da quale versione si parte, e `XminVersion` vale 0, che non è mai
+        // un xid reale. Tutti i ~30 handler di produzione che scrivono sul catalogo fanno già
+        // read-modify-write (`GetByIdAsync` / `GetGameByFaqIdAsync` / …), quindi questo test si
+        // allinea a loro invece di coprire un percorso che nessuno usa.
+        var game = await _repository.GetByIdAsync(created.Id);
+        game.Should().NotBeNull();
+
         // Act
-        game.UpdateInfo(
+        game!.UpdateInfo(
             title: "Ticket to Ride",
             yearPublished: 2004,
             description: "Updated description - claim railway routes across North America",

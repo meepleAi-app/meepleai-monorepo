@@ -48,16 +48,25 @@ internal sealed class ProviderCredentialEntityConfiguration
         builder.Property(e => e.PreviousCredentialId)
             .HasColumnName("previous_credential_id");
 
-        // row_version MUST be nullable: with .IsRowVersion() the Npgsql provider treats it as
-        // store-generated and omits it from INSERT, so a NOT NULL bytea column raised a 23502
-        // not-null violation on the first credential INSERT (breaking rotate-key). Nullable
-        // lets the provider omit it on INSERT. Note: this table has no trigger/xmin populating
-        // the token, so it stays NULL and provides no real optimistic-concurrency detection —
-        // the single-active-row invariant is enforced by the ux_provider_credentials_active_one
-        // unique index. Mirrors the PhotoBatchUpload aggregate (same byte[]? RowVersion pattern).
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // #3651: concorrenza ottimistica via `xmin`, la colonna di sistema di PostgreSQL.
+        //
+        // Qui c'era `.Property(e => e.RowVersion).HasColumnName("row_version").IsRowVersion()` su
+        // una `bytea`, con un commento che riconosceva il difetto invece di correggerlo: «this
+        // table has no trigger/xmin populating the token, so it stays NULL and provides no real
+        // optimistic-concurrency detection». Restava quindi una dichiarazione senza effetto — EF
+        // confrontava NULL = NULL a ogni update e nessun conflitto veniva rilevato.
+        //
+        // Anche il vincolo storico che imponeva la colonna nullable sparisce: serviva perché
+        // .IsRowVersion() faceva omettere row_version dall'INSERT, e una `bytea` NOT NULL alzava
+        // un 23502 alla prima credenziale. `xmin` è di sistema: Postgres la valorizza da sé e non
+        // compare mai in un INSERT.
+        //
+        // Stesso pattern di LiveGameSessionEntityConfiguration:148-152 e GameNightPlaylist.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Partial unique index: 1 sola row attiva per provider (Postgres filtered index)
         builder.HasIndex(e => e.ProviderName)

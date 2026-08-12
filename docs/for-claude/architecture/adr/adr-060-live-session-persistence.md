@@ -210,3 +210,29 @@ Implementation:
 Same migration pattern applied to `GameNightPlaylist` and `MechanicDraft` (issue #2306) which had `bytea NOT NULL row_version` without any trigger — optimistic concurrency was effectively disabled on those tables. The new xmin pattern + integration tests prove the fix.
 
 Pattern reference: `apps/api/src/Api/Infrastructure/Configurations/SharedGameCatalog/MechanicAnalysisEntityConfiguration.cs:101-107`.
+
+## Update 2026-08-12 — il censimento lasciato aperto da #2305 (issue #3651)
+
+L'update del 2026-06-14 ha rimosso il trigger `ef_update_row_version()`, ma la conversione a `xmin` ha coperto solo le entità allora note. **Le altre hanno smesso di essere protette senza che nulla lo segnalasse**: senza trigger Postgres non valorizza una `bytea`, quindi il token restava NULL su ogni riga, EF confrontava `NULL = NULL` a ogni update e nessun conflitto veniva più rilevato. È lo stesso difetto già descritto sopra per `GameNightPlaylist`/`MechanicDraft` — solo, non era stato censito fino in fondo.
+
+Il difetto è **silenzioso per costruzione**: la configurazione EF continua a dichiarare `.IsRowVersion()`, quindi leggendo il codice la protezione sembra esserci. Una configurazione arrivò perfino a documentare la propria inefficacia come se fosse accettabile (`ProviderCredentialEntityConfiguration`: *«this table has no trigger/xmin populating the token, so it stays NULL and provides no real optimistic-concurrency detection»*).
+
+Stato del censimento (verificabile su `MeepleAiDbContextModelSnapshot.cs`):
+
+| | conteggio | come contarle |
+|---|---|---|
+| convertite a `xmin` | **18** | `grep -c 'HasColumnName("xmin")'` |
+| ancora su `bytea` | **7** | `grep -c 'HasColumnName("row_version")'` |
+
+Restano: `AbTestSession` · `BggTosHashEntity` · `CatalogSeedDraftEntity` · `GameBook` · `PhotoBatchUpload` · `SessionEntity` · `ShareRequestEntity`.
+
+**Ordine di lavoro obbligato** (issue #3651, DoD): prima un test di integrazione che fallisce con *«no exception was thrown»* — cioè che dimostra l'assenza di conflitto invece di assumerla — poi la conversione che lo fa passare. Convertire senza il test rosso significa sostituire un'asserzione non verificata con un'altra.
+
+Due trappole ricorrenti, entrambe già incontrate:
+
+1. **Lo scaffold di EF genera un `AddColumn` per `xmin`**, che in produzione fallisce con *«column name "xmin" conflicts with a system column name»*: è una colonna di sistema presente su ogni tabella. Va rimosso a mano dalla migration. L'avviso *«may result in the loss of data»* è il segnale per leggerla invece di accettarla.
+2. **Il `DROP COLUMN row_version` richiede la direttiva `-- safe:`** sulla prima riga di `Up()` (Migration Safety Gate, #1087, rollback-runbook §8.2).
+
+Attivare la protezione fa emergere `DbUpdateConcurrencyException` su percorsi che prima non la vedevano mai. La rete esiste già: `ApiExceptionHandlerMiddleware` la mappa a **409** con `X-Warning-Code: concurrent-edit`, quindi nessun percorso HTTP degrada a 500. Da verificare caso per caso restano i **job in background**, dove un'eccezione non gestita non produce un 409 ma un ciclo perso.
+
+Riferimenti: #2305 (la conversione parziale) · #3658 (`PdfDocument`) · #3651 + PR #3683 (`SharedGame`, `ProviderCredential`).

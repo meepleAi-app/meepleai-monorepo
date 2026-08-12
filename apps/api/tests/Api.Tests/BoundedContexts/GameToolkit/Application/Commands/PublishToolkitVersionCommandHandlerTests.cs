@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameToolkit.Application.Commands.PublishToolkitVersion
 using Api.BoundedContexts.GameToolkit.Domain.Entities;
 using Api.BoundedContexts.GameToolkit.Domain.Enums;
 using Api.BoundedContexts.GameToolkit.Domain.Repositories;
+using Api.BoundedContexts.GameToolkit.Infrastructure.Persistence;
 using Api.Infrastructure.Entities.GameToolkit;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -9,6 +10,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -48,8 +50,16 @@ public class PublishToolkitVersionCommandHandlerTests
         var unitOfWork = new EfCoreUnitOfWork(context);
         var timeProvider = new FakeTimeProvider(Now);
 
+        // Real repository, not a mock (#3670). The handler no longer mutates the tracked EF
+        // row: it loads the aggregate, calls PublishMarketplaceVersion and persists through
+        // UpdateAsync. A mocked repository would stub out exactly the mapping round-trip that
+        // makes this safe — MapToDomain loading VersionSemver so MapToPersistence can write it
+        // back — and the test would still pass if that round-trip broke.
+        var toolkitRepo = new GameToolkitRepository(
+            context, TestDbContextFactory.CreateMockEventCollector().Object);
+
         var handler = new PublishToolkitVersionCommandHandler(
-            context,
+            toolkitRepo,
             versionRepo.Object,
             unitOfWork,
             cache.Object,
@@ -79,6 +89,14 @@ public class PublishToolkitVersionCommandHandlerTests
             UpdatedAt = Now,        };
 #pragma warning restore CS0618
         context.GameToolkits.Add(toolkit);
+        context.SaveChanges();
+
+        // Detach so the act phase starts with an empty change tracker, which is what a request
+        // actually sees: MeepleAiDbContext is scoped, and the handler's only load is
+        // GetByIdAsync (AsNoTracking). Leaving the seeded instance tracked makes UpdateAsync's
+        // Set<>().Update() attach a second instance of the same key and throw — a fixture
+        // artifact, not a product defect, but one that reads exactly like a real bug (#3670).
+        context.Entry(toolkit).State = EntityState.Detached;
         return toolkit;
     }
 

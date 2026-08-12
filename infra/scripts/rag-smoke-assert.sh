@@ -13,7 +13,8 @@
 #   bash scripts/rag-smoke-assert.sh --update-baseline  # capture the baseline from current retrieval
 #   API_BASE_URL=http://localhost:8080 SMOKE_EMAIL=... SMOKE_PASSWORD=... bash scripts/rag-smoke-assert.sh
 #
-# Exit: 0 = all queries match baseline (or baseline updated); 1 = a query drifted / no citations.
+# Exit: 0 = all queries match baseline (or baseline updated); 1 = a query drifted / no citations;
+#       3 = baseline stale (captured against a different snapshot — nothing to compare).
 set -uo pipefail
 
 BASE_URL="${API_BASE_URL:-http://localhost:8080}"
@@ -24,6 +25,9 @@ UPDATE_BASELINE=false
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # infra/
 QUERIES="$DIR/fixtures/rag-canonical-queries.json"
 BASELINE="$DIR/fixtures/rag-golden-baseline.json"
+# Stessa convenzione di snapshot-verify.sh / snapshot-restore.sh / seed-index-publish.sh:
+# il percorso degli snapshot è configurabile, non dedotto dalla posizione dello script.
+OUT_DIR="${SEED_INDEX_OUT_DIR:-$DIR/../data/snapshots}"
 
 for arg in "$@"; do
   case "$arg" in
@@ -44,6 +48,29 @@ command -v curl >/dev/null || fail "curl is required"
 ENDPOINT=$(jq -r '.endpoint' "$QUERIES")
 TOPK=$(jq -r '.topK' "$QUERIES")
 LANG=$(jq -r '.language' "$QUERIES")
+
+# --- guardia: la baseline appartiene allo snapshot in esecuzione? (#3645) ---
+# La baseline fissa i chunk {source,page} di un corpus preciso. Su un corpus diverso il
+# confronto non produce informazione: ogni query "drifta" e il gate riporta una regressione
+# di retrieval che non è avvenuta. È successo dal 2026-07-20 al 2026-08-10 — tre settimane di
+# rosso settimanale in cui una regressione autentica sarebbe passata inosservata.
+#
+# Confrontiamo solo quando entrambi i lati sono noti: eseguire contro un'API remota senza
+# snapshot locale, o con una baseline anteriore all'introduzione del campo, resta legittimo.
+if [ "$UPDATE_BASELINE" = false ]; then
+  baseline_snap=$(jq -r '.snapshot // empty' "$BASELINE")
+  current_snap=$(cat "$OUT_DIR/.latest" 2>/dev/null || true)
+
+  if [ -n "$baseline_snap" ] && [ -n "$current_snap" ] && [ "$baseline_snap" != "$current_snap" ]; then
+    echo "::error:: baseline scaduta — non è una regressione del retrieval" >&2
+    echo "  baseline catturata su: $baseline_snap" >&2
+    echo "  snapshot in esecuzione: $current_snap" >&2
+    echo "  Confrontare il retrieval fra corpus diversi non è significativo. Rigenera la" >&2
+    echo "  baseline (--update-baseline) o esegui contro lo snapshot della baseline —" >&2
+    echo "  docs/for-developers/operations/rag-smoke-runbook.md" >&2
+    exit 3
+  fi
+fi
 
 COOKIE=$(mktemp); trap 'rm -f "$COOKIE" "${TMP_BASELINE:-}"' EXIT
 
@@ -118,8 +145,8 @@ if [ "$UPDATE_BASELINE" = true ]; then
   # Never write a partial baseline: a query that returned no citations would be
   # silently omitted and later assert runs would blame the operator. Fail loudly.
   [ "$FAIL" -eq 0 ] || fail "$FAIL query(ies) returned no citations — baseline NOT written (fix retrieval/auth first)"
-  snap=$(cat "$DIR/../data/snapshots/.latest" 2>/dev/null || echo "unknown")
-  model=$(jq -r '.embedding_model // "unknown"' "$DIR/../data/snapshots/$snap.meta.json" 2>/dev/null || echo "unknown")
+  snap=$(cat "$OUT_DIR/.latest" 2>/dev/null || echo "unknown")
+  model=$(jq -r '.embedding_model // "unknown"' "$OUT_DIR/$snap.meta.json" 2>/dev/null || echo "unknown")
   ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   jq --slurpfile b "$TMP_BASELINE" --arg snap "$snap" --arg model "$model" --arg ts "$ts" \
      '.baseline=$b[0] | .snapshot=$snap | .embeddingModel=$model | .capturedAt=$ts' \

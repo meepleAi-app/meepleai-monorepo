@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.GameToolkit.Application.Commands.PublishToolkitVer
 /// <remarks>
 /// <para>Pipeline (spec-panel §6 Gherkin):</para>
 /// <list type="number">
-///   <item>Load tracked toolkit row — return <c>null</c> if missing (404).</item>
+///   <item>Load the toolkit aggregate through <c>IGameToolkitRepository</c> — <c>null</c> if missing (404).</item>
 ///   <item>Owner check (<c>CreatedByUserId == ViewerId</c>) — throw <c>ForbiddenException</c>.</item>
 ///   <item>Uniqueness check — throw <c>ConflictException</c> if <c>(ToolkitId, VersionNumber)</c> exists
 ///         (covers yanked numbers per §1 — permanently retired).</item>
@@ -34,7 +34,7 @@ namespace Api.BoundedContexts.GameToolkit.Application.Commands.PublishToolkitVer
 internal sealed class PublishToolkitVersionCommandHandler
     : ICommandHandler<PublishToolkitVersionCommand, PublishedToolkitVersionResponse?>
 {
-    private readonly MeepleAiDbContext _context;
+    private readonly IGameToolkitRepository _toolkitRepository;
     private readonly IToolkitVersionRepository _versionRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IHybridCacheService _cache;
@@ -42,14 +42,14 @@ internal sealed class PublishToolkitVersionCommandHandler
     private readonly ILogger<PublishToolkitVersionCommandHandler> _logger;
 
     public PublishToolkitVersionCommandHandler(
-        MeepleAiDbContext context,
+        IGameToolkitRepository toolkitRepository,
         IToolkitVersionRepository versionRepository,
         IUnitOfWork unitOfWork,
         IHybridCacheService cache,
         TimeProvider timeProvider,
         ILogger<PublishToolkitVersionCommandHandler> logger)
     {
-        _context = context ?? throw new ArgumentNullException(nameof(context));
+        _toolkitRepository = toolkitRepository ?? throw new ArgumentNullException(nameof(toolkitRepository));
         _versionRepository = versionRepository ?? throw new ArgumentNullException(nameof(versionRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
@@ -63,11 +63,17 @@ internal sealed class PublishToolkitVersionCommandHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // 1) Tracked load — we mutate VersionSemver + IsPublished below and
-        //    rely on EF change tracking to emit the UPDATE inside the UnitOfWork
-        //    transaction. AsNoTracking would discard those changes.
-        var toolkit = await _context.GameToolkits
-            .FirstOrDefaultAsync(t => t.Id == request.ToolkitId, cancellationToken)
+        // 1) Load the aggregate through the repository (#3670). This used to be a TRACKED
+        //    load of the EF entity via MeepleAiDbContext, because step 6 mutated the row
+        //    directly to dodge MapToPersistence's VersionSemver synthesis. The aggregate now
+        //    owns VersionSemver, so the normal repository path works.
+        //
+        //    Do NOT reintroduce a tracked load alongside UpdateAsync: GetByIdAsync is
+        //    AsNoTracking, and UpdateAsync calls Set<GameToolkitEntity>().Update() with a
+        //    freshly mapped instance. Two instances of the same key in the change tracker
+        //    would throw ("instance with the same key value is already being tracked").
+        var toolkit = await _toolkitRepository
+            .GetByIdAsync(request.ToolkitId, cancellationToken)
             .ConfigureAwait(false);
 
         if (toolkit is null)
@@ -128,15 +134,13 @@ internal sealed class PublishToolkitVersionCommandHandler
 
         await _versionRepository.AddAsync(version, cancellationToken).ConfigureAwait(false);
 
-        // 6) Mutate parent toolkit DIRECTLY on the tracked EF entity.
-        //    Bypass GameToolkitRepository.UpdateAsync deliberately: its
-        //    MapToPersistence pass synthesises VersionSemver from the legacy
-        //    int Version field (see #1144 follow-up tracker at GameToolkitRepository.cs:308),
-        //    which would overwrite our user-input semver. Direct mutation
-        //    preserves the user-input value through the UPDATE statement.
-        toolkit.VersionSemver = request.VersionNumber;
-        toolkit.IsPublished = true;
-        toolkit.UpdatedAt = now;
+        // 6) Move the parent toolkit's marketplace pointer through the aggregate (#3670).
+        //    Previously this mutated the tracked EF row directly to bypass
+        //    GameToolkitRepository.UpdateAsync, whose MapToPersistence synthesised
+        //    VersionSemver as "0.{Version}.0" and would have overwritten the user's input.
+        //    That synthesis is gone, so the write goes through the repository like any other.
+        toolkit.PublishMarketplaceVersion(request.VersionNumber, now);
+        await _toolkitRepository.UpdateAsync(toolkit, cancellationToken).ConfigureAwait(false);
 
         // 7) Single transaction — IUnitOfWork dispatches domain events post-commit.
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

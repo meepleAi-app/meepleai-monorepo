@@ -18,6 +18,30 @@ The fixture top-level `language` (`"en"`) is the **default**. Each query MAY set
 
 A query with **no golden-baseline entry** reports `SKIP` (via a `::notice::`), not `FAIL`, and does **not** fail the gate. This lets new queries (e.g. the IT set) land *before* the ops `--update-baseline` capture without redding the weekly cron. Real drift and no-citations still `FAIL`. The summary reports `N passed, N failed, N skipped (pending baseline)`; exit is non-zero only on a real `FAIL`.
 
+### Baseline scaduta ≠ retrieval regredito (exit 3, #3645)
+
+Prima di eseguire le query l'harness confronta il campo `snapshot` della baseline con lo snapshot caricato (`$SEED_INDEX_OUT_DIR/.latest`). Se differiscono **esce 3 senza eseguire alcuna query**:
+
+```
+::error:: baseline scaduta — non è una regressione del retrieval
+  baseline catturata su: meepleai_seed_20260729T070620Z_..._9101176e9
+  snapshot in esecuzione: meepleai_seed_20260809T060634Z_..._dc83e1a4e
+```
+
+**Perché esiste**: la baseline fissa i chunk `{source,page}` di un corpus preciso. Su un corpus diverso *ogni* query risulta "drifted" — dal 2026-07-20 al 2026-08-10 il gate ha riportato `0 passed, 11 failed` per tre settimane, aprendo una issue intitolata «retrieval drift» che descriveva un guasto mai avvenuto. Un rosso che significa sempre la stessa cosa smette di essere letto, e in quelle tre settimane una regressione autentica sarebbe passata inosservata.
+
+**Cosa fare**: rigenerare la baseline (§ *Capturing the EN + IT baseline via CI dispatch*). Non è un bug da indagare — è la conseguenza attesa di un re-bake.
+
+| Exit | Significato | Azione |
+|---|---|---|
+| `0` | tutte le query combaciano (o baseline aggiornata) | — |
+| `1` | drift reale **a parità di snapshot**, o nessuna citation | indagare |
+| `3` | baseline catturata su un altro snapshot | rigenerare la baseline |
+
+La guardia confronta solo quando **entrambi** i lati sono noti: senza `.latest` (esecuzione contro un'API remota) o con una baseline priva del campo `snapshot`, non blocca. Uno stato non conoscibile non va trasformato in un fallimento.
+
+⚠️ L'auto-opener deduplica sulla label `rag-smoke-failure`: **finché una issue resta aperta non ne viene emessa un'altra**. Una issue di baseline scaduta lasciata aperta silenzia gli alert successivi, inclusi quelli di un drift vero.
+
 ## Capturing / updating the golden baseline
 
 The baseline must be captured against a **fresh, compatible snapshot** (`snapshot-verify.sh` exit 0). Do this:

@@ -22,15 +22,26 @@ var games = new[]
 
 Console.WriteLine("=== MeepleAI Golden Dataset Generator (Template-Based) ===\n");
 
-// Find repo root
+// Find repo root.
+//
+// #3655: il marcatore era `tests/rulebook`, spostata in `data/rulebook` dal commit 1806fcd0a
+// (2026-01-17) insieme alla cancellazione del dataset. Da allora il generatore abortiva
+// ANCHE se lanciato dalla root, accusando l'utente di stare nella cartella sbagliata — e la
+// via documentata dal README («il dataset è generato, non committato») non era percorribile.
+//
+// Ora il marcatore è la directory di output. È l'unica precondizione di cui il generatore ha
+// davvero bisogno, ed è tenuta tracciata apposta: `tests/data/README.md` esiste testualmente
+// «to keep the folder tracked so the generated output path stays stable». I 132 PDF in
+// `data/rulebook` non li legge nessuno: questo generatore è template-based.
 var repoRoot = Directory.GetCurrentDirectory();
-if (!Directory.Exists(Path.Combine(repoRoot, "tests", "rulebook")))
+var outputDir = Path.Combine(repoRoot, "tests", "data");
+if (!Directory.Exists(outputDir))
 {
-    Console.Error.WriteLine("❌ Run from repository root!");
+    Console.Error.WriteLine($"❌ '{outputDir}' non trovata — esegui dalla root del repository.");
     return 1;
 }
 
-var outputPath = Path.Combine(repoRoot, "tests", "data", "golden_dataset.json");
+var outputPath = Path.Combine(outputDir, "golden_dataset.json");
 
 // Generate dataset
 var dataset = new

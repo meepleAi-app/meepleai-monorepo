@@ -213,5 +213,162 @@ class CliExitCodeTests(unittest.TestCase):
         self.assertEqual(0, rc)
 
 
+# ---------------------------------------------------------------------------
+# Real `dotnet ef migrations script --idempotent` output (#3659)
+# ---------------------------------------------------------------------------
+#
+# Everything above this line uses `_block()`, whose docstring claims to produce
+# an "EF-Core-style SQL block" by prepending `-- Migration: <id>`. EF has never
+# emitted that header. The parser was green against a format that does not
+# exist, which is why the gate ran for three months without reading a single
+# statement -- including on a PR that dropped a column.
+#
+# The excerpt below is copied VERBATIM from the tail of
+# `dotnet ef migrations script --idempotent` run against this repo on
+# 2026-08-11. Do not tidy it: its value is being byte-for-byte real.
+#
+# Note the shape it proves: one `migrationBuilder` call per `DO $EF$` block, so
+# the `-- safe:` directive and the DROP COLUMN it authorises sit in DIFFERENT
+# blocks joined only by their MigrationId. A parser grouping per block would
+# lose that association.
+REAL_EF_TAIL = '''\
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260811130532_PdfDocumentXminConcurrency') THEN
+    -- safe: drop dead bytea concurrency column, replaced by the xmin system column
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260811130532_PdfDocumentXminConcurrency') THEN
+    ALTER TABLE pdf_documents DROP COLUMN "RowVersion";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = '20260811130532_PdfDocumentXminConcurrency') THEN
+    INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+    VALUES ('20260811130532_PdfDocumentXminConcurrency', '9.0.11');
+    END IF;
+END $EF$;
+COMMIT;
+'''
+
+REAL_EF_PREAMBLE = '''\
+CREATE TABLE IF NOT EXISTS "__EFMigrationsHistory" (
+    "MigrationId" character varying(150) NOT NULL,
+    "ProductVersion" character varying(32) NOT NULL,
+    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
+);
+
+START TRANSACTION;
+
+'''
+
+
+class RealEfFormatTests(unittest.TestCase):
+    """The regression suite that would have caught #3659 on day one."""
+
+    def test_real_ef_output_contains_no_legacy_header(self):
+        """Pins the fact the old parser depended on and never checked.
+
+        The pre-#3659 parser split on `-- Migration: <id>` alone. This asserts
+        that real EF output contains no such header -- i.e. that a header-only
+        parser reads ZERO statements from it. It is the reason every other test
+        in this class fails against the old implementation, and it is worth
+        stating separately because it is the assumption, not the symptom.
+        """
+        self.assertNotIn("-- Migration:", REAL_EF_PREAMBLE + REAL_EF_TAIL)
+
+    def test_real_ef_output_is_recognised_at_all(self):
+        """The single assertion whose absence let the gate run blind."""
+        result = mod.scan(REAL_EF_PREAMBLE + REAL_EF_TAIL, gate_ship_date=GATE_SHIP_DATE)
+        self.assertGreater(
+            result.migrations_seen, 0,
+            "real EF output must yield at least one migration; if this fails the "
+            "gate is scanning nothing and every result below is vacuous",
+        )
+
+    def test_drop_column_in_real_format_is_found(self):
+        findings = mod.scan_sql(REAL_EF_PREAMBLE + REAL_EF_TAIL, gate_ship_date=GATE_SHIP_DATE)
+        self.assertTrue(any(f.pattern == "DROP_COLUMN" for f in findings))
+
+    def test_directive_in_a_different_block_still_authorises(self):
+        """Cross-block association: directive and statement share only the id."""
+        findings = mod.scan_sql(REAL_EF_PREAMBLE + REAL_EF_TAIL, gate_ship_date=GATE_SHIP_DATE)
+        drop = next(f for f in findings if f.pattern == "DROP_COLUMN")
+        self.assertTrue(drop.allowed)
+        self.assertIn("xmin", drop.rationale)
+
+    def test_many_blocks_collapse_into_one_migration(self):
+        """EF emits one block per call: 3 blocks here, but a single migration."""
+        result = mod.scan(REAL_EF_PREAMBLE + REAL_EF_TAIL, gate_ship_date=GATE_SHIP_DATE)
+        self.assertEqual(1, result.migrations_seen)
+
+    def test_line_numbers_are_absolute_in_the_file(self):
+        sql = REAL_EF_PREAMBLE + REAL_EF_TAIL
+        findings = mod.scan_sql(sql, gate_ship_date=GATE_SHIP_DATE)
+        drop = next(f for f in findings if f.pattern == "DROP_COLUMN")
+        actual = sql.splitlines()[drop.line_number - 1]
+        self.assertIn("DROP COLUMN", actual)
+
+    def test_history_bootstrap_is_not_reported_as_unattributed(self):
+        """Its continuation lines carry no verb; flagging them would fail every run."""
+        result = mod.scan(REAL_EF_PREAMBLE + REAL_EF_TAIL, gate_ship_date=GATE_SHIP_DATE)
+        self.assertEqual([], result.unattributed)
+
+
+class NothingScannedTests(unittest.TestCase):
+    """Scanning nothing must be an error, never a pass (#3659)."""
+
+    def test_unknown_format_yields_zero_migrations(self):
+        result = mod.scan(
+            'ALTER TABLE users DROP COLUMN email;\n', gate_ship_date=GATE_SHIP_DATE
+        )
+        self.assertEqual(0, result.migrations_seen)
+
+    def test_ef_block_without_recognisable_guard_is_unattributed(self):
+        """Simulates EF changing its output: the SQL must not vanish silently."""
+        sql = (
+            "DO $EF$\nBEGIN\n"
+            '    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE migration = 42) THEN\n'
+            '    DROP TABLE "victims";\n'
+            "    END IF;\nEND $EF$;\n"
+        )
+        result = mod.scan(sql, gate_ship_date=GATE_SHIP_DATE)
+        self.assertEqual(0, result.migrations_seen)
+        self.assertTrue(
+            any("DROP TABLE" in text for _, text in result.unattributed),
+            "SQL inside an unrecognised block must surface as unattributed",
+        )
+
+    def test_ddl_outside_any_block_is_unattributed(self):
+        sql = REAL_EF_PREAMBLE + REAL_EF_TAIL + 'DROP TABLE "sneaky_orphan";\n'
+        result = mod.scan(sql, gate_ship_date=GATE_SHIP_DATE)
+        self.assertTrue(any("sneaky_orphan" in text for _, text in result.unattributed))
+
+    def test_unterminated_block_is_not_discarded(self):
+        sql = (
+            "DO $EF$\nBEGIN\n"
+            '    IF NOT EXISTS(SELECT 1 FROM "__EFMigrationsHistory" WHERE "MigrationId" = \'20260601120000_Trunc\') THEN\n'
+            '    ALTER TABLE "users" DROP COLUMN "email";\n'
+        )
+        findings = mod.scan_sql(sql, gate_ship_date=GATE_SHIP_DATE)
+        self.assertTrue(any(f.pattern == "DROP_COLUMN" for f in findings))
+
+
+class CoverageReportTests(unittest.TestCase):
+    """`{"unsafe": [], "allowed": []}` must never again be ambiguous (#3659)."""
+
+    def test_coverage_counters_distinguish_clean_from_unread(self):
+        clean = mod.scan(REAL_EF_PREAMBLE + REAL_EF_TAIL, gate_ship_date=GATE_SHIP_DATE)
+        unread = mod.scan("SELECT 1;\n", gate_ship_date=GATE_SHIP_DATE)
+        self.assertGreater(clean.lines_scanned, 0)
+        self.assertEqual(0, unread.lines_scanned)
+        self.assertNotEqual(clean.migrations_seen, unread.migrations_seen)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -73,10 +73,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e4", // Standard chess opening
-            gameState = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" // Starting position (FEN)
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e4", // Standard chess opening
+            position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR" // Starting position (FEN)
         };
 
         // Act
@@ -108,10 +108,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "Zz9", // Invalid - no Z piece, no 9 rank
-            gameState = "{}"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "Zz9", // Invalid - no Z piece, no 9 rank
+            position = "{}"
         };
 
         // Act
@@ -143,10 +143,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "Nf3", // Knight move
-            gameState = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "Nf3", // Knight move
+            position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
         };
 
         // Act
@@ -184,8 +184,8 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Step 1: Query Tutor agent for setup help
         var tutorPayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
             query = "How do I set up the chess board?"
         };
 
@@ -204,10 +204,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Step 2: Validate a move with Arbitro agent (same session context)
         var arbitroPayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e4",
-            gameState = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e4",
+            position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
         };
 
         var arbitroResponse = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", arbitroPayload);
@@ -235,15 +235,15 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
         SetSessionCookie(sessionToken);
 
-        var startingPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        var startingPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
 
         // Turn 1: Validate opening move
         var move1Payload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e4",
-            gameState = startingPosition
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e4",
+            position = startingPosition
         };
 
         var response1 = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", move1Payload);
@@ -257,10 +257,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Turn 2: Validate response move (same session)
         var move2Payload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e5", // Black's response
-            gameState = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e5", // Black's response
+            position = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR"
         };
 
         var response2 = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", move2Payload);
@@ -289,10 +289,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "Nf3",
-            gameState = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "Nf3",
+            position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
         };
 
         // Act
@@ -327,10 +327,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e4",
-            gameState = "{}"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e4",
+            position = "{}"
         };
 
         // Act
@@ -350,10 +350,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e4",
-            gameState = "INVALID_FEN_STRING"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e4",
+            position = "INVALID_FEN_STRING"
         };
 
         // Act
@@ -384,10 +384,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
 
         var validatePayload = new
         {
-            gameId = _testGameId,
-            sessionId = _testSessionId,
-            move = "e4",
-            gameState = "{}"
+            gameSessionId = _testSessionId,
+            playerName = "E2E Player",
+            action = "e4",
+            position = "{}"
         };
 
         // Act

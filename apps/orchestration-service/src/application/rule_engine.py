@@ -257,18 +257,28 @@ class RuleEngine:
                         precedence=rule["precedence"],
                     ))
 
-            # State-based validation (requires game state)
-            elif rule["type"] == "Constraint" and game_state:
-                # Placeholder: Would check game state for obstruction
-                # For MVP, assume constraint passes
-                matches.append(RuleMatch(
-                    rule_id=rule_id,
-                    rule_name=rule["name"],
-                    rule_type=rule["type"],
-                    matches=True,
-                    reason=rule["description"],
-                    precedence=rule["precedence"],
-                ))
+            # State-based rules are not evaluated: there is no board model to check them
+            # against (#3668).
+            #
+            # This branch used to be guarded by `and game_state` and, when reached, appended
+            # a RuleMatch with matches=True — "for MVP, assume constraint passes". Since the
+            # orchestrator always passed game_state=None the branch was dead, which hid how
+            # bad its body was: implementing the accompanying TODO (extract game_state from
+            # board_state) would have flipped the engine from "this rule is not evaluated"
+            # to "this rule is satisfied", asserted without a single check. The second is
+            # worse precisely because it is invisible.
+            #
+            # Emitting no RuleMatch at all keeps the outcome truthful — nothing claims the
+            # constraint passed — and leaves moves to be judged by the rules that CAN be
+            # evaluated. The warning is what makes the gap visible; silence is how this
+            # survived from #3759 to #3668.
+            elif rule["type"] == "Constraint":
+                logger.warning(
+                    "Constraint rule '%s' NOT evaluated: no board model exists to check it "
+                    "(#3668). The move was not verified against this rule.",
+                    rule["name"],
+                )
+                continue
 
         return matches
 

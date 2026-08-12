@@ -45,6 +45,20 @@ internal sealed class ToolkitVersion : AggregateRoot<Guid>
     public string? YankReason { get; private set; }
     public Guid? YankedBy { get; private set; }
 
+    /// <summary>Token di concorrenza ottimistica Postgres (<c>xmin</c>). Di proprietà del server;
+    /// il repository lo round-trippa per l'Update su grafo detached (ADR-060). #3688.
+    /// <para>
+    /// Senza questo trasporto <c>MapToPersistence</c> produce un'entità con <c>Xmin = 0</c> — mai
+    /// un xid reale — e l'UPDATE emette <c>WHERE xmin = 0</c>, colpendo 0 righe: ogni pubblicazione
+    /// o yank di una versione fallirebbe con <c>DbUpdateConcurrencyException</c> anche in assenza
+    /// di concorrenza. Stesso guasto di #3670 e #3694.
+    /// </para></summary>
+#pragma warning disable S1144 // Il setter è scritto solo da SetPrivateProperty in
+    // ToolkitVersionRepository.MapToDomain (reflection): l'analyzer non lo vede come usato.
+    // Stessa ragione per cui quel repository sopprime già S3011 sulle sue helper.
+    public uint Xmin { get; private set; }
+#pragma warning restore S1144
+
     /// <summary>True when the version has been soft-deleted via <see cref="Yank"/>.</summary>
     public bool IsYanked => YankedAt.HasValue;
 

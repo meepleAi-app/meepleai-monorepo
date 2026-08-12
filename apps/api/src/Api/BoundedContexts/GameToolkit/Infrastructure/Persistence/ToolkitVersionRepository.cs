@@ -146,6 +146,9 @@ internal class ToolkitVersionRepository : RepositoryBase, IToolkitVersionReposit
         SetPrivateProperty(version, "YankedAt", entity.YankedAt);
         SetPrivateProperty(version, "YankReason", entity.YankReason);
         SetPrivateProperty(version, "YankedBy", entity.YankedBy);
+        // #3688: il token deve tornare nel dominio, altrimenti MapToPersistence lo riscrive a 0 e
+        // l'UPDATE su grafo detached cerca `WHERE xmin = 0`, che non corrisponde ad alcuna riga.
+        SetPrivateProperty(version, "Xmin", entity.Xmin);
 
         // Reinitialise the domain-events list (GetUninitializedObject leaves it null).
         SetPrivateField(version, "_domainEvents", new List<Api.SharedKernel.Domain.Interfaces.IDomainEvent>());
@@ -166,6 +169,8 @@ internal class ToolkitVersionRepository : RepositoryBase, IToolkitVersionReposit
             YankedAt = version.YankedAt,
             YankReason = version.YankReason,
             YankedBy = version.YankedBy,
+            // #3688 — round-trip del token per l'Update su grafo detached (ADR-060).
+            Xmin = version.Xmin,
         };
     }
 

@@ -12,6 +12,15 @@
 # looked exactly like one that succeeded, from the outside (#3669).
 set -Eeuo pipefail
 
+# cron gives user jobs a minimal PATH (/usr/bin:/bin on Debian/Ubuntu) and this
+# crontab sets none. The AWS CLI v2 installer puts `aws` in /usr/local/bin, which is
+# therefore invisible at 03:00 while working perfectly from an interactive shell —
+# the offsite upload would fail nightly and only in the dark. Verified on the staging
+# VPS (2026-08-12): `env -i PATH=/usr/bin:/bin bash -c 'command -v aws'` finds nothing.
+# Fixed here rather than in the crontab so it holds for every host regardless of how
+# the cron entry was installed.
+export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+
 # ─────────────────────────────────────────────
 # Error trap — notify on unexpected failure
 # ─────────────────────────────────────────────

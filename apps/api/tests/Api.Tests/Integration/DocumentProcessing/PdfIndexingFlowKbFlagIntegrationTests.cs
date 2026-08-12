@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -8,6 +9,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
@@ -500,23 +502,38 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // outbox row schema does not store an AggregateId column, so the test filters
         // on the serialised event body. Acceptable in test scope because the only PDF in
         // play is the one this test seeded.
+        // #3633: il filtro sul payload va fatto in memoria. `PayloadJson` è mappato a jsonb, e un
+        // `.Contains(...)` dentro l'espressione LINQ viene tradotto in `LIKE`, che per Postgres non
+        // esiste su quel tipo: la query moriva con `42883: operator does not exist: jsonb ~~ jsonb`
+        // prima di qualunque assert. Il filtro su `EventType` (text) resta invece nel database.
+        // #3633: gli alias arrivano da EventTypeRegistry, non scritti a mano. La colonna
+        // `EventType` NON contiene il nome CLR: `MeepleAiDbContext.EnqueueOutboxRows` la
+        // popola con `EventTypeRegistry.ResolveOrFullName(...)`, che per questi due eventi
+        // restituisce gli alias stabili «pdf.state.changed» e «kb.doc.indexed» (#661).
+        // I filtri precedenti cercavano «PdfStateChanged» e «KbDocIndexed» e non potevano
+        // matchare nulla: il test contava 0 e 0, e falliva sul primo assert facendo sembrare
+        // regredita la pipeline mentre a essere sbagliata era l'interrogazione.
+        var pdfStateChangedAlias = EventTypeRegistry.AliasByType[typeof(PdfStateChangedEvent)];
+        var kbDocIndexedAlias = EventTypeRegistry.AliasByType[typeof(KbDocIndexedEvent)];
+
         var pdfIdString = pdfDocId.ToString();
-        var pdfStateChangedCount = await _dbContext.DomainEventOutbox
+        var outboxRows = await _dbContext.DomainEventOutbox
             .AsNoTracking()
-            .CountAsync(
-                e => e.EventType.Contains("PdfStateChanged") && e.PayloadJson.Contains(pdfIdString),
-                TestCancellationToken);
+            .Select(e => new { e.EventType, e.PayloadJson })
+            .ToListAsync(TestCancellationToken);
+
+        var pdfStateChangedCount = outboxRows.Count(
+            e => string.Equals(e.EventType, pdfStateChangedAlias, StringComparison.Ordinal)
+                 && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
         pdfStateChangedCount.Should().Be(6,
             "pipeline must raise PdfStateChangedEvent for EVERY state transition " +
             "(Pending→Uploading + Uploading→Extracting + Extracting→Chunking + " +
             "Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
             "If this counts 1, the bridge-save shortcut from PR #2295 has regressed.");
 
-        var kbDocIndexedCount = await _dbContext.DomainEventOutbox
-            .AsNoTracking()
-            .CountAsync(
-                e => e.EventType.Contains("KbDocIndexed") && e.PayloadJson.Contains(pdfIdString),
-                TestCancellationToken);
+        var kbDocIndexedCount = outboxRows.Count(
+            e => string.Equals(e.EventType, kbDocIndexedAlias, StringComparison.Ordinal)
+                 && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
         kbDocIndexedCount.Should().Be(1,
             "KbDocIndexedEvent must fire exactly once per upload, raised by " +
             "PdfDocument.TransitionTo(Ready) (PdfDocument.cs:435-442).");

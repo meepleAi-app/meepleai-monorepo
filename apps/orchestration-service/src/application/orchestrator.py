@@ -236,7 +236,13 @@ class GameOrchestrator:
                 current_agent=AgentType.ARBITRO,
                 conversation_history=state.conversation_history,
                 move_notation=state.pending_move.move_notation if state.pending_move else state.user_query,
-                game_state=None,  # TODO: Extract from board_state
+                # Deliberately None (#3668). board_state is available two lines above, but
+                # RuleEngine has no board model, so populating this would buy nothing:
+                # Constraint rules are skipped (with a warning) whatever it contains.
+                # Extract it together with a real obstruction check, never before — the
+                # previous TODO here promised an extraction that would have made a
+                # placeholder "assume constraint passes" branch reachable.
+                game_state=None,
             )
 
             # Execute Arbitro workflow with retry fallback

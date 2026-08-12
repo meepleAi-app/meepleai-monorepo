@@ -838,7 +838,15 @@ jobs:
         # the suite now actually runs to completion (it used to short-circuit
         # on the first wave of failures at ~25 min). 45 min keeps headroom
         # for transient Testcontainers churn on the GitHub-hosted runner.
-        timeout-minutes: 45
+        #
+        # #3634: 45 → 90. Il TestSessionTimeout del runsettings passa a 75 min perché a 45 la
+        # sessione veniva troncata a metà (2148 test su ~2962, `Test Run Aborted.` su tutti e tre
+        # gli shard). Questo timeout deve restare SOPRA quello della sessione: se scattasse prima,
+        # GitHub marcherebbe il job `cancelled` senza riepilogo — il difetto di #3629.
+        #
+        # Nota: la stima «45 min bastano» di PR #1505 non era verificabile, perché nello stesso
+        # periodo questo job non eseguiva alcun test (#3632).
+        timeout-minutes: 90
         env:
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432

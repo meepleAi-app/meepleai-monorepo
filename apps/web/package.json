@@ -237,7 +237,7 @@
     "@vitest/ui": "4.1.10",
     "autoprefixer": "^10.5.4",
     "axe-core": "^4.13.0",
-    "chromatic": "^17.0.1",
+    "chromatic": "^18.1.0",
     "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "dotenv-cli": "^11.0.0",

@@ -158,26 +158,21 @@ internal static class GameEndpoints
         .WithSummary("Add player to session")
         .WithDescription("Adds a new player to an existing game session. Requires active user session.");
 
-        // Complete game session
-        group.MapPost("/sessions/{id}/complete", HandleCompleteSession)
-        .RequireSession() // Issue #1446: Automatic session validation
-        .Produces<GameSessionDto>(200)
-        .Produces(400)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Sessions")
-        .WithSummary("Complete a game session")
-        .WithDescription("Marks a game session as completed with optional winner. Requires active user session.");
-
-        // Abandon game session
-        group.MapPost("/sessions/{id}/abandon", HandleAbandonSession)
-        .RequireSession() // Issue #1446: Automatic session validation
-        .Produces<GameSessionDto>(200)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Sessions")
-        .WithSummary("Abandon a game session")
-        .WithDescription("Marks a game session as abandoned. Requires active user session.");
+        // #3662: RIMOSSI `/sessions/{id}/complete` e `/sessions/{id}/abandon`.
+        //
+        // Erano superficie pubblica senza consumatori. Verificato prima di rimuoverli:
+        //   · frontend — l'unico riferimento a `complete` era un ESEMPIO in un commento
+        //     (lib/api/index.ts); `abandon` non era chiamato da nessuna parte;
+        //   · backend — `CompleteGameSessionCommand` e `AbandonGameSessionCommand` erano
+        //     istanziati una volta sola, proprio da questi due handler.
+        //
+        // Il comportamento non si perde. Concludere una sessione passa da
+        // `/sessions/{id}/end`, che ha un chiamante vero (useActiveSessions.ts:230) e accetta
+        // `winnerName`: `complete` ne era un duplicato. Lo stato `Abandoned` resta raggiungibile
+        // da `GameSession.TerminateForQuota()`, chiamato da SessionQuotaService, quindi la UI
+        // che disegna «abandoned» continua ad avere senso.
+        //
+        // Restano `pause`, `resume` ed `end`, tutti consumati da useActiveSessions.ts.
 
         // Pause game session
         group.MapPost("/sessions/{id}/pause", HandlePauseSession)
@@ -453,51 +448,6 @@ internal static class GameEndpoints
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("Added player {PlayerName} to session {SessionId}", request.PlayerName, id);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleCompleteSession(
-        Guid id,
-        CompleteSessionRequest? request,
-        HttpContext httpContext,
-        IMediator mediator,
-                CancellationToken ct)
-    {
-        var userId = httpContext.User.GetUserId();
-        if (userId == Guid.Empty)
-        {
-            return Results.Unauthorized();
-        }
-
-        var command = new CompleteGameSessionCommand(
-            SessionId: id,
-            RequesterId: userId,
-            WinnerName: request?.WinnerName
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleAbandonSession(
-        Guid id,
-        HttpContext httpContext,
-        IMediator mediator,
-                CancellationToken ct)
-    {
-        var userId = httpContext.User.GetUserId();
-        if (userId == Guid.Empty)
-        {
-            return Results.Unauthorized();
-        }
-
-        var command = new AbandonGameSessionCommand(
-            SessionId: id,
-            RequesterId: userId,
-            Reason: null
-        );
-
-        var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

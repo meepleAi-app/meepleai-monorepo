@@ -120,6 +120,28 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
 
     // Issue #4219: Progress tracking and ETA calculation
     public int ProgressPercentage => CalculateProgressPercentage();
+
+    /// <summary>
+    /// Token di concorrenza ottimistica (colonna di sistema PostgreSQL <c>xmin</c>, ADR-060).
+    /// <para>
+    /// #3694 — deve attraversare l'aggregato perché <c>PdfDocumentRepository.UpdateAsync</c>
+    /// persiste un grafo <b>detached</b> (<c>MapToPersistence</c> + <c>DbSet.Update()</c>): EF non
+    /// ha una riga tracciata da cui ricavare l'<i>original value</i> del token e usa quello sulla
+    /// proprietà. Senza questo trasporto valeva sempre <c>0</c> — mai un xid reale — quindi ogni
+    /// UPDATE emetteva <c>WHERE xmin = 0</c>, colpiva 0 righe e falliva con
+    /// <c>DbUpdateConcurrencyException</c> <b>anche senza concorrenza</b>.
+    /// </para>
+    /// <para>
+    /// Il difetto è arrivato in produzione con #3658 (conversione da <c>bytea</c> a <c>xmin</c>)
+    /// perché prima la coincidenza lo mascherava: <c>RowVersion</c> era NULL sull'entità e sulla
+    /// riga, quindi EF generava <c>row_version IS NULL</c>, sempre vero.
+    /// </para>
+    /// <para>
+    /// Vale <c>0</c> per un documento appena creato: quel percorso è un INSERT, dove il token non
+    /// si usa ed è Postgres a valorizzarlo.
+    /// </para>
+    /// </summary>
+    public uint XminVersion { get; private set; }
     public TimeSpan? EstimatedTimeRemaining { get; private set; }
     public TimeSpan? TotalDuration => ProcessedAt.HasValue ? ProcessedAt.Value - UploadedAt : null;
 
@@ -230,10 +252,12 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         string? coverGenerationStatus = null,
         int? coverPageIndex = null,
         string? coverGenerationError = null,
-        int coverGenerationAttempts = 0)
+        int coverGenerationAttempts = 0,
+        uint xminVersion = 0)
     {
         var document = new PdfDocument
         {
+            XminVersion = xminVersion,
             Id = id,
             GameId = gameId,
             FileName = fileName,

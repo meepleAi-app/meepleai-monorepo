@@ -40,8 +40,15 @@ internal class GameBookEntityConfiguration : IEntityTypeConfiguration<GameBook>
         builder.Property(e => e.UpdatedBy).HasColumnName("updated_by");
         builder.Property(e => e.IsDeleted).HasColumnName("is_deleted")
                .HasDefaultValue(false).IsRequired();
-        builder.Property(e => e.RowVersion).HasColumnName("row_version")
-               .IsRowVersion();
+        // #3651 — concorrenza ottimistica via `xmin`, la colonna di sistema di PostgreSQL.
+        // Prima era `.Property(e => e.RowVersion).HasColumnName("row_version").IsRowVersion()` su
+        // una `bytea` che nulla popolava da quando #2305 ha rimosso il trigger: EF confrontava
+        // NULL = NULL e nessun conflitto veniva rilevato.
+        builder.Property(e => e.Xmin)
+               .HasColumnName("xmin")
+               .HasColumnType("xid")
+               .ValueGeneratedOnAddOrUpdate()
+               .IsConcurrencyToken();
 
         // A0.2 (#1320) lesson: composite indexes spanning owned-type columns (game_ref_kind,
         // game_ref_id) AND parent columns (deleted_at) cannot be expressed via HasIndex(...) in

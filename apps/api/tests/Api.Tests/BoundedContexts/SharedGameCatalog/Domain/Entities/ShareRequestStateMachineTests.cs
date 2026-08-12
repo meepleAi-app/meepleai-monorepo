@@ -719,16 +719,30 @@ public class ShareRequestStateMachineTests
 
     #endregion
 
-    #region RowVersion Tests
+    #region Concurrency token tests
 
+    /// <summary>
+    /// #3651 — questo test asseriva <c>RowVersion.Should().BeNull()</c> ed era verde proprio
+    /// perché la protezione non esisteva: il token <c>bytea</c> restava NULL su ogni riga da
+    /// quando #2305 ha rimosso il trigger che lo popolava, quindi EF confrontava NULL = NULL e
+    /// nessun conflitto veniva mai rilevato. Fissava la forma sbagliata, certificando il difetto.
+    ///
+    /// Il contratto vero: un aggregato appena creato non proviene da una lettura, quindi non ha
+    /// ancora un token — vale 0. È corretto e innocuo, perché quel percorso è un INSERT, dove il
+    /// token non viene usato ed è Postgres a valorizzarlo. La verifica di merito (due scritture
+    /// concorrenti, la seconda rifiutata) sta in <c>ShareRequestXminConcurrencyTests</c>, che
+    /// richiede un vero PostgreSQL.
+    /// </summary>
     [Fact]
-    public void Create_InitializesWithNullRowVersion()
+    public void Create_LeavesConcurrencyTokenUnsetUntilFirstRead()
     {
         // Arrange & Act
         var request = CreateTestShareRequest();
 
         // Assert
-        request.RowVersion.Should().BeNull();
+        request.Xmin.Should().Be(0,
+            "un aggregato appena creato non viene da una lettura: il token lo assegna Postgres " +
+            "all'INSERT, e arriva nel dominio solo alla rilettura successiva");
     }
 
     #endregion

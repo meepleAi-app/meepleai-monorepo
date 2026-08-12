@@ -179,10 +179,21 @@ public sealed class ShareRequest : AggregateRoot<Guid>
     public UserLibrary.Domain.Entities.PrivateGame? PrivateGame { get; }
 
     /// <summary>
-    /// Gets or sets the row version for optimistic concurrency control.
+    /// Token di concorrenza ottimistica (colonna di sistema PostgreSQL <c>xmin</c>, ADR-060).
+    /// <para>
+    /// #3651 — era <c>[Timestamp] byte[]? RowVersion</c> su una <c>bytea</c> che nulla popolava
+    /// dopo la rimozione del trigger in #2305: restava NULL, EF confrontava <c>NULL = NULL</c> e
+    /// due amministratori potevano risolvere la stessa richiesta senza che nulla lo segnalasse.
+    /// </para>
+    /// <para>
+    /// Deve attraversare l'aggregato perché <c>ShareRequestRepository.Update()</c>, quando non
+    /// trova un'entità già tracciata, riattacca un grafo <b>detached</b>: lì EF non ha un
+    /// <i>original value</i> da cui partire e usa quello sulla proprietà. Se restasse 0 — mai un
+    /// xid reale — ogni UPDATE emetterebbe <c>WHERE xmin = 0</c> e fallirebbe anche senza
+    /// concorrenza.
+    /// </para>
     /// </summary>
-    [Timestamp]
-    public byte[]? RowVersion { get; private set; }
+    public uint Xmin { get; private set; }
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -216,7 +227,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         DateTime? modifiedAt,
         Guid createdBy,
         Guid? modifiedBy,
-        byte[]? rowVersion = null,
+        uint xmin = 0,
         List<ShareRequestDocument>? attachedDocuments = null,
         string? pendingCoverR2Key = null,
         int? coverPageIndex = null,
@@ -240,7 +251,7 @@ public sealed class ShareRequest : AggregateRoot<Guid>
         _modifiedAt = modifiedAt;
         _createdBy = createdBy;
         _modifiedBy = modifiedBy;
-        RowVersion = rowVersion;
+        Xmin = xmin;
         _pendingCoverR2Key = pendingCoverR2Key;
         _coverPageIndex = coverPageIndex;
         _sourcePdfDocumentId = sourcePdfDocumentId;

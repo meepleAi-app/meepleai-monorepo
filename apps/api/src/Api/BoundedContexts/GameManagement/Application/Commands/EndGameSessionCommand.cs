@@ -5,7 +5,10 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands;
 
 /// <summary>
 /// Command to end (complete) a game session with optional winner.
-/// Business alias for CompleteGameSessionCommand.
+/// #3662: era «Business alias for CompleteGameSessionCommand». Quel command e' stato
+/// rimosso con il suo endpoint, che non aveva chiamanti: questo e' ora l'unico percorso
+/// per concludere una sessione, ed e' quello che il frontend usa davvero
+/// (useActiveSessions.ts:230).
 /// </summary>
 /// <param name="SessionId">Session to end.</param>
 /// <param name="RequesterId">Authenticated caller — must match the session creator (#2655 IDOR guard).</param>

@@ -5,7 +5,21 @@
 # Cron (run daily at 03:00 on the staging server):
 #   0 3 * * * cd /opt/meepleai/repo/infra && bash scripts/backup.sh >> /var/log/meepleai-backup.log 2>&1
 
-set -euo pipefail
+# -E (errtrace) is load-bearing, not decoration: without it bash does NOT inherit the
+# ERR trap into shell functions, so every `return 1` inside backup_postgres,
+# upload_to_s3 & co. unwound the script with the trap below never firing — no webhook,
+# no notification, and clean_local_backups never reached. A backup run that failed
+# looked exactly like one that succeeded, from the outside (#3669).
+set -Eeuo pipefail
+
+# cron gives user jobs a minimal PATH (/usr/bin:/bin on Debian/Ubuntu) and this
+# crontab sets none. The AWS CLI v2 installer puts `aws` in /usr/local/bin, which is
+# therefore invisible at 03:00 while working perfectly from an interactive shell —
+# the offsite upload would fail nightly and only in the dark. Verified on the staging
+# VPS (2026-08-12): `env -i PATH=/usr/bin:/bin bash -c 'command -v aws'` finds nothing.
+# Fixed here rather than in the crontab so it holds for every host regardless of how
+# the cron entry was installed.
+export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
 
 # ─────────────────────────────────────────────
 # Error trap — notify on unexpected failure
@@ -70,7 +84,22 @@ S3_ENDPOINT="${S3_BACKUP_ENDPOINT:-}"
 S3_BUCKET_NAME="${S3_BACKUP_BUCKET_NAME:-meepleai-backups}"
 export AWS_ACCESS_KEY_ID="${S3_BACKUP_ACCESS_KEY:-}"
 export AWS_SECRET_ACCESS_KEY="${S3_BACKUP_SECRET_KEY:-}"
-S3_REGION="${S3_REGION:-auto}"
+# Accept S3_BACKUP_REGION for consistency with the variables above; S3_REGION stays
+# supported because existing secret files may already use it. Default "auto" is a
+# Cloudflare R2 convention — AWS S3 rejects it, so it is validated before use.
+S3_REGION="${S3_BACKUP_REGION:-${S3_REGION:-auto}}"
+
+# Tracks whether the cross-provider copy actually happened, so the final summary can
+# say so. Before #3669 the script logged "All backups completed successfully" even
+# when the upload had been skipped — the offsite copy had been off for months and
+# every run still reported success.
+OFFSITE_STATUS="not-attempted"
+
+# age public key ("age1...") used to encrypt the offsite copy. The matching PRIVATE
+# key must NOT live on this host — storing it here would make the encryption
+# pointless — and without it the offsite backups cannot be restored. Keep it in the
+# password manager alongside the DR runbook.
+BACKUP_AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
 
 # ─────────────────────────────────────────────
 # Webhook notification
@@ -83,15 +112,21 @@ notify_webhook() {
     return 0
   fi
 
+  # "text" is what Slack and Discord require: without it an incoming webhook answers
+  # 400 and the notification is dropped. The structured fields are kept alongside for
+  # any receiver that reads them.
   local payload
-  payload=$(printf '{"status":"%s","message":"%s","timestamp":"%s","host":"%s"}' \
+  payload=$(printf '{"text":"[%s] MeepleAI backup on %s: %s","status":"%s","message":"%s","timestamp":"%s","host":"%s"}' \
+    "$status" "$(hostname)" "$message" \
     "$status" "$message" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$(hostname)")
 
-  curl --silent --max-time 10 \
+  # --fail so an HTTP 4xx/5xx is an error: without it curl exits 0 on a rejected
+  # payload and the `||` below never fires — the notification failure was itself silent.
+  curl --silent --fail --max-time 10 \
     -H "Content-Type: application/json" \
     -d "$payload" \
     "$WEBHOOK_URL" \
-    || log "WARN" "Webhook notification failed (non-fatal)"
+    || log "WARN" "Webhook notification failed (non-fatal) — status '${status}' was NOT delivered"
 }
 
 # ─────────────────────────────────────────────
@@ -198,25 +233,110 @@ backup_redis() {
 # ─────────────────────────────────────────────
 upload_to_s3() {
   if [[ "${S3_BACKUP_ENABLED}" != "true" ]]; then
-    log "INFO" "S3 upload disabled (S3_BACKUP_ENABLED != true) — skipping"
+    # WARN, not INFO: this is the difference between "backups exist" and "backups
+    # survive losing this provider". Both the backups and production live in the same
+    # Hetzner account, so with the upload off there is no cross-provider redundancy
+    # at all — an incident on the account loses them together (#3669).
+    log "WARN" "OFFSITE COPY NOT MADE — S3_BACKUP_ENABLED != true. Backups exist only on this host/provider."
+    OFFSITE_STATUS="disabled"
     return 0
   fi
 
   if [[ -z "${S3_ENDPOINT}" ]]; then
-    log "ERROR" "S3_BACKUP_ENABLED=true but S3_BACKUP_ENDPOINT is empty — skipping upload"
+    log "ERROR" "S3_BACKUP_ENABLED=true but S3_BACKUP_ENDPOINT is empty — cannot upload"
+    OFFSITE_STATUS="failed"
     return 1
   fi
 
-  log "INFO" "Uploading backup to S3/R2 bucket: ${S3_BUCKET_NAME}..."
+  if ! command -v aws >/dev/null 2>&1; then
+    log "ERROR" "S3_BACKUP_ENABLED=true but the aws CLI is not installed. Local backups were written; the offsite copy was NOT. Install it (e.g. apt-get install -y awscli) and re-run."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  # "auto" is a Cloudflare R2 convention. AWS S3 rejects it, and the resulting error
+  # names neither the variable nor the file it comes from.
+  if [[ "${S3_REGION}" == "auto" && "${S3_ENDPOINT}" == *"amazonaws.com"* ]]; then
+    log "ERROR" "S3_REGION=auto is not valid for AWS S3. Set S3_BACKUP_REGION to the bucket's real region (e.g. eu-central-1) in backup.secret."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  # Client-side encryption before the copy leaves the host (#3669).
+  #
+  # Only the OFFSITE copy is encrypted; the local one stays as-is. That is deliberate:
+  # backup-restore-test.sh reads the local backups monthly, so encrypting them would
+  # either need the private key on this host — which defeats the point, since anyone
+  # who takes the host takes the key — or break the only restore test there is. Local
+  # backups share a trust boundary with the database; the offsite copy does not.
+  #
+  # Fails closed: with no recipient configured we do NOT fall back to uploading
+  # plaintext. S3 server-side encryption protects the disks, not the bucket's contents
+  # from whoever holds a key to it.
+  if [[ -z "${BACKUP_AGE_RECIPIENT}" ]]; then
+    log "ERROR" "S3_BACKUP_ENABLED=true but BACKUP_AGE_RECIPIENT is empty. Refusing to upload unencrypted database dumps — set the age public key in backup.secret."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  if ! command -v age >/dev/null 2>&1; then
+    log "ERROR" "BACKUP_AGE_RECIPIENT is set but the age binary is missing. Local backups were written; nothing was uploaded. Install it (apt-get install -y age) and re-run."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  local offsite_dir="${BACKUP_BASE_DIR}/.offsite-${TIMESTAMP}"
+  # Staged outside BACKUP_DIR so the encrypted copies never land among the local
+  # artifacts, where the next run's sync or the restore test would trip over them.
+  mkdir -p "${offsite_dir}"
+  # EXIT, not RETURN: a RETURN trap does not fire when errexit unwinds the script (e.g.
+  # age failing on one file), which left the staging copy on disk.
+  # shellcheck disable=SC2064
+  trap "rm -rf '${offsite_dir}'" EXIT
+
+  log "INFO" "Encrypting backup for offsite copy (age)..."
+
+  local expected
+  expected=$(find "${BACKUP_DIR}" -type f | wc -l)
+  if [[ "${expected}" -eq 0 ]]; then
+    log "ERROR" "No files found under ${BACKUP_DIR} — refusing to report an empty offsite copy as complete."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  local f rel
+  while IFS= read -r -d '' f; do
+    rel="${f#"${BACKUP_DIR}/"}"
+    mkdir -p "${offsite_dir}/$(dirname "${rel}")"
+    age -r "${BACKUP_AGE_RECIPIENT}" -o "${offsite_dir}/${rel}.age" "${f}"
+  done < <(find "${BACKUP_DIR}" -type f -print0)
+
+  # Count what was actually produced instead of trusting the loop to have run.
+  # errexit is supposed to abort on a failed `age`, but relying on that makes the
+  # guarantee implicit: a loop that iterates zero times (or partially) would upload
+  # an empty or truncated tree and still report "upload complete" — the worst possible
+  # outcome here, because you would believe an encrypted offsite copy exists. Assert
+  # the invariant rather than inferring it from control flow (#3669).
+  local produced
+  produced=$(find "${offsite_dir}" -type f -name '*.age' | wc -l)
+  if [[ "${produced}" -ne "${expected}" ]]; then
+    log "ERROR" "Encryption produced ${produced} of ${expected} expected files — refusing to upload a partial offsite copy."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+  log "INFO" "Encrypted ${produced}/${expected} files."
+
+  log "INFO" "Uploading encrypted backup to S3/R2 bucket: ${S3_BUCKET_NAME} (region ${S3_REGION})..."
 
   local s3_prefix="s3://${S3_BUCKET_NAME}/${TIMESTAMP}/"
 
-  aws s3 sync "${BACKUP_DIR}/" "${s3_prefix}" \
+  aws s3 sync "${offsite_dir}/" "${s3_prefix}" \
     --endpoint-url "${S3_ENDPOINT}" \
     --region "${S3_REGION}" \
     --storage-class STANDARD \
     --no-progress
 
+  OFFSITE_STATUS="uploaded"
   log "INFO" "S3/R2 upload complete: ${s3_prefix}"
 }
 
@@ -290,8 +410,17 @@ main() {
   clean_s3_backups
   clean_local_backups
 
-  log "INFO" "All backups completed successfully — ${BACKUP_DIR}"
-  notify_webhook "success" "Backup completed successfully: ${TIMESTAMP}"
+  # The summary names the destinations actually written. "Successfully" used to be
+  # unconditional, so a run that had silently skipped the offsite copy read exactly
+  # like a healthy one — which is how the copy stayed off for months without anyone
+  # noticing (#3669). Absence of a step must not look like success.
+  if [[ "${OFFSITE_STATUS}" == "uploaded" ]]; then
+    log "INFO" "Backup complete — local: ${BACKUP_DIR} | offsite: ${S3_BUCKET_NAME}"
+    notify_webhook "success" "Backup completed (local + offsite): ${TIMESTAMP}"
+  else
+    log "WARN" "Backup complete WITHOUT offsite copy — local only: ${BACKUP_DIR} (offsite: ${OFFSITE_STATUS})"
+    notify_webhook "degraded" "Backup completed but offsite copy is ${OFFSITE_STATUS}: ${TIMESTAMP}"
+  fi
 }
 
 main

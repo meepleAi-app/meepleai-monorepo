@@ -407,7 +407,7 @@ export interface ApiClient {
  *
  * // Sessions
  * const history = await api.sessions.getHistory({ gameId });
- * await api.sessions.complete(sessionId, { winnerName: 'Alice' });
+ * await api.sessions.end(sessionId, 'Alice');
  *
  * // Chat
  * const threads = await api.chat.getThreads(gameId);

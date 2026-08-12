@@ -210,3 +210,44 @@ Implementation:
 Same migration pattern applied to `GameNightPlaylist` and `MechanicDraft` (issue #2306) which had `bytea NOT NULL row_version` without any trigger — optimistic concurrency was effectively disabled on those tables. The new xmin pattern + integration tests prove the fix.
 
 Pattern reference: `apps/api/src/Api/Infrastructure/Configurations/SharedGameCatalog/MechanicAnalysisEntityConfiguration.cs:101-107`.
+
+## Update 2026-08-12 — il censimento lasciato aperto da #2305 (issue #3651)
+
+L'update del 2026-06-14 ha rimosso il trigger `ef_update_row_version()`, ma la conversione a `xmin` ha coperto solo le entità allora note. **Le altre hanno smesso di essere protette senza che nulla lo segnalasse**: senza trigger Postgres non valorizza una `bytea`, quindi il token restava NULL su ogni riga, EF confrontava `NULL = NULL` a ogni update e nessun conflitto veniva più rilevato. È lo stesso difetto già descritto sopra per `GameNightPlaylist`/`MechanicDraft` — solo, non era stato censito fino in fondo.
+
+Il difetto è **silenzioso per costruzione**: la configurazione EF continua a dichiarare `.IsRowVersion()`, quindi leggendo il codice la protezione sembra esserci. Una configurazione arrivò perfino a documentare la propria inefficacia come se fosse accettabile (`ProviderCredentialEntityConfiguration`: *«this table has no trigger/xmin populating the token, so it stays NULL and provides no real optimistic-concurrency detection»*).
+
+Stato del censimento (verificabile su `MeepleAiDbContextModelSnapshot.cs`):
+
+| | conteggio | come contarle |
+|---|---|---|
+| convertite a `xmin` | **20** | `grep -c 'HasColumnName("xmin")'` |
+| ancora su `bytea` | **5** | `grep -c 'HasColumnName("row_version")'` |
+
+Restano: `AbTestSession` · `BggTosHashEntity` · `CatalogSeedDraftEntity` · `PhotoBatchUpload` · `SessionEntity`.
+
+Lotti chiusi: #3658 (`PdfDocument`) · #3683 (`SharedGame`, `ProviderCredential`) · lotto 3 (`ShareRequest`, `GameBook`).
+
+**Ordine di lavoro obbligato** (issue #3651, DoD): prima un test di integrazione che fallisce con *«no exception was thrown»* — cioè che dimostra l'assenza di conflitto invece di assumerla — poi la conversione che lo fa passare. Convertire senza il test rosso significa sostituire un'asserzione non verificata con un'altra.
+
+Due trappole ricorrenti, entrambe già incontrate:
+
+1. **Lo scaffold di EF genera un `AddColumn` per `xmin`**, che in produzione fallisce con *«column name "xmin" conflicts with a system column name»*: è una colonna di sistema presente su ogni tabella. Va rimosso a mano dalla migration. L'avviso *«may result in the loss of data»* è il segnale per leggerla invece di accettarla.
+2. **Il `DROP COLUMN row_version` richiede la direttiva `-- safe:`** sulla prima riga di `Up()` (Migration Safety Gate, #1087, rollback-runbook §8.2).
+
+Attivare la protezione fa emergere `DbUpdateConcurrencyException` su percorsi che prima non la vedevano mai. La rete esiste già: `ApiExceptionHandlerMiddleware` la mappa a **409** con `X-Warning-Code: concurrent-edit`, quindi nessun percorso HTTP degrada a 500. Da verificare caso per caso restano i **job in background**, dove un'eccezione non gestita non produce un 409 ma un ciclo perso.
+
+### 🔴 La trappola del write-path detached (#3683)
+
+Il rischio più serio non è che la protezione manchi: è che, una volta attivata, **rifiuti ogni scrittura**. Se il repository persiste un grafo **detached** (`MapToEntity` + `DbSet.Update()`), EF non ha una riga tracciata da cui ricavare l'*original value* del token e usa quello che trova sulla proprietà. Se l'aggregato non lo trasporta, quel valore è `0` — che non è mai un xid reale — e ogni UPDATE emette `WHERE xmin = 0`, colpisce 0 righe e solleva `DbUpdateConcurrencyException` **anche senza concorrenza**.
+
+Su `SharedGame` questo avrebbe fatto fallire con 409 ~30 handler. Non è stato notato subito perché i test di concorrenza usavano il `DbContext` direttamente, dove il problema non si manifesta.
+
+Ne segue che il token deve **attraversare l'aggregato** (`uint XminVersion` letto in `MapToDomain`, riproposto in `MapToEntity`) ovunque il repository usi quel pattern, e che per ogni entità servono **due** test sul percorso reale — il repository, non il `DbContext`:
+
+1. **uno scrittore solo deve riuscire** — un token che rifiuta ogni scrittura non protegge, rompe soltanto;
+2. **due scrittori concorrenti: il secondo è rifiutato**.
+
+Nota: un aggregato appena creato con `Create()` ha `XminVersion = 0`, ed è corretto — quel percorso è un INSERT, dove il token non si usa. Ma ne segue che **aggiornare un aggregato mai riletto dal DB non è più un'operazione definibile**: il pattern corretto è read-modify-write.
+
+Riferimenti: #2305 (la conversione parziale) · #3658 (`PdfDocument`) · #3651 + PR #3683 (`SharedGame`, `ProviderCredential`).

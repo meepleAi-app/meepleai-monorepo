@@ -225,7 +225,7 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
             entity.ModifiedAt,
             entity.CreatedBy,
             entity.ModifiedBy,
-            entity.RowVersion,
+            entity.Xmin,
             documents,
             entity.PendingCoverR2Key,
             entity.CoverPageIndex,
@@ -254,7 +254,9 @@ internal sealed class ShareRequestRepository : RepositoryBase, IShareRequestRepo
             ModifiedAt = request.ModifiedAt,
             CreatedBy = request.CreatedBy,
             ModifiedBy = request.ModifiedBy,
-            RowVersion = request.RowVersion,
+            // #3651 — il token deve tornare sull'entità detached, altrimenti l'UPDATE emette
+            // `WHERE xmin = 0` e non trova la riga: ogni scrittura fallirebbe anche senza rivali.
+            Xmin = request.Xmin,
             PendingCoverR2Key = request.PendingCoverR2Key,
             CoverPageIndex = request.CoverPageIndex,
             SourcePdfDocumentId = request.SourcePdfDocumentId

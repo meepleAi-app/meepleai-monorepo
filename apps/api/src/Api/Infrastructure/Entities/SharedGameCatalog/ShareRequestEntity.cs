@@ -45,7 +45,10 @@ public class ShareRequestEntity
     public Guid CreatedBy { get; set; }
     public Guid? ModifiedBy { get; set; }
 
-    public byte[]? RowVersion { get; set; }
+    // #3651 — token di concorrenza sulla colonna di sistema `xmin` (ADR-060). Era una `bytea`
+    // che nulla popolava da quando #2305 ha rimosso il trigger: restava NULL, EF confrontava
+    // NULL = NULL e due admin potevano risolvere la stessa richiesta senza accorgersene.
+    public uint Xmin { get; set; }
 
     /// <summary>
     /// R2 object key of the pending cover image materialized from a PDF page

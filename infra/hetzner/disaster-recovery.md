@@ -40,13 +40,34 @@ The following code review findings are documented but NOT fixed in Sprint 0:
 - **Item 4** (phantom Prometheus targets): `prometheus.yml` references `postgres-exporter:9187` and `redis-exporter:9121` but no such services exist in the compose stack. Targets must be added before scrape jobs work. Action: comment out or add exporters before deploying.
 - **Item 6** (Loki schema deprecated): `loki-config.yml` uses `boltdb-shipper` + `schema v11` (Loki 2.x format). When Loki 3.x is pulled via `:latest`, runtime warnings or failures may occur. Action: pin Loki to `2.9.10` at deploy time, OR migrate to `tsdb` + `schema v13` for Loki 3.x.
 - **Item 10** (redundant compose install in bootstrap): `cax31-bootstrap.sh` manually downloads `docker-compose-linux-aarch64` after `get.docker.com` already installs the Compose plugin via APT. This may cause version drift. Action: remove manual download step before production deploy.
-- **Offsite copy is configured off, not missing** (#3669). The earlier wording here — *"`backup-to-r2.sh` not implemented; cron line commented out in `backup.cron`"* — described a path that was never deployed. The live backup is `infra/scripts/backup.sh`, installed by `make backup-cron-install`; `infra/hetzner/backup.sh` and `backup.cron` were never copied to `/usr/local/bin` and have been removed.
+- **Offsite copy: LIVE on staging since 2026-08-12, still MISSING on production** (#3669). The earlier wording here — *"`backup-to-r2.sh` not implemented; cron line commented out in `backup.cron`"* — described a path that was never deployed. The live backup is `infra/scripts/backup.sh`, installed by `make backup-cron-install`; `infra/hetzner/backup.sh` and `backup.cron` were never copied to `/usr/local/bin` and have been removed.
 
-  `infra/scripts/backup.sh` **already uploads to S3/R2**, but the upload is gated on `S3_BACKUP_ENABLED`, and `backup.secret` is absent on the host — so every nightly run skips it. Until that secret is filled in, backups and production both live in the same Hetzner account and an incident on that account loses them together.
+  A run that skips the offsite copy now reports `WARN … WITHOUT offsite copy` and sends a `degraded` webhook instead of claiming success — before #3669 it logged *"All backups completed successfully"* while the copy had silently never happened.
 
-  Since #3669 a run that skips the offsite copy reports `WARN … WITHOUT offsite copy` and sends a `degraded` webhook instead of claiming success.
+## Offsite backup — staging (verified 2026-08-12)
 
-  **To close the gap**, on the host: create `infra/secrets/backup.secret` from `backup.secret.example` (`S3_BACKUP_ENABLED=true`, credentials, endpoint, a real `S3_BACKUP_REGION` for AWS, and `BACKUP_AGE_RECIPIENT`), then `apt-get install -y awscli age` — **neither binary is currently installed**.
+| | |
+|---|---|
+| Bucket | `meepleai-backups`, `eu-north-1`, public access blocked |
+| Endpoint | `https://s3.eu-north-1.amazonaws.com` |
+| Versioning | enabled, with the `backup-retention` lifecycle rule above |
+| IAM user | `meepleai-backup` — verified `AccessDenied` on `s3:ListAllMyBuckets`, so a stolen key cannot even enumerate the account |
+| Encryption | client-side `age`; the private key is **not** on the VPS |
+| Binaries | `aws-cli 2.36.21` (aarch64 installer — `apt` has no `awscli` candidate on Ubuntu 24.04 arm64), `age 1.1.1` |
+
+End-to-end proof, run with `env -i PATH=/usr/bin:/bin` so it matches cron's environment rather than an interactive shell:
+
+```
+Encrypted 3/3 files.
+upload: ... postgres.sql.gz.age → s3://meepleai-backups/20260812-145136/
+Backup complete — local: /backups/... | offsite: meepleai-backups
+```
+
+The restore path was exercised too, not just the write path: an object was pulled back from S3, decrypted with the private key, and its content validated (Redis RDB header). **A backup nobody has restored is a hypothesis, not a backup.**
+
+### Still to do on PRODUCTION
+
+Production is a different host and none of the above applies to it yet. Repeat: install `age` + the aarch64 AWS CLI, create `backup.secret`, and generate a **separate** age key and IAM user — sharing them would mean one compromise exposes both environments.
 
 ## Restoring from the offsite copy
 
@@ -93,14 +114,14 @@ Measured on staging (2026-08-12): **177 MB per backup**, 7-day retention, ~1.4 G
 
 ```json
 { "Rules": [
-  { "ID": "expire-noncurrent", "Status": "Enabled", "Filter": {},
-    "NoncurrentVersionExpiration": { "NoncurrentDays": 7 } },
-  { "ID": "abort-multipart", "Status": "Enabled", "Filter": {},
-    "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 } },
-  { "ID": "expire-old-backups", "Status": "Enabled", "Filter": {},
-    "Expiration": { "Days": 14 } }
+  { "ID": "backup-retention", "Status": "Enabled", "Filter": {},
+    "Expiration": { "Days": 14 },
+    "NoncurrentVersionExpiration": { "NoncurrentDays": 7 },
+    "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 } }
 ]}
 ```
+
+⚠️ Do **not** also enable *"delete expired object delete markers"*. The console rejects it: with `Expiration` active on a versioned bucket, S3 already removes the marker once the last noncurrent version expires. An earlier draft of this runbook listed both — they are mutually exclusive.
 
 The 14-day expiry is a backstop **independent of the script**: `clean_s3_backups` swallows a failed `aws s3 ls` (`|| true`) and prunes nothing, silently.
 

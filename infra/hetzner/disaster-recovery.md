@@ -44,5 +44,24 @@ The following code review findings are documented but NOT fixed in Sprint 0:
 
   `infra/scripts/backup.sh` **already uploads to S3/R2**, but the upload is gated on `S3_BACKUP_ENABLED`, and `backup.secret` is absent on the host — so every nightly run skips it. Until that secret is filled in, backups and production both live in the same Hetzner account and an incident on that account loses them together.
 
-  Since #3669 a run that skips the offsite copy reports `WARN … WITHOUT offsite copy` and sends a `degraded` webhook instead of claiming success. To close the gap: create `infra/secrets/backup.secret` on the host from `backup.secret.example` (needs `S3_BACKUP_ENABLED=true`, credentials, endpoint and — for AWS — a real `S3_BACKUP_REGION`), and install the `aws` CLI, which is not currently present.
+  Since #3669 a run that skips the offsite copy reports `WARN … WITHOUT offsite copy` and sends a `degraded` webhook instead of claiming success.
+
+  **To close the gap**, on the host: create `infra/secrets/backup.secret` from `backup.secret.example` (`S3_BACKUP_ENABLED=true`, credentials, endpoint, a real `S3_BACKUP_REGION` for AWS, and `BACKUP_AGE_RECIPIENT`), then `apt-get install -y awscli age` — **neither binary is currently installed**.
+
+## Restoring from the offsite copy
+
+The offsite copy is encrypted client-side with `age`; the local copy is not. Only the offsite one needs decrypting.
+
+```bash
+aws s3 sync s3://meepleai-backups/<TIMESTAMP>/ ./restore/ \
+  --endpoint-url "$S3_BACKUP_ENDPOINT" --region "$S3_BACKUP_REGION"
+
+# The private key is NOT on the VPS by design — fetch it from the password manager.
+find ./restore -name '*.age' -exec sh -c \
+  'age -d -i backup-key.txt -o "${1%.age}" "$1"' _ {} \;
+
+gunzip -c ./restore/postgres.sql.gz | docker exec -i meepleai-postgres psql -U meepleai meepleai_db
+```
+
+⚠️ **Losing the age private key makes every offsite backup unrecoverable.** It is the one artifact that must survive the loss of both providers. Verify it is in the password manager *before* relying on this copy — a restore drill that only ever runs against the local backups will not tell you it is missing.
 - **Promtail positions volatility**: positions file at `/tmp/positions.yaml` is lost on container restart, causing log re-ingestion. Action: mount named volume in compose.observability.yml.

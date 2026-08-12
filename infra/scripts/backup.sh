@@ -81,6 +81,12 @@ S3_REGION="${S3_BACKUP_REGION:-${S3_REGION:-auto}}"
 # every run still reported success.
 OFFSITE_STATUS="not-attempted"
 
+# age public key ("age1...") used to encrypt the offsite copy. The matching PRIVATE
+# key must NOT live on this host — storing it here would make the encryption
+# pointless — and without it the offsite backups cannot be restored. Keep it in the
+# password manager alongside the DR runbook.
+BACKUP_AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
+
 # ─────────────────────────────────────────────
 # Webhook notification
 # ─────────────────────────────────────────────
@@ -236,11 +242,49 @@ upload_to_s3() {
     return 1
   fi
 
-  log "INFO" "Uploading backup to S3/R2 bucket: ${S3_BUCKET_NAME} (region ${S3_REGION})..."
+  # Client-side encryption before the copy leaves the host (#3669).
+  #
+  # Only the OFFSITE copy is encrypted; the local one stays as-is. That is deliberate:
+  # backup-restore-test.sh reads the local backups monthly, so encrypting them would
+  # either need the private key on this host — which defeats the point, since anyone
+  # who takes the host takes the key — or break the only restore test there is. Local
+  # backups share a trust boundary with the database; the offsite copy does not.
+  #
+  # Fails closed: with no recipient configured we do NOT fall back to uploading
+  # plaintext. S3 server-side encryption protects the disks, not the bucket's contents
+  # from whoever holds a key to it.
+  if [[ -z "${BACKUP_AGE_RECIPIENT}" ]]; then
+    log "ERROR" "S3_BACKUP_ENABLED=true but BACKUP_AGE_RECIPIENT is empty. Refusing to upload unencrypted database dumps — set the age public key in backup.secret."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  if ! command -v age >/dev/null 2>&1; then
+    log "ERROR" "BACKUP_AGE_RECIPIENT is set but the age binary is missing. Local backups were written; nothing was uploaded. Install it (apt-get install -y age) and re-run."
+    OFFSITE_STATUS="failed"
+    return 1
+  fi
+
+  local offsite_dir="${BACKUP_BASE_DIR}/.offsite-${TIMESTAMP}"
+  # Staged outside BACKUP_DIR so the encrypted copies never land among the local
+  # artifacts, where the next run's sync or the restore test would trip over them.
+  mkdir -p "${offsite_dir}"
+  # shellcheck disable=SC2064
+  trap "rm -rf '${offsite_dir}'" RETURN
+
+  log "INFO" "Encrypting backup for offsite copy (age)..."
+  local f rel
+  while IFS= read -r -d '' f; do
+    rel="${f#"${BACKUP_DIR}/"}"
+    mkdir -p "${offsite_dir}/$(dirname "${rel}")"
+    age -r "${BACKUP_AGE_RECIPIENT}" -o "${offsite_dir}/${rel}.age" "${f}"
+  done < <(find "${BACKUP_DIR}" -type f -print0)
+
+  log "INFO" "Uploading encrypted backup to S3/R2 bucket: ${S3_BUCKET_NAME} (region ${S3_REGION})..."
 
   local s3_prefix="s3://${S3_BUCKET_NAME}/${TIMESTAMP}/"
 
-  aws s3 sync "${BACKUP_DIR}/" "${s3_prefix}" \
+  aws s3 sync "${offsite_dir}/" "${s3_prefix}" \
     --endpoint-url "${S3_ENDPOINT}" \
     --region "${S3_REGION}" \
     --storage-class STANDARD \

@@ -8,7 +8,7 @@ Tier 3 D8 quality gate of [#2126](https://github.com/meepleAi-app/meepleai-monor
 
 The suite covers **EN + IT** (10 queries: 5 EN + 5 IT, added for [#3269](https://github.com/meepleAi-app/meepleai-monorepo/issues/3269)). The corpus is English rulebooks; `multilingual-e5-base` does **cross-lingual retrieval**, so each `-it` query pins the IT→EN retrieval behavior. This is the concrete implementation of the epic [#3266](https://github.com/meepleAi-app/meepleai-monorepo/issues/3266) LOCKED safety-net: *"EN+IT non-regression suite on staging before prod"*. Motivating case: `catan-setup-it` ("Setup per N giocatori" style IT query) must still retrieve the right EN chunks.
 
-It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by `{source, page}`; `score` is advisory (not asserted, to tolerate minor embedding/search float drift).
+It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by the **document name** (`{document, page}`, baseline v2 — see § *La chiave della baseline*); `page` and `score` are advisory (not asserted, to tolerate chunking shifts and minor embedding/search float drift).
 
 ### Per-query `language`
 
@@ -18,27 +18,43 @@ The fixture top-level `language` (`"en"`) is the **default**. Each query MAY set
 
 A query with **no golden-baseline entry** reports `SKIP` (via a `::notice::`), not `FAIL`, and does **not** fail the gate. This lets new queries (e.g. the IT set) land *before* the ops `--update-baseline` capture without redding the weekly cron. Real drift and no-citations still `FAIL`. The summary reports `N passed, N failed, N skipped (pending baseline)`; exit is non-zero only on a real `FAIL`.
 
-### Baseline scaduta ≠ retrieval regredito (exit 3, #3645)
+### La chiave della baseline: il documento, non il suo id (v2, #3666)
 
-Prima di eseguire le query l'harness confronta il campo `snapshot` della baseline con lo snapshot caricato (`$SEED_INDEX_OUT_DIR/.latest`). Se differiscono **esce 3 senza eseguire alcuna query**:
+La baseline **v2** pinna, per ogni query, la sequenza ordinata dei **documenti** da cui provengono i primi *K* chunk. Le pagine restano nel file ma sono **advisory**: una pagina diversa dentro il manuale giusto produce un `::notice::`, non un fallimento.
+
+**Perché.** Fino alla v1 la chiave era `{source, page}`, dove `source` è `pdf_documents.Id` — un `Guid.NewGuid()` generato a ogni ingest (`PdfDocument.cs:1012`, e `StreamQaQueryHandler:396-399` spiega perché la citation porta proprio quell'id: serve al viewer PDF del frontend). Ne seguiva che **ogni re-bake invalidava la baseline per costruzione**, a retrieval identico: fra il 2026-07-20 e il 2026-08-10 il gate è stato rosso in 7 run su 8, e l'unico verde è stato il dispatch che ha catturato la baseline. Un gate spento sette volte su otto non protegge nulla.
+
+Le *query* canoniche non hanno mai avuto questo problema perché identificano i giochi per nome (`"game": "Catan"`). La v2 allinea la baseline allo stesso livello semantico.
+
+**Il compromesso, esplicito.** Pinnare il documento e non la pagina **perde** il drift di ranking fine *all'interno dello stesso manuale*: se il chunk giusto scivola da pagina 3 a pagina 12 restando nel manuale corretto, il gate lo segnala ma non fallisce. È una perdita di sensibilità reale, accettata perché l'alternativa non era «un gate più severo» ma «un gate spento»: la sensibilità della v1 era teorica, dato che la baseline era scaduta quasi sempre. Ciò che il gate continua a rilevare — un chunk che arriva dal manuale sbagliato — è la regressione per cui esiste.
+
+**Come viene risolto il nome.** Dopo il login l'harness fa **una** chiamata a `GET /api/v1/admin/pdfs?pageSize=500` e costruisce la mappa `id → fileName`, poi traduce ogni citation. Serve quindi un account **admin** in `SMOKE_EMAIL`/`SMOKE_PASSWORD`. Un id citato che non compare nella mappa non viene confuso con un drift: fallisce con il suo messaggio («documento rimosso o mappa incompleta»).
+
+### Baseline v1: rigenerazione una tantum (exit 3)
+
+Una baseline con `schemaVersion < 2` **esce 3 senza eseguire alcuna query**:
 
 ```
-::error:: baseline scaduta — non è una regressione del retrieval
-  baseline catturata su: meepleai_seed_20260729T070620Z_..._9101176e9
-  snapshot in esecuzione: meepleai_seed_20260809T060634Z_..._dc83e1a4e
+::error:: baseline in formato v1 (id fisici) — va rigenerata una volta sola
 ```
 
-**Perché esiste**: la baseline fissa i chunk `{source,page}` di un corpus preciso. Su un corpus diverso *ogni* query risulta "drifted" — dal 2026-07-20 al 2026-08-10 il gate ha riportato `0 passed, 11 failed` per tre settimane, aprendo una issue intitolata «retrieval drift» che descriveva un guasto mai avvenuto. Un rosso che significa sempre la stessa cosa smette di essere letto, e in quelle tre settimane una regressione autentica sarebbe passata inosservata.
-
-**Cosa fare**: rigenerare la baseline (§ *Capturing the EN + IT baseline via CI dispatch*). Non è un bug da indagare — è la conseguenza attesa di un re-bake.
+Non è la toil ricorrente di prima: la v2 sopravvive ai re-bake, quindi questa rigenerazione si fa **una volta**. Procedura: § *Capturing the EN + IT baseline via CI dispatch*.
 
 | Exit | Significato | Azione |
 |---|---|---|
 | `0` | tutte le query combaciano (o baseline aggiornata) | — |
-| `1` | drift reale **a parità di snapshot**, o nessuna citation | indagare |
-| `3` | baseline catturata su un altro snapshot | rigenerare la baseline |
+| `1` | drift reale (documenti diversi), o nessuna citation, o id non risolvibile | indagare |
+| `3` | baseline ancora in formato v1 | rigenerare **una volta** |
 
-La guardia confronta solo quando **entrambi** i lati sono noti: senza `.latest` (esecuzione contro un'API remota) o con una baseline priva del campo `snapshot`, non blocca. Uno stato non conoscibile non va trasformato in un fallimento.
+**Lo snapshot diverso non blocca più** (era exit 3 in #3645, quando la chiave era fisica). Con la chiave v2 il confronto resta significativo attraverso un re-bake, quindi la divergenza viene solo segnalata:
+
+```
+::notice:: baseline catturata su un altro snapshot (…20260729T070620Z → …20260809T060634Z).
+  Con la chiave v2 (nome documento) il confronto resta valido: un fallimento qui
+  è drift del retrieval, non una baseline scaduta.
+```
+
+Il campo `snapshot` resta nella fixture: non serve più a invalidare, ma a dire su quale corpus la baseline è stata catturata quando si legge un fallimento.
 
 ⚠️ L'auto-opener deduplica sulla label `rag-smoke-failure`: **finché una issue resta aperta non ne viene emessa un'altra**. Una issue di baseline scaduta lasciata aperta silenzia gli alert successivi, inclusi quelli di un drift vero.
 
@@ -61,7 +77,7 @@ The baseline must be captured against a **fresh, compatible snapshot** (`snapsho
    This writes `infra/fixtures/rag-golden-baseline.json` (`baseline`, `snapshot`, `embeddingModel`, `capturedAt`).
 4. Review the diff and commit it.
 
-**Regenerate the baseline after any intentional re-index**: embedding model change, chunker change, or a `seed-schema.version` bump (which forces a snapshot rebuild). An *unintentional* drift is exactly what this gate is meant to flag — investigate before regenerating.
+**Con la baseline v2 un semplice re-bake NON richiede più una rigenerazione** (#3666): la chiave è il nome del documento, che il re-bake conserva. Rigenera solo quando cambia davvero ciò che il gate misura — modello di embedding, chunker, o un bump di `seed-schema.version` che sposta il retrieval — e solo dopo aver stabilito che lo scostamento è **voluto**. Un drift non intenzionale è esattamente ciò che questo gate esiste per segnalare: indagalo prima di rigenerare, altrimenti la nuova baseline lo certifica come normale.
 
 ### Capturing the EN + IT baseline via CI dispatch (preferred)
 

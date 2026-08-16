@@ -270,9 +270,13 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 **Baseline currently clean** (0 known failures on `main-dev`). Resolved-triage history (#1349 → #1422 → #1887 → #2270 → #2266): [claude-md-history.md](./docs/for-claude/claude-md-history.md#known-flaky-tests--resolved-history).
 
-**Intermittenti noti**: nessuno.
+**Intermittenti noti** (non contano nella baseline: passano al rerun, ma costano un'indagine a chi li incontra la prima volta):
 
-Prima di rilassare la soglia di un test di timing, stabilisci **perché** la misura scende: se il cronometro non accumula davvero, il test sta segnalando un difetto vero e la soglia va alzata, non abbassata. È andata esattamente così in [#3686](https://github.com/meepleAi-app/meepleai-monorepo/issues/3686), l'unico intermittente che questa tabella abbia mai elencato: `DurationTracking_MultipleStageFallback_RecordsCumulativeTime` falliva 1 volta su 2 sullo stesso SHA perché `EnhancedPdfProcessingOrchestrator` fermava il cronometro **prima** dello stage 3 di fallback — il nominale era 100 ms contro una soglia `>= 100`, margine zero. Corretta la misura, la soglia è stata **alzata** a 200.
+| Test | Sintomo | Issue |
+|------|---------|-------|
+| `PublishAsync_DeliversEventToSubscriber` | il subscriber SSE deve registrarsi entro un `Task.Delay(50)` **fisso** prima della publish; su un runner che esegue 22.500 test la finestra non è garantita. Fallito su PR #3710, verde al rerun sullo stesso SHA | [#3711](https://github.com/meepleAi-app/meepleai-monorepo/issues/3711) |
+
+Prima di rilassare la soglia — o di allargare l'attesa — di un test di timing, stabilisci **perché** la misura scende: potrebbe segnalare un difetto vero. È andata così in [#3686](https://github.com/meepleAi-app/meepleai-monorepo/issues/3686): `DurationTracking_MultipleStageFallback_RecordsCumulativeTime` falliva 1 volta su 2 sullo stesso SHA perché `EnhancedPdfProcessingOrchestrator` fermava il cronometro **prima** dello stage 3 di fallback — il nominale era 100 ms contro una soglia `>= 100`, margine zero. Corretta la misura, la soglia è stata **alzata** a 200. In #3711 la domanda aperta è l'analoga: se `SubscribeAsync` avesse un ritardo di registrazione osservabile anche in esercizio, un client SSE perderebbe gli eventi emessi subito dopo l'iscrizione — e il test starebbe segnalando quello, non il runner.
 
 **Policy**: PRs MUST NOT grow the unit-test fail count above baseline (zero). Future regressions: fix the root cause OR skip with `[Trait("Skip", "<issue#>")]` and add a row here in the same PR.
 

@@ -104,6 +104,21 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     public IReadOnlyCollection<UserGameLabel> Labels => _labels.AsReadOnly();
 
     /// <summary>
+    /// Concurrency token letto dalla riga (#3651, ADR-060). L'aggregato lo trasporta perché
+    /// <c>UserLibraryRepository.UpdateAsync</c> persiste un grafo <b>detached</b>
+    /// (<c>MapToPersistence</c> + <c>Update()</c>): senza il round-trip la WHERE conterrebbe
+    /// <c>xmin = 0</c> e ogni scrittura fallirebbe — il difetto di #3688, opposto a quello che
+    /// questa conversione chiude.
+    /// </summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>
+    /// Carica il token letto dalla riga. Chiamato solo dal mapper del repository: il dominio non
+    /// lo interpreta, lo trasporta.
+    /// </summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618

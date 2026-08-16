@@ -103,9 +103,13 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .IsRequired()
             .HasDefaultValue(0);
 
-        // Optimistic concurrency control
-        builder.Property(e => e.RowVersion)
-            .IsRowVersion()
+        // Optimistic concurrency control — #3651 lotto 6, pattern xmin di ADR-060.
+        // `IsRowVersion()` su un `byte[]` non produce il mapping alla colonna di sistema su
+        // Npgsql: serve la configurazione esplicita.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
             .IsConcurrencyToken();
 
         // Custom agent configuration (JSONB column for PostgreSQL)

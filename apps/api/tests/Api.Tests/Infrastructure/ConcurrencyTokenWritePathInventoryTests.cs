@@ -91,6 +91,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["MechanicAnalysisEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicAnalysisRepository:391, con Xmin escluso da IsModified"),
             ["MechanicCardEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicCardRepository:159"),
             ["PdfDocumentEntity"] = (WritePathTechnique.TokenRoundTrip, "PdfDocumentRepository:338 (#3694) — il commento a :333 spiega il difetto"),
+            ["PhotoBatchUpload"] = (WritePathTechnique.TokenRoundTrip, "PhotoBatchUploadRepository:75 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token (#3651 lotto 8)"),
             ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:338 — «round-trip for detached Update (ADR-060)»"),
             ["ShareRequestEntity"] = (WritePathTechnique.TokenRoundTrip, "ShareRequestRepository:259 (#3698)"),
             ["SharedGameTranslationEntity"] = (WritePathTechnique.TokenRoundTrip, "SharedGameTranslationRepository:54-58 — Attach + Modified con il token nell'entità"),
@@ -131,7 +132,6 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             // affermazione falsa che #3651 documenta: su Npgsql `IsRowVersion()` su byte[] NON mappa a
             // `xmin`, serve la configurazione esplicita. Il token è quindi inerte come gli altri.
             "KbQualityBudgetCounter",
-            "PhotoBatchUpload",
             "ProposalMigrationEntity",
             "RuleSpecEntity",
             "SessionEntity",

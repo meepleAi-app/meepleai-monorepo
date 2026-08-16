@@ -92,6 +92,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["MechanicCardEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicCardRepository:159"),
             ["PdfDocumentEntity"] = (WritePathTechnique.TokenRoundTrip, "PdfDocumentRepository:338 (#3694) — il commento a :333 spiega il difetto"),
             ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:338 — «round-trip for detached Update (ADR-060)»"),
+            ["ProposalMigrationEntity"] = (WritePathTechnique.TokenRoundTrip, "ProposalMigrationRepository:117 — Xmin nel mapper; UpdateAsync ha un ramo detached a :97 (#3651 lotto 7)"),
             ["ShareRequestEntity"] = (WritePathTechnique.TokenRoundTrip, "ShareRequestRepository:259 (#3698)"),
             ["SharedGameTranslationEntity"] = (WritePathTechnique.TokenRoundTrip, "SharedGameTranslationRepository:54-58 — Attach + Modified con il token nell'entità"),
             ["ToolkitVersionEntity"] = (WritePathTechnique.TokenRoundTrip, "ToolkitVersionRepository:173 (#3688 → #3704)"),
@@ -131,7 +132,6 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             // `xmin`, serve la configurazione esplicita. Il token è quindi inerte come gli altri.
             "KbQualityBudgetCounter",
             "PhotoBatchUpload",
-            "ProposalMigrationEntity",
             "RuleSpecEntity",
             "SessionEntity",
             "UserLibraryEntryEntity",

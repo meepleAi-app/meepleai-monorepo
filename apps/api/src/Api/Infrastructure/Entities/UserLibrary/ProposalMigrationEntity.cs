@@ -47,7 +47,12 @@ public class ProposalMigrationEntity
     /// <summary>
     /// Optimistic concurrency control.
     /// </summary>
-    public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>. Prima era
+    /// <c>byte[]?</c> su <c>bytea</c>, che Postgres non popola: la protezione era dichiarata e
+    /// inesistente.
+    /// </summary>
+    public uint Xmin { get; set; }
 
     /// <summary>
     /// Optional source domain event id used to dedupe at the DB level (issue #1938 / CF-2).

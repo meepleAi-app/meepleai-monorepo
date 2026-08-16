@@ -70,9 +70,13 @@ internal sealed class CatalogSeedDraftEntityConfiguration : IEntityTypeConfigura
         builder.Property(e => e.ApprovedByUserId)
             .HasColumnName("approved_by_user_id");
 
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // #3651 lotto 5 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` non produce
+        // il mapping alla colonna di sistema su Npgsql: serve la configurazione esplicita.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         builder.Property(e => e.IsDeleted)
             .HasColumnName("is_deleted")

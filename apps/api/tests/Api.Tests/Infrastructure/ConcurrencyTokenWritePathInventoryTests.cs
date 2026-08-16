@@ -95,6 +95,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["SharedGameTranslationEntity"] = (WritePathTechnique.TokenRoundTrip, "SharedGameTranslationRepository:54-58 — Attach + Modified con il token nell'entità"),
             ["ToolkitVersionEntity"] = (WritePathTechnique.TokenRoundTrip, "ToolkitVersionRepository:173 (#3688 → #3704)"),
 
+            ["BggTosHashEntity"] = (WritePathTechnique.TrackedMutation, "BggTosWatcherJob:129-169 — riga singleton caricata AsTracking e mutata (#3651 lotto 4)"),
             ["DomainEventOutboxEntity"] = (WritePathTechnique.TrackedMutation, "DomainEventOutboxProcessor:118 — righe tracked mutate via MarkSent/MarkRetry/MarkFailed (#1535)"),
             ["GameCoverAssignmentEntity"] = (WritePathTechnique.TrackedMutation, "SharedGameRepository:244 — riconciliazione su set AsTracking"),
             ["MechanicGoldenClaimEntity"] = (WritePathTechnique.TrackedMutation, "MechanicGoldenClaimRepository:72 — il commento descrive per esteso il difetto evitato"),
@@ -121,7 +122,6 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         new HashSet<string>(StringComparer.Ordinal)
         {
             "AbTestSession",
-            "BggTosHashEntity",
             "CatalogSeedDraftEntity",
             "GameSessionStateEntity",
             // Non censita in #3651, trovata da questo test. `KbQualityBudgetCounterEntityConfiguration:23-25`

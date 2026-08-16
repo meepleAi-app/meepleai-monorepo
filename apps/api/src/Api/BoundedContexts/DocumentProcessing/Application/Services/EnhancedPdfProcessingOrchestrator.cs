@@ -155,8 +155,10 @@ internal class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] Stages 1-2 failed or low quality, using Stage 3 (Docnet) fallback",
                 requestId);
 
-            overallStopwatch.Stop();
-            return await ExecuteStage3FallbackAsync(pdfData, enableOcrFallback, overallStopwatch.Elapsed, requestId, cancellationToken).ConfigureAwait(false);
+            // #3686: the stopwatch keeps running into the fallback. Stopping it here reported
+            // the duration of stages 1-2 as the pipeline total, under-reporting exactly on the
+            // slowest path — the one the number exists to describe.
+            return await ExecuteStage3FallbackAsync(pdfData, enableOcrFallback, overallStopwatch, requestId, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
@@ -328,7 +330,7 @@ internal class EnhancedPdfProcessingOrchestrator
     private async Task<EnhancedExtractionResult> ExecuteStage3FallbackAsync(
         PdfDataHandle pdfData,
         bool enableOcrFallback,
-        TimeSpan totalDuration,
+        Stopwatch overallStopwatch,
         string requestId,
         CancellationToken cancellationToken)
     {
@@ -338,12 +340,13 @@ internal class EnhancedPdfProcessingOrchestrator
         {
             var stage3Result = await _docnetExtractor.ExtractTextAsync(fallbackStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
             stage3Stopwatch.Stop();
+            overallStopwatch.Stop();
 
             _logger.LogInformation(
                 "[{RequestId}] Stage 3 (Docnet) completed in {DurationMs}ms - Success={Success}, Quality={Quality}",
                 requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.Quality);
 
-            return CreateEnhancedResult(stage3Result, 3, "Docnet", totalDuration, requestId);
+            return CreateEnhancedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
         }
     }
 
@@ -353,7 +356,7 @@ internal class EnhancedPdfProcessingOrchestrator
     private async Task<EnhancedPagedExtractionResult> ExecutePagedStage3FallbackAsync(
         PdfDataHandle pdfData,
         bool enableOcrFallback,
-        TimeSpan totalDuration,
+        Stopwatch overallStopwatch,
         string requestId,
         CancellationToken cancellationToken)
     {
@@ -363,12 +366,13 @@ internal class EnhancedPdfProcessingOrchestrator
         {
             var stage3Result = await _docnetExtractor.ExtractPagedTextAsync(fallbackStream, enableOcrFallback, cancellationToken).ConfigureAwait(false);
             stage3Stopwatch.Stop();
+            overallStopwatch.Stop();
 
             _logger.LogInformation(
                 "[{RequestId}] Stage 3 (Docnet) paged extraction completed in {DurationMs}ms - Success={Success}, Chunks={Chunks}",
                 requestId, stage3Stopwatch.Elapsed.TotalMilliseconds, stage3Result.Success, stage3Result.PageChunks.Count);
 
-            return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", totalDuration, requestId);
+            return CreateEnhancedPagedResult(stage3Result, 3, "Docnet", overallStopwatch.Elapsed, requestId);
         }
     }
 
@@ -506,8 +510,8 @@ internal class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] Stages 1-2 failed for paged extraction, using Stage 3 (Docnet) fallback",
                 requestId);
 
-            overallStopwatch.Stop();
-            return await ExecutePagedStage3FallbackAsync(pdfData, enableOcrFallback, overallStopwatch.Elapsed, requestId, cancellationToken).ConfigureAwait(false);
+            // #3686: same defect as the text path — the stopwatch must survive into the fallback.
+            return await ExecutePagedStage3FallbackAsync(pdfData, enableOcrFallback, overallStopwatch, requestId, cancellationToken).ConfigureAwait(false);
         }
         finally
         {

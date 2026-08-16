@@ -101,6 +101,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["DomainEventOutboxEntity"] = (WritePathTechnique.TrackedMutation, "DomainEventOutboxProcessor:118 — righe tracked mutate via MarkSent/MarkRetry/MarkFailed (#1535)"),
             ["CatalogSeedDraftEntity"] = (WritePathTechnique.TrackedMutation, "CatalogSeedDraftRepository — le letture dei percorsi di scrittura usano AsTracking (PERF-06), #3651 lotto 5"),
             ["GameCoverAssignmentEntity"] = (WritePathTechnique.TrackedMutation, "SharedGameRepository:244 — riconciliazione su set AsTracking"),
+            ["KbQualityBudgetCounter"] = (WritePathTechnique.TrackedMutation, "EvaluationRepository:171 — counter caricato tracked e mutato, con retry loop su DbUpdateConcurrencyException (#3651 lotto 9)"),
             ["MechanicGoldenClaimEntity"] = (WritePathTechnique.TrackedMutation, "MechanicGoldenClaimRepository:72 — il commento descrive per esteso il difetto evitato"),
             ["ProviderCredential"] = (WritePathTechnique.TrackedMutation, "ProviderCredentialRepository (#3683)"),
         };
@@ -125,13 +126,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         new HashSet<string>(StringComparer.Ordinal)
         {
             "GameSessionStateEntity",
-            // Non censita in #3651, trovata da questo test. `KbQualityBudgetCounterEntityConfiguration:23-25`
-            // usa `.IsRowVersion()` su un `byte[]?` e il commento dichiara «optimistic concurrency via
-            // Postgres xmin» citando la convenzione di PdfDocumentEntity (#1802). È la stessa
-            // affermazione falsa che #3651 documenta: su Npgsql `IsRowVersion()` su byte[] NON mappa a
-            // `xmin`, serve la configurazione esplicita. Il token è quindi inerte come gli altri.
-            "KbQualityBudgetCounter",
-            "PhotoBatchUpload",
+"PhotoBatchUpload",
             "ProposalMigrationEntity",
             "RuleSpecEntity",
             "SessionEntity",

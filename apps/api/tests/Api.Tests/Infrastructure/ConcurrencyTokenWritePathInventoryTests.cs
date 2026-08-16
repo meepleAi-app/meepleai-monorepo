@@ -93,6 +93,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["PdfDocumentEntity"] = (WritePathTechnique.TokenRoundTrip, "PdfDocumentRepository:338 (#3694) — il commento a :333 spiega il difetto"),
             ["PhotoBatchUpload"] = (WritePathTechnique.TokenRoundTrip, "PhotoBatchUploadRepository:75 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token (#3651 lotto 8)"),
             ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:338 — «round-trip for detached Update (ADR-060)»"),
+            ["ProposalMigrationEntity"] = (WritePathTechnique.TokenRoundTrip, "ProposalMigrationRepository:117 — Xmin nel mapper; UpdateAsync ha un ramo detached a :97 (#3651 lotto 7)"),
             ["ShareRequestEntity"] = (WritePathTechnique.TokenRoundTrip, "ShareRequestRepository:259 (#3698)"),
             ["SharedGameTranslationEntity"] = (WritePathTechnique.TokenRoundTrip, "SharedGameTranslationRepository:54-58 — Attach + Modified con il token nell'entità"),
             ["UserLibraryEntryEntity"] = (WritePathTechnique.TokenRoundTrip, "UserLibraryRepository:600 — Xmin = domainEntity.Xmin nel mapper; UpdateAsync persiste un grafo detached (#3651 lotto 6)"),
@@ -132,7 +133,6 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             // affermazione falsa che #3651 documenta: su Npgsql `IsRowVersion()` su byte[] NON mappa a
             // `xmin`, serve la configurazione esplicita. Il token è quindi inerte come gli altri.
             "KbQualityBudgetCounter",
-            "ProposalMigrationEntity",
             "RuleSpecEntity",
             "SessionEntity",
         };

@@ -41,9 +41,14 @@ public sealed class AbTestSessionConfiguration : IEntityTypeConfiguration<AbTest
         builder.Property(s => s.CompletedAt)
             .HasColumnName("completed_at");
 
-        builder.Property(s => s.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // #3651 lotto 5 — pattern xmin di ADR-060. La forma precedente (`byte[]` +
+        // `IsRowVersion()`) generava una colonna `bytea NOT NULL` che Postgres non popola:
+        // ogni INSERT su questa tabella falliva con 23502.
+        builder.Property(s => s.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Relationship: Session has many Variants
         builder.HasMany(s => s.Variants)

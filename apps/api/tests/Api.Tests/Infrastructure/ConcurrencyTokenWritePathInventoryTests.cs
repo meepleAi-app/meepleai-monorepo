@@ -84,6 +84,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["LiveGameSessionEntity"] = (WritePathTechnique.OriginalValue, "LiveSessionRepository (ADR-060)"),
             ["SharedGameEntity"] = (WritePathTechnique.OriginalValue, "SharedGameRepository"),
 
+            ["AbTestSession"] = (WritePathTechnique.TokenRoundTrip, "AbTestSessionRepository:87 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token letto (#3651 lotto 5)"),
             ["CertificationThresholdsConfigEntity"] = (WritePathTechnique.TokenRoundTrip, "CertificationThresholdsConfigRepository:87 — Xmin = config.XminVersion"),
             ["GameBook"] = (WritePathTechnique.TokenRoundTrip, "GameBookRepository:58 — l'aggregato è l'entità EF e trasporta il token letto"),
             ["GameNightPlaylistEntity"] = (WritePathTechnique.TokenRoundTrip, "GameNightPlaylistRepository:180 (#2306)"),
@@ -97,6 +98,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
 
             ["BggTosHashEntity"] = (WritePathTechnique.TrackedMutation, "BggTosWatcherJob:129-169 — riga singleton caricata AsTracking e mutata (#3651 lotto 4)"),
             ["DomainEventOutboxEntity"] = (WritePathTechnique.TrackedMutation, "DomainEventOutboxProcessor:118 — righe tracked mutate via MarkSent/MarkRetry/MarkFailed (#1535)"),
+            ["CatalogSeedDraftEntity"] = (WritePathTechnique.TrackedMutation, "CatalogSeedDraftRepository — le letture dei percorsi di scrittura usano AsTracking (PERF-06), #3651 lotto 5"),
             ["GameCoverAssignmentEntity"] = (WritePathTechnique.TrackedMutation, "SharedGameRepository:244 — riconciliazione su set AsTracking"),
             ["MechanicGoldenClaimEntity"] = (WritePathTechnique.TrackedMutation, "MechanicGoldenClaimRepository:72 — il commento descrive per esteso il difetto evitato"),
             ["ProviderCredential"] = (WritePathTechnique.TrackedMutation, "ProviderCredentialRepository (#3683)"),
@@ -121,8 +123,6 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
     private static readonly IReadOnlySet<string> PendingByteaConversions =
         new HashSet<string>(StringComparer.Ordinal)
         {
-            "AbTestSession",
-            "CatalogSeedDraftEntity",
             "GameSessionStateEntity",
             // Non censita in #3651, trovata da questo test. `KbQualityBudgetCounterEntityConfiguration:23-25`
             // usa `.IsRowVersion()` su un `byte[]?` e il commento dichiara «optimistic concurrency via

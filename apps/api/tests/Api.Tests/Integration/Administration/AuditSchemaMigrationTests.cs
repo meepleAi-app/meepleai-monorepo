@@ -36,7 +36,10 @@ public sealed class AuditSchemaMigrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _databaseName = $"test_audit_schema_{Guid.NewGuid():N}";
-        _isolatedConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        // #3742: NON clonare il modello. Questa classe verifica che ExtendAuditLogSchema si applichi
+        // davvero (le 4 colonne nuove su audit_logs, la tabella audit_outbox, gli indici) — sul
+        // modello troverebbe tutto già applicato e passerebbe anche con quella migration rotta.
+        _isolatedConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName, useTemplate: false);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedConnectionString);
         var sp = services.BuildServiceProvider();

@@ -806,7 +806,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// migration reali o assume uno schema vuoto.
     /// </param>
     /// <returns>Connection string for the isolated database</returns>
-    public async Task<string> CreateIsolatedDatabaseAsync(string databaseName, bool useTemplate = false)
+    public async Task<string> CreateIsolatedDatabaseAsync(string databaseName, bool useTemplate = true)
     {
         // Issue #2577: Add diagnostics for connection troubleshooting
         var startTime = DateTime.UtcNow;

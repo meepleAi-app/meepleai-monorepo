@@ -52,7 +52,10 @@ public sealed class MigrationSeedInventoryIntegrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _databaseName = $"test_seed_inventory_{Guid.NewGuid():N}";
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
+        // #3633: NON clonare il modello. Questo test misura ciò che le migration producono, quindi
+        // deve eseguirle davvero: sul modello troverebbe i seed già applicati e passerebbe anche
+        // con una migration di seed rotta.
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName, useTemplate: false);
 
         _dbContext = _fixture.CreateDbContext(connectionString);
         await _dbContext.Database.MigrateAsync(TestContext.Current.CancellationToken);

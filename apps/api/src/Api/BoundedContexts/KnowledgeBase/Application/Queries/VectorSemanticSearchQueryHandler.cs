@@ -46,8 +46,9 @@ internal sealed class VectorSemanticSearchQueryHandler
             "[VectorSemanticSearchQueryHandler] Generating embedding for query: {Query}",
             query.Query);
 
+        // #3737: retrieval question -> e5 "query:" prefix.
         var embeddingResult = await _embeddingService
-            .GenerateEmbeddingAsync(query.Query, cancellationToken)
+            .GenerateEmbeddingAsync(query.Query, EmbeddingPurpose.Query, cancellationToken)
             .ConfigureAwait(false);
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)

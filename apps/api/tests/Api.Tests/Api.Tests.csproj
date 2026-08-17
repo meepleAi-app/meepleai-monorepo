@@ -50,8 +50,15 @@
     <PackageReference Include="ScottPlot" Version="5.1.57" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
-    <PackageReference Include="Testcontainers.PostgreSql" Version="4.9.0" />
-    <PackageReference Include="Testcontainers.Redis" Version="4.9.0" />
+    <!-- Issue #3707 / GHSA-q939-rpr3-3284 (HIGH): Testcontainers <=4.13.0 tira
+         transitive SSH.NET 2025.1.0 (path traversal in ScpClient.Download
+         ricorsivo, vulnerabile <=2025.1.0). 4.14.0 è la prima release che
+         dichiara SSH.NET >= 2026.0.0. Il path SSH è usato solo per Docker host
+         remoto: la suite gira contro Docker locale, quindi il bump serve a
+         tenere leggibile il gate "Dependency Vulnerabilities", non a chiudere
+         un'esposizione reale. -->
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.14.0" />
+    <PackageReference Include="Testcontainers.Redis" Version="4.14.0" />
     <!-- Issue #2662 / GHSA-24c8-4792-22hx (HIGH): WireMock.Net tira transitive
          Scriban.Signed 7.0.6 (array.insert_at unbounded fill loop → OOM/DoS,
          vulnerabile <=7.1.0). Override alla versione patchata 7.2.0 per far

@@ -1216,6 +1216,12 @@ public class SharedTestcontainersCollectionDefinition : ICollectionFixture<Share
 /// imposta da Api.Tests.Architecture.IntegrationCollectionBalanceArchitectureTests, che dice anche
 /// in quale gruppo va una classe nuova. Per un'assegnazione in blocco:
 /// `python infra/scripts/assign-integration-collections.py --apply`.
+///
+/// Le classi annidate sono fuori da questa regola per scelta: il guard le esclude
+/// (<c>!t.IsNested</c>) perché la riflessione le identifica come <c>Outer+Inner</c>, non
+/// <c>Namespace.Inner</c>, e lo script di riassegnazione — testuale, senza un vero parser C# — non
+/// può ricostruire in modo affidabile la catena dei tipi contenitori. Restano nel gruppo assegnato
+/// manualmente finché esistono.
 /// </summary>
 [CollectionDefinition("Integration-GroupA")]
 public class IntegrationGroupACollection : ICollectionFixture<SharedTestcontainersFixture> { }

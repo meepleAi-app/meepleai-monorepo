@@ -70,6 +70,15 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
         return GroupNames[bucket];
     }
 
+    /// <summary>
+    /// Le classi annidate sono escluse per scelta, non per svista: <see cref="Type.FullName"/> le
+    /// identifica come <c>Outer+Inner</c>, non <c>Namespace.Inner</c>. Lo script Python che applica
+    /// la riassegnazione in blocco è testuale — non un parser C# — e non può ricostruire in modo
+    /// affidabile la catena dei tipi contenitori (region, classi parziali, annidamento multiplo). Se
+    /// questo filtro cambiasse per includerle, lo script dovrebbe cambiare di pari passo: altrimenti
+    /// una classe annidata potrebbe finire riassegnata su un FQN sintetico che nessuna riflessione
+    /// produrrebbe mai — la stessa deriva silenziosa che questa regola chiude sull'asse shard/gruppo.
+    /// </summary>
     private static IReadOnlyList<(string Fqn, string Group)> IntegrationClasses() =>
         typeof(IntegrationCollectionBalanceArchitectureTests).Assembly
             .GetTypes()

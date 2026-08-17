@@ -164,7 +164,7 @@ public sealed class SharedGameRagIntegrationTests
     /// After EF Migrate, the trigger exists, so FTS should work. If it doesn't find
     /// results (trigger timing), the test verifies the query at least runs without exception.
     /// </summary>
-    [Collection("Integration-GroupC")]
+    [Collection("Integration-GroupA")]
     [Trait("Category", TestCategories.Integration)]
     [Trait("Dependency", "PostgreSQL")]
     public sealed class PostgresFullTextSearchTests : IAsyncLifetime

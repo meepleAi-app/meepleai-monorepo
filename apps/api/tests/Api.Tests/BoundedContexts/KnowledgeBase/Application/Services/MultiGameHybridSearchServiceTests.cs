@@ -228,12 +228,17 @@ public class MultiGameHybridSearchServiceTests
 
         // Assert ordering: 0.5/chunk0 ≤ 0.5/chunk1 by chunkIndex → game2(idx0) < game1(idx1)
         // so order: [0.5,chunkIdx0], [0.5,chunkIdx1], [0.3,chunkIdx2]
+        // #3735: il VALORE di HybridScore in uscita non è più quello per-gioco in ingresso — è il
+        // punteggio RRF globale. Ciò che il contratto promette, e che qui si verifica, è
+        // l'ORDINAMENTO: i due chunk a pari cosine restano appaiati (ranking a scaglioni) e il
+        // pareggio è rotto da ChunkIndex ASC, non dall'ordine dei gameId.
         result.Should().HaveCount(3);
-        result[0].HybridScore.Should().Be(0.5f);
         result[0].ChunkIndex.Should().Be(0);  // tie broken by chunkIndex ASC
-        result[1].HybridScore.Should().Be(0.5f);
         result[1].ChunkIndex.Should().Be(1);
-        result[2].HybridScore.Should().Be(0.3f);
+        result[2].ChunkIndex.Should().Be(2);  // cosine più bassa → scaglione inferiore
+        result[0].HybridScore.Should().Be(result[1].HybridScore,
+            "pari cosine deve dare pari rango, quindi termine RRF identico");
+        result[2].HybridScore.Should().BeLessThan(result[1].HybridScore);
     }
 
     // ---------------------------------------------------------------------------
@@ -489,9 +494,13 @@ public class MultiGameHybridSearchServiceTests
         // Act
         var result = await sut.SearchAsync("test", new[] { gameId }, limit: 10, minScore: 0.5);
 
-        // Assert — low-score chunk excluded
+        // Assert — low-score chunk excluded.
+        // #3735: minScore filtra il punteggio PER-GIOCO in ingresso, mentre HybridScore in uscita è
+        // quello globale: asserire sull'uscita confronterebbe due grandezze diverse. Si verifica
+        // quindi CHI è sopravvissuto, che è ciò che la soglia deve garantire.
         result.Should().HaveCount(2);
-        result.Should().AllSatisfy(r => r.HybridScore.Should().BeGreaterThanOrEqualTo(0.5f));
+        result.Select(r => r.ChunkIndex).Should().BeEquivalentTo(new[] { 0, 2 },
+            "il chunk con punteggio per-gioco 0.4 è sotto la soglia 0.5 e va escluso");
     }
 
     // ---------------------------------------------------------------------------
@@ -567,6 +576,94 @@ public class MultiGameHybridSearchServiceTests
     // ---------------------------------------------------------------------------
     // Helper methods
     // ---------------------------------------------------------------------------
+
+
+    // ---------------------------------------------------------------------------
+    // #3735: il punteggio per-gioco NON è comparabile fra giochi
+    // ---------------------------------------------------------------------------
+
+    /// <summary>
+    /// Il difetto che #3735 misura sul corpus reale (9 query canoniche su 11 recuperano il manuale
+    /// sbagliato), ridotto al suo nucleo.
+    ///
+    /// <para>
+    /// <c>HybridScore</c> è calcolato <b>dentro</b> ogni gioco come somma di termini RRF
+    /// <c>1/(k+rank)</c>. Un chunk che compare in <b>entrambe</b> le liste (vettoriale e lessicale)
+    /// riceve due termini; uno che compare in una sola ne riceve uno — anche se la sua similarità
+    /// semantica è nettamente superiore. Fra giochi diversi quei valori vengono poi confrontati
+    /// direttamente, benché misurino il rango locale e non la pertinenza.
+    /// </para>
+    /// <para>
+    /// Effetto: un manuale che contiene le parole generiche della query («setup», «board»,
+    /// «place» — presenti in ogni regolamento) batte il manuale che la query nomina
+    /// esplicitamente. Il tiebreak su <c>VectorScore</c> di #2568 non interviene, perché i due
+    /// <c>HybridScore</c> non sono uguali: sono diversi <i>e</i> nell'ordine sbagliato.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task CrossGame_TheChunkMostRelevantToTheQuery_OutranksTheGenericOnes()
+    {
+        // Il campo realistico: molti giochi, come nel corpus vero (133 manuali). La dimensione
+        // conta, e la prima versione di questo test lo ha dimostrato per assurdo — vedi il
+        // commento sotto l'assert.
+        var expectedGame = Guid.NewGuid();                                   // il manuale che la query nomina
+        var genericGames = Enumerable.Range(0, 20).Select(_ => Guid.NewGuid()).ToArray();
+
+        // Il chunk atteso è nettamente il più pertinente, ma compare SOLO nella lista vettoriale:
+        // un solo termine RRF per-gioco.
+        _hybridSearchMock
+            .Setup(s => s.SearchAsync(
+                It.IsAny<string>(), expectedGame,
+                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
+                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<HybridSearchResult>
+            {
+                MakeResultWithScores(expectedGame, chunkIndex: 0,
+                    hybridScore: 0.0164f,   // ≈ 1/(60+1): un termine
+                    vectorScore: 0.93f,     // ma è il più simile alla query, di molto
+                    keywordScore: null),
+            });
+
+        // Ogni manuale generico contiene le parole comuni della query, quindi il suo chunk compare
+        // in ENTRAMBE le liste per-gioco: due termini, punteggio per-gioco doppio.
+        foreach (var (gameId, i) in genericGames.Select((g, i) => (g, i)))
+        {
+            var noise = i * 0.005f;
+            _hybridSearchMock
+                .Setup(s => s.SearchAsync(
+                    It.IsAny<string>(), gameId,
+                    It.IsAny<SearchMode>(), It.IsAny<int>(), null,
+                    It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                    It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<HybridSearchResult>
+                {
+                    MakeResultWithScores(gameId, chunkIndex: 0,
+                        hybridScore: 0.0328f,          // ≈ 2/(60+1): il doppio dell'atteso
+                        vectorScore: 0.71f - noise,    // semanticamente molto più debole
+                        keywordScore: 0.12f - noise),
+                });
+        }
+
+        var sut = CreateSut();
+
+        var results = await sut.SearchAsync(
+            "How do I set up the board and place the two initial settlements?",
+            genericGames.Append(expectedGame).ToArray(),   // l'atteso è l'ULTIMO: nessun vantaggio d'ordine
+            limit: 30);
+
+        results[0].GameId.Should().Be(expectedGame,
+            "il ranking cross-gioco deve riflettere la pertinenza alla query, non quante liste "
+            + "per-gioco hanno prodotto il chunk (#3735)");
+
+        // Perché venti giochi e non due. La prima stesura di questo test ne usava DUE, e falliva
+        // anche con la fusione globale: con due soli candidati i ranghi vettoriali adiacenti
+        // distano 0.7/61 − 0.7/62 ≈ 0.000185, mentre un secondo segnale aggiunge 0.3/61 ≈ 0.0049 —
+        // trenta volte tanto. L'RRF è rank-based per costruzione e non può esprimere un divario di
+        // cosine fra due posizioni contigue: serve che i candidati si distribuiscano, come accade
+        // sul corpus reale. Il test è stato corretto perché modellava male il problema, non per
+        // farlo passare: il calcolo è in #3735.
+    }
 
     private void SetupHybridSearchForGame(Guid gameId, int count, float baseScore)
     {

@@ -74,9 +74,15 @@ internal sealed class PhotoBatchUploadEntityConfiguration
             .IsRequired(false);
 
         // Optimistic concurrency token
-        builder.Property(b => b.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // #3651 lotto 8 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` non mappa alla
+        // colonna di sistema su Npgsql, malgrado il nome: serve la configurazione esplicita. È la
+        // ragione per cui la protezione qui è stata inefficace da quando `row_version` è diventata
+        // nullable (20260524190307).
+        builder.Property(b => b.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Soft-delete query filter
         builder.HasQueryFilter(b => !b.IsDeleted);

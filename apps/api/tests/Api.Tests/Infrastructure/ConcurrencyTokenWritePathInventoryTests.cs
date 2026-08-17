@@ -91,6 +91,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["MechanicAnalysisEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicAnalysisRepository:391, con Xmin escluso da IsModified"),
             ["MechanicCardEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicCardRepository:159"),
             ["PdfDocumentEntity"] = (WritePathTechnique.TokenRoundTrip, "PdfDocumentRepository:338 (#3694) — il commento a :333 spiega il difetto"),
+            ["PhotoBatchUpload"] = (WritePathTechnique.TokenRoundTrip, "PhotoBatchUploadRepository:75 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token (#3651 lotto 8)"),
             ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:338 — «round-trip for detached Update (ADR-060)»"),
             ["ProposalMigrationEntity"] = (WritePathTechnique.TokenRoundTrip, "ProposalMigrationRepository:117 — Xmin nel mapper; UpdateAsync ha un ramo detached a :97 (#3651 lotto 7)"),
             ["ShareRequestEntity"] = (WritePathTechnique.TokenRoundTrip, "ShareRequestRepository:259 (#3698)"),
@@ -127,7 +128,6 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         new HashSet<string>(StringComparer.Ordinal)
         {
             "GameSessionStateEntity",
-            "PhotoBatchUpload",
             "RuleSpecEntity",
             "SessionEntity",
         };

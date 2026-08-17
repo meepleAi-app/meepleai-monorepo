@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using MediatR;
@@ -56,11 +57,19 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// </summary>
     private const string TemplateDatabaseName = "meepleai_test_template";
 
-    // Lo stato è DI PROCESSO, non d'istanza: ICollectionFixture istanzia una fixture per collection
-    // (quattro, oggi), quindi un campo d'istanza farebbe costruire il modello quattro volte e le
-    // costruzioni concorrenti si ostacolerebbero a vicenda sul CREATE DATABASE.
+    // La prontezza del modello è chiavata per ISTANZA Postgres (host:porta), non per processo: un
+    // semplice `static bool` presume UN SOLO Postgres condiviso — vero in CI, dove le quattro
+    // fixture (una per collection group) leggono tutte la stessa TEST_POSTGRES_CONNSTRING, falso in
+    // locale, dove — senza quella env var — ogni fixture avvia il proprio container Testcontainers.
+    // Con un bool, la prima fixture a costruire il modello alzava il flag per TUTTE, e le altre tre
+    // clonavano da un modello che sul LORO Postgres non esisteva mai:
+    // `Npgsql.PostgresException: 3D000: template database "meepleai_test_template" does not exist`
+    // (riprodotto lanciando in locale, senza TEST_POSTGRES_CONNSTRING, un filtro che attraversa più
+    // di un collection group). Il semaforo resta uno solo — la costruzione è rara, serializzarla fra
+    // istanze diverse non costa nulla — ma senza la chiave il prossimo lettore lo risemplifica in un
+    // bool e il 3D000 torna.
     private static readonly SemaphoreSlim TemplateGate = new(1, 1);
-    private static bool _templateReady;
+    private static readonly ConcurrentDictionary<string, bool> TemplateReadyByPostgresInstance = new();
 
     /// <summary>
     /// PostgreSQL connection string for shared container.
@@ -712,12 +721,14 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     }
 
     /// <summary>
-    /// Builds the shared, process-wide migrated template database that isolated databases can
-    /// clone via <c>CREATE DATABASE ... TEMPLATE</c>. Issue #3633.
+    /// Builds the migrated template database — once per Postgres instance, not once per process —
+    /// that isolated databases can clone via <c>CREATE DATABASE ... TEMPLATE</c>. Issue #3633.
     /// </summary>
     private async Task EnsureTemplateDatabaseAsync()
     {
-        if (_templateReady)
+        var instanceKey = GetPostgresInstanceKey();
+
+        if (TemplateReadyByPostgresInstance.ContainsKey(instanceKey))
         {
             return;
         }
@@ -725,7 +736,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         await TemplateGate.WaitAsync();
         try
         {
-            if (_templateReady)
+            if (TemplateReadyByPostgresInstance.ContainsKey(instanceKey))
             {
                 return;
             }
@@ -786,12 +797,24 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
                 }
             }
 
-            _templateReady = true;
+            TemplateReadyByPostgresInstance[instanceKey] = true;
         }
         finally
         {
             TemplateGate.Release();
         }
+    }
+
+    /// <summary>
+    /// Identifies the physical Postgres server this fixture instance talks to (host:port), so the
+    /// template-readiness cache keys on the server the template was actually built on — not on the
+    /// process, which may see several distinct local Postgres instances (one per collection-group
+    /// fixture) that each need their own template. See <see cref="TemplateReadyByPostgresInstance"/>.
+    /// </summary>
+    private string GetPostgresInstanceKey()
+    {
+        var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString);
+        return $"{builder.Host}:{builder.Port}";
     }
 
     /// <summary>

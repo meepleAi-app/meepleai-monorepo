@@ -81,15 +81,25 @@ Con il prefisso corretto **e** i distrattori italiani fuori, il manuale atteso �
 
 Questo spiega anche perché `wingspan-round-goals-it` e `seven-wonders-military-it` «già funzionano» mentre Catan no: Wingspan e 7 Wonders hanno contenuto nella lingua della query (7-wonders ha 263 chunk `it`), Catan, Dominion e Ark Nova sono **solo** in inglese. Non è che «l'italiano non funziona»: è che l'italiano funziona *troppo bene* verso i manuali italiani sbagliati.
 
+### ⚠️ Una discrepanza da non nascondere
+
+Il clustering linguistico è dimostrato **sul braccio vettoriale**, e questo non è ancora tutta la storia del top-3 osservato. La baseline #3739 registra per `catan-setup-it` tre distrattori **inglesi** — star-wars-rebellion, imperial-settlers, cthulhu-death-may-die — mentre il top-10 cosine misurato qui è composto da dieci chunk **italiani**. Le due osservazioni non coincidono, e la differenza è informativa:
+
+- il retrieval prende **top-K per gioco** (`topK: 3` nella fixture), quindi i 13 manuali non inglesi contribuiscono ~39 candidati, non 131: la struttura per-gioco attenuisce già molto il cluster;
+- il punteggio finale è `0.7 · cosine_normalizzata + 0.3 · ts_rank_cd_normalizzata`, e il braccio lessicale gira con la config FTS **del gioco** — quindi la query italiana viene stemmata all'inglese. Le sue parole inglesi accidentali (`due` è una parola inglese; `come`, `in`) possono far emergere manuali inglesi che con la domanda non hanno nulla a che fare, e questo è il candidato più probabile per i tre distrattori osservati.
+
+Cioè: per `catan-setup-it` concorrono almeno **due** difetti indipendenti oltre al prefisso — il cluster linguistico sul vettoriale e un braccio lessicale che su una query fuori-lingua matcha rumore. Nessuno dei due è stato quantificato sulla pipeline completa qui, e per farlo onestamente serve il gate, non questo metodo. È la ragione per cui questo audit **non** propone di chiudere #3740: la sua prima voce di DoD («è stabilito quale pista regge, con il dato che la sostiene») è soddisfatta, le altre no.
+
 ## Cosa resta aperto
 
 #3737 rimuove una delle due cause. La seconda — il clustering linguistico su corpus mixed-language — è un cambiamento di ranking e va misurato sulla pipeline completa, non sul solo braccio vettoriale: va quindi verificato con il gate RAG smoke, non con questo metodo. Direzioni candidate, in ordine di invasività:
 
 1. **Normalizzare il segnale vettoriale per lingua** in `FuseGlobally` (min-max dentro ogni gruppo `lang`) invece che sull'intero aggregato. Cancella esattamente l'offset di lingua e lascia decidere al lessicale — dove «Catan» è il termine discriminante. È la direzione suggerita dalla tabella `solo lang=en` qui sopra.
 2. **Correggere il metadato** `language` del manifest per i 13 manuali non inglesi. Non risolve il ranking da solo, ma oggi qualunque logica che si fidi di quel campo sta leggendo un dato falso.
-3. **Accettare e documentare** che una query IT su un gioco che esiste solo in EN non è recuperabile a corpus misto — cioè che `catan-setup-it` resta rosso per costruzione. Va scritto, non subito in silenzio: il gate esiste per non far passare questo caso inosservato.
+3. **Rendere il braccio lessicale consapevole della lingua della query.** Oggi la config FTS viene dal gioco, quindi una domanda italiana viene stemmata all'inglese e le sue parole inglesi accidentali (`due`, `come`, `in`) diventano segnale. Un match lessicale su una query fuori-lingua vale meno di zero: aggiunge rumore con peso 0.3.
+4. **Accettare e documentare** che una query IT su un gioco che esiste solo in EN non è recuperabile a corpus misto — cioè che `catan-setup-it` resta rosso per costruzione. Va scritto, non subito in silenzio: il gate esiste per non far passare questo caso inosservato.
 
-⚠️ Nessuna delle tre è stata applicata qui. Applicarne una senza passare dal gate significherebbe sostituire una misura con un'ipotesi, che è precisamente ciò che #3740 chiede di non fare.
+⚠️ Nessuna delle quattro è stata applicata qui. Applicarne una senza passare dal gate significherebbe sostituire una misura con un'ipotesi, che è precisamente ciò che #3740 chiede di non fare.
 
 ## Riproducibilità
 

@@ -33,7 +33,7 @@ La stima nella issue — «+0.018 di similarità, **non cambia l'ordine**» — 
 
 Lo stesso vale per `seven-wonders-military-it`: con `passage:` i primi due sono iss-vanguard e voidfall e 7 Wonders arriva al rango 9; con `query:` **tutti e dieci** i primi risultati sono `7-wonders_rulebook.pdf`.
 
-**Conclusione**: #3737 è un difetto reale e sottostimato. Corretto in PR [#3745](https://github.com/meepleAi-app/meepleai-monorepo/pull/3745).
+**Conclusione**: #3737 è un difetto reale e sottostimato. Corretto in PR [#3741](https://github.com/meepleAi-app/meepleai-monorepo/pull/3741).
 
 ## Risultato 2 — le tre piste di #3740
 

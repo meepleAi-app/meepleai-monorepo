@@ -73,7 +73,9 @@ public class UpdatePlayerScoreCommandHandler : IRequestHandler<UpdatePlayerScore
 
         await _scoreEntryRepository.AddAsync(scoreEntry, cancellationToken).ConfigureAwait(false);
 
-        // Touch the session RowVersion to participate in optimistic concurrency detection
+        // Touch the session so its row is rewritten and the xmin token advances, facendo
+        // partecipare la sessione al rilevamento dei conflitti (#3651: prima del passaggio a xmin
+        // questo "touch" non produceva alcun token confrontabile).
         session.UpdateAudit(request.RequesterId);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 

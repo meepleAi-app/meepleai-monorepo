@@ -61,8 +61,12 @@ public class SessionEntity
     public Guid CreatedBy { get; set; }
     public Guid? UpdatedBy { get; set; }
 
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>. Prima era
+    /// <c>[Timestamp] byte[]?</c> su <c>row_version bytea</c>: Postgres non la popola, quindi EF
+    /// confrontava <c>NULL = NULL</c> e nessun conflitto veniva rilevato.
+    /// </summary>
+    public uint Xmin { get; set; }
 
     /// <summary>
     /// Invite token for session sharing (Issue #3354).

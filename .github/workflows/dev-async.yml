@@ -101,7 +101,16 @@ jobs:
     # fermati a ~44m30s con `Test Run Aborted.` lasciando ~800 test non raggiunti. 2148 test in 44
     # minuti danno ~61 minuti per l'intera selezione; 75 + 90 conserva il margine E l'ordine giusto
     # fra le due soglie.
-    timeout-minutes: 90
+    #
+    # #3742: 90 → 110, perché l'aritmetica sopra non tornava con margine reale: sessione 75 min +
+    # setup/apt-get + Build (Release) ~7,5 min + actions/checkout — osservato fino a 9m39s in
+    # questo repo — fanno ~92 min contro un cap di 90. Lo shard che consuma tutto il budget è
+    # proprio l'unico caso che il guard sul troncamento qui sotto esiste per nominare: un cap del
+    # job troppo stretto lo prevarrebbe e lo farebbe uscire muto, `cancelled`, prima che il guard
+    # possa parlare. Il margine dei 110 copre la varianza del checkout, non il lavoro dei test —
+    # quello resta delimitato dai 75 min del TestSessionTimeout, che deve continuare a scattare
+    # per primo.
+    timeout-minutes: 110
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -309,7 +318,13 @@ jobs:
       # una causa. Il runsettings il .trx lo produce già (integration-test-results.trx): finora
       # nessuno lo raccoglieva, quindi ogni ipotesi sulle prestazioni della suite restava tale.
       - name: Upload test results
-        if: ${{ !cancelled() }}
+        # #3742: `always()`, non `!cancelled()`. Un job che sfora `timeout-minutes` viene marcato
+        # cancelled: con `!cancelled()` questo step saltava proprio nella run che esaurisce il
+        # tempo, perdendo il .trx parziale e il log — le durate più interessanti da misurare.
+        # `if-no-files-found: warn` copre già il caso senza output e il nome è per-shard-per-run,
+        # quindi non collide. Il guard sul troncamento sopra resta `!cancelled()` di proposito: su
+        # una cancellazione da concurrency non c'è davvero niente da misurare.
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: integration-results-${{ matrix.shard.name }}

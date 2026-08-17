@@ -233,7 +233,13 @@ Aggiungere dopo lo step `Integration tests`:
             status=1
           fi
 
-          summary=$(grep -aE '^(Passed|Failed)!  -' "$log" | tail -1)
+          # `|| true`: sotto `set -e` + `pipefail`, un grep senza match esce 1 e l'assegnazione
+          # ucciderebbe lo script prima di scrivere il summary e prima del controllo sul
+          # troncamento. Il fallback `${summary:-...}` qui sotto sarebbe altrimenti irraggiungibile:
+          # serve per i log senza trailer Passed!/Failed! (test host crashato, dotnet test mai
+          # partito, dump di --blame-hang), non per il troncamento — una run troncata stampa
+          # comunque il trailer dopo `Test Run Aborted.`.
+          summary=$(grep -aE '^(Passed|Failed)!  -' "$log" | tail -1 || true)
           {
             echo "### Backend Integration — ${SHARD}"
             echo

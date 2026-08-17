@@ -670,6 +670,15 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             {
                 await _postgresContainer.StopAsync();
                 await _postgresContainer.DisposeAsync();
+
+                // #3742: rimuove la chiave di prontezza per QUESTA istanza Postgres. Senza, un
+                // container fermato la cui porta effimera venga riusata da un container diverso
+                // risulterebbe già dotato di modello — lo stesso 3D000 "template database does
+                // not exist" chiuso in precedenza, ma sull'asse dispose/riuso invece che
+                // multi-fixture. Solo per i container avviati da QUESTA fixture: il Postgres
+                // esterno di CI (env var) resta vivo per l'intero job, quindi il suo host:port
+                // non viene mai riassegnato a un'istanza diversa nella stessa run.
+                TemplateReadyByPostgresInstance.TryRemove(GetPostgresInstanceKey(), out _);
             }
 
             if (_redisContainer != null)
@@ -779,21 +788,25 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
             {
                 await admin.OpenAsync();
 
+                await using (var seal = admin.CreateCommand())
+                {
+                    // #3742: sigilla PRIMA di terminare, non dopo. È la stessa configurazione di
+                    // template0: un database con datallowconn=false resta clonabile ma non
+                    // connettibile. Terminare prima lasciava una finestra in cui una nuova
+                    // connessione poteva aprirsi fra i due comandi — invisibile a
+                    // pg_terminate_backend, che ha già girato — e sopravvivere fino al primo
+                    // CREATE DATABASE ... TEMPLATE.
+                    seal.CommandText =
+                        $"ALTER DATABASE \"{TemplateDatabaseName}\" WITH ALLOW_CONNECTIONS false;";
+                    await seal.ExecuteNonQueryAsync();
+                }
+
                 await using (var terminate = admin.CreateCommand())
                 {
                     terminate.CommandText =
                         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity " +
                         $"WHERE datname = '{TemplateDatabaseName}' AND pid <> pg_backend_pid();";
                     await terminate.ExecuteNonQueryAsync();
-                }
-
-                await using (var seal = admin.CreateCommand())
-                {
-                    // È la stessa configurazione di template0: un database con datallowconn=false
-                    // resta clonabile ma non connettibile.
-                    seal.CommandText =
-                        $"ALTER DATABASE \"{TemplateDatabaseName}\" WITH ALLOW_CONNECTIONS false;";
-                    await seal.ExecuteNonQueryAsync();
                 }
             }
 
@@ -887,11 +900,18 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
                 return builder.ConnectionString;
             }
-            catch (NpgsqlException ex) when (ex.SqlState == "57P01" && attempt < TestcontainersConfiguration.DatabaseOperationMaxRetries - 1)
+            catch (NpgsqlException ex) when ((ex.SqlState == "57P01" || ex.SqlState == "55006") && attempt < TestcontainersConfiguration.DatabaseOperationMaxRetries - 1)
             {
                 // Issue #2706: Handle 57P01 "terminating connection due to administrator command"
                 // This happens when another test's cleanup terminates our connection during parallel execution
-                Console.WriteLine($"⚠️ Database creation attempt {attempt + 1}/{TestcontainersConfiguration.DatabaseOperationMaxRetries} hit 57P01, retrying...");
+                //
+                // #3742: 55006 "source database ... is being accessed by other users" — retry it
+                // too. pg_terminate_backend (EnsureTemplateDatabaseAsync) returns as soon as the
+                // signal is SENT, not once the backend has actually exited; the round-trip that
+                // follows usually covers that window, but when it doesn't, the first
+                // CREATE DATABASE ... TEMPLATE races a backend still closing and fails with 55006
+                // instead of 57P01 — a different SqlState that this catch didn't recognize before.
+                Console.WriteLine($"⚠️ Database creation attempt {attempt + 1}/{TestcontainersConfiguration.DatabaseOperationMaxRetries} hit {ex.SqlState}, retrying...");
                 await Task.Delay(TestcontainersConfiguration.DatabaseOperationRetryDelays[attempt]);
             }
             catch (Exception ex)

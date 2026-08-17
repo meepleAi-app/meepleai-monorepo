@@ -45,8 +45,11 @@ public class DatabaseMetricsQueryTests : IAsyncLifetime
 
         _serviceProvider = services.BuildServiceProvider();
 
-        // CreateIsolatedDatabaseAsync only runs CREATE DATABASE — schema is empty.
-        // Apply EF migrations explicitly (pre-flight Q2).
+        // #3742: CreateIsolatedDatabaseAsync clones a pre-migrated template by default now, so the
+        // schema is already present here -- this MigrateAsync() is a no-op against that clone, not
+        // the from-scratch application the original pre-flight Q2 comment described. Kept explicit
+        // anyway: it's harmless, and it keeps this class correct if a future change opts it out of
+        // the template (useTemplate: false).
         using var scope = _serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         await db.Database.MigrateAsync().ConfigureAwait(false);

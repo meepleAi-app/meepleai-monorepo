@@ -60,6 +60,13 @@ def is_nested(text: str, namespace_end: int, position: int) -> bool:
     perché il suo attributo segue la graffa di apertura della classe esterna. Stessa euristica
     testuale di ATTR/CLASS/NAMESPACE: non distingue graffe di codice da graffe dentro stringhe o
     commenti, ma nessun caso simile è presente nella zona d'interesse di questo sweep.
+
+    Vale SOLO per i namespace file-scoped (`namespace X;`, senza corpo). `namespace_end` cade
+    subito dopo quella riga, prima di ogni classe del file, quindi il saldo delle graffe da lì in
+    poi conta solo i corpi di classe. Con un namespace a blocco (`namespace X { ... }`) la graffa di
+    apertura del blocco cadrebbe comunque dopo `namespace_end` e verrebbe conteggiata: ogni classe
+    di primo livello del file risulterebbe annidata. Nessun file toccato da questo sweep usa la
+    forma a blocco, ma un file nuovo scritto così romperebbe silenziosamente questa euristica.
     """
     segment = text[namespace_end:position]
     return segment.count("{") - segment.count("}") > 0

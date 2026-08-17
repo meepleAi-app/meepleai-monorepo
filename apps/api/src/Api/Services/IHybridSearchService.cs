@@ -125,4 +125,12 @@ internal record HybridSearchResult
 
     /// <summary>#3270: merged chunk heading (prefers vector arm) for the heading-match boost (nullable).</summary>
     public string? Heading { get; init; }
+
+    /// <summary>
+    /// #3740: ISO 639-1 language of the chunk (<c>pgvector_embeddings.lang</c>), from the vector arm.
+    /// <b>Null for a keyword-only hit</b>: the FTS arm reads <c>text_chunks</c>, which has no language
+    /// column. Consumed by <c>MultiGameHybridSearchService.FuseGlobally</c> to normalise the cosine
+    /// within each language group.
+    /// </summary>
+    public string? Language { get; init; }
 }

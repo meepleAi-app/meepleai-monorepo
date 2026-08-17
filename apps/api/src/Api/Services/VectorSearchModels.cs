@@ -78,6 +78,14 @@ internal record SearchResultItem
     public string? Heading { get; init; }
 
     /// <summary>
+    /// #3740: ISO 639-1 language of the chunk, from <c>pgvector_embeddings.lang</c>. Carried through
+    /// so the cross-game fusion can normalise the cosine <b>within</b> each language instead of
+    /// across the whole aggregate — see <c>MultiGameHybridSearchService.FuseGlobally</c>.
+    /// Null for the keyword/FTS arm, which reads <c>text_chunks</c> and has no language column.
+    /// </summary>
+    public string? Language { get; init; }
+
+    /// <summary>
     /// SP-C (#3407): raw bounding-box JSON carried from the vector arm (<c>Embedding.BoundingBoxesJson</c>).
     /// Primitive string (no layer dep); parsed + Full-gated at the API handler boundary. Null for the
     /// keyword/FTS/RAPTOR arms and the pre-coordinate corpus.

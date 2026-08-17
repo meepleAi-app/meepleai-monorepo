@@ -35,6 +35,23 @@ Lo stesso vale per `seven-wonders-military-it`: con `passage:` i primi due sono 
 
 **Conclusione**: #3737 è un difetto reale e sottostimato. Corretto in PR [#3741](https://github.com/meepleAi-app/meepleai-monorepo/pull/3741).
 
+### Effetto collaterale misurato: la cache semantica delle risposte
+
+`SemanticResponseCache` (Redis, TTL 24 h) è una cache **query↔query**: confronta il vettore della domanda nuova con quelli delle domande già viste e serve la risposta se la cosine è `>= 0.95`. Cambiare il prefisso delle query cambia quel vettore, quindi le voci scritte prima del fix non combaciano più con le domande di dopo.
+
+Quanto: `cos(passage: X, query: X)` sulla **stessa** domanda sta a cavallo della soglia.
+
+| query | `cos(passage:X, query:X)` | esito con soglia 0.95 |
+|---|---|---|
+| `catan-setup` | 0.9482 | miss |
+| `catan-setup-it` | 0.9351 | miss |
+| `wingspan-round-goals` | 0.9367 | miss |
+| `dominion-buy-phase` | 0.9603 | **hit** |
+
+Quindi il degrado è **parziale e transitorio**: la maggior parte delle voci pre-fix diventa irraggiungibile, alcune restano raggiungibili — e un hit resta *corretto*, perché è la stessa domanda. Si esaurisce con il TTL di 24 ore, senza intervento e senza risposte errate. Non serve invalidare la cache a mano; se si volesse comunque, `InvalidateGameAsync` esiste.
+
+⚠️ Nota per chi collegherà `CacheSemanticPlugin` al servizio reale (oggi è uno stub hash-based, `// Simulate embedding generation`): è anch'essa una cache query↔query, quindi **entrambe le sponde del confronto devono usare lo stesso prefisso**. Con `EmbeddingPurpose.Query` su entrambe è coerente per costruzione.
+
 ## Risultato 2 — le tre piste di #3740
 
 ### Pista 1 — il prefisso: regge, ma non basta

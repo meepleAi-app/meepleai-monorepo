@@ -511,21 +511,24 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var (adminToken, _) = await LoginAsAdminAsync();
         SetSessionCookie(adminToken);
 
+        // #3662: `POST /api/v1/agents` non esiste più — quel path è registrato solo in GET
+        // (AgentsEndpoints.cs:128), quindi rispondeva 405. La creazione passa da /agents/user,
+        // con il body di CreateUserAgentRequest (gameId + agentType obbligatori).
         var payload = new
         {
+            gameId = _testSharedGameId,
+            agentType = "TutorAgent",
             name = $"E2E Agent {Guid.NewGuid():N}",
-            type = "TutorAgent",
             strategyName = "HybridSearch",
             strategyParameters = new Dictionary<string, object>
             {
                 ["topK"] = 5,
                 ["minScore"] = 0.6
-            },
-            isActive = true
+            }
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/agents", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/agents/user", payload);
 
         // Assert
         if (response.StatusCode == HttpStatusCode.InternalServerError)
@@ -592,17 +595,19 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         // Arrange
         ClearAuthentication();
 
+        // #3662: stesso spostamento di rotta del test precedente — su `POST /api/v1/agents`
+        // il 401 atteso arrivava come 405, perché quel path esiste solo in GET.
         var payload = new
         {
+            gameId = _testSharedGameId,
+            agentType = "TutorAgent",
             name = "Unauthorized Agent",
-            type = "TutorAgent",
             strategyName = "HybridSearch",
-            strategyParameters = new Dictionary<string, object>(),
-            isActive = true
+            strategyParameters = new Dictionary<string, object>()
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync("/api/v1/agents", payload);
+        var response = await Client.PostAsJsonAsync("/api/v1/agents/user", payload);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

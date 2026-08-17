@@ -35,7 +35,13 @@ internal class RuleSpecEntityConfiguration : IEntityTypeConfiguration<RuleSpecEn
         builder.HasIndex(e => e.ParentVersionId);
 
         // Issue #2055: Optimistic concurrency control for collaborative editing
-        builder.Property(e => e.RowVersion)
-            .IsRowVersion();
+        // #3651 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` non mappa alla colonna
+        // di sistema su Npgsql: serve la configurazione esplicita. Finché è mancata, l'ETag di
+        // #2055 è stato null e il controllo di concorrenza non è mai scattato.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
     }
 }

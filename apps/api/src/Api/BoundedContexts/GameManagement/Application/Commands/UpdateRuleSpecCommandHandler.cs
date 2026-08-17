@@ -95,9 +95,15 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
             .OrderByDescending(r => r.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-        if (latestSpec != null && latestSpec.RowVersion != null)
+        // #3651: la guardia era `latestSpec.RowVersion != null`, e con un token `bytea` mai
+        // popolato risultava SEMPRE falsa — il ConflictException qui sotto non è mai stato
+        // sollevato e l'editing collaborativo di #2055 non ha mai rilevato una modifica
+        // concorrente. Con `xmin` il token esiste sempre per una riga viva, quindi la sola
+        // condizione che resta è quella voluta: c'è una spec da confrontare.
+        // (Il caso «ETag non fornito dal client» è già gestito a inizio metodo.)
+        if (latestSpec != null)
         {
-            var currentETag = Convert.ToBase64String(latestSpec.RowVersion);
+            var currentETag = latestSpec.Xmin.ToString(CultureInfo.InvariantCulture);
             if (!string.Equals(currentETag, expectedETag, StringComparison.Ordinal))
             {
                 throw new ConflictException(
@@ -176,9 +182,7 @@ internal class UpdateRuleSpecCommandHandler : ICommandHandler<UpdateRuleSpecComm
 
     private static RuleSpecDto CreateRuleSpecDto(RuleSpecEntity specEntity)
     {
-        var etag = specEntity.RowVersion != null
-            ? Convert.ToBase64String(specEntity.RowVersion)
-            : null;
+        var etag = specEntity.Xmin.ToString(CultureInfo.InvariantCulture);
 
         return new RuleSpecDto(
             Id: specEntity.Id,

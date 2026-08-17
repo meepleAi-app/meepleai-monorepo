@@ -157,7 +157,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <!-- Meziantou Analyzer for additional best practices and security checks -->
-    <PackageReference Include="Meziantou.Analyzer" Version="2.0.257">
+    <PackageReference Include="Meziantou.Analyzer" Version="3.0.159">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

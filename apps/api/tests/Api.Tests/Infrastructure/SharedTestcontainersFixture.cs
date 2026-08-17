@@ -52,6 +52,17 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     private bool _pdfServicesEnabled;
 
     /// <summary>
+    /// Database-modello da cui si clonano i database isolati. Issue #3633.
+    /// </summary>
+    private const string TemplateDatabaseName = "meepleai_test_template";
+
+    // Lo stato è DI PROCESSO, non d'istanza: ICollectionFixture istanzia una fixture per collection
+    // (quattro, oggi), quindi un campo d'istanza farebbe costruire il modello quattro volte e le
+    // costruzioni concorrenti si ostacolerebbero a vicenda sul CREATE DATABASE.
+    private static readonly SemaphoreSlim TemplateGate = new(1, 1);
+    private static bool _templateReady;
+
+    /// <summary>
     /// PostgreSQL connection string for shared container.
     /// Each test class should create its own database to avoid conflicts.
     /// </summary>
@@ -701,13 +712,101 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     }
 
     /// <summary>
+    /// Builds the shared, process-wide migrated template database that isolated databases can
+    /// clone via <c>CREATE DATABASE ... TEMPLATE</c>. Issue #3633.
+    /// </summary>
+    private async Task EnsureTemplateDatabaseAsync()
+    {
+        if (_templateReady)
+        {
+            return;
+        }
+
+        await TemplateGate.WaitAsync();
+        try
+        {
+            if (_templateReady)
+            {
+                return;
+            }
+
+            var adminConnectionString = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+            {
+                Database = "postgres",
+            }.ConnectionString;
+
+            await using (var admin = new NpgsqlConnection(adminConnectionString))
+            {
+                await admin.OpenAsync();
+                await using var create = admin.CreateCommand();
+                create.CommandText =
+                    $"DROP DATABASE IF EXISTS \"{TemplateDatabaseName}\" WITH (FORCE); " +
+                    $"CREATE DATABASE \"{TemplateDatabaseName}\";";
+                await create.ExecuteNonQueryAsync();
+            }
+
+            var templateConnectionString = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
+            {
+                Database = TemplateDatabaseName,
+            }.ConnectionString;
+
+            // L'unico scopo del contesto è applicare le migration una volta.
+            await using (await TestHelpers.CreateDbContextAndMigrateAsync(templateConnectionString))
+            {
+            }
+
+            // Da qui il modello non deve più avere connessioni: `CREATE DATABASE ... TEMPLATE`
+            // fallisce con 55006 se il sorgente è in uso. Si svuota il pool del SOLO modello —
+            // ClearAllPools() colpirebbe anche i database delle classi che stanno già girando in
+            // parallelo — poi si chiudono i backend residui e si nega la connessione.
+            await using (var templateConnection = new NpgsqlConnection(templateConnectionString))
+            {
+                NpgsqlConnection.ClearPool(templateConnection);
+            }
+
+            await using (var admin = new NpgsqlConnection(adminConnectionString))
+            {
+                await admin.OpenAsync();
+
+                await using (var terminate = admin.CreateCommand())
+                {
+                    terminate.CommandText =
+                        "SELECT pg_terminate_backend(pid) FROM pg_stat_activity " +
+                        $"WHERE datname = '{TemplateDatabaseName}' AND pid <> pg_backend_pid();";
+                    await terminate.ExecuteNonQueryAsync();
+                }
+
+                await using (var seal = admin.CreateCommand())
+                {
+                    // È la stessa configurazione di template0: un database con datallowconn=false
+                    // resta clonabile ma non connettibile.
+                    seal.CommandText =
+                        $"ALTER DATABASE \"{TemplateDatabaseName}\" WITH ALLOW_CONNECTIONS false;";
+                    await seal.ExecuteNonQueryAsync();
+                }
+            }
+
+            _templateReady = true;
+        }
+        finally
+        {
+            TemplateGate.Release();
+        }
+    }
+
+    /// <summary>
     /// Creates a new isolated database for a test class.
     /// Call this in your test class's InitializeAsync method.
     /// Issue #2706: Added retry logic to handle 57P01 connection termination errors in parallel tests.
     /// </summary>
     /// <param name="databaseName">Unique database name (e.g., "test_auth_{guid}")</param>
+    /// <param name="useTemplate">
+    /// Se true, clona il database-modello già migrato invece di creare un database vuoto
+    /// (#3633: 5,1-7,4 s contro 135-159 ms). Passare false solo dove il test deve esercitare le
+    /// migration reali o assume uno schema vuoto.
+    /// </param>
     /// <returns>Connection string for the isolated database</returns>
-    public async Task<string> CreateIsolatedDatabaseAsync(string databaseName)
+    public async Task<string> CreateIsolatedDatabaseAsync(string databaseName, bool useTemplate = false)
     {
         // Issue #2577: Add diagnostics for connection troubleshooting
         var startTime = DateTime.UtcNow;
@@ -724,6 +823,11 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
         {
             try
             {
+                if (useTemplate)
+                {
+                    await EnsureTemplateDatabaseAsync();
+                }
+
                 // Create database
                 var builder = new NpgsqlConnectionStringBuilder(PostgresConnectionString)
                 {
@@ -735,7 +839,9 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
                 await using var cmd = connection.CreateCommand();
 #pragma warning disable CA2100 // SQL injection safe: databaseName validated with regex ^[a-zA-Z0-9_]+$
-                cmd.CommandText = $"DROP DATABASE IF EXISTS \"{databaseName}\"; CREATE DATABASE \"{databaseName}\";";
+                cmd.CommandText = useTemplate
+                    ? $"DROP DATABASE IF EXISTS \"{databaseName}\" WITH (FORCE); CREATE DATABASE \"{databaseName}\" TEMPLATE \"{TemplateDatabaseName}\";"
+                    : $"DROP DATABASE IF EXISTS \"{databaseName}\"; CREATE DATABASE \"{databaseName}\";";
 #pragma warning restore CA2100
                 await cmd.ExecuteNonQueryAsync();
 

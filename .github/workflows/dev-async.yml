@@ -22,9 +22,18 @@ on:
       - '.github/actions/**'
   workflow_dispatch:
 
+# `cancel-in-progress: false` NON accoda una fila. A gruppo occupato GitHub mette la nuova run
+# pending e cancella la pending PRECEDENTE: la run in volo arriva quindi sempre in fondo, e quando
+# lo slot si libera parte l'ultimo sha. È un debounce, non un backlog.
+#
+# Con `true`, un gate da ~83 minuti su un branch che riceve merge ogni 40-70 non aveva finestra: il
+# 2026-08-17 nove run su quindici erano `cancelled`, e lo shard Games — l'ultimo a chiudere — non
+# arrivava quasi mai in fondo. Un `cancelled` si legge come «annullato», non come «fallito»:
+# `dev-auto-revert` lo classifica `green-pending` e non fa nulla, quindi su main-dev non esisteva
+# alcun esito, né verde né rosso. È lo stesso difetto di #3629 su un altro asse.
 concurrency:
   group: dev-async-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read

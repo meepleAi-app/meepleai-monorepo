@@ -179,11 +179,19 @@ jobs:
         working-directory: apps/api
         run: |
           dotnet restore
-          dotnet list package --vulnerable --include-transitive > vuln-report.txt || true
+          # Nessun `|| true`: il comando esce 0 anche quando trova vulnerabilità
+          # (verificato su GHSA-q939-rpr3-3284), quindi un exit non-zero è un
+          # guasto dello scan — mascherarlo produrrebbe un report vuoto, cioè un
+          # gate verde che non ha esaminato nulla.
+          dotnet list package --vulnerable --include-transitive > vuln-report.txt
           cat vuln-report.txt
 
-          # Fail on HIGH/CRITICAL
-          if grep -iE "(High|Critical)" vuln-report.txt; then
+          # Fail on HIGH/CRITICAL — l'asserzione è sulla colonna Severity
+          # (penultimo campo delle righe "> pacchetto", prima dell'advisory URL),
+          # non su un grep dell'intero report: un nome di pacchetto o un URL non
+          # devono poter far scattare il gate. (#3707)
+          if awk '$1 == ">" && ($(NF - 1) == "High" || $(NF - 1) == "Critical") { print; found = 1 }
+                  END { exit found ? 0 : 1 }' vuln-report.txt; then
             echo "❌ HIGH/CRITICAL vulnerabilities found"
             exit 1
           fi

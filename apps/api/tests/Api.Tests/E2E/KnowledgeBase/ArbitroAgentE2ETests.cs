@@ -1,3 +1,4 @@
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.E2E.Infrastructure;
 using FluentAssertions;
@@ -58,7 +59,26 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         DbContext.SharedGames.Add(sharedGame);
         await DbContext.SaveChangesAsync();
         _testGameId = sharedGame.Id;
-        _testSessionId = Guid.NewGuid(); // Test session ID for workflow
+
+        // #3662: la GameSession dev'essere reale. `ValidateMoveCommandHandler` la carica da
+        // `IGameSessionRepository.GetByIdAsync` e lancia `NotFoundException` → 404 se non esiste.
+        // Qui c'era `_testSessionId = Guid.NewGuid()`, cioè un id inventato: i test passavano
+        // finché l'endpoint non validava l'esistenza della sessione, e quando la validazione è
+        // arrivata il gate E2E non girava più da mesi, quindi nessuno se n'è accorto.
+        // È l'aggregato `GameSession` — non `LiveGameSession` né `SessionTracking.Session`,
+        // che vivono in spazi di id distinti (ADR-089).
+        var gameSession = new GameSessionEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = sharedGame.Id,
+            Status = "InProgress",
+            StartedAt = DateTime.UtcNow,
+            PlayersJson = """[{"PlayerName":"E2E Player","PlayerOrder":1}]"""
+        };
+
+        DbContext.GameSessions.Add(gameSession);
+        await DbContext.SaveChangesAsync();
+        _testSessionId = gameSession.Id;
     }
 
     #region Happy Path Tests

@@ -1,161 +1,161 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "_comment": "Golden baseline for the RAG smoke harness (#2480). Captured once against a fresh, verified snapshot by running `bash infra/scripts/rag-smoke-assert.sh --update-baseline` after `make dev-from-snapshot`. Each entry pins the top-3 retrieved chunks (source + page) for a canonical query; the harness then fails if retrieval drifts. relevanceScore is advisory (compared with tolerance, not exact). Regenerate after an intentional re-index (embedding model change, chunker change, seed-table schema-version bump). See docs/for-developers/operations/rag-smoke-runbook.md.",
-  "capturedAt": "2026-07-29T15:09:29Z",
-  "snapshot": "meepleai_seed_20260729T070620Z_intfloat_multilingual-e5-base_9101176e9",
+  "capturedAt": "2026-08-17T09:53:38Z",
+  "snapshot": "meepleai_seed_20260817T093250Z_intfloat_multilingual-e5-base_5bfc9f17a",
   "embeddingModel": "intfloat/multilingual-e5-base",
   "baseline": {
     "catan-setup": [
       {
-        "source": "8d0a2f6f-aa45-4d01-982e-218d47badd79",
+        "document": "mechs-vs-minions_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "7cb67b4e-9add-4c6d-8d4b-ff338446dc92",
+        "document": "7-wonders-duel_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "8e222b6a-8b0d-4137-8f10-dc544e321e74",
+        "document": "sleeping-gods_rulebook.pdf",
         "page": 1
       }
     ],
     "wingspan-round-goals": [
       {
-        "source": "17093326-1b2f-48a3-b6d4-5daa5ac8dcbb",
+        "document": "codenames_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "9ea35ce8-c70a-47b4-92e7-8d5ee21d49c2",
+        "document": "wingspan_en_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "f5a914f4-83a0-4c71-8c4a-399e9f595897",
+        "document": "gaia-project_rulebook.pdf",
         "page": 1
       }
     ],
     "dominion-buy-phase": [
       {
-        "source": "b7766e3e-db14-4e48-86c0-4a519dc64591",
+        "document": "viticulture_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "e6929aa1-02bf-4c23-9ea8-57c24c3dc9c5",
+        "document": "paleo_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "f8733ddb-3fc6-49b8-8988-63ff0f4f34a7",
+        "document": "concordia_rulebook.pdf",
         "page": 1
       }
     ],
     "ark-nova-conservation": [
       {
-        "source": "45e40e99-1150-46fe-9074-ff5d96682a66",
+        "document": "spot-it_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "2dd89c4d-2a59-4a5e-be5d-dae6818d69aa",
+        "document": "aeons-end_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "f58aec40-eb3d-434b-ab23-7a6c82db1756",
+        "document": "survive-escape-from-atlantis_rulebook.pdf",
         "page": 1
       }
     ],
     "seven-wonders-military": [
       {
-        "source": "8fbee54d-0849-4199-8ad0-9df3485a7636",
+        "document": "rone-invasion_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "2669c604-df7c-4f7e-88e1-f209f7282029",
+        "document": "dune-imperium-uprising_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "9ea35ce8-c70a-47b4-92e7-8d5ee21d49c2",
+        "document": "gaia-project_rulebook.pdf",
         "page": 1
       }
     ],
     "catan-setup-it": [
       {
-        "source": "dbc7122d-7a65-401d-83ee-a6b5df594b7b",
+        "document": "star-wars-rebellion_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "2669c604-df7c-4f7e-88e1-f209f7282029",
+        "document": "dune-imperium-uprising_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "a82e62ac-0cba-48c6-a369-915870e67f4e",
+        "document": "eclipse-second-dawn_rulebook.pdf",
         "page": 1
       }
     ],
     "wingspan-round-goals-it": [
       {
-        "source": "26df6ae0-c67e-402a-8ab9-76719c811377",
+        "document": "raiders-of-the-north-sea_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "76664600-7883-4da8-8737-13c53985561d",
+        "document": "terra-mystica_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "a7aea6dd-346f-47cc-aa0e-0a2cb38b59b8",
+        "document": "el-grande_rulebook.pdf",
         "page": 1
       }
     ],
     "dominion-buy-phase-it": [
       {
-        "source": "0a85b821-94cc-41a3-a8ad-0f299fcb104e",
+        "document": "dixit_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "ee655f3c-17a4-4dd2-8b00-be603c53a833",
+        "document": "clank-legacy_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "1e59bf52-80ee-4720-a81a-ae66349da283",
+        "document": "root_rulebook.pdf",
         "page": 1
       }
     ],
     "ark-nova-conservation-it": [
       {
-        "source": "dbc7122d-7a65-401d-83ee-a6b5df594b7b",
+        "document": "star-wars-rebellion_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "d14f2ee6-3fb2-457f-ba3d-92c2f3f4057f",
+        "document": "ark-nova_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "eb5759ac-9ca9-416e-9396-26335039e5b4",
+        "document": "quacks-of-quedlinburg_rulebook.pdf",
         "page": 1
       }
     ],
     "seven-wonders-military-it": [
       {
-        "source": "8fbee54d-0849-4199-8ad0-9df3485a7636",
+        "document": "sagrada_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "f6c159a5-8510-4baa-ab2a-b8f39b41e7c4",
+        "document": "rone-invasion_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "0a85b821-94cc-41a3-a8ad-0f299fcb104e",
+        "document": "dixit_rulebook.pdf",
         "page": 1
       }
     ],
     "tmars-setup-it": [
       {
-        "source": "3eccead9-4483-4c43-a145-60b62140d4fb",
+        "document": "spot-it_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "45e40e99-1150-46fe-9074-ff5d96682a66",
+        "document": "sushi-go_rulebook.pdf",
         "page": 1
       },
       {
-        "source": "dc44310e-5ae6-4dca-b776-d053114eb527",
+        "document": "terraforming-mars_rulebook.pdf",
         "page": 1
       }
     ]

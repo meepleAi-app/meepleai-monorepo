@@ -458,6 +458,24 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
             .OrderBy(x => x.Fqn, StringComparer.Ordinal)
             .ToList();
 
+    /// <summary>
+    /// Recupera le classi di integrazione e garantisce che la riflessione le abbia trovate. Se
+    /// <see cref="IntegrationClasses"/> tornasse vuota — riflessione rotta, forma dell'attributo
+    /// cambiata, scope dell'assembly diverso — ogni fact che filtra quella sequenza passerebbe a
+    /// vuoto: zero segnale proprio quando il meccanismo su cui si regge si è rotto. Usata da tutti
+    /// e tre i fact, non da uno soltanto: il guard è sul recupero, non su un singolo assert locale.
+    /// </summary>
+    private static IReadOnlyList<(string Fqn, string Group)> IntegrationClassesOrFail()
+    {
+        var classes = IntegrationClasses();
+        classes.Should().HaveCountGreaterThan(
+            100,
+            "se la riflessione non trova le classi di integrazione, ogni fact di questa classe " +
+            "filtra una sequenza vuota e passa a vuoto: sarebbe verde proprio quando il meccanismo " +
+            "su cui si regge si è rotto");
+        return classes;
+    }
+
     private static bool InKnowledgeBaseShard(string fqn) =>
         KnowledgeBaseTokens.Any(t => fqn.Contains(t, StringComparison.Ordinal));
 
@@ -471,7 +489,7 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
     [Fact]
     public void EveryShard_SeesAllFourCollectionGroups()
     {
-        var classes = IntegrationClasses();
+        var classes = IntegrationClassesOrFail();
         var shards = new (string Name, Func<string, bool> Predicate)[]
         {
             ("KnowledgeBase", InKnowledgeBaseShard),
@@ -507,7 +525,7 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
     [Fact]
     public void EveryIntegrationClass_IsInTheGroupItsHashDictates()
     {
-        var misplaced = IntegrationClasses()
+        var misplaced = IntegrationClassesOrFail()
             .Where(c => !string.Equals(c.Group, GroupFor(c.Fqn), StringComparison.Ordinal))
             .Select(c => $"{c.Fqn}: sta in {c.Group}, deve stare in {GroupFor(c.Fqn)}")
             .ToList();
@@ -524,11 +542,7 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
     [Fact]
     public void Groups_HoldBetween20And30PercentOfTheClasses()
     {
-        var classes = IntegrationClasses();
-        classes.Should().HaveCountGreaterThan(
-            100,
-            "se la riflessione non trova le classi di integrazione, gli altri due test di questa " +
-            "classe passano a vuoto");
+        var classes = IntegrationClassesOrFail();
 
         var offBalance = GroupNames
             .Select(g => new
@@ -562,10 +576,12 @@ cd apps/api && dotnet test tests/Api.Tests/Api.Tests.csproj \
   --logger "console;verbosity=normal"
 ```
 
-Expected: **2 falliti su 3**.
-- `EveryShard_SeesAllFourCollectionGroups` → FAIL, `Games (mancano: Integration-GroupA, Integration-GroupB)`.
-- `EveryIntegrationClass_IsInTheGroupItsHashDictates` → FAIL, con un conteggio di classi fuori posto nell'ordine delle centinaia.
-- `Groups_HoldBetween20And30PercentOfTheClasses` → FAIL (oggi la ripartizione è 74/42/157/97 su 370, cioè 20,0% / 11,4% / 42,4% / 26,2%: fuori banda su GroupB e GroupC).
+Expected: **3 falliti su 3**.
+- `EveryShard_SeesAllFourCollectionGroups` → FAIL. Misurato il 2026-08-17: `Games (mancano: Integration-GroupA)` — solo GroupA è vuota nello shard Games, GroupB contiene già una classe (vedi §2 C1 della spec, dove la riga della tabella è stata corretta di conseguenza).
+- `EveryIntegrationClass_IsInTheGroupItsHashDictates` → FAIL, con un conteggio di classi fuori posto nell'ordine delle centinaia (misurato: 280).
+- `Groups_HoldBetween20And30PercentOfTheClasses` → FAIL. Misurato: GroupA 19,6% · GroupB 11,4% · GroupC 42,7% — **tutte e tre** fuori banda, GroupA compresa: sta appena sotto il 20%, non esattamente al bordo.
+
+⚠️ **La misura autorevole è l'output di questi tre fact quando girano**, non un conteggio statico dei file `[Collection(...)]`: la ripartizione si sposta a ogni classe di test aggiunta o rimossa, e i numeri sopra sono già una fotografia, non una costante. Se all'esecuzione risultano diversi da questi, fidarsi dell'esecuzione.
 
 Se invece **compila male** su `GetCustomAttribute<CollectionAttribute>()?.Name`, l'API di xUnit v3 differisce: leggere l'argomento del costruttore via `CustomAttributeData` — `t.GetCustomAttributesData().FirstOrDefault(a => a.AttributeType.Name == "CollectionAttribute")?.ConstructorArguments[0].Value as string` — e proseguire.
 

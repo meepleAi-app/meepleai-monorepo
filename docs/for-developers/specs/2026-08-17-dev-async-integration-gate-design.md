@@ -55,12 +55,17 @@ Distribuzione reale, 370 classi:
 | shard | GroupA | GroupB | GroupC | GroupD | tot | collection non vuote |
 |---|---|---|---|---|---|---|
 | KnowledgeBase | 68 | 31 | 3 | 10 | 112 | 4 (61% in una) |
-| **Games** | **0** | **0** | **113** | 45 | **158** | **2 su 4** |
+| **Games** | **0** | **1** | **113** | 46 | 160 | 3 su 4, ma GroupB con una sola classe |
 | Core | 6 | 11 | 41 | 42 | 100 | 4 |
 
-Lo shard Games ha GroupA e GroupB **vuote**: per costruzione lascia metà runner inattivo per tutta
-la run, ed è vincolato da una catena seriale di 113 classi. È lo shard che sfora per primo, e non è
-un caso.
+> La somma dei `tot` per shard (112 + 160 + 100 = 372) supera il totale di 370 classi perché i
+> filtri di shard sono **non esclusivi**: due classi contengono token sia di `KnowledgeBaseTokens`
+> sia di `GamesTokens` e vengono quindi conteggiate — ed eseguite — da entrambi gli shard.
+
+Lo shard Games ha GroupA **vuota** e GroupB che si esaurisce dopo una sola classe: per costruzione
+lascia il runner privo di lavoro su quei due thread quasi per l'intera durata, e resta appeso alla
+catena seriale di 113 classi in GroupC per il resto della run. È lo shard che sfora per primo, e non
+è un caso.
 
 Il commento dichiara «~39-42 classi per gruppo». La realtà è 74 / 42 / 157 / 97: la ripartizione è
 derivata da sola, senza che niente la misurasse.

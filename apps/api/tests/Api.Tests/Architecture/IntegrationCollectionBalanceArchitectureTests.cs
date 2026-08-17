@@ -85,6 +85,24 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
             .OrderBy(x => x.Fqn, StringComparer.Ordinal)
             .ToList();
 
+    /// <summary>
+    /// Recupera le classi di integrazione e garantisce che la riflessione le abbia trovate. Se
+    /// <see cref="IntegrationClasses"/> tornasse vuota — riflessione rotta, forma dell'attributo
+    /// cambiata, scope dell'assembly diverso — ogni fact che filtra quella sequenza passerebbe a
+    /// vuoto: zero segnale proprio quando il meccanismo su cui si regge si è rotto. Usata da tutti
+    /// e tre i fact, non da uno soltanto: il guard è sul recupero, non su un singolo assert locale.
+    /// </summary>
+    private static IReadOnlyList<(string Fqn, string Group)> IntegrationClassesOrFail()
+    {
+        var classes = IntegrationClasses();
+        classes.Should().HaveCountGreaterThan(
+            100,
+            "se la riflessione non trova le classi di integrazione, ogni fact di questa classe " +
+            "filtra una sequenza vuota e passa a vuoto: sarebbe verde proprio quando il meccanismo " +
+            "su cui si regge si è rotto");
+        return classes;
+    }
+
     private static bool InKnowledgeBaseShard(string fqn) =>
         KnowledgeBaseTokens.Any(t => fqn.Contains(t, StringComparison.Ordinal));
 
@@ -98,7 +116,7 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
     [Fact]
     public void EveryShard_SeesAllFourCollectionGroups()
     {
-        var classes = IntegrationClasses();
+        var classes = IntegrationClassesOrFail();
         var shards = new (string Name, Func<string, bool> Predicate)[]
         {
             ("KnowledgeBase", InKnowledgeBaseShard),
@@ -134,7 +152,7 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
     [Fact]
     public void EveryIntegrationClass_IsInTheGroupItsHashDictates()
     {
-        var misplaced = IntegrationClasses()
+        var misplaced = IntegrationClassesOrFail()
             .Where(c => !string.Equals(c.Group, GroupFor(c.Fqn), StringComparison.Ordinal))
             .Select(c => $"{c.Fqn}: sta in {c.Group}, deve stare in {GroupFor(c.Fqn)}")
             .ToList();
@@ -151,11 +169,7 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
     [Fact]
     public void Groups_HoldBetween20And30PercentOfTheClasses()
     {
-        var classes = IntegrationClasses();
-        classes.Should().HaveCountGreaterThan(
-            100,
-            "se la riflessione non trova le classi di integrazione, gli altri due test di questa " +
-            "classe passano a vuoto");
+        var classes = IntegrationClassesOrFail();
 
         var offBalance = GroupNames
             .Select(g => new

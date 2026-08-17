@@ -10,10 +10,11 @@ namespace Api.BoundedContexts.KbQuality.Domain.Budget;
 /// chronological order (used by the monthly reset job).</para>
 ///
 /// <para>DDD: private setters + factory + domain mutator follow the project pattern
-/// established by <c>DocumentEvaluationRun</c>. The <see cref="RowVersion"/> column
-/// (mapped to Postgres' system <c>xmin</c> via <c>IsRowVersion()</c>) gives optimistic
-/// concurrency control on parallel increments — <c>EvaluationRepository.IncrementSpentAsync</c>
-/// catches <c>DbUpdateConcurrencyException</c> and retries with a fresh read.</para>
+/// established by <c>DocumentEvaluationRun</c>. Il concurrency token <see cref="Xmin"/> (colonna di
+/// sistema di Postgres, #3651) rende osservabili i conflitti sugli incrementi paralleli, che
+/// <c>EvaluationRepository.IncrementSpentAsync</c> intercetta e riprova con una lettura fresca.
+/// Prima di #3651 quel retry non veniva mai eseguito: il token era <c>bytea</c> e l'eccezione non
+/// poteva essere sollevata.</para>
 /// </summary>
 public sealed class KbQualityBudgetCounter
 {
@@ -22,14 +23,29 @@ public sealed class KbQualityBudgetCounter
     public decimal SpentUsd { get; private set; }
 
     /// <summary>
-    /// Optimistic concurrency token. Auto-mapped to Postgres <c>xmin</c> by Npgsql via
-    /// <c>.IsRowVersion()</c> in
-    /// <see cref="Api.Infrastructure.EntityConfigurations.KbQuality.KbQualityBudgetCounterEntityConfiguration"/>.
-    /// Nullable to match the convention adopted for <c>PdfDocumentEntity.RowVersion</c>
-    /// (issue #1802) and avoid the PhotoBatchUpload landmine with NOT NULL on xmin.
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>.
+    ///
+    /// <para>
+    /// La forma precedente era <c>[Timestamp] byte[]?</c> con <c>.IsRowVersion()</c>, e il commento
+    /// dichiarava «auto-mapped to Postgres xmin by Npgsql». <b>Non lo era</b>: su Npgsql
+    /// <c>IsRowVersion()</c> su un <c>byte[]</c> genera una colonna <c>bytea</c>, che Postgres non
+    /// popola. Il token restava <c>null</c>, EF confrontava <c>NULL = NULL</c> e nessun conflitto
+    /// veniva mai rilevato.
+    /// </para>
+    /// <para>
+    /// La conseguenza qui è concreta: <c>EvaluationRepository.IncrementSpentAsync</c> ha un retry
+    /// loop su <c>DbUpdateConcurrencyException</c> che <b>non è mai entrato in funzione</b>, perché
+    /// quell'eccezione non poteva essere sollevata. Due valutazioni concorrenti dello stesso tenant
+    /// si sovrascrivevano l'incremento, e il tetto di spesa diventava superabile in silenzio.
+    /// </para>
+    /// <para>
+    /// ⚠️ Il commento precedente citava come modello <c>PdfDocumentEntity.RowVersion</c> (#1802) e
+    /// «the PhotoBatchUpload landmine»: entrambe erano rotte allo stesso modo, ed entrambe sono
+    /// state convertite da #3651. È così che il difetto si è propagato — copiando la convenzione
+    /// sbagliata credendola la cura.
+    /// </para>
     /// </summary>
-    [Timestamp]
-    public byte[]? RowVersion { get; private set; }
+    public uint Xmin { get; private set; }
 
     // EF Core ctor
     private KbQualityBudgetCounter() { }
@@ -47,6 +63,10 @@ public sealed class KbQualityBudgetCounter
             TenantId = tenantId,
             YearMonth = yearMonth,
             SpentUsd = initialSpent,
+            // Assegnazione esplicita: il setter è altrimenti raggiunto solo dalla
+            // materializzazione EF e S1144 farebbe fallire la build. È anche semanticamente vero —
+            // una riga mai persistita non ha ancora un xmin (#3688 lo documenta).
+            Xmin = 0,
         };
     }
 

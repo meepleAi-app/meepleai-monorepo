@@ -22,6 +22,14 @@ internal sealed class KbQualityBudgetCounterEntityConfiguration
 
         // Issue #1675: optimistic concurrency via Postgres xmin. Nullable byte[] mirrors
         // the convention adopted for PdfDocumentEntity.RowVersion (#1802 landmine workaround).
-        builder.Property(e => e.RowVersion).IsRowVersion();
+        // #3651 lotto 9 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` NON mappa alla
+        // colonna di sistema su Npgsql, malgrado il commento originale dicesse il contrario: serve
+        // la configurazione esplicita. Finché è mancata, il retry loop di IncrementSpentAsync non
+        // ha mai visto un conflitto da gestire.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
     }
 }

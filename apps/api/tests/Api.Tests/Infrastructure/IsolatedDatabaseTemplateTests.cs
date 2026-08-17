@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Npgsql;
 using Xunit;
@@ -15,7 +16,7 @@ namespace Api.Tests.Infrastructure;
 /// <c>CREATE DATABASE ... TEMPLATE</c> costa 135-159 ms perché è una copia a livello di file.
 /// </para>
 /// </summary>
-[Trait("Category", "Integration")]
+[Trait("Category", TestCategories.Integration)]
 [Collection("Integration-GroupA")]
 public sealed class IsolatedDatabaseTemplateTests
 {
@@ -73,16 +74,25 @@ public sealed class IsolatedDatabaseTemplateTests
 
         var builder = new NpgsqlConnectionStringBuilder(_fixture.PostgresConnectionString)
         {
-            Database = "meepleai_test_template",
+            Database = SharedTestcontainersFixture.TemplateDatabaseName,
         };
 
         await using var connection = new NpgsqlConnection(builder.ConnectionString);
         var connect = async () => await connection.OpenAsync();
 
-        await connect.Should().ThrowAsync<PostgresException>(
+        var thrown = await connect.Should().ThrowAsync<PostgresException>(
             "una sola connessione aperta sul modello fa fallire con 55006 ogni CREATE DATABASE ... " +
             "TEMPLATE concorrente. Negare le connessioni trasforma la convenzione 'non " +
             "connettersi' in un invariante imposto dal server");
+
+        // Un database ASSENTE solleva 3D000, che soddisfa "lancia PostgresException" tanto quanto
+        // il 57P03 ("is not currently accepting connections") che questo test intende verificare
+        // — asserire solo il tipo lascerebbe passare il fact anche se il modello non esistesse
+        // affatto. Il fact gemello (WithTemplate_...) prova che il modello esiste, quindi la
+        // coppia teneva comunque; questo fact, da solo, ora dice davvero ciò che afferma.
+        thrown.Which.SqlState.Should().Be(PostgresErrorCodes.CannotConnectNow,
+            "il modello deve rifiutare la connessione perché nega le connessioni (57P03), non " +
+            "perché non esiste (3D000)");
     }
 
     private static async Task<bool> TableExistsAsync(string connectionString, string table)

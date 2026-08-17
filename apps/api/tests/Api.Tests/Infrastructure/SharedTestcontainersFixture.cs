@@ -55,7 +55,12 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// <summary>
     /// Database-modello da cui si clonano i database isolati. Issue #3742.
     /// </summary>
-    private const string TemplateDatabaseName = "meepleai_test_template";
+    /// <remarks>
+    /// <c>internal</c>, non <c>private</c>: <see cref="IsolatedDatabaseTemplateTests"/> lo usa
+    /// invece del letterale <c>"meepleai_test_template"</c>, così i due punti non possono
+    /// divergere silenziosamente.
+    /// </remarks>
+    internal const string TemplateDatabaseName = "meepleai_test_template";
 
     // La prontezza del modello è chiavata per ISTANZA Postgres (host:porta), non per processo: un
     // semplice `static bool` presume UN SOLO Postgres condiviso — vero in CI, dove le quattro

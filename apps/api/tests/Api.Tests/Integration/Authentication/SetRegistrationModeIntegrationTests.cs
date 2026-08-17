@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.Authentication;
 ///     → handler must NOT raise 23505, must write a new row at Environment="Development".
 ///   - Idempotency: second call in the same env must hit the Update path, no duplicate row.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

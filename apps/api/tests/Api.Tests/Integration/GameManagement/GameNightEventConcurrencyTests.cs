@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// concurrency check to fire. Before #2703 the entity had no xmin token, so the detached UPDATE
 /// emitted <c>WHERE id = @id</c> only → last-write-wins → the second writer silently overwrote.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2703")]

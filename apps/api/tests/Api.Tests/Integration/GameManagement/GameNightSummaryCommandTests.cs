@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Handler-driven integration tests for the game-night summary + share-token + archive flow
 /// through the MediatR pipeline — Issue #2702 (summary aggregation, IDOR, share-token, archive).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2702")]

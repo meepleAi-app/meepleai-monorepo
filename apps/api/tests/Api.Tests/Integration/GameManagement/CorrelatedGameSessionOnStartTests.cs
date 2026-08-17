@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// These tests use IntegrationWebApplicationFactory (which mocks Redis/embeddings) and
 /// SharedTestcontainersFixture (shared Postgres container, isolated DB per test class).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime

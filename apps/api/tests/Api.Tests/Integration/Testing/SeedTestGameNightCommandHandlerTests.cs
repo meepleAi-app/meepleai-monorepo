@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.Testing;
 ///
 /// Pattern: <see cref="IntegrationWebApplicationFactory.Create"/> + scope-based MeepleAiDbContext.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Testing")]

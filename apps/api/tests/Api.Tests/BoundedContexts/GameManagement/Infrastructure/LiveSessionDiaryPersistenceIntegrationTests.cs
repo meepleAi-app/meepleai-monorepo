@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure;
 /// - UpdateAsync with new entries (SyncDiaryEntriesAsync append-only semantics)
 /// - FK cascade delete from parent session
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class LiveSessionDiaryPersistenceIntegrationTests : IAsyncLifetime

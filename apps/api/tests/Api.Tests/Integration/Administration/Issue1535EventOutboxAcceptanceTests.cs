@@ -63,7 +63,7 @@ namespace Api.Tests.Integration.Administration;
 /// <see cref="MeepleAiDbContext"/> + processor + collector wired via
 /// <see cref="IntegrationServiceCollectionBuilder"/>.</para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

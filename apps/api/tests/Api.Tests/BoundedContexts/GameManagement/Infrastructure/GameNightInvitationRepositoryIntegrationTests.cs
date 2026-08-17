@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure;
 /// AcceptedSoFar count formula) that cannot be exercised by EF Core InMemory.
 /// Issue #607 (Wave A.5a): GameNight token-based RSVP backend extension.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class GameNightInvitationRepositoryIntegrationTests : IAsyncLifetime

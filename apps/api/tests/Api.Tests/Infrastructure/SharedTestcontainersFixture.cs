@@ -1208,10 +1208,14 @@ public class SharedTestcontainersCollectionDefinition : ICollectionFixture<Share
 /// share the same PostgreSQL/Redis. Each test class creates an isolated database
 /// (unique name per class), making parallel execution safe.
 ///
-/// Group A: KnowledgeBase + DocumentProcessing (~41 classes)
-/// Group B: Authentication + Integration root tests (~42 classes)
-/// Group C: SharedGameCatalog + GameManagement + UserLibrary + SessionTracking (~39 classes)
-/// Group D: Administration + SystemConfiguration + misc (~42 classes)
+/// Issue #3633: l'appartenenza NON si sceglie per dominio. Assegnare i gruppi per bounded context
+/// li allineava ai filtri di shard di dev-async.yml, che tagliano sugli stessi nomi: lo shard Games
+/// finiva tutto in GroupC + GroupD, con GroupA e GroupB vuote, e girava su 2 thread invece di 4.
+///
+/// Il gruppo si deriva da SHA-256(FQN della classe), primi 4 byte big-endian, mod 4. La regola è
+/// imposta da Api.Tests.Architecture.IntegrationCollectionBalanceArchitectureTests, che dice anche
+/// in quale gruppo va una classe nuova. Per un'assegnazione in blocco:
+/// `python infra/scripts/assign-integration-collections.py --apply`.
 /// </summary>
 [CollectionDefinition("Integration-GroupA")]
 public class IntegrationGroupACollection : ICollectionFixture<SharedTestcontainersFixture> { }

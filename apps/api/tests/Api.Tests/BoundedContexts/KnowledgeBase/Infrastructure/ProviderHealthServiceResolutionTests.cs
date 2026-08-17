@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// tripped this, e.g. <c>ExtractMetadata_WithValidFilePath_Returns200Ok</c>.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "2865")]

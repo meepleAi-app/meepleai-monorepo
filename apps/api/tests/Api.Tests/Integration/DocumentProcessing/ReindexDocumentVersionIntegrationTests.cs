@@ -27,7 +27,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Verifies version persistence + audit row (success + conflict) + 409 on in-flight reindex
 /// using a real PostgreSQL instance via Testcontainers.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

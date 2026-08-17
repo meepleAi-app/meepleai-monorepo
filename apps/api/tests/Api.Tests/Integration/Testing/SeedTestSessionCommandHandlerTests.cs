@@ -18,7 +18,7 @@ namespace Api.Tests.Integration.Testing;
 /// Issue #1928 Task B (DEC-B-1, DEC-B-8) — Integration tests for
 /// SeedTestSessionCommandHandler. Pattern reuse from T1.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Testing")]

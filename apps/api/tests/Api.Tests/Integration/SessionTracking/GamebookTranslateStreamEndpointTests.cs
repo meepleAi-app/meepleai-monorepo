@@ -38,7 +38,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// </list>
 /// </para>
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class GamebookTranslateStreamEndpointTests : IAsyncLifetime

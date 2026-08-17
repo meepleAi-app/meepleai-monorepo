@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// Verifies that rolling dice persists both the DiceRoll aggregate and a
 /// <c>dice_rolled</c> SessionEvent correlated to the parent GameNight.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

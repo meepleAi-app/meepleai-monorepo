@@ -36,7 +36,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// is called with type "session:diary" without needing a live Redis/SignalR connection.
 /// This is the realistic end-to-end chain short of an actual SSE subscriber.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2570")]

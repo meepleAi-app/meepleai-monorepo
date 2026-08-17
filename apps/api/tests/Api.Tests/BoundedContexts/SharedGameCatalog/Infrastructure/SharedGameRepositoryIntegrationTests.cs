@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Tests: CRUD operations using actual repository interface methods
 /// Issue #2371 Phase 2
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameRepositoryIntegrationTests : IAsyncLifetime

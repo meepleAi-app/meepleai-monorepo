@@ -35,7 +35,7 @@ namespace Api.Tests.BoundedContexts.Administration.Integration;
 ///   <item><see cref="Get_All_RequireAdminSession_401_403_200"/> — auth gate</item>
 /// </list>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "1718")]

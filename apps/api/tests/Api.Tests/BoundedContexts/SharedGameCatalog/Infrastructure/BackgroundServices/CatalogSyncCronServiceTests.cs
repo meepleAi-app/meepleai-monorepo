@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.BackgroundS
 /// against a real PostgreSQL database via <see cref="IntegrationWebApplicationFactory"/>.
 /// The PeriodicTimer wrapper is trivial and out of scope.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class CatalogSyncCronServiceTests : IAsyncLifetime

@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// - #5 missing authz: PATCH /api/v1/documents/{id}/active must be owner-or-admin (mirror HandleSetPdfVisibility).
 /// - #6 missing admin gate: PATCH /api/v1/documents/{id}/classify must be admin-only.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "3222")]

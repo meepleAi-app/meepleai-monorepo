@@ -16,7 +16,7 @@ using Xunit;
 
 namespace Api.Tests.Integration.Authentication;
 
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

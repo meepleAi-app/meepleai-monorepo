@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// and verifies that the full degrade–save round-trip completes without exception and that
 /// both rows are persisted in <c>Failed</c> state.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "2689")]

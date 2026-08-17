@@ -30,7 +30,7 @@ namespace Api.Tests.Integration;
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// Pattern: OAuthIntegrationTests (ServiceCollection + DI + Repositories)
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifetime

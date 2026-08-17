@@ -15,7 +15,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// the well_formed check across all retries and never reached the review queue — is visible to the
 /// reviewer as N &lt; M. Computed at query time from the persisted claims; no schema change.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class GetMechanicAnalysisStatusSectionSignalIntegrationTests : IAsyncLifetime

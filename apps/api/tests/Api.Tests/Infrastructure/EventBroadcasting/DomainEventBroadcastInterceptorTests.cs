@@ -30,7 +30,7 @@ namespace Api.Tests.Infrastructure.EventBroadcasting;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "1718")]
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 public sealed class DomainEventBroadcastInterceptorTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

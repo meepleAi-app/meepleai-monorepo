@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// <c>AmbiguousMatchException</c> (HTTP 500) on every request. This test boots the real host and
 /// asserts the endpoint is registered exactly once, so a future duplicate fails CI, not prod.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class GameNightDiaryRouteUniquenessTests : IAsyncLifetime

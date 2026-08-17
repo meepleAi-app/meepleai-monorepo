@@ -33,7 +33,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// pre-existing analysis-level partial unique index (one Published, non-suppressed analysis per game),
 /// so it is not reachable via seeding; the card-level index remains as belt-and-braces defense.
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime

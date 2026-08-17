@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// system-agent visibility, GameName bulk resolution, and admin authentication.
 /// Uses Testcontainers Postgres because the @> containment is not translatable on EF InMemory.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1651")]

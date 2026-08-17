@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// IPdfDeduplicationService, still (a) reuses an existing Ready PDF via EntityLink
 /// without creating a new record, and (b) performs a full upload when no hash matches.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Issue", "2949")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class AddRulebookDedupIntegrationTests : IAsyncLifetime

@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Verifies timing fields, progress percentage, ETA, state durations,
 /// and total duration across the complete pipeline.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

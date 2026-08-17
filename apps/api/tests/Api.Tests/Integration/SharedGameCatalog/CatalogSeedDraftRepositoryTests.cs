@@ -16,7 +16,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 public sealed class CatalogSeedDraftRepositoryTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fx;

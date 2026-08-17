@@ -18,7 +18,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// pipeline (#2782 D3, commit b8c6f609f) now retains guardrail-failed sections with Status=3
 /// instead of dropping them, so the persistence layer must allow the value.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicSectionRunStatus3IntegrationTests : IAsyncLifetime

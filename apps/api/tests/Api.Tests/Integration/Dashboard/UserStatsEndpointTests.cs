@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Dashboard;
 /// Integration tests for GET /api/v1/users/me/stats endpoint (Issue #4585, #4578)
 /// Epic #4575: Gaming Hub Dashboard - Phase 3
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class UserStatsEndpointTests : IAsyncLifetime
 {

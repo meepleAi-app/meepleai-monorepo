@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// Exercised against real Postgres via <see cref="SharedTestcontainersFixture"/> + the actual
 /// migrations (<c>MigrateAsync</c>) so the index definition under test is the real one.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 /// (no existence disclosure), mirroring the collection-endpoint hardening (IDOR #3120).
 /// </para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class ChatSessionByIdEndpointsIdorIntegrationTests : IAsyncLifetime

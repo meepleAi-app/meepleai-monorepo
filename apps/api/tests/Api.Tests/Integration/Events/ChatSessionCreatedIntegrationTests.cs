@@ -16,7 +16,7 @@ namespace Api.Tests.Integration.Events;
 /// <c>domain_event_logs</c> atomically with the session row.
 /// BE-3 #1590 — H2: alias "chat.session.created" matches real command name (not fictional CreateChatThreadCommand).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class ChatSessionCreatedIntegrationTests : IAsyncLifetime

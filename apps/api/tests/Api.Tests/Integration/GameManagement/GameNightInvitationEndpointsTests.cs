@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Idempotency contract D2 b: same-state response → 200 no-op; switch Accepted ⇄ Declined →
 /// 409 Conflict; pending past-expiry / terminal Expired or Cancelled → 410 Gone.
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class GameNightInvitationEndpointsTests : IAsyncLifetime

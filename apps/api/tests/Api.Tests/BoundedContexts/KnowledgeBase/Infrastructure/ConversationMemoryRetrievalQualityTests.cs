@@ -38,7 +38,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// nDCG and ordering assertions are deterministic.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", TestCategories.Performance)]
 [Trait("BoundedContext", "KnowledgeBase")]

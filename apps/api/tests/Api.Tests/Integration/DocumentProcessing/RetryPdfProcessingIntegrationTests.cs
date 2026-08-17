@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Integration tests for PDF retry mechanism (Issue #4216).
 /// Tests the complete retry workflow from command to database persistence.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Issue", "4216")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class RetryPdfProcessingIntegrationTests : IAsyncLifetime

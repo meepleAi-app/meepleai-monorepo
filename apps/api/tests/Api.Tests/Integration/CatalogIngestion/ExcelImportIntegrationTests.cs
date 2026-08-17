@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.CatalogIngestion;
 /// Integration tests for Excel import with real PostgreSQL database.
 /// Validates end-to-end: Excel parsing → skeleton creation → DB persistence → dedup detection.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class ExcelImportIntegrationTests : IAsyncLifetime

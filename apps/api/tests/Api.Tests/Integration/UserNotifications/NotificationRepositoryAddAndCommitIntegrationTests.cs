@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.UserNotifications;
 /// unsaved entity, and return false — the in-app row already exists under the
 /// winning caller's CorrelationId.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "UserNotifications")]

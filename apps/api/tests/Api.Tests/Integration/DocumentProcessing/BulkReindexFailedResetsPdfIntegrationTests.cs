@@ -41,7 +41,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// production <c>QueryTrackingBehavior.NoTracking</c> default so a missing <c>.AsTracking()</c>
 /// on the reset query would still be caught.</para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

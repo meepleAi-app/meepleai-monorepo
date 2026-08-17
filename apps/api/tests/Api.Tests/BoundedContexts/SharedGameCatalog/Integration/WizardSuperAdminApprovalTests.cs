@@ -35,7 +35,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// <see cref="TestAuthenticationHandler"/> role header, whose claim value ("SuperAdmin")
 /// reproduces the production NormalizeRoleClaim semantics the defect depends on.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class WizardSuperAdminApprovalTests : IAsyncLifetime

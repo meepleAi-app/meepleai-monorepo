@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.Administration;
 /// <c>ValidateSessionQueryHandler</c> + <c>TwoFactorEnforcementBehavior</c>, NOT construct
 /// <c>SessionStatusDto</c> manually.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

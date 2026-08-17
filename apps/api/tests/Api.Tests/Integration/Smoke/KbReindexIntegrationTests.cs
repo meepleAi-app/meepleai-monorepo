@@ -29,7 +29,7 @@ namespace Api.Tests.Integration.Smoke;
 /// - SG2-T3: DeletePdf cascade — deletes orphan raptor_summaries rows
 /// - SG2-T4: RAPTOR rebuild — premium user, no indexed PDFs → completed + pdfCount=0
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

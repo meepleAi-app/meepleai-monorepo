@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Uses WebApplicationFactory + PostgreSQL Testcontainer for relational data (RBAC),
 /// and mocked IMultiGameHybridSearchService + ILlmService for the vector/LLM layer.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

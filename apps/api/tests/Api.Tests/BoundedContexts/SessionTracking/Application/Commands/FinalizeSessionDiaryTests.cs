@@ -36,7 +36,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// scoreboard snapshot (participant → total). The GameNightId must be
 /// propagated so cross-night UNION queries can correlate the event.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

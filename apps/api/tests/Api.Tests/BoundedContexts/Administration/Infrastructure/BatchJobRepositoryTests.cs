@@ -15,7 +15,7 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 /// <summary>
 /// Integration tests for BatchJobRepository (Issue #3693)
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

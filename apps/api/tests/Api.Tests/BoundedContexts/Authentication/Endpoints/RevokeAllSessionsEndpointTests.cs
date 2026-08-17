@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Endpoints;
 /// so the hash matches stored Session.TokenHash and the "exclude current session"
 /// branch actually excludes the right row.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class RevokeAllSessionsEndpointTests : IAsyncLifetime

@@ -13,7 +13,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>#532: the metrics endpoints are admin-gated and route to the query handlers.</summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicMetricsEndpointsTests : IAsyncLifetime

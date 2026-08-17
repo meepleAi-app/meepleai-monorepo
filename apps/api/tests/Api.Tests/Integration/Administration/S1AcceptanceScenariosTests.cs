@@ -44,7 +44,7 @@ namespace Api.Tests.Integration.Administration;
 ///
 /// Each scenario provisions its own isolated database to avoid cross-test state leaks.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

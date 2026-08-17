@@ -33,7 +33,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// participant upload → list, IDOR guards, SHA256 dedup (DB unique index),
 /// share-token gallery read, and delete. Validates the EF config + migration.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2724")]

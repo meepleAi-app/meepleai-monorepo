@@ -13,7 +13,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// <summary>
 /// Integration tests for AgentDefinitionRepository (Issue #3808, Epic #3687)
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

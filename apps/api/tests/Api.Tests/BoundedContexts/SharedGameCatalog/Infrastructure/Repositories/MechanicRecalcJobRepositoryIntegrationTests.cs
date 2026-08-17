@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 /// <c>SELECT ... FOR UPDATE SKIP LOCKED</c> claim primitive yields a distinct job to each
 /// concurrent caller — the core safety property of the worker-pool design.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicRecalcJobRepositoryIntegrationTests : IAsyncLifetime

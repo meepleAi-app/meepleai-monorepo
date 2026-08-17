@@ -15,7 +15,7 @@ namespace Api.Tests.Integration.Administration;
 ///
 /// SP5 Admin Security S1 — Task 1 migration smoke test.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

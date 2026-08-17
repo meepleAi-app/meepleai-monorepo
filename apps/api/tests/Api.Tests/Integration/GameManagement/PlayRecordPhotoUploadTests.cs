@@ -39,7 +39,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Testcontainers Postgres round-trip covering creator upload, forbidden guard,
 /// and SHA256 dedup (aggregate + DB unique index). Issue #2436 PR-B.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2436")]

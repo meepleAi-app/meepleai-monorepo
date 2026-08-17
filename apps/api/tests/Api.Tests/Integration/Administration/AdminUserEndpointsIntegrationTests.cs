@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Administration;
 /// Integration tests for Admin User Management endpoints (Issue #4205).
 /// Tests core CRUD, pagination, filtering, tier management via MediatR.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

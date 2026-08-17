@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries.GetPdfClea
 /// of the COUNT(*) clauses on <c>text_chunks</c> and <c>raptor_summaries</c> filtered
 /// by <c>PdfDocumentId</c> produces the expected aggregates end-to-end. Issue #1529.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1529")]

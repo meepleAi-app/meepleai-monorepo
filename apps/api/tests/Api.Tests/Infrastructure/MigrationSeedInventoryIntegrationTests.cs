@@ -35,7 +35,7 @@ namespace Api.Tests.Infrastructure;
 /// (<c>git show &lt;commit&gt;^:&lt;path-migration&gt;</c>) e riprendi i valori alla lettera, non dedurli.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Infrastructure")]
 public sealed class MigrationSeedInventoryIntegrationTests : IAsyncLifetime

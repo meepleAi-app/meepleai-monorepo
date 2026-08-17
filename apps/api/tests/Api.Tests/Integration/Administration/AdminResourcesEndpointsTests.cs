@@ -18,7 +18,7 @@ namespace Api.Tests.Integration.Administration;
 /// Verifies auth (401/403), and that the endpoint returns real metrics WITHOUT depending
 /// on Prometheus/exporters (the service reads System.Diagnostics directly).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 public sealed class AdminResourcesEndpointsTests : IAsyncLifetime

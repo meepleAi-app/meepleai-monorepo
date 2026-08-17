@@ -52,7 +52,7 @@ namespace Api.Tests.Integration;
 /// causing "terminating connection due to administrator command" errors (PostgreSQL 57P01).
 /// Tests are skipped in CI to avoid flaky behavior.
 /// </remarks>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 [Trait("SkipInCI", "Testcontainers conflict with service containers")]

@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// to an in-memory tracked context and shares that same context with the handler's scope, masking the
 /// detached behavior.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "3288")]

@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Asserts the authorization branch (D-2 anti-info-leak 404), the no-op idempotency
 /// path, and the actual persistence + domain-event emission.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

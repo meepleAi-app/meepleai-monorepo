@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Tests provisioning, activation, resend, revoke, and batch operations against real PostgreSQL.
 /// Issue #124: Admin invitation flow.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", TestCategories.E2E)]
 [Trait("Dependency", "PostgreSQL")]

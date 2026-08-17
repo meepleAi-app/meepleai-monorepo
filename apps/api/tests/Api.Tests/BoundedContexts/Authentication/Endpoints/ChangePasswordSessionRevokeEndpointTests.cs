@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Endpoints;
 /// PostgreSQL so a regression in either the repository SQL or the
 /// auth-middleware reject path would surface here.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class ChangePasswordSessionRevokeEndpointTests : IAsyncLifetime

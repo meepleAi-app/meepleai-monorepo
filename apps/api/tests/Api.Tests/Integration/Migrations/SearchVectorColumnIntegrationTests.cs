@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Migrations;
 /// boots with the table but no <c>search_vector</c>, and the adapter fails with
 /// <c>42703: column "search_vector" does not exist</c>.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

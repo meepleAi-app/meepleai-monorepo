@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// 1. Stale xmin → DbUpdateConcurrencyException (the middleware maps this to 409).
 /// 2. Null xmin  → fresh-load fallback, no concurrency check, succeeds.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2437")]

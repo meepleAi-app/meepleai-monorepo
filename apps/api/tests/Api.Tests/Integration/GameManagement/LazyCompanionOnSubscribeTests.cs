@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// All tests use <see cref="HttpCompletionOption.ResponseHeadersRead"/> to avoid
 /// blocking on the infinite SSE body.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class LazyCompanionOnSubscribeTests : IAsyncLifetime

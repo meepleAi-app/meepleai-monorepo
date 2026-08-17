@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Testing;
 /// Pattern: clone of <see cref="SeedTestLibraryGameCommandHandlerTests"/>;
 /// EnsureCreatedAsync rebuilds schema from current model.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Testing")]

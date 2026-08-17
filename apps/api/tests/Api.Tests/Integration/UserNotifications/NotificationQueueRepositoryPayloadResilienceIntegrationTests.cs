@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.UserNotifications;
 /// so <see cref="NotificationQueueRepository.GetPendingByChannelAsync"/> threw for the whole batch,
 /// <c>EmailNotificationProcessorJob</c> crash-looped, and one poison row blocked every email.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "UserNotifications")]

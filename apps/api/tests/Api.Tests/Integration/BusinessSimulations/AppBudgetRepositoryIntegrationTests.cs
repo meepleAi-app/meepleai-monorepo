@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.BusinessSimulations;
 /// xmin, and singleton enforcement (second Upsert reuses the same row
 /// rather than creating a duplicate).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "BusinessSimulations")]

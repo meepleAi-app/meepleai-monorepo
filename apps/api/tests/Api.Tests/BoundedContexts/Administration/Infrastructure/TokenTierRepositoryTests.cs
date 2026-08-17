@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.Administration.Infrastructure;
 /// <summary>
 /// Integration tests for TokenTierRepository (Issue #3786)
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

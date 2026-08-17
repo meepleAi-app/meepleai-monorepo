@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// quello conteso.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "UserLibrary")]

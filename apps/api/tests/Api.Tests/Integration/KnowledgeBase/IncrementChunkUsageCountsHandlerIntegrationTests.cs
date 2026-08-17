@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "2324")]
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 public class IncrementChunkUsageCountsHandlerIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

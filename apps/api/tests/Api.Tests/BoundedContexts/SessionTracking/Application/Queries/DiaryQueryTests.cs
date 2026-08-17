@@ -36,7 +36,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Queries;
 ///   <item>Event-type filtering returns only matching rows.</item>
 /// </list>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

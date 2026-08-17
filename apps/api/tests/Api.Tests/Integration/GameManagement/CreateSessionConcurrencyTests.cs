@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.GameManagement;
 ///
 /// <para>Mirrors the Testcontainers + full-DI factory pattern of <c>GoLiveSessionConcurrencyTests</c>.</para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "GameManagement")]

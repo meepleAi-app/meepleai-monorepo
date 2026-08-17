@@ -19,7 +19,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// differently and would mask shape issues on real Postgres.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 public class GetGameSessionContributorsQueryHandlerIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Migrations;
 /// future <c>ef migrations add Initial</c> flatten would silently drop it (see #2875); this test is
 /// the regression guard — the same role SearchVectorColumnIntegrationTests plays for search_vector.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

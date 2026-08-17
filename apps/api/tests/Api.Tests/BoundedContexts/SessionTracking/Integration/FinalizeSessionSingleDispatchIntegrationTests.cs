@@ -49,7 +49,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Integration;
 ///   <item>The MediatR-dispatched event carries the full payload (UserId, GameId, PlayerCount).</item>
 /// </list>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

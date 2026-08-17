@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.CrossContext;
 /// Issue #2307: Week 3 - Cross-context integration testing.
 /// Issue #1320 (P2c): Removed Game aggregate usage; events constructed directly.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2307")]
 [Trait("CrossContext", "GameManagement-Dispatch")]

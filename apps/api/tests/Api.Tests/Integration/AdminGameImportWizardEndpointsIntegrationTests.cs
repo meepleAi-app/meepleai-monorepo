@@ -20,7 +20,7 @@ namespace Api.Tests.Integration;
 /// Tests the 4-step wizard workflow: Upload PDF → Extract Metadata → Enrich from BGG → Confirm Import
 /// Issue #4157: Backend - Wizard Endpoints Routing
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class AdminGameImportWizardEndpointsIntegrationTests : IAsyncLifetime

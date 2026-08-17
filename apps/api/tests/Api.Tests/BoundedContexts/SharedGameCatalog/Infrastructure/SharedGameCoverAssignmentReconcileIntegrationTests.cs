@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// is inserted (not silently lost) — the <c>ef-detached-graph-child-loss</c>
 /// pitfall the InMemory provider hides.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameCoverAssignmentReconcileIntegrationTests : IAsyncLifetime

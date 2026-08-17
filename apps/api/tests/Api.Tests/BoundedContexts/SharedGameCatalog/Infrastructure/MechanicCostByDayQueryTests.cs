@@ -13,7 +13,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>#532: the daily cost time-series buckets cost/count per day and gap-fills empty days.</summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicCostByDayQueryTests : IAsyncLifetime

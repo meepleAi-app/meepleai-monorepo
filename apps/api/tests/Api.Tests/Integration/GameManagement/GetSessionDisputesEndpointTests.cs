@@ -36,7 +36,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// - IMediator to create sessions; DisputesJson seeded directly (same camelCase shape the
 ///   LiveGameSessionMapper reads back) to avoid depending on the multi-step Arbitro LLM flow.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "3391")]

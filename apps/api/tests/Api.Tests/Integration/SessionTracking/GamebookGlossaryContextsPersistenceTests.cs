@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// only works because <see cref="IGamebookGlossaryRepository.GetByIdAsync"/> loads
 /// <c>.AsTracking()</c> under the global NoTracking default (same class as #2660).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 [Trait("Issue", "2638")]

@@ -17,7 +17,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Validates full-content export ordered by ChunkIndex.
 /// Issue #1653: F3-FU-4 — Export document chunks (full content).
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

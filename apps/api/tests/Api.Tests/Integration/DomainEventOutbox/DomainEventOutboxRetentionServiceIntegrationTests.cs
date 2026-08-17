@@ -37,7 +37,7 @@ namespace Api.Tests.Integration.DomainEventOutbox;
 /// resolved from a controlled DI container, <see cref="FakeTimeProvider"/> so the cutoff
 /// math is deterministic.</para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Infrastructure")]

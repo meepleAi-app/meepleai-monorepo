@@ -38,7 +38,7 @@ namespace Api.Tests.Integration.GameManagement;
 ///     3. Unauthenticated caller → 401
 ///     4. GET on session with no diary entries → 200 + empty array
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2570")]

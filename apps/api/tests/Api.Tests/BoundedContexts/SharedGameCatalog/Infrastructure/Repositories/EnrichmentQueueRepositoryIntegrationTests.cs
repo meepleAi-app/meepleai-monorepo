@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 /// <summary>
 /// Integration tests for <see cref="EnrichmentQueueRepository"/> (#1874).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 [Trait("Issue", "1874")]

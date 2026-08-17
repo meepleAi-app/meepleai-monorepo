@@ -36,7 +36,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Integration;
 /// <para>The hub context is replaced with a Moq spy so the broadcast can be
 /// verified without spinning up a real SignalR transport.</para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

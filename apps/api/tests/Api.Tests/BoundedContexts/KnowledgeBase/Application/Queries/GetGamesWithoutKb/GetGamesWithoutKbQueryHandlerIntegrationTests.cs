@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWi
 /// Validates the admin RAG onboarding flow: returns paginated SharedGames where
 /// <c>HasKnowledgeBase = false</c>, counts PDFs and surfaces failed-state flag.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

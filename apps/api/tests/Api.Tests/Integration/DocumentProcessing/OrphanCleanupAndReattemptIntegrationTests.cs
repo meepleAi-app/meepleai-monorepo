@@ -27,7 +27,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// pgvector embeddings deletion is delegated to a mocked IVectorStoreAdapter (no real embeddings table),
 /// mirroring DeleteKbDocumentCommandHandlerIntegrationTests.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

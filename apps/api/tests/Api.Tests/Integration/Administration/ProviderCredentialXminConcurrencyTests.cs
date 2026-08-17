@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.Administration;
 /// <c>ux_provider_credentials_active_one</c> protegge l'INSERT della nuova riga attiva, ma non
 /// l'UPDATE che disattiva la vecchia — quello è scoperto, ed è ciò che questo test copre.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

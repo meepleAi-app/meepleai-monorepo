@@ -29,7 +29,7 @@ namespace Api.Tests.Integration.Events;
 /// activity endpoint resolves the name via <c>SharedGameRepository.GetNamesByIds</c>.
 /// <c>FileName</c> is the primary rail title.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 public sealed class KbDocIndexedIntegrationTests : IAsyncLifetime

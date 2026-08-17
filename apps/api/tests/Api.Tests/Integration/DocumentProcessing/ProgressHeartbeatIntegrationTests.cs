@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// in CI instead of silently disabling the stuck-job protection.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "3585")]

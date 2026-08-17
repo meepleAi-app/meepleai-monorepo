@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCo
 /// produces the correct aggregate counts end-to-end.
 /// Issue #1655 (F3-FU-6 KbSubNav count badges).
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1655")]

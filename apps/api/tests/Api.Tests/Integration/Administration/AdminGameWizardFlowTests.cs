@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.Administration;
 /// - Pipeline commands dispatched correctly
 /// - Multiple-PDF isolation: only target PDF gets Admin priority
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

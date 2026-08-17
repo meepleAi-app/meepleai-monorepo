@@ -14,7 +14,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>#532: the recent-analyses query filters (game/reviewer/status), paginates, and resolves names.</summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicRecentAnalysesQueryTests : IAsyncLifetime

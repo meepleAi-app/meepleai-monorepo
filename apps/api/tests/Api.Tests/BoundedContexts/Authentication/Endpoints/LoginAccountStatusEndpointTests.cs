@@ -34,7 +34,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Endpoints;
 /// lockout check, so all three non-Active states return the same neutral response
 /// without touching the failed-attempts counter.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class LoginAccountStatusEndpointTests : IAsyncLifetime

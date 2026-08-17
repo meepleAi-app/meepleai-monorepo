@@ -33,7 +33,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// trasporta il token letto, ma è esattamente ciò che il secondo test verifica invece di assumere.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

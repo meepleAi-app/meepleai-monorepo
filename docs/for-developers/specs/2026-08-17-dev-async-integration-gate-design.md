@@ -67,8 +67,12 @@ lascia il runner privo di lavoro su quei due thread quasi per l'intera durata, e
 catena seriale di 113 classi in GroupC per il resto della run. È lo shard che sfora per primo, e non
 è un caso.
 
-Il commento dichiara «~39-42 classi per gruppo». La realtà è 74 / 42 / 157 / 97: la ripartizione è
-derivata da sola, senza che niente la misurasse.
+Il commento dichiara «~39-42 classi per gruppo». I conteggi 74 / 42 / 157 / 97 sopra derivano da un
+grep statico sui file, che cattura solo il primo `[Collection(...)]` per file e quindi sottostima.
+Le cifre autorevoli sono quelle che `IntegrationCollectionBalanceArchitectureTests` riporta tramite
+riflessione, eseguito prima della riassegnazione: GroupA al 19,6%, GroupB all'11,4%, GroupC al
+42,7%, GroupD (complemento) al 26,3% — non il 20,0% per gruppo che i conteggi grezzi implicano. La
+ripartizione era comunque derivata da sola, senza che niente la misurasse.
 
 > ⚠️ **Limite dell'evidenza.** Lo skew spiega *perché* Games è il peggiore, non l'intero
 > ordinamento: KnowledgeBase ha il 61% concentrato in un gruppo ed è comunque il più veloce, quindi

@@ -42,7 +42,7 @@ namespace Api.Tests.Integration.Administration;
 /// in-handler cooldown (last rotation &lt; 24h ago → <c>ConflictException</c> 409). This is the
 /// authoritative gate; the edge rate-limit policy is defence-in-depth.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "1859")]

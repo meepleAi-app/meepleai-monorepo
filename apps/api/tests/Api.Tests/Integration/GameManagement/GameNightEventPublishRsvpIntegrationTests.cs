@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// It fails (Multigraph cycle) on origin/main-dev before the dedup guard is added to
 /// <see cref="GameNightEvent.Publish"/>, and passes after.</para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2835")]

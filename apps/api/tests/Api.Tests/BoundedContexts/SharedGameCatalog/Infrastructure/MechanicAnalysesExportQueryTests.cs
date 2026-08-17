@@ -15,7 +15,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>#532: CSV export emits a header + one row per analysis, with comma-containing values quoted.</summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicAnalysesExportQueryTests : IAsyncLifetime

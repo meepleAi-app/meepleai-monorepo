@@ -36,7 +36,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// assert the synchronous contract (validation, T7 idempotency, T8 cost gate, 404/409 mapping)
 /// without depending on the real LLM pipeline.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime

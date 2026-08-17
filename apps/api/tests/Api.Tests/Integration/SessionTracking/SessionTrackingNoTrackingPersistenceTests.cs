@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// Existing Category=Unit tests missed this because they mock the repository and never exercise
 /// the real EF NoTracking pipeline.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 [Trait("Issue", "2734")]

@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// Integration tests for the admin bulk Excel import feature.
 /// Tests the full CQRS pipeline: command -> handler -> repository -> database.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class ExcelImportIntegrationTests : IAsyncLifetime

@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.Administration;
 /// Covers: insert-on-upsert, update-on-upsert, GetByType, GetAll, optimistic
 /// concurrency via stale xmin.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

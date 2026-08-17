@@ -51,7 +51,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// flips has_knowledge_base to true → admin/user UIs can show
 /// "agente pronto" without manual refresh.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "2243")]

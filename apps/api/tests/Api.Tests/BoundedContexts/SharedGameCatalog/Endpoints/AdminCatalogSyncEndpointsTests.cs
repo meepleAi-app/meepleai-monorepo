@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Endpoints;
 /// GET /status, GET /runs, GET /runs/{id}/logs, POST /trigger.
 /// Asserts auth enforcement, happy-path 200/202, 404 / 409 mappings.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class AdminCatalogSyncEndpointsTests : IAsyncLifetime

@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 ///   <item>Optimistic concurrency via xmin throws DbUpdateConcurrencyException.</item>
 /// </list>
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class SharedGameTranslationRepositoryIntegrationTests : IAsyncLifetime

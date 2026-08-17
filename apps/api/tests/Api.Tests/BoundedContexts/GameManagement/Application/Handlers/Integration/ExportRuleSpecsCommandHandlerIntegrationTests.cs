@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers.Integrat
 /// (GroupBy + MaxBy) is not translatable by the EF InMemory provider, so a real provider
 /// is required to exercise the count == 0 branch.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class ExportRuleSpecsCommandHandlerIntegrationTests : IAsyncLifetime
 {

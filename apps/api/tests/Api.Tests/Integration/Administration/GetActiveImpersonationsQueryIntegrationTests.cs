@@ -17,7 +17,7 @@ namespace Api.Tests.Integration.Administration;
 /// Verifies the active-impersonation predicate (ImpersonatedByUserId set, RevokedAt null,
 /// ImpersonatedUntil &gt; now), the actor/subject email join, and the optional admin filter.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

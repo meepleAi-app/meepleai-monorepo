@@ -44,7 +44,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// <see cref="SharedTestcontainersFixture"/>, <c>InlineBackgroundTaskService</c> so the BG
 /// pipeline (extract → chunk → embed → index → finalize) runs synchronously before assertions.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "3281")]

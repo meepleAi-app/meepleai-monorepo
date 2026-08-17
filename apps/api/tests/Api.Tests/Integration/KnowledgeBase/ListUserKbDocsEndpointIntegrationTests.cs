@@ -18,7 +18,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Covers AC5 (401 unauthenticated) and the happy-path HTTP round-trip
 /// using a real WebApplicationFactory + PostgreSQL Testcontainer.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

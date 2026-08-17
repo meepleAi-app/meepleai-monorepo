@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers.Integrat
 /// Tests audit logging with real database persistence.
 /// Issue #2886: Verify audit log entries are persisted correctly.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 public sealed class SuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
 {

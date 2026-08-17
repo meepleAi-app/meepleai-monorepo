@@ -37,7 +37,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Italian content mislabelled as <c>en</c> silently returns nothing.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

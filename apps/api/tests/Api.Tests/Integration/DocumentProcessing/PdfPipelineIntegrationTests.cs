@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Week 9: DocumentProcessing complete pipeline (20 tests)
 /// Tests: PDF extraction pipeline (Unstructured → SmolDocling → Docnet), chunking strategies, validation and confidence scoring
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

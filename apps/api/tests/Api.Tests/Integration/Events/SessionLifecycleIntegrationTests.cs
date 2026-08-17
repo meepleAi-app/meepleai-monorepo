@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.Events;
 /// the handler's orthogonal KB-readiness / GameNight / quota pre-checks (covered by the handler's
 /// own test suite).</para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class SessionLifecycleIntegrationTests : IAsyncLifetime

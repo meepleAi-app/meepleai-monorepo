@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Unauthorized; authenticated requests accept the expected status OR Unauthorized
 /// (the test middleware may not honor the seeded session cookie).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class GameBookWriteEndpointsTests : IAsyncLifetime

@@ -41,7 +41,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// honored in this test pipeline) — following the conservative dual-acceptance pattern.
 /// </para>
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class GamebookTextTranslateStreamEndpointTests : IAsyncLifetime

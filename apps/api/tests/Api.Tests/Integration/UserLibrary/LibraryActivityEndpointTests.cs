@@ -17,7 +17,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// Integration tests for GET /api/v1/library/activity endpoint (Issue #642 — Wave B.3 followup).
 /// Verifies authentication, empty-state, and ordering semantics for the activity feed.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
 public sealed class LibraryActivityEndpointTests : IAsyncLifetime

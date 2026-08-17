@@ -15,7 +15,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Tests DeleteBehavior.Restrict for User, DeleteBehavior.Cascade for Game.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 public class RuleSpecCommentForeignKeyTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

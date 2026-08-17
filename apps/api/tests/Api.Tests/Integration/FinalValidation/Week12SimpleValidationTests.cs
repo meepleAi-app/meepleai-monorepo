@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.FinalValidation;
 /// Focuses on database operations, concurrency, and edge cases using GameEntity
 /// Issue #2310: Week 12 - Final coverage push
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2310")]
 [Trait("Week", "12")]

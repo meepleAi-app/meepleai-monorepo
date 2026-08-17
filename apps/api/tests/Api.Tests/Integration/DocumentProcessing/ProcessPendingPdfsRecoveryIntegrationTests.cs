@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// (which the live pipeline is still working on — the old handler raced them) nor demo mock
 /// placeholders.</para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

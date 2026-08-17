@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.Administration;
 ///   AND   audit_logs contains 3 rows
 ///   AND   all 3 source outbox rows are marked Sent
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

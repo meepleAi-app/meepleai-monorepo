@@ -37,7 +37,7 @@ namespace Api.Tests.Integration.Smoke;
 /// - SG3-T5: Soft-delete system-defined agent → SystemAgentProtectedException (403)
 /// - SG3-T6: Create agent at free-tier quota → TierQuotaExceededException (402)
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Dependency", "PostgreSQL")]

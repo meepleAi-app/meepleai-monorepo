@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 /// COLUMNS in a fresh NoTracking scope — the guard against the PERF-06 "load+mutate+save is a silent
 /// no-op" class of bug the project rules call out.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserNotifications")]
 public sealed class UpdateQuietHoursHandlerTests : IAsyncLifetime

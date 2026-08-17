@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 /// JSON report. <see cref="IRagService"/> is mocked so the test never depends on a live RAG
 /// pipeline/LLM (REQ-AI-TEST-001).
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "3433")]

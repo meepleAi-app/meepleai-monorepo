@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 /// and stay green even if <see cref="MechanicAnalysisRepository"/>'s write mapper drops the field —
 /// ONLY this round-trip against a real jsonb column catches a dropped mapper copy (#2782 FU-1 M4).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicAnalysisRepositoryValidationsIntegrationTests : IAsyncLifetime

@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Integration;
 /// HTTP integration tests for the public Waitlist endpoint.
 /// Spec §3.5 / §4.4 (2026-04-27-v2-migration-wave-a-2-join.md) — RED phase.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class WaitlistEndpointsIntegrationTests : IAsyncLifetime

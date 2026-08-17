@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Exercises the real repository (<see cref="UserRepository.GetAdminUsersAsync"/>) against Postgres,
 /// not a hand-built DTO (lesson S2 — acceptance must exercise the real pipeline).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

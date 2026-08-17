@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 /// Issue #3541: BGG Import Queue Service
 /// Tests: Admin auth, CQRS flow, status endpoint, enqueue/batch, cancel, retry, SSE streaming
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime

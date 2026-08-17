@@ -13,7 +13,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>#2837: DISTINCT game + reviewer filter options, deduped across all analyses (no recency cap).</summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicMetricsFilterOptionsQueryTests : IAsyncLifetime

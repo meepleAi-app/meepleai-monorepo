@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Services;
 ///
 /// Fixture: a NoTracking-aligned WebApplicationFactory (matches prod PERF-06).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "Authentication")]
 public sealed class TotpServiceTrackingContractTests : IAsyncLifetime

@@ -29,7 +29,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Endpoints;
 /// (User-linked) participant with HTTP 403. This mirrors the existing IDOR guard on
 /// <c>UpdateSessionScoresCommandHandler</c> (PUT /scores-polymorphic).</para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 [Trait("Concern", "Security")]

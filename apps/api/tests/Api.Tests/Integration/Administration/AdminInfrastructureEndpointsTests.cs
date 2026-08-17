@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Administration;
 ///   POST /admin/infrastructure/services/{name}/restart     — SuperAdmin only
 ///   POST /admin/infrastructure/services/{name}/health-check — SuperAdmin only
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 public sealed class AdminInfrastructureEndpointsTests : IAsyncLifetime

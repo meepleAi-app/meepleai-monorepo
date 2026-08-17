@@ -33,7 +33,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// T3 — Free-form not in active list: free-form (GameId==null) start → no correlated
 ///      GameSession → GetActiveSessionsQuery.Sessions stays empty.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime

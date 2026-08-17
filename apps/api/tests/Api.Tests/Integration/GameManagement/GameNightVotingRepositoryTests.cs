@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// does NOT silently wipe votes (the queries feeding a mutation path must Include the Votes
 /// owned collection — same class of bug as the xmin round-trip in #2703).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2700")]

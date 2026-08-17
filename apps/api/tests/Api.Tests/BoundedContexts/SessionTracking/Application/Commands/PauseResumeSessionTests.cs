@@ -29,7 +29,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// Verifies the "1 Active per GameNight" invariant via auto-pause-on-resume, owner-only auth,
 /// and diary event emission for both transitions.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

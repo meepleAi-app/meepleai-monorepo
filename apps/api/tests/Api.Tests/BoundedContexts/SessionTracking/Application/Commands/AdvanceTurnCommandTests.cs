@@ -32,7 +32,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// turn order is not set, and diary (turn_advanced) event emission with the
 /// correct game-night correlation.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

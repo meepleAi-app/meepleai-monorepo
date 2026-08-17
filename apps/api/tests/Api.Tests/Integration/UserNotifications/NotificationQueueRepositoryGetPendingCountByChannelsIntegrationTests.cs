@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.UserNotifications;
 /// unfiltered <see cref="NotificationQueueRepository.GetPendingCountAsync"/> is asserted alongside
 /// to make the channel-leak contrast explicit.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "UserNotifications")]

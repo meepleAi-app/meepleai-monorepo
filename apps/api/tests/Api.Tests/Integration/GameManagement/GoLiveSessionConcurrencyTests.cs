@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// test is the single-live-slot arbitration on <c>game_night_sessions</c> plus the self-heal of the
 /// tracking Session's live state.</para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "GameManagement")]

@@ -31,7 +31,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// Verifies Manual + Random turn order modes, owner-only auth, deterministic
 /// Fisher-Yates shuffle, seed persistence, and diary event emission.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

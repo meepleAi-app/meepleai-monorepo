@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Integration tests for the #534 repository additions: the active-card feedback aggregate query
 /// (excludes suppressed cards) and the tracked <see cref="IMechanicCardRepository.Update"/> path.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicCardRepositoryFeedbackTests : IAsyncLifetime

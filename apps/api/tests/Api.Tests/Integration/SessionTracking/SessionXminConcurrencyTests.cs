@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// a <c>Update()</c> esisteva già, mancava solo che il token significasse qualcosa (#3688).
 /// </para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

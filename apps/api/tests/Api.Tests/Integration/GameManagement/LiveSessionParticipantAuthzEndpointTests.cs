@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.GameManagement;
 ///
 /// Mirrors LiveSessionDiaryEndpointTests (Testcontainers fixture, cookie auth, IMediator setup).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2573")]

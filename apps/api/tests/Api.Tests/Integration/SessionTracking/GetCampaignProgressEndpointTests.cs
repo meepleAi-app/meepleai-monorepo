@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.SessionTracking;
 /// Follows the conservative auth pattern used by sibling endpoint tests: accepts
 /// either OK (middleware honors the seeded session cookie) or Unauthorized.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class GetCampaignProgressEndpointTests : IAsyncLifetime

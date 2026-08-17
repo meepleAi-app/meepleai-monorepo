@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Routing;
 /// <c>/api/v1/admin/event-outbox</c> surface. Covers auth enforcement, the
 /// three GET endpoints and the POST retry endpoint (404 + 409 + 204 paths).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 public sealed class AdminDomainEventOutboxEndpointsTests : IAsyncLifetime

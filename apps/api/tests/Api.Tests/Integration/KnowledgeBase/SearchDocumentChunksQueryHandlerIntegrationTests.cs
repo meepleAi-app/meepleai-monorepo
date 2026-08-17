@@ -29,7 +29,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 ///
 /// Issue #1653: F3-FU-4 — per-document scored similarity-search.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

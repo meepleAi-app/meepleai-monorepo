@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// 7. 21 tags → 422, no event.
 /// 8. Cached list → PATCH → fresh GET returns updated data (cache invalidation).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

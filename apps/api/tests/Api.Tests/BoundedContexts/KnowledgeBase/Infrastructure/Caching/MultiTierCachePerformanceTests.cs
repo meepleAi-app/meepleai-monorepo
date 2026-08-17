@@ -35,7 +35,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
 /// catches the regression that matters — a tier silently falling through to the one below it.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", TestCategories.Performance)]
 [Trait("Issue", "3494")]

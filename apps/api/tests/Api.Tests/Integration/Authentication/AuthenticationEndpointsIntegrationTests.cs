@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Authentication;
 /// Tests: Register, Login, Logout, Session management, API key authentication.
 /// Issue #3010: Backend coverage improvement.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class AuthenticationEndpointsIntegrationTests : IAsyncLifetime

@@ -19,7 +19,7 @@ namespace Api.Tests.Integration;
 /// Tests: GET /api/v1/kb-docs/{id} (G4 single doc metadata),
 ///        GET /api/v1/kb-docs/{id}/chunks (G1 chunk list + heading paths).
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class KbChunkEndpointsIntegrationTests : IAsyncLifetime

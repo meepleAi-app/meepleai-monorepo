@@ -27,7 +27,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Infrastructure;
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 public sealed class UserGamebookViewRepositoryIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

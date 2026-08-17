@@ -29,7 +29,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// quindi al difetto opposto (#3688).
 /// </para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

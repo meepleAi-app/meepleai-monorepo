@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.GameManagement;
 ///   - AC-2 / AC-5: use a self-contained IContainer to support stop/start without disrupting the shared fixture
 ///     used by other concurrent test classes.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class LiveSessionRepositoryIntegrationTests : IAsyncLifetime

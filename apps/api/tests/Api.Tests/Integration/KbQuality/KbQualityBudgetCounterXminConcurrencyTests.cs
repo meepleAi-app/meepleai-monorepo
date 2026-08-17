@@ -34,7 +34,7 @@ namespace Api.Tests.Integration.KbQuality;
 /// che il retry assorba il conflitto e nessun incremento vada perso.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KbQuality")]

@@ -11,7 +11,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure;
 
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>

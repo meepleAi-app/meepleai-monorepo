@@ -34,7 +34,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// test non-conteso lo verifica invece di assumerlo (#3688).
 /// </para>
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.Events;
 /// to the calling user, applies 90-day retention and limit, maps EventType to clean
 /// entityType names, and enforces authentication + validation.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime

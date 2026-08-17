@@ -51,7 +51,7 @@ namespace Api.Tests.Integration;
 ///
 /// Infrastructure: PostgreSQL (SharedTestcontainersFixture), Redis (real cache), pgvector (mocked for now)
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
 public sealed class UploadPdfIntegrationTests : IAsyncLifetime

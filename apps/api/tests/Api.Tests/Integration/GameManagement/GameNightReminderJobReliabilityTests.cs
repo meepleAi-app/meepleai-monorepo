@@ -24,7 +24,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// instance of the same key) — swallowed by the per-event catch — so the flag was never written
 /// and every run re-sent the reminder.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2720")]

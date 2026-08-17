@@ -33,7 +33,7 @@ namespace Api.Tests.Integration.Administration;
 ///
 /// SP5 Admin Security S1 — Task 3b atomicity guarantee.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

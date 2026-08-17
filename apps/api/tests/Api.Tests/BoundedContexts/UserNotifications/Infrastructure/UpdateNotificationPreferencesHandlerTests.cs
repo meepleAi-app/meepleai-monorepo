@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 /// unit of work (ADR-060). These tests drive the command through MediatR (full pipeline) and then
 /// re-read the row in a fresh scope to assert persistence.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserNotifications")]
 public sealed class UpdateNotificationPreferencesHandlerTests : IAsyncLifetime

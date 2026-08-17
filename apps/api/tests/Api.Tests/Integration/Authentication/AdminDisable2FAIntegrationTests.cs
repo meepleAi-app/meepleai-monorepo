@@ -39,7 +39,7 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL
 /// </remarks>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Authentication")]

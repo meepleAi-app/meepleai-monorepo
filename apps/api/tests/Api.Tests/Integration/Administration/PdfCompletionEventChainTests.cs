@@ -27,7 +27,7 @@ namespace Api.Tests.Integration.Administration;
 /// PdfStateChanged(Ready) + Admin priority → AutoCreateAgentOnPdfReadyHandler → CreateGameAgentCommand dispatched.
 /// Issue #4673: Validate handler reads real DB, checks conditions, dispatches command.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

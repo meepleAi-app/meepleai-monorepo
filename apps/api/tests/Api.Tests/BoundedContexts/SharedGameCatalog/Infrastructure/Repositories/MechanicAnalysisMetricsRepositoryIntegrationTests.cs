@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 /// Integration tests for <see cref="MechanicAnalysisMetricsRepository"/> (ADR-051 Sprint 1 / Task 15)
 /// against a real PostgreSQL database (Testcontainers).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicAnalysisMetricsRepositoryIntegrationTests : IAsyncLifetime

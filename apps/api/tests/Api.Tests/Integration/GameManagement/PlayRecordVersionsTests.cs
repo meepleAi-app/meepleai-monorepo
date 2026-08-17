@@ -34,7 +34,7 @@ namespace Api.Tests.Integration.GameManagement;
 ///    a third version is created (the pre-restore state), so after restore there are 3 versions.
 /// 2. Six updates → only 5 versions retained (oldest pruned, cap enforcement).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2437")]

@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 [Trait("Issue", "1823")]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 public class WikidataQuarterlyReVerificationJobIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

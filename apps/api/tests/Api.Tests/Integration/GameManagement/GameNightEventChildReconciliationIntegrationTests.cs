@@ -39,7 +39,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// conflict on the tracked-root path) and pass once <c>UpdateAsync</c> reconciles child state
 /// (Added / Modified / Deleted) the way <see cref="LiveSessionRepository"/> already does.</para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "gamenight-update-child-loss")]

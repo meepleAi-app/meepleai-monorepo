@@ -22,7 +22,7 @@ namespace Api.Tests.Integration.Agents;
 /// Verifies <c>GET /api/v1/agents</c> wraps the existing <c>GetAllAgentsQueryHandler</c>
 /// MediatR handler over HTTP with proper authentication and filter support.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime

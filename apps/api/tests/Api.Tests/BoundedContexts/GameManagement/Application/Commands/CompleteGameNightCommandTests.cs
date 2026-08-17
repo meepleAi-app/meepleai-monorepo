@@ -34,7 +34,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Commands;
 /// non-finalized sessions, marks link rows as Completed, transitions the
 /// GameNightEvent to Completed, and emits the correct diary events.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "GameManagement")]

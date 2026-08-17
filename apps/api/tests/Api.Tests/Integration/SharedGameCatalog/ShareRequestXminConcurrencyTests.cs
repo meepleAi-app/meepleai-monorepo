@@ -27,7 +27,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// quello che nel lotto 2 si è rivelato capace di rompere ogni scrittura quando il token non
 /// attraversa il mapper.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

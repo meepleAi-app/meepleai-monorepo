@@ -22,7 +22,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// (PendingCoverR2Key, CoverPageIndex, SourcePdfDocumentId) added in Task 4
 /// (Game Cover-da-PDF, ContributionType.CoverChange).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class ShareRequestRepositoryIntegrationTests : IAsyncLifetime

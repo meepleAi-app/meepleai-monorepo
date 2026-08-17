@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.GameToolkit.Integration;
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 public sealed class AiToolkitSuggestionCacheConcurrentInsertTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

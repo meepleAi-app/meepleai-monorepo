@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// - Asserting status code + Content-Type + X-Warning-Code headers is sufficient for these ACs
 ///   per the task brief ("asserting response HEADERS via ResponseHeadersRead is sufficient").
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class LiveSessionStreamEndpointTests : IAsyncLifetime

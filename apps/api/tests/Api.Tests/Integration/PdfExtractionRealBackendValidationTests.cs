@@ -33,7 +33,7 @@ namespace Api.Tests.Integration;
 /// - Other tests use mocks for fast feedback
 /// - This provides comprehensive validation without slowing down standard CI
 /// </remarks>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", "PDF")]
 [Trait("TestType", "Validation")]

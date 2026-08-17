@@ -32,7 +32,7 @@ namespace Api.Tests.Integration.Authentication;
 /// user_terms_acceptances persistence, the registration recording path, and the
 /// me-scoped accept/status endpoints. Uses real PostgreSQL via Testcontainers.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class TermsAcceptanceIntegrationTests : IAsyncLifetime

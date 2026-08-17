@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 ///
 /// Target method: GetIndexingInfoByGameIdAsync (contains the bridge logic at lines 171-219).
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

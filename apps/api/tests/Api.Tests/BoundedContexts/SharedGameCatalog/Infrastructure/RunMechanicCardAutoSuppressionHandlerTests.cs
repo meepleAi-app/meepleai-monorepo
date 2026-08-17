@@ -16,7 +16,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Integration tests for the #534 auto-suppression batch command, sent through the real MediatR pipeline:
 /// threshold breach → suppress + audit + counters; AND-condition; count-floor; kill-switch; config override.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class RunMechanicCardAutoSuppressionHandlerTests : IAsyncLifetime

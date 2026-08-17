@@ -28,7 +28,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// Covers generate → read via token, revoke → token no longer found, bogus token.
 /// Issue #2437-2.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2437")]

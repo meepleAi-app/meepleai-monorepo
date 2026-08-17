@@ -16,7 +16,7 @@ namespace Api.Tests.Integration.Events;
 /// <c>domain_event_logs</c> atomically with the agent row.
 /// BE-3 #1590 — H1: user-facing flow only (quick-create / POST /agents/user).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class AgentCreatedIntegrationTests : IAsyncLifetime

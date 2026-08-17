@@ -27,7 +27,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Endpoints;
 /// happy-path status codes (200 / 201 / 204), and exception → HTTP mapping
 /// (404 / 409 / 400).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifetime

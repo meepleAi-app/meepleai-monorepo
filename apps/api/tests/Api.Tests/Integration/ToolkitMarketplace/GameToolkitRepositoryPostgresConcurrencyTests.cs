@@ -29,7 +29,7 @@ namespace Api.Tests.Integration.ToolkitMarketplace;
 /// This test exists to answer that empirically rather than by reading EF's source: it is the
 /// difference between "publish is fine" and "renaming a toolkit has been 500ing in production".
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameToolkit")]
 public sealed class GameToolkitRepositoryPostgresConcurrencyTests : IAsyncLifetime

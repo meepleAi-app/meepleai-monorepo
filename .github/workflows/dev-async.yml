@@ -111,6 +111,10 @@ jobs:
         # Stessa ripartizione di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
         # asse. Misurati 2950 test totali (esclusioni incluse): 910 / 1123 / 929.
+        # #3633: i token qui sotto sono duplicati come costanti in
+        # Api.Tests.Architecture.IntegrationCollectionBalanceArchitectureTests, che verifica che
+        # ogni shard contenga tutte e 4 le collection xUnit. Se cambi questo elenco, aggiorna anche
+        # quello: divergendo, il guard smette di guardare proprio lo shard che hai toccato.
         shard:
           - name: "KnowledgeBase"
             filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"

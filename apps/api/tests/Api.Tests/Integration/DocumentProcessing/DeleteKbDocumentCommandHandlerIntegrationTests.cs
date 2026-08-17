@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// 2. Consuming agents have the document id removed from KbCardIds
 /// 3. NotFoundException thrown for missing document
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

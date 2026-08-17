@@ -36,7 +36,7 @@ namespace Api.Tests.Integration.Phase4a;
 /// rather than 404 / 204.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameToolkit")]
 [Trait("Wave", "3-Phase-4a")]

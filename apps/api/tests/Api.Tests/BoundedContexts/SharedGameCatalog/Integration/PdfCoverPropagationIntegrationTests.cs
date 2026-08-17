@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 ///   → MeepleAiDbContext.SaveChangesAsync dispatches via MediatR
 ///   → PdfCoverGeneratedEventHandler populates shared_games.pdf_cover_r2_key.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 [Trait("Issue", "1852")]

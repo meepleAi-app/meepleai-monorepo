@@ -23,7 +23,7 @@ namespace Api.Tests.Integration.Agents;
 /// "Typologies" was collapsed into AgentDefinition during system simplification —
 /// this route exposes Published agent definitions as the user-facing typology dropdown source.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class AgentTypologiesEndpointTests : IAsyncLifetime

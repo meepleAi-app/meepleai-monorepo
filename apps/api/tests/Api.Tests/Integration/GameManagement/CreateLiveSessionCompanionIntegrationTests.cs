@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// The companion Session FKs both <c>users</c> and <c>shared_games</c> (Restrict), so the
 /// test seeds a user and a shared game before sending the command.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class CreateLiveSessionCompanionIntegrationTests : IAsyncLifetime

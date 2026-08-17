@@ -23,7 +23,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Tests: StartReview, ReleaseReview, GetMyActiveReviews
 /// Issue #2737
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class ReviewLockEndpointsIntegrationTests : IAsyncLifetime

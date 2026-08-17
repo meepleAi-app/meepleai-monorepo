@@ -38,7 +38,7 @@ namespace Api.Tests.Integration;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), Testcontainers for PostgreSQL, transaction rollback between tests
 /// </remarks>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Issue", "2031")]

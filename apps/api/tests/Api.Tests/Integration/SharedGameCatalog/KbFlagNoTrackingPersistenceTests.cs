@@ -35,7 +35,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// provider with default TrackAll semantics; these tests run against real Postgres via
 /// Testcontainers with the production NoTracking default, so the mutation must actually persist.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

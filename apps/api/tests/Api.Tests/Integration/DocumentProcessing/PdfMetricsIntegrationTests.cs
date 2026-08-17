@@ -20,7 +20,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Issue #4413: Validates timing fields, progress percentage, ETA calculation,
 /// and state durations through the complete pipeline.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

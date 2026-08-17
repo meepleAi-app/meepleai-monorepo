@@ -43,7 +43,7 @@ namespace Api.Tests.Integration.GameManagement;
 ///     auth-token infrastructure is wired). The skipped 429 test in this class
 ///     documents the contractual expectation.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class BggEndpointsIntegrationTests : IAsyncLifetime

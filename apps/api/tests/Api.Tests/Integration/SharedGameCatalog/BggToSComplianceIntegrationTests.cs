@@ -29,7 +29,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 public sealed class BggToSComplianceIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fx;

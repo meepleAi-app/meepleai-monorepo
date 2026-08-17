@@ -20,7 +20,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 /// partial unique index (AC-4), audit atomicity (AC-5), suppression query filter (AC-6),
 /// review queue visibility (AC-7), optimistic concurrency (AC-9), cascade deletes (AC-11).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class MechanicAnalysisRepositoryIntegrationTests : IAsyncLifetime

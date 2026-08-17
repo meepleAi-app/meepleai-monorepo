@@ -37,7 +37,7 @@ namespace Api.Tests.Integration.Discover;
 ///   - Rate limiting (the integration factory disables the <c>BggSearch</c>
 ///     -family rate limiters to keep the suite fast and deterministic).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 [Trait("Wave", "3-Phase-1")]

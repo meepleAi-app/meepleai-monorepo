@@ -31,7 +31,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// authorization, and the append-only diary history via <c>score_updated</c>
 /// <see cref="SessionEventEntity"/> rows.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

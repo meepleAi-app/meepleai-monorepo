@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 /// #535: the dedicated card-suppression email preference command persists the opt-in flag (backend
 /// settability; the FE checkbox is a follow-up).
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserNotifications")]
 public sealed class UpdateCardSuppressionEmailPreferenceHandlerTests : IAsyncLifetime

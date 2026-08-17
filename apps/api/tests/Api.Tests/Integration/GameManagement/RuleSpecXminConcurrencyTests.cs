@@ -30,7 +30,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// (come nel resto del lotto) e il <b>contratto</b> — un ETag che esiste davvero.
 /// </para>
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "GameManagement")]

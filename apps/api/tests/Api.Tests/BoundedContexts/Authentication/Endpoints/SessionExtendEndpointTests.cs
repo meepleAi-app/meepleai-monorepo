@@ -28,7 +28,7 @@ namespace Api.Tests.BoundedContexts.Authentication.Endpoints;
 /// These tests exercise the full HTTP stack so a regression to the broken
 /// inline hash would fail the suite.
 /// </summary>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Authentication")]
 public sealed class SessionExtendEndpointTests : IAsyncLifetime

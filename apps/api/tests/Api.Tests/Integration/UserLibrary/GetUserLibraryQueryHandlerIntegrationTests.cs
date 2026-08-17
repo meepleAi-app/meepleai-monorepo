@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 public class GetUserLibraryQueryHandlerIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

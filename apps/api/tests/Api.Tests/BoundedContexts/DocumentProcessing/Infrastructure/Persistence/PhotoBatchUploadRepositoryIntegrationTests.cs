@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Persistenc
 /// neither is faithfully reproducible by EF Core InMemory, which silently returns the wrong
 /// result for array containment checks.
 /// </remarks>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 public sealed class PhotoBatchUploadRepositoryIntegrationTests : IAsyncLifetime

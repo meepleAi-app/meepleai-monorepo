@@ -18,7 +18,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 /// Verifies 401 (anonymous), 403 (editor), and 200 (superadmin) scenarios.
 /// Issue #1655 — F3-FU-6 KbSubNav count badges.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1655")]

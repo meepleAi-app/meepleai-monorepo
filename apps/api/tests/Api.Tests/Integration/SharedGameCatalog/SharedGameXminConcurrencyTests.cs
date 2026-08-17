@@ -25,7 +25,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// scheda gioco e salvano modifiche a campi diversi. Senza token la seconda scrittura sovrascrive
 /// la prima in silenzio (last-write-wins), e chi ha salvato per primo non ha modo di accorgersene.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

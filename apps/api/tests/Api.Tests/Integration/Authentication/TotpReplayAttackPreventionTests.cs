@@ -38,7 +38,7 @@ namespace Api.Tests.Integration.Authentication;
 ///
 /// Pattern: AAA (Arrange-Act-Assert), SharedTestcontainersFixture (Issue #2031)
 /// </remarks>
-[Collection("Integration-GroupB")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Category", TestCategories.Security)]
 [Trait("Dependency", "PostgreSQL")]

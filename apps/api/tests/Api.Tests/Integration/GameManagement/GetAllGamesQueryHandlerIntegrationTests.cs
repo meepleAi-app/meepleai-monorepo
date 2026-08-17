@@ -17,7 +17,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// All other handler behaviors remain covered by the Unit test class.
 /// </summary>
 [Trait("Category", TestCategories.Integration)]
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 public class GetAllGamesQueryHandlerIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;

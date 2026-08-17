@@ -35,7 +35,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Application.Commands;
 /// Tests 4 (existing-night attach) and 5 (active-session-in-night conflict) are deferred — they
 /// depend on the PauseSessionCommand that lands in T5.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SessionTracking")]

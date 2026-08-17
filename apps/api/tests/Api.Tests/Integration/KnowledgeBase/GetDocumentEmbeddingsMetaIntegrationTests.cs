@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Exercises full MediatR pipeline including AuditLoggingBehavior — asserts
 /// audit_logs row is written on success (Issue #1674 spec §6 + §7).
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

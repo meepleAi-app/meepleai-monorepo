@@ -26,7 +26,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Issue #1802. Uses Barrier-synchronized parallel tasks for real race conditions
 /// against PostgreSQL Testcontainers.
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

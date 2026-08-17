@@ -38,7 +38,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// leaving EF Core's track-by-default behavior in place (which masks the bug). This suite explicitly
 /// opts into the production NoTracking default.</para>
 /// </summary>
-[Collection("Integration-GroupA")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]

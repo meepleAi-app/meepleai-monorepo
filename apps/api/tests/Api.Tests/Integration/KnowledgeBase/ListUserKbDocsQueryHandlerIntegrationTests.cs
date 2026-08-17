@@ -21,7 +21,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Validates AC1-AC4 + AC6: user-scoping, cross-game listing, pagination,
 /// state filtering (ready/all), and GameName resolution. BE-1 #1588.
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]

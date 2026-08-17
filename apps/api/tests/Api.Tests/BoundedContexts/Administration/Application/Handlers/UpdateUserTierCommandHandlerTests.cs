@@ -24,7 +24,7 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// Verifies that tier changes are actually persisted to the database.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
 /// </summary>
-[Collection("Integration-GroupD")]
+[Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Administration")]

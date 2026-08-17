@@ -32,7 +32,7 @@ namespace Api.Tests.Integration.GameManagement;
 /// <item>due scrittori concorrenti: il secondo deve essere <b>rifiutato</b>.</item>
 /// </list>
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "GameManagement")]

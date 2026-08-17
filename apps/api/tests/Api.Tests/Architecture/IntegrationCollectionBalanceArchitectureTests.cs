@@ -11,7 +11,7 @@ using Xunit;
 namespace Api.Tests.Architecture;
 
 /// <summary>
-/// Issue #3633 — tiene separato l'asse del parallelismo da quello dello sharding.
+/// Issue #3742 — tiene separato l'asse del parallelismo da quello dello sharding.
 ///
 /// <para>
 /// xUnit parallelizza FRA collection e serializza DENTRO una collection. Le quattro

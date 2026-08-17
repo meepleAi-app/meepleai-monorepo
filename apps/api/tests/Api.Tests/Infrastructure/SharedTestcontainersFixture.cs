@@ -53,7 +53,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     private bool _pdfServicesEnabled;
 
     /// <summary>
-    /// Database-modello da cui si clonano i database isolati. Issue #3633.
+    /// Database-modello da cui si clonano i database isolati. Issue #3742.
     /// </summary>
     private const string TemplateDatabaseName = "meepleai_test_template";
 
@@ -722,7 +722,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
 
     /// <summary>
     /// Builds the migrated template database — once per Postgres instance, not once per process —
-    /// that isolated databases can clone via <c>CREATE DATABASE ... TEMPLATE</c>. Issue #3633.
+    /// that isolated databases can clone via <c>CREATE DATABASE ... TEMPLATE</c>. Issue #3742.
     /// </summary>
     private async Task EnsureTemplateDatabaseAsync()
     {
@@ -825,7 +825,7 @@ public sealed class SharedTestcontainersFixture : IAsyncLifetime
     /// <param name="databaseName">Unique database name (e.g., "test_auth_{guid}")</param>
     /// <param name="useTemplate">
     /// Se true, clona il database-modello già migrato invece di creare un database vuoto
-    /// (#3633: 5,1-7,4 s contro 135-159 ms). Passare false solo dove il test deve esercitare le
+    /// (#3742: 5,1-7,4 s contro 135-159 ms). Passare false solo dove il test deve esercitare le
     /// migration reali o assume uno schema vuoto.
     /// </param>
     /// <returns>Connection string for the isolated database</returns>
@@ -1337,7 +1337,7 @@ public class SharedTestcontainersCollectionDefinition : ICollectionFixture<Share
 /// share the same PostgreSQL/Redis. Each test class creates an isolated database
 /// (unique name per class), making parallel execution safe.
 ///
-/// Issue #3633: l'appartenenza NON si sceglie per dominio. Assegnare i gruppi per bounded context
+/// Issue #3742: l'appartenenza NON si sceglie per dominio. Assegnare i gruppi per bounded context
 /// li allineava ai filtri di shard di dev-async.yml, che tagliano sugli stessi nomi: lo shard Games
 /// finiva tutto in GroupC + GroupD, con GroupA e GroupB vuote, e girava su 2 thread invece di 4.
 ///

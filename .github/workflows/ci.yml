@@ -690,7 +690,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # #3633: i token qui sotto sono duplicati come costanti in
+        # #3742: i token qui sotto sono duplicati come costanti in
         # Api.Tests.Architecture.IntegrationCollectionBalanceArchitectureTests, che verifica che
         # ogni shard contenga tutte e 4 le collection xUnit. Se cambi questo elenco, aggiorna anche
         # quello: divergendo, il guard smette di guardare proprio lo shard che hai toccato.

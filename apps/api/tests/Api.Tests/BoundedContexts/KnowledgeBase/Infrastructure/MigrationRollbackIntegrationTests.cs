@@ -43,7 +43,7 @@ public sealed class MigrationRollbackIntegrationTests : IAsyncLifetime
     public async ValueTask InitializeAsync()
     {
         _databaseName = $"test_migration_{Guid.NewGuid():N}";
-        // #3633: NON clonare il modello. Questa classe verifica che le migration si applichino
+        // #3742: NON clonare il modello. Questa classe verifica che le migration si applichino
         // davvero (pending prima, nessuna dopo, tabelle/colonne/indici creati) — sul modello
         // troverebbe tutto già applicato e passerebbe anche con una migration rotta.
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName, useTemplate: false);

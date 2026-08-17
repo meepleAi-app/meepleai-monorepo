@@ -7,7 +7,7 @@ using Xunit;
 namespace Api.Tests.Infrastructure;
 
 /// <summary>
-/// Issue #3633 — pinna il clone da database-modello.
+/// Issue #3742 — pinna il clone da database-modello.
 ///
 /// <para>
 /// Ognuna delle 362 classi di integrazione creava il proprio database e ci applicava tutte le

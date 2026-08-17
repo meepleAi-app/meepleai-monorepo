@@ -120,7 +120,7 @@ jobs:
         # Stessa ripartizione di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
         # asse. Misurati 2950 test totali (esclusioni incluse): 910 / 1123 / 929.
-        # #3633: i token qui sotto sono duplicati come costanti in
+        # #3742: i token qui sotto sono duplicati come costanti in
         # Api.Tests.Architecture.IntegrationCollectionBalanceArchitectureTests, che verifica che
         # ogni shard contenga tutte e 4 le collection xUnit. Se cambi questo elenco, aggiorna anche
         # quello: divergendo, il guard smette di guardare proprio lo shard che hai toccato.
@@ -240,14 +240,14 @@ jobs:
             --blame-hang-timeout 5min \
             2>&1 | tee "integration-${{ matrix.shard.name }}.log"
 
-      # #3632/#3633 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
+      # #3632/#3742 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
       #
       # `Aborting test run: test run timeout` esce già 134 e fa fallire lo step, quindi questo guard
       # non introduce un rosso nuovo: rende distinguibile «la selezione non è stata misurata per
       # intero» da «alcuni test sono falliti». Sono due fatti diversi e finora erano lo stesso colore.
       #
       # `!cancelled()` e non `always()`: su una cancellazione non c'è niente da misurare.
-      - name: 'Guard: la selezione e stata misurata per intero (#3633)'
+      - name: 'Guard: la selezione e stata misurata per intero (#3742)'
         if: ${{ !cancelled() }}
         working-directory: apps/api
         env:

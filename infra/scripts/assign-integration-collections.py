@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Riassegna [Collection("Integration-Group{A..D}")] per hash dell'FQN.
 
-Issue #3633. Le collection erano assegnate per bounded context, cioè sullo stesso asse dei filtri di
+Issue #3742. Le collection erano assegnate per bounded context, cioè sullo stesso asse dei filtri di
 shard di dev-async.yml: ogni shard finiva per contenere solo un paio di gruppi e girava con meno
 thread di quelli concessi. Qui l'assegnazione diventa ortogonale al dominio.
 

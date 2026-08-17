@@ -86,13 +86,15 @@ public sealed class IsolatedDatabaseTemplateTests
             "connettersi' in un invariante imposto dal server");
 
         // Un database ASSENTE solleva 3D000, che soddisfa "lancia PostgresException" tanto quanto
-        // il 57P03 ("is not currently accepting connections") che questo test intende verificare
-        // — asserire solo il tipo lascerebbe passare il fact anche se il modello non esistesse
-        // affatto. Il fact gemello (WithTemplate_...) prova che il modello esiste, quindi la
-        // coppia teneva comunque; questo fact, da solo, ora dice davvero ciò che afferma.
-        thrown.Which.SqlState.Should().Be(PostgresErrorCodes.CannotConnectNow,
-            "il modello deve rifiutare la connessione perché nega le connessioni (57P03), non " +
-            "perché non esiste (3D000)");
+        // il 55000 ("is not currently accepting connections", sollevato da InitPostgres quando
+        // datallowconn=false — NON il 57P03 "cannot_connect_now", che riguarda lo stato del server,
+        // non del singolo database) che questo test intende verificare — asserire solo il tipo
+        // lascerebbe passare il fact anche se il modello non esistesse affatto. Il fact gemello
+        // (WithTemplate_...) prova che il modello esiste, quindi la coppia teneva comunque; questo
+        // fact, da solo, ora dice davvero ciò che afferma.
+        thrown.Which.SqlState.Should().Be(PostgresErrorCodes.ObjectNotInPrerequisiteState,
+            "il modello deve rifiutare la connessione perché nega le connessioni (55000, " +
+            "datallowconn=false), non perché non esiste (3D000)");
     }
 
     private static async Task<bool> TableExistsAsync(string connectionString, string table)

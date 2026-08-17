@@ -25,6 +25,19 @@ namespace Api.Tests.Architecture;
 /// Il commento della fixture dichiarava «~39-42 classi per gruppo» mentre GroupC era arrivata a 157.
 /// La deriva è passata inosservata per mesi perché niente la misurava: un commento non è un guard.
 /// </para>
+/// <para>
+/// Sull'alternativa sanzionata quando due classi devono davvero escludersi a vicenda: la regola
+/// dell'hash non ammette eccezioni, quindi co-locarle nello stesso gruppo per farle serializzare è
+/// vietato dal guard (<see cref="EveryIntegrationClass_IsInTheGroupItsHashDictates"/>). Il caso
+/// concreto è <c>AdminProviderEndpointsIntegrationTests</c> e <c>GameNightTokenRateLimitTests</c>:
+/// entrambe mutano <c>DISABLE_RATE_LIMITING</c> / <c>RateLimiting__Enabled</c> via
+/// <c>Environment.SetEnvironmentVariable</c>, che sono globali di PROCESSO — per la durata del
+/// test il rate limiting è attivo per ogni host costruito ovunque nel processo, e il
+/// salva-e-ripristina è una lost update se le due classi girano insieme. Non correggerle è fuori
+/// scope qui; la via sanzionata per chi deve risolvere un caso simile è un
+/// <see cref="SemaphoreSlim"/> statico condiviso attorno alla mutazione, oppure spostare il flag
+/// nella configurazione per-host invece che nell'ambiente di processo — non co-locare le classi.
+/// </para>
 /// </summary>
 [Trait("Category", "Unit")]
 public sealed class IntegrationCollectionBalanceArchitectureTests
@@ -175,8 +188,21 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
             string.Join(" · ", misplaced.Take(10)));
     }
 
+    /// <summary>
+    /// La banda è volutamente larga (18-32%, non 20-30%): l'aggregato per gruppo non è una
+    /// variabile libera, è funzione di <see cref="GroupFor"/> e dell'insieme delle classi. A
+    /// 20-30% GroupA stava già al 29,46% (109/370) — mezzo punto sotto il tetto — e sarebbero
+    /// bastate quattro classi nuove finite in A per sforare una PR che aveva solo aggiunto due
+    /// test. Il rimedio proporzionato quando questo fallisce NON è spostare a mano un singolo
+    /// file: <see cref="EveryIntegrationClass_IsInTheGroupItsHashDictates"/> lo impedisce, perché
+    /// il gruppo si deriva dall'hash, non si assegna. Un fallimento qui significa rivedere la
+    /// funzione di ripartizione stessa (<see cref="GroupFor"/> in C# *e* la sua copia in
+    /// <c>infra/scripts/assign-integration-collections.py</c>) e rifare lo sweep di ~370 file — la
+    /// banda esiste per rilevare un collasso vero della ripartizione, non per essere inseguita a
+    /// ogni aggiunta di test.
+    /// </summary>
     [Fact]
-    public void Groups_HoldBetween20And30PercentOfTheClasses()
+    public void Groups_HoldBetween18And32PercentOfTheClasses()
     {
         var classes = IntegrationClassesOrFail();
 
@@ -187,16 +213,71 @@ public sealed class IntegrationCollectionBalanceArchitectureTests
                 Share = (double)classes.Count(c => string.Equals(c.Group, g, StringComparison.Ordinal))
                         / classes.Count,
             })
-            .Where(x => x.Share < 0.20 || x.Share > 0.30)
+            .Where(x => x.Share < 0.18 || x.Share > 0.32)
             .Select(x => $"{x.Group}: {x.Share:P1}")
             .ToList();
 
         offBalance.Should().BeEmpty(
-            "con {0} gruppi la quota attesa è il 25%; fuori dalla banda 20-30% il gruppo più " +
-            "grosso torna a essere il collo di bottiglia seriale dello shard che lo contiene. Se " +
-            "questo fallisce dopo un'aggiunta massiccia di test, va rivista la funzione di " +
-            "ripartizione, non il singolo file. Sbilanciati: {1}",
+            "con {0} gruppi la quota attesa è il 25%; fuori dalla banda 18-32% il gruppo più " +
+            "grosso torna a essere il collo di bottiglia seriale dello shard che lo contiene. " +
+            "Spostare un singolo file NON è una via d'uscita — il fact sull'hash lo impedisce — " +
+            "quindi un fallimento qui va rivisto come un collasso della funzione di ripartizione " +
+            "(GroupFor, C# e Python), non inseguito file per file. Sbilanciati: {1}",
             GroupCount,
             string.Join(" · ", offBalance));
+    }
+
+    /// <summary>
+    /// <see cref="EveryShard_SeesAllFourCollectionGroups"/> passerebbe anche con A=1, B=1, C=1,
+    /// D=157: verifica solo che i 4 gruppi siano non vuoti, non quanto pesano. Il wall-clock di
+    /// uno shard è governato dalla catena seriale PIÙ LUNGA fra i suoi gruppi — xUnit parallelizza
+    /// fra collection ma serializza dentro una collection — quindi è il gruppo più numeroso, non
+    /// la loro presenza, a decidere se lo shard sfora il TestSessionTimeout.
+    /// </summary>
+    [Fact]
+    public void EveryShard_LongestChainStaysWithinOneAndAHalfTimesTheIdealShare()
+    {
+        var classes = IntegrationClassesOrFail();
+        var shards = new (string Name, Func<string, bool> Predicate)[]
+        {
+            ("KnowledgeBase", InKnowledgeBaseShard),
+            ("Games", InGamesShard),
+            ("Core", InCoreShard),
+        };
+
+        var overloaded = new List<string>();
+        foreach (var (name, predicate) in shards)
+        {
+            var shardClasses = classes.Where(c => predicate(c.Fqn)).ToList();
+            if (shardClasses.Count == 0)
+            {
+                // EveryShard_SeesAllFourCollectionGroups già segnala uno shard vuoto: qui
+                // dividere per zero non aggiungerebbe segnale, solo un'eccezione fuori posto.
+                continue;
+            }
+
+            var idealShare = shardClasses.Count / (double)GroupCount;
+            var longestChainSize = shardClasses
+                .GroupBy(c => c.Group, StringComparer.Ordinal)
+                .Max(g => g.Count());
+            var ratio = longestChainSize / idealShare;
+
+            if (ratio > 1.5)
+            {
+                overloaded.Add(
+                    $"{name}: catena più lunga {longestChainSize}/{shardClasses.Count} " +
+                    $"({ratio:F2}x l'ideale del 25%)");
+            }
+        }
+
+        overloaded.Should().BeEmpty(
+            "la presenza dei {0} gruppi non basta: xUnit serializza DENTRO una collection, quindi " +
+            "il wall-clock di uno shard è governato dalla sua catena seriale più lunga, non dal " +
+            "numero di gruppi non vuoti. Uno shard con A=1,B=1,C=1,D=157 passerebbe " +
+            "EveryShard_SeesAllFourCollectionGroups pur girando in pratica su un thread solo. La " +
+            "soglia è 1,5x la quota ideale del 25% (cioè 37,5%): oggi Core è il caso più vicino al " +
+            "limite, a 1,39x. Fuori soglia: {1}",
+            GroupCount,
+            string.Join(" · ", overloaded));
     }
 }

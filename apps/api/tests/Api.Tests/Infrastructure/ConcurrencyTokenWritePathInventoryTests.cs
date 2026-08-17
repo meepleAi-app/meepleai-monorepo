@@ -96,6 +96,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["ProposalMigrationEntity"] = (WritePathTechnique.TokenRoundTrip, "ProposalMigrationRepository:117 — Xmin nel mapper; UpdateAsync ha un ramo detached a :97 (#3651 lotto 7)"),
             ["GameSessionStateEntity"] = (WritePathTechnique.TokenRoundTrip, "GameSessionStateRepository:145 — detach del tracked + Update() su detached, token nel mapper (#3651 lotto 10)"),
             ["SessionEntity"] = (WritePathTechnique.TokenRoundTrip, "SessionMapper:37/:74 — il round-trip esisteva già, cambia solo il tipo del token (#3651 lotto 10)"),
+            ["RuleSpecEntity"] = (WritePathTechnique.TrackedMutation, "UpdateRuleSpecCommandHandler — nuove versioni sono INSERT; gli update passano da entità tracciata. Il token esce come ETag (#2055 → #3651)"),
             ["ShareRequestEntity"] = (WritePathTechnique.TokenRoundTrip, "ShareRequestRepository:259 (#3698)"),
             ["SharedGameTranslationEntity"] = (WritePathTechnique.TokenRoundTrip, "SharedGameTranslationRepository:54-58 — Attach + Modified con il token nell'entità"),
             ["UserLibraryEntryEntity"] = (WritePathTechnique.TokenRoundTrip, "UserLibraryRepository:600 — Xmin = domainEntity.Xmin nel mapper; UpdateAsync persiste un grafo detached (#3651 lotto 6)"),
@@ -126,10 +127,16 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
     /// il write-path sposta dal guasto di #3651 a quello di #3688.
     /// </para>
     /// </summary>
+    /// <remarks>
+    /// <b>Vuota dal 2026-08-17</b>: #3651 ha convertito tutte e undici le entità. Il test resta
+    /// perché il suo valore non è la lista ma il divieto — una nuova entità con token <c>byte[]</c>
+    /// fallisce <see cref="EveryByteaTokenIsAccountedForAsPendingConversion"/> invece di entrare
+    /// nel modello con una protezione inerte, che è il modo in cui questo difetto si è propagato
+    /// per copia undici volte.
+    /// </remarks>
     private static readonly IReadOnlySet<string> PendingByteaConversions =
         new HashSet<string>(StringComparer.Ordinal)
         {
-            "RuleSpecEntity",
         };
 
     private static MeepleAiDbContext CreateModelOnlyContext()

@@ -23,9 +23,18 @@ public class RuleSpecEntity
     public Guid? ParentVersionId { get; set; }
     public string? MergedFromVersionIds { get; set; } // Comma-separated GUIDs
 
-    // Issue #2055: Optimistic concurrency control for collaborative editing
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// Concurrency token (#2055 per l'editing collaborativo, convertito a <c>xmin</c> da #3651).
+    ///
+    /// <para>
+    /// Esce dal boundary HTTP come <c>ETag</c> in <c>RuleSpecDto</c>/<c>GameDto</c>, e i client lo
+    /// rimandano in <c>UpdateRuleSpecCommand.ExpectedETag</c>. Prima era <c>[Timestamp] byte[]?</c>
+    /// su una colonna <c>bytea</c> che Postgres non popola: l'ETag esposto era <b>sempre null</b> e
+    /// il confronto lato server era racchiuso in una guardia <c>RowVersion != null</c> mai vera —
+    /// l'editing collaborativo non ha quindi mai rilevato un conflitto.
+    /// </para>
+    /// </summary>
+    public uint Xmin { get; set; }
 
     public SharedGameEntity Game { get; set; } = default!;
     public UserEntity? CreatedBy { get; set; }

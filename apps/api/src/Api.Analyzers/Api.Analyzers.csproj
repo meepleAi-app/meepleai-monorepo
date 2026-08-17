@@ -31,7 +31,7 @@
       so future .NET SDK upgrades surface incompatibilities via build errors
       rather than silent ABI drift. Update only when the .NET SDK version bumps.
     -->
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

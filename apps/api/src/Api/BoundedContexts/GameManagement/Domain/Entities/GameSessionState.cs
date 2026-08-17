@@ -18,6 +18,18 @@ internal sealed class GameSessionState : AggregateRoot<Guid>
     public DateTime LastUpdatedAt { get; private set; }
     public string LastUpdatedBy { get; private set; }
 
+    /// <summary>
+    /// Concurrency token letto dalla riga (#3651, ADR-060). Distinto da <see cref="Version"/>, che
+    /// è un contatore applicativo: questo è il token di sistema che il database aggiorna a ogni
+    /// scrittura. L'aggregato lo trasporta perché <c>GameSessionStateRepository.UpdateAsync</c>
+    /// stacca l'entità tracciata e riattacca un grafo <b>detached</b>: senza round-trip la WHERE
+    /// conterrebbe <c>xmin = 0</c> e ogni scrittura fallirebbe (#3688).
+    /// </summary>
+    public uint Xmin { get; private set; }
+
+    /// <summary>Carica il token letto. Chiamato solo dal mapper del repository.</summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
+
     private readonly List<GameStateSnapshot> _snapshots = new();
     public IReadOnlyList<GameStateSnapshot> Snapshots => _snapshots.AsReadOnly();
 

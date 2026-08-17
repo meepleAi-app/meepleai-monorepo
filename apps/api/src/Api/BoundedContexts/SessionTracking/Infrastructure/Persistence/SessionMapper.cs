@@ -34,7 +34,8 @@ internal static class SessionMapper
             UpdatedAt = domain.UpdatedAt,
             CreatedBy = domain.CreatedBy,
             UpdatedBy = domain.UpdatedBy,
-            RowVersion = domain.RowVersion,
+            // #3651/#3688: round-trip del token, il mapper lo portava già — cambia solo il tipo.
+            Xmin = domain.Xmin,
             InviteToken = domain.InviteToken,
             InviteExpiresAt = domain.InviteExpiresAt,
             TurnOrderJson = domain.TurnOrderJson,
@@ -71,7 +72,7 @@ internal static class SessionMapper
         typeof(Session).GetProperty(nameof(Session.UpdatedAt))!.SetValue(session, entity.UpdatedAt);
         typeof(Session).GetProperty(nameof(Session.CreatedBy))!.SetValue(session, entity.CreatedBy);
         typeof(Session).GetProperty(nameof(Session.UpdatedBy))!.SetValue(session, entity.UpdatedBy);
-        typeof(Session).GetProperty(nameof(Session.RowVersion))!.SetValue(session, entity.RowVersion);
+        typeof(Session).GetProperty(nameof(Session.Xmin))!.SetValue(session, entity.Xmin);
         typeof(Session).GetProperty(nameof(Session.InviteToken))!.SetValue(session, entity.InviteToken);
         typeof(Session).GetProperty(nameof(Session.InviteExpiresAt))!.SetValue(session, entity.InviteExpiresAt);
         typeof(Session).GetProperty(nameof(Session.TurnOrderJson))!.SetValue(session, entity.TurnOrderJson);

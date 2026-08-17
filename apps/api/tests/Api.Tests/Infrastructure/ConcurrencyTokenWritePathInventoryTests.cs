@@ -94,6 +94,8 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["PhotoBatchUpload"] = (WritePathTechnique.TokenRoundTrip, "PhotoBatchUploadRepository:75 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token (#3651 lotto 8)"),
             ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:338 — «round-trip for detached Update (ADR-060)»"),
             ["ProposalMigrationEntity"] = (WritePathTechnique.TokenRoundTrip, "ProposalMigrationRepository:117 — Xmin nel mapper; UpdateAsync ha un ramo detached a :97 (#3651 lotto 7)"),
+            ["GameSessionStateEntity"] = (WritePathTechnique.TokenRoundTrip, "GameSessionStateRepository:145 — detach del tracked + Update() su detached, token nel mapper (#3651 lotto 10)"),
+            ["SessionEntity"] = (WritePathTechnique.TokenRoundTrip, "SessionMapper:37/:74 — il round-trip esisteva già, cambia solo il tipo del token (#3651 lotto 10)"),
             ["ShareRequestEntity"] = (WritePathTechnique.TokenRoundTrip, "ShareRequestRepository:259 (#3698)"),
             ["SharedGameTranslationEntity"] = (WritePathTechnique.TokenRoundTrip, "SharedGameTranslationRepository:54-58 — Attach + Modified con il token nell'entità"),
             ["UserLibraryEntryEntity"] = (WritePathTechnique.TokenRoundTrip, "UserLibraryRepository:600 — Xmin = domainEntity.Xmin nel mapper; UpdateAsync persiste un grafo detached (#3651 lotto 6)"),
@@ -127,9 +129,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
     private static readonly IReadOnlySet<string> PendingByteaConversions =
         new HashSet<string>(StringComparer.Ordinal)
         {
-            "GameSessionStateEntity",
             "RuleSpecEntity",
-            "SessionEntity",
         };
 
     private static MeepleAiDbContext CreateModelOnlyContext()

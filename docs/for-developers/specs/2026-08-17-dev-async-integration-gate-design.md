@@ -79,6 +79,17 @@ ripartizione era comunque derivata da sola, senza che niente la misurasse.
 > contano anche le durate per-classe. Quantificare il guadagno richiede le durate del `.trx` — che
 > `dev-async` oggi **non pubblica**. Questa è la ragione dell'ordine delle PR.
 
+> **Proiezione per shard — Core.** I numeri sopra sono di Games; Core è lo shard col margine più
+> sottile (§1: ~84 min stimati contro un budget di 75) e merita la propria proiezione. La
+> riassegnazione ortogonale porta la sua catena più lunga dal 42% (distribuzione per bounded
+> context) al 34,7% dello shard (distribuzione per hash) — fattore ~1,21 — quindi ~84 min → ~69. Il
+> template database (C2) toglie altri ~3 min di schema dalla catena critica: **~69 → ~66 min contro
+> un budget di 75**, circa il 12% di margine. Non è un margine comodo quanto sembra sulla carta:
+> quattro catene realmente parallele su un runner GitHub condiviso — contro le una-o-due che
+> giravano prima della riassegnazione, con GroupA/GroupB quasi vuote — competono per la stessa CPU,
+> quindi il tempo per-classe sotto carico reale sale rispetto a quello osservato con meno thread
+> attivi. Il margine è quindi più sottile della sola aritmetica.
+
 ### C2 — ogni classe ricostruisce lo schema da zero
 
 `CreateIsolatedDatabaseAsync` crea un database per classe di test; la classe poi chiama
@@ -218,12 +229,17 @@ attribuisce: confronto per-test, non per-colore.
 - Il `MigrateAsync()` già presente nei test diventa un no-op: la history table viene copiata insieme
   allo schema. **Zero modifiche ai 362 file di test.**
 - **Opt-out** per le classi che assumono uno schema vuoto: `CreateIsolatedDatabaseAsync(name,
-  useTemplate: true)` con `false` dove serve. `DatabaseMetricsQueryTests` lo dichiara
-  esplicitamente in un commento. Vanno **enumerate una per una**, non stimate: il grep iniziale ne
-  segnala ~10 candidate, ma alcune migrano indirettamente via `WebApplicationFactory`.
-- 🔴 **I canary restano sul percorso vero.** `MeepleAiDbContextNpgsqlCanaryTests` e
-  `MigrationSeedInventoryIntegrationTests` devono continuare a migrare da zero, altrimenti una
-  migration rotta smette di essere intercettata. È un requisito di correttezza.
+  useTemplate: true)` con `false` dove serve. Vanno **enumerate una per una**, non stimate: il grep
+  iniziale ne segnala ~10 candidate, ma alcune migrano indirettamente via `WebApplicationFactory`.
+  (`DatabaseMetricsQueryTests` NON è fra queste: continua a chiamare `MigrateAsync()` per
+  documentazione, ma è un no-op sul clone — il suo commento lo dichiara esplicitamente invece di
+  affermare, come faceva prima, che lo schema arriva vuoto.)
+- 🔴 **I canary restano sul percorso vero.** `MigrationSeedInventoryIntegrationTests`,
+  `MigrationRollbackIntegrationTests` e `AuditSchemaMigrationTests` passano `useTemplate: false` e
+  continuano a migrare da zero, altrimenti una migration rotta smette di essere intercettata. È un
+  requisito di correttezza. (`MeepleAiDbContextNpgsqlCanaryTests`, nonostante il nome, non è in
+  questo elenco: non usa `SharedTestcontainersFixture` — costruisce il proprio container Postgres
+  via Testcontainers direttamente — quindi l'opt-out del modello non lo riguarda.)
 - `CREATE DATABASE … TEMPLATE` prende un lock sul database sorgente, quindi le copie si serializzano
   fra loro: 362 × 0,14 s ≈ 51 s per suite. Accettabile.
 
@@ -272,6 +288,6 @@ volo non viene falciata. Il workaround resta valido come ripiego.
 
 ## 6. Tracciamento
 
-Issue nuova per questo lavoro. **#3633 resta al triage dei fallimenti**: quella issue separa già i
-due problemi («Due problemi distinti, da non confondere») e sovrapporli riporterebbe la confusione
-che si è presa la briga di evitare.
+Issue nuova per questo lavoro: **#3742**. **#3633 resta al triage dei fallimenti**: quella issue
+separa già i due problemi («Due problemi distinti, da non confondere») e sovrapporli riporterebbe
+la confusione che si è presa la briga di evitare.

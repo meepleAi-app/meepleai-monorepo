@@ -1,4 +1,4 @@
-using Api.Services;
+
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProviders;
@@ -54,23 +54,6 @@ internal interface IEmbeddingProvider
         string language,
         CancellationToken cancellationToken = default)
         => GenerateBatchEmbeddingsAsync(texts, cancellationToken); // default: ignores language
-
-    /// <summary>
-    /// Generate embeddings declaring which side of the retrieval pair the texts are (#3737).
-    /// </summary>
-    /// <remarks>
-    /// The default ignores <paramref name="purpose"/>, and that is correct for most providers:
-    /// only a model trained with an asymmetric instruction prefix (the <c>multilingual-e5</c>
-    /// family, served by <c>HttpEmbeddingProvider</c>) encodes the two sides differently.
-    /// OpenRouter / Ollama / HuggingFace models here take the text as-is, so a provider that
-    /// does not override this is not silently wrong — it has nothing to distinguish.
-    /// </remarks>
-    Task<EmbeddingProviderResult> GenerateBatchEmbeddingsAsync(
-        IReadOnlyList<string> texts,
-        string language,
-        EmbeddingPurpose purpose,
-        CancellationToken cancellationToken = default)
-        => GenerateBatchEmbeddingsAsync(texts, language, cancellationToken);
 
     /// <summary>
     /// Check if the provider is healthy and available

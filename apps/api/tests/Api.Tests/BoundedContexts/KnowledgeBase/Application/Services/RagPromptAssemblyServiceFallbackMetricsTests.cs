@@ -355,7 +355,7 @@ public class RagPromptAssemblyServiceFallbackMetricsTests
     private void SetupSuccessfulEmbedding()
     {
         _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess([TestEmbedding]));
     }
 

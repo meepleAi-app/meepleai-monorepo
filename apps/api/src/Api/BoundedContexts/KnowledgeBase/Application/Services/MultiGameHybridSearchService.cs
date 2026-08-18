@@ -18,8 +18,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///    games (EC-2 / EC-7 resilience: a game with no indexed content should not abort the whole search).
 /// 4. Per-game already-fused results are tagged with their origin gameId and aggregated.
 /// 5. Apply minScore filter (sul punteggio per-gioco: è una soglia di rilevanza locale).
-/// 6. <b>Rifondere globalmente</b> su segnali confrontabili fra giochi (#3735), dopo aver corretto
-///    la cosine per l'offset di <b>lingua</b> del chunk (#3740).
+/// 6. <b>Rifondere con RRF GLOBALE</b> su ranking costruiti sull'insieme aggregato (#3735).
 /// 7. Sort by HybridScore DESC + tiebreak deterministici (EC-4 stable ordering).
 /// 8. Take the requested limit (hard cap, EC-7).
 ///
@@ -223,18 +222,6 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     /// sul massimo dell'insieme aggregato prima di entrare nella somma. Un chunk privo di un
     /// segnale contribuisce 0 da quel lato, senza essere penalizzato due volte.
     /// </para>
-    /// <para>
-    /// <b>La cosine viene prima corretta per lingua</b> (#3740). «Confrontabile fra giochi» non
-    /// implica «confrontabile fra lingue»: il corpus è mixed-language (51.505 chunk <c>en</c> /
-    /// 4.332 <c>it</c> / 530 <c>de</c>, benché il manifest dichiari <c>language: en</c> per ogni
-    /// gioco), e nello spazio di <c>multilingual-e5</c> la lingua del testo è una componente
-    /// dominante. Misurato: per la query italiana <c>catan-setup-it</c> i primi dieci vicini sono
-    /// dieci chunk italiani di giochi diversi da Catan, mentre il miglior chunk di Catan —
-    /// l'unico manuale che la query nomina, e che esiste solo in inglese — sta al rango 132.
-    /// Restringendo l'ordinamento a <c>lang='en'</c> quello stesso chunk risale al <b>rango 1</b>.
-    /// <see cref="BuildLanguageOffsets"/> toglie quello scostamento; è un no-op quando i candidati
-    /// sono tutti della stessa lingua, cioè nel caso normale.
-    /// </para>
     /// </summary>
     private static List<MultiGameSearchResultItem> FuseGlobally(List<MultiGameSearchResultItem> aggregated)
     {
@@ -253,22 +240,14 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         //
         // Portando entrambi i segnali su [0,1] rispetto ai candidati effettivi, i pesi tornano a
         // significare ciò che dichiarano.
-        // #3740: prima della normalizzazione, togli l'offset di LINGUA dalla cosine.
-        var languageOffsets = BuildLanguageOffsets(aggregated);
-        var adjustedVector = new float?[aggregated.Count];
-        for (var i = 0; i < aggregated.Count; i++)
-        {
-            adjustedVector[i] = AdjustForLanguage(aggregated[i], languageOffsets);
-        }
-
-        var (vectorMin, vectorMax) = Extent(adjustedVector);
+        var (vectorMin, vectorMax) = Extent(aggregated, r => r.VectorScore);
         var (keywordMin, keywordMax) = Extent(aggregated, r => r.KeywordScore);
 
         var rescored = aggregated
-            .Select((r, i) => r with
+            .Select(r => r with
             {
                 HybridScore =
-                    (GlobalVectorWeight * Normalise(adjustedVector[i], vectorMin, vectorMax)) +
+                    (GlobalVectorWeight * Normalise(r.VectorScore, vectorMin, vectorMax)) +
                     (GlobalKeywordWeight * Normalise(r.KeywordScore, keywordMin, keywordMax))
             })
             .ToList();
@@ -297,83 +276,6 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     }
 
     /// <summary>
-    /// Numero minimo di candidati che una lingua deve avere perché la sua media sia usata come
-    /// stima dell'offset (#3740). Sotto questa soglia lo shift NON viene applicato.
-    /// </summary>
-    /// <remarks>
-    /// Non è un parametro tarato, è una guardia contro una stima priva di significato. Con un solo
-    /// candidato la "media del gruppo" è quel candidato, quindi lo shift lo porterebbe esattamente
-    /// sulla media globale — cioè promuoverebbe un chunk qualunque, e più il suo cosine è basso più
-    /// lo promuoverebbe. È la ragione per cui questo fix **non** normalizza min-max per gruppo, che
-    /// nel caso singleton darebbe 1.0 (il massimo) a quel chunk.
-    /// </remarks>
-    private const int MinLanguageGroupSize = 5;
-
-    /// <summary>
-    /// Offset per lingua della cosine, come scostamento della media del gruppo dalla media globale (#3740).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Misurato su staging: nello spazio di <c>multilingual-e5</c> la lingua del testo è una componente
-    /// dominante, quindi su un corpus mixed-language (51.505 chunk <c>en</c> / 4.332 <c>it</c> /
-    /// 530 <c>de</c>) una query italiana ha per vicini i chunk <b>italiani di qualunque gioco</b>:
-    /// l'intera banda IT sta più in alto di quella EN, uniformemente e senza rapporto con la pertinenza.
-    /// Togliere quello scostamento rende confrontabile la pertinenza <i>dentro</i> ciascuna lingua.
-    /// </para>
-    /// <para>
-    /// La stima usa la <b>media</b> del gruppo e non il massimo: il massimo è deciso da un solo
-    /// elemento, la media no. E resta un vincolo importante: quando i candidati sono tutti della
-    /// stessa lingua — il caso normale — la media del gruppo <b>è</b> la media globale, l'offset è
-    /// esattamente 0 e questa funzione è un no-op. Non può quindi far regredire il caso monolingua.
-    /// </para>
-    /// </remarks>
-    private static Dictionary<string, float> BuildLanguageOffsets(List<MultiGameSearchResultItem> aggregated)
-    {
-        var offsets = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
-
-        var withVector = aggregated.Where(r => r.VectorScore.HasValue).ToList();
-        if (withVector.Count == 0)
-            return offsets;
-
-        var globalMean = withVector.Average(r => r.VectorScore!.Value);
-
-        foreach (var group in withVector.GroupBy(LanguageKeyOf, StringComparer.OrdinalIgnoreCase))
-        {
-            var members = group.ToList();
-            if (members.Count < MinLanguageGroupSize)
-                continue;
-
-            offsets[group.Key] = members.Average(r => r.VectorScore!.Value) - globalMean;
-        }
-
-        return offsets;
-    }
-
-    /// <summary>
-    /// Chiave di raggruppamento per lingua. Un candidato senza lingua — un hit del solo braccio
-    /// lessicale, che legge <c>text_chunks</c> e non ha la colonna — finisce in un gruppo proprio,
-    /// non in quello inglese: attribuirgli una lingua che non conosciamo sposterebbe la sua cosine
-    /// (che tra l'altro non ha) su una stima non sua.
-    /// </summary>
-    private static string LanguageKeyOf(MultiGameSearchResultItem item) =>
-        string.IsNullOrWhiteSpace(item.Language) ? "?" : item.Language;
-
-    /// <summary>
-    /// Cosine del candidato al netto dell'offset della sua lingua (#3740). Invariata quando la sua
-    /// lingua non ha un offset stimabile, o quando il candidato non ha una cosine.
-    /// </summary>
-    private static float? AdjustForLanguage(
-        MultiGameSearchResultItem item, Dictionary<string, float> offsets)
-    {
-        if (item.VectorScore is not { } cosine)
-            return null;
-
-        return offsets.TryGetValue(LanguageKeyOf(item), out var offset)
-            ? cosine - offset
-            : cosine;
-    }
-
-    /// <summary>
     /// Estremi di un segnale sui candidati che lo possiedono. <c>(0,0)</c> quando nessuno ce l'ha —
     /// il segnale è assente e <see cref="Normalise"/> lo neutralizza.
     /// </summary>
@@ -381,15 +283,6 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         List<MultiGameSearchResultItem> items, Func<MultiGameSearchResultItem, float?> selector)
     {
         var present = items.Select(selector).Where(v => v.HasValue).Select(v => v!.Value).ToList();
-        return present.Count == 0 ? (0f, 0f) : (present.Min(), present.Max());
-    }
-
-    /// <summary>
-    /// Estremi di una serie di valori già calcolati (la cosine corretta per lingua, #3740).
-    /// </summary>
-    private static (float Min, float Max) Extent(IReadOnlyList<float?> values)
-    {
-        var present = values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
         return present.Count == 0 ? (0f, 0f) : (present.Min(), present.Max());
     }
 
@@ -424,7 +317,6 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             VectorScore = r.VectorScore,
             KeywordScore = r.KeywordScore,
             MatchedTerms = r.MatchedTerms,
-            Mode = r.Mode,
-            Language = r.Language
+            Mode = r.Mode
         };
 }

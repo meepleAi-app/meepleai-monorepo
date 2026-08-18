@@ -2,9 +2,28 @@
 
 **Data**: 2026-08-17 · **Issue**: [#3737](https://github.com/meepleAi-app/meepleai-monorepo/issues/3737) (prefisso e5), [#3740](https://github.com/meepleAi-app/meepleai-monorepo/issues/3740) (`catan-setup-it`) · **Corpus**: staging, 56.367 chunk / 127 manuali, `intfloat/multilingual-e5-base` (768d, L2-normalizzati)
 
+## 🔴 Esito: entrambe le correzioni sono state revertite (2026-08-18)
+
+**Leggi questo prima del resto.** Le misure qui sotto sono corrette per ciò che misurano, ma **non predicono il gate**, e due correzioni costruite su di esse sono state revertite dopo che il gate le ha bocciate.
+
+| stato di `main-dev` | gioco atteso nei top-3 |
+|---|---|
+| pre-fix (`f55753cb5`) | **10/11** |
+| `#3737` — prefisso `query:` (PR #3741) | **8/11** |
+| `#3737 + #3740` — offset di lingua (PR #3743) | 8/11 — *identico*, byte per byte |
+| `#3737 + #3740 +` ri-taratura della fusione | **5/11** |
+
+Tre conclusioni, tutte contrarie a quanto questo documento sosteneva:
+
+1. **Il corpus del gate non è quello misurato qui.** Le misure vengono da **staging**; il gate consuma lo **snapshot pubblicato**, baked con un estrattore diverso. La prova non è un'inferenza: la correzione per lingua di #3740 ha prodotto un output **byte-identico su tutte le 11 query**, il che è possibile solo se in quello snapshot la colonna `lang` è di fatto uniforme. Il § *«la causa vera: clustering linguistico»* descrive quindi **staging**, non il corpus su cui gira il gate.
+2. **#3737 è teoricamente corretto e empiricamente dannoso** su quel corpus: −2 query. Codificare una domanda come passaggio resta sbagliato per il model card di e5, ma il 10/11 precedente dipendeva anche da quella codifica.
+3. **`absent = 0` in `FuseGlobally` è load-bearing.** Sembrava un artefatto («0 significa rilevanza minima dove il dato è ignoto») e invece rende la fusione **congiuntiva**: per stare in cima serve evidenza da *entrambi* i bracci. Toglierlo — con pesi simmetrici — ha portato 8/11 → 5/11, riempiendo i top-3 di manuali scorrelati. Il commento di #3735 aveva ragione per un motivo che non dichiarava.
+
+**Cosa serve prima di riprovare**: non un'altra ipotesi sui pesi, ma **strumentazione**. Finché il gate non emette l'aggregato per-candidato (`VectorScore`, `KeywordScore`, `lang`, documento) come artifact, ogni taratura è una scommessa da ~45 minuti — e tre scommesse su tre sono andate al ribasso.
+
 ## Perché questo documento
 
-#3740 chiede esplicitamente di **misurare prima di ipotizzare**, e nomina tre piste. Questo audit le risolve con i numeri, e nel farlo ridimensiona #3737 al rialzo: l'effetto del prefisso è molto più grande della stima nella issue, ma **non** è la causa di #3740.
+#3740 chiede esplicitamente di **misurare prima di ipotizzare**, e nomina tre piste. Questo audit le risolve con i numeri — sul corpus di staging. La parte che regge è l'analisi delle tre piste; la parte che **non** regge è la generalizzazione al corpus del gate, ed è l'errore da cui è nato tutto il resto.
 
 ## Metodo
 
@@ -33,9 +52,11 @@ La stima nella issue — «+0.018 di similarità, **non cambia l'ordine**» — 
 
 Lo stesso vale per `seven-wonders-military-it`: con `passage:` i primi due sono iss-vanguard e voidfall e 7 Wonders arriva al rango 9; con `query:` **tutti e dieci** i primi risultati sono `7-wonders_rulebook.pdf`.
 
-**Conclusione**: #3737 è un difetto reale e sottostimato. Corretto in PR [#3741](https://github.com/meepleAi-app/meepleai-monorepo/pull/3741).
+**Conclusione (rivista)**: #3737 è un difetto reale, e su **questo** corpus il prefisso corretto migliora nettamente il braccio vettoriale. Corretto in PR [#3741](https://github.com/meepleAi-app/meepleai-monorepo/pull/3741) e poi **revertito**: sul corpus del gate la stessa correzione porta 10/11 → 8/11. Le due affermazioni non sono in contraddizione — misurano corpora diversi, e la seconda è quella che conta perché è la pipeline completa.
 
 ### Effetto collaterale misurato: la cache semantica delle risposte
+
+> Vale **se e quando** il prefisso corretto verrà reintrodotto: con il revert non è più in gioco. Resta qui perché è misurato e servirà a chi riprova.
 
 `SemanticResponseCache` (Redis, TTL 24 h) è una cache **query↔query**: confronta il vettore della domanda nuova con quelli delle domande già viste e serve la risposta se la cosine è `>= 0.95`. Cambiare il prefisso delle query cambia quel vettore, quindi le voci scritte prima del fix non combaciano più con le domande di dopo.
 
@@ -50,7 +71,7 @@ Quanto: `cos(passage: X, query: X)` sulla **stessa** domanda sta a cavallo della
 
 Quindi il degrado è **parziale e transitorio**: la maggior parte delle voci pre-fix diventa irraggiungibile, alcune restano raggiungibili — e un hit resta *corretto*, perché è la stessa domanda. Si esaurisce con il TTL di 24 ore, senza intervento e senza risposte errate. Non serve invalidare la cache a mano; se si volesse comunque, `InvalidateGameAsync` esiste.
 
-⚠️ Nota per chi collegherà `CacheSemanticPlugin` al servizio reale (oggi è uno stub hash-based, `// Simulate embedding generation`): è anch'essa una cache query↔query, quindi **entrambe le sponde del confronto devono usare lo stesso prefisso**. Con `EmbeddingPurpose.Query` su entrambe è coerente per costruzione.
+⚠️ Nota per chi collegherà `CacheSemanticPlugin` al servizio reale (oggi è uno stub hash-based, `// Simulate embedding generation`): è anch'essa una cache query↔query, quindi **entrambe le sponde del confronto devono usare lo stesso prefisso**.
 
 ## Risultato 2 — le tre piste di #3740
 
@@ -107,38 +128,39 @@ Il clustering linguistico è dimostrato **sul braccio vettoriale**, e questo non
 
 Cioè: per `catan-setup-it` concorrono almeno **due** difetti indipendenti oltre al prefisso — il cluster linguistico sul vettoriale e un braccio lessicale che su una query fuori-lingua matcha rumore. Nessuno dei due è stato quantificato sulla pipeline completa qui, e per farlo onestamente serve il gate, non questo metodo. È la ragione per cui questo audit **non** propone di chiudere #3740: la sua prima voce di DoD («è stabilito quale pista regge, con il dato che la sostiene») è soddisfatta, le altre no.
 
-## Cosa resta aperto
+## Cosa è stato provato, e come è finito
 
-#3737 rimuove una delle due cause. La seconda — il clustering linguistico su corpus mixed-language — è un cambiamento di ranking e va misurato sulla pipeline completa, non sul solo braccio vettoriale: va quindi verificato con il gate RAG smoke, non con questo metodo. Direzioni candidate, in ordine di invasività:
+Tre configurazioni misurate col gate, tutte al ribasso. Le riporto per intero perché il valore residuo di questo lavoro è sapere **cosa non funziona e perché**.
 
-1. ✅ **Normalizzare il segnale vettoriale per lingua** in `FuseGlobally` — **implementato**, vedi § *La correzione applicata*.
-2. **Correggere il metadato** `language` del manifest per i 13 manuali non inglesi. Non risolve il ranking da solo, ma oggi qualunque logica che si fidi di quel campo sta leggendo un dato falso.
-3. **Rendere il braccio lessicale consapevole della lingua della query.** Oggi la config FTS viene dal gioco, quindi una domanda italiana viene stemmata all'inglese e le sue parole inglesi accidentali (`due`, `come`, `in`) diventano segnale. Un match lessicale su una query fuori-lingua vale meno di zero: aggiunge rumore con peso 0.3.
-4. **Accettare e documentare** che una query IT su un gioco che esiste solo in EN non è recuperabile a corpus misto — cioè che `catan-setup-it` resta rosso per costruzione. Va scritto, non subito in silenzio: il gate esiste per non far passare questo caso inosservato.
+### 1. Prefisso `query:` da solo (#3737, PR #3741) — 10/11 → 8/11
 
-## La correzione applicata
+Perdono il manuale nominato `wingspan-round-goals-it` e `dominion-buy-phase-it`; `catan-setup` scende da 2 chunk Catan a 1. Migliora `ark-nova-conservation-it`.
 
-La direzione 1 è implementata in `FuseGlobally`, **non** come min-max per gruppo. Il min-max per gruppo ha un difetto che lo squalifica: un gruppo con un solo candidato ha intervallo degenere, e la `Normalise` esistente per quel caso restituisce `1f` — cioè il massimo. Un singolo chunk in una lingua rara, con cosine 0.50, verrebbe promosso in testa. Sarebbe un difetto nuovo introdotto per curarne uno vecchio.
+Il meccanismo, per come lo si legge nei dati: con il prefisso corretto il vettoriale diventa semanticamente più forte e su una query italiana attrae il **contenuto italiano**, di qualunque gioco. L'unico segnale che conosce il *nome* del gioco è il lessicale, che pesava 0.3.
 
-Applicato invece uno **shift dell'offset di lingua**:
+### 2. Correzione dell'offset di lingua (#3740, PR #3743) — nessun effetto
 
-```
-cosine_corretta(i) = cosine(i) − ( media(gruppo_lingua(i)) − media(tutti) )
-```
+Output **byte-identico** su tutte le 11 query rispetto alla configurazione 1. Con ~380 candidati (top-3 × 127 giochi) un secondo gruppo linguistico da ≥5 membri avrebbe mosso qualcosa: non essendosi mosso niente, in quello snapshot la colonna `lang` è di fatto **uniforme**. La correzione è strutturalmente incapace di agire là, non mal tarata.
 
-con due vincoli deliberati:
+### 3. Ri-taratura della fusione — 8/11 → 5/11
 
-- **la stima usa la media, non il massimo.** Il massimo è deciso da un solo elemento, la media no.
-- **gruppi con meno di 5 candidati non vengono spostati** (`MinLanguageGroupSize`). Non è un parametro tarato: con un solo membro la «media del gruppo» *è* quel membro, quindi lo shift lo porterebbe esattamente sulla media globale — e più bassa è la sua cosine, più lo promuoverebbe.
+Pesi simmetrici `0.5/0.5` **più** rimozione della penalità sul segnale assente (normalizzare sul peso dei segnali presenti). Regrediscono anche query EN prima solide: `catan-setup` va a **zero** chunk Catan, `ark-nova-conservation` da 3/3 a 1/3.
 
-Due proprietà che rendono il cambio difendibile prima del gate:
+La firma è inequivocabile — i top-3 si riempiono di manuali scorrelati (`frostpunk`, `concordia`, `scythe`, `frosthaven`, `mage-knight`, `dune-imperium`): è l'**uncapping degli hit keyword-only**.
 
-1. **È un no-op sul caso monolingua.** Con una sola lingua fra i candidati la media del gruppo *è* la media globale, quindi l'offset è esattamente `0`. Non può far regredire una query su corpus omogeneo — che è la quasi totalità. Pinnato da un test, e confermato dal fatto che i 16 test di #3735 passano invariati.
-2. **L'allineamento fra gruppi spostati non dipende dalla media globale.** `offset_A − offset_B = media_A − media_B`: la media globale si cancella. Quindi un gruppo piccolo e anomalo non può alterare il rapporto fra i gruppi grandi.
+> **La lezione, ed è la cosa più utile qui.** `absent = 0` sembrava un artefatto: contribuire 0 asserisce «rilevanza minima possibile» dove il dato reale è «ignoto». Ma è **load-bearing**: rende la fusione di fatto **congiuntiva** — per stare in cima serve evidenza da *entrambi* i bracci — ed è ciò che tiene giù i match lessicali generici, cioè esattamente il difetto che #3735 aveva misurato. Il commento di #3735 aveva ragione per un motivo che non dichiarava, e la sua reticenza è stata scambiata per una svista.
 
-Il segnale riportato al chiamante resta la **cosine grezza** (`VectorScore`): la correzione vive solo dentro il punteggio di fusione.
+## Perché si è smesso di iterare
 
-⚠️ **Non verificato end-to-end.** I test unit pinnano il meccanismo, non l'esito sul corpus: quello richiede il gate RAG smoke, cioè deploy su staging e un dispatch di `rag-smoke-dispatch.yml`. Finché quel passaggio non è fatto, questa correzione è **un'ipotesi motivata da una misura**, non un risultato. Le direzioni 2–4 restano aperte, e la discrepanza dichiarata sopra suggerisce che la 2 serva comunque.
+Due previsioni sul gate, entrambe smentite: «il prefisso corretto migliora» e «togliere la penalità sull'assenza aiuta». Il ragionamento locale era coerente e i test unit passavano; il gate no. Non esiste, al momento, un modello funzionante di quella pipeline — e ogni ipotesi costa ~45 minuti di CI.
+
+**Quello che manca non è un'altra idea sui pesi, è strumentazione.** Serve che il gate emetta come artifact l'**aggregato per-candidato** prima della fusione: per ogni query, `[documento, VectorScore, KeywordScore, lang, arm]`. Con quel dump la fusione si tara offline in secondi su dati veri, e si risolve anche la domanda rimasta senza risposta — cosa dica davvero la colonna `lang` in quello snapshot.
+
+## Direzioni ancora aperte, non provate
+
+1. **Correggere il metadato `language`** del manifest per i 13 manuali non inglesi (vale su staging; sullo snapshot va prima verificato cosa contenga davvero la colonna).
+2. **Rendere il braccio lessicale consapevole della lingua della query.** Oggi la config FTS viene dal gioco, quindi una domanda italiana viene stemmata all'inglese e le sue parole inglesi accidentali (`due`, `come`, `in`) diventano segnale.
+3. **Accettare e documentare** che una query IT su un gioco che esiste solo in EN non sia recuperabile — cioè che `catan-setup-it` resti rosso per costruzione. Va scritto, non subito in silenzio.
 
 ## Riproducibilità
 

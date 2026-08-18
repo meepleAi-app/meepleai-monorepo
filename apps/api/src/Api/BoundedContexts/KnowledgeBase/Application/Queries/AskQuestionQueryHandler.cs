@@ -219,9 +219,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         {
             try
             {
-                // #3737: retrieval question -> e5 "query:" prefix.
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
-                    query.Question, query.Language, EmbeddingPurpose.Query, cancellationToken).ConfigureAwait(false);
+                    query.Question, query.Language, cancellationToken).ConfigureAwait(false);
                 if (embeddingResult.Success && embeddingResult.Embeddings.Count > 0)
                 {
                     queryVector = embeddingResult.ToFloatArray();

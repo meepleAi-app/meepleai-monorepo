@@ -6,15 +6,7 @@ Tier 3 D8 quality gate of [#2126](https://github.com/meepleAi-app/meepleai-monor
 
 `infra/scripts/rag-smoke-assert.sh` runs the canonical queries in `infra/fixtures/rag-canonical-queries.json` against `POST /api/v1/knowledge-base/ask/global` (SSE) and asserts the **top-3 retrieved chunks** per query match `infra/fixtures/rag-golden-baseline.json`.
 
-The suite covers **EN + IT** (10 queries: 5 EN + 5 IT, added for [#3269](https://github.com/meepleAi-app/meepleai-monorepo/issues/3269)). `multilingual-e5-base` does **cross-lingual retrieval**, so each `-it` query pins the IT→EN retrieval behavior. This is the concrete implementation of the epic [#3266](https://github.com/meepleAi-app/meepleai-monorepo/issues/3266) LOCKED safety-net: *"EN+IT non-regression suite on staging before prod"*. Motivating case: `catan-setup-it` ("Setup per N giocatori" style IT query) must still retrieve the right EN chunks.
-
-### 🔴 Il corpus NON è tutto inglese (#3740)
-
-Questo runbook diceva «the corpus is English rulebooks», ed è falso — misurato su staging: **51.505 chunk `en`, 4.332 `it`, 530 `de`**. Tredici PDF del manifest `dev.yml` sono nativamente in un'altra lingua (root, scacchi-fide, descent, barrage, agricola, pandemic, 7-wonders, azul, terraforming-mars, ticket-to-ride, carcassone, splendor · great-western-trail in tedesco), pur essendo dichiarati `language: en` nel manifest.
-
-Conta perché cambia come si legge un `-it` rosso. Nello spazio di e5 la lingua del testo è una componente dominante, quindi una query italiana ha per vicini i chunk **italiani di qualunque gioco**: un `-it` che recupera il manuale sbagliato può essere clustering linguistico e non una regressione del ranking. La distinzione è misurabile — restringere l'ordinamento cosine a `lang='en'` — e i numeri stanno in [2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md](../audits/2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md).
-
-Regola pratica: prima di trattare un `-it` rosso come drift, controlla se il gioco atteso ha contenuto nella lingua della query. Wingspan e 7 Wonders ce l'hanno; **Catan, Dominion e Ark Nova sono solo in inglese**, ed è la ragione per cui le loro query IT sono le più fragili del set.
+The suite covers **EN + IT** (10 queries: 5 EN + 5 IT, added for [#3269](https://github.com/meepleAi-app/meepleai-monorepo/issues/3269)). The corpus is English rulebooks; `multilingual-e5-base` does **cross-lingual retrieval**, so each `-it` query pins the IT→EN retrieval behavior. This is the concrete implementation of the epic [#3266](https://github.com/meepleAi-app/meepleai-monorepo/issues/3266) LOCKED safety-net: *"EN+IT non-regression suite on staging before prod"*. Motivating case: `catan-setup-it` ("Setup per N giocatori" style IT query) must still retrieve the right EN chunks.
 
 It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by the **document name** (`{document, page}`, baseline v2 — see § *La chiave della baseline*); `page` and `score` are advisory (not asserted, to tolerate chunking shifts and minor embedding/search float drift).
 

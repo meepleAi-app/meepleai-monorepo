@@ -142,7 +142,7 @@ public class StreamExplainQueryHandlerTests
         var query = new StreamExplainQuery("game123", "test topic");
 
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = false,
@@ -171,7 +171,7 @@ public class StreamExplainQueryHandlerTests
         var query = new StreamExplainQuery("game123", "test topic");
 
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -217,7 +217,7 @@ public class StreamExplainQueryHandlerTests
     {
         var embedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,

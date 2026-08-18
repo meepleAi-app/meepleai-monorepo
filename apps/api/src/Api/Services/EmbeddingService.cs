@@ -52,139 +52,11 @@ internal class EmbeddingService : IEmbeddingService
     public string GetModelName() => $"{_primaryProvider.ProviderName.ToLowerInvariant()}/{_primaryProvider.ModelName}";
 
     /// <summary>
-    /// Language sent to the provider when a purpose-aware caller does not specify one. Matches
-    /// what <c>HttpEmbeddingProvider</c> already hard-coded on its no-language path.
+    /// Generate embeddings for a list of text chunks
     /// </summary>
-    private const string DefaultLanguage = "en";
-
-    /// <summary>
-    /// Generate embeddings for a list of text chunks.
-    /// Implies <see cref="EmbeddingPurpose.Passage"/> — see #3737 and the purpose-aware overload.
-    /// </summary>
-    public Task<EmbeddingResult> GenerateEmbeddingsAsync(
+    public async Task<EmbeddingResult> GenerateEmbeddingsAsync(
         List<string> texts,
         CancellationToken ct = default)
-        => GenerateWithFallbackAsync(
-            texts,
-            (provider, token) => provider.GenerateBatchEmbeddingsAsync(texts, token),
-            "embedding generation",
-            ct);
-
-    /// <summary>
-    /// Generate embedding for a single text.
-    /// Implies <see cref="EmbeddingPurpose.Passage"/> — see #3737.
-    /// </summary>
-    public virtual Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
-        => GenerateEmbeddingsAsync(new List<string> { text }, ct);
-
-    /// <inheritdoc />
-    public Task<EmbeddingResult> GenerateEmbeddingsAsync(
-        List<string> texts,
-        EmbeddingPurpose purpose,
-        CancellationToken ct = default)
-        => GenerateWithFallbackAsync(
-            texts,
-            (provider, token) => provider.GenerateBatchEmbeddingsAsync(texts, DefaultLanguage, purpose, token),
-            $"embedding generation for purpose {purpose}",
-            ct);
-
-    /// <inheritdoc />
-    public Task<EmbeddingResult> GenerateEmbeddingAsync(
-        string text,
-        EmbeddingPurpose purpose,
-        CancellationToken ct = default)
-        => GenerateEmbeddingsAsync(new List<string> { text }, purpose, ct);
-
-    /// <inheritdoc />
-    public Task<EmbeddingResult> GenerateEmbeddingAsync(
-        string text,
-        string language,
-        EmbeddingPurpose purpose,
-        CancellationToken ct = default)
-    {
-        if (!IsValidLanguage(language))
-        {
-            _logger.LogWarning("Unsupported language code: {Language}, falling back to 'en'", language);
-            language = DefaultLanguage;
-        }
-
-        var texts = new List<string> { text };
-        var resolvedLanguage = language;
-
-        return GenerateWithFallbackAsync(
-            texts,
-            (provider, token) => provider.GenerateBatchEmbeddingsAsync(texts, resolvedLanguage, purpose, token),
-            $"embedding generation for language {resolvedLanguage} and purpose {purpose}",
-            ct);
-    }
-
-    /// <summary>
-    /// Generate embeddings for texts with language-specific model selection and fallback chain.
-    /// AI-09: Multi-language embedding support.
-    /// </summary>
-    public Task<EmbeddingResult> GenerateEmbeddingsAsync(
-        List<string> texts,
-        string language,
-        CancellationToken ct = default)
-    {
-        // Validate language code
-        if (!IsValidLanguage(language))
-        {
-            _logger.LogWarning("Unsupported language code: {Language}, falling back to 'en'", language);
-            language = DefaultLanguage;
-        }
-
-        // For multilingual support, prefer HuggingFace BGE-M3 if available
-        if (_config.Provider == EmbeddingProviderType.HuggingFaceBgeM3 ||
-            _config.FallbackProvider == EmbeddingProviderType.HuggingFaceBgeM3)
-        {
-            _logger.LogInformation(
-                "Using multilingual-aware provider for language {Language}",
-                language);
-        }
-
-        var resolvedLanguage = language;
-
-        return GenerateWithFallbackAsync(
-            texts,
-            (provider, token) => provider.GenerateBatchEmbeddingsAsync(texts, resolvedLanguage, token),
-            $"embedding generation for language {resolvedLanguage}",
-            ct);
-    }
-
-    /// <summary>
-    /// Generate embedding for a single text with language-specific model
-    /// </summary>
-    public async Task<EmbeddingResult> GenerateEmbeddingAsync(
-        string text,
-        string language,
-        CancellationToken ct = default)
-    {
-        return await GenerateEmbeddingsAsync(new List<string> { text }, language, ct).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Primary-then-fallback provider call, shared by every public overload.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This body existed twice — once per overload — before #3737, which is how the two paths
-    /// could send differently-shaped requests to the same service. Adding <c>purpose</c> would
-    /// have made it four copies, so it is extracted instead.
-    /// </para>
-    /// <para>
-    /// Each overload passes its own <paramref name="call"/> rather than letting this method pick
-    /// a provider overload: the pre-#3737 paths must keep hitting the exact provider method they
-    /// hit before (2-arg or 3-arg), because <c>IEmbeddingProvider</c>'s purpose overload is a
-    /// default interface implementation and Moq does not invoke those — routing everything
-    /// through it would have moved existing behaviour under test without any caller asking for it.
-    /// </para>
-    /// </remarks>
-    private async Task<EmbeddingResult> GenerateWithFallbackAsync(
-        List<string> texts,
-        Func<IEmbeddingProvider, CancellationToken, Task<EmbeddingProviderResult>> call,
-        string operationLabel,
-        CancellationToken ct)
     {
         if (texts == null || texts.Count == 0)
         {
@@ -194,7 +66,7 @@ internal class EmbeddingService : IEmbeddingService
         try
         {
             // Try primary provider
-            var result = await call(_primaryProvider, ct).ConfigureAwait(false);
+            var result = await _primaryProvider.GenerateBatchEmbeddingsAsync(texts, ct).ConfigureAwait(false);
 
             if (result.Success)
             {
@@ -213,7 +85,7 @@ internal class EmbeddingService : IEmbeddingService
                     result.ErrorMessage,
                     _fallbackProvider.ProviderName);
 
-                var fallbackResult = await call(_fallbackProvider, ct).ConfigureAwait(false);
+                var fallbackResult = await _fallbackProvider.GenerateBatchEmbeddingsAsync(texts, ct).ConfigureAwait(false);
 
                 if (fallbackResult.Success)
                 {
@@ -241,10 +113,114 @@ internal class EmbeddingService : IEmbeddingService
         catch (Exception ex)
         {
             return RagExceptionHandler.HandleServiceException(
-                ex, _logger, operationLabel,
+                ex, _logger, "embedding generation",
                 errorMessage => EmbeddingResult.CreateFailure(errorMessage));
         }
 #pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Generate embedding for a single text
+    /// </summary>
+    public virtual async Task<EmbeddingResult> GenerateEmbeddingAsync(string text, CancellationToken ct = default)
+    {
+        var result = await GenerateEmbeddingsAsync(new List<string> { text }, ct).ConfigureAwait(false);
+        return result;
+    }
+
+    /// <summary>
+    /// Generate embeddings for texts with language-specific model selection and fallback chain.
+    /// AI-09: Multi-language embedding support.
+    /// </summary>
+    public async Task<EmbeddingResult> GenerateEmbeddingsAsync(
+        List<string> texts,
+        string language,
+        CancellationToken ct = default)
+    {
+        if (texts == null || texts.Count == 0)
+        {
+            return EmbeddingResult.CreateFailure("No texts provided");
+        }
+
+        // Validate language code
+        if (!IsValidLanguage(language))
+        {
+            _logger.LogWarning("Unsupported language code: {Language}, falling back to 'en'", language);
+            language = "en";
+        }
+
+        try
+        {
+            // For multilingual support, prefer HuggingFace BGE-M3 if available
+            if (_config.Provider == EmbeddingProviderType.HuggingFaceBgeM3 ||
+                _config.FallbackProvider == EmbeddingProviderType.HuggingFaceBgeM3)
+            {
+                _logger.LogInformation(
+                    "Using multilingual-aware provider for language {Language}",
+                    language);
+            }
+
+            // Try primary provider with language hint
+            var result = await _primaryProvider.GenerateBatchEmbeddingsAsync(texts, language, ct).ConfigureAwait(false);
+
+            if (result.Success)
+            {
+                return EmbeddingResult.CreateSuccess(result.Embeddings.ToList());
+            }
+
+            // Try fallback if configured and primary failed
+            if (_fallbackProvider != null && _config.EnableFallback)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                _logger.LogWarning(
+                    "Primary provider {Primary} failed: {Error}. Trying fallback {Fallback}",
+                    _primaryProvider.ProviderName,
+                    result.ErrorMessage,
+                    _fallbackProvider.ProviderName);
+
+                var fallbackResult = await _fallbackProvider.GenerateBatchEmbeddingsAsync(texts, language, ct).ConfigureAwait(false);
+
+                if (fallbackResult.Success)
+                {
+                    _logger.LogInformation("Fallback provider {Provider} succeeded", _fallbackProvider.ProviderName);
+                    return EmbeddingResult.CreateSuccess(fallbackResult.Embeddings.ToList());
+                }
+
+                _logger.LogError(
+                    "Fallback provider {Provider} also failed: {Error}",
+                    _fallbackProvider.ProviderName,
+                    fallbackResult.ErrorMessage);
+
+                return EmbeddingResult.CreateFailure(
+                    $"Primary ({_primaryProvider.ProviderName}): {result.ErrorMessage}; " +
+                    $"Fallback ({_fallbackProvider.ProviderName}): {fallbackResult.ErrorMessage}");
+            }
+
+            return EmbeddingResult.CreateFailure(result.ErrorMessage ?? "Embedding generation failed");
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // SERVICE BOUNDARY: Wraps multi-provider embedding failures (network, API errors, timeouts) into domain-friendly EmbeddingResult
+#pragma warning restore S125
+        catch (Exception ex)
+        {
+            return RagExceptionHandler.HandleServiceException(
+                ex, _logger, $"embedding generation for language {language}",
+                errorMessage => EmbeddingResult.CreateFailure(errorMessage));
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>
+    /// Generate embedding for a single text with language-specific model
+    /// </summary>
+    public async Task<EmbeddingResult> GenerateEmbeddingAsync(
+        string text,
+        string language,
+        CancellationToken ct = default)
+    {
+        return await GenerateEmbeddingsAsync(new List<string> { text }, language, ct).ConfigureAwait(false);
     }
 
     /// <summary>

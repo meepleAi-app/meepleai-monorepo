@@ -56,7 +56,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         var mockSearchLogger = new Mock<ILogger<SearchQueryHandler>>();
 
         mockSearchEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -116,7 +116,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .ReturnsAsync((CachedRagResponse?)null);
 
         _mockEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[768] } });
     }
 

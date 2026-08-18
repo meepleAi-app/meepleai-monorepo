@@ -84,11 +84,9 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         {
             _logger.LogDebug("[SearchQueryHandler] Step 1: Generating embedding via IEmbeddingService...");
             var sw1 = System.Diagnostics.Stopwatch.StartNew();
-            // #3737: retrieval question -> e5 "query:" prefix.
             var queryEmbedding = await _embeddingService.GenerateEmbeddingAsync(
                 query.Query,
                 query.Language,
-                EmbeddingPurpose.Query,
                 cancellationToken).ConfigureAwait(false);
             sw1.Stop();
             _logger.LogInformation("[SearchQueryHandler] Step 1 DONE: Embedding generated in {ElapsedMs}ms - Success: {Success}",

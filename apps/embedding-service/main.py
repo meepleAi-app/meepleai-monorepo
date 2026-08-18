@@ -45,18 +45,6 @@ if MODEL_NAME not in ALLOWED_MODELS:
         f"EMBEDDING_MODEL={MODEL_NAME!r} not in allowed models: {ALLOWED_MODELS}"
     )
 SUPPORTED_LANGUAGES = ["en", "it", "de", "fr", "es"]
-
-# e5 instruction prefixes (#3737). The multilingual-e5 family is trained with an
-# asymmetric instruction prefix: "query: " for the retrieval question, "passage: "
-# for the indexed text. Both live behind THIS one endpoint, so the caller has to say
-# which side it is on — the service cannot infer it.
-#
-# `passage` stays the default on purpose: it is what the service did unconditionally
-# before #3737, so a client that does not send `purpose` keeps its current behaviour
-# and no already-indexed chunk is invalidated.
-EMBEDDING_PURPOSES = ("passage", "query")
-DEFAULT_EMBEDDING_PURPOSE = "passage"
-
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 # Hard guard to prevent runaway memory use on very long inputs
 MAX_TEXT_CHARS = 4096
@@ -78,14 +66,6 @@ class EmbeddingRequest(BaseModel):
     """Request model for embedding generation"""
     texts: List[str] = Field(..., min_length=1, max_length=100, description="Texts to embed (1-100)")
     language: str = Field(..., pattern="^(en|it|de|fr|es)$", description="ISO 639-1 language code")
-    purpose: str = Field(
-        DEFAULT_EMBEDDING_PURPOSE,
-        pattern="^(passage|query)$",
-        description=(
-            "e5 instruction prefix to apply: 'query' for a retrieval question, "
-            "'passage' for indexed text. Defaults to 'passage' (pre-#3737 behaviour)."
-        ),
-    )
 
 
 class EmbeddingResponse(BaseModel):
@@ -102,20 +82,6 @@ class HealthResponse(BaseModel):
     model: str = Field(..., description="Loaded model name")
     device: str = Field(..., description="Compute device (cpu/cuda)")
     supported_languages: List[str] = Field(..., description="Supported language codes")
-
-
-def apply_instruction_prefix(texts: List[str], purpose: str) -> List[str]:
-    """Prepend the e5 instruction prefix matching `purpose` to each text.
-
-    Extracted from the endpoint so the asymmetry can be asserted without loading
-    the model — the defect in #3737 was exactly that the endpoint hard-coded one
-    side of it, and a comment claimed otherwise.
-    """
-    if purpose not in EMBEDDING_PURPOSES:
-        raise ValueError(
-            f"Unsupported purpose: {purpose!r}. Supported: {EMBEDDING_PURPOSES}"
-        )
-    return [f"{purpose}: {text}" for text in texts]
 
 
 @asynccontextmanager
@@ -184,8 +150,7 @@ async def generate_embeddings(request: EmbeddingRequest):
     Uses intfloat/multilingual-e5-large model
 
     Args:
-        request: EmbeddingRequest with texts, language code and e5 instruction
-            purpose ('query' for search questions, 'passage' for indexed text)
+        request: EmbeddingRequest with texts and language code
 
     Returns:
         EmbeddingResponse with embedding vectors
@@ -218,15 +183,12 @@ async def generate_embeddings(request: EmbeddingRequest):
                 detail=f"Total payload too large ({total_chars} chars > {MAX_TOTAL_CHARS})"
             )
 
-        logger.info(
-            f"Generating embeddings for {len(request.texts)} texts "
-            f"in language: {request.language}, purpose: {request.purpose}"
-        )
+        logger.info(f"Generating embeddings for {len(request.texts)} texts in language: {request.language}")
 
-        # #3737: the prefix now comes from the caller. Until this issue the endpoint
-        # hard-coded "passage:" for every text, which was correct for the indexing
-        # path and wrong for every search query routed through the same endpoint.
-        prefixed_texts = apply_instruction_prefix(request.texts, request.purpose)
+        # Note: multilingual-e5-large uses instruction prefix for better quality
+        # Format: "query: <text>" for queries, "passage: <text>" for documents
+        # We'll use "passage:" prefix as we're embedding PDF chunks
+        prefixed_texts = [f"passage: {text}" for text in request.texts]
 
         loop = asyncio.get_running_loop()
 

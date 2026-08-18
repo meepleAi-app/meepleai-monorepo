@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -131,6 +133,8 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         // (KeywordScore, ts_rank_cd). Il risultato sostituisce HybridScore, che sul percorso
         // cross-gioco è quindi il punteggio globale — vedi il contratto in
         // IMultiGameHybridSearchService.
+        LogAggregateForTuning(query, aggregated);
+
         aggregated = FuseGlobally(aggregated);
 
         // Step 5: Hard-cap at limit (EC-7).
@@ -192,6 +196,68 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         {
             throttle.Release();
         }
+    }
+
+    /// <summary>
+    /// Prefisso stabile della riga di diagnostica. Il consumatore (il gate RAG smoke) filtra su
+    /// questo: cambiarlo rompe lo script di estrazione.
+    /// </summary>
+    internal const string TuningLogPrefix = "[RAG-TUNE]";
+
+    private static readonly JsonSerializerOptions TuningJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    /// <summary>
+    /// Emette l'aggregato PRIMA della fusione, per poter tarare <see cref="FuseGlobally"/> offline.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Perché esiste.</b> Fra il 2026-08-17 e il 2026-08-18 tre configurazioni della fusione sono
+    /// state provate contro il gate RAG smoke e hanno dato 10/11 → 8/11 → 5/11. Ogni ipotesi è
+    /// costata ~45 minuti di CI e nessuna era verificabile prima: dall'esterno si vede solo il
+    /// top-3 finale, mai i segnali su cui la fusione decide. Con questa riga l'aggregato diventa
+    /// osservabile e la taratura si misura offline in secondi.
+    /// </para>
+    /// <para>
+    /// <b>Perché dal codice e non ricostruito in SQL.</b> Riprodurre i due bracci con query proprie
+    /// significherebbe tarare su un'approssimazione — ed è esattamente l'errore che ha prodotto
+    /// quelle tre iterazioni: una misura fatta su un corpus e una pipeline diversi da quelli veri.
+    /// Qui il dato è quello che la fusione riceve davvero, non una sua imitazione.
+    /// </para>
+    /// <para>
+    /// <b>Costo a runtime: nullo quando disattivata.</b> La guardia <c>IsEnabled(Debug)</c> precede
+    /// qualunque allocazione, quindi in produzione — dove la categoria sta a Information — non si
+    /// serializza nulla. Il gate alza il livello solo per questa categoria.
+    /// </para>
+    /// <para>
+    /// Il documento è identificato dal suo id: la risoluzione a nome file la fa già il consumatore
+    /// (<c>rag-smoke-assert.sh</c> costruisce la mappa id → fileName), e duplicarla qui
+    /// significherebbe una query in più sul percorso caldo.
+    /// </para>
+    /// </remarks>
+    private void LogAggregateForTuning(string query, List<MultiGameSearchResultItem> aggregated)
+    {
+        if (!_logger.IsEnabled(LogLevel.Debug))
+            return;
+
+        var payload = new
+        {
+            q = query,
+            n = aggregated.Count,
+            c = aggregated.Select(r => new
+            {
+                d = r.PdfDocumentId,
+                i = r.ChunkIndex,
+                g = r.GameId,
+                v = r.VectorScore,
+                k = r.KeywordScore
+            }).ToList()
+        };
+
+        _logger.LogDebug(
+            "{Prefix} {Payload}", TuningLogPrefix, JsonSerializer.Serialize(payload, TuningJsonOptions));
     }
 
     /// <summary>

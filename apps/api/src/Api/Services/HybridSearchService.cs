@@ -142,10 +142,7 @@ internal class HybridSearchService : IHybridSearchService
                 KeywordRank = null,
                 MatchedTerms = new List<string>(),
                 Mode = SearchMode.Semantic,
-                RoleTags = chunkRoleTags,
-                // #3740: carry the chunk language so the cross-game fusion can normalise the
-                // cosine within each language instead of across a mixed-language aggregate.
-                Language = embedding.Language
+                RoleTags = chunkRoleTags
             };
         }).ToList();
 
@@ -294,9 +291,7 @@ internal class HybridSearchService : IHybridSearchService
             // fusion (same cast as the semantic-only path). pgvector already SELECTs role_tags.
             RoleTags = (GameBookRole)se.Embedding.RoleTags,
             // #3270: carry the chunk heading (JOIN-resolved) so vector-arm chunks get the heading boost.
-            Heading = se.Embedding.Heading,
-            // #3740: chunk language, for the per-language cosine normalisation in the cross-game fusion.
-            Language = se.Embedding.Language
+            Heading = se.Embedding.Heading
         }).ToArray();
 
         _logger.LogInformation(
@@ -481,10 +476,7 @@ internal class HybridSearchService : IHybridSearchService
                 MatchedTerms = matchedTerms,
                 Mode = SearchMode.Hybrid,
                 RoleTags = f.RoleTags,
-                Heading = f.Heading,
-                // #3740: only the vector arm knows the chunk language (the FTS arm reads
-                // text_chunks, which has no language column), so a keyword-only hit stays null.
-                Language = v?.Language
+                Heading = f.Heading
             });
         }
 

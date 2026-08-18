@@ -97,11 +97,4 @@ internal sealed record MultiGameSearchResultItem
 
     /// <summary>Search mode used for this result.</summary>
     public required SearchMode Mode { get; init; }
-
-    /// <summary>
-    /// #3740: ISO 639-1 language of the chunk, from the vector arm
-    /// (<c>pgvector_embeddings.lang</c>). Null for a keyword-only hit.
-    /// Used by <c>FuseGlobally</c> to normalise the cosine within each language group.
-    /// </summary>
-    public string? Language { get; init; }
 }

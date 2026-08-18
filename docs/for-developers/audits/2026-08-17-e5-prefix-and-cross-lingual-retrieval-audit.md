@@ -111,34 +111,12 @@ Cioè: per `catan-setup-it` concorrono almeno **due** difetti indipendenti oltre
 
 #3737 rimuove una delle due cause. La seconda — il clustering linguistico su corpus mixed-language — è un cambiamento di ranking e va misurato sulla pipeline completa, non sul solo braccio vettoriale: va quindi verificato con il gate RAG smoke, non con questo metodo. Direzioni candidate, in ordine di invasività:
 
-1. ✅ **Normalizzare il segnale vettoriale per lingua** in `FuseGlobally` — **implementato**, vedi § *La correzione applicata*.
+1. **Normalizzare il segnale vettoriale per lingua** in `FuseGlobally` (min-max dentro ogni gruppo `lang`) invece che sull'intero aggregato. Cancella esattamente l'offset di lingua e lascia decidere al lessicale — dove «Catan» è il termine discriminante. È la direzione suggerita dalla tabella `solo lang=en` qui sopra.
 2. **Correggere il metadato** `language` del manifest per i 13 manuali non inglesi. Non risolve il ranking da solo, ma oggi qualunque logica che si fidi di quel campo sta leggendo un dato falso.
 3. **Rendere il braccio lessicale consapevole della lingua della query.** Oggi la config FTS viene dal gioco, quindi una domanda italiana viene stemmata all'inglese e le sue parole inglesi accidentali (`due`, `come`, `in`) diventano segnale. Un match lessicale su una query fuori-lingua vale meno di zero: aggiunge rumore con peso 0.3.
 4. **Accettare e documentare** che una query IT su un gioco che esiste solo in EN non è recuperabile a corpus misto — cioè che `catan-setup-it` resta rosso per costruzione. Va scritto, non subito in silenzio: il gate esiste per non far passare questo caso inosservato.
 
-## La correzione applicata
-
-La direzione 1 è implementata in `FuseGlobally`, **non** come min-max per gruppo. Il min-max per gruppo ha un difetto che lo squalifica: un gruppo con un solo candidato ha intervallo degenere, e la `Normalise` esistente per quel caso restituisce `1f` — cioè il massimo. Un singolo chunk in una lingua rara, con cosine 0.50, verrebbe promosso in testa. Sarebbe un difetto nuovo introdotto per curarne uno vecchio.
-
-Applicato invece uno **shift dell'offset di lingua**:
-
-```
-cosine_corretta(i) = cosine(i) − ( media(gruppo_lingua(i)) − media(tutti) )
-```
-
-con due vincoli deliberati:
-
-- **la stima usa la media, non il massimo.** Il massimo è deciso da un solo elemento, la media no.
-- **gruppi con meno di 5 candidati non vengono spostati** (`MinLanguageGroupSize`). Non è un parametro tarato: con un solo membro la «media del gruppo» *è* quel membro, quindi lo shift lo porterebbe esattamente sulla media globale — e più bassa è la sua cosine, più lo promuoverebbe.
-
-Due proprietà che rendono il cambio difendibile prima del gate:
-
-1. **È un no-op sul caso monolingua.** Con una sola lingua fra i candidati la media del gruppo *è* la media globale, quindi l'offset è esattamente `0`. Non può far regredire una query su corpus omogeneo — che è la quasi totalità. Pinnato da un test, e confermato dal fatto che i 16 test di #3735 passano invariati.
-2. **L'allineamento fra gruppi spostati non dipende dalla media globale.** `offset_A − offset_B = media_A − media_B`: la media globale si cancella. Quindi un gruppo piccolo e anomalo non può alterare il rapporto fra i gruppi grandi.
-
-Il segnale riportato al chiamante resta la **cosine grezza** (`VectorScore`): la correzione vive solo dentro il punteggio di fusione.
-
-⚠️ **Non verificato end-to-end.** I test unit pinnano il meccanismo, non l'esito sul corpus: quello richiede il gate RAG smoke, cioè deploy su staging e un dispatch di `rag-smoke-dispatch.yml`. Finché quel passaggio non è fatto, questa correzione è **un'ipotesi motivata da una misura**, non un risultato. Le direzioni 2–4 restano aperte, e la discrepanza dichiarata sopra suggerisce che la 2 serva comunque.
+⚠️ Nessuna delle quattro è stata applicata qui. Applicarne una senza passare dal gate significherebbe sostituire una misura con un'ipotesi, che è precisamente ciò che #3740 chiede di non fare.
 
 ## Riproducibilità
 

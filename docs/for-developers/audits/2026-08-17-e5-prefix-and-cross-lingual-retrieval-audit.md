@@ -15,7 +15,7 @@
 
 Tre conclusioni, tutte contrarie a quanto questo documento sosteneva:
 
-1. **Il corpus del gate non è quello misurato qui.** Le misure vengono da **staging**; il gate consuma lo **snapshot pubblicato**, baked con un estrattore diverso. La prova non è un'inferenza: la correzione per lingua di #3740 ha prodotto un output **byte-identico su tutte le 11 query**, il che è possibile solo se in quello snapshot la colonna `lang` è di fatto uniforme. Il § *«la causa vera: clustering linguistico»* descrive quindi **staging**, non il corpus su cui gira il gate.
+1. **Il corpus del gate ha la stessa composizione di staging, con granularità diversa** — ⚠️ *corretto il 2026-08-19, vedi § «Cosa ha trovato il primo dump»*. La versione precedente di questo punto affermava che nello snapshot il `lang` fosse **uniforme**, dedotto dal fatto che la correzione per lingua avesse prodotto un output byte-identico. **È falso**: misurato, lo snapshot ha **9840 `en` / 943 `it` / 107 `de`** e gli stessi 13 manuali non inglesi di staging. Differisce la granularità (10.890 chunk contro 56.367), non la composizione.
 2. **#3737 è teoricamente corretto e empiricamente dannoso** su quel corpus: −2 query. Codificare una domanda come passaggio resta sbagliato per il model card di e5, ma il 10/11 precedente dipendeva anche da quella codifica.
 3. **`absent = 0` in `FuseGlobally` è load-bearing.** Sembrava un artefatto («0 significa rilevanza minima dove il dato è ignoto») e invece rende la fusione **congiuntiva**: per stare in cima serve evidenza da *entrambi* i bracci. Toglierlo — con pesi simmetrici — ha portato 8/11 → 5/11, riempiendo i top-3 di manuali scorrelati. Il commento di #3735 aveva ragione per un motivo che non dichiarava.
 
@@ -140,7 +140,9 @@ Il meccanismo, per come lo si legge nei dati: con il prefisso corretto il vettor
 
 ### 2. Correzione dell'offset di lingua (#3740, PR #3743) — nessun effetto
 
-Output **byte-identico** su tutte le 11 query rispetto alla configurazione 1. Con ~380 candidati (top-3 × 127 giochi) un secondo gruppo linguistico da ≥5 membri avrebbe mosso qualcosa: non essendosi mosso niente, in quello snapshot la colonna `lang` è di fatto **uniforme**. La correzione è strutturalmente incapace di agire là, non mal tarata.
+Output **byte-identico** su tutte le 11 query rispetto alla configurazione 1.
+
+⚠️ **La spiegazione data qui in origine era sbagliata**, e il primo dump l'ha falsificata — vedi § *«Cosa ha trovato il primo dump»*. Non era il corpus a essere monolingua: era il codice a non poterne vedere la lingua.
 
 ### 3. Ri-taratura della fusione — 8/11 → 5/11
 
@@ -149,6 +151,36 @@ Pesi simmetrici `0.5/0.5` **più** rimozione della penalità sul segnale assente
 La firma è inequivocabile — i top-3 si riempiono di manuali scorrelati (`frostpunk`, `concordia`, `scythe`, `frosthaven`, `mage-knight`, `dune-imperium`): è l'**uncapping degli hit keyword-only**.
 
 > **La lezione, ed è la cosa più utile qui.** `absent = 0` sembrava un artefatto: contribuire 0 asserisce «rilevanza minima possibile» dove il dato reale è «ignoto». Ma è **load-bearing**: rende la fusione di fatto **congiuntiva** — per stare in cima serve evidenza da *entrambi* i bracci — ed è ciò che tiene giù i match lessicali generici, cioè esattamente il difetto che #3735 aveva misurato. Il commento di #3735 aveva ragione per un motivo che non dichiarava, e la sua reticenza è stata scambiata per una svista.
+
+## Cosa ha trovato il primo dump (2026-08-19)
+
+Il primo artifact `rag-fusion-tuning-*` prodotto dal gate (run `32262228377`) ha **falsificato l'unica conclusione di questo audit basata su inferenza invece che su misura**.
+
+### Lo snapshot del gate NON è monolingua
+
+| `lang` | chunk |
+|---|---|
+| en | 9.840 |
+| it | **943** |
+| de | **107** |
+
+Tredici manuali non inglesi, **gli stessi di staging**: 7-wonders, agricola, azul, barrage, carcassone, descent, pandemic, root, scacchi-fide, splendor, terraforming-mars, ticket-to-ride (it) · great-western-trail (de). Stessi 127 documenti. Ciò che differisce è la **granularità**: 10.890 chunk contro i 56.367 di staging, perché l'estrattore Docnet produce chunk molto più grossi.
+
+### Perché allora #3743 fu un no-op byte-identico
+
+Non per il corpus. Per un difetto nel codice della correzione stessa:
+
+```sql
+-- PgVectorStoreAdapter.SearchWithScoresAsync
+SELECT e.id, e.vector_document_id, e.text_content, e.model,
+       e.chunk_index, e.page_number, e.role_tags, …, tc."Heading"
+```
+
+**`e.lang` non è nella SELECT**, e `Embedding.Language` ha l'inizializzatore `= "en"`. Ogni candidato del braccio vettoriale arrivava quindi alla fusione con `Language = "en"`, qualunque fosse la lingua vera del chunk: un solo gruppo linguistico, media del gruppo uguale alla media globale, offset **esattamente 0**. Il no-op osservato non era una proprietà del corpus, era una colonna mancante mascherata da un default non-null.
+
+**Conseguenza**: l'idea di #3740 non è stata provata e bocciata — **non è mai stata eseguita**. Chi la riprende deve prima aggiungere `e.lang` alla proiezione.
+
+È anche la dimostrazione di cosa serviva lo strumento: questa cosa non era deducibile: era osservabile, e nessuno la stava osservando.
 
 ## Perché si è smesso di iterare
 

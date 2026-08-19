@@ -101,7 +101,7 @@ jobs:
     # fermati a ~44m30s con `Test Run Aborted.` lasciando ~800 test non raggiunti. 2148 test in 44
     # minuti danno ~61 minuti per l'intera selezione; 75 + 90 conserva il margine E l'ordine giusto
     # fra le due soglie.
-    timeout-minutes: 90
+    timeout-minutes: 110
     needs: changes
     if: needs.changes.outputs.backend == 'true' || github.event_name == 'workflow_dispatch'
 
@@ -305,7 +305,11 @@ jobs:
       # una causa. Il runsettings il .trx lo produce già (integration-test-results.trx): finora
       # nessuno lo raccoglieva, quindi ogni ipotesi sulle prestazioni della suite restava tale.
       - name: Upload test results
-        if: ${{ !cancelled() }}
+        # `always()` e non `!cancelled()`: un job che sfora `timeout-minutes` risulta `cancelled`,
+        # e quella e' proprio la run le cui durate interessano di piu' — quella che ha esaurito il
+        # tempo. Con `!cancelled()` l'artifact spariva li'. Il guard sopra tiene `!cancelled()`:
+        # su una cancellazione da concurrency non c'e' davvero niente da misurare.
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: integration-results-${{ matrix.shard.name }}

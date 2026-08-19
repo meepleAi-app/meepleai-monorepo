@@ -207,12 +207,37 @@ jobs:
           set +e
           mkdir -p tuning-dump
 
+          # Uno step con always() gira anche quando NULLA è stato bootato (job annullato o andato in
+          # timeout prima del boot). La prima versione di questo step finiva con `exit 0` e in quel
+          # caso pubblicava un artifact con `aggregate.log` vuoto e due file contenenti
+          # «No such container: meepleai-postgres» — riportando **success**. È il pattern del cluster
+          # #3622/#3625/#3629/#3632/#3659/#3662: verde e vuoto danno lo stesso segnale. Verificato
+          # sulla run 32226720200, annullata al timeout di 75 min sul passo `Install jq`.
+          #
+          # Quindi si distinguono DUE casi, perché hanno colpe diverse:
+          #   - lo stack non è mai partito  -> non è un difetto della strumentazione: ::warning:: e
+          #     STATUS.txt che dice perché il dump è vuoto, invece di error text spacciato per dati;
+          #   - lo stack è partito ma zero righe [RAG-TUNE] -> LO È: il livello di log non è
+          #     arrivato al servizio, e lo step FALLISCE.
+          if ! docker inspect meepleai-api >/dev/null 2>&1; then
+            {
+              echo "DUMP VUOTO — il container meepleai-api non esiste."
+              echo "Lo stack non è mai stato bootato: job annullato o in timeout prima del boot."
+              echo "Non è un difetto della strumentazione. Rilancia il dispatch."
+              echo "run: ${{ github.run_id }}"
+            } > tuning-dump/STATUS.txt
+            echo "::warning:: dump vuoto: lo stack non è partito, nessun dato di taratura da raccogliere"
+            cat tuning-dump/STATUS.txt
+            exit 0
+          fi
+
           # 1) L'aggregato PRIMA della fusione, emesso da MultiGameHybridSearchService (una riga
           #    per query). È il dato che dall'esterno non è osservabile: il top-3 finale non dice
           #    nulla sui segnali con cui la fusione lo ha scelto. --tail non è limitato perché le
           #    11 query stanno in poche centinaia di KB e troncare qui vanificherebbe il dump.
           docker logs meepleai-api 2>&1 | grep -F '[RAG-TUNE]' > tuning-dump/aggregate.log
-          echo "righe [RAG-TUNE] catturate: $(wc -l < tuning-dump/aggregate.log)"
+          LINES=$(wc -l < tuning-dump/aggregate.log)
+          echo "righe [RAG-TUNE] catturate: $LINES"
 
           # 2) La composizione linguistica del corpus. È una LETTURA di colonna, non una
           #    ri-implementazione dei bracci: qui l'approssimazione non è un rischio.
@@ -221,8 +246,7 @@ jobs:
           PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
           PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
           q() { docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At -F'|' -c "$1" 2>&1; }
-          q "SELECT lang, count(*) FROM pgvector_embeddings GROUP BY 1 ORDER BY 2 DESC;" \
-            > tuning-dump/lang-distribution.txt
+          q "SELECT lang, count(*) FROM pgvector_embeddings GROUP BY 1 ORDER BY 2 DESC;"             > tuning-dump/lang-distribution.txt
           q "SELECT d.\"FileName\", e.lang, count(*)
              FROM pgvector_embeddings e
              JOIN vector_documents v ON v.\"Id\" = e.vector_document_id
@@ -230,6 +254,13 @@ jobs:
              GROUP BY 1,2 ORDER BY 1,2;" > tuning-dump/lang-by-document.txt
 
           echo "::group::distribuzione lang"; cat tuning-dump/lang-distribution.txt; echo "::endgroup::"
+
+          # Lo stack era su e non ha prodotto una riga: il wiring del livello di log è rotto, e un
+          # dump vuoto qui è indistinguibile da «la fusione non è stata invocata». Fallisce.
+          if [ "$LINES" -eq 0 ]; then
+            echo "::error:: nessuna riga [RAG-TUNE] con lo stack attivo — Logging__LogLevel__…MultiGameHybridSearchService non sta arrivando al servizio"
+            exit 1
+          fi
           exit 0
 
       - name: Upload fusion tuning data (#3737)

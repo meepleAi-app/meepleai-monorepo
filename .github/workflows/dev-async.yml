@@ -22,9 +22,18 @@ on:
       - '.github/actions/**'
   workflow_dispatch:
 
+# `cancel-in-progress: false` NON accoda una fila. A gruppo occupato GitHub mette la nuova run
+# pending e cancella la pending PRECEDENTE: la run in volo arriva quindi sempre in fondo, e quando
+# lo slot si libera parte l'ultimo sha. È un debounce, non un backlog.
+#
+# Con `true`, un gate da ~83 minuti su un branch che riceve merge ogni 40-70 non aveva finestra: il
+# 2026-08-17 nove run su quindici erano `cancelled`, e lo shard Games — l'ultimo a chiudere — non
+# arrivava quasi mai in fondo. Un `cancelled` si legge come «annullato», non come «fallito»:
+# `dev-auto-revert` lo classifica `green-pending` e non fa nulla, quindi su main-dev non esisteva
+# alcun esito, né verde né rosso. È lo stesso difetto di #3629 su un altro asse.
 concurrency:
   group: dev-async-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -197,6 +206,9 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
         run: |
+          # `set -o pipefail` è obbligatorio: senza, l'exit code che arriva a GitHub è quello di
+          # `tee` (sempre 0) e un `Test Run Aborted.` passerebbe per successo.
+          set -o pipefail
           # Target esplicito del .csproj (PR #1505): `dotnet test` sulla solution invocherebbe anche
           # Api.Analyzers.Tests.dll, che non ha test Category=Integration, e vstest tratta il
           # no-match su un assembly non vuoto come exit 1.
@@ -205,13 +217,100 @@ jobs:
           # divergenza qui riporterebbe il difetto di #3622 (test che nessun gate esegue) su un
           # altro asse.
           #
-          # NESSUN override di TestSessionTimeout: valgono i 75 min del runsettings condiviso (#3634),
-          # calcolati sul lavoro reale misurato di uno shard. Override più bassi sono già stati
-          # provati due volte e abortivano ogni shard a metà.
+          # NESSUN override di TestSessionTimeout: valgono i 75 min del runsettings condiviso (#3634).
           dotnet test tests/Api.Tests/Api.Tests.csproj \
             --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \
             --no-build \
             --configuration Release \
             --logger "console;verbosity=minimal" \
-            --blame-hang-timeout 5min
+            --blame-hang-timeout 5min \
+            2>&1 | tee "integration-${{ matrix.shard.name }}.log"
+
+      # #3632/#3633 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
+      #
+      # `Aborting test run: test run timeout` esce già 134 e fa fallire lo step, quindi questo guard
+      # non introduce un rosso nuovo: rende distinguibile «la selezione non è stata misurata per
+      # intero» da «alcuni test sono falliti». Sono due fatti diversi e finora erano lo stesso colore.
+      #
+      # `!cancelled()` e non `always()`: su una cancellazione non c'è niente da misurare.
+      - name: 'Guard: la selezione e stata misurata per intero (#3633)'
+        if: ${{ !cancelled() }}
+        working-directory: apps/api
+        env:
+          SHARD: ${{ matrix.shard.name }}
+        run: |
+          set -uo pipefail
+          status=0
+          log="integration-${SHARD}.log"
+
+          if [ ! -f "$log" ]; then
+            echo "::error::Shard ${SHARD}: log assente, lo step dei test non e partito."
+            exit 1
+          fi
+
+          mapfile -t trx_files < <(find . -name 'integration-test-results.trx' -print)
+          if [ ${#trx_files[@]} -eq 0 ]; then
+            echo "::error::Shard ${SHARD}: nessun .trx, nessun test eseguito."
+            status=1
+          fi
+
+          executed=0
+          for f in "${trx_files[@]}"; do
+            n=$(sed -n 's/.*<Counters[^>]* executed="\([0-9]\{1,\}\)".*/\1/p' "$f" | head -1)
+            if ! [[ "${n:-}" =~ ^[0-9]+$ ]]; then
+              echo "::error::$f: counter 'executed' illeggibile (trx malformato?)."
+              status=1
+              continue
+            fi
+            echo "  $f -> executed=$n"
+            executed=$((executed + n))
+          done
+
+          # Soglia bassa e deliberata: distingue «e girato» da «zero», non pinna un numero.
+          if [ "$executed" -lt 100 ]; then
+            echo "::error::Shard ${SHARD}: solo $executed test eseguiti, sarebbe stato verde senza eseguire nulla (#3632)."
+            status=1
+          fi
+
+          # `|| true`: sotto `set -e` + `pipefail`, un grep senza match esce 1 e l'assegnazione
+          # ucciderebbe lo script prima di scrivere il summary e prima del controllo sul
+          # troncamento. Il fallback `${summary:-...}` qui sotto sarebbe altrimenti irraggiungibile:
+          # serve per i log senza trailer Passed!/Failed! (test host crashato, dotnet test mai
+          # partito, dump di --blame-hang), non per il troncamento — una run troncata stampa
+          # comunque il trailer dopo `Test Run Aborted.`.
+          summary=$(grep -aE '^(Passed|Failed)!  -' "$log" | tail -1 || true)
+          {
+            echo "### Backend Integration — ${SHARD}"
+            echo
+            echo '```'
+            echo "${summary:-(riepilogo non trovato nel log)}"
+            echo '```'
+            echo
+            echo "Baseline attesa per shard: Core 9 · KnowledgeBase 4 · Games 3 (#3633)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if grep -qa 'Aborting test run: test run timeout' "$log"; then
+            echo "::error::Shard ${SHARD} TRONCATO: il TestSessionTimeout e scattato. La selezione NON e stata misurata per intero: i conteggi qui sopra sono parziali e non confrontabili con una baseline completa (#3633)."
+            {
+              echo
+              echo "> ⚠️ **Shard troncato** — sessione abortita sul TestSessionTimeout. Conteggi parziali."
+            } >> "$GITHUB_STEP_SUMMARY"
+            status=1
+          fi
+
+          exit $status
+
+      # Le durate per-test del .trx sono l'unico modo di attribuire un guadagno o una regressione a
+      # una causa. Il runsettings il .trx lo produce già (integration-test-results.trx): finora
+      # nessuno lo raccoglieva, quindi ogni ipotesi sulle prestazioni della suite restava tale.
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-results-${{ matrix.shard.name }}
+          path: |
+            apps/api/**/integration-test-results.trx
+            apps/api/integration-*.log
+          retention-days: 14
+          if-no-files-found: warn

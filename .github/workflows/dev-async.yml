@@ -153,7 +153,13 @@ jobs:
       # libgdiplus: senza, i test che toccano il rendering PDF non falliscono subito ma dopo un
       # timeout, e il costo si somma su tutta la suite. È una delle differenze che rendevano questo
       # job molto più lento di ci.yml a parità di test.
+      # `timeout-minutes` qui non e' pedanteria: il 2026-08-19 questo step si e' piantato per
+      # 1h50m su un mirror apt, ha consumato l'intero budget del job e lo ha fatto uscire
+      # `cancelled` — muto, senza che un solo test fosse partito. E' lo stesso difetto di #3629 su
+      # un altro asse: un guasto che non lascia un esito leggibile. A 5 minuti fallisce presto e
+      # dice perche'.
       - name: Install PDF Dependencies
+        timeout-minutes: 5
         run: sudo apt-get update && sudo apt-get install -y libgdiplus redis-tools
 
       - uses: ./.github/actions/setup-backend
@@ -227,14 +233,14 @@ jobs:
             --blame-hang-timeout 5min \
             2>&1 | tee "integration-${{ matrix.shard.name }}.log"
 
-      # #3632/#3633 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
+      # #3632/#3742 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
       #
       # `Aborting test run: test run timeout` esce già 134 e fa fallire lo step, quindi questo guard
       # non introduce un rosso nuovo: rende distinguibile «la selezione non è stata misurata per
       # intero» da «alcuni test sono falliti». Sono due fatti diversi e finora erano lo stesso colore.
       #
       # `!cancelled()` e non `always()`: su una cancellazione non c'è niente da misurare.
-      - name: 'Guard: la selezione e stata misurata per intero (#3633)'
+      - name: 'Guard: la selezione e stata misurata per intero (#3742)'
         if: ${{ !cancelled() }}
         working-directory: apps/api
         env:
@@ -291,7 +297,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
           if grep -qa 'Aborting test run: test run timeout' "$log"; then
-            echo "::error::Shard ${SHARD} TRONCATO: il TestSessionTimeout e scattato. La selezione NON e stata misurata per intero: i conteggi qui sopra sono parziali e non confrontabili con una baseline completa (#3633)."
+            echo "::error::Shard ${SHARD} TRONCATO: il TestSessionTimeout e scattato. La selezione NON e stata misurata per intero: i conteggi qui sopra sono parziali e non confrontabili con la baseline dei fallimenti (#3633). Il guard e' di #3742."
             {
               echo
               echo "> ⚠️ **Shard troncato** — sessione abortita sul TestSessionTimeout. Conteggi parziali."

@@ -15,6 +15,22 @@ using FluentAssertions;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Nessuna asserzione della classe
+/// riguarda conteggi o liste complete: gli endpoint di lista (<c>GET /api/v1/games</c>) sono
+/// verificati solo per status code (OK/Unauthorized), mai per contenuto o cardinalita'. Gli
+/// endpoint per-risorsa usano <c>Guid.NewGuid()</c> per id inesistenti o per i giochi seminati da
+/// ogni test, quindi non collidono fra loro. <c>TestSessionHelper.CreateUserSessionAsync</c> genera
+/// un'email univoca per ogni chiamata, quindi nessuna collisione di utenti.
+/// </para>
+/// </summary>
+public sealed class GameEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "game_endpoints");
+
+/// <summary>
 /// Integration tests for Game Management HTTP endpoints.
 /// Tests: GetAllGames, GetGameById, CreateGame, UpdateGame, GameSessions, GameState
 /// Issue #3010: Backend coverage improvement.
@@ -22,39 +38,15 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class GameEndpointsIntegrationTests : IAsyncLifetime
+public sealed class GameEndpointsIntegrationTests : IClassFixture<GameEndpointsHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public GameEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public GameEndpointsIntegrationTests(GameEndpointsHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"game_endpoints_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        // Initialize database with migrations
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     // ========================================

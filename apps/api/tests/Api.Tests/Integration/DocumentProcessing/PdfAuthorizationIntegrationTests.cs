@@ -13,6 +13,21 @@ using Xunit;
 namespace Api.Tests.Integration.DocumentProcessing;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test (via <c>InitializeAsync</c>,
+/// che continua a girare una volta per test perche' xUnit crea una nuova istanza della classe per
+/// ogni <c>[Fact]</c>) semina i propri due PdfDocument con id nuovi (<c>_privatePdfId</c>/
+/// <c>_sharedPdfId</c>). Ogni asserzione e' uno status-code su una richiesta scoped a quegli id —
+/// nessun conteggio o lista globale.
+/// </para>
+/// </summary>
+public sealed class PdfAuthorizationHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "pdf_authz");
+
+/// <summary>
 /// HTTP-layer authorization tests for PDF retrieval/mutation endpoints (issue #3222).
 ///
 /// Covers three broken-access-control gaps, each mirroring a sibling that already checks correctly:
@@ -25,11 +40,9 @@ namespace Api.Tests.Integration.DocumentProcessing;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "3222")]
-public sealed class PdfAuthorizationIntegrationTests : IAsyncLifetime
+public sealed class PdfAuthorizationIntegrationTests : IClassFixture<PdfAuthorizationHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly WebApplicationFactory<Program> _factory;
     private HttpClient _ownerClient = null!;
     private HttpClient _otherClient = null!;
     private HttpClient _adminClient = null!;
@@ -39,20 +52,15 @@ public sealed class PdfAuthorizationIntegrationTests : IAsyncLifetime
     private Guid _privatePdfId;
     private Guid _sharedPdfId;
 
-    public PdfAuthorizationIntegrationTests(SharedTestcontainersFixture fixture)
+    public PdfAuthorizationIntegrationTests(PdfAuthorizationHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"pdf_authz_{Guid.NewGuid():N}";
+        _factory = host.Factory;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
 
         Guid ownerId;
         (ownerId, _ownerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
@@ -98,13 +106,12 @@ public sealed class PdfAuthorizationIntegrationTests : IAsyncLifetime
         _adminClient = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _ownerClient?.Dispose();
         _otherClient?.Dispose();
         _adminClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private string TextUrl(Guid id) => $"/api/v1/pdfs/{id}/text";

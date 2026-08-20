@@ -14,43 +14,37 @@ using Xunit;
 namespace Api.Tests.Integration.UserLibrary;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> La classe supera la domanda di
+/// ordine-indipendenza posta dalla base: l'endpoint filtra per utente
+/// (<c>GetLibraryActivityQuery(UserId: ...)</c>), ogni test crea il proprio utente con
+/// <c>TestSessionHelper.CreateUserSessionAsync</c> — che genera id ed email univoci, quindi nessuna
+/// collisione di chiave — e un solo test semina partite. Nessuna asserzione riguarda conteggi
+/// globali o l'ordinamento fra righe di test diversi.
+/// </para>
+/// </summary>
+public sealed class LibraryActivityHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "library_activity");
+
+/// <summary>
 /// Integration tests for GET /api/v1/library/activity endpoint (Issue #642 — Wave B.3 followup).
 /// Verifies authentication, empty-state, and ordering semantics for the activity feed.
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
-public sealed class LibraryActivityEndpointTests : IAsyncLifetime
+public sealed class LibraryActivityEndpointTests : IClassFixture<LibraryActivityHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public LibraryActivityEndpointTests(SharedTestcontainersFixture fixture)
+    public LibraryActivityEndpointTests(LibraryActivityHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"library_activity_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     [Fact]

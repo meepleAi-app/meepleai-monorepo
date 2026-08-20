@@ -14,6 +14,23 @@ using FluentAssertions;
 namespace Api.Tests.Integration.UserLibrary;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Nessuna asserzione della classe
+/// riguarda conteggi o liste complete: gli endpoint di lista (<c>GET /api/v1/library</c>,
+/// <c>/stats</c>, <c>/quota</c>) sono verificati solo per status code (OK/Unauthorized), mai per
+/// contenuto o cardinalita' — il test "ReturnsEmptyLibrary" controlla solo lo status, non lo
+/// svuotamento. Ogni test crea il proprio utente con <c>TestSessionHelper.CreateUserSessionAsync</c>
+/// — email univoca per chiamata — e i giochi referenziati sono id inesistenti (<c>Guid.NewGuid()</c>),
+/// quindi nessuna collisione fra test.
+/// </para>
+/// </summary>
+public sealed class UserLibraryEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "library_endpoints");
+
+/// <summary>
 /// Integration tests for UserLibrary HTTP endpoints.
 /// Tests: GetLibrary, AddGame, RemoveGame, UpdateEntry, GetStats, ShareLinks
 /// Issue #3010: Backend coverage improvement.
@@ -21,39 +38,15 @@ namespace Api.Tests.Integration.UserLibrary;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
-public sealed class UserLibraryEndpointsIntegrationTests : IAsyncLifetime
+public sealed class UserLibraryEndpointsIntegrationTests : IClassFixture<UserLibraryEndpointsHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public UserLibraryEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public UserLibraryEndpointsIntegrationTests(UserLibraryEndpointsHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"library_endpoints_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        // Initialize database with migrations
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     // ========================================

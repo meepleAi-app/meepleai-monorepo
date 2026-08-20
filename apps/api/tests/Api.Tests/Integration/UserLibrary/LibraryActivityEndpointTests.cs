@@ -17,40 +17,74 @@ namespace Api.Tests.Integration.UserLibrary;
 /// Integration tests for GET /api/v1/library/activity endpoint (Issue #642 — Wave B.3 followup).
 /// Verifies authentication, empty-state, and ordering semantics for the activity feed.
 /// </summary>
-[Collection("Integration-GroupC")]
-[Trait("Category", TestCategories.Integration)]
-[Trait("BoundedContext", "UserLibrary")]
-public sealed class LibraryActivityEndpointTests : IAsyncLifetime
+/// <summary>
+/// Host e database condivisi da tutti i test della classe. Issue #3742.
+///
+/// <para>
+/// xUnit istanzia la classe di test **una volta per metodo**, quindi un
+/// <see cref="IAsyncLifetime.InitializeAsync"/> che costruisce un
+/// <see cref="WebApplicationFactory{T}"/> lo ricostruisce per ogni test. Misurato in CI: i tre
+/// test di questa classe costavano 99,6s / 112,5s / 114,4s — durate uniformi, non «il primo lento
+/// e gli altri veloci», che è la firma del setup pagato ogni volta. Il costo non è il database
+/// (mediana 3,4s per i test che ne creano uno senza host) ma la costruzione dell'host: MediatR e
+/// FluentValidation scandiscono un assembly con 445 handler e 678 validator a ogni build.
+/// </para>
+/// <para>
+/// Come <c>IClassFixture</c> il costo si paga una volta per classe. Condividere il database fra i
+/// test è sicuro **qui** perché ogni test crea il proprio utente con
+/// <c>TestSessionHelper.CreateUserSessionAsync</c> e asserisce solo su quello: nessun test pretende
+/// un database vuoto. Va verificato caso per caso prima di applicare lo stesso schema altrove.
+/// </para>
+/// </summary>
+public sealed class LibraryActivityHostFixture : IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly SharedTestcontainersFixture _shared;
+    private readonly string _databaseName = $"library_activity_{Guid.NewGuid():N}";
 
-    public LibraryActivityEndpointTests(SharedTestcontainersFixture fixture)
-    {
-        _fixture = fixture;
-        _testDbName = $"library_activity_{Guid.NewGuid():N}";
-    }
+    public WebApplicationFactory<Program> Factory { get; private set; } = null!;
+    public HttpClient Client { get; private set; } = null!;
+
+    public LibraryActivityHostFixture(SharedTestcontainersFixture shared) => _shared = shared;
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        var connectionString = await _shared.CreateIsolatedDatabaseAsync(_databaseName);
+        Factory = IntegrationWebApplicationFactory.Create(connectionString);
 
-        using (var scope = _factory.Services.CreateScope())
+        using (var scope = Factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync();
         }
 
-        _client = _factory.CreateClient();
+        Client = Factory.CreateClient();
     }
 
     public async ValueTask DisposeAsync()
     {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        Client?.Dispose();
+        if (Factory is not null)
+        {
+            await Factory.DisposeAsync();
+        }
+
+        // La versione per-test non lo faceva: ogni test lasciava dietro di sé un database.
+        await _shared.DropIsolatedDatabaseAsync(_databaseName);
+    }
+}
+
+[Collection("Integration-GroupC")]
+[Trait("Category", TestCategories.Integration)]
+[Trait("BoundedContext", "UserLibrary")]
+public sealed class LibraryActivityEndpointTests : IClassFixture<LibraryActivityHostFixture>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
+
+    public LibraryActivityEndpointTests(LibraryActivityHostFixture host)
+    {
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     [Fact]

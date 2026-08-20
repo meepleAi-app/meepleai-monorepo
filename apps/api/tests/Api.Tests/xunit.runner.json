@@ -7,5 +7,5 @@
   "diagnosticMessages": true,
   "internalDiagnosticMessages": false,
   "methodTimeout": 180000,
-  "longRunningTestSeconds": 30
+  "longRunningTestSeconds": 300
 }

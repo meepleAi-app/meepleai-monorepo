@@ -13,11 +13,10 @@ namespace Api.Tests.Infrastructure;
 /// <para>
 /// <b>Il difetto che risolve.</b> xUnit istanzia la classe di test <b>una volta per metodo</b>,
 /// quindi un <c>IAsyncLifetime.InitializeAsync</c> sulla classe di test che costruisce un
-/// <see cref="WebApplicationFactory{T}"/> lo ricostruisce a ogni test. Misurato sui <c>.trx</c> di
-/// CI: i test in classi «database + host per test» hanno mediana <b>54,0s</b> e valgono il
-/// <b>79%</b> del tempo dell'intero gate, contro i <b>3,4s</b> delle classi che creano solo il
-/// database. I ~50s di differenza sono la costruzione dell'host: MediatR e FluentValidation
-/// scandiscono per riflessione un assembly con 445 handler e 678 validator.
+/// <see cref="WebApplicationFactory{T}"/> lo ricostruisce a ogni test. Misurato dalla
+/// strumentazione qui sotto, non inferito: <c>db=0,1s host=19,2s migrate=5,1s</c> — l'host e'
+/// <b>~24,4s</b> di costo per costruzione, di cui il database e' una frazione trascurabile.
+/// L'A/B su 52 test (24m59s contro 84s) da' 27,2s risparmiati per test, coerente.
 /// </para>
 /// <para>
 /// La firma diagnostica è che <b>tutti</b> i test di una classe sono lenti in modo uniforme, non
@@ -48,7 +47,15 @@ namespace Api.Tests.Infrastructure;
 ///   <item>asserzioni sull'ordinamento globale, dove le righe di un altro test si interpongono.</item>
 /// </list>
 /// Per una classe che fallisce la domanda serve host condiviso ma database per test — non si torna
-/// all'host per test: il database costa 3,4s, l'host ~50s, e i due sono separabili.
+/// all'host per test. Il margine reale, dalla strumentazione: creare e migrare un database costa
+/// <b>~5,2s</b> (db 0,1 + migrate 5,1) contro i <b>~24,4s</b> del ciclo completo. Attenzione: la
+/// migrazione e' il 21% del costo della fixture, non una voce trascurabile — una versione
+/// «database per test» la ripaga a ogni test.
+///
+/// 🔴 Il verdetto di isolamento deve considerare anche cosa i test <b>scrivono</b>, non solo cosa
+/// leggono. Un seeder che inserisce senza find-or-create contro un indice unico (per esempio
+/// <c>UserEntity.Email</c>) e' strutturalmente impossibile da violare con un database per test, e
+/// diventa un 23505 con un database condiviso.
 /// </para>
 ///
 /// <para>
@@ -82,7 +89,12 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
     // nei log di CI — dove nemmeno la convenzione preesistente di SharedTestcontainersFixture
     // ("✅ Database '...' created in Xs") e' mai comparsa.
     //
-    // Richiede `diagnosticMessages: true` in xunit.runner.json. Costo misurato: su Category=Unit
+    // Richiede `diagnosticMessages: true` in xunit.runner.json — che ha un effetto collaterale:
+    // riattiva anche `longRunningTestSeconds`, finora inerte perche' xUnit lo riporta solo tramite
+    // il canale diagnostico. Misurato sui .trx reali del gate: con la soglia a 30s sarebbero
+    // 100-205 righe in piu' per shard (+22%..+49% sul log), che seppellirebbero proprio le righe
+    // fixture-timing. Per questo la soglia e' stata portata a 300s: intercetta ancora un test
+    // davvero bloccato, non la popolazione normale. Costo misurato: su Category=Unit
     // (22.568 test) il log resta di 86 righe; su 3 test passa da 4 a 5. Il messaggio finisce nel log
     // che dev-async pubblica come artifact (#3744), quindi e' aggregabile per shard con:
     //   grep -o 'fixture-timing .*' integration-<shard>.log | sort -t' ' -k3 -rn | head -20
@@ -124,7 +136,7 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
         }
 
         // Prefisso stabile e campi in secondi: e' pensato per essere greppato e ordinato, non letto.
-        TestContext.Current.SendDiagnosticMessage(
+        TestContext.Current?.SendDiagnosticMessage(
             $"fixture-timing {GetType().Name} " +
             $"{Stopwatch.GetElapsedTime(started).TotalSeconds:F1} " +
             $"db={Stopwatch.GetElapsedTime(started, afterDb).TotalSeconds:F1} " +
@@ -147,10 +159,16 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
         finally
         {
             // Nel finally perche' un fallimento nella dismissione dell'host non deve far trapelare
-            // il database: sopravvivrebbe per tutta la vita del container. La versione per-test non
-            // lo eliminava affatto, quindi ne lasciava uno per ogni test.
+            // il database: sopravvivrebbe per tutta la vita del container. Sette delle tredici
+            // classi convertite non lo eliminavano affatto, quindi ne lasciavano uno per ogni test;
+            // le altre sei lo eliminavano per test. In entrambi i casi ora e' una volta per classe.
             if (_databaseCreated)
             {
+                // Azzerato PRIMA di rilasciare: su fallimento in InitializeAsync questo metodo viene
+                // chiamato due volte (una da noi, una da xUnit alla dismissione della fixture) e
+                // DropIsolatedDatabaseAsync invoca NpgsqlConnection.ClearAllPools(), che e'
+                // process-global e strappa le connessioni alle altre collection in parallelo.
+                _databaseCreated = false;
                 await _shared.DropIsolatedDatabaseAsync(_databaseName);
             }
         }

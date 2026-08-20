@@ -33,6 +33,14 @@ namespace Api.Tests.Integration.Testing;
 /// usa sempre <c>MigrateAsync</c> (vedi <see cref="IntegrationHostFixture"/>), verificato qui non
 /// avere effetti collaterali sui test.
 /// </para>
+///
+/// ⚠️ <b>Vincolo sull'asse di scrittura, non solo di lettura.</b> Il seeder inserisce l'utente
+/// proprietario con un <c>Add</c> cieco, senza find-or-create, contro l'indice unico su
+/// <c>UserEntity.Email</c>. Con un database per test una collisione era strutturalmente
+/// impossibile; con uno condiviso diventa un 23505. Le email derivano da
+/// <c>testRunId[..16]</c>: due <c>testRunId</c> che coincidono nei primi 16 caratteri
+/// collidono. Aggiungendo test a questa classe, le email letterali devono restare
+/// globalmente uniche all'interno della classe.
 /// </summary>
 public sealed class SeedTestSessionHostFixture(SharedTestcontainersFixture shared)
     : IntegrationHostFixture(shared, "test_seed_session");
@@ -72,7 +80,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_IsLiveTrue_CreatesSessionWithStartedAtSetAndCompletedAtNull()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-sessionlive11-1717603200000";
         var gameNightId = await SeedParentGameNightAsync(db, testRunId);
@@ -107,7 +115,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_IsLiveTrue_GetGameNightLive_ReportsSessionIsLive()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-livequery1234-1717603200000";
 
@@ -142,7 +150,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_IsLiveFalse_CreatesSessionWithStartedAtNull()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-sessionoff112-1717603200000";
         var gameNightId = await SeedParentGameNightAsync(db, testRunId);
@@ -167,7 +175,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_GameNightNotFound_ThrowsNotFoundException()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new SeedTestSessionCommandHandler(db, NullLogger<SeedTestSessionCommandHandler>.Instance);
         var cmd = new SeedTestSessionCommand
@@ -186,7 +194,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_MultipleSessions_IncrementPlayOrder()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-multisess1234-1717603200000";
         var gameNightId = await SeedParentGameNightAsync(db, testRunId);
@@ -216,7 +224,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_TestRunIdStamp_AppliedToSession()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-stampcase0123-1717603200000";
         var gameNightId = await SeedParentGameNightAsync(db, testRunId);
@@ -239,7 +247,7 @@ public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestS
     [Fact]
     public async Task Handle_ResponseShape_CorrectFields()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-shapecase0123-1717603200000";
         var gameNightId = await SeedParentGameNightAsync(db, testRunId);

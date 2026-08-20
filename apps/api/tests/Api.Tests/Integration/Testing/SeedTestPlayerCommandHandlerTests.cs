@@ -68,7 +68,7 @@ public sealed class SeedTestPlayerCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_HostRole_ReturnsOrganizerId()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-hostrole01234-1717603200000";
         var (gameNightId, organizerId) = await SeedParentGameNightAsync(db, testRunId);
@@ -91,7 +91,7 @@ public sealed class SeedTestPlayerCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_PlayerRole_CreatesUserLinkedRsvpAccepted()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-playerrole012-1717603200000";
         var (gameNightId, _) = await SeedParentGameNightAsync(db, testRunId);
@@ -117,7 +117,7 @@ public sealed class SeedTestPlayerCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_GuestRole_CreatesGuestInvitationStub()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-guestrole0123-1717603200000";
         var (gameNightId, _) = await SeedParentGameNightAsync(db, testRunId);
@@ -145,7 +145,7 @@ public sealed class SeedTestPlayerCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_GameNightNotFound_ThrowsNotFoundException()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new SeedTestPlayerCommandHandler(db, NullLogger<SeedTestPlayerCommandHandler>.Instance);
         var cmd = new SeedTestPlayerCommand
@@ -164,7 +164,7 @@ public sealed class SeedTestPlayerCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_PlayerRole_WithExplicitUserId_UsesProvidedUserId()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-explicituser0-1717603200000";
         var (gameNightId, organizerId) = await SeedParentGameNightAsync(db, testRunId);
@@ -186,7 +186,7 @@ public sealed class SeedTestPlayerCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_ResponseShape_CorrectFields()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-shapecase0123-1717603200000";
         var (gameNightId, _) = await SeedParentGameNightAsync(db, testRunId);

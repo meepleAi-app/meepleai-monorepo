@@ -62,7 +62,7 @@ public sealed class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_HappyPath_NewUser_CreatesGameAndLibraryEntryWithTestRunIdStamps()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-libgamenewuser-1717603200000";
 
@@ -96,7 +96,7 @@ public sealed class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_HappyPath_ExistingUser_ReusesUserIdAndCreatesNewLibraryEntry()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-libgameexisti-1717603200000";
 
@@ -125,7 +125,7 @@ public sealed class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_DefaultTitle_ConstructsFromTestRunIdPrefix()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-defaulttitle0-1717603200000";
 
@@ -148,7 +148,7 @@ public sealed class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_CustomTitle_RespectedExactly()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-customtitle00-1717603200000";
 
@@ -170,7 +170,7 @@ public sealed class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_TestRunIdStamped_OnBothSharedGameAndLibraryEntry()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-trsstamp00000-1717603200000";
 
@@ -199,7 +199,7 @@ public sealed class SeedTestLibraryGameCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_ResponseShape_GameIdAndLibraryEntryIdMatchDbRows()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-respshape0000-1717603200000";
 

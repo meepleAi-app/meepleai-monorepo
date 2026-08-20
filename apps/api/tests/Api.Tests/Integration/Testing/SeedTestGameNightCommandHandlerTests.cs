@@ -64,7 +64,7 @@ public sealed class SeedTestGameNightCommandHandlerTests : IAsyncLifetime
 
     private (IServiceScope scope, MeepleAiDbContext db, SeedTestGameNightCommandHandler handler) CreateHandlerScope()
     {
-        var scope = _factory!.Services.CreateScope();
+        var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new SeedTestGameNightCommandHandler(db, NullLogger<SeedTestGameNightCommandHandler>.Instance);
         return (scope, db, handler);

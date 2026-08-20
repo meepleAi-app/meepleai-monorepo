@@ -18,6 +18,21 @@ using Xunit;
 namespace Api.Tests.Integration.SessionTracking;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test seminA la propria campagna +
+/// GameBook con id generati (<c>SeedOwnedCampaignAsync</c> usa <c>Guid.NewGuid()</c> per
+/// <c>sharedGameId</c>) e ogni chiamata all'endpoint e' scoped a quel <c>campaignId</c>/
+/// <c>gameBookId</c>. Nessuna asserzione legge conteggi o liste globali: sono tutte status-code su
+/// una singola richiesta SSE pre-flight per la campagna del test stesso.
+/// </para>
+/// </summary>
+public sealed class GamebookTextTranslateStreamHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "text_translate_stream");
+
+/// <summary>
 /// Issue #1774: integration tests for POST /api/v1/gamebook/campaigns/{id}/text/translate (SSE).
 /// Verifies the pre-flight ownership/validation guards return proper HTTP error codes BEFORE
 /// any SSE bytes are flushed to the client, following the same conservative dual-acceptance
@@ -44,38 +59,15 @@ namespace Api.Tests.Integration.SessionTracking;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
-public sealed class GamebookTextTranslateStreamEndpointTests : IAsyncLifetime
+public sealed class GamebookTextTranslateStreamEndpointTests : IClassFixture<GamebookTextTranslateStreamHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public GamebookTextTranslateStreamEndpointTests(SharedTestcontainersFixture fixture)
+    public GamebookTextTranslateStreamEndpointTests(GamebookTextTranslateStreamHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"text_translate_stream_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

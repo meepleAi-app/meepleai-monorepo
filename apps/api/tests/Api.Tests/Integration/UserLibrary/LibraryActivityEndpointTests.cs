@@ -14,65 +14,25 @@ using Xunit;
 namespace Api.Tests.Integration.UserLibrary;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> La classe supera la domanda di
+/// ordine-indipendenza posta dalla base: l'endpoint filtra per utente
+/// (<c>GetLibraryActivityQuery(UserId: ...)</c>), ogni test crea il proprio utente con
+/// <c>TestSessionHelper.CreateUserSessionAsync</c> — che genera id ed email univoci, quindi nessuna
+/// collisione di chiave — e un solo test semina partite. Nessuna asserzione riguarda conteggi
+/// globali o l'ordinamento fra righe di test diversi.
+/// </para>
+/// </summary>
+public sealed class LibraryActivityHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "library_activity");
+
+/// <summary>
 /// Integration tests for GET /api/v1/library/activity endpoint (Issue #642 — Wave B.3 followup).
 /// Verifies authentication, empty-state, and ordering semantics for the activity feed.
 /// </summary>
-/// <summary>
-/// Host e database condivisi da tutti i test della classe. Issue #3742.
-///
-/// <para>
-/// xUnit istanzia la classe di test **una volta per metodo**, quindi un
-/// <see cref="IAsyncLifetime.InitializeAsync"/> che costruisce un
-/// <see cref="WebApplicationFactory{T}"/> lo ricostruisce per ogni test. Misurato in CI: i tre
-/// test di questa classe costavano 99,6s / 112,5s / 114,4s — durate uniformi, non «il primo lento
-/// e gli altri veloci», che è la firma del setup pagato ogni volta. Il costo non è il database
-/// (mediana 3,4s per i test che ne creano uno senza host) ma la costruzione dell'host: MediatR e
-/// FluentValidation scandiscono un assembly con 445 handler e 678 validator a ogni build.
-/// </para>
-/// <para>
-/// Come <c>IClassFixture</c> il costo si paga una volta per classe. Condividere il database fra i
-/// test è sicuro **qui** perché ogni test crea il proprio utente con
-/// <c>TestSessionHelper.CreateUserSessionAsync</c> e asserisce solo su quello: nessun test pretende
-/// un database vuoto. Va verificato caso per caso prima di applicare lo stesso schema altrove.
-/// </para>
-/// </summary>
-public sealed class LibraryActivityHostFixture : IAsyncLifetime
-{
-    private readonly SharedTestcontainersFixture _shared;
-    private readonly string _databaseName = $"library_activity_{Guid.NewGuid():N}";
-
-    public WebApplicationFactory<Program> Factory { get; private set; } = null!;
-    public HttpClient Client { get; private set; } = null!;
-
-    public LibraryActivityHostFixture(SharedTestcontainersFixture shared) => _shared = shared;
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _shared.CreateIsolatedDatabaseAsync(_databaseName);
-        Factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = Factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        Client = Factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        Client?.Dispose();
-        if (Factory is not null)
-        {
-            await Factory.DisposeAsync();
-        }
-
-        // La versione per-test non lo faceva: ogni test lasciava dietro di sé un database.
-        await _shared.DropIsolatedDatabaseAsync(_databaseName);
-    }
-}
-
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]

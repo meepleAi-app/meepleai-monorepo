@@ -15,6 +15,29 @@ using Xunit;
 namespace Api.Tests.Integration.Testing;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test usa il proprio
+/// <c>testRunId</c> letterale, mai riutilizzato da un altro <c>[Fact]</c> in questa classe
+/// (es. <c>"e2e-sessionlive11-..."</c> vs <c>"e2e-livequery1234-..."</c> vs
+/// <c>"e2e-notfound00001-..."</c>), e ogni asserzione legge o il record appena creato via
+/// <c>response.SessionId</c> (Guid fresco) o filtra per quel <c>testRunId</c>. Il test
+/// <c>Handle_IsLiveTrue_GetGameNightLive_ReportsSessionIsLive</c> interroga
+/// <c>GetGameNightLiveQuery</c> scoped al <c>GameNightId</c> seminato dal test stesso, quindi non
+/// puo' vedere sessioni di altri test.
+/// </para>
+/// <para>
+/// Nota: la classe passava da <c>EnsureCreatedAsync</c> a schema-da-modello; la fixture condivisa
+/// usa sempre <c>MigrateAsync</c> (vedi <see cref="IntegrationHostFixture"/>), verificato qui non
+/// avere effetti collaterali sui test.
+/// </para>
+/// </summary>
+public sealed class SeedTestSessionHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "test_seed_session");
+
+/// <summary>
 /// Issue #1928 Task B (DEC-B-1, DEC-B-8) — Integration tests for
 /// SeedTestSessionCommandHandler. Pattern reuse from T1.
 /// </summary>
@@ -23,36 +46,15 @@ namespace Api.Tests.Integration.Testing;
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Testing")]
 [Trait("Issue", "1928")]
-public sealed class SeedTestSessionCommandHandlerTests : IAsyncLifetime
+public sealed class SeedTestSessionCommandHandlerTests : IClassFixture<SeedTestSessionHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private string _databaseName = string.Empty;
-    private WebApplicationFactory<Program>? _factory;
+    private readonly WebApplicationFactory<Program> _factory;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    public SeedTestSessionCommandHandlerTests(SharedTestcontainersFixture fixture)
+    public SeedTestSessionCommandHandlerTests(SeedTestSessionHostFixture host)
     {
-        _fixture = fixture;
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        _databaseName = $"test_seed_session_{Guid.NewGuid():N}";
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.EnsureCreatedAsync(TestCancellationToken);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        _factory = host.Factory;
     }
 
     private async Task<Guid> SeedParentGameNightAsync(MeepleAiDbContext db, string testRunId)

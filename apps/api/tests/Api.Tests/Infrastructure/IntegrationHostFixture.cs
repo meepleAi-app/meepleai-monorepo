@@ -1,4 +1,4 @@
-
+using System.Diagnostics;
 using Api.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -73,32 +73,38 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
         _databaseName = $"{databasePrefix}_{Guid.NewGuid():N}";
     }
 
-    // 🔴 PREREQUISITO DEL ROLLOUT — il tempo speso in InitializeAsync NON viene attribuito da xUnit
-    // ad alcun test. Convertendo le altre 92 classi, il costo dominante del gate (79% del tempo,
-    // mediana 54s per test) uscirebbe dal .trx pur restando sul runner: resterebbe visibile solo il
-    // wall-clock aggregato per shard, senza piu' sapere QUALE classe lo consuma. E' la stessa forma
-    // di difetto da cui nasce #3742 — una misura che diventa verde smettendo di guardare.
+    // Il tempo speso qui NON viene attribuito da xUnit ad alcun test: nel .trx non esiste. Senza
+    // strumentazione, convertire le classi farebbe uscire dalla misura il costo dominante del gate
+    // (79% del tempo) lasciandolo sul runner — la stessa forma di difetto da cui nasce #3742.
     //
-    // Un primo tentativo usava Console.WriteLine seguendo la convenzione dei messaggi di
-    // SharedTestcontainersFixture ("✅ Database '...' created in Xs"). VERIFICATO CHE NON FUNZIONA:
-    // quell'output non compare ne' in locale con `--logger "console;verbosity=detailed"`, ne' nei
-    // log di CI raccolti da #3744 — dove nemmeno la convenzione preesistente compare mai. E' stato
-    // rimosso invece di lasciarlo: una strumentazione che non strumenta e' peggio della sua assenza,
-    // perche' il prossimo lettore smette di cercarne una vera.
+    // Il canale e' `SendDiagnosticMessage`, non `Console.WriteLine`: quest'ultimo e' stato provato e
+    // NON compare da nessuna parte, ne' in locale con `--logger "console;verbosity=detailed"` ne'
+    // nei log di CI — dove nemmeno la convenzione preesistente di SharedTestcontainersFixture
+    // ("✅ Database '...' created in Xs") e' mai comparsa.
     //
-    // Le opzioni per il rollout, da decidere prima di convertire le altre classi:
-    //   a) scrivere i tempi su file e aggiungerlo al glob dell'artifact in dev-async.yml;
-    //   b) TestContext.Current.SendDiagnosticMessage, che richiede diagnosticMessages: true in
-    //      xunit.runner.json (oggi false) e aggiunge rumore globale;
-    //   c) accettare la sola granularita' per shard, rinunciando all'attribuzione per classe.
+    // Richiede `diagnosticMessages: true` in xunit.runner.json. Costo misurato: su Category=Unit
+    // (22.568 test) il log resta di 86 righe; su 3 test passa da 4 a 5. Il messaggio finisce nel log
+    // che dev-async pubblica come artifact (#3744), quindi e' aggregabile per shard con:
+    //   grep -o 'fixture-timing .*' integration-<shard>.log | sort -t' ' -k3 -rn | head -20
     public async ValueTask InitializeAsync()
     {
+        var started = Stopwatch.GetTimestamp();
+        long afterDb;
+        long afterHost;
+
         try
         {
             var connectionString = await _shared.CreateIsolatedDatabaseAsync(_databaseName);
             _databaseCreated = true;
+            afterDb = Stopwatch.GetTimestamp();
 
             Factory = IntegrationWebApplicationFactory.Create(connectionString);
+
+            // `WithWebHostBuilder` e' PIGRO: l'host si costruisce al primo accesso a `.Services`.
+            // Senza questa riga il tempo dell'host finirebbe nel campo `migrate=` e la
+            // strumentazione riporterebbe `host=0,0` — misurato davvero, prima di accorgersene.
+            _ = Factory.Services;
+            afterHost = Stopwatch.GetTimestamp();
 
             using (var scope = Factory.Services.CreateScope())
             {
@@ -116,6 +122,14 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             await SafeDisposeAsync();
             throw;
         }
+
+        // Prefisso stabile e campi in secondi: e' pensato per essere greppato e ordinato, non letto.
+        TestContext.Current.SendDiagnosticMessage(
+            $"fixture-timing {GetType().Name} " +
+            $"{Stopwatch.GetElapsedTime(started).TotalSeconds:F1} " +
+            $"db={Stopwatch.GetElapsedTime(started, afterDb).TotalSeconds:F1} " +
+            $"host={Stopwatch.GetElapsedTime(afterDb, afterHost).TotalSeconds:F1} " +
+            $"migrate={Stopwatch.GetElapsedTime(afterHost).TotalSeconds:F1}");
     }
 
     public ValueTask DisposeAsync() => SafeDisposeAsync();

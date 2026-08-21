@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
@@ -311,7 +312,17 @@ public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
             AvatarUrl: null));
 
         // Domain invariant: session must be InProgress before Complete.
-        await mediator.Send(new StartLiveSessionCommand(sessionId, Guid.NewGuid(), UserTier.Free, Role.User));
+        //
+        // L'utente agente deve essere il CREATORE: #2608 ha aggiunto a StartLiveSessionCommandHandler
+        // il guard "Only the session creator can start the session", perche' la GameSession correlata
+        // e la quota sono attribuite a CreatedByUserId. Questo helper passava un Guid.NewGuid(), che
+        // e' sempre diverso dal creatore: da allora il setup lanciava ForbiddenException e il test
+        // era rosso in CI (uno dei 3 fallimenti di baseline dello shard Games, identico nelle run
+        // 32379487982 e 32494719773). Non e' un difetto di isolamento: falliva anche con un database
+        // per test.
+        var session = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
+            .GetByIdAsync(sessionId);
+        await mediator.Send(new StartLiveSessionCommand(sessionId, session!.CreatedByUserId, UserTier.Free, Role.User));
         await mediator.Send(new CompleteLiveSessionCommand(sessionId));
     }
 

@@ -20,6 +20,27 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// La guardia <c>WaitForPostgresReadyAsync</c> che questa classe chiamava prima di costruire l'host
+/// non e' andata persa: e' nella base, subito dopo la creazione del database isolato.
+/// </para>
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test semina il proprio utente
+/// (<c>SeedUserAsync</c>: id nuovo, email parametrizzata su quell'id) e la propria sessione, e
+/// <c>SeedDisputesAsync</c> scrive con un <c>ExecuteUpdateAsync</c> filtrato per <c>sessionId</c>,
+/// asserendo <c>affected == 1</c>. Le asserzioni su conteggio e ordinamento
+/// (<c>HaveCount(2)</c>, <c>Disputes[0]</c>, <c>BeEmpty()</c>) leggono il campo <c>Disputes</c>
+/// <b>di quella singola sessione</b>: non e' un aggregato, quindi non c'e' lista globale in cui le
+/// righe di un altro test possano interporsi.
+/// </para>
+/// </summary>
+public sealed class GetSessionDisputesHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "session_disputes");
+
+/// <summary>
 /// Integration tests for the per-session dispute-history endpoint:
 ///   GET /api/v1/live-sessions/{sessionId}/disputes
 ///
@@ -40,11 +61,9 @@ namespace Api.Tests.Integration.GameManagement;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "3391")]
-public sealed class GetSessionDisputesEndpointTests : IAsyncLifetime
+public sealed class GetSessionDisputesEndpointTests : IClassFixture<GetSessionDisputesHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"session_disputes_{Guid.NewGuid():N}";
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly WebApplicationFactory<Program> _factory;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -58,30 +77,11 @@ public sealed class GetSessionDisputesEndpointTests : IAsyncLifetime
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public GetSessionDisputesEndpointTests(SharedTestcontainersFixture fixture)
+    public GetSessionDisputesEndpointTests(GetSessionDisputesHostFixture host)
     {
-        _fixture = fixture;
+        _factory = host.Factory;
     }
 
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // Scenario 1: participant GET on a session with disputes → 200 + ordered list

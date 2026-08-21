@@ -64,6 +64,13 @@ namespace Api.Tests.Infrastructure;
 /// <c>GameNightTokenRateLimitTests</c>): spostare la costruzione in una fixture separa la
 /// manipolazione dalla build e le romperebbe.
 /// </para>
+///
+/// <para>
+/// ✅ <b>La prontezza di Postgres NON e' piu' un motivo di esclusione.</b> Le classi che chiamavano
+/// <c>TestcontainersWaitHelpers.WaitForPostgresReadyAsync</c> prima di costruire l'host — trentanove
+/// in tutta la suite — possono convertirsi senza perdere quella guardia: e' nella base, subito dopo
+/// la creazione del database isolato. Issue #3742.
+/// </para>
 /// </summary>
 public abstract class IntegrationHostFixture : IAsyncLifetime
 {
@@ -108,6 +115,16 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
         {
             var connectionString = await _shared.CreateIsolatedDatabaseAsync(_databaseName);
             _databaseCreated = true;
+
+            // Issue #3742. La guardia di #2031: Docker Desktop su Windows fallisce a intermittenza
+            // l'hijack dell'exec, e il retry TCP con backoff e' piu' affidabile della wait strategy
+            // di Testcontainers. Trentanove classi la chiamavano prima di costruire l'host; questa
+            // base no, quindi convertirle avrebbe significato deciderne il destino trentanove volte
+            // dentro commit meccanici. E' qui perche' vada decisa una volta sola.
+            //
+            // Nel caso normale la connessione riesce al primo tentativo e il costo e' una OpenAsync:
+            // sta dentro il campo `db=` della strumentazione qui sotto, che infatti resta a 0,0-0,1s.
+            await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
             afterDb = Stopwatch.GetTimestamp();
 
             Factory = IntegrationWebApplicationFactory.Create(connectionString);

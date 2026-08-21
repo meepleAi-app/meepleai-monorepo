@@ -23,6 +23,26 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// La guardia <c>WaitForPostgresReadyAsync</c> che questa classe chiamava prima di costruire l'host
+/// non e' andata persa: e' nella base, subito dopo la creazione del database isolato.
+/// </para>
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test chiama
+/// <c>CreateSessionWithClientAsync</c>, che semina un utente nuovo (<c>SeedUserAsync</c> genera
+/// <c>Guid.NewGuid()</c> e un'email parametrizzata su quell'id) e crea una <c>LiveGameSession</c>
+/// propria via <c>IMediator</c>. Le due asserzioni su conteggi — <c>HaveCount(1)</c> e
+/// <c>BeEmpty()</c> — leggono il diario <b>di quella sessione</b>, non una lista globale: le voci
+/// degli altri test non vi entrano.
+/// </para>
+/// </summary>
+public sealed class LiveSessionDiaryHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "live_diary");
+
+/// <summary>
 /// Integration tests for the diary endpoints:
 ///   POST /api/v1/live-sessions/{sessionId}/diary
 ///   GET  /api/v1/live-sessions/{sessionId}/diary
@@ -43,11 +63,9 @@ namespace Api.Tests.Integration.GameManagement;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Issue", "2570")]
-public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
+public sealed class LiveSessionDiaryEndpointTests : IClassFixture<LiveSessionDiaryHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"live_diary_{Guid.NewGuid():N}";
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly WebApplicationFactory<Program> _factory;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -55,30 +73,11 @@ public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public LiveSessionDiaryEndpointTests(SharedTestcontainersFixture fixture)
+    public LiveSessionDiaryEndpointTests(LiveSessionDiaryHostFixture host)
     {
-        _fixture = fixture;
+        _factory = host.Factory;
     }
 
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // Scenario 1: POST adds an entry → 201 + Guid; GET then lists it
@@ -314,7 +313,7 @@ public sealed class LiveSessionDiaryEndpointTests : IAsyncLifetime
         // Domain invariant: session must be InProgress before Complete.
         //
         // L'utente agente deve essere il CREATORE: #2608 ha aggiunto a StartLiveSessionCommandHandler
-        // il guard "Only the session creator can start the session", perche' la GameSession correlata
+        // il guard «Only the session creator can start the session», perche' la GameSession correlata
         // e la quota sono attribuite a CreatedByUserId. Questo helper passava un Guid.NewGuid(), che
         // e' sempre diverso dal creatore: da allora il setup lanciava ForbiddenException e il test
         // era rosso in CI (uno dei 3 fallimenti di baseline dello shard Games, identico nelle run

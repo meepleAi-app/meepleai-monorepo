@@ -16,7 +16,15 @@ public sealed record StartTimerCommand(
     Guid ParticipantId,
     string ParticipantName,
     int DurationSeconds
-) : IRequest<StartTimerResponse>;
+) : IRequest<StartTimerResponse>
+{
+    /// <summary>
+    /// IDOR guard (#3756): utente autenticato che effettua la chiamata. L'endpoint lo deriva dal
+    /// principal e sovrascrive qualunque valore arrivato dal body; l'handler verifica via
+    /// <c>ISessionAccessGuard</c> che sia owner o partecipante registrato della sessione.
+    /// </summary>
+    public Guid RequestedBy { get; init; }
+}
 
 /// <summary>
 /// Response from starting a timer.
@@ -34,7 +42,15 @@ public sealed record StartTimerResponse(
 public sealed record PauseTimerCommand(
     Guid SessionId,
     Guid ParticipantId
-) : IRequest<TimerStatusResponse>;
+) : IRequest<TimerStatusResponse>
+{
+    /// <summary>
+    /// IDOR guard (#3756): utente autenticato che effettua la chiamata. L'endpoint lo deriva dal
+    /// principal e sovrascrive qualunque valore arrivato dal body; l'handler verifica via
+    /// <c>ISessionAccessGuard</c> che sia owner o partecipante registrato della sessione.
+    /// </summary>
+    public Guid RequestedBy { get; init; }
+}
 
 /// <summary>
 /// Resume a paused timer.
@@ -42,7 +58,15 @@ public sealed record PauseTimerCommand(
 public sealed record ResumeTimerCommand(
     Guid SessionId,
     Guid ParticipantId
-) : IRequest<TimerStatusResponse>;
+) : IRequest<TimerStatusResponse>
+{
+    /// <summary>
+    /// IDOR guard (#3756): utente autenticato che effettua la chiamata. L'endpoint lo deriva dal
+    /// principal e sovrascrive qualunque valore arrivato dal body; l'handler verifica via
+    /// <c>ISessionAccessGuard</c> che sia owner o partecipante registrato della sessione.
+    /// </summary>
+    public Guid RequestedBy { get; init; }
+}
 
 /// <summary>
 /// Reset a timer.
@@ -50,7 +74,15 @@ public sealed record ResumeTimerCommand(
 public sealed record ResetTimerCommand(
     Guid SessionId,
     Guid ParticipantId
-) : IRequest<TimerResetResponse>;
+) : IRequest<TimerResetResponse>
+{
+    /// <summary>
+    /// IDOR guard (#3756): utente autenticato che effettua la chiamata. L'endpoint lo deriva dal
+    /// principal e sovrascrive qualunque valore arrivato dal body; l'handler verifica via
+    /// <c>ISessionAccessGuard</c> che sia owner o partecipante registrato della sessione.
+    /// </summary>
+    public Guid RequestedBy { get; init; }
+}
 
 /// <summary>
 /// Timer status response.

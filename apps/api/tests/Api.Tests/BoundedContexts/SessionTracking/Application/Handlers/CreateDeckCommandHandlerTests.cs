@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -21,6 +22,7 @@ public class CreateDeckCommandHandlerTests
     {
         var loggerMock = new Mock<ILogger<CreateDeckCommandHandler>>();
         _handler = new CreateDeckCommandHandler(
+            SessionAccessGuardMocks.Permissive(),
             _deckRepoMock.Object, _mediatorMock.Object, loggerMock.Object);
     }
 

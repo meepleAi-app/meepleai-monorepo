@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using MediatR;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -27,12 +28,15 @@ public class SendSessionChatMessageCommandHandler : IRequestHandler<SendSessionC
     private readonly ISessionRepository _sessionRepository;
     private readonly ISessionChatRepository _chatRepository;
     private readonly IMediator _mediator;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public SendSessionChatMessageCommandHandler(
+        ISessionAccessGuard accessGuard,
         ISessionRepository sessionRepository,
         ISessionChatRepository chatRepository,
         IMediator mediator)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _sessionRepository = sessionRepository;
         _chatRepository = chatRepository;
         _mediator = mediator;
@@ -40,6 +44,10 @@ public class SendSessionChatMessageCommandHandler : IRequestHandler<SendSessionC
 
     public async Task<SendChatMessageResult> Handle(SendSessionChatMessageCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
@@ -276,78 +284,78 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
 
         if (!groundedProduced)
         {
-        try
-        {
-            if (hasImages)
+            try
             {
-                // Vision path: process images and build multimodal messages
-                var contentParts = new List<ContentPart>();
-
-                foreach (var img in request.Images!)
+                if (hasImages)
                 {
-                    var processed = await _imagePreprocessor.ProcessAsync(
-                        img.Data, img.MediaType).ConfigureAwait(false);
-                    var base64 = Convert.ToBase64String(processed.Data);
-                    contentParts.Add(new ImageContentPart(base64, processed.MediaType));
-                }
+                    // Vision path: process images and build multimodal messages
+                    var contentParts = new List<ContentPart>();
 
-                contentParts.Add(new TextContentPart(effectiveQuery));
+                    foreach (var img in request.Images!)
+                    {
+                        var processed = await _imagePreprocessor.ProcessAsync(
+                            img.Data, img.MediaType).ConfigureAwait(false);
+                        var base64 = Convert.ToBase64String(processed.Data);
+                        contentParts.Add(new ImageContentPart(base64, processed.MediaType));
+                    }
 
-                var messages = new List<LlmMessage>
+                    contentParts.Add(new TextContentPart(effectiveQuery));
+
+                    var messages = new List<LlmMessage>
                 {
                     LlmMessage.FromText("system", systemPrompt),
                     new("user", contentParts)
                 };
 
-                var result = await _llmService.GenerateMultimodalCompletionAsync(
-                    (IReadOnlyList<LlmMessage>)messages,
-                    RequestSource.AgentTask,
-                    cancellationToken).ConfigureAwait(false);
+                    var result = await _llmService.GenerateMultimodalCompletionAsync(
+                        (IReadOnlyList<LlmMessage>)messages,
+                        RequestSource.AgentTask,
+                        cancellationToken).ConfigureAwait(false);
 
-                if (result.Success)
-                {
-                    answer = result.Response;
-                    confidence = null; // #3388: no fabricated confidence — vision path is not grounded in retrieval
+                    if (result.Success)
+                    {
+                        answer = result.Response;
+                        confidence = null; // #3388: no fabricated confidence — vision path is not grounded in retrieval
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Multimodal LLM completion failed for session {SessionId}: {Error}",
+                            request.SessionId, result.ErrorMessage);
+                        answer = "I'm sorry, I couldn't analyze the image right now. Please try again.";
+                        confidence = null;
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "Multimodal LLM completion failed for session {SessionId}: {Error}",
-                        request.SessionId, result.ErrorMessage);
-                    answer = "I'm sorry, I couldn't analyze the image right now. Please try again.";
-                    confidence = null;
+                    // Text-only path (existing behavior)
+                    var result = await _llmService.GenerateCompletionAsync(
+                        systemPrompt,
+                        effectiveQuery,
+                        RequestSource.AgentTask,
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (result.Success)
+                    {
+                        answer = result.Response;
+                        confidence = null; // #3388: no fabricated confidence — text-only path is not grounded in retrieval
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "LLM completion failed for session {SessionId}: {Error}",
+                            request.SessionId, result.ErrorMessage);
+                        answer = "I'm sorry, I couldn't process your question right now. Please try again.";
+                        confidence = null;
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                // Text-only path (existing behavior)
-                var result = await _llmService.GenerateCompletionAsync(
-                    systemPrompt,
-                    effectiveQuery,
-                    RequestSource.AgentTask,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (result.Success)
-                {
-                    answer = result.Response;
-                    confidence = null; // #3388: no fabricated confidence — text-only path is not grounded in retrieval
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "LLM completion failed for session {SessionId}: {Error}",
-                        request.SessionId, result.ErrorMessage);
-                    answer = "I'm sorry, I couldn't process your question right now. Please try again.";
-                    confidence = null;
-                }
+                _logger.LogError(ex, "LLM service error for session {SessionId}", request.SessionId);
+                answer = "I'm sorry, an error occurred while processing your question. Please try again.";
+                confidence = null;
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "LLM service error for session {SessionId}", request.SessionId);
-            answer = "I'm sorry, an error occurred while processing your question. Please try again.";
-            confidence = null;
-        }
         } // end if (!groundedProduced) — multimodal/text-only fallback (ungrounded)
 
         var agentSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);

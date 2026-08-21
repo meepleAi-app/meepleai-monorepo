@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -42,6 +43,7 @@ public class SendSessionChatMessageCommandHandlerTests
         _mockChatRepo = new Mock<ISessionChatRepository>();
         _mockMediator = new Mock<IMediator>();
         _handler = new SendSessionChatMessageCommandHandler(
+            SessionAccessGuardMocks.Permissive(),
             _mockSessionRepo.Object,
             _mockChatRepo.Object,
             _mockMediator.Object);

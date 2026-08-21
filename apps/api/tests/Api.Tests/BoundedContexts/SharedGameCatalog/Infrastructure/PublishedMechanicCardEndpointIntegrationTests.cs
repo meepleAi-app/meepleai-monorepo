@@ -19,6 +19,21 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test semina il proprio gioco con
+/// <c>SeedGameWithCardAsync</c> (<c>gameId = Guid.NewGuid()</c>) e legge <c>GET</c> scoped a quel
+/// gameId; il test del 404 usa un <c>Guid.NewGuid()</c> mai seminato. Le asserzioni sul contenuto
+/// (<c>GameName</c>, <c>Sections</c>, <c>PublicationYear</c>) riguardano la card di quel singolo
+/// gioco, non un aggregato: le card degli altri test non entrano nella risposta.
+/// </para>
+/// </summary>
+public sealed class PublishedMechanicCardHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "published_mechanic_card");
+
+/// <summary>
 /// Integration tests for <c>GET /api/v1/games/{gameId}/card</c> (#528, ME-M1.6) — the login-gated
 /// public read of a published mechanic card. Exercises the full stack against real PostgreSQL: the
 /// content JSONB round-trip + grouping, the suppression query filter (takedown → 404), the no-card
@@ -27,12 +42,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class PublishedMechanicCardEndpointIntegrationTests : IAsyncLifetime
+public sealed class PublishedMechanicCardEndpointIntegrationTests
+    : IClassFixture<PublishedMechanicCardHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
     private string _userSessionToken = null!;
 
     private static readonly Guid TestUserId = Guid.NewGuid();
@@ -43,37 +57,24 @@ public sealed class PublishedMechanicCardEndpointIntegrationTests : IAsyncLifeti
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public PublishedMechanicCardEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public PublishedMechanicCardEndpointIntegrationTests(PublishedMechanicCardHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"published_mechanic_card_{Guid.NewGuid():N}";
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
+    // Il seeding resta per test — xUnit crea una nuova istanza della classe per ogni [Fact] — ma
+    // costruisce solo la sessione utente, non l'host. TestUserId e' static e CreateUserSessionAsync
+    // e' find-or-create sull'Id: nessun 23505 sull'indice unico dell'email.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-            var (_, token) = await TestSessionHelper.CreateUserSessionAsync(dbContext, TestUserId);
-            _userSessionToken = token;
-        }
-
-        _client = _factory.CreateClient();
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = await TestSessionHelper.CreateUserSessionAsync(dbContext, TestUserId);
+        _userSessionToken = token;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        if (_factory is not null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task GetCard_ForPublishedActiveCard_Returns200WithGroupedSections()

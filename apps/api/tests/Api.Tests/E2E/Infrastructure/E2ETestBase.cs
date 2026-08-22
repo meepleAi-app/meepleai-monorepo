@@ -381,12 +381,24 @@ internal static class E2ESharedInfrastructure
             using var dbContext = CreateDbContext();
             await dbContext.Database.MigrateAsync();
 
-            // Seed SystemConfiguration row required by RequirePublicRegistrationFilter.
-            // The filter fails closed (returns 403) when Registration:PublicEnabled is
-            // not present or false, which breaks every E2E test that calls
-            // RegisterUserAsync. ConfigurationService reads from the DB via CQRS, so
-            // setting IConfiguration alone is not enough — we must seed the row itself.
-            await SeedRegistrationEnabledConfigAsync(dbContext);
+            // Seed SystemConfiguration rows required dagli endpoint sotto test. ConfigurationService
+            // legge dal DB via CQRS, quindi impostare IConfiguration non basta: la riga deve esistere.
+            //
+            // Registration:PublicEnabled — RequirePublicRegistrationFilter fallisce chiuso (403) se
+            // manca, e questo romperebbe ogni test che chiama RegisterUserAsync.
+            //
+            // Features.PdfUpload (#3662) — FeatureFlagService.IsEnabledAsync fa fail-safe a FALSE
+            // quando la chiave non esiste, e HandleStandardUpload controlla il flag PRIMA
+            // dell'autenticazione. In CI il database e' nuovo, quindi la riga non c'era e quattro
+            // test ricevevano 403 con corpo `{"error":"feature_disabled"}` — sia da admin sia da
+            // anonimo, il che spiega anche perche' il test del 401 ne riceveva 403. In locale
+            // passavano perche' il DB di sviluppo la riga ce l'ha. Saltare quei test avrebbe
+            // significato non verificare mai l'upload PDF in CI: e' il difetto che #3662 combatte,
+            // non la sua cura.
+            await SeedBoolConfigAsync(dbContext, "Registration:PublicEnabled", "Registration",
+                "E2E test seed: enable public registration so RegisterUserAsync succeeds.");
+            await SeedBoolConfigAsync(dbContext, "Features.PdfUpload", "Features",
+                "E2E test seed (#3662): enable PDF upload so the ingest endpoint is reachable.");
 
             _initialized = true;
         }
@@ -396,10 +408,17 @@ internal static class E2ESharedInfrastructure
         }
     }
 
-    private static async Task SeedRegistrationEnabledConfigAsync(MeepleAiDbContext dbContext)
+    /// <summary>
+    /// Semina in modo idempotente una riga booleana di <c>SystemConfiguration</c>. Generalizzato in
+    /// #3662: serviva la stessa cosa per un secondo flag, e due copie della stessa procedura — con
+    /// la nota sul FK Restrict su <c>CreatedByUserId</c> — sarebbero invecchiate separatamente.
+    /// </summary>
+    private static async Task SeedBoolConfigAsync(
+        MeepleAiDbContext dbContext,
+        string key,
+        string category,
+        string description)
     {
-        const string key = "Registration:PublicEnabled";
-
         var exists = await dbContext
             .Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AnyAsync(c => c.Key == key);
@@ -424,8 +443,8 @@ internal static class E2ESharedInfrastructure
                 Key = key,
                 Value = "true",
                 ValueType = "bool",
-                Description = "E2E test seed: enable public registration so RegisterUserAsync succeeds.",
-                Category = "Registration",
+                Description = description,
+                Category = category,
                 IsActive = true,
                 RequiresRestart = false,
                 Environment = "All",

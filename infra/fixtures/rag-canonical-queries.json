@@ -8,64 +8,78 @@
     {
       "queryId": "catan-setup",
       "game": "Catan",
-      "query": "How do I set up the board and place the two initial settlements and roads in Catan?"
+      "query": "How do I set up the board and place the two initial settlements and roads in Catan?",
+      "expectedDocument": "catan_en_rulebook.pdf"
     },
     {
       "queryId": "wingspan-round-goals",
       "game": "Wingspan",
-      "query": "How does end-of-round goal scoring work in Wingspan?"
+      "query": "How does end-of-round goal scoring work in Wingspan?",
+      "expectedDocument": "wingspan_en_rulebook.pdf"
     },
     {
       "queryId": "dominion-buy-phase",
       "game": "Dominion",
-      "query": "During the buy phase how many cards may I buy and how do coins work in Dominion?"
+      "query": "During the buy phase how many cards may I buy and how do coins work in Dominion?",
+      "expectedDocument": "dominion_rulebook.pdf"
     },
     {
       "queryId": "ark-nova-conservation",
       "game": "Ark Nova",
-      "query": "How do conservation projects and reputation points work in Ark Nova?"
+      "query": "How do conservation projects and reputation points work in Ark Nova?",
+      "expectedDocument": "ark-nova_rulebook.pdf"
     },
     {
       "queryId": "seven-wonders-military",
       "game": "7 Wonders",
-      "query": "How is military conflict resolved at the end of each age in 7 Wonders?"
+      "query": "How is military conflict resolved at the end of each age in 7 Wonders?",
+      "expectedDocument": "7-wonders_rulebook.pdf"
     },
     {
       "queryId": "catan-setup-it",
       "game": "Catan",
       "language": "it",
-      "query": "Come si prepara il tabellone e si piazzano i due insediamenti e le strade iniziali in Catan?"
+      "query": "Come si prepara il tabellone e si piazzano i due insediamenti e le strade iniziali in Catan?",
+      "expectedDocument": "catan_en_rulebook.pdf"
     },
     {
       "queryId": "wingspan-round-goals-it",
       "game": "Wingspan",
       "language": "it",
-      "query": "Come funziona il punteggio degli obiettivi di fine round in Wingspan?"
+      "query": "Come funziona il punteggio degli obiettivi di fine round in Wingspan?",
+      "expectedDocument": "wingspan_en_rulebook.pdf"
     },
     {
       "queryId": "dominion-buy-phase-it",
       "game": "Dominion",
       "language": "it",
-      "query": "Durante la fase di acquisto quante carte posso comprare e come funzionano le monete in Dominion?"
+      "query": "Durante la fase di acquisto quante carte posso comprare e come funzionano le monete in Dominion?",
+      "expectedDocument": "dominion_rulebook.pdf"
     },
     {
       "queryId": "ark-nova-conservation-it",
       "game": "Ark Nova",
       "language": "it",
-      "query": "Come funzionano i progetti di conservazione e i punti reputazione in Ark Nova?"
+      "query": "Come funzionano i progetti di conservazione e i punti reputazione in Ark Nova?",
+      "expectedDocument": "ark-nova_rulebook.pdf"
     },
     {
       "queryId": "seven-wonders-military-it",
       "game": "7 Wonders",
       "language": "it",
-      "query": "Come si risolve il conflitto militare alla fine di ogni età in 7 Wonders?"
+      "query": "Come si risolve il conflitto militare alla fine di ogni età in 7 Wonders?",
+      "expectedDocument": "7-wonders_rulebook.pdf"
     },
     {
       "queryId": "tmars-setup-it",
       "game": "Terraforming Mars",
       "language": "it",
       "_comment": "Epic #3338 WP2/WP3 motivating case ('Setup per N giocatori'). Pins that TM's PREPARAZIONE setup section — recovered by the WP1 heading-repair (Header promotion) after the re-chunk — stays retrievable. SKIPs until its baseline is captured via --update-baseline on staging. The query carries TM-specific nouns (Corporation, ossigeno, plancia dei giocatori) so global-ask isolates TM and does not pin a wrong-game baseline (review #3355).",
-      "query": "Come si prepara Terraforming Mars per N giocatori: quante carte Corporation e progetti in mano, la plancia dei giocatori e i parametri iniziali (ossigeno, temperatura, oceani)?"
+      "query": "Come si prepara Terraforming Mars per N giocatori: quante carte Corporation e progetti in mano, la plancia dei giocatori e i parametri iniziali (ossigeno, temperatura, oceani)?",
+      "expectedDocument": "terraforming-mars_rulebook.pdf"
     }
-  ]
+  ],
+  "_semanticCriterion": "#3740: criterio semantico STRETTO, accanto al confronto con la golden baseline. `expectedDocument` e' il manuale PROPRIO del gioco nominato, non la sua famiglia: il criterio largo (prefisso del nome) certificava come corretta `seven-wonders-military`, che recupera 3 volte su 3 `7-wonders-duel_rulebook.pdf` — un gioco diverso. I due segnali sono indipendenti: la baseline cattura la DERIVA (qualunque cambio, anche migliorativo), il semantico cattura la CORRETTEZZA (il manuale giusto nei top-K). Il pavimento e' un conteggio, non un pass/fail per query, perche' due query oggi mancano il bersaglio per un difetto noto e non vanno confuse con una regressione.",
+  "semanticFloor": 9,
+  "_semanticFloorRationale": "9/11 misurato sul dump del gate (run 32262228377) replicando FuseGlobally offline. I due che mancano sono lo stesso difetto cross-lingua, in direzioni opposte: catan-setup-it (query IT, manuale EN) e seven-wonders-military (query EN, manuale IT — 7-wonders_rulebook.pdf e' in italiano, e la query inglese ripiega su 7-wonders-duel). Sale a 11 quando #3737 corregge il prefisso e5. ALZARE questo pavimento quando il difetto e' corretto; NON abbassarlo per far passare la build."
 }

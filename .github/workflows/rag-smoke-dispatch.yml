@@ -38,6 +38,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      e5_query_prefix:
+        description: 'Turn on the e5 query: prefix for this run (#3737) — seeds Embedding:E5QueryPrefixEnabled'
+        required: false
+        default: 'false'
+        type: boolean
 
 # ADR-078: monitor/consume workflows serialize per ref to stay under the API/runner budget.
 concurrency:
@@ -166,6 +171,50 @@ jobs:
           # ~15-20min — wait generously. #2480.
           bash scripts/wait-for-healthy.sh embedding 1800
           bash scripts/wait-for-healthy.sh reranker 1800
+
+      # Il gate NON gira su staging: lo stack è effimero e nasce dallo snapshot pubblicato, quindi
+      # una riga di configurazione accesa su staging qui non esiste. Senza questo step l'interruttore
+      # di #3737 sarebbe spento in ogni run e il gate misurerebbe per sempre il comportamento
+      # precedente — cioè non potrebbe mai dire se il prefisso corretto aiuta o danneggia.
+      #
+      # Riga assente = spento: una run senza questo input misura il comportamento di produzione
+      # odierno, ed è il termine di paragone dell'A/B.
+      - name: Turn on the e5 query prefix (#3737)
+        if: ${{ inputs.e5_query_prefix }}
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
+          PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
+
+          # CreatedByUserId è FK non-null verso users: prendo un utente qualunque dello snapshot.
+          # Se non ce ne sono, meglio fallire qui che scoprire a valle un interruttore mai acceso.
+          OWNER=$(docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
+            -c 'SELECT "Id" FROM users ORDER BY "CreatedAt" LIMIT 1')
+          if [ -z "$OWNER" ]; then
+            echo "::error:: nessun utente nello snapshot: impossibile seminare la configurazione"
+            exit 1
+          fi
+
+          # Environment='All' per ADR-062: è una chiave globale, non un valore che diverge per
+          # ambiente. IsActive=true perché il repository filtra su di esso.
+          docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -v ON_ERROR_STOP=1 -c "
+            INSERT INTO system_configurations
+              (\"Id\", \"Key\", \"Value\", \"ValueType\", \"Description\", \"Category\",
+               \"IsActive\", \"RequiresRestart\", \"Environment\", \"Version\",
+               \"CreatedAt\", \"UpdatedAt\", \"CreatedByUserId\")
+            VALUES
+              ('e5-query-prefix-gate', 'Embedding:E5QueryPrefixEnabled', 'true', 'bool',
+               'e5 query: prefix on search queries (#3737) — seeded by the RAG smoke dispatch',
+               'general', true, false, 'All', 1, NOW(), NOW(), '$OWNER');"
+
+          # La cache di IConfigurationService dura 5 minuti ma si popola alla prima lettura, che
+          # avviene con la prima query: seminare prima dello smoke è sufficiente, e nessun restart
+          # serve. Verifico comunque che la riga sia leggibile, così un fallimento è qui e non
+          # travestito da «il prefisso non ha avuto effetto».
+          docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
+            -c "SELECT \"Key\" || '=' || \"Value\" FROM system_configurations
+                WHERE \"Key\" = 'Embedding:E5QueryPrefixEnabled' AND \"IsActive\";"
 
       - name: Run RAG smoke
         id: ragsmoke

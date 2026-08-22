@@ -64,7 +64,15 @@ La cura descritta sopra è **presente nel codice ma spenta**. Il prefisso corret
 | riga assente | **spento** — il deploy non cambia nulla finché non si accende deliberatamente |
 | propagazione | ≤ 5 min (cache di `IConfigurationService`), nessun restart |
 
-Accendere su staging:
+**Per una run del gate** — non serve toccare staging, e non servirebbe a nulla: lo stack del gate è **effimero** e nasce dallo snapshot pubblicato, quindi non vede le righe di configurazione di staging. Si accende con l'input del dispatch:
+
+```bash
+gh workflow run rag-smoke-dispatch.yml -f e5_query_prefix=true
+```
+
+Lo step `Turn on the e5 query prefix` semina la riga nel Postgres effimero prima dello smoke. Una run **senza** quell'input misura il comportamento attuale: è il termine di paragone dell'A/B, ed è per questo che l'interruttore va lasciato spento come default anche qui.
+
+**Su staging o in produzione**:
 
 ```bash
 curl -sS -X POST "$API/api/v1/admin/configurations" \

@@ -198,23 +198,33 @@ jobs:
 
           # Environment='All' per ADR-062: è una chiave globale, non un valore che diverge per
           # ambiente. IsActive=true perché il repository filtra su di esso.
+          # "Id" e "CreatedByUserId" sono uuid: la configurazione EF li dichiara HasMaxLength(64),
+          # che su una colonna uuid non ha effetto e legge come se fossero stringhe.
           docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -v ON_ERROR_STOP=1 -c "
             INSERT INTO system_configurations
               (\"Id\", \"Key\", \"Value\", \"ValueType\", \"Description\", \"Category\",
                \"IsActive\", \"RequiresRestart\", \"Environment\", \"Version\",
                \"CreatedAt\", \"UpdatedAt\", \"CreatedByUserId\")
             VALUES
-              ('e5-query-prefix-gate', 'Embedding:E5QueryPrefixEnabled', 'true', 'bool',
+              ('3737e5e5-0000-4000-8000-000000003737', 'Embedding:E5QueryPrefixEnabled', 'true', 'bool',
                'e5 query: prefix on search queries (#3737) — seeded by the RAG smoke dispatch',
-               'general', true, false, 'All', 1, NOW(), NOW(), '$OWNER');"
+               'general', true, false, 'All', 1, NOW(), NOW(), '$OWNER')
+            ON CONFLICT DO NOTHING;"
 
           # La cache di IConfigurationService dura 5 minuti ma si popola alla prima lettura, che
           # avviene con la prima query: seminare prima dello smoke è sufficiente, e nessun restart
-          # serve. Verifico comunque che la riga sia leggibile, così un fallimento è qui e non
-          # travestito da «il prefisso non ha avuto effetto».
-          docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
-            -c "SELECT \"Key\" || '=' || \"Value\" FROM system_configurations
-                WHERE \"Key\" = 'Embedding:E5QueryPrefixEnabled' AND \"IsActive\";"
+          # serve.
+          #
+          # La rilettura ASSERISCE il valore invece di stamparlo: uno step che stampa e prosegue
+          # lascia passare un interruttore non acceso, e il costo di scoprirlo è una run intera.
+          SEEDED=$(docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
+            -c "SELECT \"Value\" FROM system_configurations
+                WHERE \"Key\" = 'Embedding:E5QueryPrefixEnabled' AND \"IsActive\";")
+          echo "Embedding:E5QueryPrefixEnabled=${SEEDED:-<assente>}"
+          if [ "$SEEDED" != "true" ]; then
+            echo "::error:: l'interruttore non risulta acceso dopo il seed: la run misurerebbe il comportamento senza prefisso"
+            exit 1
+          fi
 
       - name: Run RAG smoke
         id: ragsmoke

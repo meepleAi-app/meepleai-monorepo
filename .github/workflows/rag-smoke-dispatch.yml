@@ -39,9 +39,9 @@ on:
         default: 'false'
         type: boolean
       e5_query_prefix:
-        description: 'Turn on the e5 query: prefix for this run (#3737) — seeds Embedding:E5QueryPrefixEnabled'
+        description: 'e5 query: prefix (#3737). Acceso per default: spegnilo per un confronto A/B'
         required: false
-        default: 'false'
+        default: 'true'
         type: boolean
 
 # ADR-078: monitor/consume workflows serialize per ref to stay under the API/runner budget.
@@ -177,10 +177,17 @@ jobs:
       # di #3737 sarebbe spento in ogni run e il gate misurerebbe per sempre il comportamento
       # precedente — cioè non potrebbe mai dire se il prefisso corretto aiuta o danneggia.
       #
-      # Riga assente = spento: una run senza questo input misura il comportamento di produzione
-      # odierno, ed è il termine di paragone dell'A/B.
+      # ACCESO PER DEFAULT dal 2026-08-22: il prefisso piu' la correzione per lingua (#3740) danno
+      # 10/11 contro i 9/11 senza, verificato nella run 32589046651 — quindi e' questa la
+      # configurazione che il gate deve proteggere, ed e' quella su cui la baseline e' catturata.
+      #
+      # La condizione NON puo' essere il solo `inputs.e5_query_prefix`: sul trigger `schedule` il
+      # contesto `inputs` e' vuoto, quindi il cron settimanale girerebbe con il prefisso spento e
+      # misurerebbe una configurazione diversa da quella pinnata dalla baseline — fallendo ogni
+      # settimana per una deriva che non esiste. Acceso sempre, tranne quando un dispatch lo spegne
+      # esplicitamente per un confronto A/B.
       - name: Turn on the e5 query prefix (#3737)
-        if: ${{ inputs.e5_query_prefix }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e5_query_prefix }}
         working-directory: infra
         run: |
           set -euo pipefail

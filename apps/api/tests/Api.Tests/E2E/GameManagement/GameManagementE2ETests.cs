@@ -111,7 +111,14 @@ public sealed class GameManagementE2ETests : E2ETestBase
         ClearAuthentication();
 
         // Act
-        var response = await Client.GetAsync("/api/v1/games");
+        // #3662: la lista pubblica e' paginata e il database E2E e' condiviso fra tutte le classi,
+        // che seminano giochi a decine: il nostro finisce fuori dalla prima pagina e l'assert
+        // falliva in 16 ms, dipendendo dalla dimensione del catalogo — cioe' dall'ordine e dal
+        // numero degli altri test. Stessa correzione gia' applicata al test del percorso completo
+        // qui sotto: il nome e' unico per test, quindi il filtro rende il passo deterministico
+        // senza cambiare cosa si verifica.
+        var response = await Client.GetAsync(
+            $"/api/v1/games?search={Uri.EscapeDataString(_testGameName)}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);

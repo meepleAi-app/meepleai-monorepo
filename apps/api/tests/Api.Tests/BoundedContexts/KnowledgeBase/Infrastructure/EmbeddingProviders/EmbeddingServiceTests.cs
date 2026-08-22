@@ -68,7 +68,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Assert
         service.Should().NotBeNull();
@@ -84,7 +85,8 @@ public class EmbeddingServiceTests
         Action act = () => new EmbeddingService(
             null!,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -98,7 +100,8 @@ public class EmbeddingServiceTests
         Action act = () => new EmbeddingService(
             _providerFactoryMock.Object,
             null!,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -115,7 +118,8 @@ public class EmbeddingServiceTests
         Action act = () => new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            null!);
+            null!,
+            Mock.Of<IConfigurationService>());
 
         // Assert
         act.Should().Throw<ArgumentNullException>()
@@ -130,7 +134,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var dimensions = service.GetEmbeddingDimensions();
@@ -148,7 +153,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var modelName = service.GetModelName();
@@ -164,7 +170,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(new List<string>());
@@ -182,7 +189,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(null!);
@@ -213,7 +221,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts);
@@ -251,7 +260,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts);
@@ -285,7 +295,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts);
@@ -316,7 +327,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts);
@@ -348,7 +360,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts);
@@ -374,7 +387,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingAsync(text);
@@ -407,7 +421,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts, language);
@@ -434,7 +449,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts, "unsupported-lang");
@@ -463,7 +479,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingAsync(text, language);
@@ -489,7 +506,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts);
@@ -519,7 +537,8 @@ public class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             options,
-            _loggerMock.Object);
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         // Act
         var result = await service.GenerateEmbeddingsAsync(texts, cts.Token);

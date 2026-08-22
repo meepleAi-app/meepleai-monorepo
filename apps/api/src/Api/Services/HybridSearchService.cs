@@ -344,8 +344,13 @@ internal class HybridSearchService : IHybridSearchService
     {
         try
         {
+            // #3737: this is the retrieval question, not indexed text, so it must carry the
+            // e5 "query:" prefix. With "passage:" the best chunk of the manual named by the
+            // canonical `catan-setup` query sat at cosine rank 10 instead of 1 on the real
+            // 56k-chunk corpus — and the vector arm is the signal that distinguishes manuals
+            // from one another (see MultiGameHybridSearchService.FuseGlobally, weight 0.7).
             var embeddingResult = await _embeddingService
-                .GenerateEmbeddingAsync(query, cancellationToken)
+                .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!embeddingResult.Success || embeddingResult.Embeddings is not { Count: > 0 })

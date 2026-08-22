@@ -704,7 +704,7 @@ public class StreamQaQueryHandlerTests
 
         // Setup empty search results
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -841,7 +841,7 @@ public class StreamQaQueryHandlerTests
         // Setup search with LOW relevance scores
         var queryEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -950,7 +950,7 @@ public class StreamQaQueryHandlerTests
         // Setup search with HIGH quality snippets
         var queryEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -1398,7 +1398,7 @@ public class StreamQaQueryHandlerTests
         // Setup embedding generation for search
         var queryEmbedding = new float[] { 0.1f, 0.2f, 0.3f };
         _embeddingServiceMock
-            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,

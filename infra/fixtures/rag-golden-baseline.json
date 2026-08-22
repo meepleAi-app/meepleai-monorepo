@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "_comment": "Golden baseline for the RAG smoke harness (#2480). Captured once against a fresh, verified snapshot by running `bash infra/scripts/rag-smoke-assert.sh --update-baseline` after `make dev-from-snapshot`. Each entry pins the top-3 retrieved chunks (source + page) for a canonical query; the harness then fails if retrieval drifts. relevanceScore is advisory (compared with tolerance, not exact). Regenerate after an intentional re-index (embedding model change, chunker change, seed-table schema-version bump). See docs/for-developers/operations/rag-smoke-runbook.md.",
-  "capturedAt": "2026-08-17T12:10:55Z",
+  "capturedAt": "2026-08-22T18:47:07Z",
   "snapshot": "meepleai_seed_20260817T093250Z_intfloat_multilingual-e5-base_5bfc9f17a",
   "embeddingModel": "intfloat/multilingual-e5-base",
   "baseline": {
@@ -11,35 +11,35 @@
         "page": 1
       },
       {
-        "document": "catan_en_rulebook.pdf",
+        "document": "revive_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "fields-of-arle_rulebook.pdf",
+        "document": "twilight-imperium-4e_rulebook.pdf",
         "page": 1
       }
     ],
     "wingspan-round-goals": [
       {
+        "document": "wingspan-asia_rulebook.pdf",
+        "page": 1
+      },
+      {
         "document": "wingspan_en_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "wingspan-asia_rulebook.pdf",
-        "page": 1
-      },
-      {
-        "document": "wingspan-asia_rulebook.pdf",
+        "document": "wingspan_en_rulebook.pdf",
         "page": 1
       }
     ],
     "dominion-buy-phase": [
       {
-        "document": "dominion-prosperity_rulebook.pdf",
+        "document": "dominion_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "dominion_rulebook.pdf",
+        "document": "dominion-prosperity_rulebook.pdf",
         "page": 1
       },
       {
@@ -77,15 +77,15 @@
     ],
     "catan-setup-it": [
       {
-        "document": "star-wars-rebellion_rulebook.pdf",
+        "document": "revive_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "imperial-settlers_rulebook.pdf",
+        "document": "catan_en_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "cthulhu-death-may-die_rulebook.pdf",
+        "document": "catan_en_rulebook.pdf",
         "page": 1
       }
     ],
@@ -105,21 +105,21 @@
     ],
     "dominion-buy-phase-it": [
       {
-        "document": "root_rulebook.pdf",
-        "page": 1
-      },
-      {
         "document": "dominion_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "barrage_rulebook.pdf",
+        "document": "root_rulebook.pdf",
+        "page": 1
+      },
+      {
+        "document": "concordia_rulebook.pdf",
         "page": 1
       }
     ],
     "ark-nova-conservation-it": [
       {
-        "document": "star-wars-rebellion_rulebook.pdf",
+        "document": "ark-nova_rulebook.pdf",
         "page": 1
       },
       {
@@ -127,7 +127,7 @@
         "page": 1
       },
       {
-        "document": "seti_rulebook.pdf",
+        "document": "ark-nova_rulebook.pdf",
         "page": 1
       }
     ],
@@ -137,11 +137,11 @@
         "page": 1
       },
       {
-        "document": "root_rulebook.pdf",
+        "document": "7-wonders-duel_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "7-wonders_rulebook.pdf",
+        "document": "7-wonders-duel_rulebook.pdf",
         "page": 1
       }
     ],
@@ -155,7 +155,7 @@
         "page": 1
       },
       {
-        "document": "7-wonders_rulebook.pdf",
+        "document": "terraforming-mars_rulebook.pdf",
         "page": 1
       }
     ]

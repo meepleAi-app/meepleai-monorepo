@@ -126,7 +126,9 @@ def fuse(candidates, language_correction: bool):
     return [c for _, c in scored]
 
 
-def top_documents(candidates, k, language_correction=False):
+def top_documents(candidates, k, language_correction=True):
+    """La correzione per lingua e' ATTIVA per default: dal 2026-08-22 (#3740) e' il comportamento
+    di produzione, quindi e' quello che la replica deve riprodurre per essere fedele."""
     return [c["d"] for c in fuse(candidates, language_correction)[:k]]
 
 
@@ -197,8 +199,9 @@ def main():
 
     datasets = [(args.reference, reference)] + [(d, load_dump(d)) for d in args.compare]
     for directory, rows in datasets:
-        for correction in (False, True):
-            label = f"{directory.name} {'+ correzione lingua' if correction else '(come in produzione)'}"
+        for correction in (True, False):
+            label = (f"{directory.name} "
+                     f"{'(come in produzione)' if correction else 'SENZA correzione lingua'}")
             hits, misses = semantic_count(rows, query_ids, expected_docs, mapping, top_k, correction)
             print(f"\n{label}: semantico {hits}/{len(rows)}")
             for query_id, want, got in misses:

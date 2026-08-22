@@ -14,7 +14,7 @@ Questo runbook diceva «the corpus is English rulebooks», ed è falso — misur
 
 Conta perché cambia come si legge un `-it` rosso. Nello spazio di e5 la lingua del testo è una componente dominante, quindi una query italiana ha per vicini i chunk **italiani di qualunque gioco**: un `-it` che recupera il manuale sbagliato può essere clustering linguistico e non una regressione del ranking. La distinzione è misurabile — restringere l'ordinamento cosine a `lang='en'` — e i numeri stanno in [2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md](../audits/2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md).
 
-Regola pratica: prima di trattare un `-it` rosso come drift, controlla se il gioco atteso ha contenuto nella lingua della query. Wingspan e 7 Wonders ce l'hanno; **Catan, Dominion e Ark Nova sono solo in inglese**, ed è la ragione per cui le loro query IT sono le più fragili del set.
+Regola pratica: prima di trattare un `-it` rosso come drift, controlla se il gioco atteso ha contenuto nella lingua della query. **Catan, Dominion e Ark Nova sono solo in inglese**, ed è la ragione per cui le loro query IT sono le più fragili del set. ⚠️ Il caso speculare esiste e sfugge più facilmente: il manuale di **7 Wonders è solo in italiano** (`7-wonders_rulebook.pdf`), quindi è la query **inglese** a mancarlo — ripiegando su `7-wonders-duel`, che è un altro gioco. Vedi § *Due criteri, non uno*.
 
 It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by the **document name** (`{document, page}`, baseline v2 — see § *La chiave della baseline*); `page` and `score` are advisory (not asserted, to tolerate chunking shifts and minor embedding/search float drift).
 
@@ -25,6 +25,33 @@ The fixture top-level `language` (`"en"`) is the **default**. Each query MAY set
 ### SKIP for un-baselined queries
 
 A query with **no golden-baseline entry** reports `SKIP` (via a `::notice::`), not `FAIL`, and does **not** fail the gate. This lets new queries (e.g. the IT set) land *before* the ops `--update-baseline` capture without redding the weekly cron. Real drift and no-citations still `FAIL`. The summary reports `N passed, N failed, N skipped (pending baseline)`; exit is non-zero only on a real `FAIL`.
+
+### Due criteri, non uno: deriva e correttezza (#3740)
+
+Il confronto con la golden baseline misura la **deriva**: fallisce a ogni cambiamento dei top-*K*, anche quando il cambiamento è un miglioramento. Non dice nulla su *quale* manuale sia stato recuperato.
+
+La distinzione non è teorica. Fino a #3740 la baseline pinnava, per `catan-setup-it`:
+
+```
+star-wars-rebellion_rulebook.pdf · imperial-settlers_rulebook.pdf · cthulhu-death-may-die_rulebook.pdf
+```
+
+Nessun Catan — e il gate era **verde**, perché il retrieval non era cambiato rispetto a quando la baseline fu catturata. Un gate che certifica come corretto un risultato sbagliato è la stessa classe di difetto dei gate che non eseguono nulla ([#3622](https://github.com/meepleAi-app/meepleai-monorepo/issues/3622) e seguenti): il colore verde e l'assenza di problemi si confondono.
+
+Accanto alla baseline l'harness conta quindi quante query hanno, nei primi *K* chunk, il manuale **proprio** del gioco nominato — `expectedDocument` in `rag-canonical-queries.json` — e confronta il totale con `semanticFloor`.
+
+**Perché un conteggio con pavimento e non un pass/fail per query.** Due query oggi mancano il bersaglio per un difetto noto e non ancora corretto: farle fallire una per una renderebbe il gate rosso in permanenza, e un gate sempre rosso si ignora. Il pavimento distingue «sappiamo che due sono fuori» da «ne è appena uscita una terza».
+
+**Perché stretto e non largo.** Il criterio largo — qualunque documento il cui nome cominci col gioco — è stato misurato e **nasconde un difetto**: `seven-wonders-military` recupera tre volte su tre `7-wonders-duel_rulebook.pdf`, che è **un altro gioco**, e passerebbe per via del prefisso comune. Con il criterio stretto il conteggio è 9/11 invece di 10/11, e i due fuori bersaglio sono:
+
+| query | manuale atteso | lingua del manuale | perché manca |
+|---|---|---|---|
+| `catan-setup-it` | `catan_en_rulebook.pdf` | **en** | query IT, manuale EN |
+| `seven-wonders-military` | `7-wonders_rulebook.pdf` | **it** | query EN, manuale IT — ripiega su Duel, che è in inglese |
+
+Sono **lo stesso difetto in direzioni opposte**, ed è la prova più diretta che il meccanismo è la lingua e non una particolarità di Catan: quando il manuale e la domanda non coincidono di lingua, il braccio vettoriale non porta il documento giusto abbastanza in alto. La cura sta in [#3737](https://github.com/meepleAi-app/meepleai-monorepo/issues/3737) (il prefisso `query:` di e5), non nella fusione — che è già al suo ottimo: nessuna combinazione di pesi supera 9/11, misurato replicando `FuseGlobally` offline sull'artifact `rag-fusion-tuning-<run_id>`.
+
+🔴 **Quando il pavimento sale, alzalo.** Se l'harness stampa `Criterio semantico salito a N/11`, fissa il guadagno aggiornando `semanticFloor` nello stesso commit. Se scende, il messaggio d'errore chiede esplicitamente di **non** abbassarlo per far passare la build: un pavimento che insegue il risultato non è un pavimento.
 
 ### La chiave della baseline: il documento, non il suo id (v2, #3666)
 

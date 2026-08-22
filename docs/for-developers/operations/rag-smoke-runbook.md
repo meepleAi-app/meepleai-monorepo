@@ -102,7 +102,7 @@ python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-off --compare /
 
 Storia: quattro configurazioni provate contro il gate fra il 17 e il 22 agosto (10/11 → 8/11 → 5/11 → 7/11), tutte a scommessa. Lo script ha ripagato il costo di scriverlo alla prima domanda a cui ha risposto — se la correzione per lingua funzionasse ora che `lang` arriva davvero alla fusione.
 
-⚠️ **Se `FuseGlobally` cambia, questo script va cambiato con essa.** La validazione lo scopre, ma solo quando qualcuno lo esegue.
+⚠️ **Se `FuseGlobally` cambia, questo script va cambiato con essa.** La validazione lo scopre, ma solo quando qualcuno lo esegue — ed è già successo: dopo il merge della correzione per lingua (#3740) la replica ha riportato **8 conflitti**, perché validava ancora col comportamento precedente. Il segnale è arrivato al primo utilizzo utile e il fix è stato una riga (il default di `language_correction`). Un banco senza quella validazione avrebbe continuato a stampare numeri, semplicemente sbagliati.
 
 ### La chiave della baseline: il documento, non il suo id (v2, #3666)
 

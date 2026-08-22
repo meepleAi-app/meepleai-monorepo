@@ -21,6 +21,13 @@ public record ShuffleDeckCommand : IRequest<ShuffleDeckResult>
     /// Whether to include discard pile in the shuffle.
     /// </summary>
     public bool IncludeDiscard { get; init; }
+
+    /// <summary>
+    /// IDOR guard (#3756): utente autenticato che effettua la chiamata. L'endpoint lo deriva dal
+    /// principal e sovrascrive qualunque valore arrivato dal body; l'handler verifica via
+    /// <c>ISessionAccessGuard</c> che sia owner o partecipante registrato della sessione.
+    /// </summary>
+    public Guid RequestedBy { get; init; }
 }
 
 /// <summary>

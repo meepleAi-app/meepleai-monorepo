@@ -464,6 +464,7 @@ internal static class SessionPlayerActionsEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/media", async (
             Guid sessionId,
             UploadSessionMediaCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -472,7 +473,16 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/media/{result.MediaId}", result);
         })
         .RequireAuthenticatedUser()
@@ -483,6 +493,7 @@ internal static class SessionPlayerActionsEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -562,6 +573,7 @@ internal static class SessionPlayerActionsEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/chat", async (
             Guid sessionId,
             SendSessionChatMessageCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -570,7 +582,16 @@ internal static class SessionPlayerActionsEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/chat/{result.MessageId}", result);
         })
         .RequireAuthenticatedUser()
@@ -580,6 +601,7 @@ internal static class SessionPlayerActionsEndpoints
         .Produces(201)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 

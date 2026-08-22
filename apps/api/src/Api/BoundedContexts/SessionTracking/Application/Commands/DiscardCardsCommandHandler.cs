@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -16,13 +17,16 @@ public class DiscardCardsCommandHandler : IRequestHandler<DiscardCardsCommand, D
     private readonly ISessionRepository _sessionRepository;
     private readonly IMediator _mediator;
     private readonly ILogger<DiscardCardsCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public DiscardCardsCommandHandler(
+        ISessionAccessGuard accessGuard,
         ISessionDeckRepository deckRepository,
         ISessionRepository sessionRepository,
         IMediator mediator,
         ILogger<DiscardCardsCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _deckRepository = deckRepository;
         _sessionRepository = sessionRepository;
         _mediator = mediator;
@@ -31,6 +35,10 @@ public class DiscardCardsCommandHandler : IRequestHandler<DiscardCardsCommand, D
 
     public async Task<DiscardCardsResult> Handle(DiscardCardsCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         _logger.LogInformation("Discarding {Count} cards from deck {DeckId} for participant {ParticipantId}",
             request.CardIds.Count, request.DeckId, request.ParticipantId);
 

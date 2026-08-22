@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -22,6 +23,7 @@ public class ShuffleDeckCommandHandlerTests
     {
         var loggerMock = new Mock<ILogger<ShuffleDeckCommandHandler>>();
         _handler = new ShuffleDeckCommandHandler(
+            SessionAccessGuardMocks.Permissive(),
             _deckRepoMock.Object, _mediatorMock.Object, loggerMock.Object);
     }
 

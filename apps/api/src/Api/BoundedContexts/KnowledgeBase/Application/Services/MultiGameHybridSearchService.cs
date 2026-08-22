@@ -252,7 +252,10 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
                 i = r.ChunkIndex,
                 g = r.GameId,
                 v = r.VectorScore,
-                k = r.KeywordScore
+                k = r.KeywordScore,
+                // #3740: la lingua del chunk. Omessa quando è null (candidato solo-lessicale), per
+                // WhenWritingNull — il consumatore distingue «lingua ignota» da «lingua nota».
+                l = r.Language
             }).ToList()
         };
 
@@ -383,6 +386,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             VectorScore = r.VectorScore,
             KeywordScore = r.KeywordScore,
             MatchedTerms = r.MatchedTerms,
-            Mode = r.Mode
+            Mode = r.Mode,
+            Language = r.Language
         };
 }

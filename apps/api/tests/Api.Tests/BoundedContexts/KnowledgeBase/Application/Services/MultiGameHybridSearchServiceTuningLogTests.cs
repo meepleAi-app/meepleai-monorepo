@@ -47,12 +47,35 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
     }
 
     [Fact]
+    public async Task TheTuningPayloadCarriesTheLanguageOfEachCandidate()
+    {
+        // #3740: senza questo campo il banco offline non può raggruppare i candidati per lingua, ed
+        // è la domanda a cui il ciclo precedente non ha saputo rispondere — «il vettoriale, con il
+        // prefisso corretto, attrae il contenuto italiano di qualunque gioco?». Il dato esisteva in
+        // colonna e si perdeva due volte: non era nella SELECT dell'adapter e non era nel dump.
+        var (sut, logger) = CreateSut(debugEnabled: true, candidateLanguage: "it");
+
+        await sut.SearchAsync("come si prepara il tabellone di Catan?", new[] { Guid.NewGuid() }, limit: 5);
+
+        TuningPayload(logger).Should().Contain("\"l\":\"it\"");
+    }
+
+    [Fact]
     public void TheLogPrefixIsStable()
     {
         // Il gate filtra su questa costante (grep -F). Cambiarla rompe lo script di estrazione,
         // quindi il valore è pinnato qui e non solo nel workflow.
         MultiGameHybridSearchService.TuningLogPrefix.Should().Be("[RAG-TUNE]");
     }
+
+    /// <summary>The single [RAG-TUNE] line emitted at Debug, as the consumer reads it.</summary>
+    private static string TuningPayload(Mock<ILogger<MultiGameHybridSearchService>> logger) =>
+        logger.Invocations
+            .Where(i => string.Equals(i.Method.Name, nameof(ILogger.Log), StringComparison.Ordinal)
+                        && i.Arguments.Count > 2
+                        && i.Arguments[0] is LogLevel.Debug)
+            .Select(i => i.Arguments[2]?.ToString() ?? string.Empty)
+            .Single();
 
     private static int LogCallsAt(Mock<ILogger<MultiGameHybridSearchService>> logger, LogLevel level) =>
         logger.Invocations.Count(i =>
@@ -62,7 +85,7 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
             && actual == level);
 
     private static (MultiGameHybridSearchService Sut, Mock<ILogger<MultiGameHybridSearchService>> Logger)
-        CreateSut(bool debugEnabled)
+        CreateSut(bool debugEnabled, string candidateLanguage = "en")
     {
         var logger = new Mock<ILogger<MultiGameHybridSearchService>>();
         logger.Setup(l => l.IsEnabled(LogLevel.Debug)).Returns(debugEnabled);
@@ -91,7 +114,8 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
                     KeywordRank = 1,
                     MatchedTerms = new List<string>(),
                     Mode = SearchMode.Hybrid,
-                    RoleTags = GameBookRole.None
+                    RoleTags = GameBookRole.None,
+                    Language = candidateLanguage
                 }
             });
 

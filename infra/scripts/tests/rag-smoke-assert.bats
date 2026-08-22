@@ -147,3 +147,40 @@ write_latest() {
     # Baseline anteriori all'introduzione del campo non devono diventare rosse.
     [ "$status" -eq 1 ]
 }
+
+# --- criterio semantico (#3740) -----------------------------------------------------------
+# Non esercitano lo script (servirebbe un'API viva) ma l'integrita' del fixture da cui il
+# criterio dipende. Servono perche' il modo in cui questo meccanismo muore in silenzio e'
+# preciso: si aggiunge una query senza `expectedDocument`, il conteggio smette di coprirla,
+# e il pavimento continua a passare su una popolazione piu' piccola. E' la stessa forma di
+# difetto del cluster dei gate che non esaminano niente.
+
+@test "semantico: ogni query canonica dichiara expectedDocument" {
+    fixture="$BATS_TEST_DIRNAME/../../fixtures/rag-canonical-queries.json"
+    missing=$(jq -r '[.queries[] | select(has("expectedDocument") | not) | .queryId] | join(", ")' "$fixture")
+    [ -z "$missing" ] || {
+        echo "query senza expectedDocument: $missing" >&2
+        return 1
+    }
+}
+
+@test "semantico: il pavimento esiste e non supera il numero di query" {
+    fixture="$BATS_TEST_DIRNAME/../../fixtures/rag-canonical-queries.json"
+    floor=$(jq -r '.semanticFloor // empty' "$fixture")
+    [ -n "$floor" ]
+    total=$(jq -r '[.queries[] | select(.expectedDocument)] | length' "$fixture")
+    [ "$floor" -le "$total" ]
+    [ "$floor" -ge 0 ]
+}
+
+@test "semantico: expectedDocument non punta a un file di un altro gioco" {
+    # 7-wonders-duel e wingspan-asia sono giochi DIVERSI da 7 Wonders e Wingspan: il criterio
+    # largo li accettava per via del prefisso comune, ed e' cosi' che seven-wonders-military
+    # risultava corretta pur recuperando tre volte su tre il manuale di un altro gioco.
+    fixture="$BATS_TEST_DIRNAME/../../fixtures/rag-canonical-queries.json"
+    bad=$(jq -r '[.queries[] | select(.expectedDocument | test("-duel|-asia|-prosperity")) | .queryId] | join(", ")' "$fixture")
+    [ -z "$bad" ] || {
+        echo "expectedDocument punta a un'espansione o a un gioco diverso: $bad" >&2
+        return 1
+    }
+}

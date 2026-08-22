@@ -140,6 +140,13 @@ resolve_documents() {
 build_document_map
 
 PASS=0; FAIL=0; SKIPPED=0
+# #3740 — criterio semantico, indipendente dal confronto con la baseline.
+# La baseline cattura la DERIVA: fallisce a ogni cambiamento, anche a un miglioramento.
+# Questo conta la CORRETTEZZA: quante query hanno il manuale PROPRIO del gioco nei top-K.
+# E' un conteggio con pavimento, non un pass/fail per query, perche' due query oggi
+# mancano il bersaglio per un difetto noto (#3737) e non vanno lette come regressione.
+SEM_HIT=0; SEM_MISS=""
+SEM_FLOOR=$(jq -r '.semanticFloor // 0' "$QUERIES")
 TMP_BASELINE=$(mktemp); echo '{}' > "$TMP_BASELINE"
 
 while IFS= read -r qid; do
@@ -160,6 +167,21 @@ while IFS= read -r qid; do
     echo "FAIL  $qid — un id citato non compare in GET /api/v1/admin/pdfs (documento rimosso o mappa incompleta)"
     echo "  citazioni: $top"
     FAIL=$((FAIL+1)); continue
+  fi
+
+  # --- criterio semantico (#3740) --------------------------------------------------------
+  # Valutato SEMPRE, anche durante --update-baseline: ricatturare una baseline mentre il
+  # retrieval e' sbagliato e' esattamente come si e' arrivati a pinnare star-wars-rebellion
+  # per `catan-setup-it`. Qui almeno lo dice invece di registrarlo in silenzio.
+  exp_doc=$(jq -r --arg id "$qid" '.queries[] | select(.queryId==$id) | .expectedDocument // empty' "$QUERIES")
+  if [ -n "$exp_doc" ]; then
+    if echo "$resolved" | jq -e --arg d "$exp_doc" 'any(.[]; .document == $d)' >/dev/null 2>&1; then
+      SEM_HIT=$((SEM_HIT+1))
+    else
+      got=$(jq -c 'map(.document)' <<<"$resolved")
+      SEM_MISS="${SEM_MISS}
+    $qid — atteso ${exp_doc}, ottenuti: ${got}"
+    fi
   fi
 
   if [ "$UPDATE_BASELINE" = true ]; then
@@ -226,5 +248,26 @@ if [ "$UPDATE_BASELINE" = true ]; then
 fi
 
 log "result: $PASS passed, $FAIL failed, $SKIPPED skipped (pending baseline)"
-# Exit non-zero ONLY on a real FAIL (drift / no-citations). SKIP (missing baseline) never fails the gate.
-[ "$FAIL" -eq 0 ]
+
+# --- criterio semantico (#3740) ------------------------------------------------------------
+SEM_TOTAL=$(jq -r '[.queries[] | select(.expectedDocument)] | length' "$QUERIES")
+log "semantico: $SEM_HIT/$SEM_TOTAL con il manuale proprio del gioco nei top-$TOPK (pavimento $SEM_FLOOR)"
+if [ -n "$SEM_MISS" ]; then
+  echo "  fuori bersaglio:$SEM_MISS"
+fi
+
+SEM_STATUS=0
+if [ "$SEM_HIT" -lt "$SEM_FLOOR" ]; then
+  echo "::error::Criterio semantico sceso a $SEM_HIT/$SEM_TOTAL contro un pavimento di $SEM_FLOOR."
+  echo "::error::Il confronto con la baseline puo' essere verde e questo rosso lo stesso: la baseline"
+  echo "::error::misura la deriva, questo misura se il manuale recuperato e' quello giusto."
+  echo "::error::Se il calo e' voluto, aggiorna semanticFloor in rag-canonical-queries.json nello"
+  echo "::error::stesso commit, con il motivo. NON abbassarlo per far passare la build."
+  SEM_STATUS=1
+elif [ "$SEM_HIT" -gt "$SEM_FLOOR" ]; then
+  echo "::notice::Criterio semantico salito a $SEM_HIT/$SEM_TOTAL (pavimento $SEM_FLOOR): alza semanticFloor per fissare il guadagno."
+fi
+
+# Exit non-zero su una FAIL vera (deriva / niente citazioni) OPPURE sotto il pavimento semantico.
+# SKIP (baseline mancante) non fa mai fallire il gate.
+[ "$FAIL" -eq 0 ] && [ "$SEM_STATUS" -eq 0 ]

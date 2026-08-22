@@ -275,7 +275,8 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             var allChunks = new List<SearchResultItem>();
             foreach (var query in queries)
             {
-                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, ct).ConfigureAwait(false);
+                // #3737: retrieval question -> e5 "query:" prefix.
+                var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, ct).ConfigureAwait(false);
                 if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
                 {
                     if (string.Equals(query, userQuestion, StringComparison.Ordinal))

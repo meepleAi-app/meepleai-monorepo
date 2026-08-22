@@ -69,9 +69,9 @@ internal sealed class SearchDocumentChunksByVectorQueryHandler
         var vectorDocumentId = vectorDoc.Id;
         var gameId = vectorDoc.GameId.Value;
 
-        // Step 2: Embed the query string.
+        // Step 2: Embed the query string. #3737: retrieval question -> e5 "query:" prefix.
         var embResult = await _embeddingService
-            .GenerateEmbeddingAsync(query.Query, cancellationToken)
+            .GenerateEmbeddingAsync(query.Query, EmbeddingPurpose.Query, cancellationToken)
             .ConfigureAwait(false);
 
         if (!embResult.Success || embResult.Embeddings.Count == 0)

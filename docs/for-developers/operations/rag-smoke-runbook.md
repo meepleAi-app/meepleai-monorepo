@@ -53,6 +53,41 @@ Sono **lo stesso difetto in direzioni opposte**, ed è la prova più diretta che
 
 🔴 **Quando il pavimento sale, alzalo.** Se l'harness stampa `Criterio semantico salito a N/11`, fissa il guadagno aggiornando `semanticFloor` nello stesso commit. Se scende, il messaggio d'errore chiede esplicitamente di **non** abbassarlo per far passare la build: un pavimento che insegue il risultato non è un pavimento.
 
+### L'interruttore del prefisso e5 `query:` (#3737)
+
+La cura descritta sopra è **presente nel codice ma spenta**. Il prefisso corretto secondo il model card di e5 è anche, misurato su questo corpus, un peggioramento: 10/11 → 8/11 nella run `32053791375`, perché il conteggio precedente dipendeva in parte dalla codifica sbagliata, che il braccio lessicale compensava. Tornare indietro è costato un revert (#3747) più un redeploy; l'interruttore esiste perché il prossimo tentativo costi un flip.
+
+| dove | valore |
+|---|---|
+| chiave | `Embedding:E5QueryPrefixEnabled` |
+| tipo | `bool` |
+| riga assente | **spento** — il deploy non cambia nulla finché non si accende deliberatamente |
+| propagazione | ≤ 5 min (cache di `IConfigurationService`), nessun restart |
+
+**Per una run del gate** — non serve toccare staging, e non servirebbe a nulla: lo stack del gate è **effimero** e nasce dallo snapshot pubblicato, quindi non vede le righe di configurazione di staging. Si accende con l'input del dispatch:
+
+```bash
+gh workflow run rag-smoke-dispatch.yml -f e5_query_prefix=true
+```
+
+Lo step `Turn on the e5 query prefix` semina la riga nel Postgres effimero prima dello smoke. Una run **senza** quell'input misura il comportamento attuale: è il termine di paragone dell'A/B, ed è per questo che l'interruttore va lasciato spento come default anche qui.
+
+**Su staging o in produzione**:
+
+```bash
+curl -sS -X POST "$API/api/v1/admin/configurations" \
+  -H 'Content-Type: application/json' -b "$ADMIN_COOKIE" \
+  -d '{"key":"Embedding:E5QueryPrefixEnabled","value":"true","valueType":"bool",
+       "description":"e5 query: prefix on search queries (#3737)",
+       "category":"general","environment":"All","requiresRestart":false}'
+```
+
+`environment: "All"` per [ADR-062](../../for-claude/architecture/adr/adr-062-config-environment-field-semantics.md): è una chiave globale, non un valore che diverge per ambiente. Per spegnere, `PUT /admin/configurations/{id}` con `value: "false"` — non serve rimuovere la riga.
+
+⚠️ **L'ingestione non passa dall'interruttore.** Solo le query sono commutabili: i chunk restano `passage:` per costruzione, perché un chunk codificato `query:` richiederebbe un re-bake completo. Nessun re-index è necessario né quando si accende né quando si spegne.
+
+⚠️ **Cache semantica.** `SemanticResponseCache` (Redis, TTL 24 h, soglia 0.95) confronta il vettore della domanda: cambiare il prefisso cambia quel vettore e produce cache-miss finché il TTL non scade. Misurato, `cos(passage: X, query: X)` sta fra 0.935 e 0.960 — **a cavallo** della soglia, quindi il degrado è parziale. Un hit resta corretto, perché è la stessa domanda: nessuna invalidazione manuale.
+
 ### La chiave della baseline: il documento, non il suo id (v2, #3666)
 
 La baseline **v2** pinna, per ogni query, la sequenza ordinata dei **documenti** da cui provengono i primi *K* chunk. Le pagine restano nel file ma sono **advisory**: una pagina diversa dentro il manuale giusto produce un `::notice::`, non un fallimento.

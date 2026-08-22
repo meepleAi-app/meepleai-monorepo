@@ -124,7 +124,7 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
 
         var searchEmbeddingServiceMock = new Mock<IEmbeddingService>();
         searchEmbeddingServiceMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new float[768] } });
 
         // Issue #3270 (Task 6): raw keyword arm — no role-hint parameter on this interface.

@@ -309,14 +309,22 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         //
         // Portando entrambi i segnali su [0,1] rispetto ai candidati effettivi, i pesi tornano a
         // significare ciò che dichiarano.
-        var (vectorMin, vectorMax) = Extent(aggregated, r => r.VectorScore);
+        // #3740: prima della normalizzazione, togli l'offset di LINGUA dalla cosine.
+        var languageOffsets = BuildLanguageOffsets(aggregated);
+        var adjustedVector = new float?[aggregated.Count];
+        for (var i = 0; i < aggregated.Count; i++)
+        {
+            adjustedVector[i] = AdjustForLanguage(aggregated[i], languageOffsets);
+        }
+
+        var (vectorMin, vectorMax) = Extent(adjustedVector);
         var (keywordMin, keywordMax) = Extent(aggregated, r => r.KeywordScore);
 
         var rescored = aggregated
-            .Select(r => r with
+            .Select((r, i) => r with
             {
                 HybridScore =
-                    (GlobalVectorWeight * Normalise(r.VectorScore, vectorMin, vectorMax)) +
+                    (GlobalVectorWeight * Normalise(adjustedVector[i], vectorMin, vectorMax)) +
                     (GlobalKeywordWeight * Normalise(r.KeywordScore, keywordMin, keywordMax))
             })
             .ToList();
@@ -353,6 +361,92 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     {
         var present = items.Select(selector).Where(v => v.HasValue).Select(v => v!.Value).ToList();
         return present.Count == 0 ? (0f, 0f) : (present.Min(), present.Max());
+    }
+
+    private static (float Min, float Max) Extent(IReadOnlyList<float?> values)
+    {
+        var present = values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
+        return present.Count == 0 ? (0f, 0f) : (present.Min(), present.Max());
+    }
+
+    /// <summary>
+    /// Numero minimo di candidati che una lingua deve avere perché la sua media sia usata come
+    /// stima dell'offset (#3740). Sotto questa soglia lo shift NON viene applicato.
+    /// </summary>
+    /// <remarks>
+    /// Non è un parametro tarato, è una guardia contro una stima priva di significato: con un solo
+    /// candidato la «media del gruppo» è quel candidato, quindi lo shift lo porterebbe esattamente
+    /// sulla media globale — promuovendo un chunk qualunque, e tanto più quanto più bassa è la sua
+    /// cosine. È anche il motivo per cui questa correzione non normalizza min-max per gruppo, che
+    /// nel caso singleton restituirebbe 1.0, cioè il massimo.
+    /// </remarks>
+    private const int MinLanguageGroupSize = 5;
+
+    /// <summary>
+    /// Offset per lingua della cosine, come scostamento della media del gruppo dalla media globale (#3740).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Perché serve.</b> Nello spazio di <c>multilingual-e5</c> la lingua del testo è una
+    /// componente dominante, e il corpus è mixed-language. Misurato sul corpus del gate (9840 chunk
+    /// <c>en</c> / 943 <c>it</c> / 107 <c>de</c>): con il prefisso <c>query:</c> attivo, una query
+    /// italiana ha per vicini i chunk <b>italiani di qualunque gioco</b> — il 56-66% dei primi 50
+    /// candidati è <c>it</c>, contro un 8,7% nel corpus. L'intera banda IT sta più in alto della EN
+    /// uniformemente, senza rapporto con la pertinenza. Togliere quello scostamento rende
+    /// confrontabile la pertinenza <i>dentro</i> ciascuna lingua.
+    /// </para>
+    /// <para>
+    /// <b>La stima usa la media e non il massimo</b>: il massimo è deciso da un solo elemento.
+    /// E vale una proprietà che rende il cambio sicuro: quando i candidati sono tutti della stessa
+    /// lingua la media del gruppo <b>è</b> la media globale, quindi l'offset è esattamente 0 — non
+    /// per approssimazione. Il caso monolingua non può regredire.
+    /// </para>
+    /// <para>
+    /// <b>Storia.</b> Questa correzione fu introdotta e revertita (#3743 → #3747) perché produsse
+    /// output byte-identico su tutte le 11 query, da cui si dedusse un corpus monolingua. La causa
+    /// era invece che <c>PgVectorStoreAdapter</c> non selezionava <c>lang</c> e ogni candidato
+    /// arrivava qui marcato <c>"en"</c> (#3760): un solo gruppo, offset zero. Non fu bocciata, non
+    /// fu eseguita.
+    /// </para>
+    /// </remarks>
+    private static Dictionary<string, float> BuildLanguageOffsets(List<MultiGameSearchResultItem> aggregated)
+    {
+        var offsets = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+
+        var withVector = aggregated.Where(r => r.VectorScore.HasValue).ToList();
+        if (withVector.Count == 0)
+            return offsets;
+
+        var globalMean = withVector.Average(r => r.VectorScore!.Value);
+
+        foreach (var group in withVector.GroupBy(LanguageKeyOf, StringComparer.OrdinalIgnoreCase))
+        {
+            var members = group.ToList();
+            if (members.Count < MinLanguageGroupSize)
+                continue;
+
+            offsets[group.Key] = members.Average(r => r.VectorScore!.Value) - globalMean;
+        }
+
+        return offsets;
+    }
+
+    private static string LanguageKeyOf(MultiGameSearchResultItem item) =>
+        string.IsNullOrWhiteSpace(item.Language) ? "?" : item.Language;
+
+    /// <summary>
+    /// Cosine corretta per lingua. <c>VectorScore</c> riportato al chiamante resta la cosine
+    /// <b>grezza</b>: la correzione vive solo dentro il punteggio di fusione.
+    /// </summary>
+    private static float? AdjustForLanguage(
+        MultiGameSearchResultItem item, Dictionary<string, float> offsets)
+    {
+        if (item.VectorScore is not { } cosine)
+            return null;
+
+        return offsets.TryGetValue(LanguageKeyOf(item), out var offset)
+            ? cosine - offset
+            : cosine;
     }
 
     /// <summary>

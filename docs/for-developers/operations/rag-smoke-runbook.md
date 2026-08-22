@@ -88,6 +88,22 @@ curl -sS -X POST "$API/api/v1/admin/configurations" \
 
 ⚠️ **Cache semantica.** `SemanticResponseCache` (Redis, TTL 24 h, soglia 0.95) confronta il vettore della domanda: cambiare il prefisso cambia quel vettore e produce cache-miss finché il TTL non scade. Misurato, `cos(passage: X, query: X)` sta fra 0.935 e 0.960 — **a cavallo** della soglia, quindi il degrado è parziale. Un hit resta corretto, perché è la stessa domanda: nessuna invalidazione manuale.
 
+### Tarare la fusione senza spendere una run
+
+`infra/scripts/rag-fusion-bench.py` rimette il dump `[RAG-TUNE]` nella stessa formula che gira in produzione, così una modifica alla fusione si valuta in secondi invece che in ~45 minuti di CI.
+
+```bash
+gh run download <run_id> -n rag-fusion-tuning-<run_id> -D /tmp/tuning-off
+gh run download <run_id2> -n rag-fusion-tuning-<run_id2> -D /tmp/tuning-on
+python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-off --compare /tmp/tuning-on
+```
+
+🔴 **La directory `--reference` deve venire da una run in cui il gate è PASSATO.** È ciò che rende la golden baseline un ground truth: lo script ricostruisce i top-3 e li allinea ai nomi dei documenti, e **si ferma se trova conflitti** — un GUID allineato a nomi diversi in query diverse significa che la replica non riproduce l'ordinamento reale, e ogni numero successivo sarebbe infondato. Una replica che diverge dal codice produce risultati sbagliati con l'aria di essere autorevole, ed è il modo in cui questo lavoro ha già sbagliato due volte.
+
+Storia: quattro configurazioni provate contro il gate fra il 17 e il 22 agosto (10/11 → 8/11 → 5/11 → 7/11), tutte a scommessa. Lo script ha ripagato il costo di scriverlo alla prima domanda a cui ha risposto — se la correzione per lingua funzionasse ora che `lang` arriva davvero alla fusione.
+
+⚠️ **Se `FuseGlobally` cambia, questo script va cambiato con essa.** La validazione lo scopre, ma solo quando qualcuno lo esegue.
+
 ### La chiave della baseline: il documento, non il suo id (v2, #3666)
 
 La baseline **v2** pinna, per ogni query, la sequenza ordinata dei **documenti** da cui provengono i primi *K* chunk. Le pagine restano nel file ma sono **advisory**: una pagina diversa dentro il manuale giusto produce un `::notice::`, non un fallimento.

@@ -182,6 +182,8 @@ SELECT e.id, e.vector_document_id, e.text_content, e.model,
 
 È anche la dimostrazione di cosa serviva lo strumento: questa cosa non era deducibile: era osservabile, e nessuno la stava osservando.
 
+> **Chiuso il 2026-08-22.** Le tre SELECT di lettura dell'adapter (`SearchAsync`, `SearchWithScoresAsync`, `SearchByMultipleGameIdsAsync`) proiettano ora `lang`, e la lingua per candidato arriva fino al campo `l` del dump `[RAG-TUNE]` — prima si conosceva la composizione del *corpus* (via query SQL nel workflow) ma non quella dei *candidati recuperati*, che è la grandezza su cui si ragiona. Un test di integrazione semina tre chunk `en`/`it`/`de` e asserisce il valore riletto su ciascuno dei tre percorsi: prima del fix falliva su tutti e tre con `"en"` ovunque. Nessun consumatore leggeva `Embedding.Language` sul percorso di ricerca, quindi il comportamento di produzione non cambia — cambia solo che ora la lingua è misurabile.
+
 ## Perché si è smesso di iterare
 
 Due previsioni sul gate, entrambe smentite: «il prefisso corretto migliora» e «togliere la penalità sull'assenza aiuta». Il ragionamento locale era coerente e i test unit passavano; il gate no. Non esiste, al momento, un modello funzionante di quella pipeline — e ogni ipotesi costa ~45 minuti di CI.
@@ -190,7 +192,7 @@ Due previsioni sul gate, entrambe smentite: «il prefisso corretto migliora» e 
 
 ## Direzioni ancora aperte, non provate
 
-1. **Correggere il metadato `language`** del manifest per i 13 manuali non inglesi (vale su staging; sullo snapshot va prima verificato cosa contenga davvero la colonna).
+1. **Correggere il metadato `language`** del manifest per i 13 manuali non inglesi (vale su staging; sullo snapshot la colonna è ora letta e riportata per candidato, vedi la nota del 2026-08-22).
 2. **Rendere il braccio lessicale consapevole della lingua della query.** Oggi la config FTS viene dal gioco, quindi una domanda italiana viene stemmata all'inglese e le sue parole inglesi accidentali (`due`, `come`, `in`) diventano segnale.
 3. **Accettare e documentare** che una query IT su un gioco che esiste solo in EN non sia recuperabile — cioè che `catan-setup-it` resti rosso per costruzione. Va scritto, non subito in silenzio.
 

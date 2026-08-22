@@ -241,8 +241,13 @@ jobs:
 
           # 2) La composizione linguistica del corpus. È una LETTURA di colonna, non una
           #    ri-implementazione dei bracci: qui l'approssimazione non è un rischio.
-          #    Risponde alla domanda rimasta aperta in #3740 — la correzione per lingua fu un
-          #    no-op byte-identico, il che implica un `lang` uniforme, ma non era mai stato letto.
+          #    Ha risposto alla domanda rimasta aperta in #3740, e la risposta ha ribaltato
+          #    l'inferenza che c'era scritta qui: dal no-op byte-identico della correzione per
+          #    lingua si era dedotto un `lang` uniforme, mentre il corpus è misto (9840/943/107).
+          #    Il no-op veniva dalla proiezione: `PgVectorStoreAdapter` non selezionava la colonna
+          #    e `Embedding.Language` la sostituiva col suo default "en". Ora la seleziona, e la
+          #    lingua per candidato è nel campo `l` di aggregate.log — questa query resta perché
+          #    misura il corpus intero, non i soli candidati recuperati.
           PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
           PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
           q() { docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At -F'|' -c "$1" 2>&1; }

@@ -142,7 +142,8 @@ internal class HybridSearchService : IHybridSearchService
                 KeywordRank = null,
                 MatchedTerms = new List<string>(),
                 Mode = SearchMode.Semantic,
-                RoleTags = chunkRoleTags
+                RoleTags = chunkRoleTags,
+                Language = embedding.Language
             };
         }).ToList();
 
@@ -291,7 +292,9 @@ internal class HybridSearchService : IHybridSearchService
             // fusion (same cast as the semantic-only path). pgvector already SELECTs role_tags.
             RoleTags = (GameBookRole)se.Embedding.RoleTags,
             // #3270: carry the chunk heading (JOIN-resolved) so vector-arm chunks get the heading boost.
-            Heading = se.Embedding.Heading
+            Heading = se.Embedding.Heading,
+            // #3740: carry the chunk language now that the adapter actually SELECTs it.
+            Language = se.Embedding.Language
         }).ToArray();
 
         _logger.LogInformation(
@@ -471,7 +474,9 @@ internal class HybridSearchService : IHybridSearchService
                 MatchedTerms = matchedTerms,
                 Mode = SearchMode.Hybrid,
                 RoleTags = f.RoleTags,
-                Heading = f.Heading
+                Heading = f.Heading,
+                // #3740: only the vector arm knows the chunk language — null for keyword-only hits.
+                Language = v?.Language
             });
         }
 

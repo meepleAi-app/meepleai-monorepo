@@ -80,6 +80,14 @@ internal sealed record MultiGameSearchResultItem
     public required string Content { get; init; }
 
     /// <summary>
+    /// #3740: ISO 639-1 language of the chunk, from <c>pgvector_embeddings.lang</c>. Null when the
+    /// candidate came from the keyword arm alone. Emitted in the [RAG-TUNE] dump so the offline
+    /// bench can group candidates by language — the question the previous cycle could not answer,
+    /// because the column was absent from the adapter projection and read back as "en" for every row.
+    /// </summary>
+    public string? Language { get; init; }
+
+    /// <summary>
     /// Final hybrid score after RRF fusion within the game.
     /// All per-game scores share the same scale (sum of weighted 1/(k+rank) terms).
     /// Used for cross-game ranking via a single sort pass.

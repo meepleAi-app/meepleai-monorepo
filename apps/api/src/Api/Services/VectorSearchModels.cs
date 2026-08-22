@@ -74,6 +74,12 @@ internal record SearchResultItem
     /// </summary>
     public GameBookRole RoleTags { get; init; } = GameBookRole.None;
 
+    /// <summary>
+    /// #3740: ISO 639-1 language of the chunk, carried from <c>pgvector_embeddings.lang</c>.
+    /// Null for a candidate that only the keyword arm produced — that arm does not read the column.
+    /// </summary>
+    public string? Language { get; init; }
+
     /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
     public string? Heading { get; init; }
 

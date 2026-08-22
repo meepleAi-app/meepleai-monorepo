@@ -205,6 +205,42 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// is skipped with a descriptive message instead of silently passing.
     /// Uses xUnit v3's Assert.Skip() for dynamic test skipping.
     /// </summary>
+    /// <summary>
+    /// Restituisce status + corpo della risposta in una riga, per infilarla nel messaggio di
+    /// un'asserzione fallita. Issue #3662.
+    ///
+    /// <para>
+    /// 🔴 Perche' serve: quattro test E2E fallivano in CI con <c>403 Forbidden</c> su
+    /// <c>POST /api/v1/ingest/pdf</c> — e in locale passavano, anche eseguendo l'intera selezione
+    /// in blocco. La diagnosi si e' fermata li' perche' l'asserzione riportava <b>solo lo status
+    /// code</b>: nessuna traccia del motivo. Un 403 senza corpo non dice se a rifiutare e' una
+    /// policy, un middleware, un limite di configurazione o un feature flag.
+    /// </para>
+    /// <para>
+    /// Il corpo e' troncato a 500 caratteri: basta per un ProblemDetails, non abbastanza per
+    /// seppellire il log.
+    /// </para>
+    /// </summary>
+    protected static async Task<string> DescribeResponseAsync(HttpResponseMessage response)
+    {
+        string body;
+        try
+        {
+            body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            body = $"<corpo non leggibile: {ex.GetType().Name}>";
+        }
+
+        if (body.Length > 500)
+        {
+            body = body[..500] + "…";
+        }
+
+        return $"la risposta e' {(int)response.StatusCode} {response.StatusCode} con corpo: {body}";
+    }
+
     protected static async Task AssertSuccessOrSkipIfServiceUnavailable(
         HttpResponseMessage response,
         string context = "")

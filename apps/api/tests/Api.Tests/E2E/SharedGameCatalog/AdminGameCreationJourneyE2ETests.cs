@@ -88,22 +88,22 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             .AnyAsync(c => c.Key == "Features.PdfUpload" && c.Environment == "All");
         if (!flagExists)
         {
-        DbContext.SystemConfigurations.Add(new SystemConfigurationEntity
-        {
-            Id = Guid.NewGuid(),
-            CreatedByUserId = seederId,
-            Key = "Features.PdfUpload",
-            Value = "true",
-            ValueType = "Boolean",
-            Description = "E2E seed: abilita l'upload PDF per i test del percorso admin",
-            Category = "Features",
-            IsActive = true,
-            RequiresRestart = false,
-            Environment = "All",
-            Version = 1,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow,
-        });
+            DbContext.SystemConfigurations.Add(new SystemConfigurationEntity
+            {
+                Id = Guid.NewGuid(),
+                CreatedByUserId = seederId,
+                Key = "Features.PdfUpload",
+                Value = "true",
+                ValueType = "Boolean",
+                Description = "E2E seed: abilita l'upload PDF per i test del percorso admin",
+                Category = "Features",
+                IsActive = true,
+                RequiresRestart = false,
+                Environment = "All",
+                Version = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+            });
         }
 
         await DbContext.SaveChangesAsync();
@@ -165,7 +165,10 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/shared-games/bgg/search?searchTerm=Catan");
 
         // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        // #3662: in CI questa riceve 403 invece di 401 — e il 403 colpisce anche l'admin, quindi
+        // non e' una policy di autorizzazione. Il corpo dice chi sta rifiutando.
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized,
+            "{0}", await DescribeResponseAsync(response));
     }
 
     [Fact]
@@ -186,6 +189,11 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             HttpStatusCode.Created,
             HttpStatusCode.BadRequest,
             HttpStatusCode.Conflict,
+            // Issue #3662: 404 mancava, ed era la risposta che l'endpoint dava davvero. Con BGG
+            // disabilitato in ambiente di test il bggId 999999 non e' risolvibile, e l'endpoint
+            // DICHIARA quel caso: `.Produces(StatusCodes.Status404NotFound)`. Non era un difetto
+            // del prodotto ma una lista di status incompleta nel test.
+            HttpStatusCode.NotFound,
             HttpStatusCode.ServiceUnavailable);
     }
 
@@ -296,10 +304,9 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         if (response.StatusCode == HttpStatusCode.InternalServerError)
             Assert.Skip("UploadPdf returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.Created,
-            HttpStatusCode.Accepted,
-            HttpStatusCode.BadRequest);
+            new[] { HttpStatusCode.OK, HttpStatusCode.Created, HttpStatusCode.Accepted, HttpStatusCode.BadRequest },
+            // #3662: in CI qui arriva 403, in locale no. Il corpo e' l'unico modo per sapere chi rifiuta.
+            "{0}", await DescribeResponseAsync(response));
     }
 
     [Fact]
@@ -463,19 +470,26 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
 
     #region Step 5: KB Monitoring
 
+    /// <summary>
+    /// Issue #3662: interrogava <c>/admin/kb/vector-collections</c>, che <b>non esiste</b> — nel
+    /// gruppo <c>/admin/kb</c> la rotta e' <c>vector-stats</c>. Il test riceveva 404, che non era
+    /// fra gli status accettati, e falliva da mesi su una rotta inventata. L'asserzione e' solo
+    /// sullo status, quindi puntarla alla rotta reale conserva cio' che il test voleva verificare:
+    /// che la superficie vettoriale admin risponda a un amministratore.
+    /// </summary>
     [Fact]
-    public async Task AdminKb_GetVectorCollections_ReturnsCollectionList()
+    public async Task AdminKb_GetVectorStats_ReturnsStats()
     {
         // Arrange
         var (adminToken, _) = await LoginAsAdminAsync();
         SetSessionCookie(adminToken);
 
         // Act
-        var response = await Client.GetAsync("/api/v1/admin/kb/vector-collections");
+        var response = await Client.GetAsync("/api/v1/admin/kb/vector-stats");
 
         // Assert - vector services may be disabled in E2E, may return error
         if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AdminKb_GetVectorCollections returned 500 — service likely unavailable");
+            Assert.Skip("AdminKb_GetVectorStats returned 500 — service likely unavailable");
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Forbidden,

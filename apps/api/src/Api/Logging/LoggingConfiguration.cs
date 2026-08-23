@@ -54,7 +54,7 @@ internal static class LoggingConfiguration
 
         loggerConfig.WriteTo.Console(
             outputTemplate: consoleTemplate,
-            restrictedToMinimumLevel: GetConsoleLogLevel(environment.EnvironmentName));
+            restrictedToMinimumLevel: GetConsoleLogLevel(environment.EnvironmentName, configuration));
 
         // Add Seq sink when configured (monitoring profile or SEQ_URL env var set)
         var seqUrl = configuration["Seq:ServerUrl"]
@@ -108,11 +108,38 @@ internal static class LoggingConfiguration
     }
 
     /// <summary>
-    /// Gets the console log level based on environment.
-    /// Production may want to reduce console verbosity.
+    /// Livello minimo del sink console: <c>Logging:Console:MinimumLevel</c> se impostato,
+    /// altrimenti il default dell'ambiente (#3768).
     /// </summary>
-    private static LogEventLevel GetConsoleLogLevel(string environmentName)
+    /// <remarks>
+    /// <para>
+    /// Prima era cablato e basta. Conseguenza pratica: una riga emessa a <c>Debug</c> viene
+    /// generata e poi scartata prima di stdout, quindi <c>docker logs</c> non la mostra mai —
+    /// nemmeno alzando <c>Logging:LogLevel:Default</c>, che agisce sul livello globale e non su
+    /// questo filtro a valle. È costato due tentativi di raccolta del dump <c>[RAG-TUNE]</c> su
+    /// staging prima di risalire alla causa.
+    /// </para>
+    /// <para>
+    /// In produzione il sink sta a <c>Warning</c>: senza questo override nemmeno gli
+    /// <c>Information</c> sono visibili, e una diagnosi su un incidente reale parte cieca.
+    /// </para>
+    /// <para>
+    /// I default per ambiente restano invariati, quindi il comportamento non cambia finché la
+    /// chiave non viene impostata. Un valore non parsabile ricade sul default invece di spegnere
+    /// il logging o far fallire l'avvio.
+    /// </para>
+    /// </remarks>
+    internal static LogEventLevel GetConsoleLogLevel(string environmentName, IConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var configured = configuration["Logging:Console:MinimumLevel"];
+        if (!string.IsNullOrWhiteSpace(configured) &&
+            Enum.TryParse<LogEventLevel>(configured, true, out var overridden))
+        {
+            return overridden;
+        }
+
         return environmentName.ToLowerInvariant() switch
         {
             "development" => LogEventLevel.Debug,

@@ -295,6 +295,32 @@ public sealed class KeywordSearchServiceTests
     }
 
     [Fact]
+    public void BuildTsQuery_GameNameFollowedByPunctuation_IsStillDropped()
+    {
+        // Il caso REALE, non quello comodo: ogni query canonica finisce con "?", quindi il token
+        // arriva come "Catan?" — SanitizeQuery toglie gli operatori tsquery ma NON la punteggiatura.
+        // Confrontando i token grezzi il filtro falliva proprio sulle query di produzione, ed è
+        // sfuggito ai primi test perché li avevo scritti senza punto interrogativo.
+        var result = KeywordSearchService.BuildTsQuery(
+            "Come si prepara il tabellone e si piazzano i due insediamenti e le strade iniziali in Catan?",
+            phraseSearch: false, "english", gameTitle: "Catan");
+
+        result.Should().NotContainEquivalentOf("catan");
+        result.Should().Contain("insediamenti");
+    }
+
+    [Fact]
+    public void BuildTsQuery_GameTitleWithPunctuation_MatchesTheQueryToken()
+    {
+        // Simmetrico: la punteggiatura può stare nel TITOLO ("Catan: Cities & Knights").
+        var result = KeywordSearchService.BuildTsQuery(
+            "come funzionano le citta in Catan", phraseSearch: false, "english",
+            gameTitle: "Catan: Cities");
+
+        result.Should().NotContainEquivalentOf("catan");
+    }
+
+    [Fact]
     public void BuildTsQuery_PhraseSearch_KeepsTheGameNameOut()
     {
         // Anche il ramo phrase deve filtrare: un <-> che include il nome del gioco cerca una

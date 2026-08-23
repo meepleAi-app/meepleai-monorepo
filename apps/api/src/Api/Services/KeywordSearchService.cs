@@ -471,6 +471,8 @@ internal class KeywordSearchService : IKeywordSearchService
 
         var titleTokens = SanitizeQuery(gameTitle)
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormaliseForTitleMatch)
+            .Where(t => t.Length > 0)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         if (titleTokens.Count == 0)
@@ -480,9 +482,25 @@ internal class KeywordSearchService : IKeywordSearchService
 
         var kept = sanitizedQuery
             .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-            .Where(token => !titleTokens.Contains(token));
+            .Where(token => !titleTokens.Contains(NormaliseForTitleMatch(token)));
 
         return string.Join(' ', kept);
+    }
+
+    /// <summary>
+    /// Forma di confronto per il match con il titolo: solo lettere e cifre (#3768).
+    /// </summary>
+    /// <remarks>
+    /// <c>SanitizeQuery</c> toglie gli operatori tsquery ma NON la punteggiatura, quindi l'ultimo
+    /// token di una domanda arriva come <c>"Catan?"</c>. Ogni query canonica finisce con un punto
+    /// interrogativo: confrontare i token grezzi faceva fallire il filtro esattamente sulle query
+    /// di produzione, mentre passava su quelle senza punteggiatura dei primi test.
+    /// Postgres normalizza comunque <c>Catan?</c> al lessema <c>catan</c>, quindi il token che
+    /// resta nella tsquery è invariato: qui cambia solo il criterio di confronto.
+    /// </remarks>
+    private static string NormaliseForTitleMatch(string token)
+    {
+        return string.Concat(token.Where(char.IsLetterOrDigit));
     }
 
     private static string SanitizeQuery(string query)

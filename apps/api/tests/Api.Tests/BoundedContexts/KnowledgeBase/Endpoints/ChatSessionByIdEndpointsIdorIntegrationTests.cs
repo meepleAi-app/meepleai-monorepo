@@ -13,6 +13,21 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test (via <c>InitializeAsync</c>,
+/// che continua a girare una volta per test perche' xUnit crea una nuova istanza della classe per
+/// ogni <c>[Fact]</c>) semina il proprio <c>ChatSessionEntity</c> con id nuovo
+/// (<c>Guid.NewGuid()</c>) e propri utenti. Ogni asserzione e' uno status-code (o una singola
+/// lookup by-id) scoped a quel <c>_sessionId</c> — nessun conteggio o lista globale.
+/// </para>
+/// </summary>
+public sealed class ChatSessionByIdEndpointsIdorHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "chatsession_byid_idor");
+
+/// <summary>
 /// HTTP-layer IDOR tests for the by-<c>sessionId</c> chat-session endpoints.
 /// <para>
 /// GET/DELETE <c>/chat/sessions/{sessionId}</c>, POST <c>/rename</c> and POST <c>/messages</c>
@@ -25,11 +40,10 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Endpoints;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public sealed class ChatSessionByIdEndpointsIdorIntegrationTests : IAsyncLifetime
+public sealed class ChatSessionByIdEndpointsIdorIntegrationTests
+    : IClassFixture<ChatSessionByIdEndpointsIdorHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly WebApplicationFactory<Program> _factory;
     private HttpClient _ownerClient = null!;
     private HttpClient _otherClient = null!;
     private Guid _ownerId;
@@ -37,20 +51,15 @@ public sealed class ChatSessionByIdEndpointsIdorIntegrationTests : IAsyncLifetim
     private string _otherToken = null!;
     private Guid _sessionId;
 
-    public ChatSessionByIdEndpointsIdorIntegrationTests(SharedTestcontainersFixture fixture)
+    public ChatSessionByIdEndpointsIdorIntegrationTests(ChatSessionByIdEndpointsIdorHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"chatsession_byid_idor_{Guid.NewGuid():N}";
+        _factory = host.Factory;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
 
         (_ownerId, _ownerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
         (_, _otherToken) = await TestSessionHelper.CreateUserSessionAsync(db);
@@ -74,12 +83,11 @@ public sealed class ChatSessionByIdEndpointsIdorIntegrationTests : IAsyncLifetim
         _otherClient = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _ownerClient?.Dispose();
         _otherClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private string SessionUrl => $"/api/v1/chat/sessions/{_sessionId}";

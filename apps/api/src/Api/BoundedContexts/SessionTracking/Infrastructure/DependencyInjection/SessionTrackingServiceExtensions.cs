@@ -48,6 +48,10 @@ internal static class SessionTrackingServiceExtensions
         // Register domain services
         services.AddScoped<ISessionQuotaService, SessionQuotaService>();
 
+        // Issue #3756: guard di autorizzazione per gli endpoint di scrittura (owner || partecipante
+        // registrato). Scoped perche' dipende da ISessionRepository, che e' scoped.
+        services.AddScoped<ISessionAccessGuard, SessionAccessGuard>();
+
         // GST-003: Register SSE synchronization service (singleton for shared state)
         services.AddSingleton<ISessionSyncService, SessionSyncService>();
 

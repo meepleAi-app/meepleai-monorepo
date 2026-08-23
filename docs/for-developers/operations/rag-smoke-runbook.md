@@ -6,9 +6,17 @@ Tier 3 D8 quality gate of [#2126](https://github.com/meepleAi-app/meepleai-monor
 
 `infra/scripts/rag-smoke-assert.sh` runs the canonical queries in `infra/fixtures/rag-canonical-queries.json` against `POST /api/v1/knowledge-base/ask/global` (SSE) and asserts the **top-3 retrieved chunks** per query match `infra/fixtures/rag-golden-baseline.json`.
 
-The suite covers **EN + IT** (10 queries: 5 EN + 5 IT, added for [#3269](https://github.com/meepleAi-app/meepleai-monorepo/issues/3269)). The corpus is English rulebooks; `multilingual-e5-base` does **cross-lingual retrieval**, so each `-it` query pins the IT→EN retrieval behavior. This is the concrete implementation of the epic [#3266](https://github.com/meepleAi-app/meepleai-monorepo/issues/3266) LOCKED safety-net: *"EN+IT non-regression suite on staging before prod"*. Motivating case: `catan-setup-it` ("Setup per N giocatori" style IT query) must still retrieve the right EN chunks.
+The suite covers **EN + IT** (10 queries: 5 EN + 5 IT, added for [#3269](https://github.com/meepleAi-app/meepleai-monorepo/issues/3269)). `multilingual-e5-base` does **cross-lingual retrieval**, so each `-it` query pins the IT→EN retrieval behavior. This is the concrete implementation of the epic [#3266](https://github.com/meepleAi-app/meepleai-monorepo/issues/3266) LOCKED safety-net: *"EN+IT non-regression suite on staging before prod"*. Motivating case: `catan-setup-it` ("Setup per N giocatori" style IT query) must still retrieve the right EN chunks.
 
-It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by `{source, page}`; `score` is advisory (not asserted, to tolerate minor embedding/search float drift).
+### 🔴 Il corpus NON è tutto inglese (#3740)
+
+Questo runbook diceva «the corpus is English rulebooks», ed è falso — misurato su staging: **51.505 chunk `en`, 4.332 `it`, 530 `de`**. Tredici PDF del manifest `dev.yml` sono nativamente in un'altra lingua (root, scacchi-fide, descent, barrage, agricola, pandemic, 7-wonders, azul, terraforming-mars, ticket-to-ride, carcassone, splendor · great-western-trail in tedesco), pur essendo dichiarati `language: en` nel manifest.
+
+Conta perché cambia come si legge un `-it` rosso. Nello spazio di e5 la lingua del testo è una componente dominante, quindi una query italiana ha per vicini i chunk **italiani di qualunque gioco**: un `-it` che recupera il manuale sbagliato può essere clustering linguistico e non una regressione del ranking. La distinzione è misurabile — restringere l'ordinamento cosine a `lang='en'` — e i numeri stanno in [2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md](../audits/2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md).
+
+Regola pratica: prima di trattare un `-it` rosso come drift, controlla se il gioco atteso ha contenuto nella lingua della query. **Catan, Dominion e Ark Nova sono solo in inglese**, ed è la ragione per cui le loro query IT sono le più fragili del set. ⚠️ Il caso speculare esiste e sfugge più facilmente: il manuale di **7 Wonders è solo in italiano** (`7-wonders_rulebook.pdf`), quindi è la query **inglese** a mancarlo — ripiegando su `7-wonders-duel`, che è un altro gioco. Vedi § *Due criteri, non uno*.
+
+It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by the **document name** (`{document, page}`, baseline v2 — see § *La chiave della baseline*); `page` and `score` are advisory (not asserted, to tolerate chunking shifts and minor embedding/search float drift).
 
 ### Per-query `language`
 
@@ -18,27 +26,121 @@ The fixture top-level `language` (`"en"`) is the **default**. Each query MAY set
 
 A query with **no golden-baseline entry** reports `SKIP` (via a `::notice::`), not `FAIL`, and does **not** fail the gate. This lets new queries (e.g. the IT set) land *before* the ops `--update-baseline` capture without redding the weekly cron. Real drift and no-citations still `FAIL`. The summary reports `N passed, N failed, N skipped (pending baseline)`; exit is non-zero only on a real `FAIL`.
 
-### Baseline scaduta ≠ retrieval regredito (exit 3, #3645)
+### Due criteri, non uno: deriva e correttezza (#3740)
 
-Prima di eseguire le query l'harness confronta il campo `snapshot` della baseline con lo snapshot caricato (`$SEED_INDEX_OUT_DIR/.latest`). Se differiscono **esce 3 senza eseguire alcuna query**:
+Il confronto con la golden baseline misura la **deriva**: fallisce a ogni cambiamento dei top-*K*, anche quando il cambiamento è un miglioramento. Non dice nulla su *quale* manuale sia stato recuperato.
+
+La distinzione non è teorica. Fino a #3740 la baseline pinnava, per `catan-setup-it`:
 
 ```
-::error:: baseline scaduta — non è una regressione del retrieval
-  baseline catturata su: meepleai_seed_20260729T070620Z_..._9101176e9
-  snapshot in esecuzione: meepleai_seed_20260809T060634Z_..._dc83e1a4e
+star-wars-rebellion_rulebook.pdf · imperial-settlers_rulebook.pdf · cthulhu-death-may-die_rulebook.pdf
 ```
 
-**Perché esiste**: la baseline fissa i chunk `{source,page}` di un corpus preciso. Su un corpus diverso *ogni* query risulta "drifted" — dal 2026-07-20 al 2026-08-10 il gate ha riportato `0 passed, 11 failed` per tre settimane, aprendo una issue intitolata «retrieval drift» che descriveva un guasto mai avvenuto. Un rosso che significa sempre la stessa cosa smette di essere letto, e in quelle tre settimane una regressione autentica sarebbe passata inosservata.
+Nessun Catan — e il gate era **verde**, perché il retrieval non era cambiato rispetto a quando la baseline fu catturata. Un gate che certifica come corretto un risultato sbagliato è la stessa classe di difetto dei gate che non eseguono nulla ([#3622](https://github.com/meepleAi-app/meepleai-monorepo/issues/3622) e seguenti): il colore verde e l'assenza di problemi si confondono.
 
-**Cosa fare**: rigenerare la baseline (§ *Capturing the EN + IT baseline via CI dispatch*). Non è un bug da indagare — è la conseguenza attesa di un re-bake.
+Accanto alla baseline l'harness conta quindi quante query hanno, nei primi *K* chunk, il manuale **proprio** del gioco nominato — `expectedDocument` in `rag-canonical-queries.json` — e confronta il totale con `semanticFloor`.
+
+**Perché un conteggio con pavimento e non un pass/fail per query.** Due query oggi mancano il bersaglio per un difetto noto e non ancora corretto: farle fallire una per una renderebbe il gate rosso in permanenza, e un gate sempre rosso si ignora. Il pavimento distingue «sappiamo che due sono fuori» da «ne è appena uscita una terza».
+
+**Perché stretto e non largo.** Il criterio largo — qualunque documento il cui nome cominci col gioco — è stato misurato e **nasconde un difetto**: `seven-wonders-military` recupera tre volte su tre `7-wonders-duel_rulebook.pdf`, che è **un altro gioco**, e passerebbe per via del prefisso comune. Con il criterio stretto il conteggio è 9/11 invece di 10/11, e i due fuori bersaglio sono:
+
+| query | manuale atteso | lingua del manuale | perché manca |
+|---|---|---|---|
+| `catan-setup-it` | `catan_en_rulebook.pdf` | **en** | query IT, manuale EN |
+| `seven-wonders-military` | `7-wonders_rulebook.pdf` | **it** | query EN, manuale IT — ripiega su Duel, che è in inglese |
+
+Sono **lo stesso difetto in direzioni opposte**, ed è la prova più diretta che il meccanismo è la lingua e non una particolarità di Catan: quando il manuale e la domanda non coincidono di lingua, il braccio vettoriale non porta il documento giusto abbastanza in alto. La cura sta in [#3737](https://github.com/meepleAi-app/meepleai-monorepo/issues/3737) (il prefisso `query:` di e5), non nella fusione — che è già al suo ottimo: nessuna combinazione di pesi supera 9/11, misurato replicando `FuseGlobally` offline sull'artifact `rag-fusion-tuning-<run_id>`.
+
+🔴 **Quando il pavimento sale, alzalo.** Se l'harness stampa `Criterio semantico salito a N/11`, fissa il guadagno aggiornando `semanticFloor` nello stesso commit. Se scende, il messaggio d'errore chiede esplicitamente di **non** abbassarlo per far passare la build: un pavimento che insegue il risultato non è un pavimento.
+
+### L'interruttore del prefisso e5 `query:` (#3737)
+
+La cura descritta sopra è **presente nel codice ma spenta**. Il prefisso corretto secondo il model card di e5 è anche, misurato su questo corpus, un peggioramento: 10/11 → 8/11 nella run `32053791375`, perché il conteggio precedente dipendeva in parte dalla codifica sbagliata, che il braccio lessicale compensava. Tornare indietro è costato un revert (#3747) più un redeploy; l'interruttore esiste perché il prossimo tentativo costi un flip.
+
+| dove | valore |
+|---|---|
+| chiave | `Embedding:E5QueryPrefixEnabled` |
+| tipo | `bool` |
+| riga assente | **spento** — il deploy non cambia nulla finché non si accende deliberatamente |
+| propagazione | ≤ 5 min (cache di `IConfigurationService`), nessun restart |
+
+**Per una run del gate** — non serve toccare staging, e non servirebbe a nulla: lo stack del gate è **effimero** e nasce dallo snapshot pubblicato, quindi non vede le righe di configurazione di staging. Si accende con l'input del dispatch:
+
+```bash
+gh workflow run rag-smoke-dispatch.yml -f e5_query_prefix=true
+```
+
+Lo step `Turn on the e5 query prefix` semina la riga nel Postgres effimero prima dello smoke. Una run **senza** quell'input misura il comportamento attuale: è il termine di paragone dell'A/B, ed è per questo che l'interruttore va lasciato spento come default anche qui.
+
+**Su staging o in produzione**:
+
+```bash
+curl -sS -X POST "$API/api/v1/admin/configurations" \
+  -H 'Content-Type: application/json' -b "$ADMIN_COOKIE" \
+  -d '{"key":"Embedding:E5QueryPrefixEnabled","value":"true","valueType":"bool",
+       "description":"e5 query: prefix on search queries (#3737)",
+       "category":"general","environment":"All","requiresRestart":false}'
+```
+
+`environment: "All"` per [ADR-062](../../for-claude/architecture/adr/adr-062-config-environment-field-semantics.md): è una chiave globale, non un valore che diverge per ambiente. Per spegnere, `PUT /admin/configurations/{id}` con `value: "false"` — non serve rimuovere la riga.
+
+⚠️ **L'ingestione non passa dall'interruttore.** Solo le query sono commutabili: i chunk restano `passage:` per costruzione, perché un chunk codificato `query:` richiederebbe un re-bake completo. Nessun re-index è necessario né quando si accende né quando si spegne.
+
+⚠️ **Cache semantica.** `SemanticResponseCache` (Redis, TTL 24 h, soglia 0.95) confronta il vettore della domanda: cambiare il prefisso cambia quel vettore e produce cache-miss finché il TTL non scade. Misurato, `cos(passage: X, query: X)` sta fra 0.935 e 0.960 — **a cavallo** della soglia, quindi il degrado è parziale. Un hit resta corretto, perché è la stessa domanda: nessuna invalidazione manuale.
+
+### Tarare la fusione senza spendere una run
+
+`infra/scripts/rag-fusion-bench.py` rimette il dump `[RAG-TUNE]` nella stessa formula che gira in produzione, così una modifica alla fusione si valuta in secondi invece che in ~45 minuti di CI.
+
+```bash
+gh run download <run_id> -n rag-fusion-tuning-<run_id> -D /tmp/tuning-off
+gh run download <run_id2> -n rag-fusion-tuning-<run_id2> -D /tmp/tuning-on
+python infra/scripts/rag-fusion-bench.py --reference /tmp/tuning-off --compare /tmp/tuning-on
+```
+
+🔴 **La directory `--reference` deve venire da una run in cui il gate è PASSATO.** È ciò che rende la golden baseline un ground truth: lo script ricostruisce i top-3 e li allinea ai nomi dei documenti, e **si ferma se trova conflitti** — un GUID allineato a nomi diversi in query diverse significa che la replica non riproduce l'ordinamento reale, e ogni numero successivo sarebbe infondato. Una replica che diverge dal codice produce risultati sbagliati con l'aria di essere autorevole, ed è il modo in cui questo lavoro ha già sbagliato due volte.
+
+Storia: quattro configurazioni provate contro il gate fra il 17 e il 22 agosto (10/11 → 8/11 → 5/11 → 7/11), tutte a scommessa. Lo script ha ripagato il costo di scriverlo alla prima domanda a cui ha risposto — se la correzione per lingua funzionasse ora che `lang` arriva davvero alla fusione.
+
+⚠️ **Se `FuseGlobally` cambia, questo script va cambiato con essa.** La validazione lo scopre, ma solo quando qualcuno lo esegue — ed è già successo: dopo il merge della correzione per lingua (#3740) la replica ha riportato **8 conflitti**, perché validava ancora col comportamento precedente. Il segnale è arrivato al primo utilizzo utile e il fix è stato una riga (il default di `language_correction`). Un banco senza quella validazione avrebbe continuato a stampare numeri, semplicemente sbagliati.
+
+### La chiave della baseline: il documento, non il suo id (v2, #3666)
+
+La baseline **v2** pinna, per ogni query, la sequenza ordinata dei **documenti** da cui provengono i primi *K* chunk. Le pagine restano nel file ma sono **advisory**: una pagina diversa dentro il manuale giusto produce un `::notice::`, non un fallimento.
+
+**Perché.** Fino alla v1 la chiave era `{source, page}`, dove `source` è `pdf_documents.Id` — un `Guid.NewGuid()` generato a ogni ingest (`PdfDocument.cs:1012`, e `StreamQaQueryHandler:396-399` spiega perché la citation porta proprio quell'id: serve al viewer PDF del frontend). Ne seguiva che **ogni re-bake invalidava la baseline per costruzione**, a retrieval identico: fra il 2026-07-20 e il 2026-08-10 il gate è stato rosso in 7 run su 8, e l'unico verde è stato il dispatch che ha catturato la baseline. Un gate spento sette volte su otto non protegge nulla.
+
+Le *query* canoniche non hanno mai avuto questo problema perché identificano i giochi per nome (`"game": "Catan"`). La v2 allinea la baseline allo stesso livello semantico.
+
+**Il compromesso, esplicito.** Pinnare il documento e non la pagina **perde** il drift di ranking fine *all'interno dello stesso manuale*: se il chunk giusto scivola da pagina 3 a pagina 12 restando nel manuale corretto, il gate lo segnala ma non fallisce. È una perdita di sensibilità reale, accettata perché l'alternativa non era «un gate più severo» ma «un gate spento»: la sensibilità della v1 era teorica, dato che la baseline era scaduta quasi sempre. Ciò che il gate continua a rilevare — un chunk che arriva dal manuale sbagliato — è la regressione per cui esiste.
+
+**Come viene risolto il nome.** Dopo il login l'harness fa **una** chiamata a `GET /api/v1/admin/pdfs?pageSize=500` e costruisce la mappa `id → fileName`, poi traduce ogni citation. Serve quindi un account **admin** in `SMOKE_EMAIL`/`SMOKE_PASSWORD`. Un id citato che non compare nella mappa non viene confuso con un drift: fallisce con il suo messaggio («documento rimosso o mappa incompleta»).
+
+### Baseline v1: rigenerazione una tantum (exit 3)
+
+Una baseline con `schemaVersion < 2` **esce 3 senza eseguire alcuna query**:
+
+```
+::error:: baseline in formato v1 (id fisici) — va rigenerata una volta sola
+```
+
+Non è la toil ricorrente di prima: la v2 sopravvive ai re-bake, quindi questa rigenerazione si fa **una volta**. Procedura: § *Capturing the EN + IT baseline via CI dispatch*.
 
 | Exit | Significato | Azione |
 |---|---|---|
 | `0` | tutte le query combaciano (o baseline aggiornata) | — |
-| `1` | drift reale **a parità di snapshot**, o nessuna citation | indagare |
-| `3` | baseline catturata su un altro snapshot | rigenerare la baseline |
+| `1` | drift reale (documenti diversi), o nessuna citation, o id non risolvibile | indagare |
+| `3` | baseline ancora in formato v1 | rigenerare **una volta** |
 
-La guardia confronta solo quando **entrambi** i lati sono noti: senza `.latest` (esecuzione contro un'API remota) o con una baseline priva del campo `snapshot`, non blocca. Uno stato non conoscibile non va trasformato in un fallimento.
+**Lo snapshot diverso non blocca più** (era exit 3 in #3645, quando la chiave era fisica). Con la chiave v2 il confronto resta significativo attraverso un re-bake, quindi la divergenza viene solo segnalata:
+
+```
+::notice:: baseline catturata su un altro snapshot (…20260729T070620Z → …20260809T060634Z).
+  Con la chiave v2 (nome documento) il confronto resta valido: un fallimento qui
+  è drift del retrieval, non una baseline scaduta.
+```
+
+Il campo `snapshot` resta nella fixture: non serve più a invalidare, ma a dire su quale corpus la baseline è stata catturata quando si legge un fallimento.
 
 ⚠️ L'auto-opener deduplica sulla label `rag-smoke-failure`: **finché una issue resta aperta non ne viene emessa un'altra**. Una issue di baseline scaduta lasciata aperta silenzia gli alert successivi, inclusi quelli di un drift vero.
 
@@ -61,7 +163,7 @@ The baseline must be captured against a **fresh, compatible snapshot** (`snapsho
    This writes `infra/fixtures/rag-golden-baseline.json` (`baseline`, `snapshot`, `embeddingModel`, `capturedAt`).
 4. Review the diff and commit it.
 
-**Regenerate the baseline after any intentional re-index**: embedding model change, chunker change, or a `seed-schema.version` bump (which forces a snapshot rebuild). An *unintentional* drift is exactly what this gate is meant to flag — investigate before regenerating.
+**Con la baseline v2 un semplice re-bake NON richiede più una rigenerazione** (#3666): la chiave è il nome del documento, che il re-bake conserva. Rigenera solo quando cambia davvero ciò che il gate misura — modello di embedding, chunker, o un bump di `seed-schema.version` che sposta il retrieval — e solo dopo aver stabilito che lo scostamento è **voluto**. Un drift non intenzionale è esattamente ciò che questo gate esiste per segnalare: indagalo prima di rigenerare, altrimenti la nuova baseline lo certifica come normale.
 
 ### Capturing the EN + IT baseline via CI dispatch (preferred)
 

@@ -38,6 +38,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      e5_query_prefix:
+        description: 'e5 query: prefix (#3737). Acceso per default: spegnilo per un confronto A/B'
+        required: false
+        default: 'true'
+        type: boolean
 
 # ADR-078: monitor/consume workflows serialize per ref to stay under the API/runner budget.
 concurrency:
@@ -84,6 +89,11 @@ jobs:
           RERANKER_SERVICE_URL=http://reranker-service:8003
           OLLAMA_URL=http://ollama:11434
           STORAGE_PROVIDER=local
+          # #3737: alza a Debug SOLO la categoria della fusione cross-gioco, per far emettere a
+          # MultiGameHybridSearchService la riga [RAG-TUNE] con l'aggregato PRIMA della fusione.
+          # È il dato su cui tarare FuseGlobally offline invece che a ~45 min di CI per ipotesi.
+          # Il resto dell'applicazione resta a Information: non è un debug globale.
+          Logging__LogLevel__Api.BoundedContexts.KnowledgeBase.Application.Services.MultiGameHybridSearchService=Debug
           APIENV
 
       - name: Configure snapshot bucket read credentials
@@ -162,6 +172,67 @@ jobs:
           bash scripts/wait-for-healthy.sh embedding 1800
           bash scripts/wait-for-healthy.sh reranker 1800
 
+      # Il gate NON gira su staging: lo stack è effimero e nasce dallo snapshot pubblicato, quindi
+      # una riga di configurazione accesa su staging qui non esiste. Senza questo step l'interruttore
+      # di #3737 sarebbe spento in ogni run e il gate misurerebbe per sempre il comportamento
+      # precedente — cioè non potrebbe mai dire se il prefisso corretto aiuta o danneggia.
+      #
+      # ACCESO PER DEFAULT dal 2026-08-22: il prefisso piu' la correzione per lingua (#3740) danno
+      # 10/11 contro i 9/11 senza, verificato nella run 32589046651 — quindi e' questa la
+      # configurazione che il gate deve proteggere, ed e' quella su cui la baseline e' catturata.
+      #
+      # La condizione NON puo' essere il solo `inputs.e5_query_prefix`: sul trigger `schedule` il
+      # contesto `inputs` e' vuoto, quindi il cron settimanale girerebbe con il prefisso spento e
+      # misurerebbe una configurazione diversa da quella pinnata dalla baseline — fallendo ogni
+      # settimana per una deriva che non esiste. Acceso sempre, tranne quando un dispatch lo spegne
+      # esplicitamente per un confronto A/B.
+      - name: Turn on the e5 query prefix (#3737)
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e5_query_prefix }}
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
+          PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
+
+          # CreatedByUserId è FK non-null verso users: prendo un utente qualunque dello snapshot.
+          # Se non ce ne sono, meglio fallire qui che scoprire a valle un interruttore mai acceso.
+          OWNER=$(docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
+            -c 'SELECT "Id" FROM users ORDER BY "CreatedAt" LIMIT 1')
+          if [ -z "$OWNER" ]; then
+            echo "::error:: nessun utente nello snapshot: impossibile seminare la configurazione"
+            exit 1
+          fi
+
+          # Environment='All' per ADR-062: è una chiave globale, non un valore che diverge per
+          # ambiente. IsActive=true perché il repository filtra su di esso.
+          # "Id" e "CreatedByUserId" sono uuid: la configurazione EF li dichiara HasMaxLength(64),
+          # che su una colonna uuid non ha effetto e legge come se fossero stringhe.
+          docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -v ON_ERROR_STOP=1 -c "
+            INSERT INTO system_configurations
+              (\"Id\", \"Key\", \"Value\", \"ValueType\", \"Description\", \"Category\",
+               \"IsActive\", \"RequiresRestart\", \"Environment\", \"Version\",
+               \"CreatedAt\", \"UpdatedAt\", \"CreatedByUserId\")
+            VALUES
+              ('3737e5e5-0000-4000-8000-000000003737', 'Embedding:E5QueryPrefixEnabled', 'true', 'bool',
+               'e5 query: prefix on search queries (#3737) — seeded by the RAG smoke dispatch',
+               'general', true, false, 'All', 1, NOW(), NOW(), '$OWNER')
+            ON CONFLICT DO NOTHING;"
+
+          # La cache di IConfigurationService dura 5 minuti ma si popola alla prima lettura, che
+          # avviene con la prima query: seminare prima dello smoke è sufficiente, e nessun restart
+          # serve.
+          #
+          # La rilettura ASSERISCE il valore invece di stamparlo: uno step che stampa e prosegue
+          # lascia passare un interruttore non acceso, e il costo di scoprirlo è una run intera.
+          SEEDED=$(docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
+            -c "SELECT \"Value\" FROM system_configurations
+                WHERE \"Key\" = 'Embedding:E5QueryPrefixEnabled' AND \"IsActive\";")
+          echo "Embedding:E5QueryPrefixEnabled=${SEEDED:-<assente>}"
+          if [ "$SEEDED" != "true" ]; then
+            echo "::error:: l'interruttore non risulta acceso dopo il seed: la run misurerebbe il comportamento senza prefisso"
+            exit 1
+          fi
+
       - name: Run RAG smoke
         id: ragsmoke
         working-directory: infra
@@ -192,6 +263,84 @@ jobs:
           fi
           echo "exit_code=$rc" >> "$GITHUB_OUTPUT"
           exit "$rc"
+
+      - name: Collect fusion tuning data (#3737)
+        # always(): il dato serve SOPRATTUTTO quando lo smoke fallisce — è il caso in cui si vuole
+        # capire perché. Senza status function l'implicito success() lo salterebbe proprio allora.
+        if: ${{ always() }}
+        working-directory: infra
+        run: |
+          set +e
+          mkdir -p tuning-dump
+
+          # Uno step con always() gira anche quando NULLA è stato bootato (job annullato o andato in
+          # timeout prima del boot). La prima versione di questo step finiva con `exit 0` e in quel
+          # caso pubblicava un artifact con `aggregate.log` vuoto e due file contenenti
+          # «No such container: meepleai-postgres» — riportando **success**. È il pattern del cluster
+          # #3622/#3625/#3629/#3632/#3659/#3662: verde e vuoto danno lo stesso segnale. Verificato
+          # sulla run 32226720200, annullata al timeout di 75 min sul passo `Install jq`.
+          #
+          # Quindi si distinguono DUE casi, perché hanno colpe diverse:
+          #   - lo stack non è mai partito  -> non è un difetto della strumentazione: ::warning:: e
+          #     STATUS.txt che dice perché il dump è vuoto, invece di error text spacciato per dati;
+          #   - lo stack è partito ma zero righe [RAG-TUNE] -> LO È: il livello di log non è
+          #     arrivato al servizio, e lo step FALLISCE.
+          if ! docker inspect meepleai-api >/dev/null 2>&1; then
+            {
+              echo "DUMP VUOTO — il container meepleai-api non esiste."
+              echo "Lo stack non è mai stato bootato: job annullato o in timeout prima del boot."
+              echo "Non è un difetto della strumentazione. Rilancia il dispatch."
+              echo "run: ${{ github.run_id }}"
+            } > tuning-dump/STATUS.txt
+            echo "::warning:: dump vuoto: lo stack non è partito, nessun dato di taratura da raccogliere"
+            cat tuning-dump/STATUS.txt
+            exit 0
+          fi
+
+          # 1) L'aggregato PRIMA della fusione, emesso da MultiGameHybridSearchService (una riga
+          #    per query). È il dato che dall'esterno non è osservabile: il top-3 finale non dice
+          #    nulla sui segnali con cui la fusione lo ha scelto. --tail non è limitato perché le
+          #    11 query stanno in poche centinaia di KB e troncare qui vanificherebbe il dump.
+          docker logs meepleai-api 2>&1 | grep -F '[RAG-TUNE]' > tuning-dump/aggregate.log
+          LINES=$(wc -l < tuning-dump/aggregate.log)
+          echo "righe [RAG-TUNE] catturate: $LINES"
+
+          # 2) La composizione linguistica del corpus. È una LETTURA di colonna, non una
+          #    ri-implementazione dei bracci: qui l'approssimazione non è un rischio.
+          #    Ha risposto alla domanda rimasta aperta in #3740, e la risposta ha ribaltato
+          #    l'inferenza che c'era scritta qui: dal no-op byte-identico della correzione per
+          #    lingua si era dedotto un `lang` uniforme, mentre il corpus è misto (9840/943/107).
+          #    Il no-op veniva dalla proiezione: `PgVectorStoreAdapter` non selezionava la colonna
+          #    e `Embedding.Language` la sostituiva col suo default "en". Ora la seleziona, e la
+          #    lingua per candidato è nel campo `l` di aggregate.log — questa query resta perché
+          #    misura il corpus intero, non i soli candidati recuperati.
+          PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
+          PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
+          q() { docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At -F'|' -c "$1" 2>&1; }
+          q "SELECT lang, count(*) FROM pgvector_embeddings GROUP BY 1 ORDER BY 2 DESC;"             > tuning-dump/lang-distribution.txt
+          q "SELECT d.\"FileName\", e.lang, count(*)
+             FROM pgvector_embeddings e
+             JOIN vector_documents v ON v.\"Id\" = e.vector_document_id
+             JOIN pdf_documents d ON d.\"Id\" = v.\"PdfDocumentId\"
+             GROUP BY 1,2 ORDER BY 1,2;" > tuning-dump/lang-by-document.txt
+
+          echo "::group::distribuzione lang"; cat tuning-dump/lang-distribution.txt; echo "::endgroup::"
+
+          # Lo stack era su e non ha prodotto una riga: il wiring del livello di log è rotto, e un
+          # dump vuoto qui è indistinguibile da «la fusione non è stata invocata». Fallisce.
+          if [ "$LINES" -eq 0 ]; then
+            echo "::error:: nessuna riga [RAG-TUNE] con lo stack attivo — Logging__LogLevel__…MultiGameHybridSearchService non sta arrivando al servizio"
+            exit 1
+          fi
+          exit 0
+
+      - name: Upload fusion tuning data (#3737)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-fusion-tuning-${{ github.run_id }}
+          path: infra/tuning-dump/
+          if-no-files-found: warn
 
       # NB: the title-health extraction-quality guard was MOVED to its own workflow
       # (.github/workflows/title-health-staging.yml). The CI seed snapshot is baked with the Docnet

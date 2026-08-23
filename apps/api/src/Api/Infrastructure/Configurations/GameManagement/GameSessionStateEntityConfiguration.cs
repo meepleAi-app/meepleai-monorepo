@@ -47,8 +47,13 @@ internal sealed class GameSessionStateEntityConfiguration : IEntityTypeConfigura
             .HasMaxLength(255)
             .IsRequired();
 
-        builder.Property(s => s.RowVersion)
-            .IsRowVersion();
+        // #3651 lotto 10 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` non mappa
+        // alla colonna di sistema su Npgsql: serve la configurazione esplicita.
+        builder.Property(s => s.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
 
         // Indexes for query performance
         builder.HasIndex(s => s.GameSessionId)

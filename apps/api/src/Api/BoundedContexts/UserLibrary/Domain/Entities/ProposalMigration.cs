@@ -145,10 +145,22 @@ public sealed class ProposalMigration : AggregateRoot<Guid>
     public bool IsPending => Choice == PostApprovalMigrationChoice.Pending;
 
     /// <summary>
-    /// Gets or sets the row version for optimistic concurrency control.
+    /// Concurrency token letto dalla riga (#3651, ADR-060), sulla colonna di sistema <c>xmin</c>.
+    ///
+    /// <para>
+    /// Prima era <c>[Timestamp] byte[]?</c> su una colonna <c>bytea</c>: Postgres non la popola,
+    /// quindi EF confrontava <c>NULL = NULL</c> e nessun conflitto veniva rilevato. L'aggregato lo
+    /// trasporta perché <c>ProposalMigrationRepository.UpdateAsync</c> ha un ramo che riattacca un
+    /// grafo <b>detached</b> (<c>:97</c>): senza round-trip la WHERE conterrebbe <c>xmin = 0</c> e
+    /// ogni scrittura fallirebbe (#3688).
+    /// </para>
     /// </summary>
-    [Timestamp]
-    public byte[]? RowVersion { get; private set; }
+    public uint Xmin { get; private set; }
+
+    /// <summary>
+    /// Carica il token letto dalla riga. Chiamato solo dal mapper del repository.
+    /// </summary>
+    internal void SetXmin(uint xmin) => Xmin = xmin;
 
     // Validation methods
     private static void ValidateId(Guid id, string paramName)

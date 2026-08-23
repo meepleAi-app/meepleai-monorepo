@@ -13,11 +13,29 @@ using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Endpoints;
+
+/// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI</b>, nonostante siano endpoint di
+/// amministrazione — lo schema che di norma fallisce il criterio di isolamento. Nessuno dei 25 test
+/// asserisce su un conteggio o su una lista globale: le uniche letture aggregate,
+/// <c>GetDashboard_Empty_Returns200</c> e <c>GetTrend_UnknownGame_ReturnsEmptyList200</c>,
+/// verificano <b>solo lo status code</b> (il primo malgrado il nome dica «Empty»; il secondo su un
+/// <c>Guid.NewGuid()</c> mai seminato). Ogni altra asserzione e' scoped a un id che il test stesso
+/// ha creato — inclusi i due lookup su <c>MechanicRecalcJob</c>, che passano per
+/// <c>GetByIdAsync(jobId)</c> con il jobId restituito dalla propria chiamata, mai «l'unico job in
+/// tabella».
+/// </para>
+/// </summary>
+public sealed class AdminMechanicExtractorValidationHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "mechanic_validation_endpoints");
 
 /// <summary>
 /// Integration tests for the AI Comprehension Validation admin endpoints
@@ -30,14 +48,13 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Endpoints;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifetime
+public sealed class AdminMechanicExtractorValidationEndpointsTests
+    : IClassFixture<AdminMechanicExtractorValidationHostFixture>, IAsyncLifetime
 {
     private const string EndpointBase = "/api/v1/admin/mechanic-extractor";
 
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
     private string _adminSessionToken = null!;
 
     private static readonly Guid TestAdminId = Guid.NewGuid();
@@ -48,36 +65,26 @@ public sealed class AdminMechanicExtractorValidationEndpointsTests : IAsyncLifet
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public AdminMechanicExtractorValidationEndpointsTests(SharedTestcontainersFixture fixture)
+    public AdminMechanicExtractorValidationEndpointsTests(AdminMechanicExtractorValidationHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"mechanic_validation_endpoints_{Guid.NewGuid():N}";
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
+    // Il seeding resta per test — xUnit crea una nuova istanza della classe per ogni [Fact] — ma
+    // costruisce solo la sessione admin, non l'host. CreateAdminSessionAsync e' find-or-create
+    // sull'Id, quindi le 25 chiamate riusano lo stesso UserEntity (TestAdminId e' static) e
+    // aggiungono solo una UserSessionEntity: nessun 23505 sull'indice unico dell'email.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync(TestContext.Current.CancellationToken);
-
-            var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(dbContext, TestAdminId);
-            _adminSessionToken = token;
-        }
-
-        _client = _factory.CreateClient();
+        var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(dbContext, TestAdminId);
+        _adminSessionToken = token;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ────────────────────────────────────────────────────────────────────
     // Auth enforcement: every route must reject anonymous calls (401)

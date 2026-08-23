@@ -57,22 +57,38 @@ LANG=$(jq -r '.language' "$QUERIES")
 #
 # Confrontiamo solo quando entrambi i lati sono noti: eseguire contro un'API remota senza
 # snapshot locale, o con una baseline anteriore all'introduzione del campo, resta legittimo.
+BASELINE_SCHEMA=$(jq -r '.schemaVersion // 1' "$BASELINE")
+
 if [ "$UPDATE_BASELINE" = false ]; then
+  # --- baseline v1: chiave fisica, non più confrontabile (#3666) ---
+  # La v1 fissava `{source,page}` dove `source` è `pdf_documents.Id`, un `Guid.NewGuid()`
+  # rigenerato a ogni ingest: il re-bake lo cambiava e la baseline scadeva per costruzione,
+  # non per una regressione. La v2 asserisce sul NOME del documento, che il re-bake conserva.
+  # Questa migrazione si fa UNA volta, non a ogni bake.
+  if [ "$BASELINE_SCHEMA" -lt 2 ]; then
+    echo "::error:: baseline in formato v1 (id fisici) — va rigenerata una volta sola" >&2
+    echo "  La v1 pinnava pdf_documents.Id, che cambia a ogni ingest: è la ragione per cui" >&2
+    echo "  il gate è stato rosso 7 run su 8 fra il 2026-07-20 e il 2026-08-10 (#3666)." >&2
+    echo "  Rigenera con --update-baseline: la v2 pinna il nome del documento e sopravvive" >&2
+    echo "  ai re-bake — docs/for-developers/operations/rag-smoke-runbook.md" >&2
+    exit 3
+  fi
+
+  # --- snapshot diverso: con la v2 è un'informazione, non un blocco (#3666) ---
+  # Con la chiave stabile il confronto resta significativo attraverso un re-bake: un corpus
+  # davvero diverso si manifesta come documenti diversi, cioè come il drift che il gate deve
+  # rilevare. Restava exit 3 finché la chiave era fisica (#3645).
   baseline_snap=$(jq -r '.snapshot // empty' "$BASELINE")
   current_snap=$(cat "$OUT_DIR/.latest" 2>/dev/null || true)
 
   if [ -n "$baseline_snap" ] && [ -n "$current_snap" ] && [ "$baseline_snap" != "$current_snap" ]; then
-    echo "::error:: baseline scaduta — non è una regressione del retrieval" >&2
-    echo "  baseline catturata su: $baseline_snap" >&2
-    echo "  snapshot in esecuzione: $current_snap" >&2
-    echo "  Confrontare il retrieval fra corpus diversi non è significativo. Rigenera la" >&2
-    echo "  baseline (--update-baseline) o esegui contro lo snapshot della baseline —" >&2
-    echo "  docs/for-developers/operations/rag-smoke-runbook.md" >&2
-    exit 3
+    echo "::notice:: baseline catturata su un altro snapshot ($baseline_snap → $current_snap)." >&2
+    echo "  Con la chiave v2 (nome documento) il confronto resta valido: un fallimento qui" >&2
+    echo "  è drift del retrieval, non una baseline scaduta." >&2
   fi
 fi
 
-COOKIE=$(mktemp); trap 'rm -f "$COOKIE" "${TMP_BASELINE:-}"' EXIT
+COOKIE=$(mktemp); trap 'rm -f "$COOKIE" "${TMP_BASELINE:-}" "${DOC_MAP:-}"' EXIT
 
 # --- login (optional: endpoint may accept a preset session) ---
 if [ -n "$EMAIL" ] && [ -n "$PASSWORD" ]; then
@@ -98,7 +114,39 @@ fetch_top_chunks() {
     | jq -c "if . == null then [] else (sort_by(-.score, .source, .page) | .[0:$TOPK] | map({source, page})) end" 2>/dev/null
 }
 
+# --- risoluzione id → documento (#3666) -------------------------------------------------
+# `citations[].source` è `pdf_documents.Id` (StreamQaQueryHandler:396-399), generato con
+# `Guid.NewGuid()` a ogni ingest: pinnarlo significava una baseline che scade a ogni re-bake.
+# Una SOLA chiamata costruisce la mappa id → nome file, che il re-bake conserva perché deriva
+# dal PDF sorgente e non dalla riga di database.
+DOC_MAP=$(mktemp); echo '{}' > "$DOC_MAP"
+
+build_document_map() {
+  local body
+  body=$(curl -s -b "$COOKIE" "$BASE_URL/api/v1/admin/pdfs?pageSize=500" 2>/dev/null) || true
+  if ! echo "$body" | jq -e '.items' >/dev/null 2>&1; then
+    fail "impossibile costruire la mappa documenti da GET /api/v1/admin/pdfs — serve un account admin (SMOKE_EMAIL). Senza mappa il confronto v2 non è possibile."
+  fi
+  echo "$body" | jq -c '[.items[] | {key: (.id|tostring), value: .fileName}] | from_entries' > "$DOC_MAP"
+  log "mappa documenti: $(jq -r 'length' "$DOC_MAP") pdf"
+}
+
+# $1 = [{source,page}] → [{document,page}]. Un id non risolto resta `null` e viene
+# segnalato dal chiamante: meglio un fallimento nominato che un confronto su una chiave vuota.
+resolve_documents() {
+  jq -c --slurpfile m "$DOC_MAP" 'map({document: ($m[0][.source] // null), page})' <<<"$1"
+}
+
+build_document_map
+
 PASS=0; FAIL=0; SKIPPED=0
+# #3740 — criterio semantico, indipendente dal confronto con la baseline.
+# La baseline cattura la DERIVA: fallisce a ogni cambiamento, anche a un miglioramento.
+# Questo conta la CORRETTEZZA: quante query hanno il manuale PROPRIO del gioco nei top-K.
+# E' un conteggio con pavimento, non un pass/fail per query, perche' due query oggi
+# mancano il bersaglio per un difetto noto (#3737) e non vanno lette come regressione.
+SEM_HIT=0; SEM_MISS=""
+SEM_FLOOR=$(jq -r '.semanticFloor // 0' "$QUERIES")
 TMP_BASELINE=$(mktemp); echo '{}' > "$TMP_BASELINE"
 
 while IFS= read -r qid; do
@@ -112,10 +160,34 @@ while IFS= read -r qid; do
     FAIL=$((FAIL+1)); continue
   fi
 
+  resolved=$(resolve_documents "$top")
+  if echo "$resolved" | jq -e 'any(.[]; .document == null)' >/dev/null 2>&1; then
+    # Un id citato che la mappa non conosce non è drift: è un documento sparito o una mappa
+    # troncata. Va detto con il suo nome, non confuso con una regressione del retrieval.
+    echo "FAIL  $qid — un id citato non compare in GET /api/v1/admin/pdfs (documento rimosso o mappa incompleta)"
+    echo "  citazioni: $top"
+    FAIL=$((FAIL+1)); continue
+  fi
+
+  # --- criterio semantico (#3740) --------------------------------------------------------
+  # Valutato SEMPRE, anche durante --update-baseline: ricatturare una baseline mentre il
+  # retrieval e' sbagliato e' esattamente come si e' arrivati a pinnare star-wars-rebellion
+  # per `catan-setup-it`. Qui almeno lo dice invece di registrarlo in silenzio.
+  exp_doc=$(jq -r --arg id "$qid" '.queries[] | select(.queryId==$id) | .expectedDocument // empty' "$QUERIES")
+  if [ -n "$exp_doc" ]; then
+    if echo "$resolved" | jq -e --arg d "$exp_doc" 'any(.[]; .document == $d)' >/dev/null 2>&1; then
+      SEM_HIT=$((SEM_HIT+1))
+    else
+      got=$(jq -c 'map(.document)' <<<"$resolved")
+      SEM_MISS="${SEM_MISS}
+    $qid — atteso ${exp_doc}, ottenuti: ${got}"
+    fi
+  fi
+
   if [ "$UPDATE_BASELINE" = true ]; then
-    jq --arg id "$qid" --argjson v "$top" '.[$id]=$v' "$TMP_BASELINE" > "$TMP_BASELINE.2" \
+    jq --arg id "$qid" --argjson v "$resolved" '.[$id]=$v' "$TMP_BASELINE" > "$TMP_BASELINE.2" \
       && mv "$TMP_BASELINE.2" "$TMP_BASELINE"
-    log "captured $qid ($qlang) → $top"
+    log "captured $qid ($qlang) → $resolved"
     continue
   fi
 
@@ -128,15 +200,32 @@ while IFS= read -r qid; do
     SKIPPED=$((SKIPPED+1)); continue
   fi
 
-  # Ordered comparison: both sides come from the same sort_by(-.score, .source, .page)
-  # pipeline, so rank matters — a chunk dropping from #1 to #3 must fail (real drift),
-  # not pass as it would with an order-insensitive set compare.
-  if [ "$top" = "$expected" ]; then
-    echo "PASS  $qid"; PASS=$((PASS+1))
+  # Confronto a due livelli (#3666).
+  #
+  # RIGIDO sui documenti, e ordinato: entrambi i lati vengono dallo stesso
+  # sort_by(-.score, .source, .page), quindi il rango conta — un manuale che scende da #1 a #3
+  # è drift vero e deve fallire, cosa che un confronto insiemistico lascerebbe passare.
+  #
+  # ADVISORY sulle pagine: sopravvivono al re-bake molto meno dei documenti, perché dipendono
+  # dal chunking. Pinnarle è ciò che rendeva la baseline usa-e-getta. Una pagina diversa dentro
+  # il manuale giusto viene segnalata e non fa fallire il gate: è il compromesso scelto in
+  # #3666, esplicito e non ereditato.
+  exp_docs=$(jq -c 'map(.document)' <<<"$expected")
+  got_docs=$(jq -c 'map(.document)' <<<"$resolved")
+
+  if [ "$exp_docs" = "$got_docs" ]; then
+    exp_pages=$(jq -c 'map(.page)' <<<"$expected")
+    got_pages=$(jq -c 'map(.page)' <<<"$resolved")
+    if [ "$exp_pages" = "$got_pages" ]; then
+      echo "PASS  $qid"
+    else
+      echo "::notice:: PASS  $qid — documenti attesi, pagine diverse (advisory): $exp_pages → $got_pages"
+    fi
+    PASS=$((PASS+1))
   else
-    echo "FAIL  $qid — top-$TOPK retrieval drifted"
-    echo "  expected: $expected"
-    echo "  got:      $top"
+    echo "FAIL  $qid — top-$TOPK retrieval drifted (documenti diversi)"
+    echo "  expected: $exp_docs"
+    echo "  got:      $got_docs"
     FAIL=$((FAIL+1))
   fi
 done < <(jq -r '.queries[].queryId' "$QUERIES")
@@ -148,13 +237,37 @@ if [ "$UPDATE_BASELINE" = true ]; then
   snap=$(cat "$OUT_DIR/.latest" 2>/dev/null || echo "unknown")
   model=$(jq -r '.embedding_model // "unknown"' "$OUT_DIR/$snap.meta.json" 2>/dev/null || echo "unknown")
   ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  # schemaVersion 2 (#3666): le entry sono {document,page}, non più {source,page}. Il campo
+  # `snapshot` resta — non serve più a invalidare la baseline, ma a dire su quale corpus è
+  # stata catturata quando si legge un fallimento.
   jq --slurpfile b "$TMP_BASELINE" --arg snap "$snap" --arg model "$model" --arg ts "$ts" \
-     '.baseline=$b[0] | .snapshot=$snap | .embeddingModel=$model | .capturedAt=$ts' \
+     '.schemaVersion=2 | .baseline=$b[0] | .snapshot=$snap | .embeddingModel=$model | .capturedAt=$ts' \
      "$BASELINE" > "$BASELINE.2" && mv "$BASELINE.2" "$BASELINE"
   log "golden baseline updated → $BASELINE (snapshot=$snap, model=$model)"
   exit 0
 fi
 
 log "result: $PASS passed, $FAIL failed, $SKIPPED skipped (pending baseline)"
-# Exit non-zero ONLY on a real FAIL (drift / no-citations). SKIP (missing baseline) never fails the gate.
-[ "$FAIL" -eq 0 ]
+
+# --- criterio semantico (#3740) ------------------------------------------------------------
+SEM_TOTAL=$(jq -r '[.queries[] | select(.expectedDocument)] | length' "$QUERIES")
+log "semantico: $SEM_HIT/$SEM_TOTAL con il manuale proprio del gioco nei top-$TOPK (pavimento $SEM_FLOOR)"
+if [ -n "$SEM_MISS" ]; then
+  echo "  fuori bersaglio:$SEM_MISS"
+fi
+
+SEM_STATUS=0
+if [ "$SEM_HIT" -lt "$SEM_FLOOR" ]; then
+  echo "::error::Criterio semantico sceso a $SEM_HIT/$SEM_TOTAL contro un pavimento di $SEM_FLOOR."
+  echo "::error::Il confronto con la baseline puo' essere verde e questo rosso lo stesso: la baseline"
+  echo "::error::misura la deriva, questo misura se il manuale recuperato e' quello giusto."
+  echo "::error::Se il calo e' voluto, aggiorna semanticFloor in rag-canonical-queries.json nello"
+  echo "::error::stesso commit, con il motivo. NON abbassarlo per far passare la build."
+  SEM_STATUS=1
+elif [ "$SEM_HIT" -gt "$SEM_FLOOR" ]; then
+  echo "::notice::Criterio semantico salito a $SEM_HIT/$SEM_TOTAL (pavimento $SEM_FLOOR): alza semanticFloor per fissare il guadagno."
+fi
+
+# Exit non-zero su una FAIL vera (deriva / niente citazioni) OPPURE sotto il pavimento semantico.
+# SKIP (baseline mancante) non fa mai fallire il gate.
+[ "$FAIL" -eq 0 ] && [ "$SEM_STATUS" -eq 0 ]

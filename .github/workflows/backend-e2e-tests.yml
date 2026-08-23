@@ -19,10 +19,13 @@ name: Backend E2E Tests
 
 on:
   pull_request:
-    # Scope to prod-promotion only (main-staging → main). Real-API E2E checks
-    # produce noise on dev releases (main-dev → main-staging). See companion
-    # change in api-smoke.yml + #979 release-PR triage.
-    branches: [main]
+    # #3662: era `[main]`, cioè SOLO la promozione a produzione. Con quel trigger la finestra fra
+    # due osservazioni del gate è di settimane, ed è la ragione per cui un OOM è passato inosservato
+    # dal 2026-06-22 al 2026-08-11: non «nessuno guardava», ma «non c'era niente da guardare».
+    # Aggiunto `main-staging` (release main-dev → main-staging): il segnale arriva a ogni release
+    # invece che a ogni promozione, e resta fuori dalle PR di sviluppo quotidiano — che era la
+    # ragione originale dello scope stretto (#979, rumore delle E2E real-API sulle PR di dev).
+    branches: [main, main-staging]
     paths:
       - 'apps/api/**'
       # #3662: era `tests/Api.Tests/E2E/**`, che NON esiste -- i test E2E stanno sotto
@@ -113,6 +116,36 @@ jobs:
         env:
           CI: true
           DOTNET_ENVIRONMENT: Testing
+
+      # Issue #3662 (DoD 4). Un `> 0` sarebbe soddisfatto da una selezione collassata da 220 a 3:
+      # è esattamente il difetto di classe del cluster #3622/#3625/#3629/#3632, dove un gate verde
+      # e vuoto dà lo stesso segnale di un gate verde e pieno. Il pavimento è il numero osservato.
+      #
+      # 220 = i 221 casi della run 32016660866 meno `TutorToArbitroWorkflow_CompleteSequence_Succeeds`,
+      # rimosso perché interrogava `/api/v1/agents/tutor/query`, rotta che non esiste.
+      #
+      # ⚠️ In locale la stessa selezione ne esegue 219 (ora 218): due test entrano in selezione solo
+      # in CI e la differenza non è ancora spiegata. Il pavimento è tarato sul numero di CI, che è
+      # quello che questo guard osserva.
+      - name: "Guard: la selezione E2E non deve restringersi (#3662)"
+        if: always()
+        working-directory: apps/api
+        run: |
+          set -euo pipefail
+          FLOOR=220
+          trx=$(ls TestResults/*.trx 2>/dev/null | head -1 || true)
+          if [ -z "$trx" ]; then
+            echo "::error::Nessun .trx prodotto: la sessione di test non ha riportato nulla."
+            exit 1
+          fi
+          total=$(grep -o 'total="[0-9]*"' "$trx" | head -1 | grep -o '[0-9]*')
+          echo "Casi in selezione: ${total} (pavimento ${FLOOR})"
+          if [ "${total:-0}" -lt "$FLOOR" ]; then
+            echo "::error::La selezione E2E si è ristretta: ${total} casi contro un pavimento di ${FLOOR}."
+            echo "::error::Un gate che esamina meno di quanto dovrebbe è verde per la ragione sbagliata."
+            echo "::error::Se la riduzione è voluta, aggiorna FLOOR in questo step nello stesso commit."
+            exit 1
+          fi
 
       - name: Upload Test Results
         if: always()

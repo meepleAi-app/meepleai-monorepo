@@ -99,10 +99,10 @@ public sealed class SearchQueryHandlerTests
         // The strict mock guarantees GenerateEmbeddingAsync was never called,
         // but verify explicitly for documentation / regression safety.
         embeddingServiceMock.Verify(
-            s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Never);
         embeddingServiceMock.Verify(
-            s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Never);
 
         // The pre-computed vector must reach the repository unchanged.
@@ -123,7 +123,7 @@ public sealed class SearchQueryHandlerTests
 
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { generated }));
 
         var capturedVectors = new List<Vector>();
@@ -176,7 +176,7 @@ public sealed class SearchQueryHandlerTests
         result.Should().NotBeNull();
 
         embeddingServiceMock.Verify(
-            s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<CancellationToken>()),
+            s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         capturedVectors.Should().HaveCount(1);
@@ -196,7 +196,7 @@ public sealed class SearchQueryHandlerTests
 
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { generated }));
 
         var embeddingRepositoryMock = new Mock<IEmbeddingRepository>();
@@ -241,7 +241,7 @@ public sealed class SearchQueryHandlerTests
 
         // Assert: empty list ≠ supplied → embedding service is called.
         embeddingServiceMock.Verify(
-            s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<CancellationToken>()),
+            s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -371,7 +371,7 @@ public sealed class SearchQueryHandlerTests
 
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 0.1f, 0.2f, 0.3f } }));
 
         var keywordSearchServiceMock = CreateEmptyKeywordSearchServiceMock();
@@ -427,7 +427,7 @@ public sealed class SearchQueryHandlerTests
 
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 0.1f, 0.2f, 0.3f } }));
 
         var keywordResults = new List<KeywordSearchResult>

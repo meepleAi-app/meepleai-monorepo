@@ -45,20 +45,30 @@ public sealed class PhotoBatchUpload : AggregateRoot<Guid>
     /// <summary>Gets the human-readable reason for failure, if the batch failed.</summary>
     public string? FailureReason { get; private set; }
 
-    /// <summary>EF Core optimistic concurrency token.
-    /// Configured exclusively via <c>PhotoBatchUploadEntityConfiguration.IsRowVersion()</c>;
-    /// the previous <c>[Timestamp]</c> data annotation combined with
-    /// <c>.IsRowVersion()</c> produced a double-mapping that, under the Npgsql
-    /// provider, made EF send an explicit NULL on INSERT and violate the NOT-NULL
-    /// constraint on <c>row_version bytea</c>. The pattern aligned here mirrors
-    /// <see cref="Api.Infrastructure.Entities.UserLibrary.UserLibraryEntryEntity"/>
-    /// which works correctly without the annotation. Migration
-    /// <c>20260524190307_FixPhotoBatchUploadRowVersionNullable</c> makes the
-    /// underlying column nullable so the Npgsql provider can omit it from the
-    /// INSERT statement and rely on optimistic concurrency on UPDATE.
-    /// Setter omitted: EF Core populates the value via reflection.
+    /// <summary>
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>.
+    ///
+    /// <para>
+    /// <b>Storia, perché spiega perché il token non ha mai protetto nulla.</b> La forma precedente
+    /// era <c>byte[]? RowVersion</c> su <c>row_version bytea</c>. Prima ancora, quella colonna era
+    /// <c>NOT NULL</c> e faceva fallire l'INSERT — lo stesso difetto trovato su
+    /// <c>ab_test_sessions</c> nel lotto 5 di #3651. La migration
+    /// <c>20260524190307_FixPhotoBatchUploadRowVersionNullable</c> intervenne rendendo la colonna
+    /// <b>nullable</b>: il sintomo rumoroso sparì e al suo posto restò il guasto silenzioso —
+    /// Postgres non popola una <c>bytea</c>, quindi EF confrontava <c>NULL = NULL</c> a ogni update
+    /// e nessun conflitto veniva più rilevato. Un guasto scambiato per un altro.
+    /// </para>
+    /// <para>
+    /// Il commento di allora indicava <c>UserLibraryEntryEntity</c> come il pattern «che funziona
+    /// correttamente»: anche quella era rotta allo stesso modo, ed è stata convertita nel lotto 6.
+    /// </para>
+    /// <para>
+    /// Ora è la colonna di sistema, che Postgres aggiorna a ogni scrittura. Setter omesso: EF la
+    /// popola in materializzazione, e l'aggregato la trasporta fino a <c>Update()</c>, che il
+    /// repository esegue su un grafo detached (#3688).
+    /// </para>
     /// </summary>
-    public byte[]? RowVersion { get; }
+    public uint Xmin { get; }
 
     private readonly List<PhotoBatchPage> _pages = [];
 

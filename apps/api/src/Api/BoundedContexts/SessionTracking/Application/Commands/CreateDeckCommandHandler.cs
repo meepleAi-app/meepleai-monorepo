@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
@@ -15,12 +16,15 @@ public class CreateDeckCommandHandler : IRequestHandler<CreateDeckCommand, Creat
     private readonly ISessionDeckRepository _deckRepository;
     private readonly IMediator _mediator;
     private readonly ILogger<CreateDeckCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public CreateDeckCommandHandler(
+        ISessionAccessGuard accessGuard,
         ISessionDeckRepository deckRepository,
         IMediator mediator,
         ILogger<CreateDeckCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _deckRepository = deckRepository;
         _mediator = mediator;
         _logger = logger;
@@ -28,6 +32,10 @@ public class CreateDeckCommandHandler : IRequestHandler<CreateDeckCommand, Creat
 
     public async Task<CreateDeckResult> Handle(CreateDeckCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         _logger.LogInformation("Creating deck for session {SessionId}, type: {DeckType}",
             request.SessionId, request.DeckType);
 

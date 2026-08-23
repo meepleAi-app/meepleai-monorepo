@@ -7,8 +7,8 @@
  *
  * Endpoints covered:
  *   POST   /api/v1/games/{gameId}/sessions            — createSession
- *   POST   /api/v1/sessions/{id}/pause                — pauseSession
- *   POST   /api/v1/sessions/{id}/resume               — resumeSession
+ *   POST   /api/v1/game-sessions/{id}/pause           — pauseSession   (#3662: spostata)
+ *   POST   /api/v1/game-sessions/{id}/resume          — resumeSession  (#3662: spostata)
  *   PUT    /api/v1/sessions/{id}/turn-order            — setTurnOrder
  *   POST   /api/v1/sessions/{id}/turn/advance          — advanceTurn
  *   POST   /api/v1/game-sessions/{id}/actions/roll-dice — rollSessionDice
@@ -104,11 +104,11 @@ export function createSessionFlowClient({
     },
 
     async pauseSession(sessionId) {
-      await httpClient.post(`${SESSION_BASE}/${encodeURIComponent(sessionId)}/pause`);
+      await httpClient.post(`${GAME_SESSION_BASE}/${encodeURIComponent(sessionId)}/pause`);
     },
 
     async resumeSession(sessionId) {
-      await httpClient.post(`${SESSION_BASE}/${encodeURIComponent(sessionId)}/resume`);
+      await httpClient.post(`${GAME_SESSION_BASE}/${encodeURIComponent(sessionId)}/resume`);
     },
 
     async setTurnOrder(sessionId, request) {

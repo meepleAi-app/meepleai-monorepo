@@ -4,12 +4,26 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using FluentAssertions;
 using Xunit;
 
 namespace Api.Tests.Integration.Administration;
+
+/// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> La classe non semina nulla: ogni test
+/// crea la propria sessione con <c>CreateAdminSessionAsync(dbContext)</c> <b>senza id fisso</b>,
+/// quindi un utente nuovo ogni volta. Tutte e dieci le asserzioni sono status code (200/401/403) su
+/// endpoint di infrastruttura che non leggono dati di dominio — nessun conteggio, nessuna lista,
+/// nessun ordinamento su cui i test possano interferire.
+/// </para>
+/// </summary>
+public sealed class AdminInfrastructureHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "infra_endpoints");
 
 /// <summary>
 /// Integration tests for Admin Infrastructure Dashboard HTTP endpoints.
@@ -23,39 +37,15 @@ namespace Api.Tests.Integration.Administration;
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
-public sealed class AdminInfrastructureEndpointsTests : IAsyncLifetime
+public sealed class AdminInfrastructureEndpointsTests : IClassFixture<AdminInfrastructureHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public AdminInfrastructureEndpointsTests(SharedTestcontainersFixture fixture)
+    public AdminInfrastructureEndpointsTests(AdminInfrastructureHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"infra_endpoints_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     // ========================================

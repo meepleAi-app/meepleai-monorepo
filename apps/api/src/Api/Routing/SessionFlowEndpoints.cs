@@ -53,8 +53,21 @@ internal static class SessionFlowEndpoints
         .Produces(200)
         .Produces(401);
 
-        // Pause session
-        app.MapPost("/sessions/{sessionId:guid}/pause", async (
+        // #3662: era `/sessions/{sessionId:guid}/pause`, che COLLIDEVA con
+        // `GameEndpoints.MapPost("/sessions/{id}/pause")`. Le due route stanno sotto lo stesso
+        // prefisso /api/v1 e appartengono a bounded context diversi: questa opera su
+        // SessionTracking.Session, quella su GameSession. La variante con vincolo `:guid` e' piu'
+        // specifica, quindi vinceva SEMPRE il match -- gli id sono GUID -- e rendeva l'altra
+        // irraggiungibile.
+        //
+        // Conseguenza in produzione: la lista delle sessioni attive mostra GameSession (arrivano
+        // da /sessions/active, servito da IGameSessionRepository) e mettere in pausa dalla lista
+        // mandava quell'id qui, ottenendo 404. `useActiveSessions` era rotto.
+        //
+        // Le sessioni di SessionTracking si creano su `POST /api/v1/game-sessions`: e' li' che
+        // appartengono le loro operazioni di ciclo di vita. Spostandole si toglie la collisione
+        // senza perdere nessuno dei due comportamenti.
+        app.MapPost("/game-sessions/{sessionId:guid}/pause", async (
             Guid sessionId,
             HttpContext httpContext,
             IMediator mediator,
@@ -80,7 +93,7 @@ internal static class SessionFlowEndpoints
         .Produces(409);
 
         // Resume session
-        app.MapPost("/sessions/{sessionId:guid}/resume", async (
+        app.MapPost("/game-sessions/{sessionId:guid}/resume", async (
             Guid sessionId,
             HttpContext httpContext,
             IMediator mediator,

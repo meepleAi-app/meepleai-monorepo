@@ -160,9 +160,15 @@ internal sealed class EvaluationRepository
     {
         // Bounded retry loop on optimistic concurrency conflicts: concurrent evals from the
         // same tenant racing on the same monthly counter would otherwise silently lose updates.
-        // The RowVersion column (xmin) makes the conflict observable; we re-load and replay
-        // the increment on top of the fresh value. Retry budget kept low (3) because the
-        // critical section is a single increment + the SQL boundary makes contention rare.
+        // The Xmin system column makes the conflict observable; we re-load and replay the
+        // increment on top of the fresh value. Retry budget kept low (3) because the critical
+        // section is a single increment + the SQL boundary makes contention rare.
+        //
+        // ⚠️ #3651: fino alla conversione a `xmin` questo loop non è MAI entrato in funzione. Il
+        // token era `byte[]` su una colonna `bytea` che Postgres non popola, quindi
+        // DbUpdateConcurrencyException non poteva essere sollevata — e le «silently lost updates»
+        // che questo codice esiste per prevenire avvenivano comunque. Misurato: due incrementi
+        // concorrenti su un contatore da 10 producevano 15 invece di 30.
         const int maxAttempts = 3;
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {

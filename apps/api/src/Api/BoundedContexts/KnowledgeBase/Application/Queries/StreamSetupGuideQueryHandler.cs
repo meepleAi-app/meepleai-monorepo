@@ -206,7 +206,8 @@ etc.";
         CancellationToken cancellationToken)
     {
         var setupQuery = "game setup preparation initial components placement player starting conditions";
-        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, cancellationToken).ConfigureAwait(false);
+        // #3737: synthetic retrieval question -> e5 "query:" prefix.
+        var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(setupQuery, EmbeddingPurpose.Query, cancellationToken).ConfigureAwait(false);
 
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
         {

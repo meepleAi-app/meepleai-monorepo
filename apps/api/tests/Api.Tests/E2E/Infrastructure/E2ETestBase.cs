@@ -205,6 +205,42 @@ public abstract class E2ETestBase : IAsyncLifetime
     /// is skipped with a descriptive message instead of silently passing.
     /// Uses xUnit v3's Assert.Skip() for dynamic test skipping.
     /// </summary>
+    /// <summary>
+    /// Restituisce status + corpo della risposta in una riga, per infilarla nel messaggio di
+    /// un'asserzione fallita. Issue #3662.
+    ///
+    /// <para>
+    /// 🔴 Perche' serve: quattro test E2E fallivano in CI con <c>403 Forbidden</c> su
+    /// <c>POST /api/v1/ingest/pdf</c> — e in locale passavano, anche eseguendo l'intera selezione
+    /// in blocco. La diagnosi si e' fermata li' perche' l'asserzione riportava <b>solo lo status
+    /// code</b>: nessuna traccia del motivo. Un 403 senza corpo non dice se a rifiutare e' una
+    /// policy, un middleware, un limite di configurazione o un feature flag.
+    /// </para>
+    /// <para>
+    /// Il corpo e' troncato a 500 caratteri: basta per un ProblemDetails, non abbastanza per
+    /// seppellire il log.
+    /// </para>
+    /// </summary>
+    protected static async Task<string> DescribeResponseAsync(HttpResponseMessage response)
+    {
+        string body;
+        try
+        {
+            body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            body = $"<corpo non leggibile: {ex.GetType().Name}>";
+        }
+
+        if (body.Length > 500)
+        {
+            body = body[..500] + "…";
+        }
+
+        return $"la risposta e' {(int)response.StatusCode} {response.StatusCode} con corpo: {body}";
+    }
+
     protected static async Task AssertSuccessOrSkipIfServiceUnavailable(
         HttpResponseMessage response,
         string context = "")
@@ -345,12 +381,24 @@ internal static class E2ESharedInfrastructure
             using var dbContext = CreateDbContext();
             await dbContext.Database.MigrateAsync();
 
-            // Seed SystemConfiguration row required by RequirePublicRegistrationFilter.
-            // The filter fails closed (returns 403) when Registration:PublicEnabled is
-            // not present or false, which breaks every E2E test that calls
-            // RegisterUserAsync. ConfigurationService reads from the DB via CQRS, so
-            // setting IConfiguration alone is not enough — we must seed the row itself.
-            await SeedRegistrationEnabledConfigAsync(dbContext);
+            // Seed SystemConfiguration rows required dagli endpoint sotto test. ConfigurationService
+            // legge dal DB via CQRS, quindi impostare IConfiguration non basta: la riga deve esistere.
+            //
+            // Registration:PublicEnabled — RequirePublicRegistrationFilter fallisce chiuso (403) se
+            // manca, e questo romperebbe ogni test che chiama RegisterUserAsync.
+            //
+            // Features.PdfUpload (#3662) — FeatureFlagService.IsEnabledAsync fa fail-safe a FALSE
+            // quando la chiave non esiste, e HandleStandardUpload controlla il flag PRIMA
+            // dell'autenticazione. In CI il database e' nuovo, quindi la riga non c'era e quattro
+            // test ricevevano 403 con corpo `{"error":"feature_disabled"}` — sia da admin sia da
+            // anonimo, il che spiega anche perche' il test del 401 ne riceveva 403. In locale
+            // passavano perche' il DB di sviluppo la riga ce l'ha. Saltare quei test avrebbe
+            // significato non verificare mai l'upload PDF in CI: e' il difetto che #3662 combatte,
+            // non la sua cura.
+            await SeedBoolConfigAsync(dbContext, "Registration:PublicEnabled", "Registration",
+                "E2E test seed: enable public registration so RegisterUserAsync succeeds.");
+            await SeedBoolConfigAsync(dbContext, "Features.PdfUpload", "Features",
+                "E2E test seed (#3662): enable PDF upload so the ingest endpoint is reachable.");
 
             _initialized = true;
         }
@@ -360,10 +408,17 @@ internal static class E2ESharedInfrastructure
         }
     }
 
-    private static async Task SeedRegistrationEnabledConfigAsync(MeepleAiDbContext dbContext)
+    /// <summary>
+    /// Semina in modo idempotente una riga booleana di <c>SystemConfiguration</c>. Generalizzato in
+    /// #3662: serviva la stessa cosa per un secondo flag, e due copie della stessa procedura — con
+    /// la nota sul FK Restrict su <c>CreatedByUserId</c> — sarebbero invecchiate separatamente.
+    /// </summary>
+    private static async Task SeedBoolConfigAsync(
+        MeepleAiDbContext dbContext,
+        string key,
+        string category,
+        string description)
     {
-        const string key = "Registration:PublicEnabled";
-
         var exists = await dbContext
             .Set<Api.Infrastructure.Entities.SystemConfigurationEntity>()
             .AnyAsync(c => c.Key == key);
@@ -388,8 +443,8 @@ internal static class E2ESharedInfrastructure
                 Key = key,
                 Value = "true",
                 ValueType = "bool",
-                Description = "E2E test seed: enable public registration so RegisterUserAsync succeeds.",
-                Category = "Registration",
+                Description = description,
+                Category = category,
                 IsActive = true,
                 RequiresRestart = false,
                 Environment = "All",

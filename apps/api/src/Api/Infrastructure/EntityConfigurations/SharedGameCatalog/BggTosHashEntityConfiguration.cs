@@ -38,8 +38,14 @@ internal sealed class BggTosHashEntityConfiguration : IEntityTypeConfiguration<B
             .IsRequired()
             .HasDefaultValue(0);
 
-        builder.Property(e => e.RowVersion)
-            .HasColumnName("row_version")
-            .IsRowVersion();
+        // #3651 lotto 4 — allineata al pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]`
+        // NON produce il mapping alla colonna di sistema su Npgsql, malgrado il nome lo suggerisca:
+        // serve la configurazione esplicita qui sotto. La colonna materializzata `row_version` è
+        // rimossa dalla migration BggTosHashXminConcurrency.
+        builder.Property(e => e.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsConcurrencyToken();
     }
 }

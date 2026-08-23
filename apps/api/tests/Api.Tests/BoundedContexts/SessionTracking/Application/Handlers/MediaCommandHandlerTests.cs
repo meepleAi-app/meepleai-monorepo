@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -30,6 +31,7 @@ public class UploadSessionMediaCommandHandlerTests
         _mockMediaRepo = new Mock<ISessionMediaRepository>();
         _mockMediator = new Mock<IMediator>();
         _handler = new UploadSessionMediaCommandHandler(
+            SessionAccessGuardMocks.Permissive(),
             _mockSessionRepo.Object,
             _mockMediaRepo.Object,
             _mockMediator.Object);

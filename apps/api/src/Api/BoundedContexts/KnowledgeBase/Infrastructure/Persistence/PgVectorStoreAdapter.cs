@@ -42,9 +42,13 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // Build SQL with cosine distance operator.
         // pgvector <=> returns cosine distance (0 = identical, 2 = opposite).
         // Similarity = 1 - distance.
+        // #3740: `lang` (column 8) is SELECTed and carried onto Embedding.Language. Omitting it does
+        // not surface as a null — Embedding.Language has the initializer "en", so every candidate
+        // reached callers marked English whatever the chunk's real language was.
         var sql = $"""
             SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
-                   1 - (vector <=> @queryVector) AS similarity
+                   1 - (vector <=> @queryVector) AS similarity,
+                   lang
             FROM {TableName}
             WHERE game_id = @gameId
               AND 1 - (vector <=> @queryVector) >= @minScore
@@ -92,6 +96,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var pageNumber = reader.GetInt32(5);
                     // Issue #1391: denormalized role_tags (mirrors text_chunks.role_tags).
                     var roleTags = reader.GetInt32(6);
+                    // #3740 column 8: chunk language. Nullable for pre-AI-09 rows → fall back to "en",
+                    // which is what those rows resolved to before this column was projected.
+                    var lang = await ReadLanguageAsync(reader, 8, cancellationToken).ConfigureAwait(false);
 
                     // Use placeholder vector for search results (actual vector not needed by callers)
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
@@ -103,6 +110,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
+                        language: lang,
                         roleTags: roleTags);
 
                     results.Add(embedding);
@@ -150,7 +158,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                    vd."PdfDocumentId",
                    1 - (e.vector <=> @queryVector) AS similarity,
                    tc."Heading",
-                   tc.char_start, tc.char_end, tc.bounding_boxes_json
+                   tc.char_start, tc.char_end, tc.bounding_boxes_json,
+                   e.lang
             FROM {TableName} e
             JOIN vector_documents vd ON vd."Id" = e.vector_document_id
             LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
@@ -218,6 +227,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var boundingBoxesJson = await reader.IsDBNullAsync(12, cancellationToken).ConfigureAwait(false)
                         ? null
                         : reader.GetString(12);
+                    // #3740 Column 13: chunk language. This is the arm the RAG gate measures, so an
+                    // "en"-for-everything projection made any per-language reasoning unfalsifiable.
+                    var lang = await ReadLanguageAsync(reader, 13, cancellationToken).ConfigureAwait(false);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -228,6 +240,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
+                        language: lang,
                         roleTags: roleTags,
                         pdfDocumentId: pdfDocumentId,
                         heading: heading,
@@ -263,9 +276,12 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
 
         // Build SQL with IN clause for multiple game_ids
+        // #3740: same `lang` projection as SearchAsync (column 8) — session-aware RAG spans a primary
+        // game plus its expansions, so a mixed-language candidate set is the normal case here.
         var sql = $"""
             SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
-                   1 - (vector <=> @queryVector) AS similarity
+                   1 - (vector <=> @queryVector) AS similarity,
+                   lang
             FROM {TableName}
             WHERE game_id = ANY(@gameIds)
               AND 1 - (vector <=> @queryVector) >= @minScore
@@ -312,6 +328,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var chunkIndex = reader.GetInt32(4);
                     var pageNumber = reader.GetInt32(5);
                     var roleTags = reader.GetInt32(6);
+                    var lang = await ReadLanguageAsync(reader, 8, cancellationToken).ConfigureAwait(false);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -322,6 +339,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         model: model,
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
+                        language: lang,
                         roleTags: roleTags);
 
                     results.Add(embedding);
@@ -673,5 +691,20 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         {
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    /// <summary>
+    /// Reads the <c>lang</c> column, falling back to <c>"en"</c> when it is null (#3740).
+    /// The fallback keeps pre-AI-09 rows on the value they already resolved to, so projecting the
+    /// column changes what a multilingual corpus reports without changing a monolingual one.
+    /// </summary>
+    private static async Task<string> ReadLanguageAsync(
+        DbDataReader reader,
+        int ordinal,
+        CancellationToken cancellationToken)
+    {
+        return await reader.IsDBNullAsync(ordinal, cancellationToken).ConfigureAwait(false)
+            ? "en"
+            : reader.GetString(ordinal);
     }
 }

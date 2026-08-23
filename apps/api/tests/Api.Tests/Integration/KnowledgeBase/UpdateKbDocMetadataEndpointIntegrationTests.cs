@@ -16,6 +16,24 @@ using Xunit;
 namespace Api.Tests.Integration.KnowledgeBase;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test crea il proprio utente con
+/// <c>TestSessionHelper.CreateUserSessionAsync</c> (id univoco) e semina al massimo un
+/// <c>PdfDocumentEntity</c> per quell'utente. Le uniche asserzioni su liste
+/// (<c>GET /api/v1/kb-docs</c> in AC8, <c>Items.Single()</c>) passano per
+/// <c>ListUserKbDocsQueryHandler</c>, che filtra con <c>Where(p =&gt; p.UploadedByUserId ==
+/// request.UserId)</c> — quindi conta solo i documenti di QUEL chiamante, mai quelli seminati da
+/// altri test. Le asserzioni sui contatori evento (<c>CountEventLogsAsync</c>) filtrano per
+/// <c>AggregateId == docId</c>, anch'esso univoco per test.
+/// </para>
+/// </summary>
+public sealed class UpdateKbDocMetadataHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "test_patch_kb_docs");
+
+/// <summary>
 /// Issue #1687 Task 9 — HTTP-level integration tests for
 /// <c>PATCH /api/v1/kb-docs/{id}</c>. Covers the 8 G/W/T scenarios from D-16
 /// of the spec panel:
@@ -33,40 +51,17 @@ namespace Api.Tests.Integration.KnowledgeBase;
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "1687")]
-public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IAsyncLifetime
+public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<UpdateKbDocMetadataHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    public UpdateKbDocMetadataEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public UpdateKbDocMetadataEndpointIntegrationTests(UpdateKbDocMetadataHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"test_patch_kb_docs_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync(TestCancellationToken);
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        if (_factory is not null) await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     // ─── Helpers ────────────────────────────────────────────────────────────

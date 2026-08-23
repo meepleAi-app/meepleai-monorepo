@@ -62,7 +62,7 @@ public class AskQuestionQueryHandlerSecurityTests
             .Setup(e => e.GenerateEmbeddingAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,
@@ -143,7 +143,7 @@ public class AskQuestionQueryHandlerSecurityTests
             .ReturnsAsync((CachedRagResponse?)null);
         _mockAskEmbeddingService = new Mock<IEmbeddingService>();
         _mockAskEmbeddingService
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult
             {
                 Success = true,

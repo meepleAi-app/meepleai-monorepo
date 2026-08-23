@@ -94,6 +94,12 @@ internal record HybridSearchResult
     public float? KeywordScore { get; init; }
 
     /// <summary>
+    /// #3740: ISO 639-1 language of the chunk, sourced from the vector arm
+    /// (<c>pgvector_embeddings.lang</c>). Null for a keyword-only candidate.
+    /// </summary>
+    public string? Language { get; init; }
+
+    /// <summary>
     /// Vector rank position in vector-only results (1-based).
     /// Used for RRF calculation.
     /// </summary>

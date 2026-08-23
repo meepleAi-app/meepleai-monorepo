@@ -340,7 +340,13 @@ jobs:
     # Issue #3665: infra/scripts/tests/ holds four bats suites that no workflow
     # ran. snapshot-verify.bats had been red since 2026-06-11 — not because it
     # was hard to fix, but because nobody executed it.
-    name: Infra Scripts (bats)
+    #
+    # Issue #3680: the same directory also holds a 14 KB Pester 5 suite that
+    # #3665 left out, so the green on this job covered roughly two thirds of the
+    # directory while reading as if it covered all of it. Both families run here
+    # now, and the check name says so — a job named after one runner is how the
+    # gap stayed invisible the first time.
+    name: Infra Scripts (bats + Pester)
     runs-on: ubuntu-latest
     # Two measurements on PR #3677, back to back:
     #   run 1 — checkout 9m39s, bats  6s, total 9m49s
@@ -389,3 +395,44 @@ jobs:
         # --print-output-on-failure surfaces the failing script's stderr in the
         # job log, so a red check is diagnosable without a local repro.
         run: npx --yes bats@1.13.0 --print-output-on-failure infra/scripts/tests/
+
+      - name: Run Pester suites
+        # #3680. Version pinned for the same reason bats is: a Pester major bump
+        # must not change what this gate means. `pwsh` is preinstalled on
+        # ubuntu-latest, and the suite is pure — it imports
+        # db-snapshot-common.psm1 and exercises pure functions, no DB, no Docker
+        # — so the cost here is seconds, not minutes.
+        #
+        # The exit code is computed by hand on purpose. `Invoke-Pester` does NOT
+        # fail the shell when tests fail: without this, a red suite would leave
+        # the job green. That is a worse failure than #3665's (a gate that ran
+        # nothing) — this one runs, reports, and reports the opposite of the
+        # truth. TotalCount is checked for the #3665 case too: a moved, renamed
+        # or emptied suite must fail the gate instead of passing on zero tests.
+        shell: pwsh
+        run: |
+          $suites = @(Get-ChildItem -Path infra/scripts/tests -Filter '*.Tests.ps1' -File -ErrorAction SilentlyContinue)
+          Write-Host "Discovered $($suites.Count) Pester suite(s) under infra/scripts/tests/"
+          if ($suites.Count -eq 0) {
+            Write-Host "::error:: no *.Tests.ps1 suite found — this gate would report success while checking nothing"
+            exit 1
+          }
+
+          Install-Module -Name Pester -RequiredVersion 5.7.1 -Force -SkipPublisherCheck -Scope CurrentUser
+          Import-Module Pester -RequiredVersion 5.7.1
+
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'infra/scripts/tests'
+          $config.Run.PassThru = $true
+          $config.Output.Verbosity = 'Detailed'
+          $result = Invoke-Pester -Configuration $config
+
+          Write-Host "Pester: total=$($result.TotalCount) passed=$($result.PassedCount) failed=$($result.FailedCount) skipped=$($result.SkippedCount)"
+          if ($result.TotalCount -eq 0) {
+            Write-Host "::error:: Pester discovered no test — the suite was moved, renamed or emptied; point this gate at its new home"
+            exit 1
+          }
+          if ($result.FailedCount -gt 0) {
+            Write-Host "::error:: $($result.FailedCount) Pester test(s) failed"
+            exit 1
+          }

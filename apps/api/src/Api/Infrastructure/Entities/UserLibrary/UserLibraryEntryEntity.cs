@@ -142,7 +142,18 @@ public class UserLibraryEntryEntity
     /// <summary>
     /// Optimistic concurrency control.
     /// </summary>
-    public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>. Prima era
+    /// <c>byte[]? RowVersion</c> su <c>bytea</c>: Postgres non la popola, quindi EF confrontava
+    /// <c>NULL = NULL</c> e nessun conflitto veniva rilevato.
+    ///
+    /// <para>
+    /// ⚠️ <c>UserLibraryRepository.UpdateAsync</c> persiste un grafo <b>detached</b>
+    /// (<c>MapToPersistence</c> + <c>Update()</c>), quindi il token deve attraversare il mapper:
+    /// senza, la WHERE conterrebbe <c>xmin = 0</c> e ogni scrittura fallirebbe (#3688).
+    /// </para>
+    /// </summary>
+    public uint Xmin { get; set; }
 
     /// <summary>
     /// Issue #1824 (umbrella #1821 L3) — user-uploaded custom cover image for

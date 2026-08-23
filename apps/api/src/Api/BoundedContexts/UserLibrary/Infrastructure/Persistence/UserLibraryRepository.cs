@@ -367,6 +367,11 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     {
         var entry = new UserLibraryEntry(entity.Id, entity.UserId, entity.GameId);
 
+        // #3651/#3688: il token letto viaggia con l'aggregato perché UpdateAsync persiste un
+        // grafo detached. Senza questa riga MapToPersistence produrrebbe Xmin = 0 e ogni
+        // scrittura fallirebbe con DbUpdateConcurrencyException — su ogni update, non su una race.
+        entry.SetXmin(entity.Xmin);
+
         // Set notes if present
         if (!string.IsNullOrWhiteSpace(entity.Notes))
         {
@@ -589,6 +594,10 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             UserId = domainEntity.UserId,
             GameId = domainEntity.GameId,
             AddedAt = domainEntity.AddedAt,
+            // #3651/#3688: round-trip del concurrency token. Update() su un grafo detached usa i
+            // valori correnti come original values, quindi senza questa riga la WHERE avrebbe
+            // xmin = 0 — che non corrisponde a nessuna tupla viva — e ogni scrittura fallirebbe.
+            Xmin = domainEntity.Xmin,
             Notes = domainEntity.Notes?.Value,
             IsFavorite = domainEntity.IsFavorite,
             CustomAgentConfigJson = agentConfigJson,

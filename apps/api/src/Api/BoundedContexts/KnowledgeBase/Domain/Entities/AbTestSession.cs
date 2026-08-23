@@ -21,9 +21,18 @@ public sealed class AbTestSession : AggregateRoot<Guid>
     public DateTime? CompletedAt { get; private set; }
 
     /// <summary>
-    /// Concurrency token for optimistic locking.
+    /// Concurrency token (#3651, ADR-060) sulla colonna di sistema <c>xmin</c>.
+    ///
+    /// <para>
+    /// Prima era <c>byte[] RowVersion</c> con <c>.IsRowVersion()</c>, che su Npgsql non mappa alla
+    /// colonna di sistema ma genera una <c>bytea NOT NULL</c> che nessuno popola. Il risultato non
+    /// era una protezione inefficace come sulle altre entità del lotto: qui l'INSERT stesso
+    /// falliva con <c>23502: null value in column "row_version" … violates not-null constraint</c>.
+    /// Nessun test lo aveva mai visto perché <b>nessun test di AbTestSession tocca Postgres</b> —
+    /// gli handler girano su InMemory, dove il vincolo non esiste.
+    /// </para>
     /// </summary>
-    public byte[] RowVersion { get; private set; } = default!;
+    public uint Xmin { get; private set; }
 
     private readonly List<AbTestVariant> _variants = new();
     public IReadOnlyList<AbTestVariant> Variants => _variants.AsReadOnly();
@@ -40,6 +49,12 @@ public sealed class AbTestSession : AggregateRoot<Guid>
         KnowledgeBaseId = knowledgeBaseId;
         Status = AbTestStatus.Draft;
         CreatedAt = DateTime.UtcNow;
+
+        // Assegnazione esplicita, non ridondante: il setter di Xmin è raggiunto altrimenti solo
+        // dalla materializzazione di EF, e S1144 lo segnalerebbe come codice morto facendo fallire
+        // la build. Scriverlo qui è anche semanticamente vero — una riga mai persistita non ha
+        // ancora un xmin — ed evita di sopprimere l'analizzatore (#3688 lo documenta).
+        Xmin = 0;
     }
 
     /// <summary>

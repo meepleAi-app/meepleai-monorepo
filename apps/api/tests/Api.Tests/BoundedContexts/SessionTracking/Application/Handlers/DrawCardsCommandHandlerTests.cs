@@ -1,3 +1,4 @@
+using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -23,6 +24,7 @@ public sealed class DrawCardsCommandHandlerTests
     public DrawCardsCommandHandlerTests()
     {
         _handler = new DrawCardsCommandHandler(
+            SessionAccessGuardMocks.Permissive(),
             _deckRepoMock.Object,
             _sessionRepoMock.Object,
             _mediatorMock.Object,

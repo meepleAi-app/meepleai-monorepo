@@ -71,8 +71,8 @@ public sealed class EmbeddingServiceTests
         _service = new EmbeddingService(
             _providerFactoryMock.Object,
             Options.Create(_config),
-            _loggerMock.Object
-        );
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
     }
 
     #region GetEmbeddingDimensions Tests
@@ -246,8 +246,8 @@ public sealed class EmbeddingServiceTests
         var service = new EmbeddingService(
             _providerFactoryMock.Object,
             Options.Create(configNoFallback),
-            _loggerMock.Object
-        );
+            _loggerMock.Object,
+            Mock.Of<IConfigurationService>());
 
         _primaryProviderMock
             .Setup(x => x.GenerateBatchEmbeddingsAsync(texts, It.IsAny<CancellationToken>()))

@@ -45,7 +45,7 @@ public sealed class VectorSemanticSearchQueryHandlerTests
 
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateFailure("embedding failed"));
 
         var vectorStoreMock = new Mock<IVectorStoreAdapter>();
@@ -83,7 +83,7 @@ public sealed class VectorSemanticSearchQueryHandlerTests
         var floatVector = new float[768];
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { floatVector }));
 
         var returnedEmbeddings = new List<Embedding>
@@ -151,7 +151,7 @@ public sealed class VectorSemanticSearchQueryHandlerTests
         var floatVector = new float[768];
         var embeddingServiceMock = new Mock<IEmbeddingService>();
         embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { floatVector }));
 
         var embeddingA = new Embedding(

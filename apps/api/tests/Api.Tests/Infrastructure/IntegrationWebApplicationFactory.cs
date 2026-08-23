@@ -194,6 +194,23 @@ internal static class IntegrationWebApplicationFactory
                         mock
                             .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                             .ReturnsAsync(success);
+                        // #3737: gli overload con purpose. Un overload non configurato fa restituire
+                        // null a Moq, e il null esplode DENTRO l'handler come NullReferenceException:
+                        // il test riporta un bug di produzione dove c'e' un mock incompleto. Questa
+                        // factory serve ogni test HTTP, quindi la copertura va tenuta esaustiva.
+                        mock
+                            .Setup(s => s.GenerateEmbeddingAsync(
+                                It.IsAny<string>(),
+                                It.IsAny<Api.Services.EmbeddingPurpose>(),
+                                It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(success);
+                        mock
+                            .Setup(s => s.GenerateEmbeddingAsync(
+                                It.IsAny<string>(),
+                                It.IsAny<string>(),
+                                It.IsAny<Api.Services.EmbeddingPurpose>(),
+                                It.IsAny<CancellationToken>()))
+                            .ReturnsAsync(success);
                         return mock.Object;
                     });
 

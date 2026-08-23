@@ -32,6 +32,51 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         _service.Dispose();
     }
 
+    /// <summary>
+    /// Attende che il pool della sessione contenga esattamente <paramref name="expected"/> subscriber.
+    /// </summary>
+    /// <remarks>
+    /// Sostituisce l'attesa fissa (<c>Task.Delay(50)</c>) da cui questi test dipendevano per la
+    /// registrazione del subscriber. <c>SubscribeAsync</c> è un iteratore lazy: il corpo — e quindi
+    /// <c>pool.TryAdd</c> — non gira finché il consumer non chiama la prima <c>MoveNextAsync</c>, in un
+    /// momento deciso dallo scheduler del thread pool e non dal test. Se la publish precedeva la
+    /// registrazione l'evento andava perso (comportamento corretto del servizio: la consegna è garantita
+    /// solo dopo la sottoscrizione, e il recupero passa da Last-Event-ID) e il test falliva con un
+    /// <c>HaveCount(1)</c> opaco. Su un runner che esegue 22.500 test la finestra di 50 ms non era
+    /// garantita — da cui l'intermittente #3711.
+    ///
+    /// Il budget di 5 s è un limite superiore per non appendere la suite, non una finestra da
+    /// indovinare: allo scadere l'eccezione dice cosa non è successo, invece di lasciarlo dedurre
+    /// dall'assert a valle. Stesso approccio di <c>WaitForZsetCardinalityAsync</c> in
+    /// <c>SessionBroadcastReplayTests</c>.
+    /// </remarks>
+    private Task WaitForConnectionCountAsync(Guid sessionId, int expected) =>
+        WaitForConnectionCountAsync(_service, sessionId, expected);
+
+    /// <inheritdoc cref="WaitForConnectionCountAsync(Guid, int)"/>
+    private static async Task WaitForConnectionCountAsync(
+        SessionBroadcastService service,
+        Guid sessionId,
+        int expected)
+    {
+        var budget = TimeSpan.FromSeconds(5);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+
+        int actual;
+        while ((actual = service.GetConnectionCount(sessionId)) != expected)
+        {
+            if (elapsed.Elapsed > budget)
+            {
+                throw new TimeoutException(
+                    $"Il pool della sessione {sessionId} non ha raggiunto {expected} subscriber entro " +
+                    $"{budget.TotalSeconds:0}s (osservati: {actual}). Il subscriber non si è registrato, " +
+                    "oppure si è disconnesso prima del previsto.");
+            }
+
+            await Task.Delay(5);
+        }
+    }
+
     #region SubscribeAsync
 
     [Fact]
@@ -69,7 +114,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 1);
 
         // Assert
         _service.GetConnectionCount(sessionId).Should().Be(1);
@@ -93,13 +138,13 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 1);
         _service.GetConnectionCount(sessionId).Should().Be(1);
 
         // Act
         await cts.CancelAsync();
         try { await subscriptionTask; } catch (OperationCanceledException) { }
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 0);
 
         // Assert
         _service.GetConnectionCount(sessionId).Should().Be(0);
@@ -127,7 +172,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             tasks.Add(task);
         }
 
-        await Task.Delay(100);
+        await WaitForConnectionCountAsync(sessionId, SessionBroadcastService.MaxConnectionsPerSession);
         _service.GetConnectionCount(sessionId).Should().Be(SessionBroadcastService.MaxConnectionsPerSession);
 
         // Act - attempt to add one more
@@ -173,7 +218,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
         // Act
         var testEvent = new ScoreUpdatedEvent
@@ -237,7 +282,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 1);
 
         // Act
         var testEvent = new ParticipantAddedEvent
@@ -277,7 +322,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(session1Id, 1);
 
         // Act - publish to both sessions
         var event1 = new ScoreUpdatedEvent
@@ -337,7 +382,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
         // Act
         var testEvent = new ScoreUpdatedEvent
@@ -385,7 +430,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
         // Act - private event for targetUser only
         var testEvent = new ScoreUpdatedEvent
@@ -431,7 +476,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             catch (OperationCanceledException) { }
         }, keepAliveCts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 1);
 
         // Subscribe and receive events to build buffer
         using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(2));
@@ -445,7 +490,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts1.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
         // Publish 3 events
         for (var i = 0; i < 3; i++)
@@ -511,7 +556,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts1.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 1);
 
         await _service.PublishAsync(sessionId, new ScoreUpdatedEvent
         {
@@ -574,7 +619,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token)) { }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
         // Act & Assert
         _service.GetConnectionCount(sessionId).Should().Be(2);
@@ -608,12 +653,12 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             completed2 = true;
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 2);
         _service.GetConnectionCount(sessionId).Should().Be(2);
 
         // Act
         await _service.DisconnectAllAsync(sessionId);
-        await Task.Delay(100);
+        await WaitForConnectionCountAsync(sessionId, 0);
 
         // Assert
         _service.GetConnectionCount(sessionId).Should().Be(0);
@@ -641,7 +686,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForConnectionCountAsync(sessionId, 1);
 
         // Act
         var testEvent = new DiceRolledEvent
@@ -681,7 +726,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         var sub = Task.Run(async () => {
             await foreach (var e in svc.SubscribeAsync(sid, uid, null, cts.Token)) { received.Add(e); break; }
         });
-        await Task.Delay(100);
+        await WaitForConnectionCountAsync(svc, sid, 1);
         await svc.PublishEnvelopeAsync(sid,
             new SseEventEnvelope { Id = "ignored", EventType = "session:score", Data = new { value = 7 } });
         await sub;

@@ -16,6 +16,36 @@ using Xunit;
 namespace Api.Tests.Integration.Testing;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test usa il proprio
+/// <c>testRunId</c> letterale, mai riutilizzato da un altro <c>[Fact]</c> in questa classe
+/// (es. <c>"e2e-cleanupAaaaaa-..."</c> vs <c>"e2e-emptyscope0000-..."</c> vs
+/// <c>"e2e-onlygn0000000-..."</c>). <c>CleanupTestEntitiesCommandHandler</c> filtra ogni cascade
+/// per <c>TestRunId == request.TestRunId</c>, quindi i conteggi <c>Deleted*</c> non possono mai
+/// includere le righe seminate da un altro test — il <c>TestRunId</c> funziona come chiave di
+/// partizione, esattamente come <c>UserId</c> nel riferimento.
+/// </para>
+/// <para>
+/// Nota: la classe passava da <c>EnsureCreatedAsync</c> a schema-da-modello; la fixture condivisa
+/// usa sempre <c>MigrateAsync</c> (vedi <see cref="IntegrationHostFixture"/>), verificato qui non
+/// avere effetti collaterali sui test.
+/// </para>
+///
+/// ⚠️ <b>Vincolo sull'asse di scrittura, non solo di lettura.</b> Il seeder inserisce l'utente
+/// proprietario con un <c>Add</c> cieco, senza find-or-create, contro l'indice unico su
+/// <c>UserEntity.Email</c>. Con un database per test una collisione era strutturalmente
+/// impossibile; con uno condiviso diventa un 23505. Le email derivano da
+/// <c>testRunId[..16]</c>: due <c>testRunId</c> che coincidono nei primi 16 caratteri
+/// collidono. Aggiungendo test a questa classe, le email letterali devono restare
+/// globalmente uniche all'interno della classe.
+/// </summary>
+public sealed class CleanupTestEntitiesHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "test_cleanup");
+
+/// <summary>
 /// Issue #1928 Task B (DEC-B-1, DEC-B-3, DEC-B-8) + Issue #1929 Task C Macro 3a
 /// (DEC-C-8) — Integration tests for CleanupTestEntitiesCommandHandler
 /// cascade-by-TestRunId. Macro 3a extends cascade to UserLibraryEntries +
@@ -26,36 +56,15 @@ namespace Api.Tests.Integration.Testing;
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "Testing")]
 [Trait("Issue", "1928")]
-public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
+public sealed class CleanupTestEntitiesCommandHandlerTests : IClassFixture<CleanupTestEntitiesHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private string _databaseName = string.Empty;
-    private WebApplicationFactory<Program>? _factory;
+    private readonly WebApplicationFactory<Program> _factory;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    public CleanupTestEntitiesCommandHandlerTests(SharedTestcontainersFixture fixture)
+    public CleanupTestEntitiesCommandHandlerTests(CleanupTestEntitiesHostFixture host)
     {
-        _fixture = fixture;
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        _databaseName = $"test_cleanup_{Guid.NewGuid():N}";
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.EnsureCreatedAsync(TestCancellationToken);
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
+        _factory = host.Factory;
     }
 
     /// <summary>Seeds 1 GameNight Published + 1 RSVP player + 1 guest invitation + 1 live session + 1 library-game (Macro 3a).</summary>
@@ -106,7 +115,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_HappyPath_DeletesAllScopedEntities_PreservesOthers()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunIdA = "e2e-cleanupAaaaaa-1717603200000";
         var testRunIdB = "e2e-cleanupBbbbbb-1717603200000";
@@ -152,7 +161,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_EmptyScope_TestRunIdNoEntities_ReturnsZeros()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var handler = new CleanupTestEntitiesCommandHandler(db, NullLogger<CleanupTestEntitiesCommandHandler>.Instance);
         var response = await handler.Handle(
@@ -172,7 +181,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_OnlyGameNight_NoChildren_DeletesGameNightAndUser()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-onlygn0000000-1717603200000";
 
@@ -197,7 +206,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_IdempotentRetry_SecondCallReturnsZeros()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-idempotent000-1717603200000";
         await SeedFullScopeAsync(db, testRunId);
@@ -215,7 +224,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_ParallelCleanups_DifferentTestRunIds_NoCollision()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunIdA = "e2e-parallelcleA0-1717603200000";
         var testRunIdB = "e2e-parallelcleB0-1717603200000";
@@ -233,7 +242,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_ResponseShape_CorrectFields()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunId = "e2e-shapecase0123-1717603200000";
         await SeedFullScopeAsync(db, testRunId);
@@ -253,7 +262,7 @@ public sealed class CleanupTestEntitiesCommandHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_LibraryGameOnly_CascadesLibraryEntryAndSharedGame()
     {
-        using var scope = _factory!.Services.CreateScope();
+        using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var testRunIdA = "e2e-libonlyAaaaa0-1717603200000";
         var testRunIdB = "e2e-libonlyBbbbb0-1717603200000";

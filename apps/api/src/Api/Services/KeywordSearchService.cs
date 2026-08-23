@@ -70,11 +70,26 @@ internal class KeywordSearchService : IKeywordSearchService
         // column; non-english uses a query-time to_tsvector with the SAME config (see tsvectorExpr).
         var textSearchConfig = await ResolveGameFtsConfigAsync(gameId, language, cancellationToken).ConfigureAwait(false);
 
+        // #3768: il titolo del gioco serve a ESCLUDERE i suoi token dalla tsquery, non a cercarli.
+        var gameTitle = await ResolveGameTitleAsync(gameId, cancellationToken).ConfigureAwait(false);
+
         try
         {
             // Build tsquery for full-text search (Slice A: synonym expansion is language-aware,
             // so the resolved per-game FTS config is threaded through to BuildTsQuery).
-            var tsQuery = BuildTsQuery(query, phraseSearch, textSearchConfig);
+            var tsQuery = BuildTsQuery(query, phraseSearch, textSearchConfig, gameTitle);
+
+            // #3768: senza token residui non c'è niente da cercare. `to_tsquery(cfg, '')` è un
+            // errore SQL, non un risultato vuoto, quindi il caso va intercettato qui — e restituire
+            // zero risultati è corretto: un candidato senza segnale lessicale conserva il suo
+            // VectorScore nella fusione, dove `absent = 0` è load-bearing (#3735).
+            if (string.IsNullOrWhiteSpace(tsQuery))
+            {
+                _logger.LogInformation(
+                    "Keyword search: query='{Query}', gameId={GameId} — nessun token oltre al nome del gioco, braccio lessicale saltato (#3768)",
+                    query, gameId);
+                return new List<KeywordSearchResult>();
+            }
 
             _logger.LogInformation(
                 "Keyword search: query='{Query}', gameId={GameId}, phraseSearch={PhraseSearch}, boostTerms={BoostTerms}, limit={Limit}, ftsConfig={FtsConfig}",
@@ -263,10 +278,23 @@ internal class KeywordSearchService : IKeywordSearchService
     /// - Phrase: "en passant" with phraseSearch=true returns "en &lt;-&gt; passant"
     /// - Synonym (italian): "setup" returns "(setup | preparazione | allestimento)"
     /// </remarks>
-    internal static string BuildTsQuery(string query, bool phraseSearch, string ftsConfig)
+    internal static string BuildTsQuery(string query, bool phraseSearch, string ftsConfig, string? gameTitle = null)
     {
         // Sanitize query to prevent SQL injection and tsquery syntax errors
         var sanitizedQuery = SanitizeQuery(query);
+
+        // #3768: togli i token del NOME DEL GIOCO. Questa ricerca gira gia' filtrata per GameId,
+        // quindi ogni candidato appartiene a quel gioco e il nome vi compare ovunque: e' un termine
+        // a IDF nullo, che non sceglie fra i chunk ma premia quelli che lo ripetono di piu'.
+        //
+        // Misurato su staging per `catan-setup-it`: il rango 1 del braccio lessicale era la pagina
+        // di copyright («Copyright © 2025 CATAN GmbH…», ts_rank_cd 0.2256) davanti alle regole vere,
+        // e con ts_rank_cd normalizzato per lunghezza un chunk breve che ripete il nome vince
+        // sistematicamente. Quei candidati sono quelli che il gioco manda alla fusione globale.
+        //
+        // Il filtro NON si applica al percorso senza gameId (gameTitle null): li' il nome del gioco
+        // e' esattamente il segnale che sceglie il gioco (#3735).
+        sanitizedQuery = RemoveGameTitleTokens(sanitizedQuery, gameTitle);
 
         // Handle phrase search with proximity operator <->
         if (phraseSearch && sanitizedQuery.Contains(' '))
@@ -425,6 +453,38 @@ internal class KeywordSearchService : IKeywordSearchService
     /// Sanitizes user query to prevent tsquery syntax errors and SQL injection.
     /// Removes special PostgreSQL full-text search operators and dangerous characters.
     /// </summary>
+    /// <summary>
+    /// Rimuove dai token della query quelli che compongono il titolo del gioco (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Restituisce la query invariata quando <paramref name="gameTitle"/> è null o vuoto — il
+    /// percorso non filtrato per gioco. Può restituire stringa vuota se la query era fatta solo del
+    /// nome del gioco: il chiamante deve trattarla come «niente da cercare» e saltare la ricerca
+    /// lessicale, perché <c>to_tsquery(cfg, '')</c> è un errore SQL, non un risultato vuoto.
+    /// </remarks>
+    private static string RemoveGameTitleTokens(string sanitizedQuery, string? gameTitle)
+    {
+        if (string.IsNullOrWhiteSpace(sanitizedQuery) || string.IsNullOrWhiteSpace(gameTitle))
+        {
+            return sanitizedQuery;
+        }
+
+        var titleTokens = SanitizeQuery(gameTitle)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (titleTokens.Count == 0)
+        {
+            return sanitizedQuery;
+        }
+
+        var kept = sanitizedQuery
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(token => !titleTokens.Contains(token));
+
+        return string.Join(' ', kept);
+    }
+
     private static string SanitizeQuery(string query)
     {
         if (string.IsNullOrWhiteSpace(query))
@@ -489,6 +549,42 @@ internal class KeywordSearchService : IKeywordSearchService
     /// <inheritdoc />
     public Task<string> ResolveFtsConfigAsync(Guid gameId, string language = "en", CancellationToken cancellationToken = default)
         => ResolveGameFtsConfigAsync(gameId, language, cancellationToken);
+
+    /// <summary>
+    /// Titolo del gioco, usato solo per escluderne i token dalla tsquery (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Fallisce in silenzio restituendo null: senza titolo il comportamento torna a quello
+    /// precedente, che è degradato ma non rotto. Far fallire una ricerca perché non si è potuto
+    /// leggere un nome sarebbe sproporzionato.
+    /// </remarks>
+    private async Task<string?> ResolveGameTitleAsync(Guid gameId, CancellationToken cancellationToken)
+    {
+        var previousTimeout = _dbContext.Database.GetCommandTimeout();
+        try
+        {
+            _dbContext.Database.SetCommandTimeout(3);
+            return await _dbContext.Database
+                .SqlQueryRaw<string>(
+                    @"SELECT title AS ""Value"" FROM shared_games WHERE id = @gameId::uuid LIMIT 1",
+                    new NpgsqlParameter("@gameId", gameId.ToString()))
+                .AsNoTracking()
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // il titolo è un'ottimizzazione del ranking, non un requisito
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex,
+                "Keyword search: titolo del gioco {GameId} non risolto, la tsquery conserverà il nome del gioco (#3768)",
+                gameId);
+            return null;
+        }
+        finally
+        {
+            _dbContext.Database.SetCommandTimeout(previousTimeout);
+        }
+    }
 
     /// <summary>
     /// Detects the dominant document language for a game (from <c>pdf_documents.Language</c>,

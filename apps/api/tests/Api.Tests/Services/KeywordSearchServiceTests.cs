@@ -226,4 +226,80 @@ public sealed class KeywordSearchServiceTests
         result.Should().NotContain("di");
         result.Should().Contain(new[] { "setup", "preparazione", "allestimento" });
     }
+
+    // ---------------------------------------------------------------------
+    // #3768: il nome del gioco non discrimina DENTRO il suo stesso gioco.
+    //
+    // La ricerca lessicale gira gia' filtrata per GameId, quindi ogni chunk
+    // candidato appartiene a quel gioco e il nome vi compare ovunque: e' un
+    // termine a IDF nullo. Pesarlo premia i chunk che lo ripetono di piu' —
+    // colophon, copertine, intestazioni — cioe' il testo senza regole.
+    //
+    // Misurato su staging per `catan-setup-it`: il rango 1 del braccio
+    // lessicale era la pagina di copyright ("Copyright © 2025 CATAN GmbH...",
+    // ts_rank_cd 0.2256), davanti al miglior chunk di regole. Quei tre
+    // candidati sono cio' che il gioco manda alla fusione globale, quindi il
+    // contenuto pertinente non arrivava nemmeno a essere valutato.
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public void BuildTsQuery_WithGameTitle_DropsTheGameNameToken()
+    {
+        var result = KeywordSearchService.BuildTsQuery(
+            "Come si prepara il tabellone in Catan", phraseSearch: false, "english", gameTitle: "Catan");
+
+        result.Should().NotContainEquivalentOf("catan");
+        result.Should().Contain("tabellone", "gli altri token restano: il filtro toglie il nome, non la domanda");
+    }
+
+    [Fact]
+    public void BuildTsQuery_WithMultiWordGameTitle_DropsEveryTokenOfTheTitle()
+    {
+        // "Terraforming Mars": entrambi i token vanno tolti, altrimenti "mars" continua a premiare
+        // le pagine che ripetono il titolo.
+        var result = KeywordSearchService.BuildTsQuery(
+            "Come si prepara Terraforming Mars per due giocatori", phraseSearch: false, "english",
+            gameTitle: "Terraforming Mars");
+
+        result.Should().NotContainEquivalentOf("terraforming");
+        result.Should().NotContainEquivalentOf("mars");
+        result.Should().Contain("giocatori");
+    }
+
+    [Fact]
+    public void BuildTsQuery_WithoutGameTitle_IsUnchanged()
+    {
+        // Il percorso che non conosce il gioco (ricerca non filtrata per GameId) deve restare
+        // identico: li' il nome del gioco E' il segnale che sceglie il gioco.
+        var withTitle = KeywordSearchService.BuildTsQuery("setup per giocatori", phraseSearch: false, "italian");
+        var explicitNull = KeywordSearchService.BuildTsQuery("setup per giocatori", phraseSearch: false, "italian", gameTitle: null);
+
+        explicitNull.Should().Be(withTitle);
+    }
+
+    [Fact]
+    public void BuildTsQuery_QueryMadeOnlyOfTheGameName_ReturnsEmpty()
+    {
+        // Caso limite reale: "Catan" su Catan. Senza token residui non c'e' nulla da cercare, e una
+        // tsquery vuota va riconosciuta dal chiamante invece di finire in to_tsquery() come stringa
+        // vuota — che e' un errore SQL, non un risultato vuoto.
+        KeywordSearchService.BuildTsQuery("Catan", phraseSearch: false, "english", gameTitle: "Catan")
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void BuildTsQuery_GameTitleMatchIsCaseInsensitive()
+    {
+        KeywordSearchService.BuildTsQuery("come si vince a CATAN", phraseSearch: false, "english", gameTitle: "Catan")
+            .Should().NotContainEquivalentOf("catan");
+    }
+
+    [Fact]
+    public void BuildTsQuery_PhraseSearch_KeepsTheGameNameOut()
+    {
+        // Anche il ramo phrase deve filtrare: un <-> che include il nome del gioco cerca una
+        // sequenza che nel manuale compare solo in copertina.
+        KeywordSearchService.BuildTsQuery("preparazione in Catan", phraseSearch: true, "english", gameTitle: "Catan")
+            .Should().NotContainEquivalentOf("catan");
+    }
 }

@@ -89,11 +89,25 @@ jobs:
           RERANKER_SERVICE_URL=http://reranker-service:8003
           OLLAMA_URL=http://ollama:11434
           STORAGE_PROVIDER=local
-          # #3737: alza a Debug SOLO la categoria della fusione cross-gioco, per far emettere a
-          # MultiGameHybridSearchService la riga [RAG-TUNE] con l'aggregato PRIMA della fusione.
-          # È il dato su cui tarare FuseGlobally offline invece che a ~45 min di CI per ipotesi.
-          # Il resto dell'applicazione resta a Information: non è un debug globale.
-          Logging__LogLevel__Api.BoundedContexts.KnowledgeBase.Application.Services.MultiGameHybridSearchService=Debug
+          # #3737: porta a Debug il livello di log, per far emettere a MultiGameHybridSearchService
+          # la riga [RAG-TUNE] con l'aggregato PRIMA della fusione. È il dato su cui tarare
+          # FuseGlobally offline invece che a ~45 min di CI per ipotesi.
+          #
+          # #3768 — la versione precedente di questo blocco impostava
+          # `Logging__LogLevel__Api.BoundedContexts.…MultiGameHybridSearchService=Debug` e diceva di
+          # alzare «SOLO la categoria della fusione cross-gioco». Non era vero in nessuna delle due
+          # parti: LoggingConfiguration non legge le categorie dalla configurazione — gli unici
+          # `MinimumLevel.Override` sono cablati su tre categorie Microsoft — quindi quella
+          # variabile non veniva letta da nessuno. Il dump usciva lo stesso perché il gate gira su
+          # compose.dev.yml, cioè in Development, dove il livello globale è già Debug.
+          #
+          # Le due chiavi qui sotto sono quelle che il codice legge davvero, e sono DUE perché i
+          # filtri sono in serie: la prima decide se l'evento viene generato, la seconda
+          # (`GetConsoleLogLevel`, #3775) se arriva a stdout. Oggi sono ridondanti in Development;
+          # esplicitarle è ciò che tiene in piedi il dump se un domani il gate cambia ambiente.
+          # Il contraccolpo è log più verbosi: il passo che estrae il dump filtra per prefisso.
+          Logging__LogLevel__Default=Debug
+          Logging__Console__MinimumLevel=Debug
           APIENV
 
       - name: Configure snapshot bucket read credentials
@@ -329,7 +343,7 @@ jobs:
           # Lo stack era su e non ha prodotto una riga: il wiring del livello di log è rotto, e un
           # dump vuoto qui è indistinguibile da «la fusione non è stata invocata». Fallisce.
           if [ "$LINES" -eq 0 ]; then
-            echo "::error:: nessuna riga [RAG-TUNE] con lo stack attivo — Logging__LogLevel__…MultiGameHybridSearchService non sta arrivando al servizio"
+            echo "::error:: nessuna riga [RAG-TUNE] con lo stack attivo — Logging__LogLevel__Default e/o Logging__Console__MinimumLevel non stanno arrivando al servizio (i filtri sono due e in serie: generazione dell'evento e sink console)"
             exit 1
           fi
           exit 0

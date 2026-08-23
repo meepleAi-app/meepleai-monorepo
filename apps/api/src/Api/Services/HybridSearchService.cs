@@ -5,6 +5,8 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Helpers;
 using Api.Infrastructure;
 using Microsoft.Extensions.Options;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
@@ -319,6 +321,8 @@ internal class HybridSearchService : IHybridSearchService
             queryRoleHint,
             headingTerms);
 
+        LogPerGameArenaForTuning(query, gameId, ftsConfig, headingTerms, queryRoleHint, fusedResults);
+
         var topResults = fusedResults
             .OrderByDescending(r => r.HybridScore)
             .Take(limit)
@@ -329,6 +333,100 @@ internal class HybridSearchService : IHybridSearchService
             topResults.Count, fusedResults.Count);
 
         return topResults;
+    }
+
+    /// <summary>
+    /// Prefisso stabile della riga di diagnostica per-gioco. Il consumatore offline
+    /// (<c>infra/scripts/rag-fusion-bench.py</c>) filtra su questo con <c>grep -F</c>: cambiarlo
+    /// rompe l'estrazione.
+    /// </summary>
+    internal const string PerGameTuningLogPrefix = "[RAG-TUNE-GAME]";
+
+    private static readonly JsonSerializerOptions PerGameTuningJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
+    /// <summary>
+    /// Emette la scomposizione del punteggio di OGNI candidato fuso di questo gioco, prima della
+    /// troncatura a <c>limit</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Perché esiste.</b> Il dump <c>[RAG-TUNE]</c> di <c>MultiGameHybridSearchService</c> mostra
+    /// i candidati che <i>arrivano</i> alla fusione globale, mai quelli che questo stadio ha
+    /// <i>rifiutato</i>. Su staging, per <c>catan-setup-it</c>, il chunk con le regole di setup è
+    /// rango 1 del braccio vettoriale dentro Catan (cosine 0.80544) e non arriva: al suo posto
+    /// arriva il colophon <c>catan.com ®</c> (cosine 0.77997, rango 14). Senza questa riga la
+    /// diagnosi ha richiesto una lettura del DB per ipotesi, e le prime due — le penalità
+    /// moltiplicative — erano entrambe a zero su quel chunk.
+    /// </para>
+    /// <para>
+    /// <b>Perché la scomposizione e non il solo punteggio.</b> `HybridScore` da solo non distingue
+    /// una cosine alta da un boost additivo, e i due boost valgono <c>0.15</c> contro un
+    /// <c>rrfSum</c> che satura a <c>1/61 = 0.0164</c>: quando uno si attiva, l'ordinamento per
+    /// rilevanza smette di contare. I due termini vanno quindi visti separati.
+    /// </para>
+    /// <para>
+    /// <b>Perché tutti i candidati e non il top-K.</b> Il chunk pertinente è, per definizione del
+    /// difetto, fuori dal risultato: un dump troncato non mostrerebbe mai ciò che serve. Il volume
+    /// è limitato dal <c>fetchLimit</c> dei due bracci (≤ 40 candidati per gioco).
+    /// </para>
+    /// <para>
+    /// <b>Cosa NON porta.</b> Il testo dei chunk: è il grosso del volume e i due fattori che se ne
+    /// derivano (<c>lg</c>, <c>nn</c>) sono già qui, precalcolati. Una variante che volesse tararli
+    /// deve estendere questo payload.
+    /// </para>
+    /// <para>
+    /// I fattori sono ricalcolati con le stesse funzioni pure usate dalla fusione, sugli stessi
+    /// input, quindi coincidono con quelli applicati. Il campo <c>s</c> è invece il punteggio
+    /// <i>reale</i> letto dal risultato fuso: è l'àncora con cui la replica offline si valida, e
+    /// ricalcolarlo qui la farebbe confermare se stessa.
+    /// </para>
+    /// </remarks>
+    private void LogPerGameArenaForTuning(
+        string query,
+        Guid gameId,
+        string? ftsConfig,
+        IReadOnlyList<string>? headingTerms,
+        GameBookRole queryRoleHint,
+        IReadOnlyList<HybridSearchResult> fused)
+    {
+        if (!_logger.IsEnabled(LogLevel.Debug))
+            return;
+
+        var payload = new
+        {
+            q = query,
+            g = gameId,
+            f = ftsConfig,
+            t = headingTerms,
+            n = fused.Count,
+            c = fused.Select(r => new
+            {
+                d = r.PdfDocumentId,
+                i = r.ChunkIndex,
+                vr = r.VectorRank,
+                kr = r.KeywordRank,
+                v = r.VectorScore,
+                k = r.KeywordScore,
+                lg = FusionSignals.ComputeLegendPenaltyFactor(r.Content),
+                nn = FusionSignals.ComputeNumberNoiseFactor(r.Content),
+                rb = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, r.RoleTags),
+                hb = FusionSignals.ComputeHeadingMatchBoost(headingTerms, r.Heading),
+                h = r.Heading,
+                // #3740: omessa quando è null (candidato solo-lessicale). La porta anche il dump
+                // globale: averla qui rende questo payload sufficiente da solo a pilotare la
+                // replica offline di FuseGlobally, senza doverlo ri-unire all'altro.
+                l = r.Language,
+                s = r.HybridScore
+            }).ToList()
+        };
+
+        _logger.LogDebug(
+            "{Prefix} {Payload}",
+            PerGameTuningLogPrefix,
+            JsonSerializer.Serialize(payload, PerGameTuningJsonOptions));
     }
 
     /// <summary>

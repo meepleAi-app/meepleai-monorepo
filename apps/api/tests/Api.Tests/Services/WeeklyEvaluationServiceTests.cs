@@ -18,6 +18,35 @@ namespace Api.Tests.Services;
 /// Unit tests for WeeklyEvaluationService.
 /// BGAI-042: Weekly automated quality evaluation job.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <b>I test si sincronizzano su un osservabile, non aspettano un tempo fisso.</b>
+/// <c>ExecuteAsync</c> e' un <c>BackgroundService</c>: dopo <c>StartAsync</c> il lavoro prosegue
+/// sul thread pool, e quanto ci mette non dipende dal test. Aspettare 100 ms e poi asserire e' una
+/// scommessa che su un runner carico si perde — cosi'
+/// <c>ExecuteAsync_HandlesExceptionsGracefully_ContinuesExecution</c> e' caduto in CI il
+/// 2026-08-23, unico rosso su 22.571 test.
+/// </para>
+/// <para>
+/// Il <see cref="FakeTimeProvider"/> non toglieva l'incertezza, e anzi la nascondeva: il servizio
+/// usa l'orologio iniettato solo per <c>GetUtcNow</c>, mentre i suoi <c>Task.Delay</c> restano sul
+/// tempo reale. Le chiamate ad <c>Advance</c> sparse in questi test non facevano scattare nulla —
+/// spostavano solo l'orologio logico, al punto che un test confrontava le date «per tollerare lo
+/// scostamento» che si era procurato da solo. Sono state rimosse.
+/// </para>
+/// <para>
+/// Il precedente e' #3711: davanti a un'attesa fissa in un test, l'osservabile su cui sincronizzarsi
+/// viene prima; allargare il ritardo e' la sconfitta, non il fix. Qui l'osservabile e' il mock che
+/// l'asserzione gia' interroga — mediator, alert o log — e <see cref="ObservableTimeout"/> e' solo
+/// il limite del caso di fallimento.
+/// </para>
+/// <para>
+/// Restano tre attese fisse, nei test che asseriscono che il servizio <b>non</b> parte
+/// (disabilitato, intervallo o finestra non validi). Li' non esiste un osservabile su cui
+/// sincronizzarsi — si verifica un'assenza — e un'attesa corta puo' solo far passare il test a
+/// torto, mai farlo fallire a torto: l'errore, se c'e', e' silenzioso e non intermittente.
+/// </para>
+/// </remarks>
 [Trait("Category", TestCategories.Unit)]
 public sealed class WeeklyEvaluationServiceTests : IDisposable
 {
@@ -54,6 +83,46 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         _scopeFactoryMock.Setup(x => x.CreateScope()).Returns(_scopeMock.Object);
         _scopeMock.Setup(x => x.ServiceProvider).Returns(_serviceProviderMock.Object);
         _serviceProviderMock.Setup(x => x.GetService(typeof(IMediator))).Returns(_mediatorMock.Object);
+    }
+
+    /// <summary>
+    /// Limite superiore per il caso di fallimento, non un'attesa: sul percorso felice il segnale
+    /// arriva in millisecondi e il test prosegue subito.
+    /// </summary>
+    private static readonly TimeSpan ObservableTimeout = TimeSpan.FromSeconds(10);
+
+    /// <summary>Un segnale da completare dentro un mock quando l'osservabile atteso si verifica.</summary>
+    private static TaskCompletionSource NewSignal() =>
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>Attende l'osservabile; scaduto il tempo fallisce con TimeoutException.</summary>
+    private static Task Wait(TaskCompletionSource signal) => signal.Task.WaitAsync(ObservableTimeout);
+
+    /// <summary>
+    /// Un segnale che si completa quando il logger emette, al livello dato, un messaggio che
+    /// contiene <paramref name="fragment"/>. Serve quando l'osservabile del test e' il log stesso.
+    /// </summary>
+    private TaskCompletionSource SignalOnLog(LogLevel level, string fragment)
+    {
+        var signal = NewSignal();
+        _loggerMock
+            .Setup(x => x.Log(
+                level,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()))
+            .Callback(new InvocationAction(invocation =>
+            {
+                var formatter = invocation.Arguments[4] as Delegate;
+                var message = formatter?.DynamicInvoke(
+                    invocation.Arguments[2], invocation.Arguments[3] as Exception) as string;
+                if (message?.Contains(fragment, StringComparison.Ordinal) == true)
+                {
+                    signal.TrySetResult();
+                }
+            }));
+        return signal;
     }
 
     public void Dispose()
@@ -165,11 +234,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
-
-        // Wait until mediator is actually called (deterministic, no arbitrary sleep)
-        var calledQuery = await mediatorCalled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var calledQuery = await mediatorCalled.Task.WaitAsync(ObservableTimeout);
 
         await _cts.CancelAsync();
         await service.StopAsync(_cts.Token);
@@ -188,12 +253,14 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         var currentTime = new DateTimeOffset(2025, 2, 20, 15, 30, 0, TimeSpan.Zero);
         _timeProvider.SetUtcNow(currentTime);
 
+        var reportRequested = NewSignal();
         var capturedQuery = (GenerateQualityReportQuery?)null;
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
             .Callback<IRequest<QualityReport>, CancellationToken>((q, ct) =>
             {
                 capturedQuery = q as GenerateQualityReportQuery;
+                reportRequested.TrySetResult();
             })
             .ReturnsAsync(new QualityReport
             {
@@ -213,26 +280,18 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
-
-        // Use longer delay to allow background service to process
-        await Task.Delay(TestConstants.Timing.RetryDelay, CancellationToken.None);
+        await Wait(reportRequested);
 
         await _cts.CancelAsync();
         await service.StopAsync(_cts.Token);
 
         // Assert
-        // Note: If capturedQuery is still null, the background service timing is too sensitive
-        // In that case, skip the detailed assertions since the service execution is non-deterministic
-        if (capturedQuery is null)
-        {
-            // Service may not have executed in time - this is acceptable for a background service test
-            return;
-        }
-
-        // Compare dates only to tolerate time shift from FakeTimeProvider.Advance
-        capturedQuery.StartDate.Date.Should().Be(new DateTime(2025, 2, 13, 0, 0, 0, DateTimeKind.Utc).Date);
-        capturedQuery.EndDate.Date.Should().Be(new DateTime(2025, 2, 20, 0, 0, 0, DateTimeKind.Utc).Date);
+        // Senza il vecchio Advance l'orologio resta fermo su `currentTime`, quindi la finestra e'
+        // esatta: prima si poteva confrontare solo la data, per tollerare lo scostamento che
+        // l'Advance introduceva mentre credeva di far scattare il ritardo iniziale.
+        capturedQuery.Should().NotBeNull();
+        capturedQuery.StartDate.Should().Be(currentTime.AddDays(-7).UtcDateTime);
+        capturedQuery.EndDate.Should().Be(currentTime.UtcDateTime);
         capturedQuery.Days.Should().Be(7);
     }
 
@@ -249,8 +308,10 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             .Setup(x => x.GetService(typeof(IRagEvaluationService)))
             .Returns(null!);
 
+        var reportRequested = NewSignal();
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
+            .Callback(() => reportRequested.TrySetResult())
             .ReturnsAsync(new QualityReport
             {
                 StartDate = DateTime.UtcNow.AddDays(-7),
@@ -269,11 +330,9 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
-
-        // Wait for execution to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
+        // L'assenza si verifica dopo un evento che DEVE essere accaduto: senza, un'attesa troppo
+        // corta farebbe passare il test perche' il servizio non era ancora partito.
+        await Wait(reportRequested);
 
         await service.StopAsync(_cts.Token);
 
@@ -290,6 +349,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Arrange
         var options = Options.Create(_config);
         var callCount = 0;
+        var errorLogged = SignalOnLog(LogLevel.Error, "Error running weekly evaluation");
 
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
@@ -319,15 +379,9 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
+        await Wait(errorLogged);
 
-        // Wait for first execution (which throws) to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
-
-        // Service should continue running despite exception
-        // We can verify by checking that it didn't crash
-
+        // Il servizio deve restare vivo dopo l'eccezione: StopAsync lo ferma in modo pulito.
         await service.StopAsync(_cts.Token);
 
         // Assert - verify exception was logged
@@ -403,6 +457,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedReport);
 
+        var summaryLogged = NewSignal();
         var loggedMessages = new List<string>();
         _loggerMock
             .Setup(x => x.Log(
@@ -420,6 +475,10 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
                 if (message != null)
                 {
                     loggedMessages.Add(message);
+                    if (message.Contains("Weekly Evaluation Summary", StringComparison.Ordinal))
+                    {
+                        summaryLogged.TrySetResult();
+                    }
                 }
             }));
 
@@ -432,8 +491,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Wait for execution to complete in real time
-        await Task.Delay(TimeSpan.FromMilliseconds(250), CancellationToken.None);
+        await Wait(summaryLogged);
 
         await service.StopAsync(_cts.Token);
 
@@ -459,6 +517,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             AverageCitationQuality = 0.90
         };
 
+        var alertSent = NewSignal();
         SendAlertCommand? capturedAlertCommand = null;
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
@@ -469,6 +528,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             .Callback<IRequest<AlertDto>, CancellationToken>((cmd, ct) =>
             {
                 capturedAlertCommand = cmd as SendAlertCommand;
+                alertSent.TrySetResult();
             })
             .ReturnsAsync(new AlertDto(
                 Guid.NewGuid(),
@@ -491,11 +551,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
-
-        // Wait for execution to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
+        await Wait(alertSent);
 
         await service.StopAsync(_cts.Token);
 
@@ -536,6 +592,8 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(expectedReport);
 
+        var thresholdsPassed = SignalOnLog(LogLevel.Information, "All quality thresholds passed");
+
         var service = new WeeklyEvaluationService(
             _scopeFactoryMock.Object,
             _loggerMock.Object,
@@ -545,11 +603,9 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
-
-        // Wait for execution to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
+        // L'assenza dell'alert si verifica dopo l'evento che DEVE precederla, altrimenti un'attesa
+        // troppo corta farebbe passare il test per il motivo sbagliato.
+        await Wait(thresholdsPassed);
 
         await service.StopAsync(_cts.Token);
 
@@ -616,6 +672,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             .Setup(x => x.GetService(typeof(IRagEvaluationService)))
             .Returns(ragServiceMock.Object);
 
+        var alertSent = NewSignal();
         SendAlertCommand? capturedAlertCommand = null;
         _mediatorMock
             .Setup(x => x.Send(It.IsAny<GenerateQualityReportQuery>(), It.IsAny<CancellationToken>()))
@@ -626,6 +683,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
             .Callback<IRequest<AlertDto>, CancellationToken>((cmd, ct) =>
             {
                 capturedAlertCommand = cmd as SendAlertCommand;
+                alertSent.TrySetResult();
             })
             .ReturnsAsync(new AlertDto(
                 Guid.NewGuid(),
@@ -648,11 +706,7 @@ public sealed class WeeklyEvaluationServiceTests : IDisposable
         // Act
         await service.StartAsync(_cts.Token);
 
-        // Advance fake clock past initial delay (0.001 minutes)
-        _timeProvider.Advance(TimeSpan.FromMinutes(_config.InitialDelayMinutes + 0.001));
-
-        // Wait for execution to complete in real time
-        await Task.Delay(TestConstants.Timing.SmallDelay, CancellationToken.None);
+        await Wait(alertSent);
 
         await service.StopAsync(_cts.Token);
 

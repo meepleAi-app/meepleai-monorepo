@@ -1,8 +1,8 @@
 {
   "schemaVersion": 2,
   "_comment": "Golden baseline for the RAG smoke harness (#2480). Captured once against a fresh, verified snapshot by running `bash infra/scripts/rag-smoke-assert.sh --update-baseline` after `make dev-from-snapshot`. Each entry pins the top-3 retrieved chunks (source + page) for a canonical query; the harness then fails if retrieval drifts. relevanceScore is advisory (compared with tolerance, not exact). Regenerate after an intentional re-index (embedding model change, chunker change, seed-table schema-version bump). See docs/for-developers/operations/rag-smoke-runbook.md.",
-  "capturedAt": "2026-08-22T18:47:07Z",
-  "snapshot": "meepleai_seed_20260817T093250Z_intfloat_multilingual-e5-base_5bfc9f17a",
+  "capturedAt": "2026-08-23T10:49:18Z",
+  "snapshot": "meepleai_seed_20260823T054922Z_intfloat_multilingual-e5-base_104a80349",
   "embeddingModel": "intfloat/multilingual-e5-base",
   "baseline": {
     "catan-setup": [
@@ -133,11 +133,11 @@
     ],
     "seven-wonders-military-it": [
       {
-        "document": "7-wonders_rulebook.pdf",
+        "document": "7-wonders-duel_rulebook.pdf",
         "page": 1
       },
       {
-        "document": "7-wonders-duel_rulebook.pdf",
+        "document": "7-wonders_rulebook.pdf",
         "page": 1
       },
       {

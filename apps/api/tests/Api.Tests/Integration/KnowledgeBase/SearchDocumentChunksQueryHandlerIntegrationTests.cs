@@ -186,7 +186,12 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
 
         // Configure mock to return the query vector when asked.
         _embeddingServiceMock
-            .Setup(s => s.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            // #3737: l'handler codifica la domanda come QUERY, quindi passa dall'overload con
+            // purpose. Configurare il solo overload senza purpose lascia Moq restituire null, e il
+            // test muore con una NullReferenceException dentro l'handler invece che con un'asserzione
+            // — il difetto arriva mascherato da bug di produzione.
+            .Setup(s => s.GenerateEmbeddingAsync(
+                It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { queryVector }));
 
         // Insert embeddings directly via raw SQL for test isolation/speed (bypasses the

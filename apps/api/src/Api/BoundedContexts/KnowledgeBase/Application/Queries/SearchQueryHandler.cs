@@ -211,6 +211,12 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
+        // #3768: stessa nota di sopra — una seconda query indicizzata per GameId. Il titolo serve a
+        // ESCLUDERE i suoi token dai termini di heading-match, non a cercarli.
+        var gameTitle = await _keywordSearchService
+            .ResolveGameTitleAsync(gameId, cancellationToken)
+            .ConfigureAwait(false);
+
         // Spec §6: RAW keyword arm sourced directly from IKeywordSearchService (un-boosted, raw ts_rank_cd
         // order) so HybridFusionCore applies role-boost + legend exactly once.
         var rawKeyword = await _keywordSearchService.SearchAsync(
@@ -237,8 +243,10 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // (the same string used for the keyword arm) and forward them so the heading boost can fire.
         // #3338 WP1c: expand those terms with the game's FTS-language intent synonyms (setup ->
         // preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
+        // #3768: stessa esclusione del braccio lessicale — questo percorso e' filtrato per gameId,
+        // quindi il nome del gioco ha IDF nullo e premiarlo porta in cima colophon e copertine.
         var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
-            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig, gameTitle);
 
         return _rrfFusionService.FuseResults(
             vectorResults,

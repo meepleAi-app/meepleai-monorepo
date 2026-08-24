@@ -31,24 +31,24 @@
     <DocnetRuntime>linux</DocnetRuntime>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="SkiaSharp" Version="3.119.2" />
-    <PackageReference Include="FluentAssertions" Version="8.8.0" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="ClosedXML" Version="0.105.1" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <!-- Mirror DEC-3d-1 (ADR-2026-06-09): Magick.NET-Q8-AnyCPU replaces SixLabors.ImageSharp.
          Test fixtures rely on the same image library used by production code. -->
-    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.15.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.11" />
-    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.0.0" />
+    <PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.16.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.19" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="10.9.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="Moq.Contrib.HttpClient" Version="1.4.0" />
     <PackageReference Include="Pgvector.EntityFrameworkCore" Version="0.3.0" />
-    <PackageReference Include="Polly" Version="8.5.0" />
-    <PackageReference Include="QuestPDF" Version="2025.12.3" />
-    <PackageReference Include="ScottPlot" Version="5.1.57" />
-    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Polly" Version="8.7.0" />
+    <PackageReference Include="QuestPDF" Version="2025.12.4" />
+    <PackageReference Include="ScottPlot" Version="5.1.59" />
+    <PackageReference Include="Serilog" Version="4.4.0" />
     <PackageReference Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
     <!-- Issue #3707 / GHSA-q939-rpr3-3284 (HIGH): Testcontainers <=4.13.0 tira
          transitive SSH.NET 2025.1.0 (path traversal in ScpClient.Download
@@ -64,19 +64,19 @@
          vulnerabile <=7.1.0). Override alla versione patchata 7.2.0 per far
          passare il check CI "Dependency Vulnerabilities" (fail su HIGH/CRITICAL).
          Solo test project — Scriban non è nel path di produzione (Api pulito). -->
-    <PackageReference Include="Scriban.Signed" Version="7.2.1" />
-    <PackageReference Include="WireMock.Net" Version="2.5.0" />
+    <PackageReference Include="Scriban.Signed" Version="7.2.6" />
+    <PackageReference Include="WireMock.Net" Version="2.15.0" />
     <PackageReference Include="xunit.abstractions" Version="2.0.3" />
-    <PackageReference Include="xunit.v3" Version="3.2.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.11" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.19" />
     <!-- Force the SQLitePCLRaw native bundle to 3.x: the transitive 2.1.10 pulled by
          Microsoft.Data.Sqlite bundles a vulnerable SQLite (GHSA-2m69-gcr7-jv3q, HIGH,
          vulnerable <= 2.1.11, no 2.x patch). The 3.x bundle ships SQLite 3.50.x.
          Test-only dependency (in-memory SQLite for EndpointContractTests). -->
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.19" />
     <PackageReference Include="coverlet.collector" Version="10.0.1">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -89,17 +89,17 @@
   <!-- Security and code quality analyzers (matching Api.csproj) -->
   <ItemGroup>
     <!-- Microsoft official .NET security and code quality analyzers -->
-    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.100">
+    <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="10.0.400">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <!-- SonarAnalyzer for comprehensive security and code quality rules -->
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.16.1.129956">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.33.0.1635">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <!-- Meziantou Analyzer for additional best practices and security checks -->
-    <PackageReference Include="Meziantou.Analyzer" Version="2.0.257">
+    <PackageReference Include="Meziantou.Analyzer" Version="2.0.302">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

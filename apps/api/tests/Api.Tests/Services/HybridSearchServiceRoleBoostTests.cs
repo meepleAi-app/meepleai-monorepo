@@ -22,6 +22,7 @@ namespace Api.Tests.Services;
 /// is unchanged. Integration coverage of the full hybrid pipeline lives elsewhere
 /// (Testcontainers + Qdrant + pgvector) and is out of scope for this unit test.
 /// </summary>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServiceRoleBoostTests

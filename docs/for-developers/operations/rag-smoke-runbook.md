@@ -18,6 +18,26 @@ Regola pratica: prima di trattare un `-it` rosso come drift, controlla se il gio
 
 It reads the **Citations SSE event (`type: 1`)**, which the vector search emits *before* the LLM streams tokens — so the assertion is independent of OpenRouter/LLM availability. Each chunk is keyed by the **document name** (`{document, page}`, baseline v2 — see § *La chiave della baseline*); `page` and `score` are advisory (not asserted, to tolerate chunking shifts and minor embedding/search float drift).
 
+### 🔴 Cosa misura questo gate — e cosa NON misura (#3768)
+
+Il corpus del gate **non è quello che la produzione serve**, e la differenza non è una scelta di configurazione: è il fallback di emergenza della catena di estrazione.
+
+`EnhancedPdfProcessingOrchestrator` prova Unstructured (soglia 0.80, heading-aware) → SmolDocling (0.70) → **Docnet** come ultimo stadio. Il target `seed-index` avvia `postgres redis api embedding-service smoldocling-service`: **`unstructured-service` non c'è**, quindi il bake finisce sullo stage 3. A parità di 127 PDF, il gate ha ~10.900 chunk grossi e staging 56.367 heading-aware (mediana 90 caratteri). Dettagli e opzioni in [#3794](https://github.com/meepleAi-app/meepleai-monorepo/issues/3794).
+
+**Conseguenza pratica**: la stessa modifica può migliorare un corpus e peggiorare l'altro, senza che nessuno dei due risultati sia sbagliato. Su chunk grossi il nome del gioco è un proxy accettabile per «pagina di contenuto»; su chunk fini è un proxy per «pagina dei crediti». È successo tre volte:
+
+| modifica | staging | gate |
+|---|---|---|
+| [#3769](https://github.com/meepleAi-app/meepleai-monorepo/issues/3769) filtro lessicale sul nome del gioco | positivo | neutro (10/11 → 10/11) |
+| [#3787](https://github.com/meepleAi-app/meepleai-monorepo/pull/3787) stesso filtro sul boost di heading | positivo (8/11 → **9/11** end-to-end) | neutro (8/11 → 8/11) |
+| [#3773](https://github.com/meepleAi-app/meepleai-monorepo/issues/3773) il filtro lessicale diventa effettivo | positivo | **−2** (10/11 → 8/11) |
+
+**Quindi**: questo gate è un test di **non-regressione della pipeline** su un corpus stabile e riproducibile — compito per cui funziona, e che ha dimostrato isolando #3773 in due run a parità di snapshot. Non è un giudice della **qualità del ranking**.
+
+Per decidere una modifica al ranking usa il banco offline, § *Tarare la fusione senza spendere una run*: è validato a tre livelli — punteggi per-candidato (41.616 ricostruiti, 0 divergenze), selezione per-gioco (11 query su 11 coincidenti col dump globale) ed **esito finale** (ha predetto 9/11 per #3787, e la misura end-to-end sulle citazioni SSE reali ha dato 9/11, con le stesse due query fuori bersaglio).
+
+⚠️ Il banco richiede un **campione sano**: conta la copertura del braccio vettoriale prima di leggerne i numeri, o misurerai una degradazione invece della modifica ([#3786](https://github.com/meepleAi-app/meepleai-monorepo/issues/3786)). È già successo: la prima misura di #3787 disse «non serve» su un campione in cui il gioco atteso non aveva candidati vettoriali da promuovere.
+
 ### Per-query `language`
 
 The fixture top-level `language` (`"en"`) is the **default**. Each query MAY set a per-query `"language"` override — the IT queries carry `"language": "it"`, the 5 EN queries omit it and inherit the default. The harness resolves `(.language) // <top-level default>` per query and sends it as the request-body `language`, so retrieval ranking is deterministic per query.

@@ -158,6 +158,68 @@ internal static partial class MeepleAiMetrics
         RagRetrievalFallbacks.Add(1, tags);
     }
 
+    // === Issue #3786: copertura del braccio vettoriale ===
+
+    /// <summary>
+    /// Esiti possibili di un braccio della ricerca ibrida, per <see cref="RagVectorArmOutcomes"/>.
+    /// Tre valori, cardinalità fissa: rispettano la regola sui tag di questo file.
+    /// </summary>
+    internal static class RagArmOutcome
+    {
+        /// <summary>La ricerca è andata a buon fine e ha prodotto candidati.</summary>
+        public const string Hit = "hit";
+
+        /// <summary>La ricerca è andata a buon fine e non ha prodotto candidati — esito legittimo.</summary>
+        public const string Empty = "empty";
+
+        /// <summary>La ricerca NON è stata eseguita: degradazione silenziosa (#3786).</summary>
+        public const string Failed = "failed";
+    }
+
+    /// <summary>
+    /// Esito del braccio vettoriale per ogni ricerca PER-GIOCO.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Perché esiste.</b> «Nessun risultato» e «non ho potuto cercare» erano entrambi una lista
+    /// vuota, indistinguibili dall'esterno. Una richiesta cross-gioco poteva quindi rispondere su un
+    /// retrieval dimezzato senza che nulla lo segnalasse: misurato su staging, <b>428 ricerche
+    /// per-gioco su 1759</b> senza braccio vettoriale, per una corsa sul <c>DbContext</c> che non
+    /// lasciava traccia nel risultato (#3789). La diagnosi è costata due giorni proprio perché
+    /// questo segnale non esisteva — andava letto dai log a <c>Debug</c>, che in produzione non sono
+    /// attivi.
+    /// </para>
+    /// <para>
+    /// <b>Come si legge.</b> <c>failed</c> è la degradazione: <b>SLO = 0</b>, qualunque valore
+    /// diverso da zero significa che una risposta è stata costruita senza il segnale che distingue i
+    /// manuali fra loro (peso 0.7 nella fusione). <c>empty</c> è invece atteso e non è un difetto:
+    /// un gioco senza contenuto indicizzato, o senza chunk sopra <c>minScore</c>, non ha candidati
+    /// da produrre — su staging sono ~34 giochi su 161, che non hanno PDF.
+    /// </para>
+    /// <para>
+    /// La copertura si calcola come <c>hit / (hit + empty + failed)</c>; il rapporto che conta per
+    /// un allarme è invece <c>failed / totale</c>, perché è l'unico che indica un guasto.
+    /// </para>
+    /// </remarks>
+    public static readonly Counter<long> RagVectorArmOutcomes = Meter.CreateCounter<long>(
+        name: "meepleai.rag.vector_arm.outcomes",
+        unit: "searches",
+        description: "Esito del braccio vettoriale per ricerca per-gioco (hit/empty/failed)");
+
+    /// <summary>
+    /// Registra l'esito del braccio vettoriale di UNA ricerca per-gioco.
+    /// </summary>
+    /// <param name="outcome">Una costante di <see cref="RagArmOutcome"/>.</param>
+    /// <remarks>
+    /// Va chiamata su ogni percorso di uscita, incluso il <c>catch</c>: è proprio il percorso di
+    /// fallimento quello che prima non lasciava traccia.
+    /// </remarks>
+    public static void RecordVectorArmOutcome(string outcome)
+    {
+        var tags = new TagList { { "outcome", outcome } };
+        RagVectorArmOutcomes.Add(1, tags);
+    }
+
     public static readonly Counter<long> RagCragVerdicts = Meter.CreateCounter<long>(
         name: "meepleai.rag.crag.verdicts",
         unit: "evaluations",

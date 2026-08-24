@@ -29,6 +29,7 @@ namespace Api.Tests.Services;
 /// intentionally keeps <c>queryRoleHint</c> at its default (<see cref="GameBookRole.None"/>) so
 /// each case isolates the fusion mapping being characterized here.
 /// </summary>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServiceFusionParityTests

@@ -45,6 +45,7 @@ namespace Api.Tests.Services;
 /// accorgersi di una corsa), mai falsi positivi. Se fallisce, la sovrapposizione c'è davvero.
 /// </para>
 /// </remarks>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServiceArmIsolationTests

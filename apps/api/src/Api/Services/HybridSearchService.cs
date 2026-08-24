@@ -4,6 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Helpers;
 using Api.Infrastructure;
+using Api.Observability;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -482,6 +483,9 @@ internal class HybridSearchService : IHybridSearchService
                 _logger.LogWarning(
                     "Query embedding generation failed: {Error}. Falling back to keyword-only.",
                     embeddingResult.ErrorMessage);
+                // #3786: la ricerca vettoriale non e' stata ESEGUITA. Senza questo segnale il
+                // chiamante riceve una lista vuota indistinguibile da «nessuna corrispondenza».
+                MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
                 return new List<KbEntities.ScoredEmbedding>();
             }
 
@@ -503,6 +507,13 @@ internal class HybridSearchService : IHybridSearchService
                 "pgvector search returned {Count} results for gameId={GameId}",
                 results.Count, gameId);
 
+            // #3786: `empty` e' un esito LEGITTIMO — un gioco senza contenuto indicizzato (su
+            // staging ~34 su 161 non hanno PDF) o senza chunk sopra minScore. Tenerlo distinto da
+            // `failed` e' cio' che rende utile un allarme su quest'ultimo.
+            MeepleAiMetrics.RecordVectorArmOutcome(results.Count > 0
+                ? MeepleAiMetrics.RagArmOutcome.Hit
+                : MeepleAiMetrics.RagArmOutcome.Empty);
+
             return results;
         }
 #pragma warning disable CA1031 // Graceful degradation: vector search failure must not break hybrid search
@@ -511,6 +522,11 @@ internal class HybridSearchService : IHybridSearchService
             _logger.LogWarning(ex,
                 "Vector search failed, falling back to keyword-only for gameId={GameId}",
                 gameId);
+            // #3786: IL percorso per cui la metrica esiste. Catturare qui e' corretto — una
+            // ricerca per-gioco fallita non deve far cadere la query cross-gioco — ma senza
+            // segnale la degradazione e' invisibile: 428 ricerche su 1759 senza braccio
+            // vettoriale, misurate su staging solo alzando i log a Debug (#3789).
+            MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
             return new List<KbEntities.ScoredEmbedding>();
         }
 #pragma warning restore CA1031

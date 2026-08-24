@@ -1,0 +1,87 @@
+# promtool unit tests per rag-vector-arm.yml (#3786).
+#
+# Run locally (Windows/Git Bash, dalla radice del repo):
+#   docker run --rm -v "$(pwd)/infra/prometheus/alerts:/work" prom/prometheus:v3.7.0 \
+#     promtool test rules /work/rag-vector-arm.test.yml
+#
+# Non esiste un gate promtool in CI (vedi #3082): questo file verifica su richiesta i due casi
+# che contano — la degradazione reale scatta, il sistema sano tace.
+rule_files:
+  - rag-vector-arm.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Il caso reale misurato su staging: 24% delle ricerche per-gioco senza braccio vettoriale.
+  # Rapporti scelti per stare sopra la soglia del 5% con margine.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="failed"}'
+        values: '0+24x20'
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="hit"}'
+        values: '0+76x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: RagVectorArmDegraded
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              subsystem: rag-retrieval
+            exp_annotations:
+              summary: "Braccio vettoriale degradato: 24% delle ricerche per-gioco non viene eseguito"
+              description: "meepleai_rag_vector_arm_outcomes_total{outcome=\"failed\"} oltre il 5% del totale per 10 minuti. Le risposte sono costruite sul solo braccio lessicale, che non distingue un manuale dall'altro (il vettoriale pesa 0.7 nella fusione). Causa nota #3789: i due bracci condividevano il DbContext. Nota: outcome=\"empty\" e' legittimo e NON entra in questo rapporto."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/issues/3786"
+
+  # Sistema sano: la serie outcome="failed" NON esiste affatto — e' lo stato dopo #3789.
+  # Il traffico c'e' (hit + empty), quindi il denominatore esiste: se il fallback `or vector(0)`
+  # fosse sbagliato, qui si vedrebbe un allarme spurio.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="hit"}'
+        values: '0+97x20'
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="empty"}'
+        values: '0+3x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: RagVectorArmDegraded
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: RagVectorArmFailuresPresent
+        exp_alerts: []
+
+  # `empty` massiccio NON e' degradazione: e' il caso dei giochi senza contenuto indicizzato
+  # (su staging ~34 su 161 non hanno PDF). Se finisse nel rapporto, l'allarme sarebbe
+  # permanentemente acceso e verrebbe ignorato — il modo classico di rendere inutile un alert.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="empty"}'
+        values: '0+40x20'
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="hit"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: RagVectorArmDegraded
+        exp_alerts: []
+
+  # Il canarino: fallimenti presenti ma sotto la soglia sistemica (2%). RagVectorArmDegraded
+  # tace, RagVectorArmFailuresPresent no.
+  - interval: 1m
+    input_series:
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="failed"}'
+        values: '0+2x25'
+      - series: 'meepleai_rag_vector_arm_outcomes_total{outcome="hit"}'
+        values: '0+98x25'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: RagVectorArmDegraded
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: RagVectorArmFailuresPresent
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              subsystem: rag-retrieval
+            exp_annotations:
+              summary: "Il braccio vettoriale sta fallendo su alcune ricerche per-gioco"
+              description: "meepleai_rag_vector_arm_outcomes_total{outcome=\"failed\"} e' diverso da zero da 15 minuti. Sotto la soglia sistemica di RagVectorArmDegraded, ma a sistema sano questa serie non dovrebbe esistere: e' il precursore della degradazione descritta in #3786."
+              runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/issues/3786"

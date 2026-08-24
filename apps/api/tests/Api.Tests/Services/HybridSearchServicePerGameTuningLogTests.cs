@@ -36,6 +36,7 @@ namespace Api.Tests.Services;
 /// punteggio reale, che è l'àncora con cui la replica offline si valida.
 /// </para>
 /// </remarks>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServicePerGameTuningLogTests

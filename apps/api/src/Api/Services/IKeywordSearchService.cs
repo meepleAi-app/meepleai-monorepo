@@ -33,6 +33,15 @@ internal interface IKeywordSearchService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Titolo del gioco, per escluderne i token dai segnali che girano GIA' filtrati per gameId:
+    /// la tsquery del braccio lessicale (#3769) e i termini di heading-match (#3768). Null quando
+    /// il gioco non e' risolvibile — i chiamanti degradano al comportamento senza esclusione.
+    /// </summary>
+    Task<string?> ResolveGameTitleAsync(
+        Guid gameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// #3338 WP1c: resolves the PostgreSQL FTS config (english/italian/…) the keyword arm uses for a
     /// game — detected from the game's dominant <c>pdf_documents.Language</c>, falling back to
     /// <paramref name="language"/>. Exposed so hybrid callers can expand heading-match terms with the

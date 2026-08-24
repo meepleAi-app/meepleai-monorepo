@@ -251,6 +251,14 @@ internal class HybridSearchService : IHybridSearchService
             .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
+        // #3768: il titolo serve a ESCLUDERE i suoi token dai termini di heading-match, non a
+        // cercarli — questa ricerca gira gia' filtrata per gameId. Seconda query indicizzata per
+        // GameId sullo stesso percorso di ResolveFtsConfigAsync; il costo per-gioco di questo
+        // percorso e' tracciato in #3786.
+        var gameTitle = await _keywordSearchService
+            .ResolveGameTitleAsync(gameId, cancellationToken)
+            .ConfigureAwait(false);
+
         // #3786: i due bracci girano in SEQUENZA, non con Task.WhenAll.
         //
         // Entrambi risolvono dallo stesso scope — quello creato per gioco da
@@ -327,7 +335,7 @@ internal class HybridSearchService : IHybridSearchService
         // (setup -> preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
         // Reuses the ftsConfig resolved once at the top of this method.
         var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
-            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig);
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig, gameTitle);
 
         var fusedResults = FuseSearchResults(
             vectorItems,

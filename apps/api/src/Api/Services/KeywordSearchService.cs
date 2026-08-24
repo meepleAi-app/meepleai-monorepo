@@ -354,8 +354,26 @@ internal class KeywordSearchService : IKeywordSearchService
     /// de-duplicated. No-op for a null/blank config or a config without a curated table
     /// (english/simple/…), so English retrieval is byte-identical.
     /// </summary>
-    internal static IReadOnlyList<string> ExpandHeadingMatchTerms(IReadOnlyList<string>? terms, string? ftsConfig)
+    internal static IReadOnlyList<string> ExpandHeadingMatchTerms(
+        IReadOnlyList<string>? terms,
+        string? ftsConfig,
+        string? gameTitle = null)
     {
+        // #3768: togli i token del NOME DEL GIOCO, per lo stesso motivo di #3769 sulla tsquery —
+        // dentro un gioco gia' filtrato per GameId quel nome ha IDF nullo. Qui pesa di piu' che nel
+        // braccio lessicale: HeadingMatchBoost e' additivo e vale 0.15, mentre rrfSum satura a
+        // 1/61 = 0.0164, quindi un match di heading non inclina il ranking, lo sostituisce. E le
+        // heading che contengono il nome del gioco sono proprio quelle senza contenuto: il colophon
+        // (`catan.com`), il pie' di pagina (`4 of 5 CATAN CN3081`), la copertina.
+        //
+        // Il filtro precede la return anticipata qui sotto: la maggior parte dei giochi risolve a
+        // una config senza tabella di sinonimi ('english'), e applicarlo dopo lo renderebbe un
+        // no-op proprio sul caso misurato.
+        //
+        // Come in #3769, NON si applica al percorso senza gameId (gameTitle null): li' il nome del
+        // gioco e' esattamente il segnale che sceglie il gioco (#3735).
+        terms = RemoveGameTitleTerms(terms, gameTitle);
+
         if (terms is null || terms.Count == 0
             || string.IsNullOrEmpty(ftsConfig)
             || !SynonymTablesByConfig.TryGetValue(ftsConfig, out var synonyms))
@@ -488,6 +506,40 @@ internal class KeywordSearchService : IKeywordSearchService
     }
 
     /// <summary>
+    /// Toglie dai termini di heading-match quelli che compongono il titolo del gioco (#3768).
+    /// </summary>
+    /// <remarks>
+    /// Usa la stessa forma di confronto della tsquery (<see cref="NormaliseForTitleMatch"/>), così
+    /// il nome del gioco viene riconosciuto allo stesso modo nei due bracci. Può restituire una
+    /// lista vuota — una query fatta del solo nome del gioco non ha niente su cui premiare una
+    /// heading, e il chiamante non va in errore, a differenza di <c>to_tsquery(cfg, '')</c>.
+    /// </remarks>
+    private static IReadOnlyList<string>? RemoveGameTitleTerms(
+        IReadOnlyList<string>? terms,
+        string? gameTitle)
+    {
+        if (terms is null || terms.Count == 0 || string.IsNullOrWhiteSpace(gameTitle))
+        {
+            return terms;
+        }
+
+        var titleTokens = SanitizeQuery(gameTitle)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(NormaliseForTitleMatch)
+            .Where(t => t.Length > 0)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (titleTokens.Count == 0)
+        {
+            return terms;
+        }
+
+        return terms
+            .Where(t => !titleTokens.Contains(NormaliseForTitleMatch(t)))
+            .ToList();
+    }
+
+    /// <summary>
     /// Forma di confronto per il match con il titolo: solo lettere e cifre (#3768).
     /// </summary>
     /// <remarks>
@@ -576,7 +628,7 @@ internal class KeywordSearchService : IKeywordSearchService
     /// precedente, che è degradato ma non rotto. Far fallire una ricerca perché non si è potuto
     /// leggere un nome sarebbe sproporzionato.
     /// </remarks>
-    private async Task<string?> ResolveGameTitleAsync(Guid gameId, CancellationToken cancellationToken)
+    public async Task<string?> ResolveGameTitleAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
         var previousTimeout = _dbContext.Database.GetCommandTimeout();
         try

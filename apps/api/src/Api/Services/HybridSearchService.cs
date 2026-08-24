@@ -251,23 +251,41 @@ internal class HybridSearchService : IHybridSearchService
             .ResolveFtsConfigAsync(gameId, cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        // Run vector and keyword searches in parallel
-        var vectorTask = ExecuteVectorSearchAsync(
-            query, gameId, fetchLimit, documentIds, cancellationToken);
+        // #3786: i due bracci girano in SEQUENZA, non con Task.WhenAll.
+        //
+        // Entrambi risolvono dallo stesso scope — quello creato per gioco da
+        // MultiGameHybridSearchService.SearchGameSafeAsync — quindi condividono la stessa istanza
+        // di MeepleAiDbContext: il vettoriale via GetDbConnection() in PgVectorStoreAdapter, il
+        // lessicale via SqlQueryRaw in KeywordSearchService. DbContext non e' thread-safe, e
+        // sovrapporli produceva:
+        //
+        //   System.InvalidOperationException: A second operation was started on this context
+        //   instance before a previous operation completed.
+        //
+        // Misurato su staging in una sola raccolta di 11 query: 267 eccezioni e 428 ricerche
+        // per-gioco con vectorCount=0 su 1759. Il vettoriale eccepiva, l'eccezione veniva catturata
+        // (vedi ExecuteVectorSearchAsync) e la ricerca proseguiva SOLO LESSICALE, senza alcun
+        // segnale nel risultato: dall'esterno indistinguibile da un gioco senza corrispondenze.
+        //
+        // Il parallelismo qui non comprava niente. Il percorso e' dominato dall'embedding della
+        // query (~1,4 s di HTTP dentro ExecuteVectorSearchAsync); le due query al DB sono
+        // millisecondi, quindi si passa da max(1,4s, ms) a 1,4s + ms. Uno scope per braccio
+        // conserverebbe quei millisecondi al prezzo di raddoppiare DbContext e connessioni su un
+        // percorso che ne apre gia' uno per gioco (~160 per richiesta cross-gioco).
+        //
+        // #2480 aveva gia' corretto la stessa classe di errore FRA giochi, dando a ciascuno il
+        // proprio scope; questo e' il caso residuo DENTRO un singolo gioco.
+        var vectorEmbeddings = await ExecuteVectorSearchAsync(
+            query, gameId, fetchLimit, documentIds, cancellationToken).ConfigureAwait(false);
 
-        var keywordTask = _keywordSearchService.SearchAsync(
+        var keywordResults = await _keywordSearchService.SearchAsync(
             query,
             gameId,
             fetchLimit,
             phraseSearch: query.Contains('"'),
             boostTerms: _config.BoostTerms,
             minScore: keywordMinScore,
-            cancellationToken: cancellationToken);
-
-        await Task.WhenAll(vectorTask, keywordTask).ConfigureAwait(false);
-
-        var vectorEmbeddings = await vectorTask.ConfigureAwait(false);
-        var keywordResults = await keywordTask.ConfigureAwait(false);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Apply document filter to keyword results
         var filteredKeywordResults = documentIds == null

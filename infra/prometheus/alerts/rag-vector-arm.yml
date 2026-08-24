@@ -1,0 +1,58 @@
+# Issue #3786 — degradazione silenziosa del braccio vettoriale.
+#
+# Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Rag.cs):
+#   - meepleai_rag_vector_arm_outcomes_total (Counter<long>, label: outcome)
+#     outcome=hit    la ricerca vettoriale ha prodotto candidati
+#     outcome=empty  la ricerca e' RIUSCITA senza candidati — esito legittimo (gioco senza
+#                    contenuto indicizzato, o nessun chunk sopra minScore)
+#     outcome=failed la ricerca NON e' stata eseguita — degradazione
+#
+# Perche' esiste. `empty` e `failed` erano entrambi una lista vuota, indistinguibili: una
+# richiesta cross-gioco poteva rispondere su un retrieval dimezzato senza che nulla lo
+# segnalasse. Misurato su staging: 428 ricerche per-gioco su 1759 (24%) senza braccio
+# vettoriale, per una corsa sul DbContext (#3789). La diagnosi e' costata due giorni perche'
+# il segnale esisteva solo nei log a Debug, che in produzione non sono attivi.
+#
+# Il braccio vettoriale pesa 0.7 nella fusione globale ed e' il segnale che distingue un
+# manuale dall'altro: senza, la risposta e' costruita sul solo lessicale.
+groups:
+  - name: meepleai_rag_vector_arm_alerts
+    rules:
+      # Degradazione sistemica. La soglia al 5% e' ampiamente sotto il 24% misurato nel caso
+      # reale, e sopra il rumore di un fallimento isolato.
+      #
+      # `or vector(0)` sul NUMERATORE: a sistema sano la serie outcome="failed" non esiste
+      # affatto, e un rapporto con numeratore assente non produce campioni — l'alert non
+      # scatterebbe mai, ma nemmeno si potrebbe distinguere «sano» da «regola rotta».
+      # Il denominatore resta senza fallback di proposito: nessun traffico = nessun campione
+      # = nessun allarme, che e' il comportamento voluto.
+      - alert: RagVectorArmDegraded
+        expr: |
+          (
+            sum(rate(meepleai_rag_vector_arm_outcomes_total{outcome="failed"}[10m])) or vector(0)
+          )
+          /
+          sum(rate(meepleai_rag_vector_arm_outcomes_total[10m]))
+          > 0.05
+        for: 10m
+        labels:
+          severity: critical
+          subsystem: rag-retrieval
+        annotations:
+          summary: "Braccio vettoriale degradato: {{ $value | humanizePercentage }} delle ricerche per-gioco non viene eseguito"
+          description: "meepleai_rag_vector_arm_outcomes_total{outcome=\"failed\"} oltre il 5% del totale per 10 minuti. Le risposte sono costruite sul solo braccio lessicale, che non distingue un manuale dall'altro (il vettoriale pesa 0.7 nella fusione). Causa nota #3789: i due bracci condividevano il DbContext. Nota: outcome=\"empty\" e' legittimo e NON entra in questo rapporto."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/issues/3786"
+
+      # Canarino: qualunque fallimento sostenuto, anche sotto la soglia sistemica. Warning e non
+      # critical perche' un fallimento isolato puo' essere transitorio — ma a SLO raggiunto la
+      # serie non esiste, quindi qualsiasi presenza costante merita uno sguardo.
+      - alert: RagVectorArmFailuresPresent
+        expr: sum(rate(meepleai_rag_vector_arm_outcomes_total{outcome="failed"}[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+          subsystem: rag-retrieval
+        annotations:
+          summary: "Il braccio vettoriale sta fallendo su alcune ricerche per-gioco"
+          description: "meepleai_rag_vector_arm_outcomes_total{outcome=\"failed\"} e' diverso da zero da 15 minuti. Sotto la soglia sistemica di RagVectorArmDegraded, ma a sistema sano questa serie non dovrebbe esistere: e' il precursore della degradazione descritta in #3786."
+          runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/issues/3786"

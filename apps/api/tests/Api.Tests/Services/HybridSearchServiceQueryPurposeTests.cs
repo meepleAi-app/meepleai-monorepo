@@ -30,6 +30,7 @@ namespace Api.Tests.Services;
 /// controls and the only thing that can regress here.
 /// </para>
 /// </remarks>
+[Collection("VectorArmMetrics")]  // #3786: contatore condiviso, vedi VectorArmMetricsCollection
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class HybridSearchServiceQueryPurposeTests

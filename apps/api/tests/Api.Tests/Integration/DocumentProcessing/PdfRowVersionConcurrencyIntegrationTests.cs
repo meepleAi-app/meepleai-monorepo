@@ -209,11 +209,11 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Scenario 2: Reindex races with Delete — first wins, second 409
+    // Scenario 2: Reindex races with Delete — nessuno stato orfano
     // ──────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Reindex_RacesWithDelete_FirstWinsSecondGets409()
+    public async Task Reindex_RacesWithDelete_LeavesNoOrphanState()
     {
         var pdf = await SeedReadyPdfAsync();
 
@@ -249,27 +249,51 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
 
         var results = await Task.WhenAll(RunReindex(), RunDelete());
 
-        var successCount = results.Count(r => r.Exception is null);
-        var conflictCount = results.Count(r => r.Exception is ConflictException);
-        successCount.Should().Be(1, "exactly one operation must succeed");
-        conflictCount.Should().Be(1, "exactly one operation must conflict");
+        // #3633: due interleaving sono entrambi legittimi, e questo test asseriva solo il primo.
+        //
+        //   (a) la barriera li allinea davvero → uno dei due legge un `xmin` che l'altro ha già
+        //       avanzato, e prende ConflictException. Un successo, un conflitto.
+        //   (b) il reindex committa PRIMA che il delete legga → il delete trova il token fresco e
+        //       cancella senza conflitto. Due successi.
+        //
+        // (b) non è concorrenza mancata: DeleteKbDocumentCommandHandler non ha (per scelta) una
+        // guardia di stato, e cancellare un documento appena accodato per il reindex è
+        // un'operazione sensata. Asserire `successCount == 1` pretendeva un esito deterministico da
+        // uno scenario che deterministico non è: il test era flaky per costruzione, e il rosso
+        // misurato in #3633 era l'interleaving (b). Ciò che regge in ENTRAMBI gli ordinamenti è
+        // qui sotto — stessa forma di Scenario 3, che l'asimmetria l'aveva già riconosciuta.
 
-        var winner = results.Single(r => r.Exception is null);
-        var existsCheck = await _dbContext!.PdfDocuments.AsNoTracking()
+        results.Should().OnlyContain(
+            r => r.Exception == null || r.Exception is ConflictException,
+            "l'unico fallimento ammesso è il conflitto di concorrenza");
+
+        var conflictCount = results.Count(r => r.Exception is ConflictException);
+        conflictCount.Should().BeLessThanOrEqualTo(1,
+            "al più una delle due operazioni può conflittare, mai entrambe");
+
+        var stillExists = await _dbContext!.PdfDocuments.AsNoTracking()
             .AnyAsync(p => p.Id == pdf.Id, TestCancellationToken);
-        if (winner.Op == "delete")
+
+        if (stillExists)
         {
-            existsCheck.Should().BeFalse("delete winner removes the document");
-            var orphanChunks = await _dbContext.TextChunks.AsNoTracking()
-                .CountAsync(tc => tc.PdfDocumentId == pdf.Id, TestCancellationToken);
-            orphanChunks.Should().Be(0, "no orphan TextChunks after cascade delete");
+            // Solo l'interleaving (a) con il reindex vincitore lascia il documento in piedi.
+            results.Single(r => r.Op == "delete").Exception
+                .Should().BeOfType<ConflictException>(
+                    "se il documento esiste ancora, il delete deve aver conflittato");
+
+            var reloaded = await _dbContext.PdfDocuments.AsNoTracking()
+                .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
+            reloaded.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending),
+                "il reindex vincitore riaccoda il documento");
         }
         else
         {
-            existsCheck.Should().BeTrue("reindex winner keeps the document");
-            var reloaded = await _dbContext.PdfDocuments.AsNoTracking()
-                .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
-            reloaded.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending));
+            // Il delete è passato — che abbia vinto la gara (a) o sia arrivato dopo il reindex
+            // (b). L'invariante che conta è la stessa nei due casi, ed è quella che protegge i
+            // dati: la cancellazione non lascia chunk appesi a un documento che non c'è più.
+            var orphanChunks = await _dbContext.TextChunks.AsNoTracking()
+                .CountAsync(tc => tc.PdfDocumentId == pdf.Id, TestCancellationToken);
+            orphanChunks.Should().Be(0, "il cascade delete non deve lasciare TextChunk orfani");
         }
     }
 
@@ -342,47 +366,150 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Scenario 4: Retry after conflict succeeds
+    // Scenario 4: dopo un conflitto, la guardia di stato governa il retry
     // ──────────────────────────────────────────────────────────────────────
 
+    // #3633: qui c'era un unico test, `Sequential_RetryAfterConflict_Succeeds`, che dopo la gara
+    // riprovava il reindex un secondo dopo e ne pretendeva il successo. Non può riuscire, e non
+    // per un difetto: il vincitore lascia il documento in `Pending`, che
+    // ReindexDocumentCommandHandler considera in-flight (InFlightStates = tutti gli stati tranne
+    // Ready e Failed), quindi la guardia respinge il retry. La guardia è più giovane del test ed
+    // è la parte corretta delle due: dopo aver perso una gara di reindex, riprovare è inutile
+    // perché il reindex è già in coda.
+    //
+    // Il test copriva però anche un caso reale — il retry che riesce quando può — e quello non
+    // va perso. Da qui i due test: uno pinna la guardia, l'altro il retry legittimo.
+
     [Fact]
-    public async Task Sequential_RetryAfterConflict_Succeeds()
+    public async Task Reindex_RetryWhileStillPending_IsRejectedByGuard()
     {
         var pdf = await SeedReadyPdfAsync();
+        await ProvokeReindexConflictAsync(pdf.Id);
 
-        // Step 1: provoke a conflict via parallel reindex (same shape as Scenario 1).
-        using (var barrier = new Barrier(participantCount: 2))
-        {
-            Task<Exception?> RunReindex() => Task.Run(async () =>
-            {
-                using var scope = _serviceProvider!.CreateScope();
-                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                barrier.SignalAndWait(TimeSpan.FromSeconds(5));
-                try
-                {
-                    await mediator.Send(
-                        new ReindexDocumentCommand(pdf.Id, IndexerVersionRegistry.Current.Version),
-                        TestCancellationToken);
-                    return null;
-                }
-                catch (Exception ex) { return ex; }
-            });
+        using var scope = _serviceProvider!.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var act = () => mediator.Send(
+            new ReindexDocumentCommand(pdf.Id, IndexerVersionRegistry.Current.Version),
+            TestCancellationToken);
 
-            await Task.WhenAll(RunReindex(), RunReindex());
-        }
+        await act.Should().ThrowAsync<ConflictException>(
+                "la guardia di stato rifiuta un reindex su un documento in-flight")
+            .WithMessage("*state=" + nameof(PdfProcessingState.Pending) + "*");
 
-        // Step 2: loser retries 1 second later (after winner has persisted its RowVersion).
-        await Task.Delay(TimeSpan.FromSeconds(1), TestCancellationToken);
+        var final = await _dbContext!.PdfDocuments.AsNoTracking()
+            .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
+        final.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending),
+            "il retry respinto non deve alterare lo stato del documento");
+    }
 
-        using var retryScope = _serviceProvider!.CreateScope();
-        var retryMediator = retryScope.ServiceProvider.GetRequiredService<IMediator>();
-        await retryMediator.Send(
+    [Fact]
+    public async Task Reindex_RetryAfterDocumentReturnsToReady_Succeeds()
+    {
+        var pdf = await SeedReadyPdfAsync();
+        await ProvokeReindexConflictAsync(pdf.Id);
+
+        // La pipeline porta a termine il lavoro accodato. Sostituisce il `Task.Delay(1s)` che
+        // questo test faceva prima: nessuna pipeline gira in questi test, quindi nessuna attesa
+        // avrebbe mai potuto soddisfare la precondizione — il ritardo fisso indovinava un istante
+        // che non sarebbe mai arrivato.
+        await SimulatePipelineCompletionAsync(pdf.Id);
+
+        using var scope = _serviceProvider!.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.Send(
             new ReindexDocumentCommand(pdf.Id, IndexerVersionRegistry.Current.Version),
             TestCancellationToken);
 
         var final = await _dbContext!.PdfDocuments.AsNoTracking()
             .FirstAsync(p => p.Id == pdf.Id, TestCancellationToken);
         final.ProcessingState.Should().Be(nameof(PdfProcessingState.Pending),
-            "retry after conflict should succeed and leave ProcessingState=Pending");
+            "il reindex riaccoda il documento");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Helper
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Provoca un conflitto di reindex con due comandi paralleli allineati da una barriera, e
+    /// verifica che sia avvenuto davvero prima di restituire il controllo: è la precondizione dei
+    /// due scenari di retry, e un test che riparte da una precondizione non verificata misura
+    /// altro. Al ritorno il documento è accodato in <c>Pending</c>.
+    /// </summary>
+    private async Task ProvokeReindexConflictAsync(Guid pdfId)
+    {
+        using var barrier = new Barrier(participantCount: 2);
+
+        Task<Exception?> RunReindex() => Task.Run(async () =>
+        {
+            using var scope = _serviceProvider!.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            barrier.SignalAndWait(TimeSpan.FromSeconds(5));
+            try
+            {
+                await mediator.Send(
+                    new ReindexDocumentCommand(pdfId, IndexerVersionRegistry.Current.Version),
+                    TestCancellationToken);
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return ex;
+            }
+        });
+
+        var exceptions = await Task.WhenAll(RunReindex(), RunReindex());
+
+        exceptions.Count(ex => ex is null).Should()
+            .Be(1, "esattamente un reindex deve vincere la gara");
+        exceptions.Count(ex => ex is ConflictException).Should()
+            .Be(1, "esattamente un reindex deve perdere con ConflictException");
+    }
+
+    /// <summary>
+    /// Simula una pipeline che porta a termine il lavoro accodato da un reindex.
+    /// </summary>
+    /// <remarks>
+    /// #3633: un reindex accodato lascia DUE marcatori di lavoro in corso, e due guardie
+    /// indipendenti li leggono. Toglierne uno solo non basta, ed è il motivo per cui la prima
+    /// versione di questo helper — che portava soltanto il documento a <c>Ready</c> — faceva
+    /// fallire il retry con «already has an active job in the queue»:
+    /// <list type="number">
+    ///   <item><c>ProcessingState</c> in-flight → guardia in ReindexDocumentCommandHandler</item>
+    ///   <item>un ProcessingJob <c>Queued</c>/<c>Processing</c> → guardia in EnqueuePdfCommandHandler</item>
+    /// </list>
+    /// Una pipeline che termina davvero li rimuove entrambi: chiude il job e riporta il documento
+    /// a <c>Ready</c>. È quello che facciamo qui, nello stesso ordine.
+    /// <para>
+    /// <c>ExecuteUpdateAsync</c> è deliberato: emette un UPDATE senza token di concorrenza, quindi
+    /// non conflitta con l'<c>xmin</c> che i reindex hanno già avanzato e non dipende da ciò che il
+    /// DbContext condiviso ha in cache.
+    /// </para>
+    /// </remarks>
+    private async Task SimulatePipelineCompletionAsync(Guid pdfId)
+    {
+        await _dbContext!.ProcessingJobs
+            .Where(j => j.PdfDocumentId == pdfId
+                && (j.Status == nameof(JobStatus.Queued) || j.Status == nameof(JobStatus.Processing)))
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(j => j.Status, nameof(JobStatus.Completed)),
+                TestCancellationToken);
+
+        var rows = await _dbContext.PdfDocuments
+            .Where(p => p.Id == pdfId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    p => p.ProcessingState, nameof(PdfProcessingState.Ready)),
+                TestCancellationToken);
+
+        rows.Should().Be(1,
+            "la precondizione deve aver aggiornato esattamente il documento sotto test");
+
+        var stillBlocked = await _dbContext.ProcessingJobs.AsNoTracking()
+            .AnyAsync(j => j.PdfDocumentId == pdfId
+                && (j.Status == nameof(JobStatus.Queued) || j.Status == nameof(JobStatus.Processing)),
+                TestCancellationToken);
+        stillBlocked.Should().BeFalse(
+            "nessun job attivo deve restare, o la guardia della coda respingerebbe il reindex");
     }
 }

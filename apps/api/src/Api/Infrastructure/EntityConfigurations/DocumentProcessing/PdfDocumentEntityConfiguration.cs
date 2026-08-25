@@ -196,9 +196,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
         // `HasColumnType("bytea")` senza `HasColumnName("xmin")`. La colonna `bytea` veniva
         // popolata dal trigger `ef_update_row_version()`, che #2305 ha rimosso migrando le altre
         // entità a xmin — questa è rimasta indietro. Senza trigger il token restava NULL, non
-        // cambiava mai fra un update e l'altro, e nessun conflitto veniva rilevato: misurato con
-        // successCount=2 in `Reindex_RacesWithDelete_FirstWinsSecondGets409`, dove il dominio
-        // prevede che esattamente una delle due operazioni concorrenti vinca.
+        // cambiava mai fra un update e l'altro, e nessun conflitto era rilevabile in alcun
+        // interleaving: misurato con due successi in `Reindex_RacesWithDelete`.
+        //
+        // #3633: il token NON rende deterministico l'esito di quella gara — due successi restano
+        // legittimi quando il delete legge dopo il commit del reindex. Garantisce che un conflitto,
+        // quando c'è, venga rilevato. Il test asserisce ora l'invariante, non il conteggio.
         //
         // Stesso pattern di LiveGameSessionEntityConfiguration:148-152 e GameNightPlaylist.
         builder.Property(e => e.Xmin)

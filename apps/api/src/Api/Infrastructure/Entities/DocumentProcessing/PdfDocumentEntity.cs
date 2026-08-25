@@ -120,9 +120,16 @@ public class PdfDocumentEntity
     // Prima era `[Timestamp] byte[]? RowVersion` su una colonna `bytea`. Quel meccanismo funzionava
     // grazie al trigger `ef_update_row_version()`, che #2305 ha rimosso migrando a xmin — ma questa
     // entità è rimasta indietro. Senza trigger Postgres non valorizza una `bytea`: il token restava
-    // NULL, non cambiava mai fra un update e l'altro, e nessun conflitto veniva rilevato. Misurato:
-    // `Reindex_RacesWithDelete_FirstWinsSecondGets409` osservava successCount=2 dove il dominio ne
-    // prevede 1 — due operazioni che devono escludersi riuscivano entrambe.
+    // NULL, non cambiava mai fra un update e l'altro, e NESSUN conflitto era rilevabile, in alcun
+    // interleaving. Misurato su `Reindex_RacesWithDelete`, che osservava due successi.
+    //
+    // #3633: quella misura non dimostrava però ciò che il commento originale le faceva dire — che
+    // «il dominio prevede esattamente un vincitore». Due successi restano un esito legittimo anche
+    // a token funzionante, quando il delete legge dopo il commit del reindex:
+    // DeleteKbDocumentCommandHandler non ha una guardia di stato, e cancellare un documento
+    // appena accodato è un'operazione
+    // sensata. Ciò che `xmin` garantisce è più stretto e più utile: che un conflitto, QUANDO c'è,
+    // venga rilevato invece di passare inosservato.
     //
     // `uint` e non `byte[]`: xmin è di tipo `xid`. La proprietà non è esposta da alcun DTO (a
     // differenza di RuleSpec, dove RowVersion diventa un ETag base64 in GameDto), quindi il cambio

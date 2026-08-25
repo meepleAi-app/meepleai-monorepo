@@ -22,6 +22,12 @@ internal interface IHybridSearchService
     /// <param name="keywordWeight">Weight for keyword search scores (default: 0.3)</param>
     /// <param name="keywordMinScore">Minimum ts_rank_cd score for keyword results to filter low-relevance matches like ToC entries (default: 0.0)</param>
     /// <param name="queryRoleHint">Phase D (D6): user intent role hint; chunks whose RoleTags overlap receive a fixed RRF score boost (default: None = no-op)</param>
+    /// <param name="precomputedQueryEmbedding">
+    /// #3786: l'embedding della query già calcolato dal chiamante. Lo passa solo chi fa un fan-out
+    /// su più giochi, dove il vettore è lo stesso per tutti e ricalcolarlo per gioco costa una
+    /// chiamata HTTP di ~1,4 s a testa. <c>null</c> (il default) = generalo qui, che è il
+    /// comportamento giusto per una ricerca a gioco singolo.
+    /// </param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Hybrid search results with RRF-fused scores</returns>
     Task<List<HybridSearchResult>> SearchAsync(
@@ -34,7 +40,53 @@ internal interface IHybridSearchService
         float keywordWeight = 0.3f,
         double keywordMinScore = 0.0,
         GameBookRole queryRoleHint = GameBookRole.None,
+        QueryEmbedding? precomputedQueryEmbedding = null,
         CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// L'embedding di una query, calcolato <b>una volta sola</b> a monte di un fan-out cross-gioco
+/// (#3786).
+/// </summary>
+/// <remarks>
+/// <para>
+/// Il vettore di una query è uno solo per l'intera richiesta, ma nasceva dentro
+/// <c>ExecuteVectorSearchAsync</c>, cioè dentro il ciclo per-gioco: un <c>ask/global</c> su ~160
+/// giochi lo ricalcolava ~160 volte. Misurate <b>1546 richieste al servizio di embedding per 11
+/// query</b>, a ~1,4 s l'una, su un percorso che quelle chiamate dominano interamente.
+/// </para>
+/// <para>
+/// I tre stati sono distinti di proposito, e il terzo è il motivo per cui questo non è un semplice
+/// <c>float[]?</c>: se la generazione a monte fallisce, i giochi a valle devono registrare la
+/// degradazione <b>senza riprovare</b>. Con un vettore nullo indistinguibile da «non fornito», un
+/// servizio di embedding irraggiungibile avrebbe prodotto ~160 tentativi falliti per richiesta —
+/// il comportamento che questa correzione esiste per togliere, riproposto nel caso peggiore.
+/// </para>
+/// <list type="bullet">
+/// <item><c>null</c> (il parametro non passato) — nessun calcolo a monte: chi cerca lo genera da
+/// sé. È il percorso a gioco singolo, dove una chiamata è il costo giusto.</item>
+/// <item><see cref="Succeeded"/> — usa <see cref="Vector"/>, nessuna chiamata HTTP.</item>
+/// <item><see cref="Failure"/> — a monte è già fallito: registra l'esito e fermati.</item>
+/// </list>
+/// </remarks>
+internal sealed class QueryEmbedding
+{
+    private QueryEmbedding(IReadOnlyList<float>? vector) => Vector = vector;
+
+    /// <summary>Il vettore della query, o <c>null</c> se la generazione è fallita.</summary>
+    public IReadOnlyList<float>? Vector { get; }
+
+    /// <summary>Se la generazione a monte è riuscita.</summary>
+    public bool Succeeded => Vector is not null;
+
+    /// <summary>Un embedding generato con successo a monte del fan-out.</summary>
+    public static QueryEmbedding From(IReadOnlyList<float> vector) => new(vector);
+
+    /// <summary>
+    /// La generazione a monte è fallita. Chi cerca deve registrare l'esito e restituire vuoto,
+    /// <b>senza</b> ritentare: il tentativo è già stato fatto una volta per l'intera richiesta.
+    /// </summary>
+    public static QueryEmbedding Failure { get; } = new(null);
 }
 
 /// <summary>

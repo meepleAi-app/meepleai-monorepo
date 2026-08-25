@@ -147,8 +147,18 @@ internal class EmbeddingService : IEmbeddingService
     /// unconditional by construction rather than by a correctly-set flag.
     /// </para>
     /// <para>
-    /// Off is the fail-safe: a missing row, a null value, or a configuration store that cannot
-    /// answer all resolve to the pre-#3737 behaviour.
+    /// <b>On is the default since 2026-08-25.</b> Off was the fail-safe while the rollout was
+    /// undecided: a missing row resolved to the pre-#3737 behaviour, so deploying the code changed
+    /// nothing until someone turned it on deliberately. The rollout is now decided and measured —
+    /// the prefix plus the per-language correction (#3740, #3764) score 10/11 on the gate against
+    /// 9/11 without — and with the old default that decision lived only in two hand-seeded rows:
+    /// the staging database, and the gate's own seeding step. A recreated database silently
+    /// reverted to the encoding the e5 model card calls wrong, and the gate stayed green because it
+    /// writes its own row.
+    /// </para>
+    /// <para>
+    /// Reversibility is unchanged, which was the point of having a switch at all: a row set to
+    /// <c>false</c> still turns the prefix off without a code revert or a redeploy.
     /// </para>
     /// </remarks>
     private async Task<EmbeddingPurpose> ResolvePurposeAsync(EmbeddingPurpose requested)
@@ -159,10 +169,13 @@ internal class EmbeddingService : IEmbeddingService
         }
 
         var enabled = await _configurationService
-            .GetValueAsync<bool?>(E5QueryPrefixEnabledKey, defaultValue: false)
+            .GetValueAsync<bool?>(E5QueryPrefixEnabledKey, defaultValue: true)
             .ConfigureAwait(false);
 
-        return enabled == true ? EmbeddingPurpose.Query : EmbeddingPurpose.Passage;
+        // `enabled != false` e non `== true`: un valore nullo restituito dallo store — che
+        // GetValueAsync produce solo se qualcuno vi scrive un null esplicito — deve seguire il
+        // default appena dichiarato, non ricadere sul ramo opposto.
+        return enabled != false ? EmbeddingPurpose.Query : EmbeddingPurpose.Passage;
     }
 
     /// <summary>

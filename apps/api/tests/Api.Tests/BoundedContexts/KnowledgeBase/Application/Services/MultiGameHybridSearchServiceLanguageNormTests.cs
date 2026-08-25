@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -177,7 +178,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
                 .Setup(h => h.SearchAsync(
                     It.IsAny<string>(), gameId, It.IsAny<SearchMode>(), It.IsAny<int>(),
                     It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
-                    It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                    It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(forGame);
         }
 
@@ -189,6 +190,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
 
         return new MultiGameHybridSearchService(
             _scopeFactoryMock.Object,
+            new MockEmbeddingService(),
             NullLogger<MultiGameHybridSearchService>.Instance);
     }
 

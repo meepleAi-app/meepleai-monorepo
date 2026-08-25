@@ -71,6 +71,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
@@ -333,7 +334,7 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         _mockHybridSearchService.Verify(
             s => s.SearchAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(),
                 It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
-                It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

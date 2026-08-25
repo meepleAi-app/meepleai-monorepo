@@ -21,8 +21,16 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.EmbeddingProvid
 /// <para>
 /// So the switch exists to make the next attempt cheap rather than to hedge the fix: with it, a red
 /// gate is a config flip. It is DB-backed via <see cref="IConfigurationService"/> (5-minute cache),
-/// and <b>off</b> when the row is absent — deploying this code changes nothing until someone turns
-/// it on deliberately.
+/// and it stays that way — spegnerlo resta una riga di configurazione, che è il criterio di
+/// reversibilità del DoD.
+/// </para>
+/// <para>
+/// <b>Acceso quando la riga è assente, dal 2026-08-25.</b> Il default spento proteggeva da un
+/// rollout <i>non deciso</i>; il rollout è ora deciso e misurato — il prefisso più la correzione
+/// per lingua (#3740, #3764) danno 10/11 sul gate contro i 9/11 senza, e su staging la chiave è
+/// accesa. Lasciando il default spento, quella decisione viveva solo in due righe seminate a mano
+/// (il DB di staging e lo step del gate): un database ricreato la perdeva in silenzio, e il gate
+/// restava verde perché la propria riga se la scrive da sé.
 /// </para>
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
@@ -47,15 +55,36 @@ public sealed class EmbeddingServiceQueryPrefixGateTests
     }
 
     [Fact]
-    public async Task QueryPurpose_WithNoConfigurationRow_ReachesTheProviderAsPassage()
+    public async Task QueryPurpose_WithNoConfigurationRow_ReachesTheProviderAsQuery()
     {
-        // Riga assente = spento. Un default che si accendesse da solo renderebbe il rollout
-        // implicito: il deploy cambierebbe il retrieval senza che nessuno lo abbia deciso.
+        // Riga assente = acceso, dal 2026-08-25. L'argomento precedente — «un default che si
+        // accendesse da solo renderebbe il rollout implicito» — reggeva finché il rollout non era
+        // deciso. Deciso e misurato, il default spento produce il difetto opposto e piu' subdolo:
+        // la codifica corretta vive solo dove qualcuno l'ha seminata a mano, e un ambiente nuovo
+        // regredisce alla codifica sbagliata senza che nulla lo segnali.
         var (service, seen) = CreateService(gate: null);
 
         await service.GenerateEmbeddingAsync("how do I set up Catan?", EmbeddingPurpose.Query);
 
-        seen.Value.Should().Be(EmbeddingPurpose.Passage);
+        seen.Value.Should().Be(EmbeddingPurpose.Query);
+    }
+
+    [Fact]
+    public async Task TheGateDeclaresItsDefaultToTheConfigurationStore()
+    {
+        // Il test sopra non basta da solo: il mock e' libero di restituire cio' che vuole, mentre
+        // in produzione e' `ConfigurationService.GetValueAsync` a decidere, e restituisce il
+        // defaultValue che ha ricevuto quando la riga manca o non si deserializza. Quel default e'
+        // percio' il contratto, e va asserito com'e' passato — non solo per i suoi effetti.
+        var config = new Mock<IConfigurationService>();
+        var (service, _) = CreateService(gate: true, configuration: config);
+
+        await service.GenerateEmbeddingAsync("how do I set up Catan?", EmbeddingPurpose.Query);
+
+        config.Verify(
+            c => c.GetValueAsync<bool?>(GateKey, true, It.IsAny<string?>()),
+            Times.Once,
+            "riga assente o valore illeggibile devono risolvere ad acceso, non alla codifica pre-#3737");
     }
 
     [Fact]

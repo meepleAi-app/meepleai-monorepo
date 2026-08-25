@@ -50,6 +50,7 @@ internal class HybridSearchService : IHybridSearchService
         float keywordWeight = 0.3f,
         double keywordMinScore = 0.0,
         GameBookRole queryRoleHint = GameBookRole.None,
+        QueryEmbedding? precomputedQueryEmbedding = null,
         CancellationToken cancellationToken = default)
     {
         // Issue #1445: Use centralized query validation
@@ -73,13 +74,13 @@ internal class HybridSearchService : IHybridSearchService
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, queryRoleHint, cancellationToken).ConfigureAwait(false);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
                     return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -113,10 +114,11 @@ internal class HybridSearchService : IHybridSearchService
         int limit,
         List<Guid>? documentIds,
         GameBookRole queryRoleHint,
+        QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         var vectorResults = await ExecuteVectorSearchAsync(
-            query, gameId, limit, documentIds, cancellationToken).ConfigureAwait(false);
+            query, gameId, limit, documentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
         var results = vectorResults.Select((r, index) =>
         {
@@ -241,6 +243,7 @@ internal class HybridSearchService : IHybridSearchService
         List<Guid>? documentIds,
         double keywordMinScore,
         GameBookRole queryRoleHint,
+        QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         var fetchLimit = Math.Max(limit * 2, 20);
@@ -285,7 +288,7 @@ internal class HybridSearchService : IHybridSearchService
         // #2480 aveva gia' corretto la stessa classe di errore FRA giochi, dando a ciascuno il
         // proprio scope; questo e' il caso residuo DENTRO un singolo gioco.
         var vectorEmbeddings = await ExecuteVectorSearchAsync(
-            query, gameId, fetchLimit, documentIds, cancellationToken).ConfigureAwait(false);
+            query, gameId, fetchLimit, documentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
         var keywordResults = await _keywordSearchService.SearchAsync(
             query,
@@ -465,31 +468,60 @@ internal class HybridSearchService : IHybridSearchService
         Guid gameId,
         int limit,
         List<Guid>? documentIds,
+        QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         try
         {
-            // #3737: this is the retrieval question, not indexed text, so it must carry the
-            // e5 "query:" prefix. With "passage:" the best chunk of the manual named by the
-            // canonical `catan-setup` query sat at cosine rank 10 instead of 1 on the real
-            // 56k-chunk corpus — and the vector arm is the signal that distinguishes manuals
-            // from one another (see MultiGameHybridSearchService.FuseGlobally, weight 0.7).
-            var embeddingResult = await _embeddingService
-                .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (!embeddingResult.Success || embeddingResult.Embeddings is not { Count: > 0 })
+            // #3786: il vettore della query e' UNO per l'intera richiesta. Su un fan-out
+            // cross-gioco il chiamante lo calcola una volta e lo passa qui; generarlo dentro
+            // questo metodo significava ricalcolarlo una volta per gioco — 1546 chiamate al
+            // servizio di embedding per 11 query, a ~1,4 s l'una, misurate su staging.
+            float[] queryEmbedding;
+            if (precomputedQueryEmbedding is not null)
             {
-                _logger.LogWarning(
-                    "Query embedding generation failed: {Error}. Falling back to keyword-only.",
-                    embeddingResult.ErrorMessage);
-                // #3786: la ricerca vettoriale non e' stata ESEGUITA. Senza questo segnale il
-                // chiamante riceve una lista vuota indistinguibile da «nessuna corrispondenza».
-                MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
-                return new List<KbEntities.ScoredEmbedding>();
+                if (!precomputedQueryEmbedding.Succeeded)
+                {
+                    // Il tentativo e' gia' stato fatto una volta per questa richiesta ed e'
+                    // fallito. Ritentare qui restituirebbe al percorso cross-gioco proprio le
+                    // ~160 chiamate che questa correzione toglie, per giunta verso un servizio
+                    // che si e' appena dimostrato irraggiungibile.
+                    _logger.LogWarning(
+                        "Query embedding was already attempted upstream and failed. Falling back to keyword-only for gameId={GameId}.",
+                        gameId);
+                    MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
+                    return new List<KbEntities.ScoredEmbedding>();
+                }
+
+                queryEmbedding = precomputedQueryEmbedding.Vector as float[]
+                    ?? precomputedQueryEmbedding.Vector!.ToArray();
+            }
+            else
+            {
+                // #3737: this is the retrieval question, not indexed text, so it must carry the
+                // e5 "query:" prefix. With "passage:" the best chunk of the manual named by the
+                // canonical `catan-setup` query sat at cosine rank 10 instead of 1 on the real
+                // 56k-chunk corpus — and the vector arm is the signal that distinguishes manuals
+                // from one another (see MultiGameHybridSearchService.FuseGlobally, weight 0.7).
+                var embeddingResult = await _embeddingService
+                    .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (!embeddingResult.Success || embeddingResult.Embeddings is not { Count: > 0 })
+                {
+                    _logger.LogWarning(
+                        "Query embedding generation failed: {Error}. Falling back to keyword-only.",
+                        embeddingResult.ErrorMessage);
+                    // #3786: la ricerca vettoriale non e' stata ESEGUITA. Senza questo segnale il
+                    // chiamante riceve una lista vuota indistinguibile da «nessuna corrispondenza».
+                    MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
+                    return new List<KbEntities.ScoredEmbedding>();
+                }
+
+                queryEmbedding = embeddingResult.Embeddings[0];
             }
 
-            var queryVector = new Vector(embeddingResult.Embeddings[0]);
+            var queryVector = new Vector(queryEmbedding);
 
             // #2568: use the scored variant so the raw cosine similarity is preserved on each
             // hit. The cross-game merge (MultiGameHybridSearchService) needs a globally-

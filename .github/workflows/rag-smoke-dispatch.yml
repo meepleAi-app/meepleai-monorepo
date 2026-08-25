@@ -187,24 +187,35 @@ jobs:
           bash scripts/wait-for-healthy.sh reranker 1800
 
       # Il gate NON gira su staging: lo stack è effimero e nasce dallo snapshot pubblicato, quindi
-      # una riga di configurazione accesa su staging qui non esiste. Senza questo step l'interruttore
-      # di #3737 sarebbe spento in ogni run e il gate misurerebbe per sempre il comportamento
-      # precedente — cioè non potrebbe mai dire se il prefisso corretto aiuta o danneggia.
+      # la riga di configurazione che vive su staging qui non esiste. Questo step la PINNA, in
+      # entrambe le direzioni, cosi' che la run misuri la configurazione che dichiara di misurare.
       #
       # ACCESO PER DEFAULT dal 2026-08-22: il prefisso piu' la correzione per lingua (#3740) danno
       # 10/11 contro i 9/11 senza, verificato nella run 32589046651 — quindi e' questa la
       # configurazione che il gate deve proteggere, ed e' quella su cui la baseline e' catturata.
       #
-      # La condizione NON puo' essere il solo `inputs.e5_query_prefix`: sul trigger `schedule` il
-      # contesto `inputs` e' vuoto, quindi il cron settimanale girerebbe con il prefisso spento e
-      # misurerebbe una configurazione diversa da quella pinnata dalla baseline — fallendo ogni
-      # settimana per una deriva che non esiste. Acceso sempre, tranne quando un dispatch lo spegne
-      # esplicitamente per un confronto A/B.
-      - name: Turn on the e5 query prefix (#3737)
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.e5_query_prefix }}
+      # 🔴 Lo step NON puo' essere condizionato, e la riga NON puo' essere omessa quando il
+      # confronto A/B chiede il prefisso spento. Dal 2026-08-25 il default in codice e' `true`
+      # (EmbeddingService.ResolvePurposeAsync), quindi una riga ASSENTE significa ACCESO: saltare il
+      # seed lascerebbe il braccio «spento» dell'A/B a misurare esattamente l'altro, e i due
+      # risultati coinciderebbero senza che nulla lo segnali. Il valore va scritto esplicitamente.
+      #
+      # Sul trigger `schedule` il contesto `inputs` e' vuoto e `inputs.e5_query_prefix` legge falso:
+      # il cron misurerebbe una configurazione diversa da quella pinnata dalla baseline, fallendo
+      # ogni settimana per una deriva che non esiste. Da qui il fallback esplicito a `true`.
+      - name: Pin the e5 query prefix (#3737)
         working-directory: infra
+        env:
+          # La condizione e' NEGATA di proposito. La forma diretta `… && inputs.e5_query_prefix ||
+          # 'true'` e' la trappola classica del ternario simulato in GHA: con l'input a `false` il
+          # ramo sinistro vale falso e l'espressione ricade sul destro, restituendo `true` proprio
+          # nel caso che si voleva spegnere. Testando il caso FALSO si evita che il valore da
+          # spegnere passi mai per il ramo `||`.
+          E5_QUERY_PREFIX: ${{ github.event_name == 'workflow_dispatch' && !inputs.e5_query_prefix && 'false' || 'true' }}
         run: |
           set -euo pipefail
+          WANTED="${E5_QUERY_PREFIX}"
+          echo "Configurazione richiesta da questa run: Embedding:E5QueryPrefixEnabled=${WANTED}"
           PGUSER=$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)
           PGDB=$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)
 
@@ -221,29 +232,36 @@ jobs:
           # ambiente. IsActive=true perché il repository filtra su di esso.
           # "Id" e "CreatedByUserId" sono uuid: la configurazione EF li dichiara HasMaxLength(64),
           # che su una colonna uuid non ha effetto e legge come se fossero stringhe.
+          #
+          # DELETE prima dell'INSERT, e non `ON CONFLICT DO NOTHING`: il conflitto si darebbe solo
+          # sulla chiave primaria, quindi una riga preesistente con la stessa "Key" e un "Id"
+          # diverso — nello snapshot, o lasciata da una run precedente con il valore opposto —
+          # sopravviverebbe accanto alla nostra, e la SELECT di verifica ne troverebbe due.
           docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -v ON_ERROR_STOP=1 -c "
+            DELETE FROM system_configurations WHERE \"Key\" = 'Embedding:E5QueryPrefixEnabled';
             INSERT INTO system_configurations
               (\"Id\", \"Key\", \"Value\", \"ValueType\", \"Description\", \"Category\",
                \"IsActive\", \"RequiresRestart\", \"Environment\", \"Version\",
                \"CreatedAt\", \"UpdatedAt\", \"CreatedByUserId\")
             VALUES
-              ('3737e5e5-0000-4000-8000-000000003737', 'Embedding:E5QueryPrefixEnabled', 'true', 'bool',
-               'e5 query: prefix on search queries (#3737) — seeded by the RAG smoke dispatch',
-               'general', true, false, 'All', 1, NOW(), NOW(), '$OWNER')
-            ON CONFLICT DO NOTHING;"
+              ('3737e5e5-0000-4000-8000-000000003737', 'Embedding:E5QueryPrefixEnabled', '$WANTED', 'bool',
+               'e5 query: prefix on search queries (#3737) — pinned by the RAG smoke dispatch',
+               'general', true, false, 'All', 1, NOW(), NOW(), '$OWNER')"
 
           # La cache di IConfigurationService dura 5 minuti ma si popola alla prima lettura, che
           # avviene con la prima query: seminare prima dello smoke è sufficiente, e nessun restart
           # serve.
           #
           # La rilettura ASSERISCE il valore invece di stamparlo: uno step che stampa e prosegue
-          # lascia passare un interruttore non acceso, e il costo di scoprirlo è una run intera.
+          # lascia passare un interruttore sul lato sbagliato, e il costo di scoprirlo è una run
+          # intera. Il confronto è contro il valore VOLUTO, non contro `true`: da quando il default
+          # in codice è acceso, il caso che si rompe in silenzio è quello spento.
           SEEDED=$(docker exec meepleai-postgres psql -U "$PGUSER" -d "$PGDB" -At \
             -c "SELECT \"Value\" FROM system_configurations
                 WHERE \"Key\" = 'Embedding:E5QueryPrefixEnabled' AND \"IsActive\";")
-          echo "Embedding:E5QueryPrefixEnabled=${SEEDED:-<assente>}"
-          if [ "$SEEDED" != "true" ]; then
-            echo "::error:: l'interruttore non risulta acceso dopo il seed: la run misurerebbe il comportamento senza prefisso"
+          echo "Embedding:E5QueryPrefixEnabled=${SEEDED:-<assente>}  (voluto: ${WANTED})"
+          if [ "$SEEDED" != "$WANTED" ]; then
+            echo "::error:: l'interruttore vale '${SEEDED:-<assente>}' invece di '${WANTED}': la run misurerebbe una configurazione diversa da quella dichiarata"
             exit 1
           fi
 

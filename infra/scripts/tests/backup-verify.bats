@@ -52,12 +52,23 @@ setup() {
     mkdir -p "$TMP/bin"
     cat > "$TMP/bin/aws" <<'FAKE'
 #!/usr/bin/env bash
+# Marker so a test can prove it exercised THIS binary. Without it, a runner that
+# ships a real aws earlier on PATH turns these tests into a measurement of the
+# real CLI's "NoCredentials" error — which is how they passed on a dev laptop
+# and failed on ubuntu-latest.
+: > "${FAKE_AWS_MARKER:-/dev/null}"
 printf '%s' "${FAKE_AWS_STDERR:-}" >&2
 printf '%s' "${FAKE_AWS_STDOUT:-}"
 exit "${FAKE_AWS_EXIT:-0}"
 FAKE
     chmod +x "$TMP/bin/aws"
     export PATH="$TMP/bin:$PATH"
+    export FAKE_AWS_MARKER="$TMP/aws-was-called"
+
+    # The script prepends BACKUP_CLI_PATH (default /usr/local/bin) to PATH, which
+    # on ubuntu-latest holds the REAL aws — it would win over the stub above no
+    # matter where $TMP/bin sits. Point the seam at the stub directory instead.
+    export BACKUP_CLI_PATH="$TMP/bin"
 
     export S3_BACKUP_ENABLED=true
     export S3_BACKUP_BUCKET_NAME=meepleai-backups
@@ -97,6 +108,9 @@ listing_ok() {
 
     run bash "$SCRIPT"
 
+    # Prove the stub ran. If a real aws shadowed it this fails here, naming the
+    # cause, instead of failing further down as an unexplained assertion.
+    [ -f "$FAKE_AWS_MARKER" ]
     [ "$status" -eq 0 ]
     [[ "$output" == *"PASS"*"postgres.sql.gz.age"* ]]
     [[ "$output" == *"All backup checks PASSED"* ]]

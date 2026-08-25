@@ -191,6 +191,7 @@ public class GenerateToolkitFromKbHandlerTests
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(chunks);
 
@@ -238,6 +239,7 @@ public class GenerateToolkitFromKbHandlerTests
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult> { chunk });
     }

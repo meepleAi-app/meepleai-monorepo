@@ -472,7 +472,7 @@ public sealed class PlaygroundChatCommandHandlerTests
         _mockHybridSearchService
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), gameId, SearchMode.Hybrid, 20,
-                null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 new()
@@ -541,7 +541,7 @@ public sealed class PlaygroundChatCommandHandlerTests
         _mockHybridSearchService
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), gameId, SearchMode.Hybrid, 20,
-                null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                null, 0.7f, 0.3f, It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(pool);
 
         // Reranker REVERSES the pool and returns the top-5 — proves the final order follows the
@@ -606,7 +606,7 @@ public sealed class PlaygroundChatCommandHandlerTests
             s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(),
                 It.IsAny<int>(), It.IsAny<List<Guid>?>(), It.IsAny<float>(),
-                It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<float>(), It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

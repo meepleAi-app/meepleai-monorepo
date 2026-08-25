@@ -46,7 +46,7 @@ groups:
       # RAG error rate (from custom metrics)
       - record: meepleai:rag:error_rate:5m
         expr: |
-          rate(meepleai_rag_errors_total[5m]) OR on() vector(0)
+          rate(meepleai_rag_errors_total_errors[5m]) OR on() vector(0)
         labels:
           service: meepleai-api
           category: rag

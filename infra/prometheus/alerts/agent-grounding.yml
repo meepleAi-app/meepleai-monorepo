@@ -1,10 +1,10 @@
 # Issue #3390 (epic #3397) Slice 1 — In-session agent grounding observability.
 #
 # Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.AgentGrounding.cs):
-#   - meepleai_agent_response_grounding_total (Counter<long>)
+#   - meepleai_agent_response_grounding_responses_total (Counter<long>)
 #       labels: path (text|image), grounding_status (grounded|partial|ungrounded),
 #               retrieval_profile (live_session|default|none)
-#   - meepleai_agent_response_citation_count (Histogram<int>, label: path)
+#   - meepleai_agent_response_citation_count_citations (Histogram<int>, label: path)
 #
 # Emitted by the two in-session agent producers:
 #   - text  -> ChatWithSessionAgentCommandHandler (KnowledgeBase, RAG, retrieval_profile=live_session)
@@ -22,9 +22,9 @@ groups:
       - alert: HighUngroundedRateOnRagLivePath
         expr: |
           (
-            sum(rate(meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}[15m]))
+            sum(rate(meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}[15m]))
             /
-            clamp_min(sum(rate(meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session"}[15m])), 1e-9)
+            clamp_min(sum(rate(meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session"}[15m])), 1e-9)
           ) > 0.5
         for: 30m
         labels:

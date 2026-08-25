@@ -18,9 +18,9 @@ tests:
   # 1. Text/RAG path ungrounded 100% (grounded flat) sustained → alert fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
         values: '0+10x60'
-      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
         values: '0x60'
     alert_rule_test:
       - eval_time: 46m
@@ -36,9 +36,9 @@ tests:
   # 2. Text/RAG path 40% ungrounded (below the 50% threshold) → no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
         values: '0+4x60'
-      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
         values: '0+6x60'
     alert_rule_test:
       - eval_time: 46m
@@ -48,9 +48,9 @@ tests:
   # 3. Idle: text counters present but flat at 0 (rate 0/0) → clamp_min keeps it 0 → no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="ungrounded"}'
         values: '0x60'
-      - series: 'meepleai_agent_response_grounding_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="text",retrieval_profile="live_session",grounding_status="grounded"}'
         values: '0x60'
     alert_rule_test:
       - eval_time: 46m
@@ -62,7 +62,7 @@ tests:
   #    invariant — dropping the path/retrieval_profile matchers would regress this to a firing.
   - interval: 1m
     input_series:
-      - series: 'meepleai_agent_response_grounding_total{path="image",retrieval_profile="none",grounding_status="ungrounded"}'
+      - series: 'meepleai_agent_response_grounding_responses_total{path="image",retrieval_profile="none",grounding_status="ungrounded"}'
         values: '0+20x60'
     alert_rule_test:
       - eval_time: 46m

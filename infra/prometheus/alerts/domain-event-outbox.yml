@@ -36,7 +36,7 @@ groups:
           description: |
             Domain event outbox has {{ $value }} Pending rows (threshold: 1000) sustained for 5 minutes.
             Likely cause: processor stalled, batch size too small for arrival rate, or transient downstream failure
-            holding rows in retry. Check meepleai_domain_event_outbox_retried_total rate vs dispatched rate.
+            holding rows in retry. Check meepleai_domain_event_outbox_retried_total_events rate vs dispatched rate.
           summary: 'Domain event outbox backlog exceeded 1000 rows'
         labels:
           severity: warning
@@ -85,7 +85,7 @@ groups:
             datasourceUid: prometheus
             model:
               # increase() over a 10m window captures spikes that a rate() would smooth out.
-              expr: 'increase(meepleai_domain_event_outbox_failed_terminal_total[10m]) > 50'
+              expr: 'increase(meepleai_domain_event_outbox_failed_terminal_total_events[10m]) > 50'
               intervalMs: 1000
               maxDataPoints: 43200
         noDataState: NoData

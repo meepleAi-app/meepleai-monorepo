@@ -2,12 +2,17 @@
 #
 # Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Rag.cs:297-344,
 # #447 observability). OTel Prometheus exporter (1.13.1-beta.1) sanitizes dots to
-# underscores and appends `_total` to monotonic counters (unit is NOT appended —
-# cf. meepleai_bgg_url_attempted_render_total). Exported names:
-#   - meepleai_rag_copyright_guard_scan_errors_total   (counter; tag error_type)
+# underscores, APPENDE L'UNITA' e poi `_total` ai counter monotoni (#3798).
+#
+# Il commento precedente diceva «unit is NOT appended», citando come prova
+# meepleai_bgg_url_attempted_render_total: una metrica che NON era mai stata esposta, quindi
+# mai osservata. E' falso — verificato incrementandola, si chiama
+# meepleai_bgg_url_attempted_render_total_attempts_total. Tutte e quattro le regole di questo
+# file erano CIECHE. Nomi reali:
+#   - meepleai_rag_copyright_guard_scan_errors_errors_total   (counter; tag error_type)
 #   - meepleai_rag_copyright_guard_scan_duration_*     (histogram; _count/_sum/_bucket)
-#   - meepleai_rag_copyright_verbatim_run_detected_total (counter; tags run_length, document_id)
-#   - meepleai_rag_copyright_instruction_injected_total  (counter; tags has_protected, agent_language)
+#   - meepleai_rag_copyright_verbatim_run_detected_detections_total (counter; tags run_length, document_id)
+#   - meepleai_rag_copyright_instruction_injected_prompts_total  (counter; tags has_protected, agent_language)
 #
 # Verify the exact scraped names in staging before relying on these:
 #   curl -s localhost:8080/metrics | grep copyright
@@ -24,12 +29,12 @@ groups:
       # sustained error rate means verbatim leaks can reach clients undetected.
       - alert: CopyrightScanErrorRateHigh
         expr: |
-          sum(rate(meepleai_rag_copyright_guard_scan_errors_total[5m]))
+          sum(rate(meepleai_rag_copyright_guard_scan_errors_errors_total[5m]))
           /
           (
-            sum(rate(meepleai_rag_copyright_guard_scan_errors_total[5m]))
+            sum(rate(meepleai_rag_copyright_guard_scan_errors_errors_total[5m]))
             +
-            sum(rate(meepleai_rag_copyright_guard_scan_duration_count[5m]))
+            sum(rate(meepleai_rag_copyright_guard_scan_duration_ms_count[5m]))
           ) > 0.01
         for: 15m
         labels:
@@ -46,9 +51,9 @@ groups:
       # i.e. the LLM is not following the copyright paraphrase instruction at scale.
       - alert: CopyrightDetectionRateHigh
         expr: |
-          sum(rate(meepleai_rag_copyright_verbatim_run_detected_total[5m]))
+          sum(rate(meepleai_rag_copyright_verbatim_run_detected_detections_total[5m]))
           /
-          sum(rate(meepleai_rag_copyright_instruction_injected_total{has_protected="true"}[5m]))
+          sum(rate(meepleai_rag_copyright_instruction_injected_prompts_total{has_protected="true"}[5m]))
           > 0.20
         for: 30m
         labels:

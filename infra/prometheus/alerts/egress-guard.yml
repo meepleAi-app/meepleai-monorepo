@@ -1,8 +1,8 @@
 # #3495 M2 — SSRF egress guard observability.
 #
 # Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Egress.cs):
-#   - meepleai_egress_blocked_total{sink, reason} — egress blocked by the SSRF guard.
-#   - meepleai_egress_allowed_total{sink}         — allowed connections (block-ratio denominator).
+#   - meepleai_egress_blocked_total_blocks{sink, reason} — egress blocked by the SSRF guard.
+#   - meepleai_egress_allowed_total_requests{sink}         — allowed connections (block-ratio denominator).
 # Labels are bounded constants (sink/reason); a host or IP is NEVER a label.
 #
 # SLO for the manual (arbitrary-URL) sink hitting private_ip is ZERO: any nonzero rate means an
@@ -19,14 +19,14 @@ groups:
     rules:
       - alert: EgressBlockedManualSensitive
         # `or vector(0)` guards cold-start: the series may not exist yet on a fresh deploy.
-        expr: (sum(rate(meepleai_egress_blocked_total{sink="manual",reason="private_ip"}[5m])) or vector(0)) > 0
+        expr: (sum(rate(meepleai_egress_blocked_total_blocks{sink="manual",reason="private_ip"}[5m])) or vector(0)) > 0
         for: 0m
         labels:
           severity: critical
           subsystem: egress-ssrf
         annotations:
           summary: "Manual-cover SSRF attempt blocked (sink=manual, private_ip)"
-          description: "meepleai_egress_blocked_total incremented for sink=manual with reason private_ip: an admin-supplied manual-cover URL resolved to an internal/reserved address. SLO for this metric is ZERO; any nonzero rate is a P1 SSRF incident (#3495)."
+          description: "meepleai_egress_blocked_total_blocks incremented for sink=manual with reason private_ip: an admin-supplied manual-cover URL resolved to an internal/reserved address. SLO for this metric is ZERO; any nonzero rate is a P1 SSRF incident (#3495)."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md"
 
       - alert: EgressDenylistHit
@@ -34,12 +34,12 @@ groups:
         # violazione di POLICY (un URL BGG/geekdo nel campo cover manuale), non un tentativo di
         # raggiungere un target interno. Trattarlo come P1 SSRF genererebbe pagine su un errore di
         # battitura di un admin — tanto più col carve-out BGG server-to-server (#3590).
-        expr: (sum(rate(meepleai_egress_blocked_total{sink="manual",reason="denylist_hit"}[5m])) or vector(0)) > 0
+        expr: (sum(rate(meepleai_egress_blocked_total_blocks{sink="manual",reason="denylist_hit"}[5m])) or vector(0)) > 0
         for: 0m
         labels:
           severity: warning
           subsystem: egress-policy
         annotations:
           summary: "Manual-cover URL rejected by the ADR-059 BGG deny-list (sink=manual)"
-          description: "meepleai_egress_blocked_total incremented for sink=manual with reason denylist_hit: someone submitted a BGG/geekdo asset URL to the manual-cover field, which ADR-059 §5 bans. A one-off is an admin mistake; a sustained rate is an attempt to launder around the ban and warrants review of who is submitting it. The legitimate route for a BGG cover is the admin server-to-server re-upload path, never the arbitrary-URL field."
+          description: "meepleai_egress_blocked_total_blocks incremented for sink=manual with reason denylist_hit: someone submitted a BGG/geekdo asset URL to the manual-cover field, which ADR-059 §5 bans. A one-off is an admin mistake; a sustained rate is an attempt to launder around the ban and warrants review of who is submitting it. The legitimate route for a BGG cover is the admin server-to-server re-upload path, never the arbitrary-URL field."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md"

@@ -8,10 +8,10 @@
 #     Distinct admin sessions that have hit the heartbeat endpoint in the
 #     last 90s. Acts as the "admin is actually watching" sentinel for
 #     starvation alerts (DEC-C).
-#   - meepleai_wikidata_sse_messages_published_total (Counter)
+#   - meepleai_wikidata_sse_messages_published_total_messages (Counter)
 #     Tick per broadcaster.Publish call — useful for sanity-checking that
 #     the M9 scheduler / M12 admin trigger is still producing events.
-#   - meepleai_wikidata_sse_messages_received_total (Counter)
+#   - meepleai_wikidata_sse_messages_received_total_messages (Counter)
 #     Tick per per-subscriber local delivery.
 #
 # Backplane assumption: single-pod (ADR DEC-3e, HPA=1). Multi-pod fan-out

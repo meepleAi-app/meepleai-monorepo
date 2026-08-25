@@ -40,7 +40,7 @@ The following code review findings are documented but NOT fixed in Sprint 0:
 - **Item 4** (phantom Prometheus targets): `prometheus.yml` references `postgres-exporter:9187` and `redis-exporter:9121` but no such services exist in the compose stack. Targets must be added before scrape jobs work. Action: comment out or add exporters before deploying.
 - **Item 6** (Loki schema deprecated): `loki-config.yml` uses `boltdb-shipper` + `schema v11` (Loki 2.x format). When Loki 3.x is pulled via `:latest`, runtime warnings or failures may occur. Action: pin Loki to `2.9.10` at deploy time, OR migrate to `tsdb` + `schema v13` for Loki 3.x.
 - **Item 10** (redundant compose install in bootstrap): `cax31-bootstrap.sh` manually downloads `docker-compose-linux-aarch64` after `get.docker.com` already installs the Compose plugin via APT. This may cause version drift. Action: remove manual download step before production deploy.
-- **Offsite copy: LIVE on staging since 2026-08-12, still MISSING on production** (#3669). The earlier wording here — *"`backup-to-r2.sh` not implemented; cron line commented out in `backup.cron`"* — described a path that was never deployed. The live backup is `infra/scripts/backup.sh`, installed by `make backup-cron-install`; `infra/hetzner/backup.sh` and `backup.cron` were never copied to `/usr/local/bin` and have been removed.
+- **Offsite copy: LIVE on staging since 2026-08-12** (#3669). Staging is the ONLY deployed environment — see the note on production below. The earlier wording here — *"`backup-to-r2.sh` not implemented; cron line commented out in `backup.cron`"* — described a path that was never deployed. The live backup is `infra/scripts/backup.sh`, installed by `make backup-cron-install`; `infra/hetzner/backup.sh` and `backup.cron` were never copied to `/usr/local/bin` and have been removed.
 
   A run that skips the offsite copy now reports `WARN … WITHOUT offsite copy` and sends a `degraded` webhook instead of claiming success — before #3669 it logged *"All backups completed successfully"* while the copy had silently never happened.
 
@@ -65,9 +65,25 @@ Backup complete — local: /backups/... | offsite: meepleai-backups
 
 The restore path was exercised too, not just the write path: an object was pulled back from S3, decrypted with the private key, and its content validated (Redis RDB header). **A backup nobody has restored is a hypothesis, not a backup.**
 
-### Still to do on PRODUCTION
+### On "production"
 
-Production is a different host and none of the above applies to it yet. Repeat: install `age` + the aarch64 AWS CLI, create `backup.secret`, and generate a **separate** age key and IAM user — sharing them would mean one compromise exposes both environments.
+**There is no production environment.** Staging is the only deployed one. The
+scaffolding exists and reads as if a second host were live — which is exactly how
+earlier revisions of this runbook, and #3669 itself, came to carry a "still to do
+on production" item that nobody could ever do:
+
+| artefatto | stato reale |
+|---|---|
+| `.github/workflows/deploy-production.yml` | **`.disabled`** — non gira |
+| `infra/secrets/prod/` | solo template `.example`, nessun `.secret` |
+| `infra/compose.prod.yml` | referenziato solo dal workflow disabilitato e da `rollback.yml` |
+| branch `main` | esiste, ma non deploya su alcun host |
+
+Se un giorno la produzione esiste, il lavoro per la copia offsite è: installare
+`age` + l'AWS CLI aarch64, creare `backup.secret`, e generare una chiave age e un
+utente IAM **separati** da staging — condividerli significherebbe che una sola
+compromissione espone entrambi gli ambienti. Fino ad allora, quel lavoro non è in
+ritardo: non ha un bersaglio.
 
 ## Restoring from the offsite copy
 
@@ -198,8 +214,9 @@ docker exec meepleai-postgres psql -U meepleai -d meepleai_staging -t -A -F'|' \
   -c "$(cat /tmp/gen.sql)" | awk -F'|' '$2>0'
 ```
 
-⚠️ **Production has not been checked.** The same tooling runs there. Check before
-assuming it is clean, and check before relying on a production restore.
+ℹ️ Staging is the only deployed environment, so there is no second database to
+check. If a production host is ever created, run the query above there too before
+relying on a restore — the relink tooling would run there as well.
 
 Cleaning the orphans is a data decision, not a backup fix, and is deliberately not
 scripted here: deleting child rows is irreversible and the right answer may be to

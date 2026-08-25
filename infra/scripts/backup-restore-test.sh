@@ -227,8 +227,8 @@ rm -f "${RESTORE_LOG}"
 #
 # Ask the cluster instead of assuming a name. The largest non-template database
 # other than "postgres" is the application one; pg_dumpall recreates it under
-# whatever name the source used — "meepleai_staging" here, not necessarily the
-# same in production.
+# whatever name the source used — "meepleai_staging" on the only deployed
+# environment there is, and whatever a future one happens to call it.
 
 DB_NAME=$(docker exec "${TEMP_CONTAINER}" psql -U "${DB_USER}" -d postgres -t -A -c \
   "SELECT datname FROM pg_database

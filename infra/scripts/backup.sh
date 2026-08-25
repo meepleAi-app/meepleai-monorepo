@@ -219,9 +219,9 @@ backup_redis() {
 upload_to_s3() {
   if [[ "${S3_BACKUP_ENABLED}" != "true" ]]; then
     # WARN, not INFO: this is the difference between "backups exist" and "backups
-    # survive losing this provider". Both the backups and production live in the same
-    # Hetzner account, so with the upload off there is no cross-provider redundancy
-    # at all — an incident on the account loses them together (#3669).
+    # survive losing this provider". The deployed environment and its backups live
+    # in the same Hetzner account, so with the upload off there is no cross-provider
+    # redundancy at all — an incident on the account loses them together (#3669).
     log "WARN" "OFFSITE COPY NOT MADE — S3_BACKUP_ENABLED != true. Backups exist only on this host/provider."
     OFFSITE_STATUS="disabled"
     return 0

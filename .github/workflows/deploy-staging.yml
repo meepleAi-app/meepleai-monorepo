@@ -285,17 +285,22 @@ jobs:
     needs: [detect-changes]
     timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ env.DEPLOY_SHA }}  # Spec R2: pin to actual deploy SHA
-          # sparse-checkout excludes data/ (1.3GB PDFs) — runner disk is limited
-          # data/rulebook/golden/ (~52K) IS included: Api.csproj embeds these JSON fixtures (ADR-051)
-          sparse-checkout: |
-            apps/
-            .github/
-            data/rulebook/golden/
-          sparse-checkout-cone-mode: true
+      # NESSUN checkout, deliberatamente. I due step di questo job non leggono un
+      # solo file del repository: "Verify VPS disk headroom" fa ssh + df, "Verify
+      # CI passed" chiama `gh api` con un path gia' qualificato, e DEPLOY_SHA
+      # viene da `github.sha` (env di workflow), non dal git locale.
+      #
+      # Prima c'era un `sparse-checkout: apps/` — l'intero albero api + web — che
+      # nessuno leggeva. Il 2026-08-25 quel checkout ha consumato l'INTERO budget
+      # di 15 minuti due volte di fila (run 32854018470 e 32855839880, cancelled
+      # a 15:03 e 15:06 sullo step Checkout), bloccando il rilascio #3808 senza
+      # che partisse un solo controllo. Altri workflow completavano negli stessi
+      # minuti: non era un guasto di GitHub, era il checkout piu' pesante del file
+      # contro la varianza nota di questo monorepo (29s -> 9m39s).
+      #
+      # Alzare il timeout avrebbe curato il sintomo lasciando la causa: qui il
+      # costo non e' ridotto, e' azzerato. Se un domani un passo servira' dei
+      # file, reintroduci il checkout con il sottoinsieme MINIMO che gli serve.
 
       # Pre-deploy disk headroom guard (issue #1575 follow-up).
       # #3331 Phase 1: read the VPS root filesystem over SSH instead of a local
@@ -836,7 +841,7 @@ jobs:
     # (kept at 30; could be lowered to 20 once the new timing is observed).
     # Observed actuals pre-#2650 (run 26472087138): deploy job 13m38s.
     timeout-minutes: 30
-    needs: [detect-changes, build, generate-migration, build-ai, snapshot-baseline]
+    needs: [detect-changes, pre-deploy-check, build, generate-migration, build-ai, snapshot-baseline]
     # Issue #1578 — skip-propagation handling. An AI-only deploy has `build`
     # (api/web) skipped, so `build` may be 'success' OR 'skipped'. build-ai may
     # be 'success' (built) or 'skipped' (no AI change); a build-ai FAILURE
@@ -846,7 +851,18 @@ jobs:
     # Issue #2650 — generate-migration: 'success' su deploy SSH (genera lo SQL in
     # cloud), 'skipped' su DEPLOY_METHOD != ssh. Un FAILURE blocca il deploy di
     # proposito: non deployare se la generazione della migration è fallita.
-    if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.generate-migration.result == 'success' || needs.generate-migration.result == 'skipped') && (needs.build-ai.result == 'success' || needs.build-ai.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
+    # #3669 — il follow-up annunciato piu' sotto ("Irrobustire deploy.if per non
+    # partire dopo un pre-deploy-check fallito"). Senza questa clausola un
+    # pre-deploy-check CANCELLED (es. timeout del checkout) skippava
+    # generate-migration, e questo job partiva lo stesso: la validazione
+    # pre-deploy non era un cancello, era un suggerimento. Il 2026-08-25 il
+    # deploy si e' fermato solo per un incidente fortunato — l'artifact della
+    # migration mancante — invece che per la ragione vera. La stessa forma di
+    # difetto della issue: l'assenza di un passo indistinguibile dalla sua
+    # riuscita. Il ramo workflow_dispatch+skip_tests rispecchia la condizione
+    # con cui pre-deploy-check si auto-skippa (ed e' identico a quello che build
+    # e generate-migration usano gia').
+    if: always() && (needs.pre-deploy-check.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.skip_tests == true)) && (needs.build.result == 'success' || needs.build.result == 'skipped') && (needs.generate-migration.result == 'success' || needs.generate-migration.result == 'skipped') && (needs.build-ai.result == 'success' || needs.build-ai.result == 'skipped') && (needs.snapshot-baseline.result == 'success' || needs.snapshot-baseline.result == 'skipped')
     environment:
       name: staging
       url: https://meepleai.app
@@ -882,21 +898,32 @@ jobs:
       # weakness PRE-ESISTENTE di deploy.if, non introdotta qui) e questo Download
       # fallisce hard (artifact assente) → il job deploy fallisce PRIMA di
       # backup/apply/SSH: nessuna migration applicata, nessun deploy container.
-      # Fail-closed, atomicità #1573 preservata. Irrobustire deploy.if per non
-      # partire dopo un pre-deploy-check fallito su push è un follow-up separato.
+      # Fail-closed, atomicità #1573 preservata. Il follow-up annunciato qui
+      # ("irrobustire deploy.if per non partire dopo un pre-deploy-check fallito
+      # su push") è stato fatto: vedi la clausola pre-deploy-check nell'`if` del
+      # job, sopra (#3669).
       #
       # Atomicità (#1573) invariata: l'APPLY resta inline in questo job. Se il
       # job non viene preso dal runner, nessuna migration è applicata. Solo la
       # GENERAZIONE (side-effect-free) si è spostata a monte, sul cloud.
+      # La condizione nomina il job che PRODUCE l'artifact, invece di fidarsi che
+      # due `if` distinti restino d'accordo. Erano allineati per coincidenza:
+      # entrambi gli step guardavano DEPLOY_METHOD, e finche' generate-migration
+      # si skippava per lo stesso motivo il conto tornava. Quando si e' skippato
+      # per un motivo diverso (pre-deploy-check cancelled, 2026-08-25) il download
+      # e' partito lo stesso ed e' morto con "Artifact not found" — un errore che
+      # non nomina la causa. Ora la dipendenza e' dichiarata.
       - name: Download migration SQL artifact
-        if: vars.DEPLOY_METHOD == 'ssh'
+        if: vars.DEPLOY_METHOD == 'ssh' && needs.generate-migration.result == 'success'
         uses: actions/download-artifact@v7
         with:
           name: migration-sql-${{ github.run_id }}
           path: /tmp
 
+      # Stessa condizione del download: senza, questo step leggerebbe un
+      # /tmp/migrations.sql mai scaricato e fallirebbe sotto `set -euo pipefail`.
       - name: Apply migrations on staging
-        if: vars.DEPLOY_METHOD == 'ssh'
+        if: vars.DEPLOY_METHOD == 'ssh' && needs.generate-migration.result == 'success'
         env:
           SSH_HOST: ${{ secrets.STAGING_HOST }}
           SSH_USER: ${{ secrets.STAGING_USER }}

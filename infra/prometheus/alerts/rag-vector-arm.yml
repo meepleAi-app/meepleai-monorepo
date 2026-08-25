@@ -1,7 +1,21 @@
 # Issue #3786 — degradazione silenziosa del braccio vettoriale.
 #
 # Metric source (apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Rag.cs):
-#   - meepleai_rag_vector_arm_outcomes_total (Counter<long>, label: outcome)
+#   - meepleai_rag_vector_arm_outcomes_searches_total (Counter<long>, label: outcome)
+#
+# ⚠️ IL NOME ESPOSTO NON E' QUELLO DICHIARATO NEL CODICE. Il meter dichiara
+# `meepleai.rag.vector_arm.outcomes` con `unit: "searches"`, e l'exporter Prometheus di
+# OpenTelemetry INFILA L'UNITA' NEL NOME: outcomes -> outcomes_searches -> _total. E' la
+# convenzione di tutte le metriche di questo repo (meepleai_cover_resolution_total_resolutions_total,
+# meepleai_egress_allowed_total_requests_total, ...).
+#
+# Queste regole sono nate con `meepleai_rag_vector_arm_outcomes_total` e sono state ATTIVE E CIECHE
+# fino alla verifica su staging: caricate correttamente, ma la loro espressione non corrispondeva ad
+# alcuna serie, quindi non avrebbero MAI potuto scattare. Un alert che non scatta e' indistinguibile
+# da un sistema sano.
+#
+# Prima di modificare l'espressione, VERIFICA IL NOME REALE contro l'endpoint, non contro il codice:
+#   docker exec meepleai-api curl -s localhost:8080/metrics | grep meepleai_rag_vector_arm
 #     outcome=hit    la ricerca vettoriale ha prodotto candidati
 #     outcome=empty  la ricerca e' RIUSCITA senza candidati — esito legittimo (gioco senza
 #                    contenuto indicizzato, o nessun chunk sopra minScore)
@@ -29,10 +43,10 @@ groups:
       - alert: RagVectorArmDegraded
         expr: |
           (
-            sum(rate(meepleai_rag_vector_arm_outcomes_total{outcome="failed"}[10m])) or vector(0)
+            sum(rate(meepleai_rag_vector_arm_outcomes_searches_total{outcome="failed"}[10m])) or vector(0)
           )
           /
-          sum(rate(meepleai_rag_vector_arm_outcomes_total[10m]))
+          sum(rate(meepleai_rag_vector_arm_outcomes_searches_total[10m]))
           > 0.05
         for: 10m
         labels:
@@ -40,19 +54,19 @@ groups:
           subsystem: rag-retrieval
         annotations:
           summary: "Braccio vettoriale degradato: {{ $value | humanizePercentage }} delle ricerche per-gioco non viene eseguito"
-          description: "meepleai_rag_vector_arm_outcomes_total{outcome=\"failed\"} oltre il 5% del totale per 10 minuti. Le risposte sono costruite sul solo braccio lessicale, che non distingue un manuale dall'altro (il vettoriale pesa 0.7 nella fusione). Causa nota #3789: i due bracci condividevano il DbContext. Nota: outcome=\"empty\" e' legittimo e NON entra in questo rapporto."
+          description: "meepleai_rag_vector_arm_outcomes_searches_total{outcome=\"failed\"} oltre il 5% del totale per 10 minuti. Le risposte sono costruite sul solo braccio lessicale, che non distingue un manuale dall'altro (il vettoriale pesa 0.7 nella fusione). Causa nota #3789: i due bracci condividevano il DbContext. Nota: outcome=\"empty\" e' legittimo e NON entra in questo rapporto."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/issues/3786"
 
       # Canarino: qualunque fallimento sostenuto, anche sotto la soglia sistemica. Warning e non
       # critical perche' un fallimento isolato puo' essere transitorio — ma a SLO raggiunto la
       # serie non esiste, quindi qualsiasi presenza costante merita uno sguardo.
       - alert: RagVectorArmFailuresPresent
-        expr: sum(rate(meepleai_rag_vector_arm_outcomes_total{outcome="failed"}[15m])) > 0
+        expr: sum(rate(meepleai_rag_vector_arm_outcomes_searches_total{outcome="failed"}[15m])) > 0
         for: 15m
         labels:
           severity: warning
           subsystem: rag-retrieval
         annotations:
           summary: "Il braccio vettoriale sta fallendo su alcune ricerche per-gioco"
-          description: "meepleai_rag_vector_arm_outcomes_total{outcome=\"failed\"} e' diverso da zero da 15 minuti. Sotto la soglia sistemica di RagVectorArmDegraded, ma a sistema sano questa serie non dovrebbe esistere: e' il precursore della degradazione descritta in #3786."
+          description: "meepleai_rag_vector_arm_outcomes_searches_total{outcome=\"failed\"} e' diverso da zero da 15 minuti. Sotto la soglia sistemica di RagVectorArmDegraded, ma a sistema sano questa serie non dovrebbe esistere: e' il precursore della degradazione descritta in #3786."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/issues/3786"

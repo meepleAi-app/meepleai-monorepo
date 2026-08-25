@@ -18,9 +18,9 @@ tests:
   #    leak guard is failing open silently on >1% of protected-chunk queries.
   - interval: 1m
     input_series:
-      - series: 'meepleai_rag_copyright_guard_scan_errors_total'
+      - series: 'meepleai_rag_copyright_guard_scan_errors_errors_total'
         values: '0+2x30'
-      - series: 'meepleai_rag_copyright_guard_scan_duration_count'
+      - series: 'meepleai_rag_copyright_guard_scan_duration_ms_count'
         values: '0+98x30'
     alert_rule_test:
       - eval_time: 25m
@@ -39,9 +39,9 @@ tests:
   # 2. Zero scan errors (guard healthy) must NOT fire — no page on green.
   - interval: 1m
     input_series:
-      - series: 'meepleai_rag_copyright_guard_scan_errors_total'
+      - series: 'meepleai_rag_copyright_guard_scan_errors_errors_total'
         values: '0+0x30'
-      - series: 'meepleai_rag_copyright_guard_scan_duration_count'
+      - series: 'meepleai_rag_copyright_guard_scan_duration_ms_count'
         values: '0+100x30'
     alert_rule_test:
       - eval_time: 25m
@@ -53,9 +53,9 @@ tests:
   #    ignoring the prompt-gate paraphrase instruction at scale.
   - interval: 1m
     input_series:
-      - series: 'meepleai_rag_copyright_verbatim_run_detected_total'
+      - series: 'meepleai_rag_copyright_verbatim_run_detected_detections_total'
         values: '0+30x45'
-      - series: 'meepleai_rag_copyright_instruction_injected_total{has_protected="true"}'
+      - series: 'meepleai_rag_copyright_instruction_injected_prompts_total{has_protected="true"}'
         values: '0+100x45'
     alert_rule_test:
       - eval_time: 40m
@@ -74,9 +74,9 @@ tests:
   # 4. Detection rate at 10% (below the 20% threshold) must NOT fire.
   - interval: 1m
     input_series:
-      - series: 'meepleai_rag_copyright_verbatim_run_detected_total'
+      - series: 'meepleai_rag_copyright_verbatim_run_detected_detections_total'
         values: '0+10x45'
-      - series: 'meepleai_rag_copyright_instruction_injected_total{has_protected="true"}'
+      - series: 'meepleai_rag_copyright_instruction_injected_prompts_total{has_protected="true"}'
         values: '0+100x45'
     alert_rule_test:
       - eval_time: 40m

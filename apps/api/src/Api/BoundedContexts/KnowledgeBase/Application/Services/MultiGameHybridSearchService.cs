@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.Helpers;
 using Api.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -137,6 +138,25 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         // before the cross-game sort + truncation.  A cap of min(limit, 50) is applied to
         // prevent per-game over-fetching when limit is very large.
         var perGameLimit = Math.Min(Math.Max(limit, 1), 50);
+
+        // #3786: la validazione PRIMA del calcolo dell'embedding, e non e' un dettaglio d'ordine.
+        //
+        // Finche' il vettore nasceva dentro il ciclo per-gioco, era HybridSearchService.SearchAsync
+        // a validare per primo e a restituire vuoto: una query invalida non raggiungeva mai il
+        // servizio di embedding. Spostando il calcolo a monte, senza questo controllo lo
+        // raggiungerebbe — e QueryValidator.MaxQueryLength e' dichiarato «security: prevent DoS»,
+        // quindi non sarebbe una chiamata sprecata ma una difesa aggirata: il testo oltre il
+        // limite arriverebbe a un servizio esterno che prima era protetto.
+        //
+        // L'esito resta identico a prima (lista vuota), perche' ogni ricerca per-gioco avrebbe
+        // comunque restituito vuoto sulla stessa validazione.
+        var queryError = QueryValidator.ValidateQuery(query);
+        if (queryError != null)
+        {
+            _logger.LogWarning(
+                "MultiGameHybridSearch: invalid query rejected before the fan-out: {Error}", queryError);
+            return Array.Empty<MultiGameSearchResultItem>();
+        }
 
         // #3786: l'embedding della query PRIMA del fan-out, non dentro. Vedi
         // GenerateQueryEmbeddingOnceAsync per la misura che lo motiva.

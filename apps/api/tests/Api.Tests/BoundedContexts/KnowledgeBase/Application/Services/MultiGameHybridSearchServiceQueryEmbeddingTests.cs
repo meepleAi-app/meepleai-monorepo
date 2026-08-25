@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
+using Api.Helpers;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -134,6 +135,43 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "l'uscita anticipata su zero giochi precede il calcolo, altrimenti la correzione aggiungerebbe una chiamata a una richiesta che non cerca nulla");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("a")]
+    public async Task AnInvalidQuery_DoesNotReachTheEmbeddingService(string query)
+    {
+        // Finche' il vettore nasceva dentro il ciclo per-gioco, era HybridSearchService.SearchAsync
+        // a validare per primo: una query invalida non raggiungeva mai il servizio di embedding.
+        // Spostando il calcolo a monte, quella protezione va ricreata a monte — altrimenti questa
+        // correzione, nata per togliere chiamate, ne aggiungerebbe una dove prima erano zero.
+        var sut = CreateSut(embeddingSucceeds: true);
+
+        var result = await sut.SearchAsync(query, new[] { Guid.NewGuid() }, limit: 10);
+
+        result.Should().BeEmpty();
+        _embeddingMock.Verify(
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task AQueryOverTheLengthLimit_DoesNotReachTheEmbeddingService()
+    {
+        // QueryValidator.MaxQueryLength e' dichiarato «security: prevent DoS». Senza la validazione
+        // a monte non sarebbe una chiamata sprecata ma una difesa aggirata: il testo oltre il
+        // limite raggiungerebbe un servizio esterno che prima era protetto dal controllo per-gioco.
+        var tooLong = new string('x', QueryValidator.MaxQueryLength + 1);
+        var sut = CreateSut(embeddingSucceeds: true);
+
+        var result = await sut.SearchAsync(tooLong, new[] { Guid.NewGuid() }, limit: 10);
+
+        result.Should().BeEmpty();
+        _embeddingMock.Verify(
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // --- helpers --------------------------------------------------------------

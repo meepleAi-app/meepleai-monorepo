@@ -82,8 +82,8 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
 
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
-            Times.Once,
-            "il tentativo fallito non va ripetuto per gioco");
+            Times.Exactly(2),
+            "i tentativi restano quelli fissi a monte (uno piu' il ritentativo): il fallimento non va ripetuto PER GIOCO, che con 12 giochi darebbe 12");
         seen.Should().HaveCount(12);
         seen.Should().AllSatisfy(e => e!.Succeeded.Should().BeFalse(),
             "ogni gioco deve poter registrare la degradazione, che e' il segnale introdotto da #3793");
@@ -174,17 +174,85 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task ACancelledRequest_StopsInsteadOfFanningOut()
+    {
+        // Il chiamante SSE passa HttpContext.RequestAborted. Inghiottire la cancellazione qui
+        // significherebbe proseguire il fan-out per un client che se n'e' andato: ~160 warning
+        // con il testo della query, e poi l'assemblaggio del prompt e la chiamata all'LLM.
+        using var cts = new CancellationTokenSource();
+        _embeddingMock
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException(cts.Token));
+        var sut = CreateSut(embeddingSucceeds: true, configureEmbedding: false);
+        await cts.CancelAsync();
+
+        var act = async () => await sut.SearchAsync(
+            "come si prepara Catan?",
+            Enumerable.Range(0, 20).Select(_ => Guid.NewGuid()).ToArray(),
+            limit: 10,
+            cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _hybridSearchMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ATransientFailure_IsRetriedOnceUpstream()
+    {
+        // Prima di questa correzione ogni gioco generava il proprio vettore, quindi un flake
+        // singolo degradava UN gioco e lasciava sani gli altri ~159. Con un solo calcolo lo stesso
+        // flake li degrada tutti — e in SearchMode.Semantic la ricerca restituisce zero risultati
+        // invece di un insieme degradato. Il ritentativo va a monte, dove costa 2 chiamate invece
+        // di 160.
+        var calls = 0;
+        _embeddingMock
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => ++calls == 1
+                ? EmbeddingResult.CreateFailure("transient timeout")
+                : EmbeddingResult.CreateSuccess(new List<float[]> { QueryVector }));
+
+        var seen = new List<QueryEmbedding?>();
+        var sut = CreateSut(embeddingSucceeds: true, onSearch: e => seen.Add(e), configureEmbedding: false);
+
+        await sut.SearchAsync("come si prepara Catan?", new[] { Guid.NewGuid(), Guid.NewGuid() }, limit: 10);
+
+        calls.Should().Be(2, "un fallimento transitorio va ritentato una volta, non zero e non per gioco");
+        seen.Should().AllSatisfy(e => e!.Succeeded.Should().BeTrue(),
+            "il secondo tentativo e' riuscito: i giochi devono ricevere il vettore, non una degradazione");
+    }
+
+    [Fact]
+    public async Task APersistentFailure_StopsAfterTheRetry_AndDoesNotScaleWithTheGameCount()
+    {
+        var gameIds = Enumerable.Range(0, 30).Select(_ => Guid.NewGuid()).ToArray();
+        var sut = CreateSut(embeddingSucceeds: false);
+
+        await sut.SearchAsync("come si prepara Catan?", gameIds, limit: 10);
+
+        _embeddingMock.Verify(
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2),
+            "il numero di tentativi e' fisso: non deve crescere col numero di giochi accessibili");
+    }
+
     // --- helpers --------------------------------------------------------------
 
     private MultiGameHybridSearchService CreateSut(
         bool embeddingSucceeds,
-        Action<QueryEmbedding?>? onSearch = null)
+        Action<QueryEmbedding?>? onSearch = null,
+        bool configureEmbedding = true)
     {
-        _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(embeddingSucceeds
-                ? EmbeddingResult.CreateSuccess(new List<float[]> { QueryVector })
-                : EmbeddingResult.CreateFailure("embedding service unreachable"));
+        // configureEmbedding: false quando il test ha gia' impostato il proprio comportamento
+        // sull'embedding (ritentativo, cancellazione) — sovrascriverlo qui lo annullerebbe.
+        if (configureEmbedding)
+        {
+            _embeddingMock
+                .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(embeddingSucceeds
+                    ? EmbeddingResult.CreateSuccess(new List<float[]> { QueryVector })
+                    : EmbeddingResult.CreateFailure("embedding service unreachable"));
+        }
 
         _hybridSearchMock
             .Setup(s => s.SearchAsync(

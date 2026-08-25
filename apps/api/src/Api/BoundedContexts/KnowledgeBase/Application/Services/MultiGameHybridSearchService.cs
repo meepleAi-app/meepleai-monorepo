@@ -82,33 +82,62 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         string query,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            // #3737: e' la domanda di retrieval, non testo indicizzato: porta il prefisso e5
-            // `query:`. Lo stesso purpose che usava il percorso per-gioco, spostato a monte.
-            var result = await _embeddingService
-                .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
-                .ConfigureAwait(false);
+        // Un solo ritentativo, e la ragione e' una conseguenza diretta dell'aver spostato il
+        // calcolo a monte: prima ogni gioco generava il proprio vettore, quindi un guasto
+        // TRANSITORIO — un timeout, un 503 durante un rolling restart — degradava quel gioco e
+        // lasciava sani gli altri ~159. Con un solo calcolo, lo stesso guasto li degrada tutti, e
+        // in SearchMode.Semantic la ricerca cross-gioco non restituisce un insieme degradato ma
+        // ZERO risultati.
+        //
+        // Il commento sul non ritentare vale PER GIOCO, dove il costo si moltiplica per il
+        // fan-out; a monte il costo massimo e' 2 chiamate invece di 160, e la probabilita' di un
+        // fallimento totale scende a p². Il provider di fallback (EmbeddingService) copre il
+        // guasto del provider primario, non il flake della singola richiesta: sono due rimedi a
+        // due guasti diversi.
+        const int Attempts = 2;
 
-            if (!result.Success || result.Embeddings is not { Count: > 0 })
+        for (var attempt = 1; attempt <= Attempts; attempt++)
+        {
+            try
             {
-                _logger.LogWarning(
-                    "MultiGameHybridSearch: query embedding generation failed ({Error}). Cross-game search continues keyword-only.",
-                    result.ErrorMessage);
-                return QueryEmbedding.Failure;
-            }
+                // #3737: e' la domanda di retrieval, non testo indicizzato: porta il prefisso e5
+                // `query:`. Lo stesso purpose che usava il percorso per-gioco, spostato a monte.
+                var result = await _embeddingService
+                    .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
+                    .ConfigureAwait(false);
 
-            return QueryEmbedding.From(result.Embeddings[0]);
-        }
+                if (result.Success && result.Embeddings is { Count: > 0 })
+                {
+                    return QueryEmbedding.From(result.Embeddings[0]);
+                }
+
+                _logger.LogWarning(
+                    "MultiGameHybridSearch: query embedding generation failed ({Error}), attempt {Attempt}/{Attempts}.",
+                    result.ErrorMessage, attempt, Attempts);
+            }
+            // La cancellazione NON e' un fallimento da degradare: il chiamante SSE passa
+            // HttpContext.RequestAborted, quindi inghiottirla significherebbe proseguire il
+            // fan-out per un client che se n'e' andato — ~160 warning con il testo della query,
+            // e poi l'assemblaggio del prompt e la chiamata all'LLM. Rilanciarla ferma la
+            // richiesta dove va fermata.
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
 #pragma warning disable CA1031 // Resilience: l'embedding fallito degrada a solo-lessicale, non aborta la query
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex,
-                "MultiGameHybridSearch: query embedding generation threw. Cross-game search continues keyword-only. Query='{Query}'",
-                query);
-            return QueryEmbedding.Failure;
-        }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "MultiGameHybridSearch: query embedding generation threw, attempt {Attempt}/{Attempts}. Query='{Query}'",
+                    attempt, Attempts, query);
+            }
 #pragma warning restore CA1031
+        }
+
+        _logger.LogWarning(
+            "MultiGameHybridSearch: query embedding unavailable after {Attempts} attempts. Cross-game search continues keyword-only.",
+            Attempts);
+        return QueryEmbedding.Failure;
     }
 
     /// <inheritdoc/>

@@ -69,28 +69,40 @@ Accanto alla baseline l'harness conta quindi quante query hanno, nei primi *K* c
 | `catan-setup-it` | `catan_en_rulebook.pdf` | **en** | query IT, manuale EN |
 | `seven-wonders-military` | `7-wonders_rulebook.pdf` | **it** | query EN, manuale IT — ripiega su Duel, che è in inglese |
 
-Sono **lo stesso difetto in direzioni opposte**, ed è la prova più diretta che il meccanismo è la lingua e non una particolarità di Catan: quando il manuale e la domanda non coincidono di lingua, il braccio vettoriale non porta il documento giusto abbastanza in alto. La cura sta in [#3737](https://github.com/meepleAi-app/meepleai-monorepo/issues/3737) (il prefisso `query:` di e5), non nella fusione — che è già al suo ottimo: nessuna combinazione di pesi supera 9/11, misurato replicando `FuseGlobally` offline sull'artifact `rag-fusion-tuning-<run_id>`.
+Sono **lo stesso difetto in direzioni opposte**, ed è la prova più diretta che il meccanismo è la lingua e non una particolarità di Catan: quando il manuale e la domanda non coincidono di lingua, il braccio vettoriale non porta il documento giusto abbastanza in alto.
+
+⚠️ **Questa tabella descrive lo stato senza il prefisso e5, ed è quindi storica.** La cura si è rivelata *doppia* — il prefisso `query:` ([#3737](https://github.com/meepleAi-app/meepleai-monorepo/issues/3737)) **più** la correzione per lingua della fusione ([#3740](https://github.com/meepleAi-app/meepleai-monorepo/issues/3740) → #3764) — e nessuna delle due funziona senza l'altra: il prefisso da solo porta 9/11 → 7/11, la correzione da sola era inerte finché i candidati arrivavano tutti marcati `"en"` (#3760). Insieme danno **10/11**, con `catan-setup-it` a bersaglio e `seven-wonders-military` no. Entrambe sono ora attive per default. La frase che qui stava — «la fusione è già al suo ottimo, nessuna combinazione di pesi supera 9/11» — valeva per i *pesi*, non per la forma della fusione, ed è stata smentita da una correzione che non è un peso.
+
+Per il conteggio corrente e i fuori bersaglio di oggi leggi `semanticFloor` e il suo razionale in `rag-canonical-queries.json`: il pavimento è sceso a 8 per [#3773](https://github.com/meepleAi-app/meepleai-monorepo/issues/3773) su un corpus che [#3794](https://github.com/meepleAi-app/meepleai-monorepo/issues/3794) mostra non essere quello servito in produzione.
 
 🔴 **Quando il pavimento sale, alzalo.** Se l'harness stampa `Criterio semantico salito a N/11`, fissa il guadagno aggiornando `semanticFloor` nello stesso commit. Se scende, il messaggio d'errore chiede esplicitamente di **non** abbassarlo per far passare la build: un pavimento che insegue il risultato non è un pavimento.
 
 ### L'interruttore del prefisso e5 `query:` (#3737)
 
-La cura descritta sopra è **presente nel codice ma spenta**. Il prefisso corretto secondo il model card di e5 è anche, misurato su questo corpus, un peggioramento: 10/11 → 8/11 nella run `32053791375`, perché il conteggio precedente dipendeva in parte dalla codifica sbagliata, che il braccio lessicale compensava. Tornare indietro è costato un revert (#3747) più un redeploy; l'interruttore esiste perché il prossimo tentativo costi un flip.
+La cura descritta sopra è **nel codice e accesa**, dal 2026-08-25.
+
+Il percorso per arrivarci vale come avvertimento, perché la stessa modifica ha dato due esiti opposti. Il prefisso corretto secondo il model card di e5, **da solo**, è un peggioramento su questo corpus: 10/11 → 8/11 nella run `32053791375`, e 9/11 → 7/11 col criterio stretto nella `32583499355`. Il conteggio precedente dipendeva in parte dalla codifica sbagliata, che appiattisce il segnale di lingua — cosa accidentalmente utile su un corpus inglese al 90%, e che il braccio lessicale compensava. Tornare indietro la prima volta è costato un revert (#3747) più un redeploy; l'interruttore esiste perché il tentativo successivo costasse un flip.
+
+**Insieme** alla correzione per lingua della fusione (#3740 → #3764) l'esito si ribalta: **10/11**, verificato nella run `32589046651`. Le due vanno misurate come un'unica ipotesi — l'una senza l'altra è inerte o dannosa.
 
 | dove | valore |
 |---|---|
 | chiave | `Embedding:E5QueryPrefixEnabled` |
 | tipo | `bool` |
-| riga assente | **spento** — il deploy non cambia nulla finché non si accende deliberatamente |
+| riga assente | **acceso** — è il default dichiarato in `EmbeddingService.ResolvePurposeAsync` |
+| per spegnere | una riga a `false`: nessun revert del codice, nessun redeploy |
 | propagazione | ≤ 5 min (cache di `IConfigurationService`), nessun restart |
 
-**Per una run del gate** — non serve toccare staging, e non servirebbe a nulla: lo stack del gate è **effimero** e nasce dallo snapshot pubblicato, quindi non vede le righe di configurazione di staging. Si accende con l'input del dispatch:
+🔴 **Perché il default è acceso e non spento.** Off era il fail-safe finché il rollout non era deciso: un deploy non cambiava nulla finché qualcuno non accendeva deliberatamente. Deciso e misurato il rollout, quel default produce il difetto opposto e più subdolo — la codifica corretta vive solo dove qualcuno l'ha seminata a mano (il DB di staging, e lo step del gate), quindi un database ricreato regredisce in silenzio alla codifica sbagliata, **e il gate resta verde perché la propria riga se la scrive da sé**.
+
+**Per una run del gate** — non serve toccare staging, e non servirebbe a nulla: lo stack del gate è **effimero** e nasce dallo snapshot pubblicato, quindi non vede le righe di configurazione di staging. Lo step `Pin the e5 query prefix` scrive la riga nel Postgres effimero prima dello smoke, **in entrambe le direzioni**, e asserisce il valore ottenuto contro quello voluto.
 
 ```bash
-gh workflow run rag-smoke-dispatch.yml -f e5_query_prefix=true
+gh workflow run rag-smoke-dispatch.yml                        # acceso (default, e ciò che la baseline pinna)
+gh workflow run rag-smoke-dispatch.yml -f e5_query_prefix=false   # spento, per il braccio di controllo dell'A/B
 ```
 
-Lo step `Turn on the e5 query prefix` semina la riga nel Postgres effimero prima dello smoke. Una run **senza** quell'input misura il comportamento attuale: è il termine di paragone dell'A/B, ed è per questo che l'interruttore va lasciato spento come default anche qui.
+🔴 **Lo step non è condizionato, e non può diventarlo.** Da quando il default in codice è acceso, una riga *assente* significa acceso: saltare il seed nel ramo `false` lascerebbe il braccio «spento» dell'A/B a misurare esattamente l'altro, e i due risultati coinciderebbero senza che nulla lo segnali. Per la stessa ragione l'espressione che calcola il valore nel workflow testa il caso **falso** — `… && !inputs.e5_query_prefix && 'false' || 'true'`: la forma diretta è la trappola del ternario simulato in GHA, dove `A && false || 'true'` restituisce `'true'` proprio nel caso che si voleva spegnere.
 
 **Su staging o in produzione**:
 

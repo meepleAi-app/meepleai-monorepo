@@ -2,6 +2,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,6 +23,12 @@ public class MultiGameHybridSearchServiceTests
     private readonly Mock<IHybridSearchService> _hybridSearchMock = new(MockBehavior.Strict);
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
 
+    // #3786: l'embedding della query e' ora calcolato UNA VOLTA a monte del fan-out, quindi il
+    // servizio ne dipende. Questi test non lo riguardano — coprono orchestrazione, lingua e
+    // diagnostica — e il mock centralizzato (#2599) li lascia invariati: restituisce sempre un
+    // embedding deterministico. Il conteggio delle chiamate e' asserito in
+    // MultiGameHybridSearchServiceQueryEmbeddingTests.
+
     // Each per-game search resolves IHybridSearchService from its OWN DI scope (own DbContext).
     // Wire the scope factory so every CreateScope() yields a provider returning the single mock,
     // keeping the existing Setup/Verify on _hybridSearchMock valid while exercising the scope path.
@@ -32,7 +39,7 @@ public class MultiGameHybridSearchServiceTests
         var scope = new Mock<IServiceScope>();
         scope.SetupGet(s => s.ServiceProvider).Returns(provider.Object);
         _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scope.Object);
-        return new(_scopeFactoryMock.Object, NullLogger<MultiGameHybridSearchService>.Instance);
+        return new(_scopeFactoryMock.Object, new MockEmbeddingService(), NullLogger<MultiGameHybridSearchService>.Instance);
     }
 
     // ---------------------------------------------------------------------------
@@ -72,6 +79,7 @@ public class MultiGameHybridSearchServiceTests
                 null,
                 0.7f, 0.3f, 0.0,
                 GameBookRole.None,
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(fakeResults);
 
@@ -112,7 +120,7 @@ public class MultiGameHybridSearchServiceTests
                 "test", gameId1,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         _hybridSearchMock.Verify(
@@ -120,7 +128,7 @@ public class MultiGameHybridSearchServiceTests
                 "test", gameId2,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Once);
 
         _hybridSearchMock.Verify(
@@ -128,7 +136,7 @@ public class MultiGameHybridSearchServiceTests
                 "test", gameId3,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -202,7 +210,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId1,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResult(gameId1, chunkIndex: 2, score: 0.3f),
@@ -215,7 +223,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId2,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResult(gameId2, chunkIndex: 0, score: 0.5f),
@@ -265,7 +273,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), lowRelevanceGame,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResultWithScores(lowRelevanceGame, chunkIndex: 0, hybridScore: tiedHybrid, vectorScore: 0.45f),
@@ -278,7 +286,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), highRelevanceGame,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResultWithScores(highRelevanceGame, chunkIndex: 7, hybridScore: tiedHybrid, vectorScore: 0.92f),
@@ -312,7 +320,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId1,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResultWithScores(gameId1, chunkIndex: 3, hybridScore: tiedHybrid, vectorScore: tiedVector),
@@ -323,7 +331,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId2,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResultWithScores(gameId2, chunkIndex: 1, hybridScore: tiedHybrid, vectorScore: tiedVector),
@@ -408,7 +416,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), It.IsAny<Guid>(),
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), cts.Token))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), cts.Token))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         var sut = CreateSut();
@@ -423,7 +431,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId1,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), cts.Token),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), cts.Token),
             Times.Once);
 
         _hybridSearchMock.Verify(
@@ -431,7 +439,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId2,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), cts.Token),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), cts.Token),
             Times.Once);
     }
 
@@ -451,7 +459,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), failingGameId,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("game has no content"));
 
         SetupHybridSearchForGame(goodGameId, count: 4, baseScore: 0.7f);
@@ -481,7 +489,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResult(gameId, chunkIndex: 0, score: 0.9f),
@@ -524,7 +532,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<SearchMode>(), It.IsAny<int>(),
                 It.Is<List<Guid>?>(d => d != null && d.SequenceEqual(documentIds)),
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>());
 
         var sut = CreateSut();
@@ -546,7 +554,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<SearchMode>(), It.IsAny<int>(),
                 It.Is<List<Guid>?>(d => d != null && d.Count == 2 && d.Contains(docA) && d.Contains(docB)),
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
     }
 
@@ -569,7 +577,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<SearchMode>(), It.IsAny<int>(),
                 null,  // explicit null — backward-compatible default
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -616,7 +624,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), expectedGame,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 MakeResultWithScores(expectedGame, chunkIndex: 0,
@@ -635,7 +643,7 @@ public class MultiGameHybridSearchServiceTests
                     It.IsAny<string>(), gameId,
                     It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                     It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                    It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                    It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<HybridSearchResult>
                 {
                     MakeResultWithScores(gameId, chunkIndex: 0,
@@ -672,7 +680,7 @@ public class MultiGameHybridSearchServiceTests
                 It.IsAny<string>(), gameId,
                 It.IsAny<SearchMode>(), It.IsAny<int>(), null,
                 It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildResults(gameId, count, baseScore));
     }
 

@@ -169,7 +169,7 @@ public sealed class GenerateToolkitFromKbHandlerCacheTests
         hybridSearch.Setup(s => s.SearchAsync(
                 It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
                 It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
-                It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<CancellationToken>()))
+                It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<HybridSearchResult>
             {
                 new() {

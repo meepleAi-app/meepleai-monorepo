@@ -46,14 +46,68 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     private const int MaxConcurrentGameSearches = 4;
 
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<MultiGameHybridSearchService> _logger;
 
     public MultiGameHybridSearchService(
         IServiceScopeFactory scopeFactory,
+        IEmbeddingService embeddingService,
         ILogger<MultiGameHybridSearchService> logger)
     {
         _scopeFactory = scopeFactory;
+        _embeddingService = embeddingService;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Calcola l'embedding della query UNA VOLTA per l'intero fan-out (#3786).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Il vettore non dipende dal gioco: dipende solo dalla query. Nasceva però dentro
+    /// <c>HybridSearchService.ExecuteVectorSearchAsync</c>, cioè dentro il ciclo per-gioco, quindi
+    /// un <c>ask/global</c> lo ricalcolava una volta per gioco accessibile. Misurate <b>1546
+    /// richieste al servizio di embedding per 11 query</b> — ~140 per query — su un percorso che
+    /// quelle chiamate HTTP (~1,4 s l'una) dominano interamente.
+    /// </para>
+    /// <para>
+    /// Il fallimento non interrompe la ricerca: restituisce <see cref="QueryEmbedding.Failure"/>,
+    /// che i percorsi per-gioco riconoscono per registrare la degradazione senza ritentare. La
+    /// query prosegue solo-lessicale, che è la degradazione già in essere — ma ora è dichiarata
+    /// una volta invece di essere scoperta ~160 volte.
+    /// </para>
+    /// </remarks>
+    private async Task<QueryEmbedding> GenerateQueryEmbeddingOnceAsync(
+        string query,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // #3737: e' la domanda di retrieval, non testo indicizzato: porta il prefisso e5
+            // `query:`. Lo stesso purpose che usava il percorso per-gioco, spostato a monte.
+            var result = await _embeddingService
+                .GenerateEmbeddingAsync(query, EmbeddingPurpose.Query, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!result.Success || result.Embeddings is not { Count: > 0 })
+            {
+                _logger.LogWarning(
+                    "MultiGameHybridSearch: query embedding generation failed ({Error}). Cross-game search continues keyword-only.",
+                    result.ErrorMessage);
+                return QueryEmbedding.Failure;
+            }
+
+            return QueryEmbedding.From(result.Embeddings[0]);
+        }
+#pragma warning disable CA1031 // Resilience: l'embedding fallito degrada a solo-lessicale, non aborta la query
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "MultiGameHybridSearch: query embedding generation threw. Cross-game search continues keyword-only. Query='{Query}'",
+                query);
+            return QueryEmbedding.Failure;
+        }
+#pragma warning restore CA1031
     }
 
     /// <inheritdoc/>
@@ -84,9 +138,18 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         // prevent per-game over-fetching when limit is very large.
         var perGameLimit = Math.Min(Math.Max(limit, 1), 50);
 
+        // #3786: l'embedding della query PRIMA del fan-out, non dentro. Vedi
+        // GenerateQueryEmbeddingOnceAsync per la misura che lo motiva.
+        //
+        // Il modo Keyword non usa il braccio vettoriale: calcolare il vettore per una ricerca
+        // solo-lessicale sarebbe una chiamata HTTP spesa per un risultato che nessuno legge.
+        var queryEmbedding = mode == SearchMode.Keyword
+            ? null
+            : await GenerateQueryEmbeddingOnceAsync(query, cancellationToken).ConfigureAwait(false);
+
         using var throttle = new SemaphoreSlim(MaxConcurrentGameSearches);
         var tasks = gameIds
-            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, documentIdsList, throttle, cancellationToken))
+            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, documentIdsList, queryEmbedding, throttle, cancellationToken))
             .ToList();
 
         // Task.WhenAll guarantees parallel execution (all tasks start before any is awaited);
@@ -161,6 +224,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         int limit,
         SearchMode mode,
         List<Guid>? documentIds,
+        QueryEmbedding? queryEmbedding,
         SemaphoreSlim throttle,
         CancellationToken cancellationToken)
     {
@@ -179,6 +243,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
                 mode,
                 limit,
                 documentIds: documentIds,
+                precomputedQueryEmbedding: queryEmbedding,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             return (gameId, results);

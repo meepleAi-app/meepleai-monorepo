@@ -19,11 +19,25 @@ set -Eeuo pipefail
 # VPS (2026-08-12): `env -i PATH=/usr/bin:/bin bash -c 'command -v aws'` finds nothing.
 # Fixed here rather than in the crontab so it holds for every host regardless of how
 # the cron entry was installed.
-export PATH="/usr/local/bin:/usr/local/sbin:${PATH}"
+# BACKUP_CLI_PATH exists so a host that installs the CLIs elsewhere can say so,
+# and so the bats suite can simulate a host without them: prepending a fixed
+# /usr/local/bin would otherwise make "aws is missing" untestable on any runner
+# that ships the AWS CLI there — which ubuntu-latest does.
+export PATH="${BACKUP_CLI_PATH:-/usr/local/bin:/usr/local/sbin}:${PATH}"
 
 # ─────────────────────────────────────────────
 # Error trap — notify on unexpected failure
 # ─────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SECRETS_DIR="${SCRIPT_DIR}/../secrets"
+
+# Sourced BEFORE the ERR trap is armed, not merely before first use: on_error()
+# calls notify_webhook(), so a failure between the trap and a later source would
+# run the handler against an undefined function and lose the notification —
+# breaking the failure path is the one bug this file cannot afford (#3669).
+# shellcheck source=lib/notify.sh
+source "${SCRIPT_DIR}/lib/notify.sh"
+
 trap 'on_error $LINENO' ERR
 
 on_error() {
@@ -46,9 +60,6 @@ log() {
 # ─────────────────────────────────────────────
 # Load secrets (non-interactive, no export leakage)
 # ─────────────────────────────────────────────
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SECRETS_DIR="${SCRIPT_DIR}/../secrets"
-
 load_secret_file() {
   local file="$1"
   if [[ -f "$file" ]]; then
@@ -66,6 +77,9 @@ load_secret_file "${SECRETS_DIR}/backup.secret"
 load_secret_file "${SECRETS_DIR}/database.secret"
 load_secret_file "${SECRETS_DIR}/redis.secret"
 load_secret_file "${SECRETS_DIR}/storage.secret"
+# Provides SLACK_WEBHOOK_URL — the fallback channel. Requiring a second copy of
+# the same URL under a backup-specific name is how the first one stayed empty.
+load_secret_file "${SECRETS_DIR}/monitoring.secret"
 
 # ─────────────────────────────────────────────
 # Configuration defaults (override via secret files)
@@ -77,7 +91,6 @@ load_secret_file "${SECRETS_DIR}/storage.secret"
 : "${BACKUP_BASE_DIR:=/backups/meepleai}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 : "${S3_BACKUP_ENABLED:=false}"
-WEBHOOK_URL="${BACKUP_WEBHOOK_URL:-}"
 
 # S3/R2 — map from backup.secret variable names
 S3_ENDPOINT="${S3_BACKUP_ENDPOINT:-}"
@@ -100,34 +113,6 @@ OFFSITE_STATUS="not-attempted"
 # pointless — and without it the offsite backups cannot be restored. Keep it in the
 # password manager alongside the DR runbook.
 BACKUP_AGE_RECIPIENT="${BACKUP_AGE_RECIPIENT:-}"
-
-# ─────────────────────────────────────────────
-# Webhook notification
-# ─────────────────────────────────────────────
-notify_webhook() {
-  local status="$1"
-  local message="$2"
-
-  if [[ -z "${WEBHOOK_URL}" ]]; then
-    return 0
-  fi
-
-  # "text" is what Slack and Discord require: without it an incoming webhook answers
-  # 400 and the notification is dropped. The structured fields are kept alongside for
-  # any receiver that reads them.
-  local payload
-  payload=$(printf '{"text":"[%s] MeepleAI backup on %s: %s","status":"%s","message":"%s","timestamp":"%s","host":"%s"}' \
-    "$status" "$(hostname)" "$message" \
-    "$status" "$message" "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" "$(hostname)")
-
-  # --fail so an HTTP 4xx/5xx is an error: without it curl exits 0 on a rejected
-  # payload and the `||` below never fires — the notification failure was itself silent.
-  curl --silent --fail --max-time 10 \
-    -H "Content-Type: application/json" \
-    -d "$payload" \
-    "$WEBHOOK_URL" \
-    || log "WARN" "Webhook notification failed (non-fatal) — status '${status}' was NOT delivered"
-}
 
 # ─────────────────────────────────────────────
 # Prepare backup directory
@@ -234,9 +219,9 @@ backup_redis() {
 upload_to_s3() {
   if [[ "${S3_BACKUP_ENABLED}" != "true" ]]; then
     # WARN, not INFO: this is the difference between "backups exist" and "backups
-    # survive losing this provider". Both the backups and production live in the same
-    # Hetzner account, so with the upload off there is no cross-provider redundancy
-    # at all — an incident on the account loses them together (#3669).
+    # survive losing this provider". The deployed environment and its backups live
+    # in the same Hetzner account, so with the upload off there is no cross-provider
+    # redundancy at all — an incident on the account loses them together (#3669).
     log "WARN" "OFFSITE COPY NOT MADE — S3_BACKUP_ENABLED != true. Backups exist only on this host/provider."
     OFFSITE_STATUS="disabled"
     return 0

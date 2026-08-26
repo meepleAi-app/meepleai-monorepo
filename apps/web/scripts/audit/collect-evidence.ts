@@ -17,13 +17,26 @@ import { execFileSync } from 'node:child_process';
 
 import type { SqlRunner } from './resolve-params';
 
+/** Scritture cumulative per tabella (inserimenti + aggiornamenti + cancellazioni). */
 export type TableCounts = Record<string, number>;
 export type Evidence = {
   errors: string[];
   changedTables: Array<{ table: string; delta: number }>;
 };
 
-const COUNTS_SQL = "SELECT relname || '|' || n_live_tup FROM pg_stat_user_tables ORDER BY relname";
+/**
+ * Contatori cumulativi di righe inserite, aggiornate e cancellate.
+ *
+ * NON si usa `n_live_tup`: è una stima aggiornata da autovacuum e può essere
+ * grossolanamente sbagliata — misurato su questo stack, `users` risultava 0
+ * contro 8 righe reali e `audit_logs` 18 contro 227. Un diff costruito su quella
+ * stima direbbe che l'azione non ha scritto nulla, o il contrario.
+ *
+ * `n_tup_ins/upd/del` sono invece contatori esatti delle operazioni eseguite:
+ * la loro differenza dice quante scritture ha davvero prodotto un'azione.
+ */
+const COUNTS_SQL =
+  "SELECT relname || '|' || (n_tup_ins + n_tup_upd + n_tup_del) FROM pg_stat_user_tables ORDER BY relname";
 const ERROR_LINE = /\b(ERR|FTL|ERROR|FATAL)\b|level=(Error|Fatal)/;
 
 export function parseTableCounts(psqlOutput: string): TableCounts {

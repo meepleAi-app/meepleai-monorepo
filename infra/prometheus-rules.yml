@@ -697,10 +697,23 @@ groups:
     interval: 30s
     rules:
       # CRITICAL: Container high memory usage (>90% of limit)
+      #
+      # #3822 follow-up: `working_set_bytes`, non `usage_bytes`. Il secondo include la page cache,
+      # che il kernel rilascia sotto pressione e che quindi NON avvicina un OOM kill. Misurato su
+      # staging appena cAdvisor ha ripreso a esporre metriche per container: `meepleai-reranker`
+      # oltre il 90% secondo usage_bytes, 78.7% secondo `docker stats` — che sottrae la cache.
+      # Un alert che promette "may lead to OOM kills" e scatta sulla cache dice il falso.
+      #
+      # E `name!=""` come per ContainerRestarted: senza, la divisione si applica anche ai cgroup
+      # di sistema, dove le due serie hanno significati diversi.
       - alert: ContainerHighMemory
         expr: |
-          (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
-          and container_spec_memory_limit_bytes > 0
+          (
+            container_memory_working_set_bytes{name!=""}
+            /
+            container_spec_memory_limit_bytes{name!=""}
+          ) > 0.9
+          and container_spec_memory_limit_bytes{name!=""} > 0
         for: 5m
         labels:
           severity: warning
@@ -716,9 +729,15 @@ groups:
           dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
 
       # WARNING: Container high CPU usage (>80%)
+      #
+      # #3822 follow-up: senza `name!=""` questo alert scatta sui cgroup di SISTEMA, non sui
+      # container. Osservato su staging appena cAdvisor ha ripreso a funzionare: tre istanze
+      # firing su `/`, `/system.slice` e `/system.slice/docker.service` — cioe' l'intero host e
+      # il demone Docker, per i quali "CPU > 80% di un core" non significa quello che l'alert
+      # dice. Stesso difetto di ContainerRestarted, sullo stesso piano di metriche.
       - alert: ContainerHighCPU
         expr: |
-          rate(container_cpu_usage_seconds_total[5m]) > 0.8
+          rate(container_cpu_usage_seconds_total{name!=""}[5m]) > 0.8
         for: 5m
         labels:
           severity: warning

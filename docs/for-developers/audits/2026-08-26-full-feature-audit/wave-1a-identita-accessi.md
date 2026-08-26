@@ -10,14 +10,14 @@ I percorsi critici dell'autenticazione **si comportano come promesso**, casi neg
 L'unico difetto trovato riguarda la completezza dell'audit di sicurezza, non il controllo degli
 accessi.
 
-| Contesto | Verificate | Totale |
+| Contesto | Coperte | Totale |
 |---|---|---|
 | Authentication | 34 | 67 |
 | SecurityAudit | 2 | 2 |
-| Administration (blocco utenti) | 24 | 272 |
+| Administration | 84 (75 verificate + 9 findings) | 272 |
 
-L'ondata **non è chiusa**: Administration resta largamente scoperta, e di Authentication mancano
-2FA, OAuth, verifica email e profilo. Vedi *Cosa resta*.
+L'ondata **non è chiusa**: del blocco utenti restano le 64 mutazioni, e di Authentication mancano
+2FA, verifica email e profilo. Vedi *Cosa resta*.
 
 ## Verifiche superate
 
@@ -54,7 +54,48 @@ Ciclo completo verificato:
 Con email **inesistente**: risposta byte-identica, **nessuna email inviata, nessun token creato**.
 È il comportamento corretto — la risposta non permette di dedurre se l'account esista.
 
+## Blocco utenti di Administration — letture
+
+Le 57 letture del blocco (utenti, inviti, richieste di accesso, impersonificazione, allowlist)
+sono state provate **con entrambi i ruoli**: 56 eseguite, 1 saltata per parametro non risolvibile.
+
+| Esito | Conteggio |
+|---|---|
+| Conformi | 51 |
+| Difformi | 5 |
+
+Il criterio non è uniforme, ed è la parte che conta: un endpoint **admin** è conforme se respinge
+l'utente semplice (401/403); un endpoint **self-service** (`/users/me/…`) è conforme se
+all'utente risponde. Applicare il primo criterio a tutti produceva **33 falsi positivi** — ogni
+`/users/me/quota` letto dal proprio titolare risultava una falla. Il tracker porta già il ruolo
+atteso per riga, e ora il giudizio lo usa.
+
+### Tre difformità che non erano difetti
+
+| Segnalazione | Realtà |
+|---|---|
+| `GET /users/search` → 400 | Il parametro si chiama `query`, non `q`. Con quello: 200 |
+| `GET /users/me/games` → 400 | Richiede `page` e `pageSize`. Con quelli: 200 |
+| `GET /admin/staging-allowlist` → 403 all'utente | Corretto: l'endpoint è documentato *"Superadmin only"*. Era il tracker a classificarlo come self-service, perché il parser non ne ha dedotto l'autorizzazione |
+
+Le prime due non sono difetti del prodotto ma del modo in cui la sonda chiama: un endpoint provato
+senza i suoi parametri obbligatori risponde 400, e chiamarlo "rotto" sarebbe un errore di metodo.
+
 ## Findings
+
+### 🔍 P1 — 500 su quattro endpoint del blocco utenti — [#3839](https://github.com/meepleAi-app/meepleai-monorepo/issues/3839)
+
+| Endpoint | Causa accertata |
+|---|---|
+| `GET /admin/users/{userId}/library/stats` | `Cannot create a DbSet for 'UserLibraryEntry' because this type is not included in the model for the context` |
+| `GET /admin/users/{userId}/ai-usage` | `QueryableMethodTranslatingExpressionVisitor.Translate` — LINQ non traducibile in SQL |
+| `GET /admin/users/{id}/rate-limit-status` | come sopra |
+| `GET /users/me/ai-usage` | come sopra — ed è **self-service**: lo subisce l'utente, non l'amministratore |
+
+Nota metodologica: cercando la causa nei log, la prima eccezione che compare riguarda
+`HealthStatusChangedEvent` e non c'entra nulla — è un job periodico che fallisce in sottofondo
+(pattern ADR-063). Correlare per `RequestPath` invece di leggere l'ultimo errore è ciò che ha
+evitato di attribuire ai quattro endpoint una causa sbagliata.
 
 ### 🔍 P2 — L'audit di sicurezza registra solo gli accessi — [#3838](https://github.com/meepleAi-app/meepleai-monorepo/issues/3838)
 
@@ -81,7 +122,8 @@ dichiarata, perché chi cerca gli eventi di sicurezza guarda `security_audit_log
 
 | Area | Righe scoperte | Nota |
 |---|---|---|
-| Administration — utenti e ruoli | ~248 | CRUD utenti, ruoli, sospensione, tier, inviti: il grosso dell'ondata |
+| Administration — mutazioni del blocco utenti | 64 | 40 POST, 12 DELETE, 10 PUT, 2 PATCH: creazione, ruoli, sospensione, tier, inviti, impersonificazione completa. Richiedono un utente di prova dedicato e un ordine che lasci l'ambiente come l'ha trovato |
+| Administration — resto del contesto | ~124 | Fuori dal blocco utenti: appartiene all'ondata 1B |
 | Authentication — 2FA | 5 endpoint | `setup`, `enable`, `verify`, `disable`, `step-up` |
 | Authentication — OAuth | — | `oauthEnabled=false` in locale: verificabile solo su staging |
 | Authentication — verifica email | 2 endpoint | `email/verify`, `email/resend` |

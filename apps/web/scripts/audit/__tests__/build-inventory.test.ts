@@ -52,6 +52,33 @@ describe('contextForRoute', () => {
   it('usa Unmapped per i prefissi sconosciuti, invece di indovinare', () => {
     expect(contextForRoute('/qualcosa-di-nuovo')).toBe('Unmapped');
   });
+
+  // Administration era un contenitore di scarto: tutto ciò che sta sotto /admin e
+  // non ha una regola propria vi finiva per fallback, gonfiandola a 520 righe e
+  // lasciando a zero i contesti a cui quelle righe appartengono davvero.
+  it.each([
+    ['/admin/entity-links', 'EntityRelationships'],
+    ['/admin/audit-log', 'SecurityAudit'],
+    ['/admin/kb', 'KnowledgeBase'],
+    ['/admin/mechanic-extractor', 'KnowledgeBase'],
+    ['/admin/prompts', 'KnowledgeBase'],
+    ['/admin/rag-executions', 'KbQuality'],
+    ['/admin/pdfs', 'DocumentProcessing'],
+    ['/admin/bgg-queue', 'SharedGameCatalog'],
+    ['/admin/wikidata', 'SharedGameCatalog'],
+    ['/admin/feature-flags', 'SystemConfiguration'],
+    ['/admin/alert-rules', 'SystemConfiguration'],
+    ['/admin/financial-ledger', 'BusinessSimulations'],
+    ['/admin/email-templates', 'UserNotifications'],
+  ])('attribuisce %s al contesto %s, non ad Administration', (route, expected) => {
+    expect(contextForRoute(route)).toBe(expected);
+  });
+
+  it('lascia ad Administration ciò che è davvero amministrativo', () => {
+    expect(contextForRoute('/admin/users')).toBe('Administration');
+    expect(contextForRoute('/admin/monitor/logs')).toBe('Administration');
+    expect(contextForRoute('/admin/impersonation')).toBe('Administration');
+  });
 });
 
 describe('contextForEndpoint', () => {

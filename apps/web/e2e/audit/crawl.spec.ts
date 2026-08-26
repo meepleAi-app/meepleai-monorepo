@@ -73,7 +73,12 @@ for (const role of ['user', 'admin']) {
           if (res.status() >= 400) failedRequests.push(`${res.status()} ${res.url()}`);
         });
 
-        const response = await page.goto(url as string, { waitUntil: 'networkidle' });
+        // `networkidle` non si verifica mai su una pagina con SSE o SignalR — che
+        // il prodotto usa — e la rotta andrebbe in timeout risultando "rotta"
+        // senza esserlo. Si attende il quietarsi della rete, ma senza farne una
+        // condizione: scaduto il tempo si prosegue e si guarda comunque la pagina.
+        const response = await page.goto(url as string, { waitUntil: 'domcontentloaded' });
+        await page.waitForLoadState('networkidle', { timeout: 5_000 }).catch(() => {});
         const body = await page.locator('body').innerText();
         const bodyMarkers = FAILURE_MARKERS.filter(([, re]) => re.test(body)).map(([name]) => name);
 

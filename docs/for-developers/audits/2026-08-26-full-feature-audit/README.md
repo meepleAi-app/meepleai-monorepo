@@ -10,8 +10,9 @@ Piano dell'harness: [plan](../../specs/2026-08-26-full-feature-audit-plan.md)
 
 | Ondata | Contesti | Stato |
 |---|---|---|
-| 0 — Harness | — | 🔄 in corso: inventario, risolutore, collettore e report fatti; crawler da eseguire a stack acceso |
-| 1 — Accesso | Authentication · SystemConfiguration · Administration · SecurityAudit | ⬜ non iniziata |
+| 0 — Harness | — | ✅ completata: inventario, crawler, collettore, report, prima passata |
+| 1A — Identità e accessi | Authentication · SecurityAudit · Administration/utenti | 🔄 in corso |
+| 1B — Configurazione e operazioni | SystemConfiguration · Administration/operazioni | ⬜ non iniziata |
 | 2 — Contenuti | SharedGameCatalog · GameManagement · UserLibrary · DocumentProcessing | ⬜ non iniziata |
 | 3 — Intelligenza | KnowledgeBase · AgentMemory · GameToolkit · KbQuality | ⬜ non iniziata |
 | 4 — Gioco | SessionTracking · GameToolbox · Gamification · EntityRelationships | ⬜ non iniziata |
@@ -54,6 +55,27 @@ for(const c of rows){ (per[c[4]] ??= {})[c[7]] = ((per[c[4]]||{})[c[7]]||0)+1; }
 console.table(per);
 "
 ```
+
+## Perché l'ondata 1 è divisa in due
+
+Nella prima stesura l'ondata 1 pesava 611 righe, il 35% del tracker, perché `Administration` da
+sola ne valeva 520. Il problema non era la sua dimensione: era che **raccoglieva gli scarti**.
+Tutto ciò che stava sotto `/admin` senza una regola propria vi cadeva per fallback — `admin/kb`,
+`admin/mechanic-extractor`, `admin/pdfs`, `admin/feature-flags` — mentre `EntityRelationships` e
+`SecurityAudit` risultavano a **zero righe** pur avendo endpoint propri (`/admin/entity-links`,
+`/admin/audit-log`), assorbiti dallo stesso fallback.
+
+Corretta l'attribuzione, Administration scende a 272 righe e ogni contesto riceve ciò che gli
+spetta. Il resto si divide per funzione:
+
+| Sotto-ondata | Contenuto | Righe |
+|---|---|---|
+| **1A — Identità e accessi** | Authentication (67) · SecurityAudit (2) · Administration → `users`, `impersonation`, `access-requests`, `invitations`, `staging-allowlist` | ~204 |
+| **1B — Configurazione e operazioni** | SystemConfiguration (64) · Administration → `queue`, `operations`, `infrastructure`, `monitor`, `analytics`, `resources`, `system`, `storage`, `cache`, `events`, `event-outbox`, `test`, `playground` | ~201 |
+
+Effetto della riattribuzione sugli altri contesti: KnowledgeBase 160 → 254, SharedGameCatalog
+161 → 181, SystemConfiguration 24 → 64, BusinessSimulations 4 → 37, UserNotifications 28 → 44,
+DocumentProcessing 55 → 71, KbQuality 6 → 20.
 
 ## L'ambiente locale, come è davvero
 

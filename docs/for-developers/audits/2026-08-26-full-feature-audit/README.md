@@ -112,6 +112,16 @@ né dell'harness, ma **non sono copertura**: restano `⬜ non coperto` nel track
 Gli screenshot dei problemi restano in `apps/web/audit-results/` e **non sono committati** (13 MB
 per 53 immagini): il segnale utile — URL fallite e marker — è nel report testuale.
 
+### Limiti noti dell'harness
+
+1. **`networkidle` non convive con le connessioni persistenti.** Il crawler attende
+   `waitUntil: 'networkidle'`, che su una pagina con SSE o SignalR — entrambi usati dal prodotto —
+   non si verifica mai: la rotta va in timeout e risulta fallita senza essere rotta. È accaduto su
+   `/admin/knowledge-base/games` (1 test su 346). Prima dell'ondata 1 conviene passare a
+   `domcontentloaded` più un'attesa esplicita, altrimenti ogni pagina live verrà segnalata a torto.
+2. **Il crawler non esercita le mutazioni.** Copre navigazione e lettura: create, update e delete
+   restano manuali, come previsto dal design.
+
 ### Come leggere i 404 con un id nell'URL
 
 23 fallimenti su `/api/v1/private-games/{id}` e 9 su `/api/v1/library/games/{id}` derivano

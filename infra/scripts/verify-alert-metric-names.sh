@@ -33,7 +33,7 @@ import glob, io, pathlib, re, sys
 
 # (nome puntato -> unita') da ogni CreateCounter/CreateHistogram con `unit:` dichiarata
 declared = {}
-for path in glob.glob('apps/api/src/Api/Observability/Metrics/*.cs'):
+for path in glob.glob('apps/api/src/Api/Observability/**/*.cs', recursive=True):
     src = io.open(path, encoding='utf-8').read()
     for match in re.finditer(r'name:\s*"([^"]+)"\s*,\s*\n\s*unit:\s*"([^"]+)"', src):
         declared[match.group(1).replace('.', '_')] = (match.group(2), 'CreateCounter' in src[max(0, match.start()-120):match.start()])
@@ -41,21 +41,63 @@ for path in glob.glob('apps/api/src/Api/Observability/Metrics/*.cs'):
 # suffissi che Prometheus aggiunge DOPO l'unita': counter -> _total, histogram -> _count/_sum/_bucket
 SUFFIXES = ('_total', '_count', '_sum', '_bucket', '')
 
+# --- composizione del nome, replicata da PrometheusMetric.cs (OpenTelemetry.Exporter.Prometheus
+# --- 1.13.1-beta.1, la versione pinnata in Api.csproj). Una regola semplificata qui produce FALSI
+# --- POSITIVI, e su un gate bloccante sono peggio di un controllo assente: insegnano a ignorarlo.
+# --- Ne sono stati misurati 5 il 2026-08-26, tutti dovuti ai tre passaggi qui sotto.
+UNIT_ABBREVIATIONS = {
+    'd': 'days', 'h': 'hours', 'min': 'minutes', 's': 'seconds', 'ms': 'milliseconds',
+    'us': 'microseconds', 'ns': 'nanoseconds',
+    'By': 'bytes', 'KiBy': 'kibibytes', 'MiBy': 'mebibytes', 'GiBy': 'gibibytes',
+    'TiBy': 'tibibytes', 'KBy': 'kilobytes', 'MBy': 'megabytes', 'GBy': 'gigabytes',
+    'TBy': 'terabytes', 'B': 'bytes', 'KB': 'kilobytes', 'MB': 'megabytes',
+    'GB': 'gigabytes', 'TB': 'terabytes',
+    'm': 'meters', 'V': 'volts', 'A': 'amperes', 'J': 'joules', 'W': 'watts', 'g': 'grams',
+    'Cel': 'celsius', 'Hz': 'hertz', '1': '', '%': 'percent', '$': 'dollars',
+}
+
+def _sanitize_unit(unit):
+    return re.sub(r'[^A-Za-z0-9:]+', '_', unit).strip('_')
+
+def exposed_unit(unit):
+    """GetUnit(): annotazioni via, "a/b" -> a_per_b, abbreviazioni espanse, poi sanificazione."""
+    # le porzioni fra graffe sono ANNOTAZIONI e non entrano nel nome: unit="{state}" -> nessun suffisso
+    unit = re.sub(r'\{[^}]*\}', '', unit).strip()
+    if not unit:
+        return ''
+    if '/' in unit and not unit.endswith('/'):
+        num, den = unit.split('/', 1)
+        return _sanitize_unit(UNIT_ABBREVIATIONS.get(num, num) + '_per_' + UNIT_ABBREVIATIONS.get(den, den))
+    return _sanitize_unit(UNIT_ABBREVIATIONS.get(unit, unit))
+
+def exposed_name(base, unit, is_counter):
+    """Il nome classico prodotto dall'exporter, suffisso di tipo escluso."""
+    name = base
+    u = exposed_unit(unit)
+    # L'unita' NON viene riappesa se il nome vi termina gia': "..._duration_seconds" con unit "s"
+    # resta invariato, e "meepleai_quality_score" con unit "score" pure.
+    if u and not name.endswith(u):
+        name = name + '_' + u
+    if is_counter and not name.endswith('_total'):
+        name = name + '_total'
+    return name
+
+
 blind = []
-for path in sorted(glob.glob('infra/prometheus/alerts/*.yml')):
+for path in sorted(glob.glob('infra/prometheus/alerts/*.yml')) + ['infra/prometheus-rules.yml']:
     text = io.open(path, encoding='utf-8').read()
     # le righe di commento non sono espressioni: un nome citato li' non rende cieca una regola
     body = "\n".join(l for l in text.splitlines() if not l.lstrip().startswith('#'))
     for base, (unit, is_counter) in declared.items():
-        with_unit = f"{base}_{unit}"
+        exposed = exposed_name(base, unit, is_counter)
+        if exposed == base:
+            continue  # dichiarato ed esposto coincidono: non c'e' nulla da sbagliare
         for suffix in SUFFIXES:
             used = base + suffix
-            if re.search(r'\b' + re.escape(used) + r'\b', body) and with_unit not in body:
-                # Un counter riceve SEMPRE `_total` finale, anche quando il nome dichiarato
-                # finisce gia' per `.total`: meepleai.bgg.url.attempted_render.total e' esposto
-                # come ..._render_total_attempts_total. Suggerire il nome senza quel suffisso
-                # manderebbe chi legge a scrivere un SECONDO nome sbagliato.
-                real = with_unit + ('_total' if is_counter else suffix)
+            if re.search(r'\b' + re.escape(used) + r'\b', body) and exposed not in body:
+                # Il suffisso di tipo (_count/_sum/_bucket) segue l'unita', quindi va riapplicato
+                # al nome esposto; per un counter il posto del `_total` lo decide exposed_name.
+                real = exposed if is_counter else exposed + suffix
                 blind.append((pathlib.Path(path).name, used, real, unit))
                 break
 

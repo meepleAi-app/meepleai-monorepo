@@ -37,7 +37,14 @@ jobs:
   rules-gate:
     name: promtool + nomi metrica
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # 20 e non 10, per la stessa ragione documentata su "Infra Scripts (bats + Pester)":
+    # i controlli non sono mai il costo — su questa PR sono 4 passi da pochi secondi — mentre
+    # `actions/checkout` su questo monorepo oscilla ~20x fra un run e l'altro. Il primo run con
+    # budget 10 e' morto proprio li': job `cancelled` allo step Checkout, tutti i controlli
+    # `skipped`, e il gate ha riportato ROSSO senza aver esaminato niente. E' il difetto che
+    # questo gate previene, nella variante opposta — e un rosso che non significa un difetto e'
+    # il modo in cui un controllo smette di essere letto.
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6

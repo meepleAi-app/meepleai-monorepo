@@ -6,9 +6,11 @@
 
 ## Esito in breve
 
-I percorsi critici dell'autenticazione **si comportano come promesso**, casi negativi inclusi.
-L'unico difetto trovato riguarda la completezza dell'audit di sicurezza, non il controllo degli
-accessi.
+I percorsi critici dell'autenticazione **si comportano come promesso**, casi negativi inclusi:
+nessuna difformità sul controllo degli accessi, in nessuno dei casi provati.
+
+I due findings stanno altrove: quattro endpoint del blocco utenti rispondono 500, e l'audit di
+sicurezza registra solo gli accessi.
 
 | Contesto | Coperte | Totale |
 |---|---|---|

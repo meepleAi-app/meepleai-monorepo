@@ -73,14 +73,8 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
 
             // #3817: gli stessi punteggi che finiscono in colonna vanno anche in metrica.
             // Prima di SaveChanges di proposito: un guasto del DB non deve far perdere la
-            // misura, che non dipende dalla persistenza. Solo il percorso QA passa oggi
-            // QualityScores; per gli altri endpoint resta null e non emettiamo nulla —
-            // una serie assente e' informativa, una a zero mentirebbe (#3814).
-            if (command.QualityScores is not null)
-            {
-                var (agentType, operation) = SplitEndpoint(command.Endpoint);
-                _qualityMetrics.RecordQualityScores(command.QualityScores, agentType, operation);
-            }
+            // misura, che non dipende dalla persistenza.
+            RecordQualityMetrics(command);
 
             _db.AiRequestLogs.Add(log);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -95,6 +89,33 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
             // and we must return results to the user, even if we cannot track metrics.
             // Context: Logging failures are typically DB-related (connection loss, disk full)
             _logger.LogError(ex, "Failed to log AI request for endpoint {Endpoint}", command.Endpoint);
+        }
+    }
+
+    /// <summary>
+    /// #3817: emette i punteggi come metrica. Ha un catch proprio perche' i due canali di
+    /// telemetria devono restare indipendenti: dentro il catch esterno, un guasto qui
+    /// impedirebbe anche la scrittura della riga di log, che avviene dopo. Solo il percorso QA
+    /// passa oggi QualityScores; per gli altri endpoint resta null e non emettiamo nulla — una
+    /// serie assente e' informativa, una a zero mentirebbe (#3814).
+    /// </summary>
+    private void RecordQualityMetrics(LogAiRequestCommand command)
+    {
+        if (command.QualityScores is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var (agentType, operation) = SplitEndpoint(command.Endpoint);
+            _qualityMetrics.RecordQualityScores(command.QualityScores, agentType, operation);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(ex, "Failed to record quality metrics for endpoint {Endpoint}", command.Endpoint);
         }
     }
 

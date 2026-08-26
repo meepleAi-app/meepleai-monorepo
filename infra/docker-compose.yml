@@ -502,6 +502,68 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  # #3813 — DatabaseDown e RedisDown interrogavano `pg_up` e `redis_up`, che nessuno esponeva:
+  # i due alert che dovrebbero dirci che il database o la cache sono giu' erano ciechi. Non era un
+  # errore di naming (#3798) ma l'assenza dell'esportatore. Nessun segnale gia' disponibile poteva
+  # sostituirli: non esistono metriche postgres/redis, non c'e' un health check esposto come
+  # metrica, e cAdvisor non popola la label `name` su questo host.
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: meepleai-postgres-exporter
+    restart: unless-stopped
+    profiles: [monitoring, monitoring-essential]
+    env_file: [./secrets/database.secret]
+    # La stringa di connessione si compone a runtime dalle variabili del secret: `env_file` le
+    # rende disponibili dentro il container, non all'interpolazione del compose. Il `$$` sfugge
+    # l'interpolazione, come gia' fa il comando di redis.
+    # DATA_SOURCE_URI/USER/PASS invece di DATA_SOURCE_NAME: la password finirebbe dentro una URL
+    # e andrebbe percent-encodata, con un carattere speciale che rompe la connessione in silenzio.
+    entrypoint:
+      - sh
+      - -c
+      - >
+        export DATA_SOURCE_URI="postgres:5432/$$POSTGRES_DB?sslmode=disable"
+        DATA_SOURCE_USER="$$POSTGRES_USER"
+        DATA_SOURCE_PASS="$$POSTGRES_PASSWORD";
+        exec /bin/postgres_exporter --web.listen-address=:9187
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0-alpine
+    container_name: meepleai-redis-exporter
+    restart: unless-stopped
+    profiles: [monitoring, monitoring-essential]
+    env_file: [./secrets/redis.secret]
+    entrypoint:
+      - sh
+      - -c
+      - exec /redis_exporter --redis.addr=redis://redis:6379 --redis.password="$$REDIS_PASSWORD"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: meepleai-cadvisor

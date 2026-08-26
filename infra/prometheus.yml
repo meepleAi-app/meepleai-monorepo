@@ -156,3 +156,22 @@ scrape_configs:
         labels:
           service: 'node-exporter'
           component: 'host-metrics'
+
+  # #3813 — senza questi due job `pg_up` e `redis_up` non esistono, e DatabaseDown/RedisDown
+  # restano caricati ma ciechi: valutano un'espressione che non trova serie e quindi tacciono,
+  # esattamente come un sistema sano.
+  - job_name: 'postgres-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres-exporter'
+          component: 'database-metrics'
+
+  - job_name: 'redis-exporter'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis-exporter'
+          component: 'cache-metrics'

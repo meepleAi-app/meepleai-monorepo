@@ -85,8 +85,9 @@ Per ogni rotta × ruolo cattura:
 
 Attorno a ogni azione (del crawler o manuale):
 
-- **Log**: marker temporale, poi query a Seq (`meepleai-seq`) filtrando `@Level in [Error, Fatal]`
-  sulla finestra dell'azione; fallback `docker logs meepleai-api --since`.
+- **Log**: marker temporale, poi `docker logs meepleai-api --since <marker>` filtrato sui livelli
+  Error/Fatal. Seq (`meepleai-seq`) è **opzionale**: gira solo sotto il profilo `monitoring` e non
+  espone porte sull'host, quindi si interroga via `docker exec` e solo quando il profilo è attivo.
 - **DB**: snapshot di `pg_stat_user_tables` prima e dopo, per sapere *se e dove* si è scritto.
 
 Il diff per conteggi è volutamente grossolano: dice "questa azione ha toccato `game_sessions` e

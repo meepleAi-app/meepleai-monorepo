@@ -1,0 +1,95 @@
+using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Api.Tests.Integration.Routing;
+
+/// <summary>
+/// Regression guard for duplicate route registrations.
+///
+/// Two endpoints registered on the same (method, template) do not fail at startup:
+/// ASP.NET throws <c>AmbiguousMatchException</c> at REQUEST time, so the endpoint
+/// looks healthy until someone calls it and gets a 500. It happened to
+/// <c>POST /admin/impersonation/end</c>, registered both by the dedicated
+/// impersonation file and by the user-activity file composed into
+/// MapAdminUserEndpoints — leaving admins unable to end an impersonation session.
+///
+/// <see cref="GameNightDiaryRouteUniquenessTests"/> guards one specific route;
+/// this one covers the whole table, so the next duplicate fails in CI instead of
+/// in production.
+/// </summary>
+[Collection("Integration-GroupC")]
+[Trait("Category", TestCategories.Integration)]
+[Trait("BoundedContext", "Administration")]
+public sealed class NoDuplicateRouteTests : IAsyncLifetime
+{
+    private readonly SharedTestcontainersFixture _fixture;
+    private readonly string _testDbName;
+    private WebApplicationFactory<Program> _factory = null!;
+
+    public NoDuplicateRouteTests(SharedTestcontainersFixture fixture)
+    {
+        _fixture = fixture;
+        _testDbName = $"dup_routes_{Guid.NewGuid():N}";
+    }
+
+    public async ValueTask InitializeAsync()
+    {
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        _ = _factory.Services; // force host build so the EndpointDataSource is populated
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _factory.DisposeAsync();
+        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+    }
+
+    /// <summary>
+    /// Known duplicate awaiting a domain decision (#3840).
+    ///
+    /// The two registrations of this route send DIFFERENT commands —
+    /// <c>ConfirmScoreCommand</c> vs <c>ConfirmScoreProposalCommand</c> — so picking
+    /// one is a decision about the live-scoring model, not a mechanical fix. The
+    /// entry is listed here rather than weakening the guard, so new duplicates
+    /// still fail while this one stays visible and tracked.
+    /// </summary>
+    private static readonly HashSet<string> KnownDuplicates = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "POST /api/v1/live-sessions/{sessionId}/scores/confirm",
+    };
+
+    [Fact]
+    public void NoRouteTemplate_IsRegisteredTwiceForTheSameHttpMethod()
+    {
+        var dataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
+
+        var duplicates = dataSource.Endpoints
+            .OfType<RouteEndpoint>()
+            .SelectMany(e =>
+                (e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? new[] { "*" })
+                    .Select(method => new
+                    {
+                        Key = $"{method} {e.RoutePattern.RawText}",
+                        Endpoint = e.DisplayName ?? "(senza nome)"
+                    }))
+            .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+            .Where(g => g.Count() > 1 && !KnownDuplicates.Contains(g.Key))
+            .Select(g => $"{g.Key} → {g.Count()} registrazioni: {string.Join(" | ", g.Select(x => x.Endpoint))}")
+            .OrderBy(s => s, StringComparer.Ordinal)
+            .ToList();
+
+        // The duplicates are listed in the failure reason on purpose: the assertion
+        // message truncates the collection, and a guard that says "there is a
+        // duplicate" without naming it sends the reader back to square one.
+        duplicates.Should().BeEmpty(
+            "a route registered twice for the same method throws AmbiguousMatchException (HTTP 500) " +
+            "on every request, while the endpoint looks correctly registered. Duplicates found: " +
+            string.Join(" ;; ", duplicates));
+    }
+}

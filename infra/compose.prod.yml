@@ -259,6 +259,10 @@ services:
       # mano. Questi due erano nel repo ma in nessuno di essi, quindi non venivano valutati.
       - ./prometheus/alerts/infrastructure.yml:/etc/prometheus/infrastructure.yml:ro
       - ./prometheus/alerts/provider-quota.yml:/etc/prometheus/provider-quota.yml:ro
+      # #3814: gli 8 alert PDF erano scritti ma non montati. Le metriche esistono (16 dichiarate
+      # in Observability/Metrics/MeepleAiMetrics.Pdf.cs); erano i NOMI nelle regole a non essere
+      # quelli esposti, piu' un fallback a zero che avrebbe acceso 5 alert al primo deploy.
+      - ./prometheus/alerts/pdf-processing.yml:/etc/prometheus/pdf-processing.yml:ro
       - prometheus-prod:/prometheus
     deploy:
       resources:

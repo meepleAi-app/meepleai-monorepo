@@ -1,0 +1,129 @@
+name: Prometheus Rules Gate
+
+# #3821 — il repo aveva tre controlli sulle regole Prometheus e NESSUNO li eseguiva:
+# `promtool check rules`, `promtool test rules` e verify-alert-metric-names.sh. Quest'ultimo,
+# scritto per #3798 con venti righe che spiegano il difetto che previene, non compariva in alcun
+# workflow ne' nel Makefile: passava, ma solo quando qualcuno si ricordava di lanciarlo a mano.
+#
+# Perche' e' grave che manchi `check rules`: la configurazione di Prometheus e' all-or-nothing.
+# Un errore in un qualsiasi rule file impedisce l'avvio del container — su staging significa
+# perdita totale di metriche e alerting, non un pannello vuoto.
+
+on:
+  pull_request:
+    branches: [main, main-staging, main-dev]
+    paths:
+      - 'infra/prometheus-rules.yml'
+      - 'infra/prometheus.yml'
+      - 'infra/prometheus.staging.yml'
+      - 'infra/prometheus.prod.yml'
+      - 'infra/prometheus/**'
+      - 'infra/scripts/verify-alert-metric-names.sh'
+      - 'apps/api/src/Api/Observability/**'
+      - '.github/workflows/prometheus-rules-gate.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Stessa immagine del compose: promtool deve essere quello che valida davvero su staging.
+  PROMETHEUS_IMAGE: prom/prometheus:v3.7.0
+
+jobs:
+  rules-gate:
+    name: promtool + nomi metrica
+    runs-on: ubuntu-latest
+    # 20 e non 10, per la stessa ragione documentata su "Infra Scripts (bats + Pester)":
+    # i controlli non sono mai il costo — su questa PR sono 4 passi da pochi secondi — mentre
+    # `actions/checkout` su questo monorepo oscilla ~20x fra un run e l'altro. Il primo run con
+    # budget 10 e' morto proprio li': job `cancelled` allo step Checkout, tutti i controlli
+    # `skipped`, e il gate ha riportato ROSSO senza aver esaminato niente. E' il difetto che
+    # questo gate previene, nella variante opposta — e un rosso che non significa un difetto e'
+    # il modo in cui un controllo smette di essere letto.
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Pull promtool
+        run: docker pull "$PROMETHEUS_IMAGE" >/dev/null
+
+      # --- 1. sintassi e PromQL di TUTTI i rule file --------------------------------------
+      # I file `*.test.yml` sono test promtool, non regole: hanno una struttura diversa e
+      # `check rules` li rifiuterebbe. Vengono esclusi qui ed eseguiti al passo 2.
+      - name: promtool check rules
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find infra/prometheus-rules.yml infra/prometheus/alerts \
+            -name '*.yml' ! -name '*.test.yml' | sort)
+          echo "rule file trovati: ${#files[@]}"
+          printf '  %s\n' "${files[@]}"
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::nessun rule file trovato — il gate non sta esaminando niente"
+            exit 1
+          fi
+          docker run --rm -v "$PWD:/w:ro" -w /w --entrypoint promtool "$PROMETHEUS_IMAGE" \
+            check rules "${files[@]}"
+
+      # --- 2. la logica delle regole, contro i casi che i test dichiarano ------------------
+      - name: promtool test rules
+        run: |
+          set -euo pipefail
+          mapfile -t tests < <(find infra/prometheus -name '*.test.yml' | sort)
+          echo "file di test trovati: ${#tests[@]}"
+          printf '  %s\n' "${tests[@]}"
+          if [ "${#tests[@]}" -eq 0 ]; then
+            echo "::error::nessun file *.test.yml trovato — il gate non sta esaminando niente"
+            exit 1
+          fi
+          # I test referenziano i rule file per path relativo, quindi si eseguono dalla loro
+          # directory. Raccolti con find: un test nuovo entra nel gate senza toccare il workflow.
+          for t in "${tests[@]}"; do
+            dir=$(dirname "$t")
+            echo "--- $t"
+            docker run --rm -v "$PWD:/w:ro" -w "/w/$dir" --entrypoint promtool \
+              "$PROMETHEUS_IMAGE" test rules "$(basename "$t")"
+          done
+
+      # --- 3. i nomi metrica, che promtool non puo' verificare ------------------------------
+      # `input_series` DICHIARA il nome: un test promtool passa anche su una metrica che non
+      # esiste. Questo script confronta invece le regole con le dichiarazioni C#.
+      - name: verify-alert-metric-names
+        run: bash infra/scripts/verify-alert-metric-names.sh
+
+      # --- 4. il gate verifica se stesso ----------------------------------------------------
+      # Senza questo passo, «verde» e «non ha esaminato niente» restano indistinguibili — ed e'
+      # accaduto: durante la scrittura di questo gate un escape perso ha trasformato `\b` in un
+      # carattere di controllo, e lo script ha continuato a rispondere «nessuna regola cieca»
+      # perche' la sua regex non poteva piu' matchare nulla. L'ha scoperto questa prova.
+      - name: self-test — una regola cieca DEVE far fallire il controllo
+        run: |
+          set -uo pipefail
+          cat > infra/prometheus/alerts/_gate-selftest.yml <<'EOF'
+          groups:
+            - name: gate_selftest
+              rules:
+                # `meepleai.bgg.url.attempted_render.total` + unit "attempts" e' esposta come
+                # meepleai_bgg_url_attempted_render_total_attempts_total: il nome qui sotto e'
+                # quello del codice C#, mai esposto, quindi la regola sarebbe cieca.
+                - alert: GateSelfTestBlindRule
+                  expr: rate(meepleai_bgg_url_attempted_render_total[5m]) > 0
+          EOF
+          # GitHub Actions esegue gli step con `bash -e`: un comando che esce != 0 terminerebbe
+          # lo step PRIMA di questa riga. Qui l'exit 1 e' il risultato atteso, quindi va
+          # catturato in un `if`, dove `-e` non interviene.
+          if bash infra/scripts/verify-alert-metric-names.sh >/dev/null 2>&1; then
+            rc=0
+          else
+            rc=$?
+          fi
+          rm -f infra/prometheus/alerts/_gate-selftest.yml
+          if [ "$rc" -eq 0 ]; then
+            echo "::error::il controllo dei nomi NON rileva una regola cieca introdotta di proposito: e' rotto, e il suo verde non vale niente"
+            exit 1
+          fi
+          echo "self-test ok — il controllo fallisce come deve (exit $rc)"

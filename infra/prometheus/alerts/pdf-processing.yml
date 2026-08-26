@@ -12,21 +12,40 @@ groups:
     interval: 15s
     rules:
       # PDF extraction stage success rate (by stage)
+      # #3814: niente `OR on() vector(0)`. Non conta il tipo di aggregazione ma la DIREZIONE del
+      # confronto di chi legge: `UnstructuredStageFailure` usa `< 0.50` e
+      # `HighPdfExtractionFailureRate` usa `(1 - x) > 0.40`, che con x=0 vale 1. Un fallback a
+      # zero le farebbe scattare entrambe per assenza di dati. Stesso criterio applicato a
+      # upload_success_rate qui sotto; processing_duration_p95 e chunks_per_doc_avg lo tengono
+      # perche' le leggono con `>`, dove zero e' la soppressione corretta.
       - record: meepleai:pdf:stage_success_rate:5m
         expr: |
           (
             sum by(stage) (rate(meepleai_pdf_extraction_stage_success_successes_total[5m]))
             /
-            sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts_attempts_total[5m]))
-          ) OR on() vector(0)
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts_total[5m]))
+          )
         labels:
           service: meepleai-api
           category: pdf
 
       # PDF quality score average
+      # #3814: due difetti in una riga sola, entrambi silenziosi.
+      #
+      # 1. `meepleai_pdf_quality_score_score` non e' il nome esposto. L'istrumento e'
+      #    "meepleai.pdf.quality.score" con unit "score": l'exporter non riappende un'unit di cui
+      #    il nome gia' termina, quindi resta `meepleai_pdf_quality_score`.
+      # 2. e' un HISTOGRAM, quindi la serie col nome nudo non esiste comunque - solo _bucket,
+      #    _sum, _count. La media viene da _sum/_count, non da avg().
+      #
+      # Niente `OR on() vector(0)`: due alert leggono questa serie con `<` (0.60 e 0.75), e un
+      # fallback a zero li farebbe scattare per ASSENZA di dati. E' il difetto misurato su
+      # staging il 2026-08-26 nelle regole gemelle di prometheus-rules.yml.
       - record: meepleai:pdf:quality_score_avg:5m
         expr: |
-          avg(meepleai_pdf_quality_score_score) OR on() vector(0)
+          sum(rate(meepleai_pdf_quality_score_sum[5m]))
+          /
+          sum(rate(meepleai_pdf_quality_score_count[5m]))
         labels:
           service: meepleai-api
           category: pdf
@@ -36,7 +55,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(meepleai_pdf_processing_duration_ms_bucket[5m])
+            rate(meepleai_pdf_processing_duration_milliseconds_bucket[5m])
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -46,18 +65,25 @@ groups:
       - record: meepleai:pdf:upload_success_rate:5m
         expr: |
           (
-            sum(rate(meepleai_pdf_upload_attempts_attempts_total{status="success"}[5m]))
+            sum(rate(meepleai_pdf_upload_attempts_total{status="success"}[5m]))
             /
-            sum(rate(meepleai_pdf_upload_attempts_attempts_total[5m]))
-          ) OR on() vector(0)
+            sum(rate(meepleai_pdf_upload_attempts_total[5m]))
+          )
         labels:
           service: meepleai-api
           category: pdf
 
       # Average chunks per document
+      # #3814: histogram, quindi la media viene da _sum/_count. Il fallback a zero RESTA:
+      # `ExcessivePdfChunking` legge questa serie con `> 150`, e per lui zero e' la
+      # soppressione corretta - il contrario del caso quality_score_avg qui sopra.
       - record: meepleai:pdf:chunks_per_doc_avg:5m
         expr: |
-          avg(meepleai_pdf_chunks_count_chunks) OR on() vector(0)
+          (
+            sum(rate(meepleai_pdf_chunks_count_chunks_sum[5m]))
+            /
+            sum(rate(meepleai_pdf_chunks_count_chunks_count[5m]))
+          ) OR on() vector(0)
         labels:
           service: meepleai-api
           category: pdf
@@ -109,7 +135,7 @@ groups:
       - alert: PdfProcessingStalled
         expr: |
           (
-            rate(meepleai_pdf_upload_attempts_attempts_total[30m]) == 0
+            rate(meepleai_pdf_upload_attempts_total[30m]) == 0
             and
             rate(http_server_request_duration_seconds_count[5m]) > 0
           )

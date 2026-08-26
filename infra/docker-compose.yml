@@ -373,6 +373,10 @@ services:
       # ProviderQuota* le recording rules definite nello stesso file.
       - ./prometheus/alerts/infrastructure.yml:/etc/prometheus/infrastructure.yml:ro
       - ./prometheus/alerts/provider-quota.yml:/etc/prometheus/provider-quota.yml:ro
+      # #3814: gli 8 alert PDF erano scritti ma non montati. Le metriche esistono (16 dichiarate
+      # in Observability/Metrics/MeepleAiMetrics.Pdf.cs); erano i NOMI nelle regole a non essere
+      # quelli esposti, piu' un fallback a zero che avrebbe acceso 5 alert al primo deploy.
+      - ./prometheus/alerts/pdf-processing.yml:/etc/prometheus/pdf-processing.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
@@ -565,7 +569,15 @@ services:
           memory: 64M
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    # #3822: da gcr.io/cadvisor v0.49.1 a ghcr.io/google v0.60.5. La v0.49.1 non riconosceva un
+    # solo container su questo host (Docker 29.4.2, cgroup v2): esponeva 43 serie, TUTTE con la
+    # label `name` vuota, cioe' i soli cgroup di systemd. Misurato in parallelo sullo stesso host:
+    #   v0.49.1 (gcr.io) ->  0 container
+    #   v0.52.1 (gcr.io) ->  0 container   <- l'ultima pubblicata su gcr.io, non basta
+    #   v0.60.5 (ghcr.io) -> 16 container  <- meepleai-api, -postgres, -redis, ...
+    # Le release recenti non sono su gcr.io: il progetto pubblica su ghcr.io, e il registry va
+    # cambiato insieme al tag o si resta fermi a una versione che non funziona qui.
+    image: ghcr.io/google/cadvisor:v0.60.5
     container_name: meepleai-cadvisor
     restart: unless-stopped
     # #3039: also in monitoring-essential so per-container metrics reach the

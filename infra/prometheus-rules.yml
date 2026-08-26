@@ -734,9 +734,19 @@ groups:
           dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
 
       # WARNING: Container restart detected
+      #
+      # #3822: il filtro `name!=""` non e' cosmetico. cAdvisor espone `container_start_time_seconds`
+      # per OGNI cgroup, comprese le slice di systemd - e `/user.slice/user-1000.slice` viene
+      # ricreata a ogni login SSH sul VPS. Senza filtro l'alert scattava a ogni connessione: sei
+      # istanze osservate il 2026-08-26, tutte con `activeAt` allineato alle sessioni di chi
+      # indagava, e nessuna riferita a un container.
+      #
+      # Peggio: senza `name` l'annotazione "Container {{ $labels.name }} has restarted" restava
+      # senza nome, e un riavvio VERO di meepleai-api si sarebbe perso in mezzo a quel rumore.
+      # Sordo al segnale e sensibile al rumore insieme.
       - alert: ContainerRestarted
         expr: |
-          increase(container_start_time_seconds[5m]) > 0
+          increase(container_start_time_seconds{name!=""}[5m]) > 0
         for: 1m
         labels:
           severity: warning

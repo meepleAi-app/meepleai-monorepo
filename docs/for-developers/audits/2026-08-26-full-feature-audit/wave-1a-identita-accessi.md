@@ -18,8 +18,9 @@ ineseguibile, quattro endpoint in 500, e l'audit di sicurezza che registra solo 
 | SecurityAudit | 2 | 2 |
 | Administration | 112 (97 verificate + 15 findings) | 272 |
 
-L'ondata **non è chiusa**: del blocco utenti restano le 64 mutazioni, e di Authentication mancano
-2FA, verifica email e profilo. Vedi *Cosa resta*.
+Il blocco utenti è coperto in letture e mutazioni. L'ondata **non è chiusa**: restano le operazioni
+di massa, il resto di Administration (che appartiene a 1B) e, di Authentication, 2FA e verifica
+email. Vedi *Cosa resta*.
 
 ## Verifiche superate
 

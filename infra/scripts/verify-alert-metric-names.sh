@@ -83,6 +83,21 @@ def exposed_name(base, unit, is_counter):
     return name
 
 
+# --- sottocomando diagnostico -------------------------------------------------------------
+# `verify-alert-metric-names.sh --explain <nome.puntato> <unit> [counter|histogram]` stampa il
+# nome che l'exporter produrra'. Serve a due cose: rispondere alla domanda «come si chiamera'
+# questa metrica?» prima di scrivere la regola, e dare ai test un aggancio sulla funzione pura
+# (infra/scripts/tests/verify-alert-metric-names.bats) senza dover allestire un finto repo.
+if len(sys.argv) >= 4 and sys.argv[1] == '--explain':
+    _name, _unit = sys.argv[2], sys.argv[3]
+    _kind = sys.argv[4] if len(sys.argv) > 4 else 'histogram'
+    if _kind not in ('counter', 'histogram'):
+        print(f"tipo non riconosciuto: {_kind} (usa 'counter' o 'histogram')", file=sys.stderr)
+        sys.exit(2)
+    print(exposed_name(_name.replace('.', '_'), _unit, _kind == 'counter'))
+    sys.exit(0)
+
+
 blind = []
 for path in sorted(glob.glob('infra/prometheus/alerts/*.yml')) + ['infra/prometheus-rules.yml']:
     text = io.open(path, encoding='utf-8').read()

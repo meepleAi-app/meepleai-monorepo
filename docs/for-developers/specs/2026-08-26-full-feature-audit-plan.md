@@ -794,7 +794,29 @@ console.log(`Unmapped: ${unmapped} (vanno mappati a mano in context-map.ts)`);
 ```
 
 Run: `cd apps/web && pnpm tsx scripts/audit/main-inventory.ts`
-Expected: il CSV esiste e `Unmapped` è un numero piccolo. **Se `Unmapped` supera il 10% delle righe, aggiungi i prefissi mancanti a `ROUTE_CONTEXTS` e rigenera**: un inventario per un quinto non classificato non permette di lavorare per ondate.
+Expected: il CSV esiste e `Unmapped` è un numero piccolo. **Se `Unmapped` supera il 10% delle righe, aggiungi i prefissi mancanti e rigenera**: un inventario per un quinto non classificato non permette di lavorare per ondate.
+
+**Esito misurato il 2026-08-26**: `rotte: 220 · endpoint: 1381 · righe: 1725` · `Unmapped: 17 (1.0%)`.
+
+La prima passata dava `Unmapped: 419 (24.3%)`: la superficie API non ricalca quella delle pagine (esistono famiglie di endpoint senza alcuna pagina — `agent-memory`, `achievements`, `emails`), quindi serve una `API_CONTEXTS` separata da `ROUTE_CONTEXTS`.
+
+I 17 residui **coincidono** con i path anomali del Task 2: l'inventario indica da sé dove guardare.
+
+Distribuzione risultante:
+
+| Contesto | Righe | | Contesto | Righe |
+|---|---|---|---|---|
+| Administration | 520 | | SystemConfiguration | 24 |
+| SessionTracking | 316 | | GameToolbox | 19 |
+| SharedGameCatalog | 161 | | Unmapped | 17 |
+| KnowledgeBase | 160 | | AgentMemory | 14 |
+| GameManagement | 131 | | DatabaseSync | 11 |
+| UserLibrary | 91 | | Testing | 9 |
+| Authentication | 67 | | KbQuality | 6 |
+| GameToolkit | 55 | | DesignSystem | 4 |
+| DocumentProcessing | 55 | | BusinessSimulations | 4 |
+| PublicPages | 31 | | Gamification | 2 |
+| UserNotifications | 28 | | EntityRelationships · SecurityAudit | **0** |
 
 - [ ] **Step 6: Verifica il determinismo**
 
@@ -1663,6 +1685,16 @@ gh pr create --base main-dev --title "chore(audit): harness per l'audit esaustiv
 ```
 
 ---
+
+## Da decidere prima dell'ondata 1
+
+Due cose che l'inventario ha reso visibili e che vanno risolte con l'autore dell'audit, non da soli:
+
+1. **L'ondata 1 è sbilanciata.** Authentication (67) + SystemConfiguration (24) + Administration (520) + SecurityAudit (0) = **611 righe**, il 35% del tracker, contro le 438 dell'ondata 2 e le 52 dell'ondata 5. Administration da sola pesa 520 perché raccoglie tutta l'area admin non attribuibile ad altro. Delle due l'una: si spezza Administration in più ondate (per esempio: utenti e ruoli · monitoraggio e analytics · resto), oppure l'ondata 1 si mette in conto che duri più sessioni.
+
+2. **Due contesti hanno zero righe.** `EntityRelationships` e `SecurityAudit` sono dichiarati fra i 20 bounded context del CLAUDE.md ma non espongono né pagine né endpoint che il parser riconosca. O i loro endpoint vivono dentro file attribuiti ad altri contesti, o non hanno superficie raggiungibile. Va accertato in ondata 5: nel secondo caso è un finding, non una casella vuota.
+
+3. **Sospetto aperto dal Task 2 — prefisso `/api/v1` raddoppiato.** `ReportingEndpoints`, `AlertConfigurationEndpoints`, `LlmAnalyticsEndpoints` e `PermissionRoutes` sono registrati su `v1Api` (già `/api/v1`) ma dichiarano al proprio interno `app.MapGroup("/api/v1/admin/...")`: ASP.NET annida i prefissi, quindi il path effettivo sarebbe `/api/v1/api/v1/admin/...`. Il frontend li chiama al path singolo (`lib/api/alert-config.api.ts:20`, `lib/api/clients/admin/adminMonitorClient.ts:135`) e nessun test backend li copre. **Da verificare con lo stack acceso all'inizio dell'ondata 1**: se confermato è P0 (funzioni admin irraggiungibili), se smentito va cancellato da qui.
 
 ## Dopo l'ondata 0
 

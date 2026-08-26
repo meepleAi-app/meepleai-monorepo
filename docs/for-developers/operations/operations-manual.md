@@ -1785,18 +1785,19 @@ solo dal target che avvia il profilo.
 
 #### Alert Rule Categories
 
-| Category | Examples |
-|----------|---------|
-| api-performance | Latency P95 > 1s, throughput drops |
-| cache-performance | Redis hit rate < 70% |
-| database-health | Connections > 80%, replication lag |
-| infrastructure | CPU > 80%, Memory > 85%, Disk < 20% |
-| http-retry | Retry rate exceeding threshold |
-| pdf-processing | Processing failures, queue backlog |
-| prompt-management | Template errors, token overflows |
-| quality-metrics | RAG quality below threshold |
-| vector-search | Qdrant latency, collection errors |
-| e2e-tests | Test suite failures |
+Un file in `infra/prometheus/alerts/` e' attivo solo se e' **anche** montato nel compose **e**
+elencato in `rule_files` di `infra/prometheus.yml`. La colonna «attivo» dice se lo e' davvero.
+
+| Category | Examples | attivo |
+|----------|---------|--------|
+| infrastructure | Disk < 20% su `/` | si (#3798) |
+| provider-quota | Quota provider < 20% / < 5% | si (#3798) |
+| api-performance, quality-metrics | error rate, p95, RAG quality | si, ma da `prometheus-rules.yml` |
+| cache-performance, database-health | Redis / Postgres down | regole presenti, ma `redis_up`/`pg_up` non esistono: gli exporter non sono deployati |
+| pdf-processing | Processing failures, queue backlog | no — le metriche `meepleai_pdf_*` non sono esposte |
+| prompt-management | Template errors, token overflows | no — le metriche `meepleai_prompt_*` non sono esposte |
+| e2e-tests | Test suite failures | no — le metriche `playwright_test*` non sono esposte |
+| http-retry, domain-event-outbox | retry, outbox | non sono regole Prometheus: sono file **Grafana** (`apiVersion: 1`, `uid`, `title`) |
 
 #### Key Alert Thresholds
 

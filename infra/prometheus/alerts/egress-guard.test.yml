@@ -17,7 +17,7 @@ tests:
   # 1) FIRES: a manual-sink private_ip block occurred.
   - interval: 1m
     input_series:
-      - series: 'meepleai_egress_blocked_total_blocks{sink="manual",reason="private_ip"}'
+      - series: 'meepleai_egress_blocked_blocks_total{sink="manual",reason="private_ip"}'
         values: '0 0 1 1 1 1'
     alert_rule_test:
       - eval_time: 5m
@@ -28,13 +28,13 @@ tests:
               subsystem: egress-ssrf
             exp_annotations:
               summary: "Manual-cover SSRF attempt blocked (sink=manual, private_ip)"
-              description: "meepleai_egress_blocked_total_blocks incremented for sink=manual with reason private_ip: an admin-supplied manual-cover URL resolved to an internal/reserved address. SLO for this metric is ZERO; any nonzero rate is a P1 SSRF incident (#3495)."
+              description: "meepleai_egress_blocked_blocks_total incremented for sink=manual with reason private_ip: an admin-supplied manual-cover URL resolved to an internal/reserved address. SLO for this metric is ZERO; any nonzero rate is a P1 SSRF incident (#3495)."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md"
 
   # 2) DOES NOT FIRE on cold-start: only an unrelated sink series exists; `or vector(0)` keeps it silent.
   - interval: 1m
     input_series:
-      - series: 'meepleai_egress_blocked_total_blocks{sink="bgg_cover",reason="size_cap"}'
+      - series: 'meepleai_egress_blocked_blocks_total{sink="bgg_cover",reason="size_cap"}'
         values: '0 0 0 0 0 0'
     alert_rule_test:
       - eval_time: 5m
@@ -44,7 +44,7 @@ tests:
   # 3) DOES NOT FIRE for a non-sensitive reason on the manual sink (size_cap is neither rule's reason).
   - interval: 1m
     input_series:
-      - series: 'meepleai_egress_blocked_total_blocks{sink="manual",reason="size_cap"}'
+      - series: 'meepleai_egress_blocked_blocks_total{sink="manual",reason="size_cap"}'
         values: '1 1 1 1 1 1'
     alert_rule_test:
       - eval_time: 5m
@@ -57,7 +57,7 @@ tests:
   # 4) denylist_hit FIRES EgressDenylistHit at warning — and NOT the critical SSRF alert (#3583).
   - interval: 1m
     input_series:
-      - series: 'meepleai_egress_blocked_total_blocks{sink="manual",reason="denylist_hit"}'
+      - series: 'meepleai_egress_blocked_blocks_total{sink="manual",reason="denylist_hit"}'
         values: '0 0 1 1 1 1'
     alert_rule_test:
       - eval_time: 5m
@@ -68,7 +68,7 @@ tests:
               subsystem: egress-policy
             exp_annotations:
               summary: "Manual-cover URL rejected by the ADR-059 BGG deny-list (sink=manual)"
-              description: "meepleai_egress_blocked_total_blocks incremented for sink=manual with reason denylist_hit: someone submitted a BGG/geekdo asset URL to the manual-cover field, which ADR-059 §5 bans. A one-off is an admin mistake; a sustained rate is an attempt to launder around the ban and warrants review of who is submitting it. The legitimate route for a BGG cover is the admin server-to-server re-upload path, never the arbitrary-URL field."
+              description: "meepleai_egress_blocked_blocks_total incremented for sink=manual with reason denylist_hit: someone submitted a BGG/geekdo asset URL to the manual-cover field, which ADR-059 §5 bans. A one-off is an admin mistake; a sustained rate is an attempt to launder around the ban and warrants review of who is submitting it. The legitimate route for a BGG cover is the admin server-to-server re-upload path, never the arbitrary-URL field."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md"
       - eval_time: 5m
         alertname: EgressBlockedManualSensitive
@@ -77,7 +77,7 @@ tests:
   # 5) private_ip does NOT cross-trigger the policy alert (its own firing is covered by case 1).
   - interval: 1m
     input_series:
-      - series: 'meepleai_egress_blocked_total_blocks{sink="manual",reason="private_ip"}'
+      - series: 'meepleai_egress_blocked_blocks_total{sink="manual",reason="private_ip"}'
         values: '0 0 1 1 1 1'
     alert_rule_test:
       - eval_time: 5m

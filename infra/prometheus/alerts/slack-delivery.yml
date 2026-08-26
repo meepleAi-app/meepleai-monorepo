@@ -7,12 +7,12 @@
 # Il commento precedente diceva «NO unit suffix», dichiarandolo «verified against #3082's
 # meepleai_bgg_url_attempted_render_total». Quella verifica non era mai avvenuta: la metrica
 # citata non era mai stata esposta, e si chiama in realta'
-# meepleai_bgg_url_attempted_render_total_attempts_total. Le quattro regole di questo file
+# meepleai_bgg_url_attempted_render_attempts_total. Le quattro regole di questo file
 # erano CIECHE. Nomi reali:
-#   - meepleai_slack_messages_sent_total_messages     (Counter, labels: channel_type, notification_type)
-#   - meepleai_slack_messages_failed_total_messages   (Counter, labels: channel_type, notification_type, error_type)
-#   - meepleai_slack_rate_limited_total_events      (Counter, label: team_id)
-#   - meepleai_slack_token_revocations_total_events (Counter)
+#   - meepleai_slack_messages_sent_messages_total     (Counter, labels: channel_type, notification_type)
+#   - meepleai_slack_messages_failed_messages_total   (Counter, labels: channel_type, notification_type, error_type)
+#   - meepleai_slack_rate_limited_events_total      (Counter, label: team_id)
+#   - meepleai_slack_token_revocations_events_total (Counter)
 # Emitted end-to-end (RecordSlackMessage*/RecordSlackRateLimited/RecordSlackTokenRevocation)
 # but previously had NO alert rule — a delivery outage or token revocation was invisible.
 #
@@ -29,32 +29,32 @@ groups:
         # sub-term with `or vector(0)` so the denominator survives (else <empty>+<x> = empty
         # vector and the alert silently never fires at 100% failure). The guard must wrap the
         # sent term, NOT the outer ratio (the `> 0.2` comparison would filter a wrapped 0).
-        expr: (sum(rate(meepleai_slack_messages_failed_total_messages[5m])) / ((sum(rate(meepleai_slack_messages_sent_total_messages[5m])) or vector(0)) + sum(rate(meepleai_slack_messages_failed_total_messages[5m])))) > 0.2
+        expr: (sum(rate(meepleai_slack_messages_failed_messages_total[5m])) / ((sum(rate(meepleai_slack_messages_sent_messages_total[5m])) or vector(0)) + sum(rate(meepleai_slack_messages_failed_messages_total[5m])))) > 0.2
         for: 10m
         labels:
           severity: warning
           subsystem: slack-delivery
         annotations:
           summary: "Slack delivery failure rate above 20% (5m window, sustained 10m)"
-          description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_total_messages vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
+          description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_messages_total vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
       - alert: SlackTokenRevoked
-        expr: increase(meepleai_slack_token_revocations_total_events[1h]) > 0
+        expr: increase(meepleai_slack_token_revocations_events_total[1h]) > 0
         for: 0m
         labels:
           severity: warning
           subsystem: slack-delivery
         annotations:
           summary: "Slack OAuth token revoked in the last 1h"
-          description: "meepleai_slack_token_revocations_total_events incremented: a Slack workspace token was deactivated (invalid_auth/token_revoked/account_inactive). The affected users stop receiving Slack notifications until they reconnect the workspace. Confirm whether this is an expected disconnect."
+          description: "meepleai_slack_token_revocations_events_total incremented: a Slack workspace token was deactivated (invalid_auth/token_revoked/account_inactive). The affected users stop receiving Slack notifications until they reconnect the workspace. Confirm whether this is an expected disconnect."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
       - alert: SlackRateLimitedSustained
-        expr: sum(rate(meepleai_slack_rate_limited_total_events[5m])) > 0
+        expr: sum(rate(meepleai_slack_rate_limited_events_total[5m])) > 0
         for: 15m
         labels:
           severity: warning
           subsystem: slack-delivery
         annotations:
           summary: "Slack API rate-limiting sustained for 15m"
-          description: "meepleai_slack_rate_limited_total_events has been incrementing for 15m: Slack is returning 429s and delaying notification delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning."
+          description: "meepleai_slack_rate_limited_events_total has been incrementing for 15m: Slack is returning 429s and delaying notification delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning."
           runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"

@@ -4,7 +4,7 @@
 #   - meepleai_wikidata_sse_subscribers (ObservableGauge)
 #     Live SSE subscriber count for the wikidata-dead-letters admin page,
 #     resolved via the broadcaster SubscriberCount property.
-#   - meepleai_wikidata_sse_admin_clients_connected (ObservableGauge)
+#   - meepleai_wikidata_sse_admin_clients_connected_clients (ObservableGauge)
 #     Distinct admin sessions that have hit the heartbeat endpoint in the
 #     last 90s. Acts as the "admin is actually watching" sentinel for
 #     starvation alerts (DEC-C).
@@ -27,7 +27,7 @@ groups:
         expr: |
           meepleai_wikidata_sse_subscribers == 0
           and
-          meepleai_wikidata_sse_admin_clients_connected > 0
+          meepleai_wikidata_sse_admin_clients_connected_clients > 0
         for: 15m
         labels:
           severity: warning

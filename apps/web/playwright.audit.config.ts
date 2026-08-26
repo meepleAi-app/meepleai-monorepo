@@ -36,7 +36,7 @@ export default defineConfig({
     {
       name: 'audit',
       dependencies: ['setup'],
-      testMatch: /(crawl|wave\d+\w*)[-.]?\w*\.spec\.ts/,
+      testMatch: /(crawl|wave)[-\w.]*\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
   ],

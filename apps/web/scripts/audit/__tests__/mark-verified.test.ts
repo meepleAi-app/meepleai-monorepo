@@ -55,3 +55,15 @@ describe('applyManualChecks', () => {
     expect(csv.split('\n')[1].split(',')).toHaveLength(10);
   });
 });
+
+describe('esito saltato', () => {
+  it('riceve uno stato proprio, non uno vuoto', () => {
+    // Una riga non eseguita per scelta non è né verificata né scoperta: con lo
+    // stato vuoto sparirebbe dal conteggio di copertura senza che nessuno se ne
+    // accorga.
+    const { csv } = applyManualChecks(CSV, [
+      check({ esito: 'saltato', evidenza: 'operazione irreversibile' }),
+    ]);
+    expect(csv.split('\n')[1]).toContain('🚫 non eseguito');
+  });
+});

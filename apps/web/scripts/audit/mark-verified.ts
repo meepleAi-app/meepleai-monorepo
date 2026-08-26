@@ -19,11 +19,20 @@ export type ManualCheck = {
   metodo: string;
   path: string;
   livello: 'L1' | 'L2' | 'L3';
-  esito: 'atteso' | 'difforme';
+  esito: 'atteso' | 'difforme' | 'saltato';
   evidenza: string;
 };
 
-const STATO = { atteso: '✅ verificato', difforme: '⚠️ finding da aprire' } as const;
+/**
+ * `saltato` ha uno stato proprio: una riga non eseguita per scelta non è né
+ * verificata né semplicemente scoperta. Senza questa distinzione finirebbe con
+ * lo stato vuoto e diventerebbe invisibile nel conteggio di copertura.
+ */
+const STATO = {
+  atteso: '✅ verificato',
+  difforme: '⚠️ finding da aprire',
+  saltato: '🚫 non eseguito (irreversibile)',
+} as const;
 
 /** Chiave di confronto: metodo + path, indipendente dall'id hash del tracker. */
 const key = (metodo: string, p: string): string => `${metodo.toUpperCase()} ${p}`;

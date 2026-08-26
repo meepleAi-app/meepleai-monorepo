@@ -1,0 +1,86 @@
+# promtool test — #3813: DatabaseDown e RedisDown devono scattare quando il segnale dice
+# "giu'", e restare spenti quando dice "su".
+#
+# Il difetto che questi test NON possono cogliere, e va detto: `input_series` dichiara i nomi
+# delle metriche, quindi un test promtool passa anche se `pg_up` non esiste in produzione — che
+# era esattamente il caso prima di #3813 (nessun esportatore deployato, 0 serie, alert ciechi).
+# La prova che le metriche esistano davvero e' lo scrape reale, verificato su staging.
+#
+# Qui si verifica l'altra meta': che la LOGICA dei due alert sia corretta, cosi' che se qualcuno
+# la cambia — invertendo un confronto, o allargando il `for` — se ne accorga.
+
+rule_files:
+  - ../../prometheus-rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ── Postgres irraggiungibile: pg_up passa a 0 mentre l'API e' viva.
+  - interval: 1m
+    name: "con pg_up a 0 DatabaseDown scatta"
+    input_series:
+      - series: 'up{job="meepleai-api"}'
+        values: '1+0x20'
+      - series: 'pg_up'
+        values: '0+0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: DatabaseDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: meepleai-api
+              category: dependency
+            exp_annotations:
+              summary: "PostgreSQL database is unreachable"
+              description: |
+                The API cannot connect to PostgreSQL database.
+                All API operations are likely failing.
+                Check database health and network connectivity.
+              runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
+
+  # ── Controprova: database sano, nessun alert. Senza questo, il test sopra passerebbe
+  #    anche se l'espressione fosse sempre vera.
+  - interval: 1m
+    name: "con pg_up a 1 DatabaseDown resta spento"
+    input_series:
+      - series: 'up{job="meepleai-api"}'
+        values: '1+0x20'
+      - series: 'pg_up'
+        values: '1+0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: DatabaseDown
+        exp_alerts: []
+
+  # ── Redis irraggiungibile.
+  - interval: 1m
+    name: "con redis_up a 0 RedisDown scatta"
+    input_series:
+      - series: 'redis_up'
+        values: '0+0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: RedisDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: meepleai-api
+              category: dependency
+            exp_annotations:
+              summary: "Redis cache is unreachable"
+              description: |
+                The API cannot connect to Redis.
+                Caching, session management, and rate limiting are affected.
+                Check Redis container health.
+              runbook_url: "https://docs.meepleai.dev/runbooks/dependency-down"
+
+  - interval: 1m
+    name: "con redis_up a 1 RedisDown resta spento"
+    input_series:
+      - series: 'redis_up'
+        values: '1+0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: RedisDown
+        exp_alerts: []

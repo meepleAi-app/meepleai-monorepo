@@ -3,6 +3,7 @@ using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 
 namespace Api.BoundedContexts.Administration.Application.Commands;
@@ -14,14 +15,17 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
     private readonly MeepleAiDbContext _db;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<LogAiRequestCommandHandler> _logger;
+    private readonly QualityMetrics _qualityMetrics;
 
     public LogAiRequestCommandHandler(
         MeepleAiDbContext db,
         ILogger<LogAiRequestCommandHandler> logger,
+        QualityMetrics qualityMetrics,
         TimeProvider? timeProvider = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _qualityMetrics = qualityMetrics ?? throw new ArgumentNullException(nameof(qualityMetrics));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
@@ -67,6 +71,17 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
                     : null,
             };
 
+            // #3817: gli stessi punteggi che finiscono in colonna vanno anche in metrica.
+            // Prima di SaveChanges di proposito: un guasto del DB non deve far perdere la
+            // misura, che non dipende dalla persistenza. Solo il percorso QA passa oggi
+            // QualityScores; per gli altri endpoint resta null e non emettiamo nulla —
+            // una serie assente e' informativa, una a zero mentirebbe (#3814).
+            if (command.QualityScores is not null)
+            {
+                var (agentType, operation) = SplitEndpoint(command.Endpoint);
+                _qualityMetrics.RecordQualityScores(command.QualityScores, agentType, operation);
+            }
+
             _db.AiRequestLogs.Add(log);
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
@@ -81,5 +96,19 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
             // Context: Logging failures are typically DB-related (connection loss, disk full)
             _logger.LogError(ex, "Failed to log AI request for endpoint {Endpoint}", command.Endpoint);
         }
+    }
+
+    /// <summary>
+    /// #3817: l'Endpoint del log ("qa", "qa-stream", "setup-stream", "explain") mescola due cose
+    /// che la metrica tiene distinte — quale agente ha risposto e con quale modalita'. Il suffisso
+    /// "-stream" e' l'unica forma composta in uso, quindi lo separiamo e il resto e' l'agente.
+    /// </summary>
+    private static (string AgentType, string Operation) SplitEndpoint(string endpoint)
+    {
+        const string StreamSuffix = "-stream";
+
+        return endpoint.EndsWith(StreamSuffix, StringComparison.Ordinal)
+            ? (endpoint[..^StreamSuffix.Length], "stream")
+            : (endpoint, "answer");
     }
 }

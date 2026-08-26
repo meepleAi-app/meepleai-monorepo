@@ -481,6 +481,16 @@ groups:
     rules:
       # Average overall confidence score (5-minute window)
       #
+      # #3817: la media si calcola da _sum/_count, non con `avg()`. `meepleai.quality.score`
+      # e' un HISTOGRAM: l'exporter espone `meepleai_quality_score_bucket`, `_sum` e `_count`,
+      # mai una serie col nome nudo. `avg(meepleai_quality_score{...})` non restituiva quindi
+      # nulla in nessuna circostanza - cieca come le regole di #3798, e per lo stesso motivo
+      # invisibile: una query che non trova serie non fallisce, tace.
+      # Il nome esposto e' `meepleai_quality_score` senza suffisso di unit: l'istrumento si
+      # chiama "meepleai.quality.score" e l'unit e' "score", e l'exporter non riappende
+      # un'unit di cui il nome gia' termina. Non e' dedotto: lo pinna
+      # QualityMetricsPrometheusNamingTests con uno scrape vero di /metrics.
+      #
       # #3814: niente `OR on() vector(0)` su questa serie ne' sulle due sotto
       # (rag_confidence, llm_confidence). Il fallback a zero e' corretto su un rate
       # (nessun evento = 0 al secondo) ma non su una media di confidenza, che un alert
@@ -491,16 +501,27 @@ groups:
       # non scatta.
       - record: meepleai:quality:overall_confidence:5m
         expr: |
-          avg(meepleai_quality_score{dimension="overall_confidence"})
+          sum(rate(meepleai_quality_score_sum{dimension="overall_confidence"}[5m]))
+          /
+          sum(rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]))
         labels:
           service: meepleai-api
           category: quality
 
       # Low-quality response rate (percentage)
+      #
+      # #3817: il counter si chiama `meepleai.quality.low_quality_responses.total` in C# ma e'
+      # esposto come `meepleai_quality_low_quality_responses_total_responses_total`: il nome non
+      # termina con l'unit ("responses"), quindi l'exporter la appende, e poi aggiunge `_total`
+      # perche' il nome risultante non ne ha piu' uno in coda. Il `_total` dichiarato resta in
+      # mezzo. Anche questo e' pinnato da QualityMetricsPrometheusNamingTests.
+      #
+      # Qui il fallback a zero RESTA: `HighLowQualityRate` e `ElevatedLowQualityRate` leggono
+      # questa serie con `>`, e per loro zero e' la soppressione corretta (#3814).
       - record: meepleai:quality:low_quality_rate:5m
         expr: |
           (
-            rate(meepleai_quality_low_quality_responses_total[5m])
+            rate(meepleai_quality_low_quality_responses_total_responses_total[5m])
             /
             rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m])
           ) * 100 OR on() vector(0)
@@ -512,7 +533,9 @@ groups:
       # #3814: niente fallback a zero, stessa ragione di overall_confidence sopra.
       - record: meepleai:quality:rag_confidence:5m
         expr: |
-          avg(meepleai_quality_score{dimension="rag_confidence"})
+          sum(rate(meepleai_quality_score_sum{dimension="rag_confidence"}[5m]))
+          /
+          sum(rate(meepleai_quality_score_count{dimension="rag_confidence"}[5m]))
         labels:
           service: meepleai-api
           category: quality
@@ -521,7 +544,9 @@ groups:
       # #3814: niente fallback a zero, stessa ragione di overall_confidence sopra.
       - record: meepleai:quality:llm_confidence:5m
         expr: |
-          avg(meepleai_quality_score{dimension="llm_confidence"})
+          sum(rate(meepleai_quality_score_sum{dimension="llm_confidence"}[5m]))
+          /
+          sum(rate(meepleai_quality_score_count{dimension="llm_confidence"}[5m]))
         labels:
           service: meepleai-api
           category: quality
@@ -603,21 +628,26 @@ groups:
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
       # CRITICAL: Zero quality metrics for 15 minutes (service health check)
-      # #3814: qui c'era QualityMetricsUnavailable (critical, for 15m). Rimosso, per due
-      # ragioni che si sommavano.
+      # #3814: qui c'era QualityMetricsUnavailable (critical, for 15m). Rimosso.
       #
-      # 1. Interrogava `meepleai_quality_score`, che non e' il nome esposto: la metrica e'
-      #    dichiarata `meepleai.quality.score` con unit `score`, quindi l'exporter OTel la
-      #    chiamerebbe `meepleai_quality_score_score`. Con `absent()` un nome errato e'
-      #    SEMPRE vero, quindi l'alert scattava - e avrebbe continuato a scattare anche a
-      #    strumentazione perfettamente funzionante.
-      # 2. La strumentazione non e' collegata: `QualityMetrics` e' registrata in DI
-      #    (ApplicationServiceExtensions.cs) ma `RecordQualityScores` e' invocato SOLO dai
-      #    test. Nessun percorso di produzione emette quelle metriche.
+      # RETTIFICA #3817 - la ragione scritta qui in #3814 era sbagliata. Diceva che il nome
+      # esposto sarebbe stato `meepleai_quality_score_score` (unit `score` appesa al nome).
+      # Non e' cosi': l'exporter NON riappende un'unit di cui il nome gia' termina, quindi il
+      # nome e' `meepleai_quality_score` - esattamente quello che l'alert interrogava. Il fatto
+      # e' ora pinnato da uno scrape vero in QualityMetricsPrometheusNamingTests.
       #
-      # Correggere il nome avrebbe lasciato l'alert acceso lo stesso, dicendo il vero per la
-      # ragione giusta ma senza che nessuno potesse agire. Il fatto da risolvere - collegare
-      # QualityMetrics al percorso di risposta, o rimuoverla - e' tracciato in #3814.
+      # L'alert era comunque sempre acceso, ma per un altro motivo: `meepleai.quality.score` e'
+      # un histogram, e di un histogram non esiste la serie col nome nudo - solo `_bucket`,
+      # `_sum`, `_count`. `absent(meepleai_quality_score{...})` era quindi vero per costruzione,
+      # a strumentazione funzionante o meno. La forma corretta interroga `_count`.
+      #
+      # Non lo ripristiniamo qui nemmeno ora che #3817 ha collegato la strumentazione, e la
+      # ragione e' una scelta, non una dimenticanza: `absent(...)` e' vero anche quando
+      # semplicemente non arrivano richieste QA, che su staging e' la norma. Un alert di
+      # disponibilita' utile deve condizionarsi al traffico QA atteso (non al traffico HTTP
+      # complessivo, che c'e' anche senza una sola domanda posta), e quel segnale oggi non
+      # esiste. Finche' non c'e', l'alert produrrebbe solo il rumore che #3814 ha spento.
+      # Tracciato in #3817.
 
   - name: meepleai_quality_warning_alerts
     interval: 1m

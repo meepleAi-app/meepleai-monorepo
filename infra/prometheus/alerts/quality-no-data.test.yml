@@ -6,9 +6,15 @@
 # perche' la qualita' fosse bassa, ma perche' non c'era alcun dato.
 #
 # Nota sul limite dei test promtool (#3798): `input_series` dichiara i nomi delle metriche,
-# quindi un test non puo' accorgersi che un nome non esista in produzione. Questo test evita
-# quella trappola perche' verifica il caso in cui le serie sono ASSENTI — cioe' non dipende
-# dal nome, ma dal comportamento della regola quando non le trova.
+# quindi un test non puo' accorgersi che un nome non esista in produzione. I casi "senza dati"
+# qui sotto evitano quella trappola perche' verificano il comportamento della regola quando NON
+# trova le serie — non dipendono dal nome.
+#
+# La controprova in fondo invece un nome lo dichiara, ed e' il punto debole per costruzione.
+# Per questo i nomi che usa (`meepleai_quality_score_sum` / `_count`) sono pinnati altrove da
+# uno scrape vero dell'exporter: apps/api/tests/Api.Tests/Observability/
+# QualityMetricsPrometheusNamingTests.cs. Se un aggiornamento di OpenTelemetry cambiasse la
+# composizione del nome, a fallire e' quel test C#, non questo.
 
 rule_files:
   - ../../prometheus-rules.yml
@@ -51,11 +57,17 @@ tests:
 
   # ── Controprova: con dati sotto soglia l'alert DEVE scattare, o il test sopra
   #    passerebbe anche se qualcuno cancellasse la regola.
+  #
+  #    #3817: la media viene da _sum/_count, non da una serie col nome nudo (che per un
+  #    histogram non esiste). Ogni minuto arriva una misurazione da 0.4: il conteggio sale
+  #    di 1 e la somma di 0.4, quindi rate(_sum)/rate(_count) = 0.4 — sotto la soglia 0.60.
   - interval: 1m
     name: "con confidenza reale sotto soglia LowOverallConfidence scatta"
     input_series:
-      - series: 'meepleai_quality_score{dimension="overall_confidence"}'
-        values: '0.4+0x180'
+      - series: 'meepleai_quality_score_sum{dimension="overall_confidence"}'
+        values: '0+0.4x180'
+      - series: 'meepleai_quality_score_count{dimension="overall_confidence"}'
+        values: '0+1x180'
     alert_rule_test:
       - eval_time: 2h
         alertname: LowOverallConfidence

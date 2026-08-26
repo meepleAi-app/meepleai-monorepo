@@ -1,0 +1,75 @@
+# promtool test — #3814: senza dati, gli alert che leggono una soglia con `<` NON devono scattare.
+#
+# Il difetto che questo test previene: le recording rules di confidenza avevano
+# `OR on() vector(0)`, quindi in assenza di metriche valevano 0 — e zero e' minore di
+# qualunque soglia. Quattro alert (tre critical) sono rimasti in pending su staging non
+# perche' la qualita' fosse bassa, ma perche' non c'era alcun dato.
+#
+# Nota sul limite dei test promtool (#3798): `input_series` dichiara i nomi delle metriche,
+# quindi un test non puo' accorgersi che un nome non esista in produzione. Questo test evita
+# quella trappola perche' verifica il caso in cui le serie sono ASSENTI — cioe' non dipende
+# dal nome, ma dal comportamento della regola quando non le trova.
+
+rule_files:
+  - ../../prometheus-rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ── Nessuna metrica di qualita' emessa: nessun alert di confidenza deve scattare.
+  - interval: 1m
+    name: "senza meepleai_quality_score gli alert di confidenza restano spenti"
+    input_series:
+      # serie irrilevante, serve solo perche' il test abbia un asse temporale
+      - series: 'up{job="meepleai-api"}'
+        values: '1+0x180'
+    alert_rule_test:
+      # `for` piu' lungo fra questi alert e' 1h: valuto a 2h per essere oltre ogni soglia.
+      - eval_time: 2h
+        alertname: LowOverallConfidence
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: LowRagConfidence
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: LowLlmConfidence
+        exp_alerts: []
+      - eval_time: 2h
+        alertname: DegradedOverallConfidence
+        exp_alerts: []
+
+  # ── Nessun traffico su shared-game-detail: il cache-hit ratio non e' "0% di hit".
+  - interval: 1m
+    name: "senza traffico SharedGameDetailCacheHitLow resta spento"
+    input_series:
+      - series: 'up{job="meepleai-api"}'
+        values: '1+0x180'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: SharedGameDetailCacheHitLow
+        exp_alerts: []
+
+  # ── Controprova: con dati sotto soglia l'alert DEVE scattare, o il test sopra
+  #    passerebbe anche se qualcuno cancellasse la regola.
+  - interval: 1m
+    name: "con confidenza reale sotto soglia LowOverallConfidence scatta"
+    input_series:
+      - series: 'meepleai_quality_score{dimension="overall_confidence"}'
+        values: '0.4+0x180'
+    alert_rule_test:
+      - eval_time: 2h
+        alertname: LowOverallConfidence
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              service: meepleai-api
+              category: quality
+            exp_annotations:
+              summary: "AI response quality is critically low"
+              description: |
+                Average overall confidence is 40% (threshold: 60%).
+                AI responses have been consistently low quality for 1 hour.
+                This indicates systematic issues with RAG, LLM, or citation quality.
+                Check pgvector (PostgreSQL) connection, embedding service, and LLM API health.
+              dashboard_url: "http://localhost:3001/d/quality-metrics"
+              runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"

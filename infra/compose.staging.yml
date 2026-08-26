@@ -369,6 +369,11 @@ services:
       - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
       # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.staging.yml rule_files).
       - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
+      # Issue #3798 — la lista dei mount e' ripetuta in docker-compose.yml, compose.staging.yml
+      # e compose.prod.yml, e la rule_files in altri tre file: sei posti da tenere allineati a
+      # mano. Questi due erano nel repo ma in nessuno di essi, quindi non venivano valutati.
+      - ./prometheus/alerts/infrastructure.yml:/etc/prometheus/infrastructure.yml:ro
+      - ./prometheus/alerts/provider-quota.yml:/etc/prometheus/provider-quota.yml:ro
       - prometheus-staging:/prometheus
 
   alertmanager:

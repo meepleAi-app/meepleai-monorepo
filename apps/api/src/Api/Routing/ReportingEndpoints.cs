@@ -16,7 +16,7 @@ internal static class ReportingEndpoints
 {
     public static IEndpointRouteBuilder MapReportingEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/reports")
+        var group = app.MapGroup("/admin/reports")
             .RequireAuthorization()
             .RequireAuthorization(policy => policy.RequireRole("SuperAdmin", "Admin")) // ISSUE-916: Admin-only access
             .WithTags("Admin - Reporting");

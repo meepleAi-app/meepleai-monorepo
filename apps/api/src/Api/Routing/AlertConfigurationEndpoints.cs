@@ -13,7 +13,7 @@ internal static class AlertConfigurationEndpoints
 {
     public static void MapAlertConfigurationEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/admin/alert-configuration")
+        var group = app.MapGroup("/admin/alert-configuration")
             .WithTags("Admin", "AlertConfiguration")
             .RequireAuthorization();
 

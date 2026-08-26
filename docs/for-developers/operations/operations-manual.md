@@ -1793,11 +1793,11 @@ elencato in `rule_files` di `infra/prometheus.yml`. La colonna «attivo» dice s
 | infrastructure | Disk < 20% su `/` | si (#3798) |
 | provider-quota | Quota provider < 20% / < 5% | si (#3798) |
 | api-performance, quality-metrics | error rate, p95, RAG quality | si, ma da `prometheus-rules.yml` |
-| cache-performance, database-health | Redis / Postgres down | regole presenti, ma `redis_up`/`pg_up` non esistono: gli exporter non sono deployati |
-| pdf-processing | Processing failures, queue backlog | no — le metriche `meepleai_pdf_*` non sono esposte |
-| prompt-management | Template errors, token overflows | no — le metriche `meepleai_prompt_*` non sono esposte |
-| e2e-tests | Test suite failures | no — le metriche `playwright_test*` non sono esposte |
-| http-retry, domain-event-outbox | retry, outbox | non sono regole Prometheus: sono file **Grafana** (`apiVersion: 1`, `uid`, `title`) |
+| cache-performance, database-health | Redis / Postgres down | si (#3813) — `postgres-exporter` e `redis-exporter` deployati, `pg_up`/`redis_up` esistono |
+| pdf-processing | Estrazione per stage, qualita', durata, upload | si (#3814) — le metriche `meepleai_pdf_*` **sono** dichiarate: erano i nomi nelle regole a non essere quelli esposti |
+| ~~prompt-management~~ | — | **rimosso** (#3814): la feature esiste ma nessuna metrica `meepleai_prompt_*` e' dichiarata, e nessuno agirebbe su quegli alert |
+| ~~e2e-tests~~ | — | **rimosso** (#3814): presupponeva un Pushgateway e un push da CI mai realizzati. Con esso `prometheus/prometheus.e2e.yml`, config orfana che non era usata da alcun compose |
+| http-retry, domain-event-outbox | retry, outbox | non sono regole Prometheus: sono file **Grafana**, spostati in `infra/monitoring/grafana/alerting/` (#3821) |
 
 #### Key Alert Thresholds
 

@@ -106,8 +106,14 @@ jobs:
                 - alert: GateSelfTestBlindRule
                   expr: rate(meepleai_bgg_url_attempted_render_total[5m]) > 0
           EOF
-          bash infra/scripts/verify-alert-metric-names.sh >/dev/null 2>&1
-          rc=$?
+          # GitHub Actions esegue gli step con `bash -e`: un comando che esce != 0 terminerebbe
+          # lo step PRIMA di questa riga. Qui l'exit 1 e' il risultato atteso, quindi va
+          # catturato in un `if`, dove `-e` non interviene.
+          if bash infra/scripts/verify-alert-metric-names.sh >/dev/null 2>&1; then
+            rc=0
+          else
+            rc=$?
+          fi
           rm -f infra/prometheus/alerts/_gate-selftest.yml
           if [ "$rc" -eq 0 ]; then
             echo "::error::il controllo dei nomi NON rileva una regola cieca introdotta di proposito: e' rotto, e il suo verde non vale niente"

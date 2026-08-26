@@ -1,0 +1,72 @@
+# promtool test — #3822: ContainerRestarted deve distinguere un container da un cgroup.
+#
+# Il difetto che questo test previene e' doppio, e le due meta' sono opposte:
+#   - FALSI POSITIVI: cAdvisor espone `container_start_time_seconds` per ogni cgroup, comprese le
+#     slice di systemd. `/user.slice/user-1000.slice` viene ricreata a OGNI LOGIN SSH, quindi
+#     senza il filtro `name!=""` l'alert scattava ogni volta che qualcuno si collegava al VPS.
+#   - FALSI NEGATIVI: la stessa mancanza di `name` rendeva l'annotazione
+#     "Container {{ $labels.name }} has restarted" priva di nome, e un riavvio vero si perdeva
+#     fra le righe di rumore.
+#
+# Il filtro copre entrambe le meta', ma vale solo se cAdvisor popola `name` — cosa che la
+# v0.49.1 su questo host non faceva affatto (0 container riconosciuti su 43 serie). Quella meta'
+# non e' verificabile qui: la copre la verifica sul campo con `count by (name)`.
+
+rule_files:
+  - ../../prometheus-rules.yml
+
+evaluation_interval: 1m
+
+tests:
+  # ── Un cgroup di systemd non e' un container ──────────────────────────────────────────────
+  - interval: 1m
+    name: "un cgroup senza name NON fa scattare l'alert"
+    input_series:
+      # forma reale osservata su staging: la user slice ricreata da un login SSH, che fa saltare
+      # container_start_time_seconds a un valore nuovo
+      - series: 'container_start_time_seconds{id="/user.slice/user-1000.slice",name=""}'
+        values: '1000+0x5 2000+0x60'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ContainerRestarted
+        exp_alerts: []
+
+  # ── Un container vero invece deve farlo scattare ──────────────────────────────────────────
+  - interval: 1m
+    name: "un container con name fa scattare l'alert e l'annotazione lo nomina"
+    input_series:
+      - series: 'container_start_time_seconds{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '1000+0x5 2000+0x60'
+    alert_rule_test:
+      # Il riavvio e' a t=6m, e la finestra di `increase(...[5m])` e' SEMIAPERTA: appena il
+      # campione pre-salto ne esce, l'espressione torna a 0. Misurato: 1250 a t=7m, gia' 0 a
+      # t=10m. Con `for: 1m` la finestra utile e' [7m, 10m) — valuto a 9m, non a 10m come
+      # avevo scritto la prima volta, dove il test falliva pur essendo corretta la regola.
+      - eval_time: 9m
+        alertname: ContainerRestarted
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: infrastructure
+              category: container
+              id: "/system.slice/docker-abc.scope"
+              name: "meepleai-api"
+            exp_annotations:
+              summary: "Container meepleai-api has restarted"
+              description: |
+                Container meepleai-api has been restarted.
+                Check container logs for crash reasons or OOM kills.
+              runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+
+  # ── Controprova: nessun riavvio, nessun alert ─────────────────────────────────────────────
+  #
+  # Senza questo caso il test sopra passerebbe anche se l'espressione fosse sempre vera.
+  - interval: 1m
+    name: "un container che non riparte non fa scattare nulla"
+    input_series:
+      - series: 'container_start_time_seconds{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '1000+0x60'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ContainerRestarted
+        exp_alerts: []

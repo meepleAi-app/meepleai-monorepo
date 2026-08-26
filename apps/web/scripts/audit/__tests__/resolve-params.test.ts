@@ -10,7 +10,38 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { PARAM_QUERIES, resolveParams } from '../resolve-params';
+import { PARAM_QUERIES, resolveParams, resolveRouteUrl } from '../resolve-params';
+
+describe('resolveRouteUrl', () => {
+  const params = { gameId: 'G1', userId: 'U1', sessionId: 'S1' };
+
+  it('lascia intatte le rotte statiche', () => {
+    expect(resolveRouteUrl('/library', params)).toBe('/library');
+  });
+
+  it('sostituisce un parametro con nome esplicito', () => {
+    expect(resolveRouteUrl('/library/[gameId]/kb', params)).toBe('/library/G1/kb');
+  });
+
+  it('risolve [id] in base al prefisso della rotta, non a un valore unico', () => {
+    // [id] compare in 40 rotte con significati diversi: un valore solo
+    // produrrebbe 404 su tutte le rotte di tipo diverso.
+    expect(resolveRouteUrl('/admin/users/[id]', params)).toBe('/admin/users/U1');
+    expect(resolveRouteUrl('/games/[id]', params)).toBe('/games/G1');
+  });
+
+  it('restituisce null quando il parametro non è risolvibile', () => {
+    expect(resolveRouteUrl('/chat/[threadId]', params)).toBeNull();
+  });
+
+  it('restituisce null per un [id] di cui non conosce il tipo', () => {
+    expect(resolveRouteUrl('/qualcosa/[id]', params)).toBeNull();
+  });
+
+  it('risolve i catch-all come i parametri semplici', () => {
+    expect(resolveRouteUrl('/games/[...id]', params)).toBe('/games/G1');
+  });
+});
 
 describe('resolveParams', () => {
   it('restituisce un valore per ogni parametro noto', () => {

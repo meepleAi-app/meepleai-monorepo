@@ -320,3 +320,8 @@ C*UsersUtenteAppDataLocalTemp*-diff.txt
 
 # Mockup<->live compare tool output (#2999) - screenshots, mai committare
 apps/web/mockup-compare-output/
+
+# Audit esaustivo (2026-08-26): sessioni reali e risultati locali
+apps/web/e2e/audit/.auth/
+apps/web/audit-results/
+apps/web/e2e/audit/route-params.json

@@ -124,15 +124,15 @@ che il piano prevedeva, e va tenuto presente prima di aprire issue su questa cat
 Oltre al P0 già confermato, la passata ne ha prodotti altri, tutti **verificati con richieste
 dirette** e riproducibili senza dipendere dagli id iniettati.
 
-| # | Endpoint / rotta | Esito | Causa accertata | Severità |
-|---|---|---|---|---|
-| 1 | `/api/v1/resources/database/tables/top` | 500 | `Npgsql 42703: column "tablename" does not exist` — `GetTopTablesBySizeQueryHandler.cs:32-34` interroga `pg_stat_user_tables` usando `tablename`, colonna che appartiene a `pg_tables`; lì si chiama `relname` | P1 |
-| 2 | `/api/v1/admin/mechanic-extractor/thresholds` | 500 | `CertificationThresholdsConfig singleton row (Id=1) is missing` — riga di seed assente. Stesso schema dei seed persi negli squash di migration già visti su questo repo | P1 |
-| 3 | `/toolkit/stats` → `/game-sessions/session-statistics` | 404 | Il client chiama **senza il prefisso `/api/v1`**: con il prefisso l'endpoint risponde 200 | P1 |
-| 4 | `/api/v1/admin/openrouter/usage/requests` | 404 | Il frontend chiama un endpoint che non esiste | P2 |
-| 5 | `/api/v1/badges/my-badges` | 404 | Idem | P2 |
-| 6 | `/games/[id]/card` | marker `not-found` | Pagina che si presenta come "non trovato" con HTTP 200, per entrambi i ruoli | P2 |
-| 7 | `/onboarding` | a11y | `DialogContent` senza `DialogTitle`: contenuto inaccessibile agli screen reader | P2 |
+| # | Endpoint / rotta | Esito | Causa accertata | Severità | Issue |
+|---|---|---|---|---|---|
+| 1 | `/api/v1/resources/database/tables/top` | 500 | `Npgsql 42703: column "tablename" does not exist` — `GetTopTablesBySizeQueryHandler.cs:32-34` interroga `pg_stat_user_tables` usando `tablename`, colonna che appartiene a `pg_tables`; lì si chiama `relname` | P1 | [#3833](https://github.com/meepleAi-app/meepleai-monorepo/issues/3833) |
+| 2 | `/api/v1/admin/mechanic-extractor/thresholds` | 500 | `CertificationThresholdsConfig singleton row (Id=1) is missing` — riga di seed assente. Stesso schema dei seed persi negli squash di migration già visti su questo repo | P1 | [#3834](https://github.com/meepleAi-app/meepleai-monorepo/issues/3834) |
+| 3 | `/toolkit/stats` → `/game-sessions/session-statistics` | 404 | Il client chiama **senza il prefisso `/api/v1`**: con il prefisso l'endpoint risponde 200 | P1 | [#3835](https://github.com/meepleAi-app/meepleai-monorepo/issues/3835) |
+| 4 | `/api/v1/admin/openrouter/usage/requests` | 404 | Il frontend chiama un endpoint che non esiste | P2 | [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) |
+| 5 | `/api/v1/badges/my-badges` | 404 | Idem | P2 | [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) |
+| 6 | `/games/[id]/card` | marker `not-found` | Pagina che si presenta come "non trovato" con HTTP 200, per entrambi i ruoli | P2 | [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) |
+| 7 | `/onboarding` | a11y | `DialogContent` senza `DialogTitle`: contenuto inaccessibile agli screen reader | P2 | [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) |
 
 **Non è un finding**: `/api/v1/admin/catalog/seeds` risponde 503 con
 `"Catalog seed pipeline disabled"` — è un flag disattivato, cioè comportamento previsto. Elencato
@@ -165,7 +165,7 @@ Da accertare in ondata 1: se il proxy distingue 401 da 403 e dove va intercettat
 
 ### 🚨 P0 CONFERMATO — prefisso `/api/v1` raddoppiato: 4 famiglie di endpoint irraggiungibili
 
-**Stato**: confermato sullo stack locale il 2026-08-26, autenticato come superadmin.
+**Stato**: confermato, corretto e in revisione — issue [#3831](https://github.com/meepleAi-app/meepleai-monorepo/issues/3831), PR [#3832](https://github.com/meepleAi-app/meepleai-monorepo/pull/3832).
 
 | Path chiamato dal frontend | Esito | Path realmente montato | Esito |
 |---|---|---|---|

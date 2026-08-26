@@ -480,13 +480,16 @@ groups:
     interval: 15s
     rules:
       # Average overall confidence score (5-minute window)
+      #
+      # #3814: niente `OR on() vector(0)` su questa serie ne' sulle due sotto
+      # (rag_confidence, llm_confidence). Il fallback a zero e' corretto su un rate
+      # (nessun evento = 0 al secondo) ma non su una media di confidenza, che un alert
+      # legge con `<`: senza dati la regola varrebbe 0, e zero e' minore di qualunque
+      # soglia, quindi l'alert scatterebbe per ASSENZA di dati travestita da valore
+      # pessimo. Misurato il 2026-08-26: 5 alert in pending, 4 critical, nessuno per una
+      # condizione reale. Senza fallback la serie e' assente, e un alert su serie assente
+      # non scatta.
       - record: meepleai:quality:overall_confidence:5m
-      # #3814: niente `OR on() vector(0)` qui. Il fallback a zero e' corretto su un rate
-      # (nessun evento = 0 al secondo) ma non su questa serie, che un alert legge con `<`:
-      # senza dati la regola varrebbe 0, e zero e' minore di qualunque soglia, quindi
-      # l'alert scatterebbe per ASSENZA di dati travestita da valore pessimo. Misurato il
-      # 2026-08-26: 5 alert in pending, 4 critical, nessuno per una condizione reale.
-      # Senza fallback la serie e' assente e un alert su serie assente non scatta.
         expr: |
           avg(meepleai_quality_score{dimension="overall_confidence"})
         labels:
@@ -506,13 +509,8 @@ groups:
           category: quality
 
       # RAG confidence average
+      # #3814: niente fallback a zero, stessa ragione di overall_confidence sopra.
       - record: meepleai:quality:rag_confidence:5m
-      # #3814: niente `OR on() vector(0)` qui. Il fallback a zero e' corretto su un rate
-      # (nessun evento = 0 al secondo) ma non su questa serie, che un alert legge con `<`:
-      # senza dati la regola varrebbe 0, e zero e' minore di qualunque soglia, quindi
-      # l'alert scatterebbe per ASSENZA di dati travestita da valore pessimo. Misurato il
-      # 2026-08-26: 5 alert in pending, 4 critical, nessuno per una condizione reale.
-      # Senza fallback la serie e' assente e un alert su serie assente non scatta.
         expr: |
           avg(meepleai_quality_score{dimension="rag_confidence"})
         labels:
@@ -520,13 +518,8 @@ groups:
           category: quality
 
       # LLM confidence average
+      # #3814: niente fallback a zero, stessa ragione di overall_confidence sopra.
       - record: meepleai:quality:llm_confidence:5m
-      # #3814: niente `OR on() vector(0)` qui. Il fallback a zero e' corretto su un rate
-      # (nessun evento = 0 al secondo) ma non su questa serie, che un alert legge con `<`:
-      # senza dati la regola varrebbe 0, e zero e' minore di qualunque soglia, quindi
-      # l'alert scatterebbe per ASSENZA di dati travestita da valore pessimo. Misurato il
-      # 2026-08-26: 5 alert in pending, 4 critical, nessuno per una condizione reale.
-      # Senza fallback la serie e' assente e un alert su serie assente non scatta.
         expr: |
           avg(meepleai_quality_score{dimension="llm_confidence"})
         labels:

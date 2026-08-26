@@ -1,4 +1,4 @@
-# promtool test — #3822: ContainerRestarted deve distinguere un container da un cgroup.
+# promtool test — #3822: gli alert container_* devono distinguere un container da un cgroup.
 #
 # Il difetto che questo test previene e' doppio, e le due meta' sono opposte:
 #   - FALSI POSITIVI: cAdvisor espone `container_start_time_seconds` per ogni cgroup, comprese le
@@ -70,3 +70,87 @@ tests:
       - eval_time: 10m
         alertname: ContainerRestarted
         exp_alerts: []
+
+  # ── #3822 follow-up: ContainerHighCPU non deve scattare sull'host ─────────────────────────
+  #
+  # Osservato su staging appena cAdvisor ha ripreso a esporre metriche: tre istanze firing su
+  # `/`, `/system.slice` e `/system.slice/docker.service`. "CPU > 80% di un core" su un cgroup
+  # che aggrega l'intero host non e' la stessa affermazione che sul singolo container.
+  - interval: 1m
+    name: "ContainerHighCPU ignora i cgroup di sistema"
+    input_series:
+      - series: 'container_cpu_usage_seconds_total{id="/system.slice",name=""}'
+        values: '0+60x20'   # 1 core pieno: sarebbe ben sopra 0.8
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ContainerHighCPU
+        exp_alerts: []
+
+  - interval: 1m
+    name: "ContainerHighCPU scatta su un container vero"
+    input_series:
+      - series: 'container_cpu_usage_seconds_total{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ContainerHighCPU
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: infrastructure
+              category: container
+              id: "/system.slice/docker-abc.scope"
+              name: "meepleai-api"
+            exp_annotations:
+              summary: "Container meepleai-api CPU usage > 80%"
+              description: |
+                Container meepleai-api CPU usage is 100%.
+                High CPU usage may affect performance.
+                Check for CPU-intensive operations or consider resource optimization.
+              runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+              dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"
+
+  # ── #3822 follow-up: ContainerHighMemory guarda il working set, non la cache ──────────────
+  #
+  # `container_memory_usage_bytes` include la page cache, che il kernel rilascia sotto pressione
+  # e che quindi non avvicina un OOM kill. Qui il container ha 950 MB di usage su 1 GB di limite
+  # (95%), ma solo 500 MB di working set (50%): con la metrica sbagliata l'alert scatterebbe.
+  - interval: 1m
+    name: "ContainerHighMemory non scatta se l'occupazione e' page cache"
+    input_series:
+      - series: 'container_memory_usage_bytes{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '950000000+0x20'
+      - series: 'container_memory_working_set_bytes{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '500000000+0x20'
+      - series: 'container_spec_memory_limit_bytes{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '1000000000+0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ContainerHighMemory
+        exp_alerts: []
+
+  - interval: 1m
+    name: "ContainerHighMemory scatta quando e' il working set a essere alto"
+    input_series:
+      - series: 'container_memory_working_set_bytes{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '950000000+0x20'
+      - series: 'container_spec_memory_limit_bytes{id="/system.slice/docker-abc.scope",name="meepleai-api"}'
+        values: '1000000000+0x20'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: ContainerHighMemory
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              service: infrastructure
+              category: container
+              id: "/system.slice/docker-abc.scope"
+              name: "meepleai-api"
+            exp_annotations:
+              summary: "Container meepleai-api memory usage > 90%"
+              description: |
+                Container meepleai-api is using 95% of its memory limit.
+                Current usage may lead to OOM kills.
+                Check container logs and consider increasing memory limits.
+              runbook_url: "https://docs.meepleai.dev/runbooks/infrastructure-monitoring"
+              dashboard_url: "http://localhost:3001/d/infrastructure-monitoring"

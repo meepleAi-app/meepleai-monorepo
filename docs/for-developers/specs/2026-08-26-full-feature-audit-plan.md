@@ -217,9 +217,14 @@ git commit -m "chore(audit): estrattore delle rotte frontend"
 
 **Interfaces:**
 - Consumes: `EndpointEntry` da `./types`
-- Produces: `parseRoutingFile(source: string, file: string, groupPrefix: string): EndpointEntry[]` · `parseProgramPrefixes(source: string): Map<string, string>` · `extractApiEndpoints(apiDir: string): EndpointEntry[]`
+- Produces: `statementFrom(source: string, index: number): string` · `methodBody(source: string, name: string): string` · `authFromChain(chain: string): EndpointEntry['auth'] | null` · `parseGroupPrefixes(source: string): Map<string, GroupInfo>` · `parseRoutingFile(source: string, file: string, groupPrefix: string): EndpointEntry[]` · `parseProgramPrefixes(source: string): Map<string, string>` · `extractApiEndpoints(apiDir: string): EndpointEntry[]`
 
-**Contesto necessario:** i path negli endpoint sono relativi al gruppo. `Program.cs:792` definisce `var v1Api = app.MapGroup("/api/v1")`, poi registra i gruppi in due forme: `v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();` (con prefisso esplicito) e `v1Api.MapGameEndpoints();` (senza). Alcuni file dichiarano il proprio prefisso internamente: `var group = app.MapGroup("/admin/agent-definitions")`.
+**Contesto misurato sul codice reale** (2026-08-26 — conta, perché un parser ingenuo qui produce path plausibili e sbagliati):
+
+- `Program.cs:792` definisce `var v1Api = app.MapGroup("/api/v1")`. Le registrazioni sono 187, quasi tutte nella forma `v1Api.MapGameEndpoints();` (nessun prefisso extra); una minoranza usa `v1Api.MapGroup("/admin/catalog/seeds").MapAdminCatalogSeedEndpoints();`.
+- **95 file sotto `Routing/` dichiarano un `MapGroup` interno, e alcuni più d'uno** (es. `AdminAgentAnalyticsEndpoints.cs` ha `var agentsGroup = group.MapGroup("/admin/agents")`). Applicare il primo gruppo a tutti gli endpoint del file è sbagliato: il prefisso va risolto **per variabile ricevente**.
+- L'autorizzazione è spesso dichiarata **sul gruppo**, non sull'endpoint. Forme presenti: `RequireAuthorization()` ×129, `"AdminOrEditorPolicy"` ×47, `"AdminOnlyPolicy"` ×33, `"RequireSuperAdmin"` ×15, `"RequireAdminOrAbove"` ×11, `policy => policy.RequireRole("SuperAdmin", "Admin")` ×6, `"AdminPolicy"` ×4, `"EditorOnlyPolicy"` ×2, `"RequireEditorOrAbove"` ×2. Un endpoint senza modificatore proprio **eredita** quello del suo gruppo.
+- Il test `/admin/i` sulla policy classifica correttamente tutte le forme admin sopra (incluso `RequireSuperAdmin`) e lascia fuori quelle solo-editor.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -227,7 +232,11 @@ git commit -m "chore(audit): estrattore delle rotte frontend"
 // apps/web/scripts/audit/__tests__/extract-api-endpoints.test.ts
 import { describe, expect, it } from 'vitest';
 
-import { parseProgramPrefixes, parseRoutingFile } from '../extract-api-endpoints';
+import {
+  parseGroupPrefixes,
+  parseProgramPrefixes,
+  parseRoutingFile,
+} from '../extract-api-endpoints';
 
 describe('parseProgramPrefixes', () => {
   it('associa il metodo di registrazione al prefisso dichiarato', () => {
@@ -242,6 +251,26 @@ describe('parseProgramPrefixes', () => {
   });
 });
 
+describe('parseGroupPrefixes', () => {
+  it('risolve i prefissi annidati per variabile', () => {
+    const source = `
+      var group = app.MapGroup("/admin");
+      var agentsGroup = group.MapGroup("/agents");
+    `;
+    const groups = parseGroupPrefixes(source);
+    expect(groups.get('group')?.prefix).toBe('/admin');
+    expect(groups.get('agentsGroup')?.prefix).toBe('/admin/agents');
+  });
+
+  it('propaga l\'autorizzazione del gruppo padre al figlio', () => {
+    const source = `
+      var group = app.MapGroup("/admin").RequireAuthorization("AdminOnlyPolicy");
+      var sub = group.MapGroup("/agents");
+    `;
+    expect(parseGroupPrefixes(source).get('sub')?.auth).toBe('admin');
+  });
+});
+
 describe('parseRoutingFile', () => {
   it('estrae metodo, path completo e stato di autorizzazione', () => {
     const source = `
@@ -250,7 +279,7 @@ describe('parseRoutingFile', () => {
         .WithTags("Games");
 
         group.MapPost("/games", HandleCreateGame)
-        .RequireAuthorization("AdminOnly")
+        .RequireAuthorization("AdminOnlyPolicy")
         .WithTags("Games");
     `;
     const found = parseRoutingFile(source, 'Routing/GameEndpoints.cs', '/api/v1');
@@ -277,14 +306,43 @@ describe('parseRoutingFile', () => {
   it('applica il prefisso dichiarato dentro il file', () => {
     const source = `
       var group = app.MapGroup("/admin/agent-definitions");
-      group.MapGet("/", H).RequireAuthorization("AdminOnly");
+      group.MapGet("/", H).RequireAuthorization("AdminOnlyPolicy");
     `;
     expect(parseRoutingFile(source, 'f.cs', '/api/v1')[0].path).toBe(
       '/api/v1/admin/agent-definitions/'
     );
   });
 
-  it('marca unknown quando non c\'è alcun modificatore di autorizzazione', () => {
+  it('usa il prefisso del gruppo ricevente, non del primo dichiarato nel file', () => {
+    // 95 file dichiarano un MapGroup e alcuni ne dichiarano due: applicare il
+    // primo a tutti gli endpoint produce path plausibili ma sbagliati.
+    const source = `
+      var group = app.MapGroup("/admin");
+      var agentsGroup = group.MapGroup("/agents");
+      group.MapGet("/health", H);
+      agentsGroup.MapGet("/metrics", H);
+    `;
+    const paths = parseRoutingFile(source, 'f.cs', '/api/v1').map(e => e.path);
+    expect(paths).toEqual(['/api/v1/admin/health', '/api/v1/admin/agents/metrics']);
+  });
+
+  it('eredita l\'autorizzazione dal gruppo quando l\'endpoint non la dichiara', () => {
+    const source = `
+      var group = app.MapGroup("/admin").RequireAuthorization("AdminOnlyPolicy");
+      group.MapGet("/users", H);
+    `;
+    expect(parseRoutingFile(source, 'f.cs', '/api/v1')[0].auth).toBe('admin');
+  });
+
+  it('lascia prevalere AllowAnonymous sull\'autorizzazione del gruppo', () => {
+    const source = `
+      var group = app.MapGroup("/x").RequireAuthorization("AdminOnlyPolicy");
+      group.MapGet("/public", H).AllowAnonymous();
+    `;
+    expect(parseRoutingFile(source, 'f.cs', '')[0].auth).toBe('anonymous');
+  });
+
+  it('marca unknown quando non c\'è alcun modificatore, né sull\'endpoint né sul gruppo', () => {
     expect(parseRoutingFile(`group.MapGet("/ping", H);`, 'f.cs', '')[0].auth).toBe('unknown');
   });
 });
@@ -304,11 +362,37 @@ import path from 'node:path';
 
 import type { EndpointEntry } from './types';
 
-const MAP_CALL = /\.Map(Get|Post|Put|Delete|Patch)\(\s*"([^"]*)"/g;
-const INNER_GROUP = /MapGroup\(\s*"([^"]+)"\s*\)/;
+const MAP_CALL = /(\w+)\.Map(Get|Post|Put|Delete|Patch)\(\s*"([^"]*)"/g;
+const GROUP_DECL = /var\s+(\w+)\s*=\s*(\w+)\.MapGroup\(\s*"([^"]+)"\s*\)/g;
 const PROGRAM_GROUP = /(\w+)\.MapGroup\(\s*"([^"]+)"\s*\)\s*\.\s*(Map\w+)\(/g;
 const PROGRAM_DIRECT = /(\w+)\.(Map\w+Endpoints|Map\w+Routes)\(\s*\)/g;
 const ADMIN_POLICY = /admin/i;
+
+export type GroupInfo = { prefix: string; auth: EndpointEntry['auth'] | null };
+
+/** Deduce l'autorizzazione da una catena di modificatori. null = nessun modificatore. */
+export function authFromChain(chain: string): EndpointEntry['auth'] | null {
+  if (chain.includes('.AllowAnonymous()')) return 'anonymous';
+  const policy = chain.match(/RequireAuthorization\(([^;]*?)\)\s*(?:\.|;)/)?.[1] ?? null;
+  if (policy === null && !chain.includes('.RequireAuthorization(')) return null;
+  return ADMIN_POLICY.test(policy ?? '') ? 'admin' : 'authenticated';
+}
+
+/** Mappa variabile di gruppo → prefisso risolto e autorizzazione ereditata. */
+export function parseGroupPrefixes(source: string): Map<string, GroupInfo> {
+  const groups = new Map<string, GroupInfo>();
+  for (const m of source.matchAll(GROUP_DECL)) {
+    const [, name, receiver, groupPath] = m;
+    const index = m.index ?? 0;
+    const decl = source.slice(index, source.indexOf(';', index) + 1);
+    const parent = groups.get(receiver);
+    groups.set(name, {
+      prefix: `${parent?.prefix ?? ''}${groupPath}`,
+      auth: authFromChain(decl) ?? parent?.auth ?? null,
+    });
+  }
+  return groups;
+}
 
 /** Costruisce la mappa metodoDiRegistrazione → prefisso completo leggendo Program.cs. */
 export function parseProgramPrefixes(source: string): Map<string, string> {
@@ -328,32 +412,29 @@ export function parseProgramPrefixes(source: string): Map<string, string> {
   return prefixes;
 }
 
-/** Estrae gli endpoint da un file di routing, applicando prefisso di gruppo esterno e interno. */
+/** Estrae gli endpoint di un file, risolvendo il prefisso per variabile ricevente. */
 export function parseRoutingFile(
   source: string,
   file: string,
   groupPrefix: string
 ): EndpointEntry[] {
-  const innerPrefix = source.match(INNER_GROUP)?.[1] ?? '';
+  const groups = parseGroupPrefixes(source);
   const found: EndpointEntry[] = [];
 
   for (const m of source.matchAll(MAP_CALL)) {
-    const [, verb, routePath] = m;
+    const [, receiver, verb, routePath] = m;
     const index = m.index ?? 0;
     // La catena di modificatori termina al primo ';' dopo la chiamata Map.
     const chain = source.slice(index, source.indexOf(';', index) + 1);
+    const group = groups.get(receiver);
 
     found.push({
       method: verb.toUpperCase(),
-      path: `${groupPrefix}${innerPrefix}${routePath}`.replace(/\/{2,}/g, '/'),
-      auth: chain.includes('.AllowAnonymous()')
-        ? 'anonymous'
-        : chain.includes('.RequireAuthorization(')
-          ? ADMIN_POLICY.test(chain.match(/RequireAuthorization\(([^)]*)\)/)?.[1] ?? '')
-            ? 'admin'
-            : 'authenticated'
-          : 'unknown',
-      tags: [...chain.matchAll(/\.WithTags\(\s*"([^"]+)"/g)].map((t) => t[1]),
+      path: `${groupPrefix}${group?.prefix ?? ''}${routePath}`.replace(/\/{2,}/g, '/'),
+      // L'endpoint vince sul gruppo; se tace, eredita; se nessuno dei due parla,
+      // il livello di protezione va letto a mano e finisce nelle note del tracker.
+      auth: authFromChain(chain) ?? group?.auth ?? 'unknown',
+      tags: [...chain.matchAll(/\.WithTags\(\s*"([^"]+)"/g)].map(t => t[1]),
       file,
       line: source.slice(0, index).split('\n').length,
     });
@@ -395,9 +476,23 @@ Expected: PASS — 5 test
 
 Run:
 ```bash
-cd apps/web && pnpm tsx -e "import('./scripts/audit/extract-api-endpoints').then(m => { const e = m.extractApiEndpoints('../api/src/Api'); console.log('endpoint:', e.length); console.log('auth unknown:', e.filter(x=>x.auth==='unknown').length); })"
+cd apps/web && pnpm tsx -e "import('./scripts/audit/extract-api-endpoints').then(mod => { const m = mod.default ?? mod; const e = m.extractApiEndpoints('../api/src/Api'); console.log('endpoint:', e.length); console.log('auth:', JSON.stringify(e.reduce((a,x)=>{a[x.auth]=(a[x.auth]||0)+1;return a;},{}))); });"
 ```
-Expected: circa 1400 endpoint. **Il numero di `auth: unknown` va annotato nel report**: sono endpoint il cui livello di protezione il parser non ha saputo dedurre e che in ondata 1 vanno letti a mano. Non è un difetto del parser da nascondere — è una lista di lavoro.
+
+**Esito misurato il 2026-08-26**: `endpoint: 1381` · `authenticated 628 · admin 620 · anonymous 39 · unknown 94`.
+
+I 94 `unknown` sono la lista di lavoro dell'ondata 1: endpoint il cui livello di protezione il parser non deduce e che vanno letti a mano. Non è un difetto da nascondere.
+
+Arrivarci ha richiesto quattro correzioni, tutte scoperte confrontando il parser col codice vero — e ognuna, presa da sola, avrebbe lasciato un audit che sembrava completo:
+
+| Correzione | unknown residui |
+|---|---|
+| Parser iniziale (solo policy ASP.NET) | 1117 su 1381 (81%) |
+| + filtri custom `.RequireAdminSession()` e affini (890 usi) | 739 |
+| + `statementFrom`: la catena non si ferma al primo `;`, che negli handler inline cade **dentro** il lambda | 427 |
+| + `AddEndpointFilter<XFilter>` sul gruppo e auth imperativa negli handler separati (`methodBody`) | **94** |
+
+La lezione, valida per le ondate: quando un'euristica classifica l'80% dei casi come "non so", il difetto è nell'euristica, non nel codice esaminato.
 
 - [ ] **Step 6: Commit**
 

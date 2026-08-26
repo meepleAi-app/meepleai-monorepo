@@ -16,6 +16,7 @@ import {
   parseGroupPrefixes,
   parseProgramPrefixes,
   parseRoutingFile,
+  registrarName,
 } from '../extract-api-endpoints';
 
 describe('parseProgramPrefixes', () => {
@@ -28,6 +29,30 @@ describe('parseProgramPrefixes', () => {
     const prefixes = parseProgramPrefixes(source);
     expect(prefixes.get('MapAdminCatalogSeedEndpoints')).toBe('/api/v1/admin/catalog/seeds');
     expect(prefixes.get('MapGameEndpoints')).toBe('/api/v1');
+  });
+});
+
+describe('registrarName', () => {
+  it('riconosce il metodo di registrazione dichiarato public', () => {
+    const source = 'public static RouteGroupBuilder MapGameEndpoints(this RouteGroupBuilder g) {}';
+    expect(registrarName(source)).toBe('MapGameEndpoints');
+  });
+
+  it('riconosce il metodo di registrazione dichiarato internal', () => {
+    // AdminBulkImportEndpoints e affini sono `internal static`: non riconoscerli
+    // significa applicare il prefisso di default a endpoint che lo dichiarano
+    // già per intero, producendo path come /api/v1/api/v1/admin/...
+    const source =
+      'internal static void MapAdminBulkImportEndpoints(this IEndpointRouteBuilder app) {}';
+    expect(registrarName(source)).toBe('MapAdminBulkImportEndpoints');
+  });
+
+  it('ignora i metodi privati di supporto, che non sono registrar', () => {
+    const source = [
+      'private static void MapGameRetrievalEndpoints(RouteGroupBuilder group) {}',
+      'public static RouteGroupBuilder MapGameEndpoints(this RouteGroupBuilder g) {}',
+    ].join('\n');
+    expect(registrarName(source)).toBe('MapGameEndpoints');
   });
 });
 

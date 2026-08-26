@@ -73,3 +73,15 @@ describe('fillPath', () => {
     expect(fillPath('/api/v1/admin/users', values)).toBe('/api/v1/admin/users');
   });
 });
+
+describe('judge — richieste senza risposta', () => {
+  it('segnala il timeout invece di scambiarlo per un esito', () => {
+    // Una richiesta che non risponde arriva qui come 0: trattarla come "non 2xx"
+    // la confonderebbe con un rifiuto del server, che è un'informazione diversa.
+    expect(judge(0, 403, 'admin')).toEqual({
+      esito: 'difforme',
+      nota: 'nessuna risposta entro 15s',
+    });
+    expect(judge(200, 0, 'user').nota).toContain('nessuna risposta');
+  });
+});

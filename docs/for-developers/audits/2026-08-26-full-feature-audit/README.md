@@ -11,8 +11,8 @@ Piano dell'harness: [plan](../../specs/2026-08-26-full-feature-audit-plan.md)
 | Ondata | Contesti | Stato |
 |---|---|---|
 | 0 — Harness | — | ✅ completata: inventario, crawler, collettore, report, prima passata |
-| 1A — Identità e accessi | Authentication · SecurityAudit · Administration/utenti | 🔄 in corso |
-| 1B — Configurazione e operazioni | SystemConfiguration · Administration/operazioni | ⬜ non iniziata |
+| 1A — Identità e accessi | Authentication · SecurityAudit · Administration/utenti | 🔄 blocco utenti completo — [scheda](./wave-1a-identita-accessi.md) |
+| 1B — Configurazione e operazioni | SystemConfiguration · Administration/operazioni | 🔄 letture complete, mutazioni sicure eseguite — [scheda](./wave-1b-configurazione-operazioni.md) |
 | 2 — Contenuti | SharedGameCatalog · GameManagement · UserLibrary · DocumentProcessing | ⬜ non iniziata |
 | 3 — Intelligenza | KnowledgeBase · AgentMemory · GameToolkit · KbQuality | ⬜ non iniziata |
 | 4 — Gioco | SessionTracking · GameToolbox · Gamification · EntityRelationships | ⬜ non iniziata |

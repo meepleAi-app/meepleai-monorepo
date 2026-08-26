@@ -69,6 +69,9 @@ export function judge(
   const ok = (s: number): boolean => s >= 200 && s < 300;
   const respinto = userStatus === 401 || userStatus === 403;
 
+  if (adminStatus === 0 || userStatus === 0)
+    return { esito: 'difforme', nota: 'nessuna risposta entro 15s' };
+
   if (ruoloAtteso === 'user') {
     if (ok(userStatus)) return { esito: 'atteso', nota: 'endpoint self-service' };
     if (userStatus === 404) return { esito: 'atteso', nota: 'self-service, risorsa assente' };
@@ -113,7 +116,10 @@ async function main(): Promise<void> {
 
   console.log(`righe selezionate dal tracker: ${rows.length}`);
 
-  const out = path.join(RESULTS, 'probe-reads.jsonl');
+  // Il nome dell'output porta il contesto: un file unico veniva sovrascritto
+  // dalla passata successiva, e i risultati della precedente sparivano prima di
+  // essere riportati nel tracker.
+  const out = path.join(RESULTS, `probe-reads-${(contesto ?? 'tutti').toLowerCase()}.jsonl`);
   writeFileSync(out, '', 'utf8');
   let attesi = 0;
   let difformi = 0;
@@ -126,9 +132,20 @@ async function main(): Promise<void> {
       continue;
     }
 
+    // Timeout esplicito: senza, una richiesta che non risponde blocca l'intera
+    // passata a tempo indeterminato — è accaduto su /admin/status/*, e la sonda
+    // si è fermata a due terzi senza segnalare nulla. Meglio registrare 0 e
+    // proseguire: uno zero nel report è un dato, un blocco no.
     const call = async (role: string): Promise<number> => {
-      const res = await fetch(`${API}${url}`, { headers: { Cookie: cookies[role] ?? '' } });
-      return res.status;
+      try {
+        const res = await fetch(`${API}${url}`, {
+          headers: { Cookie: cookies[role] ?? '' },
+          signal: AbortSignal.timeout(15_000),
+        });
+        return res.status;
+      } catch {
+        return 0;
+      }
     };
 
     const adminStatus = await call('admin');

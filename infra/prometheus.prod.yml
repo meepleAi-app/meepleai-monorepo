@@ -49,6 +49,8 @@ rule_files:
   # Issue #3798 — montarli non basta: senza queste due righe Prometheus li ignora.
   - '/etc/prometheus/infrastructure.yml'
   - '/etc/prometheus/provider-quota.yml'
+  # Issue #3814 — pipeline PDF: estrazione per stage, qualita', durata, upload.
+  - '/etc/prometheus/pdf-processing.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

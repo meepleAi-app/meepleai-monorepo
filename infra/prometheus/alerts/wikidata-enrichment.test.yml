@@ -15,7 +15,7 @@ tests:
   # Dead-letter backlog above 100 sustained >1h -> WikidataDeadLetterHigh fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_wikidata_dead_letter_count'
+      - series: 'meepleai_wikidata_dead_letter_count_attempts'
         values: '150x65'
     alert_rule_test:
       - eval_time: 62m
@@ -26,13 +26,13 @@ tests:
               subsystem: wikidata-enrichment
             exp_annotations:
               summary: "Wikidata dead-letter backlog above 100 (sustained 1h)"
-              description: "meepleai_wikidata_dead_letter_count has stayed above 100 for 1h: an operator triage backlog is building. Investigate via the M13 admin dead-letter page — likely a license-whitelist drift or SPARQL schema drift in the enrichment pipeline."
+              description: "meepleai_wikidata_dead_letter_count_attempts has stayed above 100 for 1h: an operator triage backlog is building. Investigate via the M13 admin dead-letter page — likely a license-whitelist drift or SPARQL schema drift in the enrichment pipeline."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
 
   # Below threshold (50) -> no alert. Idle (0) is also below threshold.
   - interval: 1m
     input_series:
-      - series: 'meepleai_wikidata_dead_letter_count'
+      - series: 'meepleai_wikidata_dead_letter_count_attempts'
         values: '50x65'
     alert_rule_test:
       - eval_time: 62m
@@ -42,7 +42,7 @@ tests:
   # A sharp jump (0 -> 300 over 5m, +60/min) -> WikidataDeadLetterSpike fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_wikidata_dead_letter_count'
+      - series: 'meepleai_wikidata_dead_letter_count_attempts'
         values: '0+60x6'
     alert_rule_test:
       - eval_time: 5m
@@ -53,13 +53,13 @@ tests:
               subsystem: wikidata-enrichment
             exp_annotations:
               summary: "Wikidata dead-letter count jumped by more than 50 in 5m"
-              description: "meepleai_wikidata_dead_letter_count rose by more than 50 within 5 minutes: a systemic upstream failure or a license-whitelist drift. Cross-check WikidataSparqlLatency p95 and the Wikidata/Commons endpoint health."
+              description: "meepleai_wikidata_dead_letter_count_attempts rose by more than 50 within 5 minutes: a systemic upstream failure or a license-whitelist drift. Cross-check WikidataSparqlLatency p95 and the Wikidata/Commons endpoint health."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
 
   # Stable dead-letter count (no growth) -> delta ~0 -> WikidataDeadLetterSpike does not fire.
   - interval: 1m
     input_series:
-      - series: 'meepleai_wikidata_dead_letter_count'
+      - series: 'meepleai_wikidata_dead_letter_count_attempts'
         values: '120x6'
     alert_rule_test:
       - eval_time: 5m
@@ -69,7 +69,7 @@ tests:
   # Queue depth above 5000 sustained >1h -> WikidataQueueBacklogHigh fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_wikidata_queue_depth'
+      - series: 'meepleai_wikidata_queue_depth_games'
         values: '6000x65'
     alert_rule_test:
       - eval_time: 62m
@@ -80,13 +80,13 @@ tests:
               subsystem: wikidata-enrichment
             exp_annotations:
               summary: "Wikidata enrichment queue depth above 5000 (sustained 1h)"
-              description: "meepleai_wikidata_queue_depth has stayed above 5000 for 1h: the enrichment backlog is building and the scheduler is under-provisioned relative to the enrichment rate. Consider tuning the batch size or the DEC-3e rate-limiter."
+              description: "meepleai_wikidata_queue_depth_games has stayed above 5000 for 1h: the enrichment backlog is building and the scheduler is under-provisioned relative to the enrichment rate. Consider tuning the batch size or the DEC-3e rate-limiter."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#wikidata-enrichment-alerts"
 
   # Idle queue (0) -> no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_wikidata_queue_depth'
+      - series: 'meepleai_wikidata_queue_depth_games'
         values: '0x65'
     alert_rule_test:
       - eval_time: 62m

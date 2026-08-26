@@ -15,7 +15,7 @@ tests:
   # Backlog sustained above 500 for >10m -> AuditOutboxBacklogHigh fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_audit_outbox_pending_count'
+      - series: 'meepleai_audit_outbox_pending_count_rows'
         values: '800x15'
     alert_rule_test:
       - eval_time: 12m
@@ -26,13 +26,13 @@ tests:
               subsystem: audit-outbox
             exp_annotations:
               summary: "audit_outbox pending backlog above 500 (sustained 10m)"
-              description: "meepleai_audit_outbox_pending_count has stayed above 500 for 10m: the audit outbox processor is not draining Pending rows fast enough (or is stalled). Audit events are accumulating undelivered. Check the audit outbox processor job logs and database health."
+              description: "meepleai_audit_outbox_pending_count_rows has stayed above 500 for 10m: the audit outbox processor is not draining Pending rows fast enough (or is stalled). Audit events are accumulating undelivered. Check the audit outbox processor job logs and database health."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#audit-outbox-alerts"
 
   # Backlog below threshold (100) -> no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_audit_outbox_pending_count'
+      - series: 'meepleai_audit_outbox_pending_count_rows'
         values: '100x15'
     alert_rule_test:
       - eval_time: 12m
@@ -42,7 +42,7 @@ tests:
   # Idle queue (flat 0) -> no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_audit_outbox_pending_count'
+      - series: 'meepleai_audit_outbox_pending_count_rows'
         values: '0x15'
     alert_rule_test:
       - eval_time: 12m
@@ -79,7 +79,7 @@ tests:
   # A failed (poison) row appears (0 -> 1) -> AuditOutboxFailedMessages fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_audit_outbox_failed_count'
+      - series: 'meepleai_audit_outbox_failed_count_rows'
         values: '0 0 1 1 1'
     alert_rule_test:
       - eval_time: 4m
@@ -90,13 +90,13 @@ tests:
               subsystem: audit-outbox
             exp_annotations:
               summary: "audit_outbox has Failed (poison) rows"
-              description: "meepleai_audit_outbox_failed_count is above 0: one or more audit_outbox rows are in Failed status (poison messages) and require operator intervention via the admin dashboard. Inspect the failed rows and their error payloads."
+              description: "meepleai_audit_outbox_failed_count_rows is above 0: one or more audit_outbox rows are in Failed status (poison messages) and require operator intervention via the admin dashboard. Inspect the failed rows and their error payloads."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#audit-outbox-alerts"
 
   # No failed rows (flat 0) -> no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_audit_outbox_failed_count'
+      - series: 'meepleai_audit_outbox_failed_count_rows'
         values: '0x5'
     alert_rule_test:
       - eval_time: 4m

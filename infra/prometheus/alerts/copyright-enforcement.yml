@@ -7,7 +7,7 @@
 # Il commento precedente diceva «unit is NOT appended», citando come prova
 # meepleai_bgg_url_attempted_render_total: una metrica che NON era mai stata esposta, quindi
 # mai osservata. E' falso — verificato incrementandola, si chiama
-# meepleai_bgg_url_attempted_render_total_attempts_total. Tutte e quattro le regole di questo
+# meepleai_bgg_url_attempted_render_attempts_total. Tutte e quattro le regole di questo
 # file erano CIECHE. Nomi reali:
 #   - meepleai_rag_copyright_guard_scan_errors_errors_total   (counter; tag error_type)
 #   - meepleai_rag_copyright_guard_scan_duration_*     (histogram; _count/_sum/_bucket)

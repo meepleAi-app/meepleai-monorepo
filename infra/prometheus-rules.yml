@@ -14,7 +14,7 @@ groups:
       - record: meepleai:api:error_rate:5m
         expr: |
           rate(
-            http_server_request_duration_count{
+            http_server_request_duration_seconds_count{
               http_response_status_code=~"5.."
             }[5m]
           )
@@ -24,7 +24,7 @@ groups:
       # Total request rate (all status codes)
       - record: meepleai:api:request_rate:5m
         expr: |
-          rate(http_server_request_duration_count[5m])
+          rate(http_server_request_duration_seconds_count[5m])
         labels:
           service: meepleai-api
 
@@ -33,12 +33,12 @@ groups:
         expr: |
           (
             rate(
-              http_server_request_duration_count{
+              http_server_request_duration_seconds_count{
                 http_response_status_code=~"5.."
               }[5m]
             )
             /
-            rate(http_server_request_duration_count[5m])
+            rate(http_server_request_duration_seconds_count[5m])
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -46,7 +46,7 @@ groups:
       # RAG error rate (from custom metrics)
       - record: meepleai:rag:error_rate:5m
         expr: |
-          rate(meepleai_rag_errors_total[5m]) OR on() vector(0)
+          rate(meepleai_rag_errors_errors_total[5m]) OR on() vector(0)
         labels:
           service: meepleai-api
           category: rag
@@ -56,7 +56,7 @@ groups:
         expr: |
           (
             rate(
-              http_server_request_duration_count{
+              http_server_request_duration_seconds_count{
                 http_response_status_code="500"
               }[5m]
             )
@@ -64,7 +64,7 @@ groups:
             (
               avg_over_time(
                 rate(
-                  http_server_request_duration_count{
+                  http_server_request_duration_seconds_count{
                     http_response_status_code="500"
                   }[5m]
                 )[1h:5m]
@@ -79,7 +79,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(http_server_request_duration_bucket[5m])
+            rate(http_server_request_duration_seconds_bucket[5m])
           )
         labels:
           service: meepleai-api
@@ -89,7 +89,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(http_server_request_duration_bucket{http_route=~"/api/v1/chat.*"}[5m])
+            rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/chat.*"}[5m])
           )
         labels:
           service: meepleai-api
@@ -101,7 +101,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*"}[5m])
+            rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/search.*"}[5m])
           )
         labels:
           service: meepleai-api
@@ -113,7 +113,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(http_server_request_duration_bucket{http_route=~"/api/v1/games/.*/explain.*"}[5m])
+            rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/games/.*/explain.*"}[5m])
           )
         labels:
           service: meepleai-api
@@ -133,7 +133,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(meepleai_rag_first_token_latency_bucket[5m])
+            rate(meepleai_rag_first_token_latency_ms_bucket[5m])
           )
         labels:
           service: meepleai-api
@@ -145,9 +145,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(meepleai_rag_first_token_latency_bucket{le="800"}[1h]))
+              sum(rate(meepleai_rag_first_token_latency_ms_bucket{le="800"}[1h]))
               /
-              sum(rate(meepleai_rag_first_token_latency_count[1h]))
+              sum(rate(meepleai_rag_first_token_latency_ms_count[1h]))
             )
           ) OR on() vector(0)
         labels:
@@ -158,9 +158,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(meepleai_rag_first_token_latency_bucket{le="800"}[6h]))
+              sum(rate(meepleai_rag_first_token_latency_ms_bucket{le="800"}[6h]))
               /
-              sum(rate(meepleai_rag_first_token_latency_count[6h]))
+              sum(rate(meepleai_rag_first_token_latency_ms_count[6h]))
             )
           ) OR on() vector(0)
         labels:
@@ -172,9 +172,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/agents/.*/chat",le="3"}[1h]))
+              sum(rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/agents/.*/chat",le="3"}[1h]))
               /
-              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/agents/.*/chat"}[1h]))
+              sum(rate(http_server_request_duration_seconds_count{http_route=~"/api/v1/agents/.*/chat"}[1h]))
             )
           ) OR on() vector(0)
         labels:
@@ -185,9 +185,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/agents/.*/chat",le="3"}[6h]))
+              sum(rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/agents/.*/chat",le="3"}[6h]))
               /
-              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/agents/.*/chat"}[6h]))
+              sum(rate(http_server_request_duration_seconds_count{http_route=~"/api/v1/agents/.*/chat"}[6h]))
             )
           ) OR on() vector(0)
         labels:
@@ -199,9 +199,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*",le="0.5"}[1h]))
+              sum(rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/search.*",le="0.5"}[1h]))
               /
-              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/search.*"}[1h]))
+              sum(rate(http_server_request_duration_seconds_count{http_route=~"/api/v1/search.*"}[1h]))
             )
           ) OR on() vector(0)
         labels:
@@ -212,9 +212,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(http_server_request_duration_bucket{http_route=~"/api/v1/search.*",le="0.5"}[6h]))
+              sum(rate(http_server_request_duration_seconds_bucket{http_route=~"/api/v1/search.*",le="0.5"}[6h]))
               /
-              sum(rate(http_server_request_duration_count{http_route=~"/api/v1/search.*"}[6h]))
+              sum(rate(http_server_request_duration_seconds_count{http_route=~"/api/v1/search.*"}[6h]))
             )
           ) OR on() vector(0)
         labels:
@@ -225,9 +225,9 @@ groups:
       - record: meepleai:slo:availability:error_ratio:1h
         expr: |
           (
-            sum(rate(http_server_request_duration_count{http_response_status_code=~"5.."}[1h]))
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[1h]))
             /
-            sum(rate(http_server_request_duration_count[1h]))
+            sum(rate(http_server_request_duration_seconds_count[1h]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -236,9 +236,9 @@ groups:
       - record: meepleai:slo:availability:error_ratio:6h
         expr: |
           (
-            sum(rate(http_server_request_duration_count{http_response_status_code=~"5.."}[6h]))
+            sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[6h]))
             /
-            sum(rate(http_server_request_duration_count[6h]))
+            sum(rate(http_server_request_duration_seconds_count[6h]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -480,18 +480,48 @@ groups:
     interval: 15s
     rules:
       # Average overall confidence score (5-minute window)
+      #
+      # #3817: la media si calcola da _sum/_count, non con `avg()`. `meepleai.quality.score`
+      # e' un HISTOGRAM: l'exporter espone `meepleai_quality_score_bucket`, `_sum` e `_count`,
+      # mai una serie col nome nudo. `avg(meepleai_quality_score{...})` non restituiva quindi
+      # nulla in nessuna circostanza - cieca come le regole di #3798, e per lo stesso motivo
+      # invisibile: una query che non trova serie non fallisce, tace.
+      # Il nome esposto e' `meepleai_quality_score` senza suffisso di unit: l'istrumento si
+      # chiama "meepleai.quality.score" e l'unit e' "score", e l'exporter non riappende
+      # un'unit di cui il nome gia' termina. Non e' dedotto: lo pinna
+      # QualityMetricsPrometheusNamingTests con uno scrape vero di /metrics.
+      #
+      # #3814: niente `OR on() vector(0)` su questa serie ne' sulle due sotto
+      # (rag_confidence, llm_confidence). Il fallback a zero e' corretto su un rate
+      # (nessun evento = 0 al secondo) ma non su una media di confidenza, che un alert
+      # legge con `<`: senza dati la regola varrebbe 0, e zero e' minore di qualunque
+      # soglia, quindi l'alert scatterebbe per ASSENZA di dati travestita da valore
+      # pessimo. Misurato il 2026-08-26: 5 alert in pending, 4 critical, nessuno per una
+      # condizione reale. Senza fallback la serie e' assente, e un alert su serie assente
+      # non scatta.
       - record: meepleai:quality:overall_confidence:5m
         expr: |
-          avg(meepleai_quality_score{dimension="overall_confidence"}) OR on() vector(0)
+          sum(rate(meepleai_quality_score_sum{dimension="overall_confidence"}[5m]))
+          /
+          sum(rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]))
         labels:
           service: meepleai-api
           category: quality
 
       # Low-quality response rate (percentage)
+      #
+      # #3817: il counter si chiama `meepleai.quality.low_quality_responses.total` in C# ma e'
+      # esposto come `meepleai_quality_low_quality_responses_total_responses_total`: il nome non
+      # termina con l'unit ("responses"), quindi l'exporter la appende, e poi aggiunge `_total`
+      # perche' il nome risultante non ne ha piu' uno in coda. Il `_total` dichiarato resta in
+      # mezzo. Anche questo e' pinnato da QualityMetricsPrometheusNamingTests.
+      #
+      # Qui il fallback a zero RESTA: `HighLowQualityRate` e `ElevatedLowQualityRate` leggono
+      # questa serie con `>`, e per loro zero e' la soppressione corretta (#3814).
       - record: meepleai:quality:low_quality_rate:5m
         expr: |
           (
-            rate(meepleai_quality_low_quality_responses_total[5m])
+            rate(meepleai_quality_low_quality_responses_total_responses_total[5m])
             /
             rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m])
           ) * 100 OR on() vector(0)
@@ -500,17 +530,23 @@ groups:
           category: quality
 
       # RAG confidence average
+      # #3814: niente fallback a zero, stessa ragione di overall_confidence sopra.
       - record: meepleai:quality:rag_confidence:5m
         expr: |
-          avg(meepleai_quality_score{dimension="rag_confidence"}) OR on() vector(0)
+          sum(rate(meepleai_quality_score_sum{dimension="rag_confidence"}[5m]))
+          /
+          sum(rate(meepleai_quality_score_count{dimension="rag_confidence"}[5m]))
         labels:
           service: meepleai-api
           category: quality
 
       # LLM confidence average
+      # #3814: niente fallback a zero, stessa ragione di overall_confidence sopra.
       - record: meepleai:quality:llm_confidence:5m
         expr: |
-          avg(meepleai_quality_score{dimension="llm_confidence"}) OR on() vector(0)
+          sum(rate(meepleai_quality_score_sum{dimension="llm_confidence"}[5m]))
+          /
+          sum(rate(meepleai_quality_score_count{dimension="llm_confidence"}[5m]))
         labels:
           service: meepleai-api
           category: quality
@@ -592,31 +628,26 @@ groups:
           dashboard_url: "http://localhost:3001/d/quality-metrics"
 
       # CRITICAL: Zero quality metrics for 15 minutes (service health check)
-      - alert: QualityMetricsUnavailable
-        expr: |
-          absent(meepleai_quality_score{dimension="overall_confidence"})
-          or
-          (
-            rate(meepleai_quality_score_count{dimension="overall_confidence"}[5m]) == 0
-            and
-            rate(http_server_request_duration_count[5m]) > 0
-          )
-        for: 15m
-        labels:
-          severity: critical
-          service: meepleai-api
-          category: quality
-        annotations:
-          summary: "Quality metrics are not being recorded"
-          description: |
-            No quality metrics have been recorded for 15 minutes.
-            This indicates either:
-            1. No AI requests are being processed
-            2. Quality scoring service is failing
-            3. Metrics collection is broken
-            Check AI service health and quality scoring pipeline.
-          runbook_url: "https://docs.meepleai.dev/runbooks/ai-quality-low"
-          dashboard_url: "http://localhost:3001/d/quality-metrics"
+      # #3814: qui c'era QualityMetricsUnavailable (critical, for 15m). Rimosso.
+      #
+      # RETTIFICA #3817 - la ragione scritta qui in #3814 era sbagliata. Diceva che il nome
+      # esposto sarebbe stato `meepleai_quality_score_score` (unit `score` appesa al nome).
+      # Non e' cosi': l'exporter NON riappende un'unit di cui il nome gia' termina, quindi il
+      # nome e' `meepleai_quality_score` - esattamente quello che l'alert interrogava. Il fatto
+      # e' ora pinnato da uno scrape vero in QualityMetricsPrometheusNamingTests.
+      #
+      # L'alert era comunque sempre acceso, ma per un altro motivo: `meepleai.quality.score` e'
+      # un histogram, e di un histogram non esiste la serie col nome nudo - solo `_bucket`,
+      # `_sum`, `_count`. `absent(meepleai_quality_score{...})` era quindi vero per costruzione,
+      # a strumentazione funzionante o meno. La forma corretta interroga `_count`.
+      #
+      # Non lo ripristiniamo qui nemmeno ora che #3817 ha collegato la strumentazione, e la
+      # ragione e' una scelta, non una dimenticanza: `absent(...)` e' vero anche quando
+      # semplicemente non arrivano richieste QA, che su staging e' la norma. Un alert di
+      # disponibilita' utile deve condizionarsi al traffico QA atteso (non al traffico HTTP
+      # complessivo, che c'e' anche senza una sola domanda posta), e quel segnale oggi non
+      # esiste. Finche' non c'e', l'alert produrrebbe solo il rumore che #3814 ha spento.
+      # Tracciato in #3817.
 
   - name: meepleai_quality_warning_alerts
     interval: 1m
@@ -943,7 +974,7 @@ groups:
 
       # Budget threshold 80%
       - alert: OpenRouterBudget80Percent
-        expr: meepleai_openrouter_balance_usd < 15
+        expr: meepleai_openrouter_balance_usd_USD < 15
         for: 5m
         labels:
           severity: warning
@@ -955,7 +986,7 @@ groups:
 
       # Budget threshold 95% — critical
       - alert: OpenRouterBudget95Percent
-        expr: meepleai_openrouter_balance_usd < 3.75
+        expr: meepleai_openrouter_balance_usd_USD < 3.75
         for: 2m
         labels:
           severity: critical
@@ -967,7 +998,7 @@ groups:
 
       # RPM utilization high
       - alert: OpenRouterHighRpmUtilization
-        expr: meepleai_openrouter_rpm_utilization > 0.8
+        expr: meepleai_openrouter_rpm_utilization_ratio > 0.8
         for: 3m
         labels:
           severity: warning
@@ -991,7 +1022,7 @@ groups:
   #
   # Metric: meepleai.rag.first_token_latency (Histogram<double>, ms)
   #   Code: MeepleAiMetrics.Rag.cs:78-81
-  #   Scraped name: meepleai_rag_first_token_latency_bucket/_count/_sum
+  #   Scraped name: meepleai_rag_first_token_latency_ms_bucket/_count/_sum
   #
   # Cardinality: metric recorded with NO session/game/user tags (bounded safe).
   - name: meepleai_slo_live_rag_recording_rules
@@ -1004,7 +1035,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(meepleai_rag_first_token_latency_bucket[5m])
+            rate(meepleai_rag_first_token_latency_ms_bucket[5m])
           )
         labels:
           service: meepleai-api
@@ -1021,8 +1052,8 @@ groups:
       # A retrieval-empty event occurs in RagPromptAssemblyService when
       # filteredChunks.Count == 0 after pgvector nearest-neighbour search.
       # Metric: meepleai.rag.retrieval_empty (Counter<long>)
-      #   Scraped: meepleai_rag_retrieval_empty_total
-      # Denominator: meepleai_rag_first_token_latency_count (answers served on
+      #   Scraped: meepleai_rag_retrieval_empty_retrievals_total
+      # Denominator: meepleai_rag_first_token_latency_ms_count (answers served on
       #   this path, consistent cardinality — no session tags on either metric).
       #
       # Threshold: >5% of live-RAG answers have zero retrieved chunks.
@@ -1032,9 +1063,9 @@ groups:
       - alert: LiveRagRetrievalEmptyHigh
         expr: |
           (
-            rate(meepleai_rag_retrieval_empty_total[15m])
+            rate(meepleai_rag_retrieval_empty_retrievals_total[15m])
             /
-            (rate(meepleai_rag_first_token_latency_count[15m]) > 0)
+            (rate(meepleai_rag_first_token_latency_ms_count[15m]) > 0)
           ) > 0.05
         for: 15m
         labels:
@@ -1065,7 +1096,7 @@ groups:
       # Total request rate across all terminal results.
       - record: meepleai:shared_game_detail:request_rate:5m
         expr: |
-          sum(rate(meepleai_shared_game_detail_requests_total[5m])) OR on() vector(0)
+          sum(rate(meepleai_shared_game_detail_requests_requests_total[5m])) OR on() vector(0)
         labels:
           service: meepleai-api
           category: shared_game_detail
@@ -1075,22 +1106,28 @@ groups:
       - record: meepleai:shared_game_detail:error_ratio:5m
         expr: |
           (
-            sum(rate(meepleai_shared_game_detail_requests_total{result="error"}[5m]))
+            sum(rate(meepleai_shared_game_detail_requests_requests_total{result="error"}[5m]))
             /
-            sum(rate(meepleai_shared_game_detail_requests_total[5m]))
+            sum(rate(meepleai_shared_game_detail_requests_requests_total[5m]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api
           category: shared_game_detail
 
       # Cache hit ratio: hit / (hit + origin). Target ≥ 80%, alert below 60%.
+      # #3814: niente `OR on() vector(0)` qui. Il fallback a zero e' corretto su un rate
+      # (nessun evento = 0 al secondo) ma non su questa serie, che un alert legge con `<`:
+      # senza dati la regola varrebbe 0, e zero e' minore di qualunque soglia, quindi
+      # l'alert scatterebbe per ASSENZA di dati travestita da valore pessimo. Misurato il
+      # 2026-08-26: 5 alert in pending, 4 critical, nessuno per una condizione reale.
+      # Senza fallback la serie e' assente e un alert su serie assente non scatta.
       - record: meepleai:shared_game_detail:cache_hit_ratio:5m
         expr: |
           (
-            sum(rate(meepleai_shared_game_detail_cache_hits_total{source="hit"}[5m]))
+            sum(rate(meepleai_shared_game_detail_cache_hits_events_total{source="hit"}[5m]))
             /
-            sum(rate(meepleai_shared_game_detail_cache_hits_total[5m]))
-          ) OR on() vector(0)
+            sum(rate(meepleai_shared_game_detail_cache_hits_events_total[5m]))
+          )
         labels:
           service: meepleai-api
           category: shared_game_detail

@@ -46,6 +46,9 @@ rule_files:
   - '/etc/prometheus/copyright-enforcement.yml'
   # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (ungrounded-rate on RAG live path).
   - '/etc/prometheus/agent-grounding.yml'
+  # Issue #3798 — montarli non basta: senza queste due righe Prometheus li ignora.
+  - '/etc/prometheus/infrastructure.yml'
+  - '/etc/prometheus/provider-quota.yml'
 
 scrape_configs:
   - job_name: 'prometheus'

@@ -36,16 +36,16 @@ groups:
       # the same Pending rows. Materialised for dashboards + manual gate inspection.
       - record: meepleai_domain_event_outbox:dispatch_enqueue_ratio1h
         expr: |
-          sum(rate(meepleai_domain_event_outbox_dispatched_total_events[1h]))
+          sum(rate(meepleai_domain_event_outbox_dispatched_events_total[1h]))
           /
-          sum(rate(meepleai_domain_event_outbox_enqueued_total_events[1h]))
+          sum(rate(meepleai_domain_event_outbox_enqueued_events_total[1h]))
 
       # Alert — duplicate-publish ratio breaches the #1965 reactivation gate.
       - alert: DomainEventOutboxDuplicatePublish
         expr: |
           meepleai_domain_event_outbox:dispatch_enqueue_ratio1h > 1.05
           and
-          sum(rate(meepleai_domain_event_outbox_enqueued_total_events[1h])) > 0
+          sum(rate(meepleai_domain_event_outbox_enqueued_events_total[1h])) > 0
         for: 2h
         labels:
           severity: warning

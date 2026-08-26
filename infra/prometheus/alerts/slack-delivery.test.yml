@@ -15,9 +15,9 @@ tests:
   # Failure ratio 100% (all sends failing) sustained → SlackDeliveryFailureRateHigh fires.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_messages_failed_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_failed_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0+1x20'
-      - series: 'meepleai_slack_messages_sent_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_sent_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0+0x20'
     alert_rule_test:
       - eval_time: 15m
@@ -28,15 +28,15 @@ tests:
               subsystem: slack-delivery
             exp_annotations:
               summary: "Slack delivery failure rate above 20% (5m window, sustained 10m)"
-              description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_total_messages vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
+              description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_messages_total vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
 
   # Healthy: ~10% failure ratio (1 failure per 9 sends) → below the 20% threshold → no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_messages_failed_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_failed_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0+1x20'
-      - series: 'meepleai_slack_messages_sent_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_sent_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0+9x20'
     alert_rule_test:
       - eval_time: 15m
@@ -48,7 +48,7 @@ tests:
   # the alert still fires at 100% failure — regression guard for the silent-never-fires bug.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_messages_failed_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_failed_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0+1x20'
     alert_rule_test:
       - eval_time: 15m
@@ -59,15 +59,15 @@ tests:
               subsystem: slack-delivery
             exp_annotations:
               summary: "Slack delivery failure rate above 20% (5m window, sustained 10m)"
-              description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_total_messages vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
+              description: "More than 20% of Slack notification deliveries are failing (meepleai_slack_messages_failed_messages_total vs _sent_total). Users are missing Slack notifications. Check the Slack app token validity, per-workspace rate limits, and the SlackNotificationProcessorJob logs."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
 
   # Idle: both counters flat at 0 (rate 0/0 = NaN) → no alert (never fire on no traffic).
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_messages_failed_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_failed_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0x20'
-      - series: 'meepleai_slack_messages_sent_total_messages{channel_type="slack_user",notification_type="game_night"}'
+      - series: 'meepleai_slack_messages_sent_messages_total{channel_type="slack_user",notification_type="game_night"}'
         values: '0x20'
     alert_rule_test:
       - eval_time: 15m
@@ -77,7 +77,7 @@ tests:
   # A token revocation (counter 0 -> 1) fires SlackTokenRevoked.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_token_revocations_total_events'
+      - series: 'meepleai_slack_token_revocations_events_total'
         values: '0 0 1 1 1 1'
     alert_rule_test:
       - eval_time: 5m
@@ -88,13 +88,13 @@ tests:
               subsystem: slack-delivery
             exp_annotations:
               summary: "Slack OAuth token revoked in the last 1h"
-              description: "meepleai_slack_token_revocations_total_events incremented: a Slack workspace token was deactivated (invalid_auth/token_revoked/account_inactive). The affected users stop receiving Slack notifications until they reconnect the workspace. Confirm whether this is an expected disconnect."
+              description: "meepleai_slack_token_revocations_events_total incremented: a Slack workspace token was deactivated (invalid_auth/token_revoked/account_inactive). The affected users stop receiving Slack notifications until they reconnect the workspace. Confirm whether this is an expected disconnect."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
 
   # No revocations (counter flat at 0) → no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_token_revocations_total_events'
+      - series: 'meepleai_slack_token_revocations_events_total'
         values: '0 0 0 0 0 0'
     alert_rule_test:
       - eval_time: 5m
@@ -104,7 +104,7 @@ tests:
   # Sustained 429s for 15m fires SlackRateLimitedSustained.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_rate_limited_total_events{team_id="T123"}'
+      - series: 'meepleai_slack_rate_limited_events_total{team_id="T123"}'
         values: '0+1x25'
     alert_rule_test:
       - eval_time: 20m
@@ -115,13 +115,13 @@ tests:
               subsystem: slack-delivery
             exp_annotations:
               summary: "Slack API rate-limiting sustained for 15m"
-              description: "meepleai_slack_rate_limited_total_events has been incrementing for 15m: Slack is returning 429s and delaying notification delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning."
+              description: "meepleai_slack_rate_limited_events_total has been incrementing for 15m: Slack is returning 429s and delaying notification delivery. Check send volume and per-workspace throttling; consider backoff/queue tuning."
               runbook_url: "https://github.com/meepleAi-app/meepleai-monorepo/blob/main-dev/docs/for-developers/operations/operations-manual.md#slack-delivery-alerts-ops-02"
 
   # No rate-limiting (counter flat at 0) → no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_slack_rate_limited_total_events{team_id="T123"}'
+      - series: 'meepleai_slack_rate_limited_events_total{team_id="T123"}'
         values: '0x25'
     alert_rule_test:
       - eval_time: 20m

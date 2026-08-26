@@ -17,9 +17,9 @@ tests:
   # each event is dispatched more than once.
   - interval: 1m
     input_series:
-      - series: 'meepleai_domain_event_outbox_enqueued_total_events'
+      - series: 'meepleai_domain_event_outbox_enqueued_events_total'
         values: '0+120x180'
-      - series: 'meepleai_domain_event_outbox_dispatched_total_events'
+      - series: 'meepleai_domain_event_outbox_dispatched_events_total'
         values: '0+150x180'
     alert_rule_test:
       - eval_time: 150m
@@ -37,9 +37,9 @@ tests:
   # Steady state (dispatched rate == enqueued rate, ratio ~1.0) -> no alert.
   - interval: 1m
     input_series:
-      - series: 'meepleai_domain_event_outbox_enqueued_total_events'
+      - series: 'meepleai_domain_event_outbox_enqueued_events_total'
         values: '0+120x180'
-      - series: 'meepleai_domain_event_outbox_dispatched_total_events'
+      - series: 'meepleai_domain_event_outbox_dispatched_events_total'
         values: '0+120x180'
     alert_rule_test:
       - eval_time: 150m
@@ -49,9 +49,9 @@ tests:
   # Mild excess below the 1.05 threshold (ratio ~1.033) -> no alert (guards the boundary).
   - interval: 1m
     input_series:
-      - series: 'meepleai_domain_event_outbox_enqueued_total_events'
+      - series: 'meepleai_domain_event_outbox_enqueued_events_total'
         values: '0+120x180'
-      - series: 'meepleai_domain_event_outbox_dispatched_total_events'
+      - series: 'meepleai_domain_event_outbox_dispatched_events_total'
         values: '0+124x180'
     alert_rule_test:
       - eval_time: 150m
@@ -61,9 +61,9 @@ tests:
   # Idle queue (no enqueue/dispatch traffic -> 0/0 = NaN) -> no alert on empty queue.
   - interval: 1m
     input_series:
-      - series: 'meepleai_domain_event_outbox_enqueued_total_events'
+      - series: 'meepleai_domain_event_outbox_enqueued_events_total'
         values: '0x180'
-      - series: 'meepleai_domain_event_outbox_dispatched_total_events'
+      - series: 'meepleai_domain_event_outbox_dispatched_events_total'
         values: '0x180'
     alert_rule_test:
       - eval_time: 150m

@@ -368,6 +368,11 @@ services:
       - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
       # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
+      # Issue #3798 — montati dopo l'audit: erano nel repo ma non in rule_files, quindi
+      # i loro alert non sono mai stati valutati. DiskSpace* usa node-exporter e
+      # ProviderQuota* le recording rules definite nello stesso file.
+      - ./prometheus/alerts/infrastructure.yml:/etc/prometheus/infrastructure.yml:ro
+      - ./prometheus/alerts/provider-quota.yml:/etc/prometheus/provider-quota.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]

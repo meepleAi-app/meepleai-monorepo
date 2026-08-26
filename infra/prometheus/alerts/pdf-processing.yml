@@ -15,9 +15,9 @@ groups:
       - record: meepleai:pdf:stage_success_rate:5m
         expr: |
           (
-            sum by(stage) (rate(meepleai_pdf_extraction_stage_success_successes[5m]))
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_success_successes_total[5m]))
             /
-            sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts_attempts[5m]))
+            sum by(stage) (rate(meepleai_pdf_extraction_stage_attempts_attempts_total[5m]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -46,9 +46,9 @@ groups:
       - record: meepleai:pdf:upload_success_rate:5m
         expr: |
           (
-            sum(rate(meepleai_pdf_upload_attempts_attempts{status="success"}[5m]))
+            sum(rate(meepleai_pdf_upload_attempts_attempts_total{status="success"}[5m]))
             /
-            sum(rate(meepleai_pdf_upload_attempts_attempts[5m]))
+            sum(rate(meepleai_pdf_upload_attempts_attempts_total[5m]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -109,9 +109,9 @@ groups:
       - alert: PdfProcessingStalled
         expr: |
           (
-            rate(meepleai_pdf_upload_attempts_attempts[30m]) == 0
+            rate(meepleai_pdf_upload_attempts_attempts_total[30m]) == 0
             and
-            rate(http_server_request_duration_count[5m]) > 0
+            rate(http_server_request_duration_seconds_count[5m]) > 0
           )
         for: 30m
         labels:

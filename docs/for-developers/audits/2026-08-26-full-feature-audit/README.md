@@ -151,7 +151,39 @@ dall'id che il crawler inietta: è un id di `shared_games`, e quelle rotte si as
 altro tipo. **Non sono findings** finché non li si prova con un id del tipo giusto — è il rischio
 che il piano prevedeva, e va tenuto presente prima di aprire issue su questa categoria.
 
-## Findings
+## Findings aperti
+
+| # | Cosa | Severità | Stato |
+|---|---|---|---|
+| [#3831](https://github.com/meepleAi-app/meepleai-monorepo/issues/3831) | 4 famiglie di endpoint admin irraggiungibili: prefisso `/api/v1` raddoppiato | P0 | corretto — [PR #3832](https://github.com/meepleAi-app/meepleai-monorepo/pull/3832) |
+| [#3840](https://github.com/meepleAi-app/meepleai-monorepo/issues/3840) | Un'impersonificazione avviata non si può terminare (rotta registrata due volte) | P0 | corretto — [PR #3841](https://github.com/meepleAi-app/meepleai-monorepo/pull/3841) |
+| [#3846](https://github.com/meepleAi-app/meepleai-monorepo/issues/3846) | Upload PDF: risponde 200 e l'elaborazione fallisce, senza segnale all'utente | P1 | aperto |
+| [#3847](https://github.com/meepleAi-app/meepleai-monorepo/issues/3847) | 30 endpoint rispondono 500 su richiesta malformata | P1 | aperto |
+| [#3843](https://github.com/meepleAi-app/meepleai-monorepo/issues/3843) | 7 endpoint in 500: query concorrenti sullo stesso DbContext | P1 | aperto |
+| [#3839](https://github.com/meepleAi-app/meepleai-monorepo/issues/3839) | 9 endpoint in 500: LINQ non traducibile o DbSet non mappato | P1 | aperto |
+| [#3849](https://github.com/meepleAi-app/meepleai-monorepo/issues/3849) | Creare una sessione senza `participants` dà 500 (validator senza `NotNull`) | P1 | aperto |
+| [#3842](https://github.com/meepleAi-app/meepleai-monorepo/issues/3842) | Il cambio di tier rifiuta ogni valore | P1 | aperto |
+| [#3833](https://github.com/meepleAi-app/meepleai-monorepo/issues/3833) | 500 su `tables/top`: colonna SQL inesistente | P1 | aperto |
+| [#3834](https://github.com/meepleAi-app/meepleai-monorepo/issues/3834) | 500 su `mechanic-extractor/thresholds`: riga di seed assente | P1 | aperto |
+| [#3835](https://github.com/meepleAi-app/meepleai-monorepo/issues/3835) | `/toolkit/stats` chiama l'API senza il prefisso `/api/v1` | P1 | aperto |
+| [#3844](https://github.com/meepleAi-app/meepleai-monorepo/issues/3844) | Disabilitare un feature flag per tier fallisce (inserisce invece di aggiornare) | P1 | aperto |
+| [#3848](https://github.com/meepleAi-app/meepleai-monorepo/issues/3848) | Il campo di ricerca di `/games` è readonly ma invita a cercare | P2 | aperto |
+| [#3838](https://github.com/meepleAi-app/meepleai-monorepo/issues/3838) | L'audit di sicurezza registra solo i login | P2 | aperto |
+| [#3845](https://github.com/meepleAi-app/meepleai-monorepo/issues/3845) | 500 su `contribution-stats` e `cache/metrics` | P2 | aperto |
+| [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) | 4 difetti minori (404 client, pagina card, a11y onboarding) | P2 | aperto |
+| [#3850](https://github.com/meepleAi-app/meepleai-monorepo/issues/3850) | Il messaggio "informazione non disponibile" è in inglese in conversazioni italiane | P3 | aperto |
+
+## Cosa funziona, verificato con prove
+
+Vale la pena dirlo con la stessa precisione dei difetti:
+
+- **Autenticazione**: accesso, uscita con revoca della sessione nel database, password errata senza cookie, nessuna enumerazione degli utenti, 403 su tutti i confini di autorizzazione provati.
+- **Invito e registrazione chiusa**: ciclo completo da richiesta ad approvazione fino all'email di invito.
+- **Recupero password**: con email inesistente la risposta è indistinguibile, senza email inviate né token creati.
+- **RAG**: risposta in 11 secondi con citazione testuale dal regolamento e riferimento alla pagina; su domanda fuori contesto dichiara di non sapere invece di inventare.
+- **Interfaccia**: le pagine principali di utente e amministratore caricano, elencano e navigano senza errori di rete.
+
+## Findings aperti (dettaglio storico)
 
 Oltre al P0 già confermato, la passata ne ha prodotti altri, tutti **verificati con richieste
 dirette** e riproducibili senza dipendere dagli id iniettati.

@@ -94,10 +94,51 @@ UPDATE users SET "EmailVerified" = true, "EmailVerifiedAt" = now() WHERE "EmailV
 Lo snapshot d'errore di Playwright (`error-context.md`) registra il **valore** dei campi password.
 `apps/web/audit-results/` è in `.gitignore` e non deve mai uscire dalla macchina.
 
+## Prima passata del crawler — 2026-08-26
+
+346 test, **275 rotte visitate**, 13,6 minuti. Dettaglio in [`wave-0-harness.md`](./wave-0-harness.md).
+
+| Esito | Rotte |
+|---|---|
+| ✅ verificato | 222 |
+| ⚠️ da triagare | 51 |
+| ⚠️ da aprire | 2 |
+| saltate (parametro non risolvibile) | 68 |
+
+Le 68 saltate dipendono dalle tabelle vuote (`chat_sessions`, `game_sessions`, `agent_sessions`):
+diventeranno visitabili quando le ondate 3 e 4 creeranno i dati. Non sono un difetto del prodotto
+né dell'harness, ma **non sono copertura**: restano `⬜ non coperto` nel tracker.
+
+Gli screenshot dei problemi restano in `apps/web/audit-results/` e **non sono committati** (13 MB
+per 53 immagini): il segnale utile — URL fallite e marker — è nel report testuale.
+
+### Come leggere i 404 con un id nell'URL
+
+23 fallimenti su `/api/v1/private-games/{id}` e 9 su `/api/v1/library/games/{id}` derivano
+dall'id che il crawler inietta: è un id di `shared_games`, e quelle rotte si aspettano un id di
+altro tipo. **Non sono findings** finché non li si prova con un id del tipo giusto — è il rischio
+che il piano prevedeva, e va tenuto presente prima di aprire issue su questa categoria.
+
 ## Findings
 
-L'ondata 0 costruisce l'harness e non produce findings di prodotto. Ne ha però aperto **uno
-sospeso**, da verificare per primo a stack acceso.
+Oltre al P0 già confermato, la passata ne ha prodotti altri, tutti **verificati con richieste
+dirette** e riproducibili senza dipendere dagli id iniettati.
+
+| # | Endpoint / rotta | Esito | Causa accertata | Severità |
+|---|---|---|---|---|
+| 1 | `/api/v1/resources/database/tables/top` | 500 | `Npgsql 42703: column "tablename" does not exist` — `GetTopTablesBySizeQueryHandler.cs:32-34` interroga `pg_stat_user_tables` usando `tablename`, colonna che appartiene a `pg_tables`; lì si chiama `relname` | P1 |
+| 2 | `/api/v1/admin/mechanic-extractor/thresholds` | 500 | `CertificationThresholdsConfig singleton row (Id=1) is missing` — riga di seed assente. Stesso schema dei seed persi negli squash di migration già visti su questo repo | P1 |
+| 3 | `/toolkit/stats` → `/game-sessions/session-statistics` | 404 | Il client chiama **senza il prefisso `/api/v1`**: con il prefisso l'endpoint risponde 200 | P1 |
+| 4 | `/api/v1/admin/openrouter/usage/requests` | 404 | Il frontend chiama un endpoint che non esiste | P2 |
+| 5 | `/api/v1/badges/my-badges` | 404 | Idem | P2 |
+| 6 | `/games/[id]/card` | marker `not-found` | Pagina che si presenta come "non trovato" con HTTP 200, per entrambi i ruoli | P2 |
+| 7 | `/onboarding` | a11y | `DialogContent` senza `DialogTitle`: contenuto inaccessibile agli screen reader | P2 |
+
+**Non è un finding**: `/api/v1/admin/catalog/seeds` risponde 503 con
+`"Catalog seed pipeline disabled"` — è un flag disattivato, cioè comportamento previsto. Elencato
+qui perché compariva 10 volte fra i fallimenti e sarebbe stato facile scambiarlo per un guasto.
+
+### Il primo P0, confermato
 
 ### 🔍 Candidato P1 — un utente non verificato viene rimbalzato al login senza spiegazione
 
@@ -122,9 +163,26 @@ pagina `/verification-pending` fatta apposta.
 
 Da accertare in ondata 1: se il proxy distingue 401 da 403 e dove va intercettato il caso.
 
-### 🔍 Sospetto — prefisso `/api/v1` raddoppiato su 4 famiglie di endpoint
+### 🚨 P0 CONFERMATO — prefisso `/api/v1` raddoppiato: 4 famiglie di endpoint irraggiungibili
 
-**Stato**: da verificare, non confermato.
+**Stato**: confermato sullo stack locale il 2026-08-26, autenticato come superadmin.
+
+| Path chiamato dal frontend | Esito | Path realmente montato | Esito |
+|---|---|---|---|
+| `/api/v1/admin/reports/generate` | **404** | `/api/v1/api/v1/admin/reports/generate` | 405 (esiste, è POST) |
+| `/api/v1/admin/alert-configuration` | **404** | `/api/v1/api/v1/admin/alert-configuration` | **200** |
+| `/api/v1/permissions/me` | **404** | `/api/v1/api/v1/permissions/me` | **200** |
+
+Comando di riproduzione (con cookie di sessione admin):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -H "Cookie: meepleai_session=…" \
+  http://localhost:8080/api/v1/admin/alert-configuration      # 404
+curl -s -o /dev/null -w "%{http_code}\n" -H "Cookie: meepleai_session=…" \
+  http://localhost:8080/api/v1/api/v1/admin/alert-configuration # 200
+```
+
+Nessun test backend copre questi path, il che spiega perché la regressione sia sopravvissuta.
 
 Quattro file sono registrati su `v1Api` (che è già `app.MapGroup("/api/v1")`) ma dichiarano al
 proprio interno un gruppo con il prefisso completo:

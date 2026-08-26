@@ -498,27 +498,27 @@ e2f2c20a,endpoint,/api/v1/users/search,GET,Administration,user,L1,⬜ non copert
 0fb45824,endpoint,/api/v1/users/top-contributors,GET,Administration,user,L1,⬜ non coperto,,
 873f4340,endpoint,/status,GET,Administration,user,L1,⬜ non coperto,,auth non dedotta: leggere il codice
 877cb8bc,endpoint,/status/details,GET,Administration,admin,L1,⬜ non coperto,,
-150f6aed,route,/admin,GET,Administration,admin,L1,⬜ non coperto,,
-a7d92277,route,/admin/analytics,GET,Administration,admin,L1,⬜ non coperto,,
-31acdd13,route,/admin/monitor,GET,Administration,admin,L1,⬜ non coperto,,
-b9ed4551,route,/admin/monitor/containers,GET,Administration,admin,L1,⬜ non coperto,,
-2f6d3da4,route,/admin/monitor/grafana,GET,Administration,admin,L1,⬜ non coperto,,
-f3fc5a69,route,/admin/monitor/logs,GET,Administration,admin,L1,⬜ non coperto,,
-93e4bc8a,route,/admin/monitor/mau,GET,Administration,admin,L1,⬜ non coperto,,
-ad2339a9,route,/admin/monitor/operations,GET,Administration,admin,L1,⬜ non coperto,,
-ad811a50,route,/admin/monitor/service-calls,GET,Administration,admin,L1,⬜ non coperto,,
-b044c032,route,/admin/monitor/services,GET,Administration,admin,L1,⬜ non coperto,,
-e90b84fb,route,/admin/monitor/wikidata-dead-letters,GET,Administration,admin,L1,⬜ non coperto,,
-50576a10,route,/admin/overview,GET,Administration,admin,L1,⬜ non coperto,,
-5af974db,route,/admin/overview/activity,GET,Administration,admin,L1,⬜ non coperto,,
-2edce285,route,/admin/overview/system,GET,Administration,admin,L1,⬜ non coperto,,
-e2008cce,route,/admin/staging-access,GET,Administration,admin,L1,⬜ non coperto,,
-a688d486,route,/admin/users,GET,Administration,admin,L1,⬜ non coperto,,
-f3e20bd8,route,/admin/users/[id],GET,Administration,admin,L1,⬜ non coperto,,param: id
-42e1e23a,route,/admin/users/access-requests,GET,Administration,admin,L1,⬜ non coperto,,
-dd82678f,route,/admin/users/activity,GET,Administration,admin,L1,⬜ non coperto,,
-3399b610,route,/admin/users/invitations,GET,Administration,admin,L1,⬜ non coperto,,
-d47d87aa,route,/admin/users/roles,GET,Administration,admin,L1,⬜ non coperto,,
+150f6aed,route,/admin,GET,Administration,admin,L1,✅ verificato,,
+a7d92277,route,/admin/analytics,GET,Administration,admin,L1,✅ verificato,,
+31acdd13,route,/admin/monitor,GET,Administration,admin,L1,✅ verificato,,
+b9ed4551,route,/admin/monitor/containers,GET,Administration,admin,L1,⚠️ finding da triagare,,
+2f6d3da4,route,/admin/monitor/grafana,GET,Administration,admin,L1,✅ verificato,,
+f3fc5a69,route,/admin/monitor/logs,GET,Administration,admin,L1,✅ verificato,,
+93e4bc8a,route,/admin/monitor/mau,GET,Administration,admin,L1,✅ verificato,,
+ad2339a9,route,/admin/monitor/operations,GET,Administration,admin,L1,⚠️ finding da triagare,,
+ad811a50,route,/admin/monitor/service-calls,GET,Administration,admin,L1,✅ verificato,,
+b044c032,route,/admin/monitor/services,GET,Administration,admin,L1,⚠️ finding da triagare,,
+e90b84fb,route,/admin/monitor/wikidata-dead-letters,GET,Administration,admin,L1,✅ verificato,,
+50576a10,route,/admin/overview,GET,Administration,admin,L1,✅ verificato,,
+5af974db,route,/admin/overview/activity,GET,Administration,admin,L1,✅ verificato,,
+2edce285,route,/admin/overview/system,GET,Administration,admin,L1,✅ verificato,,
+e2008cce,route,/admin/staging-access,GET,Administration,admin,L1,✅ verificato,,
+a688d486,route,/admin/users,GET,Administration,admin,L1,✅ verificato,,
+f3e20bd8,route,/admin/users/[id],GET,Administration,admin,L1,⚠️ finding da triagare,,param: id
+42e1e23a,route,/admin/users/access-requests,GET,Administration,admin,L1,✅ verificato,,
+dd82678f,route,/admin/users/activity,GET,Administration,admin,L1,✅ verificato,,
+3399b610,route,/admin/users/invitations,GET,Administration,admin,L1,✅ verificato,,
+d47d87aa,route,/admin/users/roles,GET,Administration,admin,L1,✅ verificato,,
 45fb3136,endpoint,/api/v1/agent-memory/games/{gameId:guid}/memory,GET,AgentMemory,user,L1,⬜ non coperto,,
 d61399d3,endpoint,/api/v1/agent-memory/games/{gameId:guid}/memory/glossary,GET,AgentMemory,user,L1,⬜ non coperto,,
 e94a0c12,endpoint,/api/v1/agent-memory/games/{gameId:guid}/memory/glossary,POST,AgentMemory,user,L2,⬜ non coperto,,
@@ -568,42 +568,42 @@ f4c6a50e,endpoint,/api/v1/callback,GET,Authentication,user,L1,⬜ non coperto,,
 43bae04f,endpoint,/api/v1/disconnect,DELETE,Authentication,user,L2,⬜ non coperto,,
 a3cca9af,endpoint,/api/v1/user/agent-slots,GET,Authentication,user,L1,⬜ non coperto,,
 ad4ddff6,endpoint,/api/v1/waitlist,POST,Authentication,user,L2,⬜ non coperto,,auth non dedotta: leggere il codice
-06ac98c8,route,/accept-invite,GET,Authentication,admin,L1,⬜ non coperto,,
-43203601,route,/accept-invite,GET,Authentication,user,L1,⬜ non coperto,,
-6398f61c,route,/invitation-expired,GET,Authentication,admin,L1,⬜ non coperto,,
-0ac3e430,route,/invitation-expired,GET,Authentication,user,L1,⬜ non coperto,,
+06ac98c8,route,/accept-invite,GET,Authentication,admin,L1,✅ verificato,,
+43203601,route,/accept-invite,GET,Authentication,user,L1,✅ verificato,,
+6398f61c,route,/invitation-expired,GET,Authentication,admin,L1,✅ verificato,,
+0ac3e430,route,/invitation-expired,GET,Authentication,user,L1,✅ verificato,,
 35e5bc63,route,/invites/[token],GET,Authentication,admin,L1,⬜ non coperto,,param: token
 3ba61c3d,route,/invites/[token],GET,Authentication,user,L1,⬜ non coperto,,param: token
-2f1774ae,route,/login,GET,Authentication,admin,L1,⬜ non coperto,,
-c2fa89a9,route,/login,GET,Authentication,user,L1,⬜ non coperto,,
-7eafc3f2,route,/oauth-callback,GET,Authentication,admin,L1,⬜ non coperto,,
-829c20e4,route,/oauth-callback,GET,Authentication,user,L1,⬜ non coperto,,
-7ffad483,route,/onboarding,GET,Authentication,admin,L1,⬜ non coperto,,
-b2cd3296,route,/onboarding,GET,Authentication,user,L1,⬜ non coperto,,
-0e83b5d3,route,/profile,GET,Authentication,admin,L1,⬜ non coperto,,
-ec74ca45,route,/profile,GET,Authentication,user,L1,⬜ non coperto,,
-3cdfdf9d,route,/profile/achievements,GET,Authentication,admin,L1,⬜ non coperto,,
-069371ff,route,/profile/achievements,GET,Authentication,user,L1,⬜ non coperto,,
-880653dc,route,/register,GET,Authentication,admin,L1,⬜ non coperto,,
-472c6a93,route,/register,GET,Authentication,user,L1,⬜ non coperto,,
-2ea18418,route,/reset-password,GET,Authentication,admin,L1,⬜ non coperto,,
-282c9158,route,/reset-password,GET,Authentication,user,L1,⬜ non coperto,,
-424dc313,route,/setup,GET,Authentication,admin,L1,⬜ non coperto,,
-7a4741da,route,/setup,GET,Authentication,user,L1,⬜ non coperto,,
-19c3588a,route,/setup-account,GET,Authentication,admin,L1,⬜ non coperto,,
-62cc10dd,route,/setup-account,GET,Authentication,user,L1,⬜ non coperto,,
-a677a7ef,route,/verification-pending,GET,Authentication,admin,L1,⬜ non coperto,,
-4de058ed,route,/verification-pending,GET,Authentication,user,L1,⬜ non coperto,,
-db2c0a8b,route,/verification-success,GET,Authentication,admin,L1,⬜ non coperto,,
-9f8a055b,route,/verification-success,GET,Authentication,user,L1,⬜ non coperto,,
-b92f5e04,route,/verify-email,GET,Authentication,admin,L1,⬜ non coperto,,
-8227abe9,route,/verify-email,GET,Authentication,user,L1,⬜ non coperto,,
-80ab39f4,route,/welcome,GET,Authentication,admin,L1,⬜ non coperto,,
-d2e7b02f,route,/welcome,GET,Authentication,user,L1,⬜ non coperto,,
+2f1774ae,route,/login,GET,Authentication,admin,L1,✅ verificato,,
+c2fa89a9,route,/login,GET,Authentication,user,L1,✅ verificato,,
+7eafc3f2,route,/oauth-callback,GET,Authentication,admin,L1,✅ verificato,,
+829c20e4,route,/oauth-callback,GET,Authentication,user,L1,✅ verificato,,
+7ffad483,route,/onboarding,GET,Authentication,admin,L1,⚠️ finding da triagare,,
+b2cd3296,route,/onboarding,GET,Authentication,user,L1,⚠️ finding da triagare,,
+0e83b5d3,route,/profile,GET,Authentication,admin,L1,✅ verificato,,
+ec74ca45,route,/profile,GET,Authentication,user,L1,✅ verificato,,
+3cdfdf9d,route,/profile/achievements,GET,Authentication,admin,L1,✅ verificato,,
+069371ff,route,/profile/achievements,GET,Authentication,user,L1,✅ verificato,,
+880653dc,route,/register,GET,Authentication,admin,L1,✅ verificato,,
+472c6a93,route,/register,GET,Authentication,user,L1,✅ verificato,,
+2ea18418,route,/reset-password,GET,Authentication,admin,L1,✅ verificato,,
+282c9158,route,/reset-password,GET,Authentication,user,L1,✅ verificato,,
+424dc313,route,/setup,GET,Authentication,admin,L1,✅ verificato,,
+7a4741da,route,/setup,GET,Authentication,user,L1,✅ verificato,,
+19c3588a,route,/setup-account,GET,Authentication,admin,L1,✅ verificato,,
+62cc10dd,route,/setup-account,GET,Authentication,user,L1,✅ verificato,,
+a677a7ef,route,/verification-pending,GET,Authentication,admin,L1,✅ verificato,,
+4de058ed,route,/verification-pending,GET,Authentication,user,L1,✅ verificato,,
+db2c0a8b,route,/verification-success,GET,Authentication,admin,L1,✅ verificato,,
+9f8a055b,route,/verification-success,GET,Authentication,user,L1,✅ verificato,,
+b92f5e04,route,/verify-email,GET,Authentication,admin,L1,✅ verificato,,
+8227abe9,route,/verify-email,GET,Authentication,user,L1,✅ verificato,,
+80ab39f4,route,/welcome,GET,Authentication,admin,L1,✅ verificato,,
+d2e7b02f,route,/welcome,GET,Authentication,user,L1,✅ verificato,,
 e4706910,endpoint,/api/v1/admin/business/breakdown,GET,BusinessSimulations,admin,L1,⬜ non coperto,,
 a88f0bc0,endpoint,/api/v1/admin/business/per-feature,GET,BusinessSimulations,admin,L1,⬜ non coperto,,
 8547507b,endpoint,/api/v1/admin/business/usage,GET,BusinessSimulations,admin,L1,⬜ non coperto,,
-b613078a,route,/admin/business,GET,BusinessSimulations,admin,L1,⬜ non coperto,,
+b613078a,route,/admin/business,GET,BusinessSimulations,admin,L1,✅ verificato,,
 9f213d88,endpoint,/api/v1/admin/database-sync/operations/history,GET,DatabaseSync,admin,L1,⬜ non coperto,,
 248ed8fc,endpoint,/api/v1/admin/database-sync/schema/apply,POST,DatabaseSync,admin,L2,⬜ non coperto,,
 5b90747f,endpoint,/api/v1/admin/database-sync/schema/compare,GET,DatabaseSync,admin,L1,⬜ non coperto,,
@@ -614,10 +614,10 @@ a94a94a2,endpoint,/api/v1/admin/database-sync/tables/{name}/compare,GET,Database
 f6253697,endpoint,/api/v1/admin/database-sync/tunnel/close,DELETE,DatabaseSync,admin,L2,⬜ non coperto,,
 a05083fc,endpoint,/api/v1/admin/database-sync/tunnel/open,POST,DatabaseSync,admin,L2,⬜ non coperto,,
 e824b637,endpoint,/api/v1/admin/database-sync/tunnel/status,GET,DatabaseSync,admin,L1,⬜ non coperto,,
-9b5d5715,route,/admin/database-sync,GET,DatabaseSync,admin,L1,⬜ non coperto,,
-d8f4398f,route,/admin/ui-library,GET,DesignSystem,admin,L1,⬜ non coperto,,
+9b5d5715,route,/admin/database-sync,GET,DatabaseSync,admin,L1,⚠️ finding da triagare,,
+d8f4398f,route,/admin/ui-library,GET,DesignSystem,admin,L1,✅ verificato,,
 4202b44a,route,/admin/ui-library/[id],GET,DesignSystem,admin,L1,⬜ non coperto,,param: id
-01a11f56,route,/admin/ui-library/compositions,GET,DesignSystem,admin,L1,⬜ non coperto,,
+01a11f56,route,/admin/ui-library/compositions,GET,DesignSystem,admin,L1,✅ verificato,,
 f139476f,route,/admin/ui-library/compositions/[id],GET,DesignSystem,admin,L1,⬜ non coperto,,param: id
 382b4e13,endpoint,/api/v1/document-collections/by-user/{userId:guid},GET,DocumentProcessing,user,L1,⬜ non coperto,,
 b2732a11,endpoint,/api/v1/documents/{documentId:guid}/analysis,GET,DocumentProcessing,admin,L1,⬜ non coperto,,
@@ -668,12 +668,12 @@ be00652f,endpoint,/api/v1/resources/database/vacuum,POST,DocumentProcessing,admi
 0881153c,endpoint,/api/v1/resources/system,GET,DocumentProcessing,admin,L1,⬜ non coperto,,
 d7c4c618,endpoint,/api/v1/resources/vectors/metrics,GET,DocumentProcessing,admin,L1,⬜ non coperto,,
 90a47569,endpoint,/api/v1/resources/vectors/rebuild,POST,DocumentProcessing,admin,L2,⬜ non coperto,,
-9b2435b2,route,/library/[gameId]/kb,GET,DocumentProcessing,admin,L1,⬜ non coperto,,param: gameId
-a9b5ff8a,route,/library/[gameId]/kb,GET,DocumentProcessing,user,L1,⬜ non coperto,,param: gameId
-c43eb17d,route,/pipeline-builder,GET,DocumentProcessing,admin,L1,⬜ non coperto,,
-e6461692,route,/pipeline-builder,GET,DocumentProcessing,user,L1,⬜ non coperto,,
-2dc6f1a2,route,/upload,GET,DocumentProcessing,admin,L1,⬜ non coperto,,
-81ca8e4f,route,/upload,GET,DocumentProcessing,user,L1,⬜ non coperto,,
+9b2435b2,route,/library/[gameId]/kb,GET,DocumentProcessing,admin,L1,⚠️ finding da triagare,,param: gameId
+a9b5ff8a,route,/library/[gameId]/kb,GET,DocumentProcessing,user,L1,⚠️ finding da triagare,,param: gameId
+c43eb17d,route,/pipeline-builder,GET,DocumentProcessing,admin,L1,✅ verificato,,
+e6461692,route,/pipeline-builder,GET,DocumentProcessing,user,L1,✅ verificato,,
+2dc6f1a2,route,/upload,GET,DocumentProcessing,admin,L1,✅ verificato,,
+81ca8e4f,route,/upload,GET,DocumentProcessing,user,L1,✅ verificato,,
 73b043d0,endpoint,/api/v1/admin/games/{gameId:guid}/agent/auto-test,POST,GameManagement,admin,L2,⬜ non coperto,,
 d870ff80,endpoint,/api/v1/admin/games/{gameId:guid}/translations/,GET,GameManagement,admin,L1,⬜ non coperto,,
 7b0c4b2a,endpoint,/api/v1/admin/games/{gameId:guid}/translations/,POST,GameManagement,admin,L2,⬜ non coperto,,
@@ -765,46 +765,46 @@ ec4b1fdb,endpoint,/api/v1/rulespecs/{gameId}/{version}/comments,GET,GameManageme
 21b86942,endpoint,/api/v1/rulespecs/{gameId}/{version}/lines/{lineNumber}/comments,GET,GameManagement,user,L1,⬜ non coperto,,
 a000ac97,endpoint,/api/v1/rulespecs/bulk/export,POST,GameManagement,user,L2,⬜ non coperto,,auth non dedotta: leggere il codice
 a1156c97,endpoint,/api/v1/wizard/game-preview/{gameId:guid},GET,GameManagement,user,L1,⬜ non coperto,,
-1634fdaf,route,/admin/content,GET,GameManagement,admin,L1,⬜ non coperto,,
-8810fe3e,route,/admin/content/email-templates,GET,GameManagement,admin,L1,⬜ non coperto,,
-0419a831,route,/admin/games/[gameId]/agent/test,GET,GameManagement,admin,L1,⬜ non coperto,,param: gameId
-1a5a4fdf,route,/admin/games/[gameId]/phases,GET,GameManagement,admin,L1,⬜ non coperto,,param: gameId
-ef60de24,route,/admin/games/[gameId]/processing,GET,GameManagement,admin,L1,⬜ non coperto,,param: gameId
-edf80437,route,/admin/games/new,GET,GameManagement,admin,L1,⬜ non coperto,,
-a78c83a6,route,/editor,GET,GameManagement,admin,L1,⬜ non coperto,,
-92b14b2f,route,/editor,GET,GameManagement,user,L1,⬜ non coperto,,
-b45e925e,route,/editor/agent-proposals,GET,GameManagement,admin,L1,⬜ non coperto,,
-92be7d18,route,/editor/agent-proposals,GET,GameManagement,user,L1,⬜ non coperto,,
+1634fdaf,route,/admin/content,GET,GameManagement,admin,L1,✅ verificato,,
+8810fe3e,route,/admin/content/email-templates,GET,GameManagement,admin,L1,✅ verificato,,
+0419a831,route,/admin/games/[gameId]/agent/test,GET,GameManagement,admin,L1,✅ verificato,,param: gameId
+1a5a4fdf,route,/admin/games/[gameId]/phases,GET,GameManagement,admin,L1,✅ verificato,,param: gameId
+ef60de24,route,/admin/games/[gameId]/processing,GET,GameManagement,admin,L1,✅ verificato,,param: gameId
+edf80437,route,/admin/games/new,GET,GameManagement,admin,L1,✅ verificato,,
+a78c83a6,route,/editor,GET,GameManagement,admin,L1,✅ verificato,,
+92b14b2f,route,/editor,GET,GameManagement,user,L1,✅ verificato,,
+b45e925e,route,/editor/agent-proposals,GET,GameManagement,admin,L1,✅ verificato,,
+92be7d18,route,/editor/agent-proposals,GET,GameManagement,user,L1,✅ verificato,,
 c95c15f9,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
 fcba07ea,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,user,L1,⬜ non coperto,,param: id
 1b7b6364,route,/editor/agent-proposals/[id]/test,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
 bf8d5938,route,/editor/agent-proposals/[id]/test,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-4230cf7d,route,/editor/agent-proposals/create,GET,GameManagement,admin,L1,⬜ non coperto,,
-468ad9bf,route,/editor/agent-proposals/create,GET,GameManagement,user,L1,⬜ non coperto,,
-5cf27241,route,/gamebook,GET,GameManagement,admin,L1,⬜ non coperto,,
-cdd4e721,route,/gamebook,GET,GameManagement,user,L1,⬜ non coperto,,
-d945f315,route,/gamebook/upload,GET,GameManagement,admin,L1,⬜ non coperto,,
-2f995334,route,/gamebook/upload,GET,GameManagement,user,L1,⬜ non coperto,,
-c43c7323,route,/games,GET,GameManagement,admin,L1,⬜ non coperto,,
-37a4378d,route,/games,GET,GameManagement,user,L1,⬜ non coperto,,
-d7105a99,route,/games/[id],GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-00259cd8,route,/games/[id],GET,GameManagement,user,L1,⬜ non coperto,,param: id
-f19a7c40,route,/games/[id]/card,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-a3a8cd48,route,/games/[id]/card,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-9cf201bc,route,/games/[id]/faqs,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-7fcf1ad2,route,/games/[id]/faqs,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-42d69076,route,/games/[id]/rules,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-727efbf1,route,/games/[id]/rules,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-09b4d385,route,/games/[id]/sessions,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-1edf35fb,route,/games/[id]/sessions,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-f7776df9,route,/hub,GET,GameManagement,admin,L1,⬜ non coperto,,
-128e8523,route,/hub,GET,GameManagement,user,L1,⬜ non coperto,,
-7904ab76,route,/hub/agents,GET,GameManagement,admin,L1,⬜ non coperto,,
-30f4778b,route,/hub/agents,GET,GameManagement,user,L1,⬜ non coperto,,
+4230cf7d,route,/editor/agent-proposals/create,GET,GameManagement,admin,L1,✅ verificato,,
+468ad9bf,route,/editor/agent-proposals/create,GET,GameManagement,user,L1,✅ verificato,,
+5cf27241,route,/gamebook,GET,GameManagement,admin,L1,✅ verificato,,
+cdd4e721,route,/gamebook,GET,GameManagement,user,L1,✅ verificato,,
+d945f315,route,/gamebook/upload,GET,GameManagement,admin,L1,✅ verificato,,
+2f995334,route,/gamebook/upload,GET,GameManagement,user,L1,✅ verificato,,
+c43c7323,route,/games,GET,GameManagement,admin,L1,✅ verificato,,
+37a4378d,route,/games,GET,GameManagement,user,L1,✅ verificato,,
+d7105a99,route,/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,,param: id
+00259cd8,route,/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,,param: id
+f19a7c40,route,/games/[id]/card,GET,GameManagement,admin,L1,⚠️ finding da aprire,,param: id
+a3a8cd48,route,/games/[id]/card,GET,GameManagement,user,L1,⚠️ finding da aprire,,param: id
+9cf201bc,route,/games/[id]/faqs,GET,GameManagement,admin,L1,✅ verificato,,param: id
+7fcf1ad2,route,/games/[id]/faqs,GET,GameManagement,user,L1,✅ verificato,,param: id
+42d69076,route,/games/[id]/rules,GET,GameManagement,admin,L1,✅ verificato,,param: id
+727efbf1,route,/games/[id]/rules,GET,GameManagement,user,L1,✅ verificato,,param: id
+09b4d385,route,/games/[id]/sessions,GET,GameManagement,admin,L1,✅ verificato,,param: id
+1edf35fb,route,/games/[id]/sessions,GET,GameManagement,user,L1,✅ verificato,,param: id
+f7776df9,route,/hub,GET,GameManagement,admin,L1,✅ verificato,,
+128e8523,route,/hub,GET,GameManagement,user,L1,✅ verificato,,
+7904ab76,route,/hub/agents,GET,GameManagement,admin,L1,✅ verificato,,
+30f4778b,route,/hub/agents,GET,GameManagement,user,L1,✅ verificato,,
 ab5c661d,route,/hub/games/[id],GET,GameManagement,admin,L1,⬜ non coperto,,param: id
 af787ba6,route,/hub/games/[id],GET,GameManagement,user,L1,⬜ non coperto,,param: id
-c103c95e,route,/hub/toolkits,GET,GameManagement,admin,L1,⬜ non coperto,,
-d69e0e75,route,/hub/toolkits,GET,GameManagement,user,L1,⬜ non coperto,,
+c103c95e,route,/hub/toolkits,GET,GameManagement,admin,L1,✅ verificato,,
+d69e0e75,route,/hub/toolkits,GET,GameManagement,user,L1,✅ verificato,,
 ce397fca,endpoint,/api/v1/toolbox-templates/,GET,GameToolbox,user,L1,⬜ non coperto,,
 4d2a12d7,endpoint,/api/v1/toolbox-templates/{templateId:guid}/apply,POST,GameToolbox,user,L2,⬜ non coperto,,
 4c38da0b,endpoint,/api/v1/toolboxes/,POST,GameToolbox,user,L2,⬜ non coperto,,
@@ -863,20 +863,20 @@ e1345463,endpoint,/api/v1/toolkits/{toolkitId:guid}/versions,GET,GameToolkit,use
 7ff1031b,endpoint,/api/v1/toolkits/{toolkitId:guid}/versions,POST,GameToolkit,user,L2,⬜ non coperto,,
 0e60776e,endpoint,/api/v1/toolkits/{toolkitId:guid}/versions/{versionId:guid}/yank,POST,GameToolkit,user,L2,⬜ non coperto,,
 1486445e,endpoint,/api/v1/toolkits/recommended,GET,GameToolkit,user,L1,⬜ non coperto,,
-a323c9a4,route,/toolkit,GET,GameToolkit,admin,L1,⬜ non coperto,,
-7ce163a4,route,/toolkit,GET,GameToolkit,user,L1,⬜ non coperto,,
+a323c9a4,route,/toolkit,GET,GameToolkit,admin,L1,✅ verificato,,
+7ce163a4,route,/toolkit,GET,GameToolkit,user,L1,✅ verificato,,
 9f800251,route,/toolkit/[sessionId],GET,GameToolkit,admin,L1,⬜ non coperto,,param: sessionId
 71bbc151,route,/toolkit/[sessionId],GET,GameToolkit,user,L1,⬜ non coperto,,param: sessionId
-7e121da8,route,/toolkit/history,GET,GameToolkit,admin,L1,⬜ non coperto,,
-e18bcf3a,route,/toolkit/history,GET,GameToolkit,user,L1,⬜ non coperto,,
-940f8429,route,/toolkit/play,GET,GameToolkit,admin,L1,⬜ non coperto,,
-f2d11be3,route,/toolkit/play,GET,GameToolkit,user,L1,⬜ non coperto,,
-6e1d4683,route,/toolkit/stats,GET,GameToolkit,admin,L1,⬜ non coperto,,
-de92af3b,route,/toolkit/stats,GET,GameToolkit,user,L1,⬜ non coperto,,
-4cd44d51,route,/toolkit/templates,GET,GameToolkit,admin,L1,⬜ non coperto,,
-428a6a94,route,/toolkit/templates,GET,GameToolkit,user,L1,⬜ non coperto,,
-9053764a,route,/toolkits,GET,GameToolkit,admin,L1,⬜ non coperto,,
-dc83a870,route,/toolkits,GET,GameToolkit,user,L1,⬜ non coperto,,
+7e121da8,route,/toolkit/history,GET,GameToolkit,admin,L1,✅ verificato,,
+e18bcf3a,route,/toolkit/history,GET,GameToolkit,user,L1,✅ verificato,,
+940f8429,route,/toolkit/play,GET,GameToolkit,admin,L1,✅ verificato,,
+f2d11be3,route,/toolkit/play,GET,GameToolkit,user,L1,✅ verificato,,
+6e1d4683,route,/toolkit/stats,GET,GameToolkit,admin,L1,⚠️ finding da triagare,,
+de92af3b,route,/toolkit/stats,GET,GameToolkit,user,L1,⚠️ finding da triagare,,
+4cd44d51,route,/toolkit/templates,GET,GameToolkit,admin,L1,✅ verificato,,
+428a6a94,route,/toolkit/templates,GET,GameToolkit,user,L1,✅ verificato,,
+9053764a,route,/toolkits,GET,GameToolkit,admin,L1,✅ verificato,,
+dc83a870,route,/toolkits,GET,GameToolkit,user,L1,✅ verificato,,
 a86e388a,route,/toolkits/[id],GET,GameToolkit,admin,L1,⬜ non coperto,,param: id
 16533982,route,/toolkits/[id],GET,GameToolkit,user,L1,⬜ non coperto,,param: id
 6c9f6fa9,endpoint,/api/v1/achievements,GET,Gamification,user,L1,⬜ non coperto,,
@@ -886,7 +886,7 @@ afe7e5ce,endpoint,/api/v1/budget/user/{userId:guid},GET,KbQuality,user,L1,⬜ no
 2cccc510,endpoint,/api/v1/llm-costs/check-alerts,POST,KbQuality,admin,L2,⬜ non coperto,,
 851370b1,endpoint,/api/v1/llm-costs/daily,GET,KbQuality,admin,L1,⬜ non coperto,,
 e1f4199f,endpoint,/api/v1/llm-costs/report,GET,KbQuality,admin,L1,⬜ non coperto,,
-f3105efa,route,/admin/rag-quality,GET,KbQuality,admin,L1,⬜ non coperto,,
+f3105efa,route,/admin/rag-quality,GET,KbQuality,admin,L1,✅ verificato,,
 0b7f8637,endpoint,/api/v1/admin/agents/arbitro/generate-faq,POST,KnowledgeBase,admin,L2,⬜ non coperto,,
 ee44c5ac,endpoint,/api/v1/admin/agents/chat-history,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
 5ab1d8e4,endpoint,/api/v1/admin/agents/debug-chat/stream,POST,KnowledgeBase,admin,L2,⬜ non coperto,,
@@ -981,103 +981,103 @@ d4d3ead5,endpoint,/api/v1/strategies/{id:guid},DELETE,KnowledgeBase,admin,L2,⬜
 4fffdef7,endpoint,/api/v1/strategies/{id:guid},PUT,KnowledgeBase,admin,L2,⬜ non coperto,,
 76576745,endpoint,/api/v1/strategies/{id:guid}/export,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
 d358c599,endpoint,/api/v1/strategies/import,POST,KnowledgeBase,admin,L2,⬜ non coperto,,
-88211def,route,/admin/agents,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
+88211def,route,/admin/agents,GET,KnowledgeBase,admin,L1,✅ verificato,,
 da84258e,route,/admin/agents/ab-testing/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-15946ba8,route,/admin/agents/ab-testing/new,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-045a7363,route,/admin/agents/ab-testing/results,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-c82ca845,route,/admin/agents/analytics,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-d168fde5,route,/admin/agents/builder,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-3acbdafc,route,/admin/agents/chat-history,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-0818e037,route,/admin/agents/chat-limits,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-c0b3da50,route,/admin/agents/config,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-1371cd67,route,/admin/agents/debug,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-040cec4f,route,/admin/agents/debug-chat,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-9b2ed26b,route,/admin/agents/definitions,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
+15946ba8,route,/admin/agents/ab-testing/new,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+045a7363,route,/admin/agents/ab-testing/results,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+c82ca845,route,/admin/agents/analytics,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+d168fde5,route,/admin/agents/builder,GET,KnowledgeBase,admin,L1,✅ verificato,,
+3acbdafc,route,/admin/agents/chat-history,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+0818e037,route,/admin/agents/chat-limits,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+c0b3da50,route,/admin/agents/config,GET,KnowledgeBase,admin,L1,✅ verificato,,
+1371cd67,route,/admin/agents/debug,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+040cec4f,route,/admin/agents/debug-chat,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+9b2ed26b,route,/admin/agents/definitions,GET,KnowledgeBase,admin,L1,✅ verificato,,
 ff4b3f42,route,/admin/agents/definitions/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
 31c1a58f,route,/admin/agents/definitions/[id]/edit,GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-5811e996,route,/admin/agents/definitions/create,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-1d87c67e,route,/admin/agents/definitions/playground,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-ba5fe62e,route,/admin/agents/infrastructure,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-6e506ed7,route,/admin/agents/inspector,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-ceb23e53,route,/admin/agents/models,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-ce2c89a0,route,/admin/agents/pipeline,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-fad50292,route,/admin/agents/playground,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-2316fe0a,route,/admin/agents/sandbox,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-ffc2b583,route,/admin/agents/strategy,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-77fbe9e0,route,/admin/agents/templates,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-0af409cf,route,/admin/agents/usage,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-df171afb,route,/admin/ai,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-e21f3457,route,/admin/knowledge-base,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-66565974,route,/admin/knowledge-base/documents,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-04076d5b,route,/admin/knowledge-base/embedding,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-a1599e80,route,/admin/knowledge-base/feedback,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
+5811e996,route,/admin/agents/definitions/create,GET,KnowledgeBase,admin,L1,✅ verificato,,
+1d87c67e,route,/admin/agents/definitions/playground,GET,KnowledgeBase,admin,L1,✅ verificato,,
+ba5fe62e,route,/admin/agents/infrastructure,GET,KnowledgeBase,admin,L1,✅ verificato,,
+6e506ed7,route,/admin/agents/inspector,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+ceb23e53,route,/admin/agents/models,GET,KnowledgeBase,admin,L1,✅ verificato,,
+ce2c89a0,route,/admin/agents/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+fad50292,route,/admin/agents/playground,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+2316fe0a,route,/admin/agents/sandbox,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+ffc2b583,route,/admin/agents/strategy,GET,KnowledgeBase,admin,L1,✅ verificato,,
+77fbe9e0,route,/admin/agents/templates,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+0af409cf,route,/admin/agents/usage,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+df171afb,route,/admin/ai,GET,KnowledgeBase,admin,L1,✅ verificato,,
+e21f3457,route,/admin/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,,
+66565974,route,/admin/knowledge-base/documents,GET,KnowledgeBase,admin,L1,✅ verificato,,
+04076d5b,route,/admin/knowledge-base/embedding,GET,KnowledgeBase,admin,L1,✅ verificato,,
+a1599e80,route,/admin/knowledge-base/feedback,GET,KnowledgeBase,admin,L1,✅ verificato,,
 a7a7932f,route,/admin/knowledge-base/games,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-e398a848,route,/admin/knowledge-base/mechanic-extractor/analyses,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-873e7432,route,/admin/knowledge-base/mechanic-extractor/dashboard,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-896c70f4,route,/admin/knowledge-base/mechanic-extractor/golden,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-01cc0340,route,/admin/knowledge-base/mechanic-extractor/golden/[gameId],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: gameId
-30e42b1f,route,/admin/knowledge-base/mechanic-extractor/metrics,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-5a37b69f,route,/admin/knowledge-base/pipeline,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-71d05838,route,/admin/knowledge-base/processing,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-4915f9be,route,/admin/knowledge-base/queue,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-afc778b9,route,/admin/knowledge-base/rag-pipeline,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-216fde74,route,/admin/knowledge-base/settings,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-d0007532,route,/admin/knowledge-base/snapshots,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-0abacc2f,route,/admin/knowledge-base/upload,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-4e378d2f,route,/admin/knowledge-base/vectors,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-093da42b,route,/agents,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-78f9458e,route,/agents,GET,KnowledgeBase,user,L1,⬜ non coperto,,
+e398a848,route,/admin/knowledge-base/mechanic-extractor/analyses,GET,KnowledgeBase,admin,L1,✅ verificato,,
+873e7432,route,/admin/knowledge-base/mechanic-extractor/dashboard,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+896c70f4,route,/admin/knowledge-base/mechanic-extractor/golden,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+01cc0340,route,/admin/knowledge-base/mechanic-extractor/golden/[gameId],GET,KnowledgeBase,admin,L1,✅ verificato,,param: gameId
+30e42b1f,route,/admin/knowledge-base/mechanic-extractor/metrics,GET,KnowledgeBase,admin,L1,✅ verificato,,
+5a37b69f,route,/admin/knowledge-base/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+71d05838,route,/admin/knowledge-base/processing,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+4915f9be,route,/admin/knowledge-base/queue,GET,KnowledgeBase,admin,L1,✅ verificato,,
+afc778b9,route,/admin/knowledge-base/rag-pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
+216fde74,route,/admin/knowledge-base/settings,GET,KnowledgeBase,admin,L1,✅ verificato,,
+d0007532,route,/admin/knowledge-base/snapshots,GET,KnowledgeBase,admin,L1,✅ verificato,,
+0abacc2f,route,/admin/knowledge-base/upload,GET,KnowledgeBase,admin,L1,✅ verificato,,
+4e378d2f,route,/admin/knowledge-base/vectors,GET,KnowledgeBase,admin,L1,✅ verificato,,
+093da42b,route,/agents,GET,KnowledgeBase,admin,L1,✅ verificato,,
+78f9458e,route,/agents,GET,KnowledgeBase,user,L1,✅ verificato,,
 b55ee25d,route,/agents/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
 2b3ba40d,route,/agents/[id],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-36ab86f5,route,/chat,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-a5b4925d,route,/chat,GET,KnowledgeBase,user,L1,⬜ non coperto,,
+36ab86f5,route,/chat,GET,KnowledgeBase,admin,L1,✅ verificato,,
+a5b4925d,route,/chat,GET,KnowledgeBase,user,L1,✅ verificato,,
 430f3319,route,/chat/[threadId],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: threadId
 404f803d,route,/chat/[threadId],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: threadId
-ff21a3ec,route,/chat/agents/create,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-dfa5c25e,route,/chat/agents/create,GET,KnowledgeBase,user,L1,⬜ non coperto,,
-cab856fd,route,/chat/new,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-32668dc5,route,/chat/new,GET,KnowledgeBase,user,L1,⬜ non coperto,,
+ff21a3ec,route,/chat/agents/create,GET,KnowledgeBase,admin,L1,✅ verificato,,
+dfa5c25e,route,/chat/agents/create,GET,KnowledgeBase,user,L1,✅ verificato,,
+cab856fd,route,/chat/new,GET,KnowledgeBase,admin,L1,✅ verificato,,
+32668dc5,route,/chat/new,GET,KnowledgeBase,user,L1,✅ verificato,,
 b27bd096,route,/kb/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
 6ef1ef40,route,/kb/[id],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-38a6bca2,route,/knowledge-base,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-504198c0,route,/knowledge-base,GET,KnowledgeBase,user,L1,⬜ non coperto,,
+38a6bca2,route,/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,,
+504198c0,route,/knowledge-base,GET,KnowledgeBase,user,L1,✅ verificato,,
 a2e1c67e,route,/knowledge-base/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
 77338322,route,/knowledge-base/[id],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
 cb454801,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
 2c5b80d7,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-4d264881,route,/knowledge-base/global,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-83bc47ae,route,/knowledge-base/global,GET,KnowledgeBase,user,L1,⬜ non coperto,,
+4d264881,route,/knowledge-base/global,GET,KnowledgeBase,admin,L1,✅ verificato,,
+83bc47ae,route,/knowledge-base/global,GET,KnowledgeBase,user,L1,✅ verificato,,
 2d5b898e,endpoint,/api/v1,GET,PublicPages,user,L1,⬜ non coperto,,
 943dfb27,endpoint,/api/v1,POST,PublicPages,user,L2,⬜ non coperto,,
 af861cb5,endpoint,/api/v1/contact,POST,PublicPages,user,L2,⬜ non coperto,,
-75f9709d,route,/,GET,PublicPages,admin,L1,⬜ non coperto,,
-32059dc0,route,/,GET,PublicPages,user,L1,⬜ non coperto,,
-44d6c691,route,/about,GET,PublicPages,admin,L1,⬜ non coperto,,
-77bc5523,route,/about,GET,PublicPages,user,L1,⬜ non coperto,,
-b093b102,route,/contact,GET,PublicPages,admin,L1,⬜ non coperto,,
-5c8090bc,route,/contact,GET,PublicPages,user,L1,⬜ non coperto,,
-cd96c0d7,route,/cookie-settings,GET,PublicPages,admin,L1,⬜ non coperto,,
-2a8b72f4,route,/cookie-settings,GET,PublicPages,user,L1,⬜ non coperto,,
-ee5352b8,route,/cookies,GET,PublicPages,admin,L1,⬜ non coperto,,
-b2e526f7,route,/cookies,GET,PublicPages,user,L1,⬜ non coperto,,
-d2f215fa,route,/faq,GET,PublicPages,admin,L1,⬜ non coperto,,
-18780ac9,route,/faq,GET,PublicPages,user,L1,⬜ non coperto,,
-996a00f6,route,/how-it-works,GET,PublicPages,admin,L1,⬜ non coperto,,
-11a674c5,route,/how-it-works,GET,PublicPages,user,L1,⬜ non coperto,,
-260f853b,route,/how-it-works/game-comprehension,GET,PublicPages,admin,L1,⬜ non coperto,,
-9195271d,route,/how-it-works/game-comprehension,GET,PublicPages,user,L1,⬜ non coperto,,
-fffc1e47,route,/legal,GET,PublicPages,admin,L1,⬜ non coperto,,
-5d744b7d,route,/legal,GET,PublicPages,user,L1,⬜ non coperto,,
-71ea0046,route,/legal/takedown,GET,PublicPages,admin,L1,⬜ non coperto,,
-980ea3dd,route,/legal/takedown,GET,PublicPages,user,L1,⬜ non coperto,,
-863d45ac,route,/offline,GET,PublicPages,admin,L1,⬜ non coperto,,
-f3f1e9ca,route,/offline,GET,PublicPages,user,L1,⬜ non coperto,,
-5a2e9ff8,route,/pricing,GET,PublicPages,admin,L1,⬜ non coperto,,
-860ecfe4,route,/pricing,GET,PublicPages,user,L1,⬜ non coperto,,
-f4337fbb,route,/privacy,GET,PublicPages,admin,L1,⬜ non coperto,,
-67630723,route,/privacy,GET,PublicPages,user,L1,⬜ non coperto,,
-265d13d6,route,/terms,GET,PublicPages,admin,L1,⬜ non coperto,,
-7e42455e,route,/terms,GET,PublicPages,user,L1,⬜ non coperto,,
+75f9709d,route,/,GET,PublicPages,admin,L1,✅ verificato,,
+32059dc0,route,/,GET,PublicPages,user,L1,✅ verificato,,
+44d6c691,route,/about,GET,PublicPages,admin,L1,✅ verificato,,
+77bc5523,route,/about,GET,PublicPages,user,L1,✅ verificato,,
+b093b102,route,/contact,GET,PublicPages,admin,L1,✅ verificato,,
+5c8090bc,route,/contact,GET,PublicPages,user,L1,✅ verificato,,
+cd96c0d7,route,/cookie-settings,GET,PublicPages,admin,L1,✅ verificato,,
+2a8b72f4,route,/cookie-settings,GET,PublicPages,user,L1,✅ verificato,,
+ee5352b8,route,/cookies,GET,PublicPages,admin,L1,✅ verificato,,
+b2e526f7,route,/cookies,GET,PublicPages,user,L1,✅ verificato,,
+d2f215fa,route,/faq,GET,PublicPages,admin,L1,✅ verificato,,
+18780ac9,route,/faq,GET,PublicPages,user,L1,✅ verificato,,
+996a00f6,route,/how-it-works,GET,PublicPages,admin,L1,✅ verificato,,
+11a674c5,route,/how-it-works,GET,PublicPages,user,L1,✅ verificato,,
+260f853b,route,/how-it-works/game-comprehension,GET,PublicPages,admin,L1,✅ verificato,,
+9195271d,route,/how-it-works/game-comprehension,GET,PublicPages,user,L1,✅ verificato,,
+fffc1e47,route,/legal,GET,PublicPages,admin,L1,✅ verificato,,
+5d744b7d,route,/legal,GET,PublicPages,user,L1,✅ verificato,,
+71ea0046,route,/legal/takedown,GET,PublicPages,admin,L1,✅ verificato,,
+980ea3dd,route,/legal/takedown,GET,PublicPages,user,L1,✅ verificato,,
+863d45ac,route,/offline,GET,PublicPages,admin,L1,✅ verificato,,
+f3f1e9ca,route,/offline,GET,PublicPages,user,L1,✅ verificato,,
+5a2e9ff8,route,/pricing,GET,PublicPages,admin,L1,✅ verificato,,
+860ecfe4,route,/pricing,GET,PublicPages,user,L1,✅ verificato,,
+f4337fbb,route,/privacy,GET,PublicPages,admin,L1,✅ verificato,,
+67630723,route,/privacy,GET,PublicPages,user,L1,✅ verificato,,
+265d13d6,route,/terms,GET,PublicPages,admin,L1,✅ verificato,,
+7e42455e,route,/terms,GET,PublicPages,user,L1,✅ verificato,,
 6e5f7964,endpoint,/api/v1/activity,GET,SessionTracking,user,L1,⬜ non coperto,,
 229c345c,endpoint,/api/v1/activity/timeline,GET,SessionTracking,user,L1,⬜ non coperto,,
 97162abd,endpoint,/api/v1/comments/{commentId},DELETE,SessionTracking,user,L2,⬜ non coperto,,
@@ -1334,52 +1334,52 @@ daf8d2a0,endpoint,/api/v1/sessions/{sessionId}/state/snapshots,POST,SessionTrack
 160ed1c4,endpoint,/api/v1/sessions/history,GET,SessionTracking,user,L1,⬜ non coperto,,
 1d1aedd7,endpoint,/api/v1/sessions/recent,GET,SessionTracking,user,L1,⬜ non coperto,,
 bd8e6b86,endpoint,/api/v1/sessions/statistics,GET,SessionTracking,user,L1,⬜ non coperto,,
-c6a10868,route,/game-nights,GET,SessionTracking,admin,L1,⬜ non coperto,,
-75d32c4b,route,/game-nights,GET,SessionTracking,user,L1,⬜ non coperto,,
+c6a10868,route,/game-nights,GET,SessionTracking,admin,L1,✅ verificato,,
+75d32c4b,route,/game-nights,GET,SessionTracking,user,L1,✅ verificato,,
 98476a4b,route,/game-nights/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 3bf1c30c,route,/game-nights/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
 19523044,route,/game-nights/[id]/live,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 b0503870,route,/game-nights/[id]/live,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
 03da1b60,route,/game-nights/[id]/summary,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 2a080644,route,/game-nights/[id]/summary,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-59d99152,route,/game-nights/new,GET,SessionTracking,admin,L1,⬜ non coperto,,
-69b23d47,route,/game-nights/new,GET,SessionTracking,user,L1,⬜ non coperto,,
+59d99152,route,/game-nights/new,GET,SessionTracking,admin,L1,✅ verificato,,
+69b23d47,route,/game-nights/new,GET,SessionTracking,user,L1,✅ verificato,,
 8497bc8c,route,/game-nights/shared/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
 ea751dc1,route,/game-nights/shared/[token],GET,SessionTracking,user,L1,⬜ non coperto,,param: token
-05fcdb1d,route,/join,GET,SessionTracking,admin,L1,⬜ non coperto,,
-77185dbe,route,/join,GET,SessionTracking,user,L1,⬜ non coperto,,
+05fcdb1d,route,/join,GET,SessionTracking,admin,L1,✅ verificato,,
+77185dbe,route,/join,GET,SessionTracking,user,L1,✅ verificato,,
 d696004e,route,/join/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
 b6d4a258,route,/join/[token],GET,SessionTracking,user,L1,⬜ non coperto,,param: token
 e484f2f5,route,/join/event/[code],GET,SessionTracking,admin,L1,⬜ non coperto,,param: code
 c9fde988,route,/join/event/[code],GET,SessionTracking,user,L1,⬜ non coperto,,param: code
 a7b168ec,route,/join/session/[code],GET,SessionTracking,admin,L1,⬜ non coperto,,param: code
 c2863396,route,/join/session/[code],GET,SessionTracking,user,L1,⬜ non coperto,,param: code
-6a47c1ef,route,/play-records,GET,SessionTracking,admin,L1,⬜ non coperto,,
-d0c2d0e7,route,/play-records,GET,SessionTracking,user,L1,⬜ non coperto,,
+6a47c1ef,route,/play-records,GET,SessionTracking,admin,L1,✅ verificato,,
+d0c2d0e7,route,/play-records,GET,SessionTracking,user,L1,✅ verificato,,
 c95f2979,route,/play-records/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 b0605914,route,/play-records/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
 54f46c6d,route,/play-records/[id]/edit,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 887a68dc,route,/play-records/[id]/edit,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-b8f2d364,route,/play-records/new,GET,SessionTracking,admin,L1,⬜ non coperto,,
-777d34c9,route,/play-records/new,GET,SessionTracking,user,L1,⬜ non coperto,,
+b8f2d364,route,/play-records/new,GET,SessionTracking,admin,L1,✅ verificato,,
+777d34c9,route,/play-records/new,GET,SessionTracking,user,L1,✅ verificato,,
 6f267eaf,route,/play-records/shared/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
 38b284b4,route,/play-records/shared/[token],GET,SessionTracking,user,L1,⬜ non coperto,,param: token
-622048f4,route,/play-records/stats,GET,SessionTracking,admin,L1,⬜ non coperto,,
-60f86d76,route,/play-records/stats,GET,SessionTracking,user,L1,⬜ non coperto,,
-65df4e19,route,/players,GET,SessionTracking,admin,L1,⬜ non coperto,,
-2c8bd5f7,route,/players,GET,SessionTracking,user,L1,⬜ non coperto,,
-39a88439,route,/players/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-a9dd444f,route,/players/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-aa1116e9,route,/players/[id]/achievements,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-36748ef7,route,/players/[id]/achievements,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-eb34bf8a,route,/players/[id]/games,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-cbcf6bbb,route,/players/[id]/games,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-21c0799d,route,/players/[id]/sessions,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-a714b2a0,route,/players/[id]/sessions,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-9955f5f4,route,/players/[id]/stats,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-1a8bdb42,route,/players/[id]/stats,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-230d11f2,route,/sessions,GET,SessionTracking,admin,L1,⬜ non coperto,,
-0188ae44,route,/sessions,GET,SessionTracking,user,L1,⬜ non coperto,,
+622048f4,route,/play-records/stats,GET,SessionTracking,admin,L1,✅ verificato,,
+60f86d76,route,/play-records/stats,GET,SessionTracking,user,L1,✅ verificato,,
+65df4e19,route,/players,GET,SessionTracking,admin,L1,✅ verificato,,
+2c8bd5f7,route,/players,GET,SessionTracking,user,L1,✅ verificato,,
+39a88439,route,/players/[id],GET,SessionTracking,admin,L1,✅ verificato,,param: id
+a9dd444f,route,/players/[id],GET,SessionTracking,user,L1,✅ verificato,,param: id
+aa1116e9,route,/players/[id]/achievements,GET,SessionTracking,admin,L1,⚠️ finding da triagare,,param: id
+36748ef7,route,/players/[id]/achievements,GET,SessionTracking,user,L1,⚠️ finding da triagare,,param: id
+eb34bf8a,route,/players/[id]/games,GET,SessionTracking,admin,L1,✅ verificato,,param: id
+cbcf6bbb,route,/players/[id]/games,GET,SessionTracking,user,L1,✅ verificato,,param: id
+21c0799d,route,/players/[id]/sessions,GET,SessionTracking,admin,L1,✅ verificato,,param: id
+a714b2a0,route,/players/[id]/sessions,GET,SessionTracking,user,L1,✅ verificato,,param: id
+9955f5f4,route,/players/[id]/stats,GET,SessionTracking,admin,L1,✅ verificato,,param: id
+1a8bdb42,route,/players/[id]/stats,GET,SessionTracking,user,L1,✅ verificato,,param: id
+230d11f2,route,/sessions,GET,SessionTracking,admin,L1,✅ verificato,,
+0188ae44,route,/sessions,GET,SessionTracking,user,L1,✅ verificato,,
 0f782e1a,route,/sessions/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 c82267fd,route,/sessions/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
 b1d6fde9,route,/sessions/[id]/join,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
@@ -1390,10 +1390,10 @@ bd34dfcc,route,/sessions/[id]/live,GET,SessionTracking,admin,L1,⬜ non coperto,
 f225a3eb,route,/sessions/[id]/notes,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
 be1a93b0,route,/sessions/[id]/scoreboard,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
 15bb7ed5,route,/sessions/[id]/scoreboard,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-6305b181,route,/sessions/join,GET,SessionTracking,admin,L1,⬜ non coperto,,
-70c7939f,route,/sessions/join,GET,SessionTracking,user,L1,⬜ non coperto,,
-d480c7f3,route,/sessions/new,GET,SessionTracking,admin,L1,⬜ non coperto,,
-3bf6652d,route,/sessions/new,GET,SessionTracking,user,L1,⬜ non coperto,,
+6305b181,route,/sessions/join,GET,SessionTracking,admin,L1,✅ verificato,,
+70c7939f,route,/sessions/join,GET,SessionTracking,user,L1,✅ verificato,,
+d480c7f3,route,/sessions/new,GET,SessionTracking,admin,L1,✅ verificato,,
+3bf6652d,route,/sessions/new,GET,SessionTracking,user,L1,✅ verificato,,
 91f54ad0,endpoint,/api/v1/admin/catalog-ingestion/assign-bgg-id,POST,SharedGameCatalog,admin,L2,⬜ non coperto,,
 9d5bbeee,endpoint,/api/v1/admin/catalog-ingestion/enqueue-all-skeletons,POST,SharedGameCatalog,admin,L2,⬜ non coperto,,
 5874637b,endpoint,/api/v1/admin/catalog-ingestion/enqueue-enrichment,POST,SharedGameCatalog,admin,L2,⬜ non coperto,,
@@ -1536,25 +1536,25 @@ a009d490,endpoint,/api/v1/users/{id:guid}/badges,GET,SharedGameCatalog,user,L1,�
 4832a334,endpoint,/api/v1/users/me/badges,GET,SharedGameCatalog,user,L1,⬜ non coperto,,
 ccf68b1a,endpoint,/api/v1/users/me/badges/{id:guid}/display,PUT,SharedGameCatalog,user,L2,⬜ non coperto,,
 c76ce9a2,endpoint,/api/v1/users/me/contribution-stats,GET,SharedGameCatalog,user,L1,⬜ non coperto,,
-189d0053,route,/admin/catalog-ingestion,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-13aa0695,route,/admin/catalog/seed-queue,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-4ffbb179,route,/admin/shared-games,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-7b0d3670,route,/admin/shared-games/[id],GET,SharedGameCatalog,admin,L1,⬜ non coperto,,param: id
-6e355b52,route,/admin/shared-games/[id]/knowledge-base,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,param: id
-2c7fe720,route,/admin/shared-games/[id]/rag-setup,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,param: id
-d13116b5,route,/admin/shared-games/all,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-7cd1fc07,route,/admin/shared-games/categories,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-5d744db7,route,/admin/shared-games/cover-gap,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-6d06c178,route,/admin/shared-games/import,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-9b206bd3,route,/admin/shared-games/new,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-5123070a,route,/admin/shared-games/seeding,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-902918da,route,/admin/shared-games/wizard,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-bf5a0d79,route,/discover,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-f51bcd63,route,/discover,GET,SharedGameCatalog,user,L1,⬜ non coperto,,
-bdc19c36,route,/shared-games,GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
-02781613,route,/shared-games,GET,SharedGameCatalog,user,L1,⬜ non coperto,,
-0e1ae79c,route,/shared-games/[id],GET,SharedGameCatalog,admin,L1,⬜ non coperto,,param: id
-17167176,route,/shared-games/[id],GET,SharedGameCatalog,user,L1,⬜ non coperto,,param: id
+189d0053,route,/admin/catalog-ingestion,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+13aa0695,route,/admin/catalog/seed-queue,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,
+4ffbb179,route,/admin/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+7b0d3670,route,/admin/shared-games/[id],GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,param: id
+6e355b52,route,/admin/shared-games/[id]/knowledge-base,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,param: id
+2c7fe720,route,/admin/shared-games/[id]/rag-setup,GET,SharedGameCatalog,admin,L1,✅ verificato,,param: id
+d13116b5,route,/admin/shared-games/all,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+7cd1fc07,route,/admin/shared-games/categories,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+5d744db7,route,/admin/shared-games/cover-gap,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+6d06c178,route,/admin/shared-games/import,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+9b206bd3,route,/admin/shared-games/new,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+5123070a,route,/admin/shared-games/seeding,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,
+902918da,route,/admin/shared-games/wizard,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+bf5a0d79,route,/discover,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+f51bcd63,route,/discover,GET,SharedGameCatalog,user,L1,✅ verificato,,
+bdc19c36,route,/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,,
+02781613,route,/shared-games,GET,SharedGameCatalog,user,L1,✅ verificato,,
+0e1ae79c,route,/shared-games/[id],GET,SharedGameCatalog,admin,L1,✅ verificato,,param: id
+17167176,route,/shared-games/[id],GET,SharedGameCatalog,user,L1,✅ verificato,,param: id
 b1c99fc1,endpoint,/api/v1/admin/config/chat-history-limits,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
 6789d1db,endpoint,/api/v1/admin/config/chat-history-limits,PUT,SystemConfiguration,admin,L2,⬜ non coperto,,
 72c7b940,endpoint,/api/v1/admin/config/game-library-limits,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
@@ -1573,12 +1573,12 @@ b03e73ba,endpoint,/api/v1/admin/config/share-request-limits/{tier},PUT,SystemCon
 f028c85d,endpoint,/api/v1/admin/providers/{name}/quota,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
 dcc58960,endpoint,/api/v1/admin/providers/{name}/rotate-key,POST,SystemConfiguration,admin,L2,⬜ non coperto,,
 f4135a7d,endpoint,/api/v1/admin/providers/quota,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
-6434ac1f,route,/admin/config,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
-05e0528f,route,/admin/config/tiers,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
-b428a2f8,route,/admin/providers,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
+6434ac1f,route,/admin/config,GET,SystemConfiguration,admin,L1,✅ verificato,,
+05e0528f,route,/admin/config/tiers,GET,SystemConfiguration,admin,L1,✅ verificato,,
+b428a2f8,route,/admin/providers,GET,SystemConfiguration,admin,L1,✅ verificato,,
 c831b37c,route,/admin/providers/[name],GET,SystemConfiguration,admin,L1,⬜ non coperto,,param: name
-5ce20729,route,/versions,GET,SystemConfiguration,admin,L1,⬜ non coperto,,
-a82778a5,route,/versions,GET,SystemConfiguration,user,L1,⬜ non coperto,,
+5ce20729,route,/versions,GET,SystemConfiguration,admin,L1,✅ verificato,,
+a82778a5,route,/versions,GET,SystemConfiguration,user,L1,✅ verificato,,
 b1cbd5ab,endpoint,/api/v1/seed-e2e-users,POST,Testing,admin,L2,⬜ non coperto,,
 6feba912,endpoint,/api/v1/test,POST,Testing,admin,L2,⬜ non coperto,,
 4a72c880,endpoint,/api/v1/test/error,POST,Testing,admin,L2,⬜ non coperto,,
@@ -1586,8 +1586,8 @@ b1cbd5ab,endpoint,/api/v1/seed-e2e-users,POST,Testing,admin,L2,⬜ non coperto,,
 0d845e7c,endpoint,/api/v1/testing/accessibility,GET,Testing,admin,L1,⬜ non coperto,,
 b674c0e0,endpoint,/api/v1/testing/e2e,GET,Testing,admin,L1,⬜ non coperto,,
 32dedf82,endpoint,/api/v1/testing/performance,GET,Testing,admin,L1,⬜ non coperto,,
-edc922a7,route,/dev/meeple-card,GET,Testing,admin,L1,⬜ non coperto,,
-64edf288,route,/dev/meeple-card,GET,Testing,user,L1,⬜ non coperto,,
+edc922a7,route,/dev/meeple-card,GET,Testing,admin,L1,✅ verificato,,
+64edf288,route,/dev/meeple-card,GET,Testing,user,L1,✅ verificato,,
 a0294bdb,endpoint,/api/v1/{collectionId:guid},GET,Unmapped,user,L1,⬜ non coperto,,
 99a28cd9,endpoint,/api/v1/{collectionId:guid}/documents,POST,Unmapped,user,L2,⬜ non coperto,,
 10d32d29,endpoint,/api/v1/{collectionId:guid}/documents/{documentId:guid},DELETE,Unmapped,user,L2,⬜ non coperto,,
@@ -1660,42 +1660,42 @@ be231d53,endpoint,/api/v1/wishlist,POST,UserLibrary,user,L2,⬜ non coperto,,
 03ed405e,endpoint,/api/v1/wishlist/{id:guid},DELETE,UserLibrary,user,L2,⬜ non coperto,,
 ee72fb15,endpoint,/api/v1/wishlist/{id:guid},PUT,UserLibrary,user,L2,⬜ non coperto,,
 0b8001be,endpoint,/api/v1/wishlist/highlights,GET,UserLibrary,user,L1,⬜ non coperto,,
-b2dda0f8,route,/dashboard,GET,UserLibrary,admin,L1,⬜ non coperto,,
-3be930f7,route,/dashboard,GET,UserLibrary,user,L1,⬜ non coperto,,
-9c2da82a,route,/library,GET,UserLibrary,admin,L1,⬜ non coperto,,
-af7a553f,route,/library,GET,UserLibrary,user,L1,⬜ non coperto,,
-bcbceb5c,route,/library-public,GET,UserLibrary,admin,L1,⬜ non coperto,,
-5f50b4dd,route,/library-public,GET,UserLibrary,user,L1,⬜ non coperto,,
-b2ffcc35,route,/library/[gameId],GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId
-9491a691,route,/library/[gameId],GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId
-32ad8ea9,route,/library/[gameId]/agent,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId
-8f0def2c,route,/library/[gameId]/agent,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId
-73a09e5e,route,/library/[gameId]/play,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId
-2af23a27,route,/library/[gameId]/play,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId
+b2dda0f8,route,/dashboard,GET,UserLibrary,admin,L1,✅ verificato,,
+3be930f7,route,/dashboard,GET,UserLibrary,user,L1,✅ verificato,,
+9c2da82a,route,/library,GET,UserLibrary,admin,L1,✅ verificato,,
+af7a553f,route,/library,GET,UserLibrary,user,L1,✅ verificato,,
+bcbceb5c,route,/library-public,GET,UserLibrary,admin,L1,✅ verificato,,
+5f50b4dd,route,/library-public,GET,UserLibrary,user,L1,✅ verificato,,
+b2ffcc35,route,/library/[gameId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
+9491a691,route,/library/[gameId],GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
+32ad8ea9,route,/library/[gameId]/agent,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
+8f0def2c,route,/library/[gameId]/agent,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
+73a09e5e,route,/library/[gameId]/play,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
+2af23a27,route,/library/[gameId]/play,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
 ebc362b9,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId campaignId
 2780f6b2,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId campaignId
 7242bf62,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId campaignId
 aa2d0f94,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId campaignId
 a350f258,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId campaignId
 9d823b6c,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId campaignId
-08cdf316,route,/library/[gameId]/toolbox,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId
-8cb8f3be,route,/library/[gameId]/toolbox,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId
-c8c2a960,route,/library/[gameId]/toolkit,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId
-f961ad47,route,/library/[gameId]/toolkit,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId
+08cdf316,route,/library/[gameId]/toolbox,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
+8cb8f3be,route,/library/[gameId]/toolbox,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
+c8c2a960,route,/library/[gameId]/toolkit,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
+f961ad47,route,/library/[gameId]/toolkit,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
 be4b9d96,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId sessionId
 7e348f9d,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId sessionId
-cd4a0915,route,/library/private,GET,UserLibrary,admin,L1,⬜ non coperto,,
-da69ab60,route,/library/private,GET,UserLibrary,user,L1,⬜ non coperto,,
-33cc66f1,route,/library/private/[id],GET,UserLibrary,admin,L1,⬜ non coperto,,param: id
-fe98bd5e,route,/library/private/[id],GET,UserLibrary,user,L1,⬜ non coperto,,param: id
-ebdb119a,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,admin,L1,⬜ non coperto,,param: id
-d07ddde6,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,user,L1,⬜ non coperto,,param: id
-6f6339d3,route,/library/private/add,GET,UserLibrary,admin,L1,⬜ non coperto,,
-ef14dad2,route,/library/private/add,GET,UserLibrary,user,L1,⬜ non coperto,,
+cd4a0915,route,/library/private,GET,UserLibrary,admin,L1,✅ verificato,,
+da69ab60,route,/library/private,GET,UserLibrary,user,L1,✅ verificato,,
+33cc66f1,route,/library/private/[id],GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: id
+fe98bd5e,route,/library/private/[id],GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: id
+ebdb119a,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: id
+d07ddde6,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: id
+6f6339d3,route,/library/private/add,GET,UserLibrary,admin,L1,✅ verificato,,
+ef14dad2,route,/library/private/add,GET,UserLibrary,user,L1,✅ verificato,,
 aac95741,route,/library/shared/[token],GET,UserLibrary,admin,L1,⬜ non coperto,,param: token
 60ade2bd,route,/library/shared/[token],GET,UserLibrary,user,L1,⬜ non coperto,,param: token
-bd0fc485,route,/library/wishlist,GET,UserLibrary,admin,L1,⬜ non coperto,,
-37b790f4,route,/library/wishlist,GET,UserLibrary,user,L1,⬜ non coperto,,
+bd0fc485,route,/library/wishlist,GET,UserLibrary,admin,L1,✅ verificato,,
+37b790f4,route,/library/wishlist,GET,UserLibrary,user,L1,✅ verificato,,
 008afb5c,endpoint,/api/v1/admin/notifications/dead-letter,GET,UserNotifications,admin,L1,⬜ non coperto,,
 d6811a6a,endpoint,/api/v1/admin/notifications/dead-letter/{id:guid}/retry,POST,UserNotifications,admin,L2,⬜ non coperto,,
 f848556a,endpoint,/api/v1/admin/notifications/legacy-queue/count,GET,UserNotifications,admin,L1,⬜ non coperto,,
@@ -1719,8 +1719,8 @@ af8a9e30,endpoint,/api/v1/notifications/push/unsubscribe,DELETE,UserNotification
 63493da1,endpoint,/api/v1/notifications/stream,GET,UserNotifications,user,L1,⬜ non coperto,,
 f4392abc,endpoint,/api/v1/notifications/unread-count,GET,UserNotifications,user,L1,⬜ non coperto,,
 fa586b55,endpoint,/api/v1/notifications/unsubscribe,GET,UserNotifications,user,L1,⬜ non coperto,,
-ab8573fa,route,/admin/notifications/compose,GET,UserNotifications,admin,L1,⬜ non coperto,,
-d360991b,route,/notifications,GET,UserNotifications,admin,L1,⬜ non coperto,,
-ef49d421,route,/notifications,GET,UserNotifications,user,L1,⬜ non coperto,,
-f588bc8d,route,/notifications/preferences,GET,UserNotifications,admin,L1,⬜ non coperto,,
-6a79ad71,route,/notifications/preferences,GET,UserNotifications,user,L1,⬜ non coperto,,
+ab8573fa,route,/admin/notifications/compose,GET,UserNotifications,admin,L1,✅ verificato,,
+d360991b,route,/notifications,GET,UserNotifications,admin,L1,✅ verificato,,
+ef49d421,route,/notifications,GET,UserNotifications,user,L1,✅ verificato,,
+f588bc8d,route,/notifications/preferences,GET,UserNotifications,admin,L1,✅ verificato,,
+6a79ad71,route,/notifications/preferences,GET,UserNotifications,user,L1,✅ verificato,,

@@ -61,8 +61,13 @@ export function renderMarkdown(entries: CrawlEntry[]): string {
     byVerdict[verdict] += 1;
     if (verdict === 'ok') continue;
 
+    // Il segnale va su una riga di tabella: i messaggi di console sono spesso
+    // multi-riga e lunghi centinaia di caratteri, e sfondano il markdown.
     const signal =
-      [...e.bodyMarkers, ...e.failedRequests, ...e.consoleErrors].slice(0, 2).join(' · ') || '—';
+      [...e.bodyMarkers, ...e.failedRequests, ...e.consoleErrors]
+        .slice(0, 2)
+        .map(s => s.replace(/\s+/g, ' ').slice(0, 110))
+        .join(' · ') || '—';
     problems.push(`| \`${e.route}\` | ${e.role} | ${verdict} | ${e.status} | ${signal} |`);
   }
 

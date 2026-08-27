@@ -234,6 +234,7 @@ internal static class SessionDeckMapper
         {
             Id = domain.Id,
             SessionId = domain.SessionId,
+            ToolboxId = domain.ToolboxId,
             Name = domain.Name,
             DeckType = domain.DeckType,
             CreatedAt = domain.CreatedAt,
@@ -258,6 +259,7 @@ internal static class SessionDeckMapper
 
         typeof(SessionDeck).GetProperty(nameof(SessionDeck.Id))!.SetValue(deck, entity.Id);
         typeof(SessionDeck).GetProperty(nameof(SessionDeck.SessionId))!.SetValue(deck, entity.SessionId);
+        typeof(SessionDeck).GetProperty(nameof(SessionDeck.ToolboxId))!.SetValue(deck, entity.ToolboxId);
         typeof(SessionDeck).GetProperty(nameof(SessionDeck.Name))!.SetValue(deck, entity.Name);
         typeof(SessionDeck).GetProperty(nameof(SessionDeck.DeckType))!.SetValue(deck, entity.DeckType);
         typeof(SessionDeck).GetProperty(nameof(SessionDeck.CreatedAt))!.SetValue(deck, entity.CreatedAt);

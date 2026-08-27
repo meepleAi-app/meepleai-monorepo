@@ -13,7 +13,23 @@ public class SessionDeck
     private List<Card> _cards = [];
 
     public Guid Id { get; private set; }
-    public Guid SessionId { get; private set; }
+
+    /// <summary>Sessione proprietaria, se il mazzo nasce dentro una partita.</summary>
+    public Guid? SessionId { get; private set; }
+
+    /// <summary>
+    /// Toolbox proprietario, se il mazzo nasce come strumento di un toolbox (#3856).
+    /// </summary>
+    /// <remarks>
+    /// Un mazzo appartiene a una sessione <b>oppure</b> a un toolbox, mai a entrambi e mai a
+    /// nessuno dei due: il vincolo <c>CK_SessionDecks_Owner</c> lo impone anche nel database, come
+    /// gia' fa <c>CK_UserLibraryEntry_GameSource</c> per le voci di libreria.
+    ///
+    /// Prima esisteva solo <c>SessionId</c>, e il percorso dei toolbox ci passava l'id del
+    /// toolbox: la chiave esterna verso le sessioni non poteva che rifiutarlo, e l'endpoint
+    /// rispondeva 500 a ogni chiamata.
+    /// </remarks>
+    public Guid? ToolboxId { get; private set; }
     public string Name { get; private set; } = string.Empty;
     public DeckType DeckType { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -45,6 +61,38 @@ public class SessionDeck
     private SessionDeck() { }
 
     /// <summary>
+    /// Mazzo standard di un <b>toolbox</b> (#3856).
+    /// </summary>
+    /// <remarks>
+    /// Esiste separata da <see cref="CreateStandardDeck"/> di proposito: passare l'id di un
+    /// toolbox come <c>sessionId</c> era esattamente il difetto: la chiave esterna verso le
+    /// sessioni lo rifiutava e l'endpoint rispondeva 500. Due factory rendono impossibile
+    /// confondere i due proprietari.
+    /// </remarks>
+    public static SessionDeck CreateStandardDeckForToolbox(Guid toolboxId, string name = "Standard Deck", bool includeJokers = false)
+    {
+        if (toolboxId == Guid.Empty)
+            throw new ArgumentException("Toolbox ID is required.", nameof(toolboxId));
+
+        var deck = CreateStandardDeckCore(name, includeJokers);
+        deck.ToolboxId = toolboxId;
+        return deck;
+    }
+
+    /// <summary>
+    /// Mazzo personalizzato di un <b>toolbox</b> (#3856).
+    /// </summary>
+    public static SessionDeck CreateCustomDeckForToolbox(Guid toolboxId, string name, List<Card> cards)
+    {
+        if (toolboxId == Guid.Empty)
+            throw new ArgumentException("Toolbox ID is required.", nameof(toolboxId));
+
+        var deck = CreateCustomDeckCore(name, cards);
+        deck.ToolboxId = toolboxId;
+        return deck;
+    }
+
+    /// <summary>
     /// Creates a new standard 52-card deck.
     /// </summary>
     public static SessionDeck CreateStandardDeck(Guid sessionId, string name = "Standard Deck", bool includeJokers = false)
@@ -52,6 +100,13 @@ public class SessionDeck
         if (sessionId == Guid.Empty)
             throw new ArgumentException("Session ID is required.", nameof(sessionId));
 
+        var deck = CreateStandardDeckCore(name, includeJokers);
+        deck.SessionId = sessionId;
+        return deck;
+    }
+
+    private static SessionDeck CreateStandardDeckCore(string name, bool includeJokers)
+    {
         var cards = includeJokers
             ? StandardDeckFactory.CreateStandardDeckWithJokers()
             : StandardDeckFactory.CreateStandardDeck();
@@ -59,7 +114,6 @@ public class SessionDeck
         var deck = new SessionDeck
         {
             Id = Guid.NewGuid(),
-            SessionId = sessionId,
             Name = name,
             DeckType = DeckType.Standard52,
             CreatedAt = DateTime.UtcNow,
@@ -80,6 +134,13 @@ public class SessionDeck
         if (sessionId == Guid.Empty)
             throw new ArgumentException("Session ID is required.", nameof(sessionId));
 
+        var deck = CreateCustomDeckCore(name, cards);
+        deck.SessionId = sessionId;
+        return deck;
+    }
+
+    private static SessionDeck CreateCustomDeckCore(string name, List<Card> cards)
+    {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Deck name is required.", nameof(name));
 
@@ -89,7 +150,6 @@ public class SessionDeck
         var deck = new SessionDeck
         {
             Id = Guid.NewGuid(),
-            SessionId = sessionId,
             Name = name,
             DeckType = DeckType.Custom,
             CreatedAt = DateTime.UtcNow,

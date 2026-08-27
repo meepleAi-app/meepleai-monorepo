@@ -8,7 +8,17 @@ namespace Api.Infrastructure.Entities.SessionTracking;
 public class SessionDeckEntity
 {
     public Guid Id { get; set; }
-    public Guid SessionId { get; set; }
+
+    /// <summary>
+    /// Sessione proprietaria, se il mazzo nasce dentro una partita.
+    /// Esattamente uno fra questo e <see cref="ToolboxId"/> e' valorizzato (#3856).
+    /// </summary>
+    public Guid? SessionId { get; set; }
+
+    /// <summary>
+    /// Toolbox proprietario, se il mazzo nasce come strumento di un toolbox.
+    /// </summary>
+    public Guid? ToolboxId { get; set; }
     public string Name { get; set; } = string.Empty;
     public DeckType DeckType { get; set; }
     public DateTime CreatedAt { get; set; }

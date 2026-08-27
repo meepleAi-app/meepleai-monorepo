@@ -162,6 +162,23 @@ describe('parseRoutingFile', () => {
     expect(parseRoutingFile(source, 'f.cs', '')[0].auth).toBe(expected);
   });
 
+  // Un endpoint con lambda inline non nomina alcun handler. Interrogare comunque
+  // il corpo dei metodi con un nome vuoto farebbe combaciare il PRIMO metodo
+  // statico del file, e l'endpoint erediterebbe l'autorizzazione di codice che
+  // non lo riguarda: qui il vicino e' protetto e l'endpoint non lo e'.
+  it("non eredita l'autorizzazione di un metodo statico che l'endpoint non riferisce", () => {
+    const source = `
+      group.MapGet("/aperto", async (HttpContext c) => Results.Ok());
+
+      private static IResult AltroHandler(HttpContext context)
+      {
+          var (ok, s, err) = context.RequireAdminSession();
+          return ok ? Results.Ok() : err!;
+      }
+    `;
+    expect(parseRoutingFile(source, 'f.cs', '')[0].auth).toBe('unknown');
+  });
+
   it('preferisce admin quando un endpoint combina più filtri', () => {
     const source = `group.MapPost("/x", H).RequireAuthenticatedUser().RequireAdminSession();`;
     expect(parseRoutingFile(source, 'f.cs', '')[0].auth).toBe('admin');

@@ -16,6 +16,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
+import { ApiError } from '@/lib/api/core/errors';
 import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
 
 // ─── Query key factory ──────────────────────────────────────────────────────
@@ -37,10 +38,23 @@ export const agentKeys = {
 export function useAgent(agentId: string | null): UseQueryResult<AgentDto | null> {
   return useQuery({
     queryKey: agentKeys.detail(agentId ?? ''),
-    queryFn: () => {
+    queryFn: async (): Promise<AgentDto | null> => {
       // Safety net: if somehow enabled fires with null, throw a clear error
       if (!agentId) throw new Error('agentId is required');
-      return api.agents.getById(agentId);
+
+      try {
+        return await api.agents.getById(agentId);
+      } catch (err) {
+        // #3852 — un agente inesistente non e' un guasto. Lasciando propagare il 404,
+        // `isError` diventava true e la macchina a stati mostrava «qualcosa e' andato storto»
+        // invece di «questo agente non esiste»: due situazioni diverse per chi legge, con
+        // reazioni diverse — tornare indietro, oppure credere che il sistema sia rotto.
+        //
+        // `null` mappa su `hasData: false`, che la FSM traduce gia' in 'not-found'.
+        // Stesso schema di useLiveSession e useLiveSessionPhases.
+        if (err instanceof ApiError && err.statusCode === 404) return null;
+        throw err;
+      }
     },
     enabled: !!agentId,
     retry: false,

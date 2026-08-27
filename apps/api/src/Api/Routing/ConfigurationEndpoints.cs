@@ -299,13 +299,13 @@ internal static class ConfigurationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
-            session!.Principal!.Subject.Id, request.Updates.Count);
+            session!.Principal!.Subject.Id, request.Updates?.Count ?? 0);
 
-        var invalidIds = request.Updates.Where(u => !Guid.TryParse(u.Id, out _)).Select(u => u.Id).ToList();
+        var invalidIds = (request.Updates ?? []).Where(u => !Guid.TryParse(u.Id, out _)).Select(u => u.Id).ToList();
         if (invalidIds.Count > 0)
             return Results.BadRequest(new { error = $"Invalid configuration IDs: {string.Join(", ", invalidIds)}" });
 
-        var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
+        var updates = (request.Updates ?? []).Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
             Id: Guid.Parse(u.Id),
             Value: u.Value
         )).ToList();
@@ -359,9 +359,9 @@ internal static class ConfigurationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} importing {Count} configurations",
-            session!.Principal!.Subject.Id, request.Configurations.Count);
+            session!.Principal!.Subject.Id, request.Configurations?.Count ?? 0);
 
-        var items = request.Configurations.Select(c => new ConfigurationImportItem(
+        var items = (request.Configurations ?? []).Select(c => new ConfigurationImportItem(
             Key: c.Key,
             Value: c.Value,
             ValueType: c.ValueType,

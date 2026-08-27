@@ -76,8 +76,11 @@ internal sealed class AiToolkitSuggestionValidator : AbstractValidator<AiToolkit
         RuleForEach(s => s.DiceTools)
             .ChildRules(d =>
             {
+                // Il NotNull era ridondante — il Must qui sotto tratta gia' il null — e con la
+                // cascata Stop (#3847) vinceva lui, sostituendo il messaggio esplicito con quello
+                // di libreria. Per un validatore che serve a spiegare a un LLM cosa ha sbagliato,
+                // il messaggio E' la funzione.
                 d.RuleFor(t => t.CustomFaces)
-                    .NotNull()
                     .Must(faces => faces is not null && faces.Length > 0)
                     .When(t => t.DiceType == DiceType.Custom)
                     .WithMessage(

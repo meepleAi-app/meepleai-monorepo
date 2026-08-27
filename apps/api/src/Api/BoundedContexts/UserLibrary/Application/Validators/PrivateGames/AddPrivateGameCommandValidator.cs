@@ -27,7 +27,7 @@ internal sealed class AddPrivateGameCommandValidator : AbstractValidator<AddPriv
             .WithMessage("BggId is required for BoardGameGeek source")
             .GreaterThan(0)
             .WithMessage("BggId must be a positive integer")
-            .When(x => x.Source.Equals("BoardGameGeek", StringComparison.OrdinalIgnoreCase));
+            .When(x => x.Source is not null && x.Source.Equals("BoardGameGeek", StringComparison.OrdinalIgnoreCase));
 
         RuleFor(x => x.Title)
             .NotEmpty()

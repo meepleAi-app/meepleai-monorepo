@@ -132,12 +132,12 @@ internal static class AdminUserBulkEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("SuperAdmin {AdminId} initiating bulk password reset for {Count} users",
-            session!.Principal!.EffectiveActor.Id, request.UserIds.Count);
+            session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0);
 
         try
         {
             var command = new BulkPasswordResetCommand(
-                request.UserIds,
+                request.UserIds ?? [],
                 request.NewPassword,
                 session.Principal!.EffectiveActor.Id
             );
@@ -163,12 +163,12 @@ internal static class AdminUserBulkEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} initiating bulk role change for {Count} users to role {Role}",
-            session!.Principal!.EffectiveActor.Id, request.UserIds.Count, request.NewRole);
+            session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0, request.NewRole);
 
         try
         {
             var command = new BulkRoleChangeCommand(
-                request.UserIds,
+                request.UserIds ?? [],
                 request.NewRole,
                 session.Principal!.EffectiveActor.Id
             );

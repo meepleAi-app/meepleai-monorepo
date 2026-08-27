@@ -438,6 +438,17 @@ internal class ApiExceptionHandlerMiddleware
                 domainEx.Message
             ),
 
+            // #3847 — un endpoint multipart chiamato con Content-Type: application/json rispondeva
+            // 500. La forma dell'errore e' quella di 415, non quella di un guasto: il binding di
+            // ASP.NET la segnala pero' come InvalidOperationException, che senza questo caso
+            // finisce nel fallback.
+            InvalidOperationException when ex.Message.Contains(
+                "Incorrect Content-Type", StringComparison.OrdinalIgnoreCase) => (
+                StatusCodes.Status415UnsupportedMediaType,
+                "unsupported_media_type",
+                ex.Message
+            ),
+
             // ASP.NET request binding exceptions (e.g., invalid JSON body)
             BadHttpRequestException badReqEx => (
                 StatusCodes.Status400BadRequest,

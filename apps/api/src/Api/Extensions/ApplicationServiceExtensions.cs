@@ -245,6 +245,23 @@ internal static class ApplicationServiceExtensions
     /// </summary>
     public static IServiceCollection AddFluentValidation(this IServiceCollection services)
     {
+        // #3847 — una regola che dereferenzia un campo assente diventava un 500.
+        //
+        // Il modo idiomatico di scrivere una regola in questo repo e'
+        //     RuleFor(x => x.PdfIds).NotEmpty().Must(ids => ids.Count <= 50)
+        // e con la cascata di default (Continue) il .Must gira ANCHE quando .NotEmpty ha gia'
+        // fallito: su un corpo vuoto solleva NullReferenceException, che attraversa la pipeline e
+        // arriva al client come 500. Chi chiama non distingue piu' "ho dimenticato un campo" da
+        // "il server e' rotto".
+        //
+        // Stop fa quello che l'autore di quelle regole intendeva: se .NotEmpty fallisce, il resto
+        // della catena non viene provato. In cambio ogni proprieta' riporta il PRIMO errore invece
+        // di tutti — accettabile, perche' i messaggi successivi descrivono comunque vincoli su un
+        // valore che non c'e'.
+        //
+        // Non copre le condizioni .When(...) che dereferenziano: quelle vanno guardate una a una.
+        ValidatorOptions.Global.DefaultRuleLevelCascadeMode = CascadeMode.Stop;
+
         // Register all validators from the Authentication bounded context
         // NOTE: includeInternalTypes: true required because validators are internal sealed classes
         services.AddValidatorsFromAssemblyContaining<BoundedContexts.Authentication.Application.Validators.LoginCommandValidator>(

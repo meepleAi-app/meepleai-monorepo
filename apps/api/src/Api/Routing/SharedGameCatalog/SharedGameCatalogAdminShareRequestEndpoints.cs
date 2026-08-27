@@ -368,12 +368,12 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
 
         logger.LogInformation(
             "Editor {EditorId} bulk approving {Count} share requests",
-            editorId, request.ShareRequestIds.Count);
+            editorId, request.ShareRequestIds?.Count ?? 0);
 
         try
         {
             var command = new BulkApproveShareRequestsCommand(
-                request.ShareRequestIds,
+                request.ShareRequestIds ?? [],
                 editorId,
                 request.TargetSharedGameId,
                 request.AdminNotes);
@@ -408,12 +408,12 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
 
         logger.LogInformation(
             "Editor {EditorId} bulk rejecting {Count} share requests with reason: {Reason}",
-            editorId, request.ShareRequestIds.Count, request.Reason);
+            editorId, request.ShareRequestIds?.Count ?? 0, request.Reason);
 
         try
         {
             var command = new BulkRejectShareRequestsCommand(
-                request.ShareRequestIds,
+                request.ShareRequestIds ?? [],
                 editorId,
                 request.Reason);
 

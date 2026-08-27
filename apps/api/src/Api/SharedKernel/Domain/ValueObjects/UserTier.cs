@@ -20,6 +20,24 @@ public sealed class UserTier : ValueObject
         "free", "normal", "premium", "pro", "enterprise"
     };
 
+    /// <summary>
+    /// I tier che il dominio riconosce, per chi deve validare senza costruire il valore.
+    /// </summary>
+    /// <remarks>
+    /// #3842 — questo elenco era privato, e ogni validatore se lo riscriveva a mano. Ne sono nate
+    /// tre versioni diverse e incompatibili: una con "Basic" (che il dominio non conosce), una
+    /// senza "normal" (che invece riconosce), e nessuna delle due con lo stesso confronto. Il
+    /// risultato era che l'endpoint del tier rifiutava OGNI valore, compresi i tre che il suo
+    /// stesso messaggio d'errore dichiarava validi.
+    ///
+    /// Meglio esporre l'elenco che vederlo duplicare male.
+    /// </remarks>
+    public static IReadOnlyCollection<string> All => ValidTiers;
+
+    /// <summary>Vero se il dominio riconosce il tier, senza distinzione di maiuscole.</summary>
+    public static bool IsValid(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && ValidTiers.Contains(value);
+
     public string Value { get; }
 
     private UserTier(string value)

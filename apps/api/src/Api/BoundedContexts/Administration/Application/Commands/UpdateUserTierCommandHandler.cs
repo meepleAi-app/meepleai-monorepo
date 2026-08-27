@@ -36,14 +36,16 @@ internal class UpdateUserTierCommandHandler : ICommandHandler<UpdateUserTierComm
     public async Task<UserDto> Handle(UpdateUserTierCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
-        ArgumentNullException.ThrowIfNull(command);
         // Authorization: While endpoint checks admin role, we verify again for defense in depth
         // and to ensure handler can be safely called from any context
         var requester = await _userRepository.GetByIdAsync(command.RequesterUserId, cancellationToken).ConfigureAwait(false);
         if (requester == null)
             throw new DomainException("Requester not found");
 
-        if (!requester.Role.IsAdmin())
+        // #3842 — IsAdmin() e' un confronto esatto su "admin": un SUPERADMIN veniva respinto dal
+        // proprio stesso sistema. HasPermission esprime la gerarchia ("almeno amministratore") ed
+        // e' l'unico posto dove quella regola e' scritta: "SuperAdmin has all permissions".
+        if (!requester.Role.HasPermission(Role.Admin))
             throw new DomainException("Only administrators can change user tiers");
 
         // Get target user

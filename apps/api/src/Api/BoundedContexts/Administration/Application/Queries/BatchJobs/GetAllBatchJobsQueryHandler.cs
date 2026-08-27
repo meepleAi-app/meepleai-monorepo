@@ -38,6 +38,6 @@ internal sealed class GetAllBatchJobsQueryHandler : IRequestHandler<GetAllBatchJ
             job.ErrorMessage,
             job.CreatedAt)).ToList();
 
-        return new BatchJobListDto(jobDtos, total);
+        return new BatchJobListDto(jobDtos, total, request.Page, request.PageSize);
     }
 }

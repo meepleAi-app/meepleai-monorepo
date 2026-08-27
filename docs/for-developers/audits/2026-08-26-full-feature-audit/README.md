@@ -18,6 +18,11 @@ Piano dell'harness: [plan](../../specs/2026-08-26-full-feature-audit-plan.md)
 | 4 — Gioco | SessionTracking · GameToolbox · Gamification · EntityRelationships | 🔄 sonde sistematiche — [scheda](./wave-3-5-sonde-sistematiche.md) |
 | 5 — Contorno | UserNotifications · BusinessSimulations · DatabaseSync · Testing | 🔄 sonde sistematiche — [scheda](./wave-3-5-sonde-sistematiche.md) |
 
+## Riprendere il lavoro
+
+Per continuare l'audit in una nuova sessione: [RIPRESA.md](./RIPRESA.md) contiene il prompt di
+handoff, con stato, strumenti, cosa resta e le trappole da non ripetere.
+
 ## Come si esegue
 
 Prerequisiti: stack locale avviato (`cd infra && make dev-from-snapshot`), frontend su :3000,

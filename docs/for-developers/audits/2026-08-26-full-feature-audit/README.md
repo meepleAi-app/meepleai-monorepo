@@ -151,6 +151,36 @@ dall'id che il crawler inietta: è un id di `shared_games`, e quelle rotte si as
 altro tipo. **Non sono findings** finché non li si prova con un id del tipo giusto — è il rischio
 che il piano prevedeva, e va tenuto presente prima di aprire issue su questa categoria.
 
+## Come leggere questo audit
+
+**Che cosa significa "verificato".** Tre livelli, dichiarati per riga nel tracker:
+
+| Livello | Significa |
+|---|---|
+| **L1** | L'endpoint esiste, autorizza e valida. Le mutazioni sondate in massa stanno qui: sono state chiamate con corpo vuoto e id inesistente, quindi si sa che rispondono correttamente a una richiesta malformata — non che facciano la cosa giusta con una valida |
+| **L2** | La funzione produce l'effetto atteso, confermato su risposta API, riga di database o email |
+| **L3** | Come L2, più almeno un caso negativo o limite |
+
+Una riga L1 **non è** una funzione verificata. È una funzione che non esplode.
+
+**Che cosa NON è stato provato**, e non per dimenticanza:
+
+- **71 mutazioni irreversibili** — riavvii di servizi, migrazione dello storage, rotazione delle chiavi API, cancellazione di backup, revoca di sessioni. Vanno provate su un ambiente sacrificabile.
+- **86 righe** che richiedono entità inesistenti in questo ambiente (collezioni di documenti, campagne, job di coda).
+- **OAuth**, disattivato in locale (`oauthEnabled: false`): verificabile solo su staging.
+
+**Quanto fidarsi dei numeri.** Durante la sessione un terzo di una passata è risultato invalido: la
+sessione era caduta e ogni 401 veniva letto come «autorizzazione applicata», marcando 232 righe
+come verificate senza provarle. Sono state rifatte, e la sonda ora si ferma dopo cinque 401
+consecutivi. Un audit automatico sbaglia in silenzio: i controlli su come sbaglia contano quanto i
+controlli su ciò che misura.
+
+**I falsi positivi sono documentati come tali.** Diverse segnalazioni iniziali erano difetti dei
+criteri, non del prodotto: `/library` che comunica lo stato vuoto con i contatori invece che con
+una frase, endpoint chiamati senza i parametri obbligatori, un endpoint "Superadmin only"
+classificato come self-service dal parser. Sono riportati nelle schede delle ondate perché
+distinguere ciò che non è un difetto vale quanto elencare ciò che lo è.
+
 ## Findings aperti
 
 | # | Cosa | Severità | Stato |

@@ -43,10 +43,26 @@ public class SessionDeckConfiguration : IEntityTypeConfiguration<SessionDeckEnti
             .HasDefaultValue("{}");
 
         // Relationships
+        //
+        // #3856 — un mazzo appartiene a una sessione OPPURE a un toolbox. Prima esisteva solo
+        // SessionId, obbligatorio: il percorso dei toolbox ci passava l'id del toolbox e la chiave
+        // esterna verso le sessioni lo rifiutava (23503), quindi l'endpoint rispondeva 500.
+        //
+        // Il vincolo "esattamente uno" e' lo stesso schema di CK_UserLibraryEntry_GameSource.
         builder.HasOne(x => x.Session)
             .WithMany()
             .HasForeignKey(x => x.SessionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne<Api.BoundedContexts.GameToolbox.Domain.Entities.Toolbox>()
+            .WithMany()
+            .HasForeignKey(x => x.ToolboxId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.ToTable(t => t.HasCheckConstraint(
+            "CK_SessionDecks_Owner",
+            "(\"SessionId\" IS NOT NULL AND \"ToolboxId\" IS NULL) OR " +
+            "(\"SessionId\" IS NULL AND \"ToolboxId\" IS NOT NULL)"));
 
         builder.HasMany(x => x.Cards)
             .WithOne(x => x.SessionDeck)
@@ -58,6 +74,7 @@ public class SessionDeckConfiguration : IEntityTypeConfiguration<SessionDeckEnti
 
         // Indexes
         builder.HasIndex(x => x.SessionId);
+        builder.HasIndex(x => x.ToolboxId);
         builder.HasIndex(x => x.IsDeleted);
     }
 }

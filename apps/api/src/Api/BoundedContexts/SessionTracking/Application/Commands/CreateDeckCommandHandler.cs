@@ -67,7 +67,7 @@ public class CreateDeckCommandHandler : IRequestHandler<CreateDeckCommand, Creat
         await _mediator.Publish(new DeckCreatedEvent
         {
             DeckId = deck.Id,
-            SessionId = deck.SessionId,
+            SessionId = request.SessionId,
             DeckName = deck.Name,
             DeckType = deck.DeckType.ToString(),
             CardCount = deck.Cards.Count

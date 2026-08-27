@@ -61,7 +61,7 @@ public class ShuffleDeckCommandHandler : IRequestHandler<ShuffleDeckCommand, Shu
         await _mediator.Publish(new DeckShuffledEvent
         {
             DeckId = deck.Id,
-            SessionId = deck.SessionId,
+            SessionId = request.SessionId,
             DeckName = deck.Name,
             CardsInDrawPile = deck.DrawPile.Count
         }, cancellationToken).ConfigureAwait(false);

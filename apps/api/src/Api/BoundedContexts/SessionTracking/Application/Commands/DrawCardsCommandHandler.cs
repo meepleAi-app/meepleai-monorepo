@@ -66,7 +66,7 @@ public class DrawCardsCommandHandler : IRequestHandler<DrawCardsCommand, DrawCar
         await _mediator.Publish(new CardsDrawnEvent
         {
             DeckId = deck.Id,
-            SessionId = deck.SessionId,
+            SessionId = request.SessionId,
             ParticipantId = request.ParticipantId,
             ParticipantName = participant.DisplayName,
             CardCount = drawnCards.Count,

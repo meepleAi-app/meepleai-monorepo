@@ -49,33 +49,6 @@ internal static class AdminImpersonationEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .Produces(StatusCodes.Status409Conflict);
 
-        // END — the acting admin ends their own impersonation session.
-        impersonationGroup.MapPost("/end", async (
-            HttpContext context,
-            IMediator mediator,
-            ImpersonationEndRequest request,
-            CancellationToken ct) =>
-        {
-            var (authorized, session, error) = context.RequireAdminSession();
-            if (!authorized) return error!;
-
-            var command = new ImpersonationEndCommand(
-                SessionId: request.SessionId,
-                RequestingUserId: session!.Principal!.EffectiveActor.Id);
-
-            var success = await mediator.Send(command, ct).ConfigureAwait(false);
-            return success
-                ? Results.Ok(new { success = true, message = "Impersonation ended" })
-                : Results.BadRequest(new { success = false, message = "Failed to end impersonation" });
-        })
-        .RequireAuthorization("RequireAdmin")
-        .WithSummary("End an active impersonation session (admin)")
-        .Produces(StatusCodes.Status200OK)
-        .Produces(StatusCodes.Status400BadRequest)
-        .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status403Forbidden)
-        .Produces(StatusCodes.Status404NotFound);
-
         // REVOKE — superadmin kill-switch for another admin's impersonation session.
         impersonationGroup.MapPost("/revoke", async (
             HttpContext context,
@@ -145,5 +118,4 @@ internal static class AdminImpersonationEndpoints
 }
 
 internal record ImpersonationStartRequest(Guid TargetUserId, string Reason, int? DurationMinutes = null);
-internal record ImpersonationEndRequest(Guid SessionId);
 internal record ImpersonationRevokeRequest(Guid SessionId);

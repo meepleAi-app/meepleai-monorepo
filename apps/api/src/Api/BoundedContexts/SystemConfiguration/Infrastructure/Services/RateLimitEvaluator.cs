@@ -117,18 +117,48 @@ internal sealed class RateLimitEvaluator : IRateLimitEvaluator
         await Task.CompletedTask.ConfigureAwait(false);
     }
 
-    private async Task<Domain.Entities.ShareRequestLimitConfig> GetTierConfigCachedAsync(
+    /// <summary>
+    /// I tre limiti del tier, nella forma in cui la cache sa rileggerli.
+    /// </summary>
+    /// <remarks>
+    /// Qui girava l'aggregato <c>ShareRequestLimitConfig</c>. Scriverlo funzionava; rileggerlo no:
+    /// l'entita' segue la convenzione DDD del progetto (costruttori privati piu' factory), e
+    /// System.Text.Json — che HybridCache usa per serializzare — rifiuta di deserializzare un tipo
+    /// senza costruttore pubblico senza parametri ne' costruttore parametrizzato singolo:
+    ///
+    ///   System.NotSupportedException: Deserialization of types without a parameterless
+    ///   constructor, a singular parameterized constructor, or a parameterized constructor
+    ///   annotated with 'JsonConstructorAttribute' is not supported.
+    ///
+    /// Il difetto era differito: la PRIMA richiesta popolava la cache e rispondeva, tutte le
+    /// successive fallivano con 500 finche' la voce non scadeva. Un record posizionale ha un solo
+    /// costruttore pubblico e chiude la questione. Annotare l'entita' con
+    /// <c>[JsonConstructor]</c> sarebbe l'alternativa, ma piegherebbe il modello di dominio a un
+    /// dettaglio dell'infrastruttura di cache: la cache non ha bisogno dell'aggregato, solo di
+    /// tre numeri.
+    /// </remarks>
+    private sealed record LimitiDelTier(
+        int MaxPendingRequests,
+        int MaxRequestsPerMonth,
+        TimeSpan CooldownAfterRejection);
+
+    private async Task<LimitiDelTier> GetTierConfigCachedAsync(
         UserTier tier,
         CancellationToken cancellationToken)
     {
         var cacheKey = $"rate_limit_config_{tier}";
 
-        return await _cache.GetOrCreateAsync<Domain.Entities.ShareRequestLimitConfig>(
+        return await _cache.GetOrCreateAsync<LimitiDelTier>(
             cacheKey,
             async (ct) =>
             {
-                var config = await _configRepository.GetByTierAsync(tier, ct).ConfigureAwait(false);
-                return config ?? throw new NotFoundException("ShareRequestLimitConfig", tier.ToString());
+                var config = await _configRepository.GetByTierAsync(tier, ct).ConfigureAwait(false)
+                    ?? throw new NotFoundException("ShareRequestLimitConfig", tier.ToString());
+
+                return new LimitiDelTier(
+                    config.MaxPendingRequests,
+                    config.MaxRequestsPerMonth,
+                    config.CooldownAfterRejection);
             },
             null,
             TierConfigCacheDuration,

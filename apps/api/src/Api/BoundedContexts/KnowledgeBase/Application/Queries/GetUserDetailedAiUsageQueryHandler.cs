@@ -50,40 +50,58 @@ internal class GetUserDetailedAiUsageQueryHandler : IQueryHandler<GetUserDetaile
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // I tre raggruppamenti proiettano in un tipo anonimo, non direttamente nel costruttore del
+        // DTO: e' l'ORDER BY sulla proprieta' del DTO che EF non sa ritradurre nell'aggregato, e
+        // l'intera query falliva con "could not be translated" — quindi 500 sull'endpoint (#3839).
+        // L'ordinamento resta in SQL, sull'espressione aggregata; i DTO si costruiscono dopo, sulla
+        // manciata di righe gia' materializzate.
+
         // Get breakdown by model
-        var byModel = await baseQuery
+        var byModelRows = await baseQuery
             .GroupBy(x => x.ModelId)
-            .Select(g => new ModelUsageDto(
-                g.Key,
-                g.Sum(x => (long)x.TotalTokens),
-                g.Sum(x => x.TotalCost)
-            ))
+            .Select(g => new
+            {
+                ModelId = g.Key,
+                Tokens = g.Sum(x => (long)x.TotalTokens),
+                Cost = g.Sum(x => x.TotalCost)
+            })
             .OrderByDescending(x => x.Tokens)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var byModel = byModelRows
+            .Select(x => new ModelUsageDto(x.ModelId, x.Tokens, x.Cost))
+            .ToList();
 
         // Get breakdown by operation (using Endpoint as operation)
-        var byOperation = await baseQuery
+        var byOperationRows = await baseQuery
             .GroupBy(x => x.Endpoint)
-            .Select(g => new OperationUsageDto(
-                g.Key,
-                g.Count(),
-                g.Sum(x => (long)x.TotalTokens)
-            ))
+            .Select(g => new
+            {
+                Endpoint = g.Key,
+                Count = g.Count(),
+                Tokens = g.Sum(x => (long)x.TotalTokens)
+            })
             .OrderByDescending(x => x.Count)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var byOperation = byOperationRows
+            .Select(x => new OperationUsageDto(x.Endpoint, x.Count, x.Tokens))
+            .ToList();
 
         // Get daily usage time series
-        var dailyUsage = await baseQuery
+        var dailyRows = await baseQuery
             .GroupBy(x => x.RequestDate)
-            .Select(g => new DailyUsageDto(
-                g.Key,
-                g.Sum(x => (long)x.TotalTokens)
-            ))
+            .Select(g => new
+            {
+                Date = g.Key,
+                Tokens = g.Sum(x => (long)x.TotalTokens)
+            })
             .OrderBy(x => x.Date)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var dailyUsage = dailyRows
+            .Select(x => new DailyUsageDto(x.Date, x.Tokens))
+            .ToList();
 
         // Fill in missing days with zero values
         var filledDailyUsage = FillMissingDays(dailyUsage, query.StartDate, query.EndDate);

@@ -298,7 +298,20 @@ internal static class InfrastructureServiceExtensions
 
             // Performance optimizations
             config.KeepAlive = 60; // Keep-alive every 60 seconds
-            config.AllowAdmin = false; // Disable admin commands for security
+
+            // Admin commands (INFO, CONFIG, FLUSHALL, SHUTDOWN) stay OFF by default: the guard is
+            // client-side, and its job is to make an accidental FLUSHALL impossible from the app.
+            //
+            // /admin/resources/cache/metrics needs INFO and cannot work without it, so it answered
+            // 500 on every call (#3845). Flipping the flag app-wide would have been a silent
+            // reversal of a deliberate security decision, so it is an explicit opt-in instead:
+            // set REDIS_ALLOW_ADMIN=true where those metrics are wanted. Left off, the endpoint
+            // now says why (503) rather than failing opaquely.
+            var allowAdmin = string.Equals(
+                Environment.GetEnvironmentVariable("REDIS_ALLOW_ADMIN") ?? configuration["REDIS_ALLOW_ADMIN"],
+                "true",
+                StringComparison.OrdinalIgnoreCase);
+            config.AllowAdmin = allowAdmin;
 
             // Connection pooling (StackExchange.Redis manages pool internally)
             config.DefaultDatabase = 0;

@@ -31,8 +31,12 @@ internal sealed class GetUserLibraryStatsQueryHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // UserLibraryEntries e' il DbSet mappato. L'aggregato di dominio UserLibraryEntry
+            // non e' nel modello — MeepleAiDbContext lo dichiara Ignore<>() — quindi
+            // Set<UserLibraryEntry>() falliva a runtime con "Cannot create a DbSet for
+            // 'UserLibraryEntry' because this type is not included in the model" (#3839).
         // Query 1: Check if user has any library entries
-        var hasEntries = await _dbContext.Set<Api.BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>()
+        var hasEntries = await _dbContext.UserLibraryEntries
             .AsNoTracking()
             .AnyAsync(e => e.UserId == request.UserId, cancellationToken)
             .ConfigureAwait(false);
@@ -43,19 +47,19 @@ internal sealed class GetUserLibraryStatsQueryHandler
         }
 
         // Query 2: Total games count
-        var totalGames = await _dbContext.Set<Api.BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>()
+        var totalGames = await _dbContext.UserLibraryEntries
             .AsNoTracking()
             .CountAsync(e => e.UserId == request.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         // Query 3: Favorite games count
-        var favoriteGames = await _dbContext.Set<Api.BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>()
+        var favoriteGames = await _dbContext.UserLibraryEntries
             .AsNoTracking()
             .CountAsync(e => e.UserId == request.UserId && e.IsFavorite, cancellationToken)
             .ConfigureAwait(false);
 
         // Query 4: Sessions played count (join through UserLibraryEntry)
-        var sessionsPlayed = await _dbContext.Set<Api.BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>()
+        var sessionsPlayed = await _dbContext.UserLibraryEntries
             .AsNoTracking()
             .Where(e => e.UserId == request.UserId)
             .SelectMany(e => e.Sessions)
@@ -63,7 +67,7 @@ internal sealed class GetUserLibraryStatsQueryHandler
             .ConfigureAwait(false);
 
         // Query 5: Date range (oldest and newest added)
-        var dateRange = await _dbContext.Set<Api.BoundedContexts.UserLibrary.Domain.Entities.UserLibraryEntry>()
+        var dateRange = await _dbContext.UserLibraryEntries
             .AsNoTracking()
             .Where(e => e.UserId == request.UserId)
             .GroupBy(_ => 1)

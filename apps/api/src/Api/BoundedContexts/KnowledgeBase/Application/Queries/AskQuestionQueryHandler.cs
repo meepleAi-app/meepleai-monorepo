@@ -354,6 +354,27 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 + "it is human-approved rulebook content and counts as provided context — you MAY answer "
                 + "from it and cite its [Page N].";
         }
+
+        if (houseRuleMatch is not null)
+        {
+            // #3855 — the house rule block was injected into the user prompt but never authorized in
+            // the system prompt, unlike [Verified Rules] right above. Two consequences, both observed:
+            //
+            //   * "Answer ONLY using the provided rulebook context" leaves the rule unsanctioned, so
+            //     the model paraphrases it instead of quoting — "chi ha giocato più di recente" came
+            //     back as "chi ha vinto l'ultima partita", a different rule entirely.
+            //   * "Always cite the page number in brackets" has no exception, so the model invents a
+            //     page for content that has none: the answer carried [Page 10], which in that rulebook
+            //     is about shuffling the deck.
+            //
+            // A reader who checks [Page 10] finds nothing and stops trusting the citations that ARE
+            // correct — which is most of them.
+            systemPrompt += " A section titled '[House Rule for this group]' may precede the Question; "
+                + "it is a rule this group agreed on and counts as provided context. Reproduce its "
+                + "wording exactly — do not paraphrase, summarise, or reword it. It comes from the "
+                + "group's own notes, NOT from the rulebook: never attach a [Page N] citation to it, "
+                + "and say explicitly that it is the group's house rule.";
+        }
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
 

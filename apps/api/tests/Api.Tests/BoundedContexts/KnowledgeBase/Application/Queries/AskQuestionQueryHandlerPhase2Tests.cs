@@ -346,6 +346,120 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // Test 4b (#3855): la house rule dev'essere AUTORIZZATA nel system prompt
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// #3855 — infilare la regola nel prompt utente non basta, e il difetto lo dimostrava.
+    ///
+    /// Il system prompt diceva «Answer ONLY using the provided rulebook context» e «Always cite
+    /// the page number»: la regola non era fra le fonti autorizzate, quindi il modello la
+    /// riformulava («chi ha giocato più di recente» tornava come «chi ha vinto l'ultima partita»),
+    /// e l'obbligo di citare senza eccezioni lo portava a inventarle una pagina — [Page 10], che
+    /// in quel manuale parla di come mescolare il mazzo.
+    ///
+    /// Il precedente e' nello stesso metodo: il blocco [Verified Rules] viene autorizzato
+    /// esplicitamente. Alla house rule non era mai stato fatto.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenHouseRuleMatched_SystemPromptForbidsParaphraseAndPageCitation()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string houseRule = "In our group, the pawn can also move diagonally.";
+        const string answer = "Based on your house rule, the pawn moves diagonally.";
+
+        SetupDefaultMocksWithSearchResults(gameId, answer);
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(houseRule);
+
+        _mockTranslationService
+            .Setup(t => t.TranslateGenericAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string text, string src, string tgt, CancellationToken _) =>
+                TranslationResult.CreateSuccess(text, src, tgt, 0m));
+
+        string? capturedSystemPrompt = null;
+        _mockLlmService
+            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((sys, user, src, ct) => capturedSystemPrompt = sys)
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                response: answer,
+                usage: new LlmUsage(10, 10, 20),
+                cost: new LlmCost { InputCost = 0.001m, OutputCost = 0.002m, ModelId = "test-model", Provider = "test" }));
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        capturedSystemPrompt.Should().NotBeNull();
+        capturedSystemPrompt.Should().Contain("[House Rule for this group]",
+            "il blocco dev'essere dichiarato fra le fonti autorizzate, altrimenti 'answer ONLY " +
+            "using the provided rulebook context' lo esclude e il modello lo riformula");
+        capturedSystemPrompt.Should().Contain("do not paraphrase",
+            "la regola va riportata com'e': riassumerla ne cambia il significato (#3855)");
+        capturedSystemPrompt.Should().Contain("never attach a [Page N] citation",
+            "l'obbligo incondizionato di citare una pagina fa inventare una fonte a contenuto " +
+            "che non ne ha");
+    }
+
+    /// <summary>
+    /// Senza house rule il system prompt non deve cambiare: l'istruzione e' condizionale, non
+    /// una zavorra su ogni richiesta.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenNoHouseRule_SystemPromptUnchanged()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string answer = "The pawn moves forward one space.";
+
+        SetupDefaultMocksWithSearchResults(gameId, answer);
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string?)null);
+
+        _mockTranslationService
+            .Setup(t => t.TranslateGenericAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string text, string src, string tgt, CancellationToken _) =>
+                TranslationResult.CreateSuccess(text, src, tgt, 0m));
+
+        string? capturedSystemPrompt = null;
+        _mockLlmService
+            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((sys, user, src, ct) => capturedSystemPrompt = sys)
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                response: answer,
+                usage: new LlmUsage(10, 10, 20),
+                cost: new LlmCost { InputCost = 0.001m, OutputCost = 0.002m, ModelId = "test-model", Provider = "test" }));
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        capturedSystemPrompt.Should().NotBeNull();
+        capturedSystemPrompt.Should().NotContain("[House Rule for this group]");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Test 5: HouseRuleMatcher throws — warning logged, flow continues
     // ─────────────────────────────────────────────────────────────────────────
 

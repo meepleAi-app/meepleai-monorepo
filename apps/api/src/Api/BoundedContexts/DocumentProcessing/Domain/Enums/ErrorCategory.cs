@@ -39,6 +39,14 @@ public enum ErrorCategory
     PayloadTooLarge = 5,
 
     /// <summary>
+    /// The stored object is not at the key recorded in <c>FilePath</c>: the upload never reached the
+    /// bucket, or the object was removed out of band.
+    /// Retry strategy: Never — an absent object does not reappear on its own. Requires re-uploading
+    /// the file or an operator restoring it. Issue #3846.
+    /// </summary>
+    StorageObjectMissing = 6,
+
+    /// <summary>
     /// Unclassified error: unexpected exception, unknown failure mode.
     /// Retry strategy: Treat as transient, allow retry with caution.
     /// </summary>

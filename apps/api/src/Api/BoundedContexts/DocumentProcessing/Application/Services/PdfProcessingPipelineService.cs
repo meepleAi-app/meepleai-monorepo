@@ -507,6 +507,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
+        catch (PdfStorageObjectMissingException ex)
+        {
+            // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
+            // so it gets a category RetryFailedPdfsJob excludes — unlike the NULL category the
+            // generic catch below leaves, which is treated as retriable.
+            _logger.LogError(ex,
+                "[PdfPipeline] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
+                pdfId, ex.ResourceKey, ex.FileId);
+            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.StorageObjectMissing).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
@@ -523,21 +534,27 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         // Issue #501: Use blob storage with correct GUID format (no hyphens) to match StoreAsync key format
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
-        // Issue #2671: StoreAsync writes the blob under a RANDOM fileId (persisted in FilePath), NOT pdfId.
-        // Recover that fileId from FilePath; ForPdf(Id) is the resourceKey folder, not the fileId. The
-        // ?? fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
-        var resourceKey = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var fileId = PdfStorageKey.FileIdFromPath(pdfDoc.FilePath) ?? resourceKey;
+        // Issue #2671 + #3846: NEITHER half of the storage key can be reconstructed from the pdfId.
+        // StoreAsync generates a random fileId, and the resourceKey is whatever the upload path passed
+        // in — gameId/privateGameId for /ingest/pdf, "shared-game-{id}", "wizard-temp", or the pdfId for
+        // the seeded corpus. Both are recorded in FilePath ({category}/{resourceKey}/{fileId}_{name}) and
+        // both blob backends resolve by exact prefix with no cross-folder search, so a rebuilt folder
+        // simply finds nothing under S3 (#3846). Mirrors DownloadPdfQueryHandler (#3568). The ??
+        // fallbacks preserve legacy behaviour for records with an empty/unparsable FilePath.
+        var bucketKey = PdfStorageKey.ForPdf(pdfDoc.Id);
+        var resourceKey = PdfStorageKey.ResourceKeyFromPath(pdfDoc.FilePath) ?? bucketKey;
+        var fileId = PdfStorageKey.FileIdFromPath(pdfDoc.FilePath) ?? bucketKey;
         var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
 
         if (fileStream == null)
         {
-            // Fallback to local filesystem for backward compatibility (dev without S3)
+            // Fallback to local filesystem for backward compatibility (dev without S3). Under S3
+            // `filePath` is an object key, not a path, so File.Exists is false and we report the KEY
+            // we looked up rather than a path that never existed (#3846).
             _logger.LogWarning("[PdfPipeline] Blob storage returned null for {PdfId}, falling back to filesystem path: {FilePath}", fileId, filePath);
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException(
-                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+                throw new PdfStorageObjectMissingException(fileId, resourceKey, filePath);
             }
             fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
@@ -719,12 +736,31 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         try
         {
+            // #3846: same as the upload path — the extractor takes a FILE, and under S3 `filePath` is
+            // a bucket key. Materialize the object, and log the failure instead of dropping it.
+            using var localFile = await PdfLocalFile
+                .AcquireAsync(_blobStorageService, pdfDoc.Id, filePath, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (localFile is null)
+            {
+                _logger.LogWarning(
+                    "[PdfPipeline] Structured content skipped for PDF {PdfId}: object not available in storage ({FilePath})",
+                    pdfDoc.Id, filePath);
+                return;
+            }
+
             var structuredResult = await _tableExtractor
-                .ExtractStructuredContentAsync(filePath, cancellationToken)
+                .ExtractStructuredContentAsync(localFile.Path, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!structuredResult.Success)
+            {
+                _logger.LogWarning(
+                    "[PdfPipeline] Structured content extraction failed for PDF {PdfId}: {Error}",
+                    pdfDoc.Id, structuredResult.ErrorMessage);
                 return;
+            }
 
             pdfDoc.ExtractedTables = JsonSerializer.Serialize(structuredResult.Tables);
             pdfDoc.ExtractedDiagrams = JsonSerializer.Serialize(
@@ -1155,22 +1191,22 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         string filePath,
         CancellationToken cancellationToken)
     {
-        // Issue #2671: the blob lives under a random fileId embedded in FilePath, not pdfId.
-        // Recover it from the persisted path; ForPdf(Id) is the resourceKey folder. The ??
-        // fallback preserves legacy behaviour for records with an empty/unparsable FilePath.
-        var resourceKey = PdfStorageKey.ForPdf(pdfDocumentId);
-        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? resourceKey;
+        // Issue #2671 + #3846: neither the fileId nor the resourceKey can be reconstructed from the
+        // pdfId — both are recorded in FilePath. See ExtractTextAsync for the full rationale. The ??
+        // fallbacks preserve legacy behaviour for records with an empty/unparsable FilePath.
+        var bucketKey = PdfStorageKey.ForPdf(pdfDocumentId);
+        var resourceKey = PdfStorageKey.ResourceKeyFromPath(filePath) ?? bucketKey;
+        var fileId = PdfStorageKey.FileIdFromPath(filePath) ?? bucketKey;
         var stream = await _blobStorageService
             .RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken)
             .ConfigureAwait(false);
 
         if (stream is null)
         {
-            // Fallback al filesystem locale per dev senza bucket (parity con ExtractTextAsync:444-451).
+            // Fallback al filesystem locale per dev senza bucket (parity con ExtractTextAsync).
             if (!File.Exists(filePath))
             {
-                throw new FileNotFoundException(
-                    $"PDF file not found in blob storage or filesystem: {filePath}", filePath);
+                throw new PdfStorageObjectMissingException(fileId, resourceKey, filePath);
             }
             stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }

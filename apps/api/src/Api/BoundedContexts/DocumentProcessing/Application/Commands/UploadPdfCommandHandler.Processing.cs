@@ -227,12 +227,42 @@ internal partial class UploadPdfCommandHandler
         var extractionStopwatch = Stopwatch.StartNew();
         // E2E fix: Use blob storage service instead of direct filesystem access (supports S3/R2)
         // Task 4: bucket key decoupled from gameId — uses pdf.Id (see PdfStorageKey + rebucket scripts)
+        // Issue #3846: the resourceKey can NOT be rebuilt from the pdfId. This very handler stores the
+        // object under `gameId ?? privateGameId` (see UploadPdfCommandHandler.StoreAndRegisterAsync),
+        // while the seeded corpus uses the pdfId — and both blob backends resolve by exact
+        // {category}/{resourceKey}/{fileId}_ prefix with no cross-folder search. Reading with the
+        // pdfId-derived folder therefore found nothing under S3, and the filesystem fallback below then
+        // opened the persisted FilePath, which under S3 is an object KEY, not a path: hence the
+        // misleading "Could not find a part of the path '/app/pdfs/<gameId>/…'". FilePath is the only
+        // record of where the object actually went — read both halves from it, as the download path
+        // already does (#3568). The ?? fallbacks preserve legacy behaviour for unparsable paths.
         var bucketKey = PdfStorageKey.ForPdf(pdfDoc.Id);
-        var fileStream = await _blobStorageService.RetrieveAsync(pdfId, BlobCategory.Pdf, bucketKey, cancellationToken).ConfigureAwait(false);
+        var resourceKey = PdfStorageKey.ResourceKeyFromPath(pdfDoc.FilePath) ?? bucketKey;
+        var fileId = PdfStorageKey.FileIdFromPath(pdfDoc.FilePath) ?? pdfId;
+        var fileStream = await _blobStorageService.RetrieveAsync(fileId, BlobCategory.Pdf, resourceKey, cancellationToken).ConfigureAwait(false);
         if (fileStream == null)
         {
-            // Fallback to local filesystem for backward compatibility
+            // Fallback to local filesystem for backward compatibility (dev without S3).
             _logger.LogWarning("[PDF-DEBUG] Blob storage returned null for {PdfId}, falling back to filesystem: {FilePath}", pdfId, filePath);
+
+            // #3846: under S3 `filePath` is an object KEY, not a path — opening it blindly resolved it
+            // against the working directory and reported "Could not find a part of the path
+            // '/app/pdfs/<gameId>/…'", a location that never existed, under a NULL error category that
+            // RetryFailedPdfsJob keeps retrying. Name the key instead, and mark it non-retriable.
+            if (!File.Exists(filePath))
+            {
+                var missing = new PdfStorageObjectMissingException(fileId, resourceKey, filePath);
+                _logger.LogError(missing,
+                    "[PDF-DEBUG] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
+                    pdfId, resourceKey, fileId);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, missing.Message, cancellationToken).ConfigureAwait(false);
+                await TransitionToFailedAsync(
+                    scope, db, pdfDoc.Id, missing.Message,
+                    Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing,
+                    PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
+                return (false, null, null);
+            }
+
             fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         }
         await using (fileStream.ConfigureAwait(false))
@@ -309,8 +339,30 @@ internal partial class UploadPdfCommandHandler
         var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
         if (tableExtractor == null) return;
 
-        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, cancellationToken).ConfigureAwait(false);
-        if (!structuredResult.Success) return;
+        // #3846: the extractor takes a FILE. Under S3 `filePath` is a bucket key, so it used to fail
+        // File.Exists and return a failure result that the line below drops without a word — tables,
+        // diagrams and atomic rules silently missing on every remote-storage upload, with the PDF
+        // still reaching Ready. Materialize the object first, and say something when it does fail.
+        using var localFile = await PdfLocalFile
+            .AcquireAsync(_blobStorageService, pdfDoc.Id, filePath, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (localFile is null)
+        {
+            _logger.LogWarning(
+                "[PDF-DEBUG] Structured content skipped for PDF {PdfId}: object not available in storage ({FilePath})",
+                pdfDoc.Id, filePath);
+            return;
+        }
+
+        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(localFile.Path, cancellationToken).ConfigureAwait(false);
+        if (!structuredResult.Success)
+        {
+            _logger.LogWarning(
+                "[PDF-DEBUG] Structured content extraction failed for PDF {PdfId}: {Error}",
+                pdfDoc.Id, structuredResult.ErrorMessage);
+            return;
+        }
 
         pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
         pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(

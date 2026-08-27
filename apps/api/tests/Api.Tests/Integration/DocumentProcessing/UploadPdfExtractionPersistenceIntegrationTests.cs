@@ -59,6 +59,16 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     private string? _testDataDirectory;
     private InlineBackgroundTaskService? _inlineBgService;
 
+    /// <summary>
+    /// Issue #3846: when true the blob double reports a successful <c>StoreAsync</c> but keeps
+    /// nothing, reproducing an object that never reached the bucket (or was removed out of band).
+    /// </summary>
+    private bool _simulateObjectNeverStored;
+
+    /// <summary>Issue #3846: what the structured-content extractor was handed, and whether it was readable.</summary>
+    private string? _structuredExtractionPath;
+    private byte[]? _structuredExtractionBytes;
+
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public UploadPdfExtractionPersistenceIntegrationTests(SharedTestcontainersFixture fixture)
@@ -131,10 +141,21 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         var tableExtractorMock = new Mock<IPdfTableExtractor>();
         tableExtractorMock
             .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>()!, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new StructuredContentResult
+            .ReturnsAsync((string path, CancellationToken _) =>
             {
-                Success = false,
-                ErrorMessage = "Skipped in test"
+                // Issue #3846: record what the extractor was actually handed. Every path-based adapter
+                // (iText tables, Tesseract, Vision) starts with File.Exists(path) and returns a failure
+                // result the caller drops with `if (!Success) return;` — so a bucket key here is a
+                // SILENT loss of tables, diagrams and atomic rules on every S3 upload, with the PDF
+                // still reaching Ready.
+                _structuredExtractionPath = path;
+                _structuredExtractionBytes = File.Exists(path) ? File.ReadAllBytes(path) : null;
+
+                return new StructuredContentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Skipped in test"
+                };
             });
         services.AddSingleton<IPdfTableExtractor>(tableExtractorMock.Object);
 
@@ -161,6 +182,14 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
             });
         services.AddSingleton<IAdvancedChunkingService>(advancedChunkingMock.Object);
 
+        // Issue #3846: this double used to write the blob to a flat file under the temp directory and
+        // resolve reads with File.Exists(firstArgument), ignoring the resourceKey entirely — so every
+        // key answered and the S3 read defect stayed invisible, exactly like STORAGE_PROVIDER=local
+        // where the filesystem fallback covers the miss. It now behaves like a bucket: StoreAsync mints
+        // a random fileId and returns the real key layout {category}/{resourceKey}/{fileId}_{name},
+        // RetrieveAsync resolves by EXACT (category, resourceKey, fileId) with no cross-folder search,
+        // and nothing is written to disk so the filesystem fallback cannot mask a miss.
+        var storedObjects = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         var blobStorageMock = new Mock<IBlobStorageService>();
         blobStorageMock
             .Setup(b => b.StoreAsync(
@@ -171,16 +200,28 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct) =>
             {
-                var safeKey = resourceKey.Replace('/', '_').Replace('\\', '_');
-                var filePath = Path.Combine(_testDataDirectory!, $"{safeKey}_{fileName}");
-                using var fileStream = File.Create(filePath);
-                stream.CopyTo(fileStream);
-                return new BlobStorageResult(true, Guid.NewGuid().ToString(), filePath, stream.Length, null);
+                // A Guid without hyphens: UploadPdfCommandHandler parses the returned FileId into
+                // PdfDocumentEntity.Id, so it has to be a real Guid, like the production backends emit.
+                var fileId = Guid.NewGuid().ToString("N");
+                using var buffer = new MemoryStream();
+                stream.CopyTo(buffer);
+                if (!_simulateObjectNeverStored)
+                {
+                    storedObjects[ObjectKey(category, resourceKey, fileId)] = buffer.ToArray();
+                }
+                return new BlobStorageResult(
+                    true,
+                    fileId,
+                    $"{category.ToS3Folder()}/{resourceKey}/{fileId}_{fileName}",
+                    buffer.Length,
+                    null);
             });
         blobStorageMock
             .Setup(b => b.RetrieveAsync(It.IsAny<string>()!, It.IsAny<BlobCategory>(), It.IsAny<string>()!, It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string path, BlobCategory category, string resourceKey, CancellationToken ct) =>
-                File.Exists(path) ? (Stream?)File.OpenRead(path) : null);
+            .ReturnsAsync((string fileId, BlobCategory category, string resourceKey, CancellationToken ct) =>
+                storedObjects.TryGetValue(ObjectKey(category, resourceKey, fileId), out var bytes)
+                    ? new MemoryStream(bytes)
+                    : (Stream?)null);
         blobStorageMock
             .Setup(b => b.DeleteAsync(It.IsAny<string>()!, It.IsAny<BlobCategory>(), It.IsAny<string>()!, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -317,6 +358,14 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         return formFile.Object;
     }
 
+    /// <summary>
+    /// Issue #3846: the identity of a stored object is the whole triple. Both production backends
+    /// resolve by exact <c>{category}/{resourceKey}/{fileId}_</c> prefix, so a read that gets any of
+    /// the three wrong finds nothing — it does not fall back to another folder.
+    /// </summary>
+    private static string ObjectKey(BlobCategory category, string resourceKey, string fileId) =>
+        $"{category}|{resourceKey}|{fileId}";
+
     private static byte[] CreateValidPdfBytes(int sizeInBytes)
     {
         var header = "%PDF-1.4\n"u8.ToArray();
@@ -381,6 +430,80 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         persisted.StructuredElementsJson.Should().NotBeNull(
             "StructuredElementsJson must durably persist for Upload-originated PDFs (re-index " +
             "parity: IndexPdfCommandHandler reads it to rebuild headings)");
+    }
+
+    /// <summary>
+    /// Issue #3846, second (silent) half: the structured-content extractor takes a FILE PATH. Under S3
+    /// the pipeline handed it the persisted <c>FilePath</c>, which is a bucket key — the adapter's
+    /// <c>File.Exists</c> failed, it returned a failure result, and the caller dropped it with
+    /// <c>if (!structuredResult.Success) return;</c>. No log, no Failed state: tables, diagrams and
+    /// atomic rules were simply never extracted while the PDF still reached <c>Ready</c>. Fixing only
+    /// the resourceKey would have turned "an upload reaches Ready" green on an amputated document.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task ProcessPdfAsync_HandsTheStructuredExtractorAReadableFile_NotABucketKey()
+    {
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+
+        var pdfBytes = CreateValidPdfBytes(1024);
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("structured-content.pdf", pdfBytes));
+
+        await handler.Handle(command, TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        _structuredExtractionPath.Should().NotBeNull("the structured-content stage must run");
+        _structuredExtractionBytes.Should().Equal(
+            pdfBytes,
+            "the extractor must receive a readable local file holding the uploaded PDF, not a bucket key");
+    }
+
+    /// <summary>
+    /// Issue #3846: an object that is not in the bucket must be reported as such. Before the fix the
+    /// upload pipeline fell back to <c>new FileStream(filePath)</c> without checking, and under S3
+    /// <c>FilePath</c> is an object key: the recorded error read "Could not find a part of the path
+    /// '/app/pdfs/{gameId}/…'" — a location that never existed — and the NULL error category made
+    /// <c>RetryFailedPdfsJob</c> retry an object that cannot come back.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task ProcessPdfAsync_WhenTheObjectNeverReachedTheBucket_FailsAsStorageObjectMissing()
+    {
+        _simulateObjectNeverStored = true;
+
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("object-never-stored.pdf", CreateValidPdfBytes(1024)));
+
+        var result = await handler.Handle(command, TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue("the accept stage still succeeds; the pipeline is what fails");
+
+        var persisted = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .FirstAsync(p => p.Id == result.Document!.Id, TestCancellationToken);
+
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed));
+        persisted.ErrorCategory.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing),
+            "an absent object does not reappear on retry, so RetryFailedPdfsJob must skip it");
+        persisted.ProcessingError.Should().Contain(
+            "not found in storage at key",
+            "the error must name the bucket key that was looked up, not a filesystem path derived from it");
     }
 
     /// <summary>

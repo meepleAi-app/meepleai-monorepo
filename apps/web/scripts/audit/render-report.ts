@@ -36,16 +36,36 @@ const STATUS_BY_VERDICT: Record<Verdict, string> = {
   rotto: '⚠️ finding da aprire',
 };
 
-/** Riscrive la colonna `stato` delle sole righe che il crawl ha toccato. */
+/** Il segnale che ha determinato il verdetto, leggibile e senza virgole. */
+export function evidenceOf(e: CrawlEntry): string {
+  return [
+    `HTTP ${e.status}`,
+    ...e.bodyMarkers.map(m => `marker: ${m}`),
+    ...e.failedRequests.slice(0, 2),
+    ...e.consoleErrors.slice(0, 1),
+  ]
+    .join(' · ')
+    .replace(/[",\n]/g, ' ')
+    .slice(0, 120);
+}
+
+/**
+ * Riscrive stato **ed evidenza** delle righe che il crawl ha toccato.
+ *
+ * Senza l'evidenza il tracker riporta decine di righe "da triagare" con la
+ * colonna del motivo vuota, e chi le rilegge deve rieseguire tutto per sapere
+ * che cosa era stato osservato.
+ */
 export function applyStatuses(csv: string, entries: CrawlEntry[]): string {
-  const verdicts = new Map(entries.map(e => [e.id, classify(e)]));
+  const perId = new Map(entries.map(e => [e.id, e]));
   const [header, ...lines] = csv.trim().split('\n');
 
   const updated = lines.map(line => {
     const cells = line.split(',');
-    const verdict = verdicts.get(cells[0]);
-    if (!verdict) return line;
-    cells[7] = STATUS_BY_VERDICT[verdict];
+    const entry = perId.get(cells[0]);
+    if (!entry) return line;
+    cells[7] = STATUS_BY_VERDICT[classify(entry)];
+    cells[8] = evidenceOf(entry);
     return cells.join(',');
   });
 

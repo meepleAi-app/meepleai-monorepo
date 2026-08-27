@@ -10,7 +10,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { applyStatuses, classify, renderMarkdown, type CrawlEntry } from '../render-report';
+import {
+  applyStatuses,
+  classify,
+  evidenceOf,
+  renderMarkdown,
+  type CrawlEntry,
+} from '../render-report';
 
 const entry = (over: Partial<CrawlEntry> = {}): CrawlEntry => ({
   id: 'abc12345',
@@ -85,5 +91,29 @@ describe('renderMarkdown', () => {
     const md = renderMarkdown([entry({ route: '/sana' }), entry({ route: '/rotta', status: 503 })]);
     expect(md).toContain('/rotta');
     expect(md).not.toContain('/sana');
+  });
+});
+
+describe('evidenceOf', () => {
+  it('riassume il segnale che ha determinato il verdetto', () => {
+    const e = entry({ status: 200, bodyMarkers: ['not-found'], failedRequests: ['404 /api/v1/x'] });
+    const ev = evidenceOf(e);
+    expect(ev).toContain('HTTP 200');
+    expect(ev).toContain('not-found');
+    expect(ev).toContain('404 /api/v1/x');
+  });
+
+  it('neutralizza le virgole per non sfasare le colonne del CSV', () => {
+    expect(evidenceOf(entry({ consoleErrors: ['a, b, c'] }))).not.toContain(',');
+  });
+
+  it('scrive l evidenza nel tracker, non solo lo stato', () => {
+    // Una riga marcata "da triagare" con la colonna del motivo vuota costringe
+    // a rieseguire tutto per sapere cosa era stato osservato.
+    const csv =
+      'id,tipo,path,metodo,contesto,ruolo,livello,stato,evidenza,note\n' +
+      'abc12345,route,/x,GET,X,user,L1,⬜ non coperto,,\n';
+    const out = applyStatuses(csv, [entry({ consoleErrors: ['TypeError'] })]);
+    expect(out.split('\n')[1].split(',')[8]).toContain('HTTP');
   });
 });

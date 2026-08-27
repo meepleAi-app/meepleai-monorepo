@@ -250,27 +250,27 @@ e2f2c20a,endpoint,/api/v1/users/search,GET,Administration,user,L2,✅ verificato
 0fb45824,endpoint,/api/v1/users/top-contributors,GET,Administration,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 873f4340,endpoint,/status,GET,Administration,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,auth non dedotta: leggere il codice
 877cb8bc,endpoint,/status/details,GET,Administration,admin,L2,⚠️ finding da aprire,admin 401 · utente 401 — admin riceve 401,
-150f6aed,route,/admin,GET,Administration,admin,L1,✅ verificato,,
-a7d92277,route,/admin/analytics,GET,Administration,admin,L1,✅ verificato,,
-31acdd13,route,/admin/monitor,GET,Administration,admin,L1,✅ verificato,,
-b9ed4551,route,/admin/monitor/containers,GET,Administration,admin,L1,⚠️ finding da triagare,,
-2f6d3da4,route,/admin/monitor/grafana,GET,Administration,admin,L1,✅ verificato,,
-f3fc5a69,route,/admin/monitor/logs,GET,Administration,admin,L1,✅ verificato,,
-93e4bc8a,route,/admin/monitor/mau,GET,Administration,admin,L1,✅ verificato,,
-ad2339a9,route,/admin/monitor/operations,GET,Administration,admin,L1,⚠️ finding da triagare,,
-ad811a50,route,/admin/monitor/service-calls,GET,Administration,admin,L1,✅ verificato,,
-b044c032,route,/admin/monitor/services,GET,Administration,admin,L1,⚠️ finding da triagare,,
-e90b84fb,route,/admin/monitor/wikidata-dead-letters,GET,Administration,admin,L1,✅ verificato,,
-50576a10,route,/admin/overview,GET,Administration,admin,L1,✅ verificato,,
-5af974db,route,/admin/overview/activity,GET,Administration,admin,L1,✅ verificato,,
-2edce285,route,/admin/overview/system,GET,Administration,admin,L1,✅ verificato,,
-e2008cce,route,/admin/staging-access,GET,Administration,admin,L1,✅ verificato,,
-a688d486,route,/admin/users,GET,Administration,admin,L1,✅ verificato,,
-f3e20bd8,route,/admin/users/[id],GET,Administration,admin,L1,⚠️ finding da triagare,,param: id
-42e1e23a,route,/admin/users/access-requests,GET,Administration,admin,L1,✅ verificato,,
-dd82678f,route,/admin/users/activity,GET,Administration,admin,L1,✅ verificato,,
-3399b610,route,/admin/users/invitations,GET,Administration,admin,L1,✅ verificato,,
-d47d87aa,route,/admin/users/roles,GET,Administration,admin,L1,✅ verificato,,
+150f6aed,route,/admin,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+a7d92277,route,/admin/analytics,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+31acdd13,route,/admin/monitor,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+b9ed4551,route,/admin/monitor/containers,GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/operat,
+2f6d3da4,route,/admin/monitor/grafana,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+f3fc5a69,route,/admin/monitor/logs,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+93e4bc8a,route,/admin/monitor/mau,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+ad2339a9,route,/admin/monitor/operations,GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/resources/database/tables/top?limit=10 · 500 http://localhost:3000/api/v1/re,
+ad811a50,route,/admin/monitor/service-calls,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+b044c032,route,/admin/monitor/services,GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/resources/database/tables/top?limit=10 · Failed to load resource: the server,
+e90b84fb,route,/admin/monitor/wikidata-dead-letters,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+50576a10,route,/admin/overview,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+5af974db,route,/admin/overview/activity,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+2edce285,route,/admin/overview/system,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+e2008cce,route,/admin/staging-access,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+a688d486,route,/admin/users,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+f3e20bd8,route,/admin/users/[id],GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/users/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000,param: id
+42e1e23a,route,/admin/users/access-requests,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+dd82678f,route,/admin/users/activity,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+3399b610,route,/admin/users/invitations,GET,Administration,admin,L1,✅ verificato,HTTP 200,
+d47d87aa,route,/admin/users/roles,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 45fb3136,endpoint,/api/v1/agent-memory/games/{gameId:guid}/memory,GET,AgentMemory,user,L2,✅ verificato,admin 404 · utente 404 — self-service  risorsa assente,
 d61399d3,endpoint,/api/v1/agent-memory/games/{gameId:guid}/memory/glossary,GET,AgentMemory,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 e94a0c12,endpoint,/api/v1/agent-memory/games/{gameId:guid}/memory/glossary,POST,AgentMemory,user,L1,✅ verificato,400: validazione attiva  endpoint raggiungibile,
@@ -320,38 +320,38 @@ f4c6a50e,endpoint,/api/v1/callback,GET,Authentication,user,L2,✅ verificato,adm
 43bae04f,endpoint,/api/v1/disconnect,DELETE,Authentication,user,L1,✅ verificato,404,
 a3cca9af,endpoint,/api/v1/user/agent-slots,GET,Authentication,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 ad4ddff6,endpoint,/api/v1/waitlist,POST,Authentication,user,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,auth non dedotta: leggere il codice
-06ac98c8,route,/accept-invite,GET,Authentication,admin,L1,✅ verificato,,
-43203601,route,/accept-invite,GET,Authentication,user,L1,✅ verificato,,
-6398f61c,route,/invitation-expired,GET,Authentication,admin,L1,✅ verificato,,
-0ac3e430,route,/invitation-expired,GET,Authentication,user,L1,✅ verificato,,
+06ac98c8,route,/accept-invite,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+43203601,route,/accept-invite,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+6398f61c,route,/invitation-expired,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+0ac3e430,route,/invitation-expired,GET,Authentication,user,L1,✅ verificato,HTTP 200,
 35e5bc63,route,/invites/[token],GET,Authentication,admin,L1,⬜ non coperto,,param: token
 3ba61c3d,route,/invites/[token],GET,Authentication,user,L1,⬜ non coperto,,param: token
-2f1774ae,route,/login,GET,Authentication,admin,L1,✅ verificato,,
-c2fa89a9,route,/login,GET,Authentication,user,L1,✅ verificato,,
-7eafc3f2,route,/oauth-callback,GET,Authentication,admin,L1,✅ verificato,,
-829c20e4,route,/oauth-callback,GET,Authentication,user,L1,✅ verificato,,
-7ffad483,route,/onboarding,GET,Authentication,admin,L1,⚠️ finding da triagare,,
-b2cd3296,route,/onboarding,GET,Authentication,user,L1,⚠️ finding da triagare,,
-0e83b5d3,route,/profile,GET,Authentication,admin,L1,✅ verificato,,
-ec74ca45,route,/profile,GET,Authentication,user,L1,✅ verificato,,
-3cdfdf9d,route,/profile/achievements,GET,Authentication,admin,L1,✅ verificato,,
-069371ff,route,/profile/achievements,GET,Authentication,user,L1,✅ verificato,,
-880653dc,route,/register,GET,Authentication,admin,L1,✅ verificato,,
-472c6a93,route,/register,GET,Authentication,user,L1,✅ verificato,,
-2ea18418,route,/reset-password,GET,Authentication,admin,L1,✅ verificato,,
-282c9158,route,/reset-password,GET,Authentication,user,L1,✅ verificato,,
-424dc313,route,/setup,GET,Authentication,admin,L1,✅ verificato,,
-7a4741da,route,/setup,GET,Authentication,user,L1,✅ verificato,,
-19c3588a,route,/setup-account,GET,Authentication,admin,L1,✅ verificato,,
-62cc10dd,route,/setup-account,GET,Authentication,user,L1,✅ verificato,,
-a677a7ef,route,/verification-pending,GET,Authentication,admin,L1,✅ verificato,,
-4de058ed,route,/verification-pending,GET,Authentication,user,L1,✅ verificato,,
-db2c0a8b,route,/verification-success,GET,Authentication,admin,L1,✅ verificato,,
-9f8a055b,route,/verification-success,GET,Authentication,user,L1,✅ verificato,,
-b92f5e04,route,/verify-email,GET,Authentication,admin,L1,✅ verificato,,
-8227abe9,route,/verify-email,GET,Authentication,user,L1,✅ verificato,,
-80ab39f4,route,/welcome,GET,Authentication,admin,L1,✅ verificato,,
-d2e7b02f,route,/welcome,GET,Authentication,user,L1,✅ verificato,,
+2f1774ae,route,/login,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+c2fa89a9,route,/login,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+7eafc3f2,route,/oauth-callback,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+829c20e4,route,/oauth-callback,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+7ffad483,route,/onboarding,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+b2cd3296,route,/onboarding,GET,Authentication,user,L1,⚠️ finding da triagare,HTTP 200 · `DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.  If you ,
+0e83b5d3,route,/profile,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+ec74ca45,route,/profile,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+3cdfdf9d,route,/profile/achievements,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+069371ff,route,/profile/achievements,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+880653dc,route,/register,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+472c6a93,route,/register,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+2ea18418,route,/reset-password,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+282c9158,route,/reset-password,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+424dc313,route,/setup,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+7a4741da,route,/setup,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+19c3588a,route,/setup-account,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+62cc10dd,route,/setup-account,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+a677a7ef,route,/verification-pending,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+4de058ed,route,/verification-pending,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+db2c0a8b,route,/verification-success,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+9f8a055b,route,/verification-success,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+b92f5e04,route,/verify-email,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+8227abe9,route,/verify-email,GET,Authentication,user,L1,✅ verificato,HTTP 200,
+80ab39f4,route,/welcome,GET,Authentication,admin,L1,✅ verificato,HTTP 200,
+d2e7b02f,route,/welcome,GET,Authentication,user,L1,✅ verificato,HTTP 200,
 93f69769,endpoint,/api/v1/admin/budget/,GET,BusinessSimulations,admin,L2,✅ verificato,admin 200 · utente 403,
 b1b08427,endpoint,/api/v1/admin/budget/,PUT,BusinessSimulations,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 46849a6d,endpoint,/api/v1/admin/budget/overview,GET,BusinessSimulations,admin,L2,✅ verificato,admin 200 · utente 403,
@@ -388,7 +388,7 @@ b9c4dbb2,endpoint,/api/v1/admin/tier-strategy/model-change-history,GET,BusinessS
 c2a3941d,endpoint,/api/v1/admin/tiers,POST,BusinessSimulations,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 7a167588,endpoint,/api/v1/admin/tiers/{name},GET,BusinessSimulations,admin,L1,⬜ non coperto,,
 d73dc2c6,endpoint,/api/v1/admin/tiers/{name},PUT,BusinessSimulations,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
-b613078a,route,/admin/business,GET,BusinessSimulations,admin,L1,✅ verificato,,
+b613078a,route,/admin/business,GET,BusinessSimulations,admin,L1,✅ verificato,HTTP 200,
 9f213d88,endpoint,/api/v1/admin/database-sync/operations/history,GET,DatabaseSync,admin,L2,⚠️ finding da aprire,admin 403 · utente 403 — admin riceve 403,
 248ed8fc,endpoint,/api/v1/admin/database-sync/schema/apply,POST,DatabaseSync,admin,L1,✅ verificato,403: autorizzazione applicata,
 5b90747f,endpoint,/api/v1/admin/database-sync/schema/compare,GET,DatabaseSync,admin,L2,⚠️ finding da aprire,admin 403 · utente 403 — admin riceve 403,
@@ -399,11 +399,11 @@ a94a94a2,endpoint,/api/v1/admin/database-sync/tables/{name}/compare,GET,Database
 f6253697,endpoint,/api/v1/admin/database-sync/tunnel/close,DELETE,DatabaseSync,admin,L1,✅ verificato,403: autorizzazione applicata,
 a05083fc,endpoint,/api/v1/admin/database-sync/tunnel/open,POST,DatabaseSync,admin,L1,✅ verificato,403: autorizzazione applicata,
 e824b637,endpoint,/api/v1/admin/database-sync/tunnel/status,GET,DatabaseSync,admin,L2,⚠️ finding da aprire,admin 403 · utente 403 — admin riceve 403,
-9b5d5715,route,/admin/database-sync,GET,DatabaseSync,admin,L1,⚠️ finding da triagare,,
-d8f4398f,route,/admin/ui-library,GET,DesignSystem,admin,L1,✅ verificato,,
-4202b44a,route,/admin/ui-library/[id],GET,DesignSystem,admin,L1,⬜ non coperto,,param: id
-01a11f56,route,/admin/ui-library/compositions,GET,DesignSystem,admin,L1,✅ verificato,,
-f139476f,route,/admin/ui-library/compositions/[id],GET,DesignSystem,admin,L1,⬜ non coperto,,param: id
+9b5d5715,route,/admin/database-sync,GET,DatabaseSync,admin,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/admin/database-sync/tunnel/status · Failed to load resource: the server resp,
+d8f4398f,route,/admin/ui-library,GET,DesignSystem,admin,L1,✅ verificato,HTTP 200,
+4202b44a,route,/admin/ui-library/[id],GET,DesignSystem,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: not-found,param: id
+01a11f56,route,/admin/ui-library/compositions,GET,DesignSystem,admin,L1,✅ verificato,HTTP 200,
+f139476f,route,/admin/ui-library/compositions/[id],GET,DesignSystem,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: not-found,param: id
 59b910bb,endpoint,/api/v1/admin/pdf-analytics/,GET,DocumentProcessing,admin,L2,✅ verificato,admin 200 · utente 403,
 7f7b4702,endpoint,/api/v1/admin/pdfs,GET,DocumentProcessing,user,L2,⚠️ finding da aprire,admin 200 · utente 403 — endpoint destinato all'utente ma risponde 403,
 2511a44c,endpoint,/api/v1/admin/pdfs/{pdfId:guid},DELETE,DocumentProcessing,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
@@ -469,12 +469,12 @@ be00652f,endpoint,/api/v1/resources/database/vacuum,POST,DocumentProcessing,admi
 0881153c,endpoint,/api/v1/resources/system,GET,DocumentProcessing,admin,L2,✅ verificato,admin 200 · utente 403,
 d7c4c618,endpoint,/api/v1/resources/vectors/metrics,GET,DocumentProcessing,admin,L2,✅ verificato,admin 200 · utente 403,
 90a47569,endpoint,/api/v1/resources/vectors/rebuild,POST,DocumentProcessing,admin,L1,🚫 non eseguito (irreversibile),operazione irreversibile o con effetti esterni: contiene  rebuild ,
-9b2435b2,route,/library/[gameId]/kb,GET,DocumentProcessing,admin,L1,⚠️ finding da triagare,,param: gameId
-a9b5ff8a,route,/library/[gameId]/kb,GET,DocumentProcessing,user,L1,⚠️ finding da triagare,,param: gameId
-c43eb17d,route,/pipeline-builder,GET,DocumentProcessing,admin,L1,✅ verificato,,
-e6461692,route,/pipeline-builder,GET,DocumentProcessing,user,L1,✅ verificato,,
-2dc6f1a2,route,/upload,GET,DocumentProcessing,admin,L1,✅ verificato,,
-81ca8e4f,route,/upload,GET,DocumentProcessing,user,L1,✅ verificato,,
+9b2435b2,route,/library/[gameId]/kb,GET,DocumentProcessing,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+a9b5ff8a,route,/library/[gameId]/kb,GET,DocumentProcessing,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+c43eb17d,route,/pipeline-builder,GET,DocumentProcessing,admin,L1,✅ verificato,HTTP 200,
+e6461692,route,/pipeline-builder,GET,DocumentProcessing,user,L1,✅ verificato,HTTP 200,
+2dc6f1a2,route,/upload,GET,DocumentProcessing,admin,L1,✅ verificato,HTTP 200,
+81ca8e4f,route,/upload,GET,DocumentProcessing,user,L1,✅ verificato,HTTP 200,
 d93aee0d,endpoint,/api/v1/admin/entity-links,GET,EntityRelationships,admin,L2,⚠️ finding da aprire,admin 400 · utente 400 — endpoint admin non respinge l'utente: 400,
 41cfb09d,endpoint,/api/v1/admin/entity-links,POST,EntityRelationships,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 2b769a2b,endpoint,/api/v1/admin/entity-links/{linkId:guid},DELETE,EntityRelationships,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
@@ -570,46 +570,46 @@ ec4b1fdb,endpoint,/api/v1/rulespecs/{gameId}/{version}/comments,GET,GameManageme
 21b86942,endpoint,/api/v1/rulespecs/{gameId}/{version}/lines/{lineNumber}/comments,GET,GameManagement,user,L1,⬜ non coperto,,
 a000ac97,endpoint,/api/v1/rulespecs/bulk/export,POST,GameManagement,user,L1,🚫 non eseguito (irreversibile),operazione irreversibile o con effetti esterni: contiene  bulk ,auth non dedotta: leggere il codice
 a1156c97,endpoint,/api/v1/wizard/game-preview/{gameId:guid},GET,GameManagement,user,L2,⚠️ finding da aprire,admin 500 · utente 500 — endpoint destinato all'utente ma risponde 500,
-1634fdaf,route,/admin/content,GET,GameManagement,admin,L1,✅ verificato,,
-8810fe3e,route,/admin/content/email-templates,GET,GameManagement,admin,L1,✅ verificato,,
-0419a831,route,/admin/games/[gameId]/agent/test,GET,GameManagement,admin,L1,✅ verificato,,param: gameId
-1a5a4fdf,route,/admin/games/[gameId]/phases,GET,GameManagement,admin,L1,✅ verificato,,param: gameId
-ef60de24,route,/admin/games/[gameId]/processing,GET,GameManagement,admin,L1,✅ verificato,,param: gameId
-edf80437,route,/admin/games/new,GET,GameManagement,admin,L1,✅ verificato,,
-a78c83a6,route,/editor,GET,GameManagement,admin,L1,✅ verificato,,
-92b14b2f,route,/editor,GET,GameManagement,user,L1,✅ verificato,,
-b45e925e,route,/editor/agent-proposals,GET,GameManagement,admin,L1,✅ verificato,,
-92be7d18,route,/editor/agent-proposals,GET,GameManagement,user,L1,✅ verificato,,
-c95c15f9,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-fcba07ea,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-1b7b6364,route,/editor/agent-proposals/[id]/test,GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-bf8d5938,route,/editor/agent-proposals/[id]/test,GET,GameManagement,user,L1,⬜ non coperto,,param: id
-4230cf7d,route,/editor/agent-proposals/create,GET,GameManagement,admin,L1,✅ verificato,,
-468ad9bf,route,/editor/agent-proposals/create,GET,GameManagement,user,L1,✅ verificato,,
-5cf27241,route,/gamebook,GET,GameManagement,admin,L1,✅ verificato,,
-cdd4e721,route,/gamebook,GET,GameManagement,user,L1,✅ verificato,,
-d945f315,route,/gamebook/upload,GET,GameManagement,admin,L1,✅ verificato,,
-2f995334,route,/gamebook/upload,GET,GameManagement,user,L1,✅ verificato,,
-c43c7323,route,/games,GET,GameManagement,admin,L1,✅ verificato,,
-37a4378d,route,/games,GET,GameManagement,user,L1,✅ verificato,,
-d7105a99,route,/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,,param: id
-00259cd8,route,/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,,param: id
-f19a7c40,route,/games/[id]/card,GET,GameManagement,admin,L1,⚠️ finding da aprire,,param: id
-a3a8cd48,route,/games/[id]/card,GET,GameManagement,user,L1,⚠️ finding da aprire,,param: id
-9cf201bc,route,/games/[id]/faqs,GET,GameManagement,admin,L1,✅ verificato,,param: id
-7fcf1ad2,route,/games/[id]/faqs,GET,GameManagement,user,L1,✅ verificato,,param: id
-42d69076,route,/games/[id]/rules,GET,GameManagement,admin,L1,✅ verificato,,param: id
-727efbf1,route,/games/[id]/rules,GET,GameManagement,user,L1,✅ verificato,,param: id
-09b4d385,route,/games/[id]/sessions,GET,GameManagement,admin,L1,✅ verificato,,param: id
-1edf35fb,route,/games/[id]/sessions,GET,GameManagement,user,L1,✅ verificato,,param: id
-f7776df9,route,/hub,GET,GameManagement,admin,L1,✅ verificato,,
-128e8523,route,/hub,GET,GameManagement,user,L1,✅ verificato,,
-7904ab76,route,/hub/agents,GET,GameManagement,admin,L1,✅ verificato,,
-30f4778b,route,/hub/agents,GET,GameManagement,user,L1,✅ verificato,,
-ab5c661d,route,/hub/games/[id],GET,GameManagement,admin,L1,⬜ non coperto,,param: id
-af787ba6,route,/hub/games/[id],GET,GameManagement,user,L1,⬜ non coperto,,param: id
-c103c95e,route,/hub/toolkits,GET,GameManagement,admin,L1,✅ verificato,,
-d69e0e75,route,/hub/toolkits,GET,GameManagement,user,L1,✅ verificato,,
+1634fdaf,route,/admin/content,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+8810fe3e,route,/admin/content/email-templates,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+0419a831,route,/admin/games/[gameId]/agent/test,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: gameId
+1a5a4fdf,route,/admin/games/[gameId]/phases,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: gameId
+ef60de24,route,/admin/games/[gameId]/processing,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: gameId
+edf80437,route,/admin/games/new,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+a78c83a6,route,/editor,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+92b14b2f,route,/editor,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+b45e925e,route,/editor/agent-proposals,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+92be7d18,route,/editor/agent-proposals,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+c95c15f9,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
+fcba07ea,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
+1b7b6364,route,/editor/agent-proposals/[id]/test,GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://lo,param: id
+bf8d5938,route,/editor/agent-proposals/[id]/test,GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/admin/agent-definitions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 403 http://lo,param: id
+4230cf7d,route,/editor/agent-proposals/create,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+468ad9bf,route,/editor/agent-proposals/create,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+5cf27241,route,/gamebook,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+cdd4e721,route,/gamebook,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+d945f315,route,/gamebook/upload,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+2f995334,route,/gamebook/upload,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+c43c7323,route,/games,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+37a4378d,route,/games,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+d7105a99,route,/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+00259cd8,route,/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+f19a7c40,route,/games/[id]/card,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
+a3a8cd48,route,/games/[id]/card,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
+9cf201bc,route,/games/[id]/faqs,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
+7fcf1ad2,route,/games/[id]/faqs,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
+42d69076,route,/games/[id]/rules,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
+727efbf1,route,/games/[id]/rules,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
+09b4d385,route,/games/[id]/sessions,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
+1edf35fb,route,/games/[id]/sessions,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
+f7776df9,route,/hub,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+128e8523,route,/hub,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+7904ab76,route,/hub/agents,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+30f4778b,route,/hub/agents,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
+ab5c661d,route,/hub/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+af787ba6,route,/hub/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+c103c95e,route,/hub/toolkits,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
+d69e0e75,route,/hub/toolkits,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
 ce397fca,endpoint,/api/v1/toolbox-templates/,GET,GameToolbox,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 4d2a12d7,endpoint,/api/v1/toolbox-templates/{templateId:guid}/apply,POST,GameToolbox,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
 4c38da0b,endpoint,/api/v1/toolboxes/,POST,GameToolbox,user,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
@@ -668,22 +668,22 @@ e1345463,endpoint,/api/v1/toolkits/{toolkitId:guid}/versions,GET,GameToolkit,use
 7ff1031b,endpoint,/api/v1/toolkits/{toolkitId:guid}/versions,POST,GameToolkit,user,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 0e60776e,endpoint,/api/v1/toolkits/{toolkitId:guid}/versions/{versionId:guid}/yank,POST,GameToolkit,user,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 1486445e,endpoint,/api/v1/toolkits/recommended,GET,GameToolkit,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
-a323c9a4,route,/toolkit,GET,GameToolkit,admin,L1,✅ verificato,,
-7ce163a4,route,/toolkit,GET,GameToolkit,user,L1,✅ verificato,,
-9f800251,route,/toolkit/[sessionId],GET,GameToolkit,admin,L1,⬜ non coperto,,param: sessionId
-71bbc151,route,/toolkit/[sessionId],GET,GameToolkit,user,L1,⬜ non coperto,,param: sessionId
-7e121da8,route,/toolkit/history,GET,GameToolkit,admin,L1,✅ verificato,,
-e18bcf3a,route,/toolkit/history,GET,GameToolkit,user,L1,✅ verificato,,
-940f8429,route,/toolkit/play,GET,GameToolkit,admin,L1,✅ verificato,,
-f2d11be3,route,/toolkit/play,GET,GameToolkit,user,L1,✅ verificato,,
-6e1d4683,route,/toolkit/stats,GET,GameToolkit,admin,L1,⚠️ finding da triagare,,
-de92af3b,route,/toolkit/stats,GET,GameToolkit,user,L1,⚠️ finding da triagare,,
-4cd44d51,route,/toolkit/templates,GET,GameToolkit,admin,L1,✅ verificato,,
-428a6a94,route,/toolkit/templates,GET,GameToolkit,user,L1,✅ verificato,,
-9053764a,route,/toolkits,GET,GameToolkit,admin,L1,✅ verificato,,
-dc83a870,route,/toolkits,GET,GameToolkit,user,L1,✅ verificato,,
-a86e388a,route,/toolkits/[id],GET,GameToolkit,admin,L1,⬜ non coperto,,param: id
-16533982,route,/toolkits/[id],GET,GameToolkit,user,L1,⬜ non coperto,,param: id
+a323c9a4,route,/toolkit,GET,GameToolkit,admin,L1,✅ verificato,HTTP 200,
+7ce163a4,route,/toolkit,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
+9f800251,route,/toolkit/[sessionId],GET,GameToolkit,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/ba8c4300-ec4f-4fe9-ad43-7b8b8f6feac4 · 404 http://localhost:80,param: sessionId
+71bbc151,route,/toolkit/[sessionId],GET,GameToolkit,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/ba8c4300-ec4f-4fe9-ad43-7b8b8f6feac4 · 404 http://localhost:80,param: sessionId
+7e121da8,route,/toolkit/history,GET,GameToolkit,admin,L1,✅ verificato,HTTP 200,
+e18bcf3a,route,/toolkit/history,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
+940f8429,route,/toolkit/play,GET,GameToolkit,admin,L1,✅ verificato,HTTP 200,
+f2d11be3,route,/toolkit/play,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
+6e1d4683,route,/toolkit/stats,GET,GameToolkit,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/game-sessions/session-statistics?monthsBack=12 · 404 http://localhost:3000/game-ses,
+de92af3b,route,/toolkit/stats,GET,GameToolkit,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/game-sessions/session-statistics?monthsBack=12 · 404 http://localhost:3000/game-ses,
+4cd44d51,route,/toolkit/templates,GET,GameToolkit,admin,L1,✅ verificato,HTTP 200,
+428a6a94,route,/toolkit/templates,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
+9053764a,route,/toolkits,GET,GameToolkit,admin,L1,✅ verificato,HTTP 200,
+dc83a870,route,/toolkits,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
+a86e388a,route,/toolkits/[id],GET,GameToolkit,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/toolkits/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+16533982,route,/toolkits/[id],GET,GameToolkit,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/toolkits/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
 6c9f6fa9,endpoint,/api/v1/achievements,GET,Gamification,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 1c5ad481,endpoint,/api/v1/achievements/recent,GET,Gamification,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 227f09d3,endpoint,/api/v1/admin/ab-tests/,GET,KbQuality,admin,L2,✅ verificato,admin 200 · utente 403,
@@ -705,7 +705,7 @@ afe7e5ce,endpoint,/api/v1/budget/user/{userId:guid},GET,KbQuality,user,L2,⚠️
 2cccc510,endpoint,/api/v1/llm-costs/check-alerts,POST,KbQuality,admin,L1,✅ verificato,200,
 851370b1,endpoint,/api/v1/llm-costs/daily,GET,KbQuality,admin,L2,✅ verificato,admin 200 · utente 403,
 e1f4199f,endpoint,/api/v1/llm-costs/report,GET,KbQuality,admin,L2,✅ verificato,admin 200 · utente 403,
-f3105efa,route,/admin/rag-quality,GET,KbQuality,admin,L1,✅ verificato,,
+f3105efa,route,/admin/rag-quality,GET,KbQuality,admin,L1,✅ verificato,HTTP 200,
 3521925a,endpoint,/api/v1/admin/agent-definitions/,GET,KnowledgeBase,admin,L2,✅ verificato,admin 200 · utente 403,
 45a04e02,endpoint,/api/v1/admin/agent-definitions/,POST,KnowledgeBase,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 b77bb6da,endpoint,/api/v1/admin/agent-definitions/{agentId:guid}/playground/chat,POST,KnowledgeBase,admin,L1,✅ verificato,200,
@@ -894,103 +894,103 @@ d4d3ead5,endpoint,/api/v1/strategies/{id:guid},DELETE,KnowledgeBase,admin,L1,✅
 4fffdef7,endpoint,/api/v1/strategies/{id:guid},PUT,KnowledgeBase,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
 76576745,endpoint,/api/v1/strategies/{id:guid}/export,GET,KnowledgeBase,admin,L2,⚠️ finding da aprire,admin 404 · utente 404 — endpoint admin non respinge l'utente: 404,
 d358c599,endpoint,/api/v1/strategies/import,POST,KnowledgeBase,admin,L1,🚫 non eseguito (irreversibile),operazione irreversibile o con effetti esterni: contiene  import ,
-88211def,route,/admin/agents,GET,KnowledgeBase,admin,L1,✅ verificato,,
-da84258e,route,/admin/agents/ab-testing/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-15946ba8,route,/admin/agents/ab-testing/new,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-045a7363,route,/admin/agents/ab-testing/results,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-c82ca845,route,/admin/agents/analytics,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-d168fde5,route,/admin/agents/builder,GET,KnowledgeBase,admin,L1,✅ verificato,,
-3acbdafc,route,/admin/agents/chat-history,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-0818e037,route,/admin/agents/chat-limits,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-c0b3da50,route,/admin/agents/config,GET,KnowledgeBase,admin,L1,✅ verificato,,
-1371cd67,route,/admin/agents/debug,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-040cec4f,route,/admin/agents/debug-chat,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-9b2ed26b,route,/admin/agents/definitions,GET,KnowledgeBase,admin,L1,✅ verificato,,
-ff4b3f42,route,/admin/agents/definitions/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-31c1a58f,route,/admin/agents/definitions/[id]/edit,GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-5811e996,route,/admin/agents/definitions/create,GET,KnowledgeBase,admin,L1,✅ verificato,,
-1d87c67e,route,/admin/agents/definitions/playground,GET,KnowledgeBase,admin,L1,✅ verificato,,
-ba5fe62e,route,/admin/agents/infrastructure,GET,KnowledgeBase,admin,L1,✅ verificato,,
-6e506ed7,route,/admin/agents/inspector,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-ceb23e53,route,/admin/agents/models,GET,KnowledgeBase,admin,L1,✅ verificato,,
-ce2c89a0,route,/admin/agents/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-fad50292,route,/admin/agents/playground,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-2316fe0a,route,/admin/agents/sandbox,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-ffc2b583,route,/admin/agents/strategy,GET,KnowledgeBase,admin,L1,✅ verificato,,
-77fbe9e0,route,/admin/agents/templates,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-0af409cf,route,/admin/agents/usage,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-df171afb,route,/admin/ai,GET,KnowledgeBase,admin,L1,✅ verificato,,
-e21f3457,route,/admin/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,,
-66565974,route,/admin/knowledge-base/documents,GET,KnowledgeBase,admin,L1,✅ verificato,,
-04076d5b,route,/admin/knowledge-base/embedding,GET,KnowledgeBase,admin,L1,✅ verificato,,
-a1599e80,route,/admin/knowledge-base/feedback,GET,KnowledgeBase,admin,L1,✅ verificato,,
-a7a7932f,route,/admin/knowledge-base/games,GET,KnowledgeBase,admin,L1,⬜ non coperto,,
-e398a848,route,/admin/knowledge-base/mechanic-extractor/analyses,GET,KnowledgeBase,admin,L1,✅ verificato,,
-873e7432,route,/admin/knowledge-base/mechanic-extractor/dashboard,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-896c70f4,route,/admin/knowledge-base/mechanic-extractor/golden,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-01cc0340,route,/admin/knowledge-base/mechanic-extractor/golden/[gameId],GET,KnowledgeBase,admin,L1,✅ verificato,,param: gameId
-30e42b1f,route,/admin/knowledge-base/mechanic-extractor/metrics,GET,KnowledgeBase,admin,L1,✅ verificato,,
-5a37b69f,route,/admin/knowledge-base/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-71d05838,route,/admin/knowledge-base/processing,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-4915f9be,route,/admin/knowledge-base/queue,GET,KnowledgeBase,admin,L1,✅ verificato,,
-afc778b9,route,/admin/knowledge-base/rag-pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,,
-216fde74,route,/admin/knowledge-base/settings,GET,KnowledgeBase,admin,L1,✅ verificato,,
-d0007532,route,/admin/knowledge-base/snapshots,GET,KnowledgeBase,admin,L1,✅ verificato,,
-0abacc2f,route,/admin/knowledge-base/upload,GET,KnowledgeBase,admin,L1,✅ verificato,,
-4e378d2f,route,/admin/knowledge-base/vectors,GET,KnowledgeBase,admin,L1,✅ verificato,,
-093da42b,route,/agents,GET,KnowledgeBase,admin,L1,✅ verificato,,
-78f9458e,route,/agents,GET,KnowledgeBase,user,L1,✅ verificato,,
-b55ee25d,route,/agents/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-2b3ba40d,route,/agents/[id],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-36ab86f5,route,/chat,GET,KnowledgeBase,admin,L1,✅ verificato,,
-a5b4925d,route,/chat,GET,KnowledgeBase,user,L1,✅ verificato,,
-430f3319,route,/chat/[threadId],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: threadId
-404f803d,route,/chat/[threadId],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: threadId
-ff21a3ec,route,/chat/agents/create,GET,KnowledgeBase,admin,L1,✅ verificato,,
-dfa5c25e,route,/chat/agents/create,GET,KnowledgeBase,user,L1,✅ verificato,,
-cab856fd,route,/chat/new,GET,KnowledgeBase,admin,L1,✅ verificato,,
-32668dc5,route,/chat/new,GET,KnowledgeBase,user,L1,✅ verificato,,
-b27bd096,route,/kb/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-6ef1ef40,route,/kb/[id],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-38a6bca2,route,/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,,
-504198c0,route,/knowledge-base,GET,KnowledgeBase,user,L1,✅ verificato,,
-a2e1c67e,route,/knowledge-base/[id],GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-77338322,route,/knowledge-base/[id],GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-cb454801,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,admin,L1,⬜ non coperto,,param: id
-2c5b80d7,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,user,L1,⬜ non coperto,,param: id
-4d264881,route,/knowledge-base/global,GET,KnowledgeBase,admin,L1,✅ verificato,,
-83bc47ae,route,/knowledge-base/global,GET,KnowledgeBase,user,L1,✅ verificato,,
+88211def,route,/admin/agents,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+da84258e,route,/admin/agents/ab-testing/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,param: id
+15946ba8,route,/admin/agents/ab-testing/new,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
+045a7363,route,/admin/agents/ab-testing/results,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
+c82ca845,route,/admin/agents/analytics,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agents/metrics/top?limit=10&sortBy=invocations&startDate=2026-08-20&en,
+d168fde5,route,/admin/agents/builder,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+3acbdafc,route,/admin/agents/chat-history,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/openrouter/usage/requests?page=1&pageSize=20 · 404 http://localhost:30,
+0818e037,route,/admin/agents/chat-limits,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/admin/config/chat-history-limits · Failed to load resource: the server respo,
+c0b3da50,route,/admin/agents/config,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+1371cd67,route,/admin/agents/debug,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions?skip=0&take=20&dateFrom=2026-08-26&dateTo=2026-08-26 · ,
+040cec4f,route,/admin/agents/debug-chat,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
+9b2ed26b,route,/admin/agents/definitions,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+ff4b3f42,route,/admin/agents/definitions/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://lo,param: id
+31c1a58f,route,/admin/agents/definitions/[id]/edit,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/undefined · 404 http://localhost:3000/api/v1/admin/a,param: id
+5811e996,route,/admin/agents/definitions/create,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+1d87c67e,route,/admin/agents/definitions/playground,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+ba5fe62e,route,/admin/agents/infrastructure,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+6e506ed7,route,/admin/agents/inspector,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions?skip=0&take=20&dateFrom=2026-08-26&dateTo=2026-08-26 · ,
+ceb23e53,route,/admin/agents/models,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+ce2c89a0,route,/admin/agents/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions/stats?dateFrom=2026-08-26&dateTo=2026-08-26 · 400 http:,
+fad50292,route,/admin/agents/playground,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
+2316fe0a,route,/admin/agents/sandbox,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
+ffc2b583,route,/admin/agents/strategy,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+77fbe9e0,route,/admin/agents/templates,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-toolkits/templates/pending-review · Failed to load resource: the server,
+0af409cf,route,/admin/agents/usage,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/openrouter/usage/requests?page=1&pageSize=20 · 404 http://localhost:30,
+df171afb,route,/admin/ai,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+e21f3457,route,/admin/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+66565974,route,/admin/knowledge-base/documents,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+04076d5b,route,/admin/knowledge-base/embedding,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+a1599e80,route,/admin/knowledge-base/feedback,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+a7a7932f,route,/admin/knowledge-base/games,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/admin/knowledge-base/games/fb9d1c45-3f1f-45c5-1fe0-5a88887822e2?_rsc=Pz8s6uyG1cjVuT,
+e398a848,route,/admin/knowledge-base/mechanic-extractor/analyses,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+873e7432,route,/admin/knowledge-base/mechanic-extractor/dashboard,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/admin/mechanic-extractor/thresholds · 500 http://localhost:3000/api/v1/admin,
+896c70f4,route,/admin/knowledge-base/mechanic-extractor/golden,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 422 http://localhost:3000/api/v1/admin/shared-games?pageNumber=1&pageSize=200 · 422 http://localhost:3000/api,
+01cc0340,route,/admin/knowledge-base/mechanic-extractor/golden/[gameId],GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,param: gameId
+30e42b1f,route,/admin/knowledge-base/mechanic-extractor/metrics,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+5a37b69f,route,/admin/knowledge-base/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/admin/kb/pipeline/health · 500 http://localhost:3000/api/v1/admin/kb/pipelin,
+71d05838,route,/admin/knowledge-base/processing,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/admin/kb/pipeline/health · Failed to load resource: the server responded wit,
+4915f9be,route,/admin/knowledge-base/queue,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+afc778b9,route,/admin/knowledge-base/rag-pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/pipeline/metrics · 404 http://localhost:3000/api/v1/admin/pipeline/hea,
+216fde74,route,/admin/knowledge-base/settings,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+d0007532,route,/admin/knowledge-base/snapshots,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+0abacc2f,route,/admin/knowledge-base/upload,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+4e378d2f,route,/admin/knowledge-base/vectors,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+093da42b,route,/agents,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+78f9458e,route,/agents,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
+b55ee25d,route,/agents/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: errore-generico-en · 404 http://localhost:3000/api/v1/agents/f19c237a-8c11-4abd-b6ee-83128fe89f47 · F,param: id
+2b3ba40d,route,/agents/[id],GET,KnowledgeBase,user,L1,⚠️ finding da aprire,HTTP 200 · marker: errore-generico-en · 404 http://localhost:3000/api/v1/agents/f19c237a-8c11-4abd-b6ee-83128fe89f47 · F,param: id
+36ab86f5,route,/chat,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+a5b4925d,route,/chat,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
+430f3319,route,/chat/[threadId],GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,param: threadId
+404f803d,route,/chat/[threadId],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/chat-threads/3e91c55d-926e-466d-9386-bfef03eae56f · 403 http://localhost:300,param: threadId
+ff21a3ec,route,/chat/agents/create,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+dfa5c25e,route,/chat/agents/create,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
+cab856fd,route,/chat/new,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+32668dc5,route,/chat/new,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
+b27bd096,route,/kb/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47/chunks?limit=200 · 404 http://l,param: id
+6ef1ef40,route,/kb/[id],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47/chunks?limit=200 · 404 http://l,param: id
+38a6bca2,route,/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+504198c0,route,/knowledge-base,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
+a2e1c67e,route,/knowledge-base/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47/chunks?limit=200 · 404 http://l,param: id
+77338322,route,/knowledge-base/[id],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 400 http://localhost:3000/api,param: id
+cb454801,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,param: id
+2c5b80d7,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,param: id
+4d264881,route,/knowledge-base/global,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
+83bc47ae,route,/knowledge-base/global,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
 2d5b898e,endpoint,/api/v1,GET,PublicPages,user,L2,✅ verificato,admin 404 · utente 404 — self-service  risorsa assente,
 943dfb27,endpoint,/api/v1,POST,PublicPages,user,L2,⬜ non coperto,,
 af861cb5,endpoint,/api/v1/contact,POST,PublicPages,user,L2,⬜ non coperto,,
-75f9709d,route,/,GET,PublicPages,admin,L1,✅ verificato,,
-32059dc0,route,/,GET,PublicPages,user,L1,✅ verificato,,
-44d6c691,route,/about,GET,PublicPages,admin,L1,✅ verificato,,
-77bc5523,route,/about,GET,PublicPages,user,L1,✅ verificato,,
-b093b102,route,/contact,GET,PublicPages,admin,L1,✅ verificato,,
-5c8090bc,route,/contact,GET,PublicPages,user,L1,✅ verificato,,
-cd96c0d7,route,/cookie-settings,GET,PublicPages,admin,L1,✅ verificato,,
-2a8b72f4,route,/cookie-settings,GET,PublicPages,user,L1,✅ verificato,,
-ee5352b8,route,/cookies,GET,PublicPages,admin,L1,✅ verificato,,
-b2e526f7,route,/cookies,GET,PublicPages,user,L1,✅ verificato,,
-d2f215fa,route,/faq,GET,PublicPages,admin,L1,✅ verificato,,
-18780ac9,route,/faq,GET,PublicPages,user,L1,✅ verificato,,
-996a00f6,route,/how-it-works,GET,PublicPages,admin,L1,✅ verificato,,
-11a674c5,route,/how-it-works,GET,PublicPages,user,L1,✅ verificato,,
-260f853b,route,/how-it-works/game-comprehension,GET,PublicPages,admin,L1,✅ verificato,,
-9195271d,route,/how-it-works/game-comprehension,GET,PublicPages,user,L1,✅ verificato,,
-fffc1e47,route,/legal,GET,PublicPages,admin,L1,✅ verificato,,
-5d744b7d,route,/legal,GET,PublicPages,user,L1,✅ verificato,,
-71ea0046,route,/legal/takedown,GET,PublicPages,admin,L1,✅ verificato,,
-980ea3dd,route,/legal/takedown,GET,PublicPages,user,L1,✅ verificato,,
-863d45ac,route,/offline,GET,PublicPages,admin,L1,✅ verificato,,
-f3f1e9ca,route,/offline,GET,PublicPages,user,L1,✅ verificato,,
-5a2e9ff8,route,/pricing,GET,PublicPages,admin,L1,✅ verificato,,
-860ecfe4,route,/pricing,GET,PublicPages,user,L1,✅ verificato,,
-f4337fbb,route,/privacy,GET,PublicPages,admin,L1,✅ verificato,,
-67630723,route,/privacy,GET,PublicPages,user,L1,✅ verificato,,
-265d13d6,route,/terms,GET,PublicPages,admin,L1,✅ verificato,,
-7e42455e,route,/terms,GET,PublicPages,user,L1,✅ verificato,,
+75f9709d,route,/,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+32059dc0,route,/,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+44d6c691,route,/about,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+77bc5523,route,/about,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+b093b102,route,/contact,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+5c8090bc,route,/contact,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+cd96c0d7,route,/cookie-settings,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+2a8b72f4,route,/cookie-settings,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+ee5352b8,route,/cookies,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+b2e526f7,route,/cookies,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+d2f215fa,route,/faq,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+18780ac9,route,/faq,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+996a00f6,route,/how-it-works,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+11a674c5,route,/how-it-works,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+260f853b,route,/how-it-works/game-comprehension,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+9195271d,route,/how-it-works/game-comprehension,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+fffc1e47,route,/legal,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+5d744b7d,route,/legal,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+71ea0046,route,/legal/takedown,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+980ea3dd,route,/legal/takedown,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+863d45ac,route,/offline,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+f3f1e9ca,route,/offline,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+5a2e9ff8,route,/pricing,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+860ecfe4,route,/pricing,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+f4337fbb,route,/privacy,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+67630723,route,/privacy,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
+265d13d6,route,/terms,GET,PublicPages,admin,L1,✅ verificato,HTTP 200,
+7e42455e,route,/terms,GET,PublicPages,user,L1,✅ verificato,HTTP 200,
 8b09765c,endpoint,/api/v1/admin/audit-log/,GET,SecurityAudit,admin,L3,✅ verificato,200 con entries per superadmin; 403 per utente non privilegiato,
 1eb2cd5d,endpoint,/api/v1/admin/audit-log/export,GET,SecurityAudit,admin,L2,✅ verificato,200; CSV con intestazione Id Timestamp AdminUserId Action Resource ... e righe,
 6e5f7964,endpoint,/api/v1/activity,GET,SessionTracking,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
@@ -1249,66 +1249,66 @@ daf8d2a0,endpoint,/api/v1/sessions/{sessionId}/state/snapshots,POST,SessionTrack
 160ed1c4,endpoint,/api/v1/sessions/history,GET,SessionTracking,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 1d1aedd7,endpoint,/api/v1/sessions/recent,GET,SessionTracking,user,L2,⚠️ finding da aprire,admin 400 · utente 400 — endpoint destinato all'utente ma risponde 400,
 bd8e6b86,endpoint,/api/v1/sessions/statistics,GET,SessionTracking,user,L2,⚠️ finding da aprire,admin 400 · utente 400 — endpoint destinato all'utente ma risponde 400,
-c6a10868,route,/game-nights,GET,SessionTracking,admin,L1,✅ verificato,,
-75d32c4b,route,/game-nights,GET,SessionTracking,user,L1,✅ verificato,,
-98476a4b,route,/game-nights/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-3bf1c30c,route,/game-nights/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-19523044,route,/game-nights/[id]/live,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-b0503870,route,/game-nights/[id]/live,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-03da1b60,route,/game-nights/[id]/summary,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-2a080644,route,/game-nights/[id]/summary,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-59d99152,route,/game-nights/new,GET,SessionTracking,admin,L1,✅ verificato,,
-69b23d47,route,/game-nights/new,GET,SessionTracking,user,L1,✅ verificato,,
+c6a10868,route,/game-nights,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+75d32c4b,route,/game-nights,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
+98476a4b,route,/game-nights/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000,param: id
+3bf1c30c,route,/game-nights/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000,param: id
+19523044,route,/game-nights/[id]/live,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/live · 404 http://localhost,param: id
+b0503870,route,/game-nights/[id]/live,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/live · 404 http://localhost,param: id
+03da1b60,route,/game-nights/[id]/summary,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/summary · 404 http://localh,param: id
+2a080644,route,/game-nights/[id]/summary,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/photos · 404 http://localho,param: id
+59d99152,route,/game-nights/new,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+69b23d47,route,/game-nights/new,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 8497bc8c,route,/game-nights/shared/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
 ea751dc1,route,/game-nights/shared/[token],GET,SessionTracking,user,L1,⬜ non coperto,,param: token
-05fcdb1d,route,/join,GET,SessionTracking,admin,L1,✅ verificato,,
-77185dbe,route,/join,GET,SessionTracking,user,L1,✅ verificato,,
+05fcdb1d,route,/join,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+77185dbe,route,/join,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 d696004e,route,/join/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
 b6d4a258,route,/join/[token],GET,SessionTracking,user,L1,⬜ non coperto,,param: token
 e484f2f5,route,/join/event/[code],GET,SessionTracking,admin,L1,⬜ non coperto,,param: code
 c9fde988,route,/join/event/[code],GET,SessionTracking,user,L1,⬜ non coperto,,param: code
 a7b168ec,route,/join/session/[code],GET,SessionTracking,admin,L1,⬜ non coperto,,param: code
 c2863396,route,/join/session/[code],GET,SessionTracking,user,L1,⬜ non coperto,,param: code
-6a47c1ef,route,/play-records,GET,SessionTracking,admin,L1,✅ verificato,,
-d0c2d0e7,route,/play-records,GET,SessionTracking,user,L1,✅ verificato,,
-c95f2979,route,/play-records/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-b0605914,route,/play-records/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-54f46c6d,route,/play-records/[id]/edit,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-887a68dc,route,/play-records/[id]/edit,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-b8f2d364,route,/play-records/new,GET,SessionTracking,admin,L1,✅ verificato,,
-777d34c9,route,/play-records/new,GET,SessionTracking,user,L1,✅ verificato,,
+6a47c1ef,route,/play-records,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+d0c2d0e7,route,/play-records,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
+c95f2979,route,/play-records/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
+b0605914,route,/play-records/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
+54f46c6d,route,/play-records/[id]/edit,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
+887a68dc,route,/play-records/[id]/edit,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
+b8f2d364,route,/play-records/new,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+777d34c9,route,/play-records/new,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 6f267eaf,route,/play-records/shared/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
 38b284b4,route,/play-records/shared/[token],GET,SessionTracking,user,L1,⬜ non coperto,,param: token
-622048f4,route,/play-records/stats,GET,SessionTracking,admin,L1,✅ verificato,,
-60f86d76,route,/play-records/stats,GET,SessionTracking,user,L1,✅ verificato,,
-65df4e19,route,/players,GET,SessionTracking,admin,L1,✅ verificato,,
-2c8bd5f7,route,/players,GET,SessionTracking,user,L1,✅ verificato,,
-39a88439,route,/players/[id],GET,SessionTracking,admin,L1,✅ verificato,,param: id
-a9dd444f,route,/players/[id],GET,SessionTracking,user,L1,✅ verificato,,param: id
-aa1116e9,route,/players/[id]/achievements,GET,SessionTracking,admin,L1,⚠️ finding da triagare,,param: id
-36748ef7,route,/players/[id]/achievements,GET,SessionTracking,user,L1,⚠️ finding da triagare,,param: id
-eb34bf8a,route,/players/[id]/games,GET,SessionTracking,admin,L1,✅ verificato,,param: id
-cbcf6bbb,route,/players/[id]/games,GET,SessionTracking,user,L1,✅ verificato,,param: id
-21c0799d,route,/players/[id]/sessions,GET,SessionTracking,admin,L1,✅ verificato,,param: id
-a714b2a0,route,/players/[id]/sessions,GET,SessionTracking,user,L1,✅ verificato,,param: id
-9955f5f4,route,/players/[id]/stats,GET,SessionTracking,admin,L1,✅ verificato,,param: id
-1a8bdb42,route,/players/[id]/stats,GET,SessionTracking,user,L1,✅ verificato,,param: id
-230d11f2,route,/sessions,GET,SessionTracking,admin,L1,✅ verificato,,
-0188ae44,route,/sessions,GET,SessionTracking,user,L1,✅ verificato,,
-0f782e1a,route,/sessions/[id],GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-c82267fd,route,/sessions/[id],GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-b1d6fde9,route,/sessions/[id]/join,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-24ecc69c,route,/sessions/[id]/join,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-bd34dfcc,route,/sessions/[id]/live,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-25fb26d5,route,/sessions/[id]/live,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-3b854d77,route,/sessions/[id]/notes,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-f225a3eb,route,/sessions/[id]/notes,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-be1a93b0,route,/sessions/[id]/scoreboard,GET,SessionTracking,admin,L1,⬜ non coperto,,param: id
-15bb7ed5,route,/sessions/[id]/scoreboard,GET,SessionTracking,user,L1,⬜ non coperto,,param: id
-6305b181,route,/sessions/join,GET,SessionTracking,admin,L1,✅ verificato,,
-70c7939f,route,/sessions/join,GET,SessionTracking,user,L1,✅ verificato,,
-d480c7f3,route,/sessions/new,GET,SessionTracking,admin,L1,✅ verificato,,
-3bf6652d,route,/sessions/new,GET,SessionTracking,user,L1,✅ verificato,,
+622048f4,route,/play-records/stats,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+60f86d76,route,/play-records/stats,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
+65df4e19,route,/players,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+2c8bd5f7,route,/players,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
+39a88439,route,/players/[id],GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,param: id
+a9dd444f,route,/players/[id],GET,SessionTracking,user,L1,✅ verificato,HTTP 200,param: id
+aa1116e9,route,/players/[id]/achievements,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/badges/my-badges · Failed to load resource: the server responded with a stat,param: id
+36748ef7,route,/players/[id]/achievements,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/badges/my-badges · Failed to load resource: the server responded with a stat,param: id
+eb34bf8a,route,/players/[id]/games,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,param: id
+cbcf6bbb,route,/players/[id]/games,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,param: id
+21c0799d,route,/players/[id]/sessions,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,param: id
+a714b2a0,route,/players/[id]/sessions,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,param: id
+9955f5f4,route,/players/[id]/stats,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,param: id
+1a8bdb42,route,/players/[id]/stats,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,param: id
+230d11f2,route,/sessions,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+0188ae44,route,/sessions,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
+0f782e1a,route,/sessions/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+c82267fd,route,/sessions/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+b1d6fde9,route,/sessions/[id]/join,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+24ecc69c,route,/sessions/[id]/join,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+bd34dfcc,route,/sessions/[id]/live,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/hubs/game-state/negotiate?negotiateVersion=1 · 404 http://localhost:3000/api/v1/liv,param: id
+25fb26d5,route,/sessions/[id]/live,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/hubs/game-state/negotiate?negotiateVersion=1 · 404 http://localhost:3000/api/v1/liv,param: id
+3b854d77,route,/sessions/[id]/notes,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+f225a3eb,route,/sessions/[id]/notes,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+be1a93b0,route,/sessions/[id]/scoreboard,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+15bb7ed5,route,/sessions/[id]/scoreboard,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+6305b181,route,/sessions/join,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+70c7939f,route,/sessions/join,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
+d480c7f3,route,/sessions/new,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
+3bf6652d,route,/sessions/new,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 ff757550,endpoint,/api/v1/admin/bgg-queue/{bggId:int},GET,SharedGameCatalog,admin,L1,⬜ non coperto,,
 17e0dc2f,endpoint,/api/v1/admin/bgg-queue/{id:guid},DELETE,SharedGameCatalog,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
 43c761d1,endpoint,/api/v1/admin/bgg-queue/{id:guid}/retry,POST,SharedGameCatalog,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
@@ -1471,25 +1471,25 @@ a009d490,endpoint,/api/v1/users/{id:guid}/badges,GET,SharedGameCatalog,user,L2,�
 4832a334,endpoint,/api/v1/users/me/badges,GET,SharedGameCatalog,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 ccf68b1a,endpoint,/api/v1/users/me/badges/{id:guid}/display,PUT,SharedGameCatalog,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
 c76ce9a2,endpoint,/api/v1/users/me/contribution-stats,GET,SharedGameCatalog,user,L2,⚠️ finding da aprire,admin 500 · utente 500 — endpoint destinato all'utente ma risponde 500,
-189d0053,route,/admin/catalog-ingestion,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-13aa0695,route,/admin/catalog/seed-queue,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,
-4ffbb179,route,/admin/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-7b0d3670,route,/admin/shared-games/[id],GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,param: id
-6e355b52,route,/admin/shared-games/[id]/knowledge-base,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,param: id
-2c7fe720,route,/admin/shared-games/[id]/rag-setup,GET,SharedGameCatalog,admin,L1,✅ verificato,,param: id
-d13116b5,route,/admin/shared-games/all,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-7cd1fc07,route,/admin/shared-games/categories,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-5d744db7,route,/admin/shared-games/cover-gap,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-6d06c178,route,/admin/shared-games/import,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-9b206bd3,route,/admin/shared-games/new,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-5123070a,route,/admin/shared-games/seeding,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,,
-902918da,route,/admin/shared-games/wizard,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-bf5a0d79,route,/discover,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-f51bcd63,route,/discover,GET,SharedGameCatalog,user,L1,✅ verificato,,
-bdc19c36,route,/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,,
-02781613,route,/shared-games,GET,SharedGameCatalog,user,L1,✅ verificato,,
-0e1ae79c,route,/shared-games/[id],GET,SharedGameCatalog,admin,L1,✅ verificato,,param: id
-17167176,route,/shared-games/[id],GET,SharedGameCatalog,user,L1,✅ verificato,,param: id
+189d0053,route,/admin/catalog-ingestion,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+13aa0695,route,/admin/catalog/seed-queue,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 503 http://localhost:3000/api/v1/admin/catalog/seeds?status=Fetched&skip=0&take=1 · 503 http://localhost:3000,
+4ffbb179,route,/admin/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+7b0d3670,route,/admin/shared-games/[id],GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/shared-games/f19c237a-8c11-4abd-b6ee-83128fe89f47/linked-agent · 404 h,param: id
+6e355b52,route,/admin/shared-games/[id]/knowledge-base,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/kb/gam,param: id
+2c7fe720,route,/admin/shared-games/[id]/rag-setup,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agents/estimate-cost · 404 http://localhost:3000/api/v1/admin/agents/e,param: id
+d13116b5,route,/admin/shared-games/all,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+7cd1fc07,route,/admin/shared-games/categories,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+5d744db7,route,/admin/shared-games/cover-gap,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+6d06c178,route,/admin/shared-games/import,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+9b206bd3,route,/admin/shared-games/new,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+5123070a,route,/admin/shared-games/seeding,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/shared,
+902918da,route,/admin/shared-games/wizard,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+bf5a0d79,route,/discover,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+f51bcd63,route,/discover,GET,SharedGameCatalog,user,L1,✅ verificato,HTTP 200,
+bdc19c36,route,/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
+02781613,route,/shared-games,GET,SharedGameCatalog,user,L1,✅ verificato,HTTP 200,
+0e1ae79c,route,/shared-games/[id],GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,param: id
+17167176,route,/shared-games/[id],GET,SharedGameCatalog,user,L1,✅ verificato,HTTP 200,param: id
 4b354209,endpoint,/api/v1/admin/alert-channels/,GET,SystemConfiguration,admin,L2,✅ verificato,admin 200 · utente 403,
 0d970c0c,endpoint,/api/v1/admin/alert-channels/{type},PUT,SystemConfiguration,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 4e83bbeb,endpoint,/api/v1/admin/alert-channels/{type}/test-connection,POST,SystemConfiguration,admin,L1,🚫 non eseguito (irreversibile),operazione irreversibile o con effetti esterni: contiene  test-connection ,
@@ -1548,12 +1548,12 @@ ff59b65d,endpoint,/api/v1/admin/secrets/,PUT,SystemConfiguration,admin,L1,✅ ve
 22534c2f,endpoint,/api/v1/admin/settings/registration-mode,PUT,SystemConfiguration,admin,L1,✅ verificato,200,
 ec306a95,endpoint,/api/v1/admin/status-banner,GET,SystemConfiguration,admin,L2,✅ verificato,admin 200 · utente 403,
 ef6c21c6,endpoint,/api/v1/admin/status-banner,PUT,SystemConfiguration,admin,L1,✅ verificato,200,
-6434ac1f,route,/admin/config,GET,SystemConfiguration,admin,L1,✅ verificato,,
-05e0528f,route,/admin/config/tiers,GET,SystemConfiguration,admin,L1,✅ verificato,,
-b428a2f8,route,/admin/providers,GET,SystemConfiguration,admin,L1,✅ verificato,,
+6434ac1f,route,/admin/config,GET,SystemConfiguration,admin,L1,✅ verificato,HTTP 200,
+05e0528f,route,/admin/config/tiers,GET,SystemConfiguration,admin,L1,✅ verificato,HTTP 200,
+b428a2f8,route,/admin/providers,GET,SystemConfiguration,admin,L1,✅ verificato,HTTP 200,
 c831b37c,route,/admin/providers/[name],GET,SystemConfiguration,admin,L1,⬜ non coperto,,param: name
-5ce20729,route,/versions,GET,SystemConfiguration,admin,L1,✅ verificato,,
-a82778a5,route,/versions,GET,SystemConfiguration,user,L1,✅ verificato,,
+5ce20729,route,/versions,GET,SystemConfiguration,admin,L1,✅ verificato,HTTP 200,
+a82778a5,route,/versions,GET,SystemConfiguration,user,L1,✅ verificato,HTTP 200,
 440b600d,endpoint,/api/v1/admin/sandbox/apply-config,POST,Testing,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 e1e34b63,endpoint,/api/v1/admin/sandbox/pdfs/{id:guid},DELETE,Testing,admin,L1,✅ verificato,404 su risorsa inesistente: gestito,
 2f746fec,endpoint,/api/v1/admin/sandbox/pdfs/{id:guid}/chunks/preview,GET,Testing,admin,L2,✅ verificato,admin 200 · utente 403,
@@ -1570,8 +1570,8 @@ b1cbd5ab,endpoint,/api/v1/seed-e2e-users,POST,Testing,admin,L1,🚫 non eseguito
 0d845e7c,endpoint,/api/v1/testing/accessibility,GET,Testing,admin,L2,✅ verificato,admin 200 · utente 403,
 b674c0e0,endpoint,/api/v1/testing/e2e,GET,Testing,admin,L2,✅ verificato,admin 200 · utente 403,
 32dedf82,endpoint,/api/v1/testing/performance,GET,Testing,admin,L2,✅ verificato,admin 200 · utente 403,
-edc922a7,route,/dev/meeple-card,GET,Testing,admin,L1,✅ verificato,,
-64edf288,route,/dev/meeple-card,GET,Testing,user,L1,✅ verificato,,
+edc922a7,route,/dev/meeple-card,GET,Testing,admin,L1,✅ verificato,HTTP 200,
+64edf288,route,/dev/meeple-card,GET,Testing,user,L1,✅ verificato,HTTP 200,
 a0294bdb,endpoint,/api/v1/{collectionId:guid},GET,Unmapped,user,L1,⬜ non coperto,,
 99a28cd9,endpoint,/api/v1/{collectionId:guid}/documents,POST,Unmapped,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
 10d32d29,endpoint,/api/v1/{collectionId:guid}/documents/{documentId:guid},DELETE,Unmapped,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
@@ -1644,42 +1644,42 @@ be231d53,endpoint,/api/v1/wishlist,POST,UserLibrary,user,L1,✅ verificato,422: 
 03ed405e,endpoint,/api/v1/wishlist/{id:guid},DELETE,UserLibrary,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
 ee72fb15,endpoint,/api/v1/wishlist/{id:guid},PUT,UserLibrary,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
 0b8001be,endpoint,/api/v1/wishlist/highlights,GET,UserLibrary,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
-b2dda0f8,route,/dashboard,GET,UserLibrary,admin,L1,✅ verificato,,
-3be930f7,route,/dashboard,GET,UserLibrary,user,L1,✅ verificato,,
-9c2da82a,route,/library,GET,UserLibrary,admin,L1,✅ verificato,,
-af7a553f,route,/library,GET,UserLibrary,user,L1,✅ verificato,,
-bcbceb5c,route,/library-public,GET,UserLibrary,admin,L1,✅ verificato,,
-5f50b4dd,route,/library-public,GET,UserLibrary,user,L1,✅ verificato,,
-b2ffcc35,route,/library/[gameId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
-9491a691,route,/library/[gameId],GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
-32ad8ea9,route,/library/[gameId]/agent,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
-8f0def2c,route,/library/[gameId]/agent,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
-73a09e5e,route,/library/[gameId]/play,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
-2af23a27,route,/library/[gameId]/play,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
-ebc362b9,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId campaignId
-2780f6b2,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId campaignId
-7242bf62,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId campaignId
-aa2d0f94,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId campaignId
-a350f258,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId campaignId
-9d823b6c,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId campaignId
-08cdf316,route,/library/[gameId]/toolbox,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
-8cb8f3be,route,/library/[gameId]/toolbox,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
-c8c2a960,route,/library/[gameId]/toolkit,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: gameId
-f961ad47,route,/library/[gameId]/toolkit,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: gameId
-be4b9d96,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,admin,L1,⬜ non coperto,,param: gameId sessionId
-7e348f9d,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,user,L1,⬜ non coperto,,param: gameId sessionId
-cd4a0915,route,/library/private,GET,UserLibrary,admin,L1,✅ verificato,,
-da69ab60,route,/library/private,GET,UserLibrary,user,L1,✅ verificato,,
-33cc66f1,route,/library/private/[id],GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: id
-fe98bd5e,route,/library/private/[id],GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: id
-ebdb119a,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,admin,L1,⚠️ finding da triagare,,param: id
-d07ddde6,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,user,L1,⚠️ finding da triagare,,param: id
-6f6339d3,route,/library/private/add,GET,UserLibrary,admin,L1,✅ verificato,,
-ef14dad2,route,/library/private/add,GET,UserLibrary,user,L1,✅ verificato,,
+b2dda0f8,route,/dashboard,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
+3be930f7,route,/dashboard,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
+9c2da82a,route,/library,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
+af7a553f,route,/library,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
+bcbceb5c,route,/library-public,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
+5f50b4dd,route,/library-public,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
+b2ffcc35,route,/library/[gameId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+9491a691,route,/library/[gameId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+32ad8ea9,route,/library/[gameId]/agent,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+8f0def2c,route,/library/[gameId]/agent,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+73a09e5e,route,/library/[gameId]/play,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+2af23a27,route,/library/[gameId]/play,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+ebc362b9,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
+2780f6b2,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
+7242bf62,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
+aa2d0f94,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
+a350f258,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
+9d823b6c,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
+08cdf316,route,/library/[gameId]/toolbox,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+8cb8f3be,route,/library/[gameId]/toolbox,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+c8c2a960,route,/library/[gameId]/toolkit,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+f961ad47,route,/library/[gameId]/toolkit,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+be4b9d96,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId sessionId
+7e348f9d,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId sessionId
+cd4a0915,route,/library/private,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
+da69ab60,route,/library/private,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
+33cc66f1,route,/library/private/[id],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+fe98bd5e,route,/library/private/[id],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+ebdb119a,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource,param: id
+d07ddde6,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource,param: id
+6f6339d3,route,/library/private/add,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
+ef14dad2,route,/library/private/add,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
 aac95741,route,/library/shared/[token],GET,UserLibrary,admin,L1,⬜ non coperto,,param: token
 60ade2bd,route,/library/shared/[token],GET,UserLibrary,user,L1,⬜ non coperto,,param: token
-bd0fc485,route,/library/wishlist,GET,UserLibrary,admin,L1,✅ verificato,,
-37b790f4,route,/library/wishlist,GET,UserLibrary,user,L1,✅ verificato,,
+bd0fc485,route,/library/wishlist,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
+37b790f4,route,/library/wishlist,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
 ae57fce2,endpoint,/api/v1/admin/email-templates/,GET,UserNotifications,admin,L2,✅ verificato,admin 200 · utente 403,
 d29beeb7,endpoint,/api/v1/admin/email-templates/,POST,UserNotifications,admin,L1,✅ verificato,422: validazione attiva  endpoint raggiungibile,
 ffb6185f,endpoint,/api/v1/admin/email-templates/{id:guid},GET,UserNotifications,admin,L2,✅ verificato,admin 404 · utente 403 — admin 404: risorsa assente  non un difetto di per sé,
@@ -1719,8 +1719,8 @@ af8a9e30,endpoint,/api/v1/notifications/push/unsubscribe,DELETE,UserNotification
 63493da1,endpoint,/api/v1/notifications/stream,GET,UserNotifications,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 f4392abc,endpoint,/api/v1/notifications/unread-count,GET,UserNotifications,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 fa586b55,endpoint,/api/v1/notifications/unsubscribe,GET,UserNotifications,user,L2,⚠️ finding da aprire,admin 400 · utente 400 — endpoint destinato all'utente ma risponde 400,
-ab8573fa,route,/admin/notifications/compose,GET,UserNotifications,admin,L1,✅ verificato,,
-d360991b,route,/notifications,GET,UserNotifications,admin,L1,✅ verificato,,
-ef49d421,route,/notifications,GET,UserNotifications,user,L1,✅ verificato,,
-f588bc8d,route,/notifications/preferences,GET,UserNotifications,admin,L1,✅ verificato,,
-6a79ad71,route,/notifications/preferences,GET,UserNotifications,user,L1,✅ verificato,,
+ab8573fa,route,/admin/notifications/compose,GET,UserNotifications,admin,L1,✅ verificato,HTTP 200,
+d360991b,route,/notifications,GET,UserNotifications,admin,L1,✅ verificato,HTTP 200,
+ef49d421,route,/notifications,GET,UserNotifications,user,L1,✅ verificato,HTTP 200,
+f588bc8d,route,/notifications/preferences,GET,UserNotifications,admin,L1,✅ verificato,HTTP 200,
+6a79ad71,route,/notifications/preferences,GET,UserNotifications,user,L1,✅ verificato,HTTP 200,

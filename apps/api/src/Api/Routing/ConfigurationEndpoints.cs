@@ -305,7 +305,7 @@ internal static class ConfigurationEndpoints
         if (invalidIds.Count > 0)
             return Results.BadRequest(new { error = $"Invalid configuration IDs: {string.Join(", ", invalidIds)}" });
 
-        var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
+        var updates = (request.Updates ?? []).Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
             Id: Guid.Parse(u.Id),
             Value: u.Value
         )).ToList();

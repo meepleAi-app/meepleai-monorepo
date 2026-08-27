@@ -277,7 +277,7 @@ internal static class AdminUserActivityEndpoints
             session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0);
 
         var command = new BulkPasswordResetCommand(
-            request.UserIds,
+            request.UserIds ?? [],
             request.NewPassword,
             session.Principal!.EffectiveActor.Id
         );
@@ -300,7 +300,7 @@ internal static class AdminUserActivityEndpoints
             session!.Principal!.EffectiveActor.Id, request.UserIds?.Count ?? 0, request.NewRole);
 
         var command = new BulkRoleChangeCommand(
-            request.UserIds,
+            request.UserIds ?? [],
             request.NewRole,
             session.Principal!.EffectiveActor.Id
         );

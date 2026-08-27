@@ -2357,7 +2357,7 @@
       },
       "search": {
         "placeholder": "Cerca giochi, agenti, toolkit…",
-        "disabledTooltip": "Ricerca disponibile in Phase 0.5"
+        "disabledTooltip": "Ricerca non ancora disponibile"
       },
       "filters": {
         "ariaLabel": "Filtra per entità",

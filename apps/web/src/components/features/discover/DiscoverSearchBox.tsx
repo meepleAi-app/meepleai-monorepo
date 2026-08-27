@@ -88,6 +88,15 @@ export function DiscoverSearchBox({
     if (disabled) onDisabledFocus?.();
   }, [disabled, onDisabledFocus]);
 
+  // #3848 — da spento il campo mostrava comunque il placeholder che invita a cercare, e l'unico
+  // segnale della sua indisponibilita' era `aria-disabled` (che raggiunge solo chi usa uno screen
+  // reader) e un `title` (che richiede di passarci sopra e aspettare). Chi guarda lo schermo ci
+  // clicca, non succede nulla e nessun messaggio spiega perche'.
+  //
+  // Il testo che promette lascia il posto a quello che dichiara. Lo stato spento resta voluto —
+  // la ricerca lato server non esiste ancora (#728) — ma smette di essere invisibile.
+  const testoVisibile = disabled && disabledTooltip ? disabledTooltip : placeholder;
+
   return (
     <div className="relative">
       <Search
@@ -102,8 +111,8 @@ export function DiscoverSearchBox({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onFocus={handleFocus}
-        placeholder={placeholder}
-        aria-label={placeholder}
+        placeholder={testoVisibile}
+        aria-label={testoVisibile}
         aria-disabled={disabled || undefined}
         title={disabled ? disabledTooltip : undefined}
         readOnly={disabled}

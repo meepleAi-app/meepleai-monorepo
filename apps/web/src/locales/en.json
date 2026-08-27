@@ -2350,7 +2350,7 @@
       },
       "search": {
         "placeholder": "Search games, agents, toolkits…",
-        "disabledTooltip": "Search available in Phase 0.5"
+        "disabledTooltip": "Search is not available yet"
       },
       "filters": {
         "ariaLabel": "Filter by entity",

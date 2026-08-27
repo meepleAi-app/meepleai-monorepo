@@ -53,6 +53,12 @@ const prometheusReporter: any[] = process.env.PROMETHEUS_REMOTE_WRITE_URL
 
 export default defineConfig({
   testDir: './e2e',
+  // e2e/audit/ ha una config propria (playwright.audit.config.ts): quegli spec
+  // fanno login VERO, senza PLAYWRIGHT_AUTH_BYPASS, e scrivono le evidenze su
+  // disco. I progetti desktop-*/mobile-* qui sotto ereditano testDir './e2e' con
+  // il testMatch di default, quindi senza questa esclusione `pnpm test:e2e` li
+  // raccoglierebbe e fallirebbe sullo storageState assente (#3837).
+  testIgnore: ['**/audit/**'],
   timeout: process.env.CI === 'true' ? 90000 : 60000, // Issue #20375956158: 90s in CI for accessibility tests, 60s local
   fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
   forbidOnly: process.env.CI === 'true',

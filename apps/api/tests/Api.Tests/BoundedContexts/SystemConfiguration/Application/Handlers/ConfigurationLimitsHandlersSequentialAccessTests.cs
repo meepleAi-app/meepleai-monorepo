@@ -66,6 +66,9 @@ public class ConfigurationLimitsHandlersSequentialAccessTests
 
         public Task<T?> GetValueAsync<T>(string key, T? defaultValue = default, string? environment = null)
             => Task.FromResult(defaultValue);
+
+        public Task InvalidateAsync(string key, string? environment = null, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     // La MemberData espone solo la stringa: IConfigurationService e' internal e non puo'

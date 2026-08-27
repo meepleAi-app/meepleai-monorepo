@@ -31,15 +31,11 @@ internal class GetChatHistoryLimitsQueryHandler : IQueryHandler<GetChatHistoryLi
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var freeConfigTask = _configService.GetConfigurationByKeyAsync(FreeTierKey, null, cancellationToken);
-        var normalConfigTask = _configService.GetConfigurationByKeyAsync(NormalTierKey, null, cancellationToken);
-        var premiumConfigTask = _configService.GetConfigurationByKeyAsync(PremiumTierKey, null, cancellationToken);
-
-        await Task.WhenAll(freeConfigTask, normalConfigTask, premiumConfigTask).ConfigureAwait(false);
-
-        var freeConfig = await freeConfigTask.ConfigureAwait(false);
-        var normalConfig = await normalConfigTask.ConfigureAwait(false);
-        var premiumConfig = await premiumConfigTask.ConfigureAwait(false);
+        // Sequential on purpose: these reads share the request-scoped DbContext, which EF Core
+        // forbids using concurrently — running them under Task.WhenAll returned 500 (#3843).
+        var freeConfig = await _configService.GetConfigurationByKeyAsync(FreeTierKey, null, cancellationToken).ConfigureAwait(false);
+        var normalConfig = await _configService.GetConfigurationByKeyAsync(NormalTierKey, null, cancellationToken).ConfigureAwait(false);
+        var premiumConfig = await _configService.GetConfigurationByKeyAsync(PremiumTierKey, null, cancellationToken).ConfigureAwait(false);
 
         var freeTierLimit = ParseIntOrDefault(freeConfig?.Value, DefaultFreeTierLimit);
         var normalTierLimit = ParseIntOrDefault(normalConfig?.Value, DefaultNormalTierLimit);

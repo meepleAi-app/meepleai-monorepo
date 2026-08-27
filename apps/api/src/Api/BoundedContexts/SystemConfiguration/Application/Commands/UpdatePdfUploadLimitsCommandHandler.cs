@@ -41,40 +41,37 @@ internal class UpdatePdfUploadLimitsCommandHandler : ICommandHandler<UpdatePdfUp
         // Convert MIME types array to comma-separated string for storage
         var mimeTypesValue = string.Join(",", command.AllowedMimeTypes);
 
-        // Process all configurations in parallel
-        var tasks = new[]
-        {
-            UpsertConfigurationAsync(
-                MaxFileSizeKey,
-                command.MaxFileSizeBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                "long",
-                "Maximum file size in bytes for PDF uploads",
-                command.UpdatedByUserId,
-                cancellationToken),
-            UpsertConfigurationAsync(
-                MaxPagesKey,
-                command.MaxPagesPerDocument.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                "int",
-                "Maximum number of pages allowed per PDF document",
-                command.UpdatedByUserId,
-                cancellationToken),
-            UpsertConfigurationAsync(
-                MaxDocumentsKey,
-                command.MaxDocumentsPerGame.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                "int",
-                "Maximum number of PDF documents allowed per game",
-                command.UpdatedByUserId,
-                cancellationToken),
-            UpsertConfigurationAsync(
-                AllowedMimeTypesKey,
-                mimeTypesValue,
-                "string",
-                "Comma-separated list of allowed MIME types for PDF uploads",
-                command.UpdatedByUserId,
-                cancellationToken)
-        };
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        // Sequential on purpose: each upsert goes through the request-scoped DbContext,
+        // which EF Core forbids using concurrently. Task.WhenAll here started every write
+        // at once on the same context (#3843).
+        await UpsertConfigurationAsync(
+            MaxFileSizeKey,
+            command.MaxFileSizeBytes.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "long",
+            "Maximum file size in bytes for PDF uploads",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(
+            MaxPagesKey,
+            command.MaxPagesPerDocument.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "int",
+            "Maximum number of pages allowed per PDF document",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(
+            MaxDocumentsKey,
+            command.MaxDocumentsPerGame.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            "int",
+            "Maximum number of PDF documents allowed per game",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(
+            AllowedMimeTypesKey,
+            mimeTypesValue,
+            "string",
+            "Comma-separated list of allowed MIME types for PDF uploads",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
 
         // Return updated limits
         return new PdfUploadLimitsDto(

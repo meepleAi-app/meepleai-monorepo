@@ -49,24 +49,22 @@ internal sealed class GetAppUsageStatsQueryHandler : IRequestHandler<GetAppUsage
                 var periodStart = now.AddDays(-query.Period);
                 var previousPeriodStart = periodStart.AddDays(-query.Period);
 
-                // Parallel execution for performance
-                var dauTask = CalculateDauAsync(now, periodStart, previousPeriodStart, cancel);
-                var mauTask = CalculateMauAsync(now, periodStart, previousPeriodStart, cancel);
-                var sessionsTask = CalculateSessionAnalyticsAsync(periodStart, now, cancel);
-                var retentionTask = CalculateRetentionCohortsAsync(now, cancel);
-                var funnelTask = CalculateFeatureFunnelAsync(cancel);
-                var geoTask = CalculateGeoDistributionAsync(periodStart, now, cancel);
-
-                await Task.WhenAll(dauTask, mauTask, sessionsTask, retentionTask, funnelTask, geoTask)
-                    .ConfigureAwait(false);
+                // Sequential on purpose (#3843): the six calculations share the request-scoped
+                // DbContext, which EF Core forbids using concurrently.
+                var dau = await CalculateDauAsync(now, periodStart, previousPeriodStart, cancel).ConfigureAwait(false);
+                var mau = await CalculateMauAsync(now, periodStart, previousPeriodStart, cancel).ConfigureAwait(false);
+                var sessions = await CalculateSessionAnalyticsAsync(periodStart, now, cancel).ConfigureAwait(false);
+                var retention = await CalculateRetentionCohortsAsync(now, cancel).ConfigureAwait(false);
+                var funnel = await CalculateFeatureFunnelAsync(cancel).ConfigureAwait(false);
+                var geo = await CalculateGeoDistributionAsync(periodStart, now, cancel).ConfigureAwait(false);
 
                 return new AppUsageStatsDto(
-                    DailyActiveUsers: await dauTask.ConfigureAwait(false),
-                    MonthlyActiveUsers: await mauTask.ConfigureAwait(false),
-                    Sessions: await sessionsTask.ConfigureAwait(false),
-                    Retention: await retentionTask.ConfigureAwait(false),
-                    FeatureFunnel: await funnelTask.ConfigureAwait(false),
-                    GeoDistribution: await geoTask.ConfigureAwait(false),
+                    DailyActiveUsers: dau,
+                    MonthlyActiveUsers: mau,
+                    Sessions: sessions,
+                    Retention: retention,
+                    FeatureFunnel: funnel,
+                    GeoDistribution: geo,
                     GeneratedAt: now);
             },
             new HybridCacheEntryOptions { Expiration = CacheDuration },

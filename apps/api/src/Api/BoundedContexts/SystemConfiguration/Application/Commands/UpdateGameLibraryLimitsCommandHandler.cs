@@ -38,15 +38,12 @@ internal class UpdateGameLibraryLimitsCommandHandler : ICommandHandler<UpdateGam
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Process all three tier limits in parallel
-        var tasks = new[]
-        {
-            UpsertConfigurationAsync(FreeTierKey, command.FreeTierLimit, "Maximum games for Free tier users", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(NormalTierKey, command.NormalTierLimit, "Maximum games for Normal tier users", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(PremiumTierKey, command.PremiumTierLimit, "Maximum games for Premium tier users", command.UpdatedByUserId, cancellationToken)
-        };
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        // Sequential on purpose: each upsert goes through the request-scoped DbContext,
+        // which EF Core forbids using concurrently. Task.WhenAll here started every write
+        // at once on the same context (#3843).
+        await UpsertConfigurationAsync(FreeTierKey, command.FreeTierLimit, "Maximum games for Free tier users", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(NormalTierKey, command.NormalTierLimit, "Maximum games for Normal tier users", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(PremiumTierKey, command.PremiumTierLimit, "Maximum games for Premium tier users", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
 
         // Return updated limits
         return new GameLibraryLimitsDto(

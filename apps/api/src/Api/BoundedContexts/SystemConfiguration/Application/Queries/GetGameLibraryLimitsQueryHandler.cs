@@ -30,16 +30,11 @@ internal class GetGameLibraryLimitsQueryHandler : IQueryHandler<GetGameLibraryLi
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Fetch all three configurations in parallel for efficiency
-        var freeConfigTask = _configService.GetConfigurationByKeyAsync(FreeTierKey, null, cancellationToken);
-        var normalConfigTask = _configService.GetConfigurationByKeyAsync(NormalTierKey, null, cancellationToken);
-        var premiumConfigTask = _configService.GetConfigurationByKeyAsync(PremiumTierKey, null, cancellationToken);
-
-        await Task.WhenAll(freeConfigTask, normalConfigTask, premiumConfigTask).ConfigureAwait(false);
-
-        var freeConfig = await freeConfigTask.ConfigureAwait(false);
-        var normalConfig = await normalConfigTask.ConfigureAwait(false);
-        var premiumConfig = await premiumConfigTask.ConfigureAwait(false);
+        // Sequential on purpose: these reads share the request-scoped DbContext, which EF Core
+        // forbids using concurrently — running them under Task.WhenAll returned 500 (#3843).
+        var freeConfig = await _configService.GetConfigurationByKeyAsync(FreeTierKey, null, cancellationToken).ConfigureAwait(false);
+        var normalConfig = await _configService.GetConfigurationByKeyAsync(NormalTierKey, null, cancellationToken).ConfigureAwait(false);
+        var premiumConfig = await _configService.GetConfigurationByKeyAsync(PremiumTierKey, null, cancellationToken).ConfigureAwait(false);
 
         // Parse values with defaults
         var freeTierLimit = ParseIntOrDefault(freeConfig?.Value, DefaultFreeTierLimit);

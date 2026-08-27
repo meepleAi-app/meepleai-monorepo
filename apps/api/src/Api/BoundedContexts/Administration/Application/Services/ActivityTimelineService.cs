@@ -128,20 +128,12 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Parallel fetch from all sources with a higher limit for full dataset.
-        var libraryTask = GetLibraryEventsAsync(userId, MaxCacheLimit, cancellationToken);
-        var sessionTask = GetSessionEventsAsync(userId, MaxCacheLimit, cancellationToken);
-        var chatTask = GetChatEventsAsync(userId, MaxCacheLimit, cancellationToken);
-        var wishlistTask = GetWishlistEventsAsync(userId, MaxCacheLimit, cancellationToken);
-
-        await Task.WhenAll(libraryTask, sessionTask, chatTask, wishlistTask)
-            .ConfigureAwait(false);
-
-        // ARCH-03: Use await instead of .Result to preserve exception fidelity
-        var libraryResult = await libraryTask.ConfigureAwait(false);
-        var sessionResult = await sessionTask.ConfigureAwait(false);
-        var chatResult = await chatTask.ConfigureAwait(false);
-        var wishlistResult = await wishlistTask.ConfigureAwait(false);
+        // Sequential on purpose (#3843): the four sources share the request-scoped
+        // DbContext, which EF Core forbids using concurrently.
+        var libraryResult = await GetLibraryEventsAsync(userId, MaxCacheLimit, cancellationToken).ConfigureAwait(false);
+        var sessionResult = await GetSessionEventsAsync(userId, MaxCacheLimit, cancellationToken).ConfigureAwait(false);
+        var chatResult = await GetChatEventsAsync(userId, MaxCacheLimit, cancellationToken).ConfigureAwait(false);
+        var wishlistResult = await GetWishlistEventsAsync(userId, MaxCacheLimit, cancellationToken).ConfigureAwait(false);
 
         return libraryResult
             .Concat(sessionResult)
@@ -156,21 +148,13 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
         int limit,
         CancellationToken cancellationToken)
     {
-        // Parallel fetch from all sources — each source fetches 'limit' items,
-        // then we merge and take top 'limit' overall.
-        var libraryTask = GetLibraryEventsAsync(userId, limit, cancellationToken);
-        var sessionTask = GetSessionEventsAsync(userId, limit, cancellationToken);
-        var chatTask = GetChatEventsAsync(userId, limit, cancellationToken);
-        var wishlistTask = GetWishlistEventsAsync(userId, limit, cancellationToken);
-
-        await Task.WhenAll(libraryTask, sessionTask, chatTask, wishlistTask)
-            .ConfigureAwait(false);
-
-        // ARCH-03: Use await instead of .Result to preserve exception fidelity
-        var libResult = await libraryTask.ConfigureAwait(false);
-        var sessResult = await sessionTask.ConfigureAwait(false);
-        var chatResult2 = await chatTask.ConfigureAwait(false);
-        var wishResult = await wishlistTask.ConfigureAwait(false);
+        // Each source fetches 'limit' items, then we merge and take top 'limit' overall.
+        // Sequential on purpose (#3843): the four sources share the request-scoped
+        // DbContext, which EF Core forbids using concurrently.
+        var libResult = await GetLibraryEventsAsync(userId, limit, cancellationToken).ConfigureAwait(false);
+        var sessResult = await GetSessionEventsAsync(userId, limit, cancellationToken).ConfigureAwait(false);
+        var chatResult2 = await GetChatEventsAsync(userId, limit, cancellationToken).ConfigureAwait(false);
+        var wishResult = await GetWishlistEventsAsync(userId, limit, cancellationToken).ConfigureAwait(false);
 
         var allEvents = libResult
             .Concat(sessResult)

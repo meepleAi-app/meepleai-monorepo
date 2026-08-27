@@ -373,7 +373,7 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
         try
         {
             var command = new BulkApproveShareRequestsCommand(
-                request.ShareRequestIds,
+                request.ShareRequestIds ?? [],
                 editorId,
                 request.TargetSharedGameId,
                 request.AdminNotes);
@@ -413,7 +413,7 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
         try
         {
             var command = new BulkRejectShareRequestsCommand(
-                request.ShareRequestIds,
+                request.ShareRequestIds ?? [],
                 editorId,
                 request.Reason);
 

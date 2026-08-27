@@ -37,7 +37,7 @@ internal static class AdminAbTestEndpoints
             var command = new CreateAbTestCommand(
                 CreatedBy: session.Principal!.EffectiveActor.Id,
                 Query: request.Query,
-                ModelIds: request.ModelIds,
+                ModelIds: request.ModelIds ?? [],
                 KnowledgeBaseId: request.KnowledgeBaseId);
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -168,7 +168,7 @@ internal static class AdminAbTestEndpoints
             var command = new EvaluateAbTestCommand(
                 SessionId: id,
                 EvaluatorId: session.Principal!.EffectiveActor.Id,
-                Evaluations: request.Evaluations.Select(e => new VariantEvaluationInput(
+                Evaluations: (request.Evaluations ?? []).Select(e => new VariantEvaluationInput(
                     Label: e.Label,
                     Accuracy: e.Accuracy,
                     Completeness: e.Completeness,

@@ -20,9 +20,27 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
     {
     }
 
+    /// <summary>
+    /// Il collegamento, <b>tracciato</b>.
+    /// </summary>
+    /// <remarks>
+    /// #3858 — il DbContext ha come default <c>QueryTrackingBehavior.NoTracking</c> (PERF-06).
+    /// Senza <c>AsTracking()</c> l'entita' restituita qui non e' tracciata: il
+    /// <c>link.Delete()</c> dell'handler mutava un oggetto scollegato, <c>SaveChangesAsync</c> non
+    /// trovava nulla da scrivere e l'endpoint rispondeva <b>204 senza cancellare</b>. Nessun
+    /// errore, in nessun log — il fallimento aveva la forma esatta del successo.
+    ///
+    /// Il tracciamento e' preferibile a un <c>Update()</c> esplicito su entita' scollegata: quella
+    /// strada rompe la concorrenza ottimistica sulle entita' che usano <c>xmin</c>, perche' il
+    /// valore originale parte da 0 e la <c>WHERE</c> non combacia mai.
+    ///
+    /// L'unico chiamante e' il comando di cancellazione, quindi il costo del tracciamento non
+    /// ricade su alcun percorso di sola lettura.
+    /// </remarks>
     public async Task<EntityLink?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await DbContext.EntityLinks
+            .AsTracking()
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken)
             .ConfigureAwait(false);
     }

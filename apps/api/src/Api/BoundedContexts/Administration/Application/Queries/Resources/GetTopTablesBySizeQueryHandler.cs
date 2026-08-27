@@ -25,16 +25,27 @@ internal class GetTopTablesBySizeQueryHandler : IQueryHandler<GetTopTablesBySize
 
         var limit = Math.Clamp(request.Limit, 1, 100);
 
-        // Query table sizes using PostgreSQL system catalogs
+        // Three separate defects sat on top of each other here; each one hid the next, so the
+        // endpoint had never worked (#3833):
+        //   1. pg_stat_user_tables has no `tablename` column — that belongs to pg_tables. Here it
+        //      is `relname`. Asking for the wrong one failed with 42703.
+        //   2. schemaname||'.'||relname passed to the pg_*_size functions is an UNQUOTED
+        //      identifier: Postgres folds it to lower case, so this database's
+        //      `SystemConfiguration` schema resolves to "systemconfiguration" and the call fails
+        //      with 3F000. relid is an oid and sidesteps quoting entirely.
+        //   3. SqlQueryRaw<T> matches columns to property names as written. snake_case aliases
+        //      never bound, so even valid SQL threw "The required column 'IndexSizeBytes' was not
+        //      present". The aliases are quoted to survive Postgres' case folding.
+        // The concatenation survives only for TableName, which is a display label.
         var query = $@"
             SELECT
-                schemaname || '.' || tablename as table_name,
-                pg_total_relation_size(schemaname||'.'||tablename) as total_size_bytes,
-                pg_relation_size(schemaname||'.'||tablename) as size_bytes,
-                pg_indexes_size(schemaname||'.'||tablename) as index_size_bytes,
-                n_live_tup as row_count
+                schemaname || '.' || relname as ""TableName"",
+                pg_total_relation_size(relid) as ""TotalSizeBytes"",
+                pg_relation_size(relid) as ""SizeBytes"",
+                pg_indexes_size(relid) as ""IndexSizeBytes"",
+                n_live_tup as ""RowCount""
             FROM pg_stat_user_tables
-            ORDER BY total_size_bytes DESC
+            ORDER BY ""TotalSizeBytes"" DESC
             LIMIT {limit}
         ";
 

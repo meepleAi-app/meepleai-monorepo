@@ -302,7 +302,11 @@ export function createAdminAnalyticsClient(http: HttpClient) {
         qs.set('successOnly', String(params.successOnly));
       const query = qs.toString();
       return http.get(
-        `/api/v1/admin/openrouter/usage/requests${query ? `?${query}` : ''}`,
+        // #3836 — il path corretto e' /admin/openrouter/requests, senza `usage/`.
+        // Il client seguiva lo schema dei due vicini (usage/timeline, usage/costs), che
+        // pero' e' proprio dove il backend non e' coerente: questo endpoint sta un livello
+        // piu' su. Risultato: 404, e la tabella delle richieste restava vuota.
+        `/api/v1/admin/openrouter/requests${query ? `?${query}` : ''}`,
         RecentLlmRequestsDtoSchema
       );
     },

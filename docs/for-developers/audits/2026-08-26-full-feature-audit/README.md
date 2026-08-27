@@ -209,6 +209,9 @@ distinguere ciò che non è un difetto vale quanto elencare ciò che lo è.
 | [#3838](https://github.com/meepleAi-app/meepleai-monorepo/issues/3838) | L'audit di sicurezza registra solo i login | P2 | aperto |
 | [#3845](https://github.com/meepleAi-app/meepleai-monorepo/issues/3845) | 500 su `contribution-stats` e `cache/metrics` | P2 | aperto |
 | [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) | 4 difetti minori (404 client, pagina card, a11y onboarding) | P2 | aperto |
+| [#3858](https://github.com/meepleAi-app/meepleai-monorepo/issues/3858) | `DELETE` sui collegamenti fra entità risponde 204 senza cancellare | P1 | aperto |
+| [#3857](https://github.com/meepleAi-app/meepleai-monorepo/issues/3857) | Toolbox: aggiungere una fase fallisce con 409 su 0 righe aggiornate | P1 | aperto |
+| [#3856](https://github.com/meepleAi-app/meepleai-monorepo/issues/3856) | I mazzi di un toolbox finiscono in una tabella di sessioni e violano la FK | P1 | aperto |
 | [#3855](https://github.com/meepleAi-app/meepleai-monorepo/issues/3855) | L'agente altera le house rule e le attribuisce a pagine del manuale che non le contengono | P1 | aperto |
 | [#3854](https://github.com/meepleAi-app/meepleai-monorepo/issues/3854) | Toolkit: due strutture parallele, la creazione scrive dove l'aggiunta di strumenti non legge | P1 | aperto |
 | [#3853](https://github.com/meepleAi-app/meepleai-monorepo/issues/3853) | 9 pagine admin scartano risposte valide: schema Zod più stretto del contratto backend | P2 | aperto |

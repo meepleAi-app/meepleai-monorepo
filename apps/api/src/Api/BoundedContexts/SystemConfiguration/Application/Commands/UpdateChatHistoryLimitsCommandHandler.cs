@@ -35,29 +35,27 @@ internal class UpdateChatHistoryLimitsCommandHandler : ICommandHandler<UpdateCha
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var tasks = new[]
-        {
-            UpsertConfigurationAsync(
-                GetChatHistoryLimitsQueryHandler.FreeTierKey,
-                command.FreeTierLimit,
-                "Maximum chat sessions stored for Free tier users",
-                command.UpdatedByUserId,
-                cancellationToken),
-            UpsertConfigurationAsync(
-                GetChatHistoryLimitsQueryHandler.NormalTierKey,
-                command.NormalTierLimit,
-                "Maximum chat sessions stored for Normal tier users",
-                command.UpdatedByUserId,
-                cancellationToken),
-            UpsertConfigurationAsync(
-                GetChatHistoryLimitsQueryHandler.PremiumTierKey,
-                command.PremiumTierLimit,
-                "Maximum chat sessions stored for Premium tier users",
-                command.UpdatedByUserId,
-                cancellationToken)
-        };
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        // Sequential on purpose: each upsert goes through the request-scoped DbContext,
+        // which EF Core forbids using concurrently. Task.WhenAll here started every write
+        // at once on the same context (#3843).
+        await UpsertConfigurationAsync(
+            GetChatHistoryLimitsQueryHandler.FreeTierKey,
+            command.FreeTierLimit,
+            "Maximum chat sessions stored for Free tier users",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(
+            GetChatHistoryLimitsQueryHandler.NormalTierKey,
+            command.NormalTierLimit,
+            "Maximum chat sessions stored for Normal tier users",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(
+            GetChatHistoryLimitsQueryHandler.PremiumTierKey,
+            command.PremiumTierLimit,
+            "Maximum chat sessions stored for Premium tier users",
+            command.UpdatedByUserId,
+            cancellationToken).ConfigureAwait(false);
 
         return new ChatHistoryLimitsDto(
             FreeTierLimit: command.FreeTierLimit,

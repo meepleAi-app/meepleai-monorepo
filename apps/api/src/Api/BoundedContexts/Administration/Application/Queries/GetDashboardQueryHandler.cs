@@ -51,24 +51,27 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
             {
                 _logger.LogInformation("Cache miss for dashboard API {UserId}, generating fresh data", query.UserId);
 
-                // Parallel execution for performance (Issue #3972: under 500ms p99)
-                var userTask = GetUserInfoAsync(query.UserId, cancel);
-                var statsTask = GetStatsAsync(query.UserId, cancel);
-                var sessionsTask = GetActiveSessionsAsync(query.UserId, cancel);
-                var libraryTask = GetLibrarySnapshotAsync(query.UserId, cancel);
-                var activityTask = GetRecentActivityAsync(query.UserId, cancel);
-                var chatsTask = GetRecentChatsAsync(query.UserId, cancel);
-
-                await Task.WhenAll(userTask, statsTask, sessionsTask, libraryTask, activityTask, chatsTask)
-                    .ConfigureAwait(false);
+                // Sequential on purpose (#3843). These six helpers all query the same
+                // request-scoped DbContext, which EF Core forbids using concurrently. Under
+                // Task.WhenAll the endpoint still answered 200: the failing sections came back
+                // EMPTY and the error only showed in the logs — a silent hole in the dashboard,
+                // harder to notice than the 500 the same defect produced elsewhere.
+                // Issue #3972 asked for p99 under 500ms; if sequential reads breach it, the fix
+                // is one DbContext per branch (IDbContextFactory), not shared-context parallelism.
+                var user = await GetUserInfoAsync(query.UserId, cancel).ConfigureAwait(false);
+                var stats = await GetStatsAsync(query.UserId, cancel).ConfigureAwait(false);
+                var sessions = await GetActiveSessionsAsync(query.UserId, cancel).ConfigureAwait(false);
+                var library = await GetLibrarySnapshotAsync(query.UserId, cancel).ConfigureAwait(false);
+                var activity = await GetRecentActivityAsync(query.UserId, cancel).ConfigureAwait(false);
+                var chats = await GetRecentChatsAsync(query.UserId, cancel).ConfigureAwait(false);
 
                 return new DashboardResponseDto(
-                    User: await userTask.ConfigureAwait(false),
-                    Stats: await statsTask.ConfigureAwait(false),
-                    ActiveSessions: await sessionsTask.ConfigureAwait(false),
-                    LibrarySnapshot: await libraryTask.ConfigureAwait(false),
-                    RecentActivity: await activityTask.ConfigureAwait(false),
-                    ChatHistory: await chatsTask.ConfigureAwait(false)
+                    User: user,
+                    Stats: stats,
+                    ActiveSessions: sessions,
+                    LibrarySnapshot: library,
+                    RecentActivity: activity,
+                    ChatHistory: chats
                 );
             },
             new HybridCacheEntryOptions

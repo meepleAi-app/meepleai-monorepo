@@ -34,18 +34,12 @@ internal class GetPdfUploadLimitsQueryHandler : IQueryHandler<GetPdfUploadLimits
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Fetch all configurations in parallel for efficiency
-        var maxFileSizeTask = _configService.GetConfigurationByKeyAsync(MaxFileSizeKey, null, cancellationToken);
-        var maxPagesTask = _configService.GetConfigurationByKeyAsync(MaxPagesKey, null, cancellationToken);
-        var maxDocumentsTask = _configService.GetConfigurationByKeyAsync(MaxDocumentsKey, null, cancellationToken);
-        var mimeTypesTask = _configService.GetConfigurationByKeyAsync(AllowedMimeTypesKey, null, cancellationToken);
-
-        await Task.WhenAll(maxFileSizeTask, maxPagesTask, maxDocumentsTask, mimeTypesTask).ConfigureAwait(false);
-
-        var maxFileSizeConfig = await maxFileSizeTask.ConfigureAwait(false);
-        var maxPagesConfig = await maxPagesTask.ConfigureAwait(false);
-        var maxDocumentsConfig = await maxDocumentsTask.ConfigureAwait(false);
-        var mimeTypesConfig = await mimeTypesTask.ConfigureAwait(false);
+        // Sequential on purpose: these reads share the request-scoped DbContext, which EF Core
+        // forbids using concurrently — running them under Task.WhenAll returned 500 (#3843).
+        var maxFileSizeConfig = await _configService.GetConfigurationByKeyAsync(MaxFileSizeKey, null, cancellationToken).ConfigureAwait(false);
+        var maxPagesConfig = await _configService.GetConfigurationByKeyAsync(MaxPagesKey, null, cancellationToken).ConfigureAwait(false);
+        var maxDocumentsConfig = await _configService.GetConfigurationByKeyAsync(MaxDocumentsKey, null, cancellationToken).ConfigureAwait(false);
+        var mimeTypesConfig = await _configService.GetConfigurationByKeyAsync(AllowedMimeTypesKey, null, cancellationToken).ConfigureAwait(false);
 
         // Parse values with defaults
         var maxFileSizeBytes = ParseLongOrDefault(maxFileSizeConfig?.Value, DefaultMaxFileSizeBytes);

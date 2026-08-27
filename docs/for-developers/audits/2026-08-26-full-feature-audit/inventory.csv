@@ -257,7 +257,7 @@ b9ed4551,route,/admin/monitor/containers,GET,Administration,admin,L1,⚠️ find
 2f6d3da4,route,/admin/monitor/grafana,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 f3fc5a69,route,/admin/monitor/logs,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 93e4bc8a,route,/admin/monitor/mau,GET,Administration,admin,L1,✅ verificato,HTTP 200,
-ad2339a9,route,/admin/monitor/operations,GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/resources/database/tables/top?limit=10 · 500 http://localhost:3000/api/v1/re,
+ad2339a9,route,/admin/monitor/operations,GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/resources/cache/metrics · 500 http://localhost:3000/api/v1/resources/databas,
 ad811a50,route,/admin/monitor/service-calls,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 b044c032,route,/admin/monitor/services,GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/resources/database/tables/top?limit=10 · Failed to load resource: the server,
 e90b84fb,route,/admin/monitor/wikidata-dead-letters,GET,Administration,admin,L1,✅ verificato,HTTP 200,
@@ -266,7 +266,7 @@ e90b84fb,route,/admin/monitor/wikidata-dead-letters,GET,Administration,admin,L1,
 2edce285,route,/admin/overview/system,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 e2008cce,route,/admin/staging-access,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 a688d486,route,/admin/users,GET,Administration,admin,L1,✅ verificato,HTTP 200,
-f3e20bd8,route,/admin/users/[id],GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/users/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000,param: id
+f3e20bd8,route,/admin/users/[id],GET,Administration,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/users/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000,param: id
 42e1e23a,route,/admin/users/access-requests,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 dd82678f,route,/admin/users/activity,GET,Administration,admin,L1,✅ verificato,HTTP 200,
 3399b610,route,/admin/users/invitations,GET,Administration,admin,L1,✅ verificato,HTTP 200,
@@ -399,7 +399,7 @@ a94a94a2,endpoint,/api/v1/admin/database-sync/tables/{name}/compare,GET,Database
 f6253697,endpoint,/api/v1/admin/database-sync/tunnel/close,DELETE,DatabaseSync,admin,L1,✅ verificato,403: autorizzazione applicata,
 a05083fc,endpoint,/api/v1/admin/database-sync/tunnel/open,POST,DatabaseSync,admin,L1,✅ verificato,403: autorizzazione applicata,
 e824b637,endpoint,/api/v1/admin/database-sync/tunnel/status,GET,DatabaseSync,admin,L2,⚠️ finding da aprire,admin 403 · utente 403 — admin riceve 403,
-9b5d5715,route,/admin/database-sync,GET,DatabaseSync,admin,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/admin/database-sync/tunnel/status · Failed to load resource: the server resp,
+9b5d5715,route,/admin/database-sync,GET,DatabaseSync,admin,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/admin/database-sync/tunnel/status · 403 http://localhost:3000/api/v1/admin/d,
 d8f4398f,route,/admin/ui-library,GET,DesignSystem,admin,L1,✅ verificato,HTTP 200,
 4202b44a,route,/admin/ui-library/[id],GET,DesignSystem,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: not-found,param: id
 01a11f56,route,/admin/ui-library/compositions,GET,DesignSystem,admin,L1,✅ verificato,HTTP 200,
@@ -469,8 +469,8 @@ be00652f,endpoint,/api/v1/resources/database/vacuum,POST,DocumentProcessing,admi
 0881153c,endpoint,/api/v1/resources/system,GET,DocumentProcessing,admin,L2,✅ verificato,admin 200 · utente 403,
 d7c4c618,endpoint,/api/v1/resources/vectors/metrics,GET,DocumentProcessing,admin,L2,✅ verificato,admin 200 · utente 403,
 90a47569,endpoint,/api/v1/resources/vectors/rebuild,POST,DocumentProcessing,admin,L1,🚫 non eseguito (irreversibile),operazione irreversibile o con effetti esterni: contiene  rebuild ,
-9b2435b2,route,/library/[gameId]/kb,GET,DocumentProcessing,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-a9b5ff8a,route,/library/[gameId]/kb,GET,DocumentProcessing,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
+9b2435b2,route,/library/[gameId]/kb,GET,DocumentProcessing,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource,param: gameId
+a9b5ff8a,route,/library/[gameId]/kb,GET,DocumentProcessing,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
 c43eb17d,route,/pipeline-builder,GET,DocumentProcessing,admin,L1,✅ verificato,HTTP 200,
 e6461692,route,/pipeline-builder,GET,DocumentProcessing,user,L1,✅ verificato,HTTP 200,
 2dc6f1a2,route,/upload,GET,DocumentProcessing,admin,L1,✅ verificato,HTTP 200,
@@ -582,8 +582,8 @@ b45e925e,route,/editor/agent-proposals,GET,GameManagement,admin,L1,✅ verificat
 92be7d18,route,/editor/agent-proposals,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
 c95c15f9,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
 fcba07ea,route,/editor/agent-proposals/[id]/edit,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
-1b7b6364,route,/editor/agent-proposals/[id]/test,GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://lo,param: id
-bf8d5938,route,/editor/agent-proposals/[id]/test,GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/admin/agent-definitions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 403 http://lo,param: id
+1b7b6364,route,/editor/agent-proposals/[id]/test,GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://lo,param: id
+bf8d5938,route,/editor/agent-proposals/[id]/test,GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/admin/agent-definitions/1353c2bb-cee9-4175-a990-24569e7f791e · 403 http://lo,param: id
 4230cf7d,route,/editor/agent-proposals/create,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
 468ad9bf,route,/editor/agent-proposals/create,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
 5cf27241,route,/gamebook,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
@@ -592,10 +592,10 @@ d945f315,route,/gamebook/upload,GET,GameManagement,admin,L1,✅ verificato,HTTP 
 2f995334,route,/gamebook/upload,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
 c43c7323,route,/games,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
 37a4378d,route,/games,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
-d7105a99,route,/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-00259cd8,route,/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-f19a7c40,route,/games/[id]/card,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
-a3a8cd48,route,/games/[id]/card,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
+d7105a99,route,/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+00259cd8,route,/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+f19a7c40,route,/games/[id]/card,GET,GameManagement,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: not-found · 404 http://localhost:3000/api/v1/games/1353c2bb-cee9-4175-a990-24569e7f791e/card · Failed,param: id
+a3a8cd48,route,/games/[id]/card,GET,GameManagement,user,L1,⚠️ finding da aprire,HTTP 200 · marker: not-found · 404 http://localhost:3000/api/v1/games/1353c2bb-cee9-4175-a990-24569e7f791e/card · Failed,param: id
 9cf201bc,route,/games/[id]/faqs,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
 7fcf1ad2,route,/games/[id]/faqs,GET,GameManagement,user,L1,✅ verificato,HTTP 200,param: id
 42d69076,route,/games/[id]/rules,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,param: id
@@ -606,8 +606,8 @@ f7776df9,route,/hub,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
 128e8523,route,/hub,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
 7904ab76,route,/hub/agents,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
 30f4778b,route,/hub/agents,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
-ab5c661d,route,/hub/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-af787ba6,route,/hub/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+ab5c661d,route,/hub/games/[id],GET,GameManagement,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+af787ba6,route,/hub/games/[id],GET,GameManagement,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
 c103c95e,route,/hub/toolkits,GET,GameManagement,admin,L1,✅ verificato,HTTP 200,
 d69e0e75,route,/hub/toolkits,GET,GameManagement,user,L1,✅ verificato,HTTP 200,
 ce397fca,endpoint,/api/v1/toolbox-templates/,GET,GameToolbox,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
@@ -682,8 +682,8 @@ de92af3b,route,/toolkit/stats,GET,GameToolkit,user,L1,⚠️ finding da triagare
 428a6a94,route,/toolkit/templates,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
 9053764a,route,/toolkits,GET,GameToolkit,admin,L1,✅ verificato,HTTP 200,
 dc83a870,route,/toolkits,GET,GameToolkit,user,L1,✅ verificato,HTTP 200,
-a86e388a,route,/toolkits/[id],GET,GameToolkit,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/toolkits/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
-16533982,route,/toolkits/[id],GET,GameToolkit,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/toolkits/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+a86e388a,route,/toolkits/[id],GET,GameToolkit,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/toolkits/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000/ap,param: id
+16533982,route,/toolkits/[id],GET,GameToolkit,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/toolkits/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000/ap,param: id
 6c9f6fa9,endpoint,/api/v1/achievements,GET,Gamification,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 1c5ad481,endpoint,/api/v1/achievements/recent,GET,Gamification,user,L2,✅ verificato,admin 200 · utente 200 — endpoint self-service,
 227f09d3,endpoint,/api/v1/admin/ab-tests/,GET,KbQuality,admin,L2,✅ verificato,admin 200 · utente 403,
@@ -903,17 +903,17 @@ d168fde5,route,/admin/agents/builder,GET,KnowledgeBase,admin,L1,✅ verificato,H
 3acbdafc,route,/admin/agents/chat-history,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/openrouter/usage/requests?page=1&pageSize=20 · 404 http://localhost:30,
 0818e037,route,/admin/agents/chat-limits,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 500 http://localhost:3000/api/v1/admin/config/chat-history-limits · Failed to load resource: the server respo,
 c0b3da50,route,/admin/agents/config,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
-1371cd67,route,/admin/agents/debug,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions?skip=0&take=20&dateFrom=2026-08-26&dateTo=2026-08-26 · ,
+1371cd67,route,/admin/agents/debug,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions/stats?dateFrom=2026-08-27&dateTo=2026-08-27 · 400 http:,
 040cec4f,route,/admin/agents/debug-chat,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
 9b2ed26b,route,/admin/agents/definitions,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
-ff4b3f42,route,/admin/agents/definitions/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://lo,param: id
+ff4b3f42,route,/admin/agents/definitions/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://lo,param: id
 31c1a58f,route,/admin/agents/definitions/[id]/edit,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agent-definitions/undefined · 404 http://localhost:3000/api/v1/admin/a,param: id
 5811e996,route,/admin/agents/definitions/create,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 1d87c67e,route,/admin/agents/definitions/playground,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 ba5fe62e,route,/admin/agents/infrastructure,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
-6e506ed7,route,/admin/agents/inspector,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions?skip=0&take=20&dateFrom=2026-08-26&dateTo=2026-08-26 · ,
+6e506ed7,route,/admin/agents/inspector,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions?skip=0&take=20&dateFrom=2026-08-27&dateTo=2026-08-27 · ,
 ceb23e53,route,/admin/agents/models,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
-ce2c89a0,route,/admin/agents/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions/stats?dateFrom=2026-08-26&dateTo=2026-08-26 · 400 http:,
+ce2c89a0,route,/admin/agents/pipeline,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/admin/rag-executions?skip=0&take=20&dateFrom=2026-08-27&dateTo=2026-08-27 · ,
 fad50292,route,/admin/agents/playground,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
 2316fe0a,route,/admin/agents/sandbox,GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/ai-mod,
 ffc2b583,route,/admin/agents/strategy,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
@@ -940,22 +940,22 @@ d0007532,route,/admin/knowledge-base/snapshots,GET,KnowledgeBase,admin,L1,✅ ve
 4e378d2f,route,/admin/knowledge-base/vectors,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 093da42b,route,/agents,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 78f9458e,route,/agents,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
-b55ee25d,route,/agents/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: errore-generico-en · 404 http://localhost:3000/api/v1/agents/f19c237a-8c11-4abd-b6ee-83128fe89f47 · F,param: id
-2b3ba40d,route,/agents/[id],GET,KnowledgeBase,user,L1,⚠️ finding da aprire,HTTP 200 · marker: errore-generico-en · 404 http://localhost:3000/api/v1/agents/f19c237a-8c11-4abd-b6ee-83128fe89f47 · F,param: id
+b55ee25d,route,/agents/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da aprire,HTTP 200 · marker: errore-generico-en · 404 http://localhost:3000/api/v1/agents/1353c2bb-cee9-4175-a990-24569e7f791e · F,param: id
+2b3ba40d,route,/agents/[id],GET,KnowledgeBase,user,L1,⚠️ finding da aprire,HTTP 200 · marker: errore-generico-en · 404 http://localhost:3000/api/v1/agents/1353c2bb-cee9-4175-a990-24569e7f791e · F,param: id
 36ab86f5,route,/chat,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 a5b4925d,route,/chat,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
-430f3319,route,/chat/[threadId],GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,param: threadId
-404f803d,route,/chat/[threadId],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 403 http://localhost:3000/api/v1/chat-threads/3e91c55d-926e-466d-9386-bfef03eae56f · 403 http://localhost:300,param: threadId
+430f3319,route,/chat/[threadId],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/chat-threads/3e91c55d-926e-466d-9386-bfef03eae56f · 404 http://localhost:300,param: threadId
+404f803d,route,/chat/[threadId],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/chat-threads/3e91c55d-926e-466d-9386-bfef03eae56f · 404 http://localhost:300,param: threadId
 ff21a3ec,route,/chat/agents/create,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 dfa5c25e,route,/chat/agents/create,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
 cab856fd,route,/chat/new,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 32668dc5,route,/chat/new,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
-b27bd096,route,/kb/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47/chunks?limit=200 · 404 http://l,param: id
-6ef1ef40,route,/kb/[id],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47/chunks?limit=200 · 404 http://l,param: id
+b27bd096,route,/kb/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/1353c2bb-cee9-4175-a990-24569e7f791e/chunks?limit=200 · 404 http://l,param: id
+6ef1ef40,route,/kb/[id],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/kb-docs/1353c2bb-cee9-4175-a990-24569e7f791e · 400 http://localhost:3000/api,param: id
 38a6bca2,route,/knowledge-base,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
 504198c0,route,/knowledge-base,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,
-a2e1c67e,route,/knowledge-base/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47/chunks?limit=200 · 404 http://l,param: id
-77338322,route,/knowledge-base/[id],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/kb-docs/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 400 http://localhost:3000/api,param: id
+a2e1c67e,route,/knowledge-base/[id],GET,KnowledgeBase,admin,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/1353c2bb-cee9-4175-a990-24569e7f791e/chunks?limit=200 · 404 http://l,param: id
+77338322,route,/knowledge-base/[id],GET,KnowledgeBase,user,L1,⚠️ finding da triagare,HTTP 200 · 400 http://localhost:3000/api/v1/kb-docs/1353c2bb-cee9-4175-a990-24569e7f791e/chunks?limit=200 · 404 http://l,param: id
 cb454801,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,param: id
 2c5b80d7,route,/knowledge-base/[id]/pdf,GET,KnowledgeBase,user,L1,✅ verificato,HTTP 200,param: id
 4d264881,route,/knowledge-base/global,GET,KnowledgeBase,admin,L1,✅ verificato,HTTP 200,
@@ -1251,12 +1251,12 @@ daf8d2a0,endpoint,/api/v1/sessions/{sessionId}/state/snapshots,POST,SessionTrack
 bd8e6b86,endpoint,/api/v1/sessions/statistics,GET,SessionTracking,user,L2,⚠️ finding da aprire,admin 400 · utente 400 — endpoint destinato all'utente ma risponde 400,
 c6a10868,route,/game-nights,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
 75d32c4b,route,/game-nights,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
-98476a4b,route,/game-nights/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000,param: id
-3bf1c30c,route,/game-nights/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000,param: id
-19523044,route,/game-nights/[id]/live,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/live · 404 http://localhost,param: id
-b0503870,route,/game-nights/[id]/live,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/live · 404 http://localhost,param: id
-03da1b60,route,/game-nights/[id]/summary,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/summary · 404 http://localh,param: id
-2a080644,route,/game-nights/[id]/summary,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/f19c237a-8c11-4abd-b6ee-83128fe89f47/photos · 404 http://localho,param: id
+98476a4b,route,/game-nights/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/1353c2bb-cee9-4175-a990-24569e7f791e/rsvps · 404 http://localhos,param: id
+3bf1c30c,route,/game-nights/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000,param: id
+19523044,route,/game-nights/[id]/live,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/1353c2bb-cee9-4175-a990-24569e7f791e/live · 404 http://localhost,param: id
+b0503870,route,/game-nights/[id]/live,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/1353c2bb-cee9-4175-a990-24569e7f791e/live · 404 http://localhost,param: id
+03da1b60,route,/game-nights/[id]/summary,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/1353c2bb-cee9-4175-a990-24569e7f791e/summary · 404 http://localh,param: id
+2a080644,route,/game-nights/[id]/summary,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/game-nights/1353c2bb-cee9-4175-a990-24569e7f791e/summary · 404 http://localh,param: id
 59d99152,route,/game-nights/new,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
 69b23d47,route,/game-nights/new,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 8497bc8c,route,/game-nights/shared/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
@@ -1271,10 +1271,10 @@ a7b168ec,route,/join/session/[code],GET,SessionTracking,admin,L1,⬜ non coperto
 c2863396,route,/join/session/[code],GET,SessionTracking,user,L1,⬜ non coperto,,param: code
 6a47c1ef,route,/play-records,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
 d0c2d0e7,route,/play-records,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
-c95f2979,route,/play-records/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
-b0605914,route,/play-records/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
-54f46c6d,route,/play-records/[id]/edit,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
-887a68dc,route,/play-records/[id]/edit,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource:,param: id
+c95f2979,route,/play-records/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource:,param: id
+b0605914,route,/play-records/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource:,param: id
+54f46c6d,route,/play-records/[id]/edit,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource:,param: id
+887a68dc,route,/play-records/[id]/edit,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/play-records/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource:,param: id
 b8f2d364,route,/play-records/new,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
 777d34c9,route,/play-records/new,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 6f267eaf,route,/play-records/shared/[token],GET,SessionTracking,admin,L1,⬜ non coperto,,param: token
@@ -1295,16 +1295,16 @@ a714b2a0,route,/players/[id]/sessions,GET,SessionTracking,user,L1,✅ verificato
 1a8bdb42,route,/players/[id]/stats,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,param: id
 230d11f2,route,/sessions,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
 0188ae44,route,/sessions,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
-0f782e1a,route,/sessions/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
-c82267fd,route,/sessions/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-b1d6fde9,route,/sessions/[id]/join,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-24ecc69c,route,/sessions/[id]/join,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
+0f782e1a,route,/sessions/[id],GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+c82267fd,route,/sessions/[id],GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+b1d6fde9,route,/sessions/[id]/join,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+24ecc69c,route,/sessions/[id]/join,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
 bd34dfcc,route,/sessions/[id]/live,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/hubs/game-state/negotiate?negotiateVersion=1 · 404 http://localhost:3000/api/v1/liv,param: id
 25fb26d5,route,/sessions/[id]/live,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/hubs/game-state/negotiate?negotiateVersion=1 · 404 http://localhost:3000/api/v1/liv,param: id
-3b854d77,route,/sessions/[id]/notes,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
-f225a3eb,route,/sessions/[id]/notes,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
-be1a93b0,route,/sessions/[id]/scoreboard,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
-15bb7ed5,route,/sessions/[id]/scoreboard,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:3000/ap,param: id
+3b854d77,route,/sessions/[id]/notes,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000/ap,param: id
+f225a3eb,route,/sessions/[id]/notes,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000/ap,param: id
+be1a93b0,route,/sessions/[id]/scoreboard,GET,SessionTracking,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:3000/ap,param: id
+15bb7ed5,route,/sessions/[id]/scoreboard,GET,SessionTracking,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/live-sessions/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
 6305b181,route,/sessions/join,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
 70c7939f,route,/sessions/join,GET,SessionTracking,user,L1,✅ verificato,HTTP 200,
 d480c7f3,route,/sessions/new,GET,SessionTracking,admin,L1,✅ verificato,HTTP 200,
@@ -1472,11 +1472,11 @@ a009d490,endpoint,/api/v1/users/{id:guid}/badges,GET,SharedGameCatalog,user,L2,�
 ccf68b1a,endpoint,/api/v1/users/me/badges/{id:guid}/display,PUT,SharedGameCatalog,user,L1,✅ verificato,404 su risorsa inesistente: gestito,
 c76ce9a2,endpoint,/api/v1/users/me/contribution-stats,GET,SharedGameCatalog,user,L2,⚠️ finding da aprire,admin 500 · utente 500 — endpoint destinato all'utente ma risponde 500,
 189d0053,route,/admin/catalog-ingestion,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
-13aa0695,route,/admin/catalog/seed-queue,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 503 http://localhost:3000/api/v1/admin/catalog/seeds?status=Fetched&skip=0&take=1 · 503 http://localhost:3000,
+13aa0695,route,/admin/catalog/seed-queue,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 503 http://localhost:3000/api/v1/admin/catalog/seeds?status=Approved&skip=0&take=1 · 503 http://localhost:300,
 4ffbb179,route,/admin/shared-games,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
-7b0d3670,route,/admin/shared-games/[id],GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/shared-games/f19c237a-8c11-4abd-b6ee-83128fe89f47/linked-agent · 404 h,param: id
+7b0d3670,route,/admin/shared-games/[id],GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/shared-games/1353c2bb-cee9-4175-a990-24569e7f791e/linked-agent · 404 h,param: id
 6e355b52,route,/admin/shared-games/[id]/knowledge-base,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · [API Error] API request failed: Schema validation failed: Response validation failed for /api/v1/admin/kb/gam,param: id
-2c7fe720,route,/admin/shared-games/[id]/rag-setup,GET,SharedGameCatalog,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/admin/agents/estimate-cost · 404 http://localhost:3000/api/v1/admin/agents/e,param: id
+2c7fe720,route,/admin/shared-games/[id]/rag-setup,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,param: id
 d13116b5,route,/admin/shared-games/all,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
 7cd1fc07,route,/admin/shared-games/categories,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
 5d744db7,route,/admin/shared-games/cover-gap,GET,SharedGameCatalog,admin,L1,✅ verificato,HTTP 200,
@@ -1650,30 +1650,30 @@ b2dda0f8,route,/dashboard,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
 af7a553f,route,/library,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
 bcbceb5c,route,/library-public,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
 5f50b4dd,route,/library-public,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
-b2ffcc35,route,/library/[gameId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-9491a691,route,/library/[gameId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-32ad8ea9,route,/library/[gameId]/agent,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-8f0def2c,route,/library/[gameId]/agent,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-73a09e5e,route,/library/[gameId]/play,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-2af23a27,route,/library/[gameId]/play,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-ebc362b9,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
-2780f6b2,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
-7242bf62,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
-aa2d0f94,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
-a350f258,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
-9d823b6c,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId campaignId
-08cdf316,route,/library/[gameId]/toolbox,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-8cb8f3be,route,/library/[gameId]/toolbox,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-c8c2a960,route,/library/[gameId]/toolkit,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-f961ad47,route,/library/[gameId]/toolkit,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId
-be4b9d96,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId sessionId
-7e348f9d,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: gameId sessionId
+b2ffcc35,route,/library/[gameId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource,param: gameId
+9491a691,route,/library/[gameId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+32ad8ea9,route,/library/[gameId]/agent,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+8f0def2c,route,/library/[gameId]/agent,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+73a09e5e,route,/library/[gameId]/play,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource,param: gameId
+2af23a27,route,/library/[gameId]/play,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+ebc362b9,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:80,param: gameId campaignId
+2780f6b2,route,/library/[gameId]/play/[campaignId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId campaignId
+7242bf62,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:80,param: gameId campaignId
+aa2d0f94,route,/library/[gameId]/play/[campaignId]/encounter,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId campaignId
+a350f258,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:80,param: gameId campaignId
+9d823b6c,route,/library/[gameId]/play/[campaignId]/translate,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId campaignId
+08cdf316,route,/library/[gameId]/toolbox,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+8cb8f3be,route,/library/[gameId]/toolbox,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+c8c2a960,route,/library/[gameId]/toolkit,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource,param: gameId
+f961ad47,route,/library/[gameId]/toolkit,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId
+be4b9d96,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId sessionId
+7e348f9d,route,/library/[gameId]/toolkit/[sessionId],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/library/games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: gameId sessionId
 cd4a0915,route,/library/private,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
 da69ab60,route,/library/private,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
-33cc66f1,route,/library/private/[id],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-fe98bd5e,route,/library/private/[id],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · 404 http://localhost:30,param: id
-ebdb119a,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource,param: id
-d07ddde6,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/private-games/f19c237a-8c11-4abd-b6ee-83128fe89f47 · Failed to load resource,param: id
+33cc66f1,route,/library/private/[id],GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+fe98bd5e,route,/library/private/[id],GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:3000/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · 404 http://localhost:30,param: id
+ebdb119a,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,admin,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource,param: id
+d07ddde6,route,/library/private/[id]/toolkit/configure,GET,UserLibrary,user,L1,⚠️ finding da triagare,HTTP 200 · 404 http://localhost:8080/api/v1/private-games/1353c2bb-cee9-4175-a990-24569e7f791e · Failed to load resource,param: id
 6f6339d3,route,/library/private/add,GET,UserLibrary,admin,L1,✅ verificato,HTTP 200,
 ef14dad2,route,/library/private/add,GET,UserLibrary,user,L1,✅ verificato,HTTP 200,
 aac95741,route,/library/shared/[token],GET,UserLibrary,admin,L1,⬜ non coperto,,param: token

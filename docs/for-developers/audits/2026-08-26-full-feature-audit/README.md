@@ -175,6 +175,14 @@ come verificate senza provarle. Sono state rifatte, e la sonda ora si ferma dopo
 consecutivi. Un audit automatico sbaglia in silenzio: i controlli su come sbaglia contano quanto i
 controlli su ciò che misura.
 
+**Il residuo di 96 righe "da triagare" è in larga parte artefatto dei parametri.** Il crawler
+naviga le rotte con id reali, ma un id solo non può essere del tipo giusto per tutte: navigare
+`/library/private/[id]` con l'id di un gioco **condiviso** produce un 404 legittimo, e
+`getPrivateGame` non ha fallback. Allineare il `gameId` a un gioco presente sia in libreria sia con
+KB ha dimezzato i 404 su `library/games` (28 → 14); i 33 su `private-games` restano e **non sono
+difetti**. Chi rilegge il tracker deve distinguerli: l'evidenza a fianco di ogni riga serve a
+questo.
+
 **I falsi positivi sono documentati come tali.** Diverse segnalazioni iniziali erano difetti dei
 criteri, non del prodotto: `/library` che comunica lo stato vuoto con i contatori invece che con
 una frase, endpoint chiamati senza i parametri obbligatori, un endpoint "Superadmin only"

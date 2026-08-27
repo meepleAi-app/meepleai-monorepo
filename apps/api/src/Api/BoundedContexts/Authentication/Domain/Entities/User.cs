@@ -852,8 +852,11 @@ public sealed class User : AggregateRoot<Guid>
         ArgumentNullException.ThrowIfNull(requesterRole);
 
 
-        // Only admins can change user tiers
-        if (!requesterRole.IsAdmin())
+        // #3842 — IsAdmin() e' un confronto esatto su "admin": un SUPERADMIN veniva respinto qui,
+        // dopo esserlo gia' stato dall'handler. La gerarchia dei ruoli e' scritta in un posto solo,
+        // HasPermission, che dichiara "SuperAdmin has all permissions": usarla invece di
+        // riformulare la regola e' cio' che impedisce alla prossima guardia di sbagliare di nuovo.
+        if (!requesterRole.HasPermission(Role.Admin))
             throw new DomainException("Only administrators can change user tiers");
 
         if (Tier == newTier)

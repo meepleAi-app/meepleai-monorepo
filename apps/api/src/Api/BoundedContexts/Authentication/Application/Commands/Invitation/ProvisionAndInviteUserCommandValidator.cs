@@ -9,6 +9,9 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 internal sealed class ProvisionAndInviteUserCommandValidator : AbstractValidator<ProvisionAndInviteUserCommand>
 {
     private static readonly string[] ValidRoles = { "User", "Editor", "Admin" };
+    // Volutamente PIU' STRETTO del dominio: UserTier riconosce anche "normal" ed "enterprise",
+    // ma non si invita nessuno direttamente in Enterprise — e InvitationSecurityTests lo asserisce.
+    // E' una politica di invito, non il vocabolario dei tier (#3842).
     private static readonly string[] ValidTiers = { "Free", "Premium", "Pro" };
     private static readonly string[] ValidGameSuggestionTypes = { "PreAdded", "Suggested" };
 

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Application.Commands;
+using Api.SharedKernel.Domain.ValueObjects;
 using FluentValidation;
 
 namespace Api.BoundedContexts.Administration.Application.Validators;
@@ -9,7 +10,6 @@ namespace Api.BoundedContexts.Administration.Application.Validators;
 /// </summary>
 internal sealed class UpdateUserTierCommandValidator : AbstractValidator<UpdateUserTierCommand>
 {
-    private static readonly string[] AllowedTiers = { "Free", "Basic", "Pro", "Enterprise" };
 
     public UpdateUserTierCommandValidator()
     {
@@ -17,11 +17,17 @@ internal sealed class UpdateUserTierCommandValidator : AbstractValidator<UpdateU
             .NotEmpty()
             .WithMessage("UserId is required");
 
+        // #3842 — qui c'era un elenco proprio, { Free, Basic, Pro, Enterprise }, confrontato in
+        // modo case-sensitive. Sbagliato tre volte: conteneva "Basic", che il dominio non conosce;
+        // ometteva "normal" e "premium", che invece riconosce; e rifiutava le minuscole, cioe' la
+        // forma in cui i tier sono scritti nel database. Ogni richiesta finiva in 422.
+        //
+        // Il vocabolario e' uno solo, e sta in UserTier.
         RuleFor(x => x.NewTier)
             .NotEmpty()
             .WithMessage("NewTier is required")
-            .Must(t => AllowedTiers.Contains(t, StringComparer.Ordinal))
-            .WithMessage("NewTier must be one of: Free, Basic, Pro, Enterprise");
+            .Must(UserTier.IsValid)
+            .WithMessage($"NewTier must be one of: {string.Join(", ", UserTier.All)}");
 
         RuleFor(x => x.RequesterUserId)
             .NotEmpty()

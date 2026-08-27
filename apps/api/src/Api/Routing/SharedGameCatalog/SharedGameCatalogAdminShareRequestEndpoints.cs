@@ -368,7 +368,7 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
 
         logger.LogInformation(
             "Editor {EditorId} bulk approving {Count} share requests",
-            editorId, request.ShareRequestIds.Count);
+            editorId, request.ShareRequestIds?.Count ?? 0);
 
         try
         {
@@ -408,7 +408,7 @@ internal static class SharedGameCatalogAdminShareRequestEndpoints
 
         logger.LogInformation(
             "Editor {EditorId} bulk rejecting {Count} share requests with reason: {Reason}",
-            editorId, request.ShareRequestIds.Count, request.Reason);
+            editorId, request.ShareRequestIds?.Count ?? 0, request.Reason);
 
         try
         {

@@ -26,10 +26,13 @@ internal static class AdminAbTestEndpoints
             var (authorized, session, error) = context.RequireAdminSession();
             if (!authorized) return error!;
 
+            // #3847 — questa riga gira PRIMA della validazione: con "modelIds" assente
+            // dereferenziava null e l'endpoint rispondeva 500 invece di 422, senza che il
+            // validatore venisse mai raggiunto. Stesso motivo negli altri nove punti corretti.
             logger.LogInformation(
                 "Admin {UserId} creating A/B test with {ModelCount} models",
                 session!.Principal!.EffectiveActor.Id,
-                request.ModelIds.Count);
+                request.ModelIds?.Count ?? 0);
 
             var command = new CreateAbTestCommand(
                 CreatedBy: session.Principal!.EffectiveActor.Id,
@@ -160,7 +163,7 @@ internal static class AdminAbTestEndpoints
                 "Admin {UserId} evaluating A/B test {SessionId} with {EvalCount} evaluations",
                 session!.Principal!.EffectiveActor.Id,
                 id,
-                request.Evaluations.Count);
+                request.Evaluations?.Count ?? 0);
 
             var command = new EvaluateAbTestCommand(
                 SessionId: id,

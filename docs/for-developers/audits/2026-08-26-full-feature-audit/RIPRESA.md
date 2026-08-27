@@ -1,134 +1,105 @@
-# Ripresa dell'audit — prompt per una nuova sessione
+# Ripresa — prompt per una nuova sessione
 
-Copia il blocco qui sotto come primo messaggio di una nuova sessione. Contiene tutto ciò che serve
-per riprendere senza rileggere la conversazione precedente.
+Copia il blocco qui sotto come primo messaggio. Contiene tutto il necessario senza rileggere le
+conversazioni precedenti.
+
+> La fase di **ricognizione** è chiusa (95% di copertura, 26 issue aperte): è documentata in
+> [README.md](./README.md). Questo prompt serve a proseguire la fase di **correzione**:
+> 20 issue chiuse e mergiate, 8 aperte.
 
 ---
 
 ```
-Riprendi il Full Feature Audit del prodotto. È già al 95%: NON ricominciare da capo, NON rigenerare
-l'inventario, NON riscrivere gli strumenti — esistono e funzionano.
+Prosegui la correzione dei difetti del Full Feature Audit. Venti issue sono chiuse e mergiate in
+main-dev; otto restano. NON ricominciare l'audit e NON rigenerare l'inventario.
 
-## Dove sta tutto
+## Ambiente
 
-- Branch: `feature/full-feature-audit` (parte da `main-dev`, PR #3837 aperta)
-- Tracker: `docs/for-developers/audits/2026-08-26-full-feature-audit/inventory.csv` — 1725 righe,
-  una per ogni (rotta × ruolo) e ogni endpoint. È la fonte di verità sulla copertura.
-- Report: `README.md` nella stessa cartella + una scheda per ondata (`wave-*.md`)
-- Spec e piano: `docs/for-developers/specs/2026-08-26-full-feature-audit-{design,plan}.md`
-- Strumenti: `apps/web/scripts/audit/` (con test in `__tests__/`, 125 test verdi)
+cd infra && make dev, poi `docker start meepleai-web` (resta in stato Created).
+Credenziali in infra/secrets/admin.secret: usa badsworm@gmail.com con SEED_BADSWORM_PASSWORD
+(quella di admin@meepleai.app NON corrisponde al DB). Il database si chiama meepleai_staging
+anche in locale, e ha 8 schemi.
 
-## Stato
+**Prima di sondare, verifica da che codice e' costruita l'immagine API.** Ci ho perso tempo due
+volte: se le migration nel DB non coincidono con quelle nel sorgente, l'immagine e' vecchia e stai
+misurando codice che non esiste piu'.
 
-| Stato nel tracker | Righe |
-|---|---|
-| ✅ verificato | 1322 |
-| ⚠️ finding da aprire | 150 |
-| ⚠️ finding da triagare | 96 |
-| ⬜ non coperto | 86 |
-| 🚫 non eseguito (irreversibile) | 71 |
+    MSYS_NO_PATHCONV=1 docker exec meepleai-postgres psql -U meepleai -d meepleai_staging \
+      -tAc 'SELECT count(*) FROM "__EFMigrationsHistory";'
+    ls apps/api/src/Api/Infrastructure/Migrations/*.cs | grep -vc "Designer\|Snapshot"
 
-26 issue aperte, tutte con causa accertata. Due P0 già corretti e in PR: #3832 e #3841.
+I due numeri devono coincidere (18 al 2026-08-27). Su Git Bash anteponi sempre MSYS_NO_PATHCONV=1
+ai comandi con argomenti che iniziano per `/`.
 
-## Prima di qualsiasi cosa: prepara l'ambiente
+## Le otto issue rimaste
 
-1. Stack: `cd infra && make dev`, poi **`docker start meepleai-web`** — il container web resta in
-   stato `Created` e non parte da solo.
-2. Credenziali: da `infra/secrets/admin.secret`. Usa `badsworm@gmail.com` con
-   `SEED_BADSWORM_PASSWORD` come admin: la password di `admin@meepleai.app` NON corrisponde al DB
-   locale. Utente semplice: `test@meepleai.com` con `SEED_TEST_PASSWORD`.
-3. Cookie per le sonde: rigenerali in `apps/web/audit-results/cookies.json` come
-   `{"admin":"meepleai_session=…","user":"meepleai_session=…"}`.
-4. Database: si chiama **`meepleai_staging`** anche in locale. Le colonne sono PascalCase in alcune
-   tabelle (`users."Id"`) e snake_case in altre (`shared_games.id`). Non esiste una tabella `games`:
-   il catalogo è `shared_games`. Esistono 8 schemi, non solo `public`.
-5. **Verifica da che codice è costruita l'immagine API prima di sondarla.** Durante l'audit il
-   container girava codice di ~3 settimane prima; me ne sono accorto solo ricostruendolo. Il
-   controllo costa un comando — se le migration nel DB non coincidono con quelle in
-   `apps/api/src/Api/Infrastructure/Migrations/`, l'immagine è vecchia:
+| # | Cosa | Nota |
+|---|---|---|
+| #3846 | Upload PDF con storage S3: 200 ma l'elaborazione fallisce | la piu' concreta rimasta |
+| #3850 | "Informazione non disponibile" in inglese dentro conversazioni italiane | piccola |
+| #3838 | L'audit di sicurezza registra solo i login | mancano logout, 2FA, cambio ruolo |
+| #3873 | IsAdmin() come guardia sbaglia in DUE direzioni opposte | autorizzazione, non meccanica |
+| #3866 | 14 file di test su 20 non riproducono NoTracking | la lacuna che ha lasciato passare 5 difetti |
+| #3840 | scores/confirm registrata due volte | serve una decisione sullo scoring live |
+| #3853 | 16 schemi Zod paginati non raggiunti dal confronto per nome | eseguirli contro risposte reali |
+| #3836 | Il gruppo /badges non esiste lato backend | esporne meta' e' decidere il prodotto |
 
-   ```bash
-   MSYS_NO_PATHCONV=1 docker exec meepleai-postgres psql -U meepleai -d meepleai_staging      -tAc 'SELECT count(*) FROM "__EFMigrationsHistory";'   # deve dare 17
-   ```
+Le ultime tre non sono correzioni: sono decisioni. Portale al proprietario invece di sceglierle tu.
 
-   Al 2026-08-27 l'ambiente è allineato: immagine ricostruita da `main-dev`, DB riparato,
-   17/17 migration applicate.
+## Il metodo che ha reso di piu'
 
-## Gli strumenti, e come si usano
+**Fai elencare i difetti a un test, non cercarli a mano.** Su #3847 un test che invoca tutti i 755
+validatori con un corpo vuoto ne ha trovati 29 in una passata; ventiquattro li ha risolti una riga
+sola. Stesso schema per #3836 (4 dialog senza titolo su 116) e #3835 (2 chiamate senza prefisso su
+270). Quando un difetto ha una forma riconoscibile, scrivi il setaccio.
 
-Tutti da `apps/web`, tutti con `MSYS_NO_PATHCONV=1` su Git Bash (altrimenti gli argomenti che
-iniziano con `/` vengono convertiti in path Windows e la regex si rompe in silenzio):
+**Verifica dal vivo, e ricostruisci l'immagine prima.** Tre issue su ventidue si sono rivelate
+non-difetti proprio cosi' (#3834, #3854, #3851).
 
-```bash
-MSYS_NO_PATHCONV=1 pnpm exec tsx scripts/audit/probe-reads.ts "." <Contesto>
-MSYS_NO_PATHCONV=1 pnpm exec tsx scripts/audit/probe-mutations.ts <Contesto>
-pnpm exec tsx scripts/audit/mark-verified.ts <file.jsonl>   # riporta le verifiche manuali nel tracker
-pnpm exec tsx scripts/audit/main-inventory.ts               # rigenera l'inventario (raro)
-pnpm exec tsx scripts/audit/main-report.ts                  # dal crawl al report + stati
-```
+**Prova a smentire il tuo stesso test.** Ne ho scritti tre che passavano ANCHE sul codice rotto.
+Prima di fidarti: ripristina il file originale, rilancia, pretendi il rosso.
 
-Crawler e verifiche di interazione (Playwright, config dedicata senza auth bypass):
+## Sette trappole pagate care
 
-```bash
-pnpm exec playwright test --config=playwright.audit.config.ts --grep "ruolo"        # crawler
-pnpm exec playwright test --config=playwright.audit.config.ts --grep "Interazioni"  # click reali
-```
+1. **Il contesto di test traccia, la produzione no.** Senza
+   `UseQueryTrackingBehavior(NoTracking)` nel contesto di test, un'intera famiglia di difetti e'
+   invisibile. E' #3866, e ha lasciato passare #1627, #1633, #2804, #3564, #3858.
 
-## Cosa resta, in ordine di valore
+2. **Il build Release cade dove il Debug passa.** Rendere null-safe una lettura (`x?.Count ?? 0`)
+   informa il compilatore che la proprieta' e' nullable, e da li' OGNI uso a valle diventa CS8604.
+   E il publish locale e' incrementale: mente. Serve
+   `dotnet clean -c Release && dotnet publish --no-incremental`.
 
-1. **Le 96 righe "da triagare"** sono in larga parte artefatti dei parametri, non difetti: navigare
-   `/library/private/[id]` con l'id di un gioco *condiviso* dà 404 legittimo. Vanno lette una per
-   una — l'evidenza è nella colonna accanto — e riclassificate.
-2. **Le 86 scoperte** richiedono entità che l'ambiente non ha (collezioni di documenti, campagne,
-   job di coda). Crearle via API sblocca i parametri e le rende verificabili: è così che sono
-   passate da 187 a 86.
-3. **Le 71 irreversibili** — riavvii di servizi, migrazione storage, rotazione chiavi, cancellazione
-   di backup — vanno su un ambiente sacrificabile, mai su questo.
-4. **Aree già coperte a livello L1 ma mai esercitate**: KbQuality, BusinessSimulations, Gamification.
-   Il livello L1 dice solo che l'endpoint non esplode.
+3. **Le risposte QA sono in cache.** `/agents/qa` accetta `?bypassCache=true`. Senza, una risposta
+   identica al carattere sembra determinismo del modello ed e' invece la voce vecchia: ho creduto
+   per qualche minuto che una correzione non funzionasse.
 
-## Il filo conduttore emerso, da tirare
+4. **Correla i log per RequestId, non per vicinanza.** Attribuendo a sei endpoint la prima
+   eccezione che vedevo, avevo dato a tutti la stessa causa. Erano quattro diverse.
 
-**Gli aggregati con collezioni figlie falliscono in scrittura, ciascuno per una ragione diversa.**
-Quattro casi finora: toolkit (#3854, doppia mappatura fra `game_toolkit.toolkits` e
-`public."GameToolkits"`), toolbox (#3857, persistenza corretta ma 0 righe aggiornate), live-session
-(#3851, campo `players` ignorato), entity-link (#3858, DELETE che risponde 204 senza cancellare).
-Vale la pena verificare gli altri aggregati con lo stesso schema.
+5. **La baseline dei test di integrazione invecchia.** Confronta i NOMI dei falliti su un commit
+   precedente, non i conteggi. Su Windows non usare `git worktree add` per questo: fallisce a meta'.
+   Con l'albero pulito basta `git checkout <sha>`.
 
-## Cinque trappole che mi sono costate tempo — non ripeterle
+6. **Un elenco privato si duplica male.** Tre vocabolari di tier divergenti (#3842) esistevano
+   perche' quello del dominio era `private`. Esporlo e' costato una riga.
 
-1. **Una sessione che scade a metà passata rende conformi centinaia di righe.** Ogni 401 veniva
-   letto come «autorizzazione applicata»: 232 righe su 711 risultavano verificate senza essere state
-   provate. La sonda ora si ferma dopo cinque 401 consecutivi, ma controlla comunque il conteggio.
-2. **La lista di esclusione per parole chiave non basta.** `DELETE /users/me` non contiene nessun
-   verbo pericoloso e cancella l'account con cui stai lavorando. C'è ora una regola sui percorsi che
-   agiscono sul soggetto autenticato.
-3. **I criteri automatici sull'interfaccia bocciano pagine integre.** `/library` comunica lo stato
-   vuoto con i contatori, non con la parola «vuota». Guarda la pagina prima di scrivere il criterio.
-4. **Un 400 può nascondere un 500.** `library/games/batch-status` risponde 400 senza parametri e 500
-   fornendoli: fermarsi al 400 lo archivia come «parametro mancante» e il difetto resta.
-5. **Non stampare mai `printenv` senza filtrare i valori.** Ho esposto credenziali S3 reali nel
-   transcript. Filtra per nome, stampa solo le chiavi.
+7. **Non stampare mai `printenv` senza filtrare i valori.** Filtra per nome, stampa solo le chiavi.
 
 ## Come lavorare
 
-Parti sempre dalle chiamate API, poi usa i click dove l'API non arriva — il campo di ricerca
-readonly di `/games` (#3848) nessuna chiamata lo avrebbe trovato. Per ogni difetto: isola la causa
-nei log **correlando per `RequestPath`** (la prima eccezione nei log è spesso un job di sottofondo
-che non c'entra), apri una issue con riproduzione e Definition of Done, e riporta la verifica nel
-tracker con `mark-verified`.
+Un branch per issue da main-dev (`git config branch.<nome>.parent main-dev`), test che fallisce
+prima, correzione, verifica dal vivo, PR con la causa spiegata, merge, chiusura dell'issue con quello
+che hai trovato — inclusi gli errori della diagnosi originale: due issue su ventidue erano sbagliate,
+e dirlo vale piu' che correggerle in silenzio.
 
-Prima di dichiarare un difetto, prova a smentirlo: metà delle mie difformità iniziali erano payload
-sbagliati miei. E quando i fatti smentiscono una diagnosi già scritta, correggila — è successo con
-#3854, dove avevo attribuito a `xmin` quella che era una doppia mappatura.
-
-Lascia l'ambiente come l'hai trovato: 8 utenti, 135 PDF, nessuna sessione o toolkit di prova.
+Lascia l'ambiente come l'hai trovato: nessun dato di prova, nessun branch residuo.
 ```
 
 ---
 
 ## Nota per chi riprende
 
-Il prompt sopra è deliberatamente prescrittivo sulle trappole. Non è pedanteria: ognuna di quelle
-cinque ha prodotto lavoro da buttare o, nel caso del `DELETE /users/me`, ha rischiato di cancellare
-l'account usato dall'audit.
+Le sette trappole non sono pedanteria: ognuna ha prodotto lavoro da buttare. La seconda ha fatto
+fallire un build che i controlli locali dichiaravano verde; la terza mi ha quasi fatto annullare una
+correzione che funzionava.

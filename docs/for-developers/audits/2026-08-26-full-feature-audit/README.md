@@ -20,8 +20,24 @@ Piano dell'harness: [plan](../../specs/2026-08-26-full-feature-audit-plan.md)
 
 ## Riprendere il lavoro
 
-Per continuare l'audit in una nuova sessione: [RIPRESA.md](./RIPRESA.md) contiene il prompt di
-handoff, con stato, strumenti, cosa resta e le trappole da non ripetere.
+La ricognizione documentata qui sotto e' chiusa. La **correzione** dei difetti trovati e' andata
+avanti: al 2026-08-27 sono **20 issue chiuse e mergiate** in `main-dev` e **8 aperte**.
+
+Per proseguire: [RIPRESA.md](./RIPRESA.md) contiene il prompt di handoff, con le issue rimaste, il
+metodo che ha reso di piu' e le sette trappole gia' pagate.
+
+### Cosa e' emerso correggendo, che la ricognizione non poteva vedere
+
+- **Tre issue su ventidue non erano difetti**: #3834 e #3854 erano l'ambiente stale, #3851 un errore
+  della sonda. Verificare dal vivo con un'immagine ricostruita e' l'unico modo di distinguerle.
+- **Due diagnosi erano sbagliate anche quando il difetto era vero.** Su #3855 avevo scritto che la
+  citazione «[Page 10]» era inventata: quel chunk contiene davvero la regola citata — avevo letto
+  solo il suo inizio. Il difetto era l'attribuzione, non l'invenzione.
+- **Il difetto piu' grave non dava 500.** Su `/api/v1/dashboard` lo stesso `Task.WhenAll` sul
+  DbContext condiviso rispondeva **200** con sezioni vuote: `recentActivity` da 0 a 6 elementi dopo
+  la correzione. Un codice di stato non lo avrebbe mai rivelato.
+- **Un test puo' essere verde e cieco.** Tre test di regressione passavano *anche sul codice rotto*
+  perche' il contesto di test non riproduceva `NoTracking`. Da li' [#3866](https://github.com/meepleAi-app/meepleai-monorepo/issues/3866).
 
 ## Come si esegue
 

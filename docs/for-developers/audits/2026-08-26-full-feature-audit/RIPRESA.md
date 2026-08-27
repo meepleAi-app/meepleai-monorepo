@@ -42,6 +42,17 @@ l'inventario, NON riscrivere gli strumenti — esistono e funzionano.
 4. Database: si chiama **`meepleai_staging`** anche in locale. Le colonne sono PascalCase in alcune
    tabelle (`users."Id"`) e snake_case in altre (`shared_games.id`). Non esiste una tabella `games`:
    il catalogo è `shared_games`. Esistono 8 schemi, non solo `public`.
+5. **Verifica da che codice è costruita l'immagine API prima di sondarla.** Durante l'audit il
+   container girava codice di ~3 settimane prima; me ne sono accorto solo ricostruendolo. Il
+   controllo costa un comando — se le migration nel DB non coincidono con quelle in
+   `apps/api/src/Api/Infrastructure/Migrations/`, l'immagine è vecchia:
+
+   ```bash
+   MSYS_NO_PATHCONV=1 docker exec meepleai-postgres psql -U meepleai -d meepleai_staging      -tAc 'SELECT count(*) FROM "__EFMigrationsHistory";'   # deve dare 17
+   ```
+
+   Al 2026-08-27 l'ambiente è allineato: immagine ricostruita da `main-dev`, DB riparato,
+   17/17 migration applicate.
 
 ## Gli strumenti, e come si usano
 

@@ -107,6 +107,57 @@ scostamento avrebbe prodotto un fallimento silenzioso.
 | `users` | 8 | 2 superadmin, 6 utenti |
 | `chat_sessions` · `game_sessions` · `agent_sessions` | **0** | `[threadId]`, `[sessionId]`, `[agentId]` non risolvibili: le rotte che li usano restano da visitare finché le ondate 3 e 4 non creano i dati |
 
+### ⚠️ Il container API era indietro di ~3 settimane rispetto al codice — scoperto il 2026-08-27
+
+L'inventario è estratto dal **sorgente** (`Routing/**`), le sonde interrogano il **container in
+esecuzione**. Non erano la stessa cosa: il container che l'audit ha esercitato era stato costruito
+da codice antecedente al **2026-08-03**, cioè circa tre settimane e mezzo dietro `main-dev`.
+
+La prova è nello stato del database. Le migration registrate si fermavano a
+`20260801104312_AddPdfImageRegions` e **nessuna** delle 17 post-schiacciamento (#3518) era
+applicata; in configurazione dev l'API applica le migration all'avvio, quindi un container con
+codice recente sarebbe andato in crash — come è puntualmente successo ricostruendo l'immagine.
+
+**Quanto invalida?** Misurato invece che supposto: ricostruita l'immagine e riparato il DB, ho
+rieseguito **9 dei findings più gravi** contro il codice corrente.
+
+| Famiglia | Riprovati | Riprodotti |
+|---|---|---|
+| Mutazioni che rispondono 500 (#3847) | 5 | 5 |
+| Letture `admin/config/*-limits` che rispondono 500 | 4 | 4 |
+
+Nove su nove. La staleness non ha inventato quei difetti: sono nel codice di oggi. Resta però un
+limite di metodo da non ripetere — **verificare la provenienza dell'immagine prima di sondarla**,
+non dopo — e una zona d'ombra: gli endpoint aggiunti dopo il 2026-08-03 rispondevano 404 sul
+container vecchio, quindi alcune delle 96 righe «da triagare» possono essere artefatti di questo,
+non difetti.
+
+Un caso mostra il meccanismo al contrario. `GET /admin/llm/monthly-report` era registrato come 500
+**sul path raddoppiato**, dove il 500 sembrava un effetto del routing. Corretto il prefisso
+([#3832](https://github.com/meepleAi-app/meepleai-monorepo/pull/3832)) l'endpoint è diventato
+raggiungibile — e il 500 è rimasto, con una causa tutta sua: quattro analyzer in `Task.WhenAll`
+sullo stesso `DbContext`
+([#3859](https://github.com/meepleAi-app/meepleai-monorepo/issues/3859)). Un 404 può nascondere un
+guasto a valle.
+
+### Riparazione del database locale (2026-08-27)
+
+Ricostruire l'immagine ha reso il DB inavviabile: `InitialCreate` provava a creare tabelle già
+presenti (`42P07`). Il DB era pre-schiacciamento, il codice post. Riparato senza perdere i dati:
+
+```sql
+-- 1. l'unica tabella che il DB non aveva (confronto: 249 tabelle in InitialCreate, 1 assente)
+CREATE TABLE public.game_cover_assignments (...);
+CREATE UNIQUE INDEX ux_game_cover_assignments_game_context ON ... (shared_game_id, context);
+
+-- 2. InitialCreate marcata come applicata: lo schema c'era già
+INSERT INTO "__EFMigrationsHistory" VALUES ('20260803112713_InitialCreate','9.0.11');
+```
+
+Al riavvio le 16 migration successive si sono applicate da sole: **17 su 17 allineate**. Backup
+preventivo in `/tmp/pre-stamp.dump` dentro `meepleai-postgres`. Le 16 righe della vecchia storia
+sono rimaste: EF ignora gli id che non conosce, e tenerle conserva la provenienza.
+
 ### Modifiche fatte all'ambiente locale
 
 Per sbloccare l'audit ho eseguito una sola scrittura, reversibile e circoscritta al DB locale:
@@ -198,8 +249,8 @@ distinguere ciò che non è un difetto vale quanto elencare ciò che lo è.
 
 | # | Cosa | Severità | Stato |
 |---|---|---|---|
-| [#3831](https://github.com/meepleAi-app/meepleai-monorepo/issues/3831) | 4 famiglie di endpoint admin irraggiungibili: prefisso `/api/v1` raddoppiato | P0 | corretto — [PR #3832](https://github.com/meepleAi-app/meepleai-monorepo/pull/3832) |
-| [#3840](https://github.com/meepleAi-app/meepleai-monorepo/issues/3840) | Un'impersonificazione avviata non si può terminare (rotta registrata due volte) | P0 | corretto — [PR #3841](https://github.com/meepleAi-app/meepleai-monorepo/pull/3841) |
+| [#3831](https://github.com/meepleAi-app/meepleai-monorepo/issues/3831) | 4 famiglie di endpoint admin irraggiungibili: prefisso `/api/v1` raddoppiato | P0 | **chiuso** — [PR #3832](https://github.com/meepleAi-app/meepleai-monorepo/pull/3832) mergiata, verificata dal vivo (4 famiglie ora 200) |
+| [#3840](https://github.com/meepleAi-app/meepleai-monorepo/issues/3840) | Un'impersonificazione avviata non si può terminare (rotta registrata due volte) | P0 | **parziale** — [PR #3841](https://github.com/meepleAi-app/meepleai-monorepo/pull/3841) mergiata; ciclo impersonate→end verificato (200, `RevokedAt` valorizzato). Resta il secondo duplicato `scores/confirm` |
 | [#3846](https://github.com/meepleAi-app/meepleai-monorepo/issues/3846) | Upload PDF: risponde 200 e l'elaborazione fallisce, senza segnale all'utente | P1 | aperto |
 | [#3847](https://github.com/meepleAi-app/meepleai-monorepo/issues/3847) | 30 endpoint rispondono 500 su richiesta malformata | P1 | aperto |
 | [#3843](https://github.com/meepleAi-app/meepleai-monorepo/issues/3843) | 7 endpoint in 500: query concorrenti sullo stesso DbContext | P1 | aperto |
@@ -215,6 +266,7 @@ distinguere ciò che non è un difetto vale quanto elencare ciò che lo è.
 | [#3845](https://github.com/meepleAi-app/meepleai-monorepo/issues/3845) | 500 su `contribution-stats` e `cache/metrics` | P2 | aperto |
 | [#3836](https://github.com/meepleAi-app/meepleai-monorepo/issues/3836) | 4 difetti minori (404 client, pagina card, a11y onboarding) | P2 | aperto |
 | [#3858](https://github.com/meepleAi-app/meepleai-monorepo/issues/3858) | `DELETE` sui collegamenti fra entità risponde 204 senza cancellare | P1 | aperto |
+| [#3859](https://github.com/meepleAi-app/meepleai-monorepo/issues/3859) | `monthly-report` in 500: quattro analyzer in `Task.WhenAll` sullo stesso DbContext | P1 | aperto — emerso correggendo #3831 |
 | [#3857](https://github.com/meepleAi-app/meepleai-monorepo/issues/3857) | Toolbox: aggiungere una fase fallisce con 409 su 0 righe aggiornate | P1 | aperto |
 | [#3856](https://github.com/meepleAi-app/meepleai-monorepo/issues/3856) | I mazzi di un toolbox finiscono in una tabella di sessioni e violano la FK | P1 | aperto |
 | [#3855](https://github.com/meepleAi-app/meepleai-monorepo/issues/3855) | L'agente altera le house rule e le attribuisce a pagine del manuale che non le contengono | P1 | aperto |

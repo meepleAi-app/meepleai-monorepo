@@ -217,6 +217,11 @@ internal class FeatureFlagService : IFeatureFlagService
 
             await _mediator.Send(command).ConfigureAwait(false);
 
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
+
             _logger.LogInformation("Feature {FeatureName} enabled{RoleInfo} by {UserId}",
                 LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
         }
@@ -234,6 +239,11 @@ internal class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
+
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled{RoleInfo} by {UserId}",
                 LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
@@ -268,6 +278,11 @@ internal class FeatureFlagService : IFeatureFlagService
 
             await _mediator.Send(command).ConfigureAwait(false);
 
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
+
             _logger.LogInformation("Feature {FeatureName} disabled{RoleInfo} by {UserId}",
                 LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
         }
@@ -285,6 +300,11 @@ internal class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
+
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled{RoleInfo} by {UserId}",
                 LogSanitizer.Sanitize(featureName), role.HasValue ? $" for {role.Value}" : "", LogSanitizer.Sanitize(userId ?? "system"));
@@ -320,6 +340,11 @@ internal class FeatureFlagService : IFeatureFlagService
 
             await _mediator.Send(command).ConfigureAwait(false);
 
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
+
             _logger.LogInformation("Feature {FeatureName} enabled for tier {Tier} by {UserId}",
                 LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
@@ -337,6 +362,11 @@ internal class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
+
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and enabled for tier {Tier} by {UserId}",
                 LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
@@ -372,6 +402,11 @@ internal class FeatureFlagService : IFeatureFlagService
 
             await _mediator.Send(command).ConfigureAwait(false);
 
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
+
             _logger.LogInformation("Feature {FeatureName} disabled for tier {Tier} by {UserId}",
                 LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));
         }
@@ -389,6 +424,11 @@ internal class FeatureFlagService : IFeatureFlagService
                 RequiresRestart: false);
 
             await _mediator.Send(command).ConfigureAwait(false);
+
+            // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
+            // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
+            // violando il vincolo di unicita' su (Key, Environment).
+            await _configService.InvalidateAsync(key, environmentName).ConfigureAwait(false);
 
             _logger.LogInformation("Feature {FeatureName} created and disabled for tier {Tier} by {UserId}",
                 LogSanitizer.Sanitize(featureName), LogSanitizer.Sanitize(tier.Value), LogSanitizer.Sanitize(userId ?? "system"));

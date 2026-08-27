@@ -101,6 +101,16 @@ internal class ConfigurationService : IConfigurationService
     }
 
 
+    /// <inheritdoc />
+    public async Task InvalidateAsync(
+        string key,
+        string? environment = null,
+        CancellationToken cancellationToken = default)
+    {
+        var currentEnvironment = environment ?? _environment.EnvironmentName;
+        await _cache.RemoveAsync(GetCacheKey(key, currentEnvironment), cancellationToken).ConfigureAwait(false);
+    }
+
     // ========================================
     // Private Helper Methods
     // ========================================

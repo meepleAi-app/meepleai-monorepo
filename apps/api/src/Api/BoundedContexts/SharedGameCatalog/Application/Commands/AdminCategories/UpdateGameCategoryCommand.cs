@@ -73,6 +73,8 @@ internal sealed class UpdateGameCategoryCommandHandler : IRequestHandler<UpdateG
         // a second projection query after SaveChangesAsync.
         var entity = await _context.GameCategories
             .Include(c => c.SharedGames)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(c => c.Id == cmd.Id, cancellationToken)
             .ConfigureAwait(false);
 

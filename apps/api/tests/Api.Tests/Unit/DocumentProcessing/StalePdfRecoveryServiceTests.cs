@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.BackgroundServices;
@@ -113,7 +114,11 @@ public sealed class StalePdfRecoveryServiceTests
             {
                 // Write Ready state into the shared in-memory DB.
                 using var db = TestDbContextFactory.CreateInMemoryDbContext(dbName);
-                var entity = await db.PdfDocuments.FindAsync(new object[] { id }, ct);
+                // #3866: FindAsync follows QueryTrackingBehavior, and the context now defaults to
+                // NoTracking like production — without AsTracking this simulated write is a no-op.
+                var entity = await db.PdfDocuments
+                    .AsTracking()
+                    .FirstOrDefaultAsync(e => e.Id == id, ct);
                 if (entity != null)
                 {
                     entity.ProcessingState = "Ready";
@@ -155,7 +160,11 @@ public sealed class StalePdfRecoveryServiceTests
             .Returns(async (Guid id, string fp, Guid userId, CancellationToken ct) =>
             {
                 using var db = TestDbContextFactory.CreateInMemoryDbContext(dbName);
-                var entity = await db.PdfDocuments.FindAsync(new object[] { id }, ct);
+                // #3866: FindAsync follows QueryTrackingBehavior, and the context now defaults to
+                // NoTracking like production — without AsTracking this simulated write is a no-op.
+                var entity = await db.PdfDocuments
+                    .AsTracking()
+                    .FirstOrDefaultAsync(e => e.Id == id, ct);
                 if (entity != null)
                 {
                     entity.ProcessingState = "Failed";

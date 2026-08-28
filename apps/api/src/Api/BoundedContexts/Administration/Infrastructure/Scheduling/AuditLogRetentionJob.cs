@@ -40,6 +40,8 @@ internal sealed class AuditLogRetentionJob : IJob
 
             var expiredEntries = await _db.AuditLogs
                 .Where(a => a.CreatedAt < cutoffDate)
+                // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+                .AsTracking()
                 .ToListAsync(context.CancellationToken)
                 .ConfigureAwait(false);
 

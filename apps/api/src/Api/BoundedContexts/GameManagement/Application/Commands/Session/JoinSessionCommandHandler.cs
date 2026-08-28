@@ -29,6 +29,8 @@ internal sealed class JoinSessionCommandHandler : IRequestHandler<JoinSessionCom
         // Find invite by PIN or link token
         var normalizedToken = request.Token.ToUpperInvariant();
         var invite = await _dbContext.SessionInvites
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(i =>
                 i.Pin == normalizedToken ||
                 i.LinkToken == request.Token,

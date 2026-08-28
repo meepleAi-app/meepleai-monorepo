@@ -85,6 +85,8 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
                 .Include(e => e.Mechanics)
                 .Include(e => e.Designers)
                 .Include(e => e.Publishers)
+                // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+                .AsTracking()
                 .FirstOrDefaultAsync(e => e.Id == command.GameId, cancellationToken)
                 .ConfigureAwait(false);
 

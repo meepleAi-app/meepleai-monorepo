@@ -42,6 +42,10 @@ internal sealed class ProvideAgentFeedbackCommandHandler : IRequestHandler<Provi
             var userGuid = Guid.Parse(request.UserId);
             var messageGuid = Guid.Parse(request.MessageId);
             var existing = await _db.AgentFeedbacks
+                // #3866: tracked on purpose — the caller both mutates `existing` (Outcome/Comment)
+                // and Removes it, and neither reaches the DB on an untracked entity under the
+                // production NoTracking default (PERF-06).
+                .AsTracking()
                 .FirstOrDefaultAsync(f => f.MessageId == messageGuid && f.UserId == userGuid, cancellationToken)
                 .ConfigureAwait(false);
 

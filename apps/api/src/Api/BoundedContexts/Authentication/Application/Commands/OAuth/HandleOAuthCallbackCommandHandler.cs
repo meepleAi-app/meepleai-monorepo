@@ -472,6 +472,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         var providerLower = provider.ToLowerInvariant();
         var oauthAccount = await _db.OAuthAccounts
             .Include(oa => oa.User)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(oa =>
                 oa.Provider == providerLower &&
                 oa.ProviderUserId == userInfo!.Id, cancellationToken).ConfigureAwait(false);

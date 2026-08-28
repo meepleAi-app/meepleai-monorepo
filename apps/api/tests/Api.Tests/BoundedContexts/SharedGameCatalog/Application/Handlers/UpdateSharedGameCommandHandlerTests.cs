@@ -21,6 +21,17 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+
+    /// <summary>
+    /// Issue #3866: the unit of work is mocked, so nothing was ever written — the assertions below
+    /// used to pass only because a tracking-by-default test context resolved the reload to the same
+    /// in-memory instance the handler had mutated. They verified the mutation, not the persistence.
+    /// Wiring the mock to the real SaveChangesAsync makes them verify what they claim to.
+    /// </summary>
+    private void MakeUnitOfWorkPersist() =>
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => _dbContext.SaveChangesAsync(ct));
     private readonly Mock<ILogger<UpdateSharedGameCommandHandler>> _loggerMock = new();
     private readonly MeepleAiDbContext _dbContext;
 
@@ -118,6 +129,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             Categories: new List<string> { "Strategy", "Negotiation" },
             Mechanics: new List<string> { "Dice Rolling" });
 
+        MakeUnitOfWorkPersist();
+
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
 
@@ -166,6 +179,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId,
             BggId: 13);
 
+        MakeUnitOfWorkPersist();
+
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
 
@@ -210,6 +225,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             Rules: null,
             ModifiedBy: userId,
             BggId: 42);
+
+        MakeUnitOfWorkPersist();
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);

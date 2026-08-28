@@ -76,6 +76,8 @@ internal class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePro
         var version = await _db.PromptVersions
             .Include(v => v.Template)
             .Include(v => v.CreatedBy)
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, cancellationToken).ConfigureAwait(false);
 
         if (version == null)
@@ -141,6 +143,8 @@ internal class ActivatePromptVersionCommandHandler : ICommandHandler<ActivatePro
     {
         var otherVersions = await _db.PromptVersions
             .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         foreach (var otherVersion in otherVersions)

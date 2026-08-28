@@ -136,6 +136,8 @@ internal class EmailVerificationService : IEmailVerificationService
 
         var verification = await _db.EmailVerifications
             .Include(v => v.User)
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.TokenHash == tokenHash, ct).ConfigureAwait(false);
 
         if (verification == null)

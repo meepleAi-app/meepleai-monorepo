@@ -216,9 +216,15 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
             MeepleEntityType.Game, _gameId1, cancellationToken: TestContext.Current.CancellationToken);
         links.Should().HaveCount(2);
 
-        // Soft-delete the first link via domain method
-        var link = links[0];
-        link.Delete();
+        // Soft-delete the first link via domain method, through the path production uses.
+        // Issue #3866: the arrange used to call Delete() on the instance returned by
+        // GetForEntityAsync, which is a read-only query and — correctly — does not track. With the
+        // production NoTracking default (PERF-06) nothing was written, and the test proved nothing
+        // about the soft delete. The delete command loads the link with GetByIdAsync, which tracks
+        // on purpose (#3858); the arrange now does the same.
+        var link = await _repository.GetByIdAsync(links[0].Id, TestContext.Current.CancellationToken);
+        link.Should().NotBeNull();
+        link!.Delete();
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 
@@ -234,8 +240,10 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
     {
         var links = await _repository.GetForEntityAsync(
             MeepleEntityType.Game, _gameId1, cancellationToken: TestContext.Current.CancellationToken);
-        var link = links[0];
-        link.Delete();
+        // #3866: through GetByIdAsync — the tracked read the delete command uses (#3858).
+        var link = await _repository.GetByIdAsync(links[0].Id, TestContext.Current.CancellationToken);
+        link.Should().NotBeNull();
+        link!.Delete();
         await _dbContext.SaveChangesAsync();
         _dbContext.ChangeTracker.Clear();
 

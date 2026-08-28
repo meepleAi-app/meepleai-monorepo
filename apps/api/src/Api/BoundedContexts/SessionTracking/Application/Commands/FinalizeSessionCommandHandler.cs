@@ -176,7 +176,11 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // Guarded on the two non-terminal statuses → idempotent, and a no-op when Path B
         // (CompleteGameNightSession) or the CompleteGameNight cascade already closed the link to a
         // terminal state (Completed / Skipped).
+        // #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking (PERF-06), so
+        // without it the two assignments below reached no change tracker and the link stayed open.
+        // Finalizing a session left its GameNightSession link Pending (or InProgress) forever.
         var openLink = await _db.GameNightSessions
+            .AsTracking()
             .FirstOrDefaultAsync(
                 l => l.SessionId == session.Id
                     && (l.Status == nameof(GameNightSessionStatus.InProgress)

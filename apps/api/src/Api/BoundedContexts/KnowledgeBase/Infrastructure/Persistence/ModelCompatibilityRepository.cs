@@ -130,7 +130,12 @@ internal sealed class ModelCompatibilityRepository : RepositoryBase, IModelCompa
         bool isDeprecated,
         CancellationToken cancellationToken = default)
     {
+        // Issue #3866: `.AsTracking()` is REQUIRED — every read-only method in this class says
+        // AsNoTracking() explicitly, which made the two read-modify-write methods look tracked by
+        // contrast. They were not: the DbContext default is NoTracking (PERF-06), so the mutations
+        // below reached no change tracker and the availability update was a no-op.
         var entity = await DbContext.Set<ModelCompatibilityEntryEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.ModelId == modelId, cancellationToken)
             .ConfigureAwait(false);
 
@@ -157,7 +162,9 @@ internal sealed class ModelCompatibilityRepository : RepositoryBase, IModelCompa
         ModelCompatibilityEntry entry,
         CancellationToken cancellationToken = default)
     {
+        // #3866: tracked — the branch below mutates `existing` in place.
         var existing = await DbContext.Set<ModelCompatibilityEntryEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.ModelId == entry.ModelId, cancellationToken)
             .ConfigureAwait(false);
 

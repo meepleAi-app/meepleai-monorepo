@@ -1,8 +1,10 @@
 # Issue #3846 — gate E2E: upload PDF con storage remoto.
 #
 # Avvia lo stack con MinIO (`--profile storage`) + l'override storage E2E, carica un PDF via
-# POST /api/v1/ingest/pdf e pretende che l'elaborazione arrivi a `Ready` con testo estratto, cioè
-# che la pipeline abbia RILETTO l'oggetto dal bucket.
+# POST /api/v1/ingest/pdf e pretende che la pipeline abbia RILETTO l'oggetto dal bucket e lo abbia
+# estratto (PageCount/CharacterCount valorizzati). Non pretende `Ready`: l'ultimo stadio è
+# l'embedding, che richiederebbe embedding-service o Ollama — dipendenze pesanti, estranee al
+# difetto sorvegliato. Vedi il commento sull'asserzione in fondo.
 #
 # Perché serve un gate dedicato: la suite gira con STORAGE_PROVIDER=local
 # (infra/secrets/test.secret), dove `FilePath` è un percorso assoluto reale e il fallback filesystem
@@ -82,13 +84,9 @@ jobs:
           # spenderebbe i timeout dei due stage remoti prima di arrivare al fallback. Qui l'unica
           # dipendenza esterna deve essere il bucket.
           PdfProcessing__Extractor__Provider=Docnet
-          # Embedding deterministico in-process (MockEmbeddingService, 768 dim). Senza, la pipeline
-          # legge l'oggetto dal bucket, lo estrae e poi fallisce sull'ultimo stadio con
-          # error_category=Service perché embedding-service e Ollama non sono avviati: il gate
-          # resterebbe rosso per una dipendenza che non è la sua materia. Il toggle vale solo in
-          # Development (Program.cs, sotto #if DEBUG). MOCK_S3 NON va attivato: il bucket vero è
-          # esattamente ciò che questo gate deve esercitare.
-          MOCK_EMBEDDING=true
+          # NB: MOCK_EMBEDDING (DevTools) qui NON servirebbe a nulla — provato: AddMeepleDevTools
+          # sta sotto #if DEBUG e l'immagine è compilata in Release (apps/api/src/Api/Dockerfile).
+          # Per questo il gate si ferma all'estrazione invece di pretendere Ready.
           APIENV
           # `web` non viene avviato da questo gate, ma compose lo referenzia: senza il file, il
           # parser di compose fallisce prima di arrivare ai servizi che ci servono.
@@ -170,36 +168,39 @@ jobs:
       - name: Assert the pipeline read the object back from the bucket
         run: |
           set -euo pipefail
-          ROW=$(docker exec meepleai-postgres psql -U meepleai -d meepleai_db -tAc \
-            "select processing_state || '|' || coalesce(\"FilePath\",'') || '|' || length(coalesce(\"ExtractedText\",'')) || '|' || coalesce(error_category,'') || '|' || coalesce(\"ProcessingError\",'') from pdf_documents order by \"UploadedAt\" desc limit 1;")
+          ROW=$(docker exec meepleai-postgres psql -U meepleai -d meepleai_db -tAc             "select processing_state || '|' || coalesce(\"FilePath\",'') || '|' || coalesce(\"CharacterCount\",0) || '|' || coalesce(error_category,'') || '|' || coalesce(\"PageCount\",0) || '|' || coalesce(\"ProcessingError\",'') from pdf_documents order by \"UploadedAt\" desc limit 1;")
           echo "riga: $ROW"
 
           STATE=$(echo "$ROW" | cut -d'|' -f1)
           FILE_PATH=$(echo "$ROW" | cut -d'|' -f2)
-          TEXT_LEN=$(echo "$ROW" | cut -d'|' -f3)
-
+          CHAR_COUNT=$(echo "$ROW" | cut -d'|' -f3)
           CATEGORY=$(echo "$ROW" | cut -d'|' -f4)
+          PAGE_COUNT=$(echo "$ROW" | cut -d'|' -f5)
 
-          if [ "$STATE" != "Ready" ]; then
-            # Distinguere la materia del gate da tutto il resto: StorageObjectMissing (o un errore
-            # che nomina un path) significa che la lettura dal bucket è di nuovo rotta — è il
-            # difetto sorvegliato. Qualunque altra categoria è una dipendenza dell'ambiente, e va
-            # letta come tale invece di far cercare il bug nel posto sbagliato.
+          # 🔴 Il criterio è "l'oggetto è stato riletto dal bucket ed estratto", NON
+          # "processing_state = Ready". Ready richiede l'ultimo stadio, l'embedding, e quindi
+          # embedding-service o Ollama: dipendenze pesanti che questo gate non avvia e che non
+          # c'entrano con il difetto sorvegliato. Il mock in-process di DevTools non è utilizzabile
+          # perché l'immagine è compilata in Release e AddMeepleDevTools sta sotto #if DEBUG.
+          # PageCount/CharacterCount sono persistiti da ExtractPdfContentAsync PRIMA dello stadio di
+          # embedding, quindi sopravvivono a un fallimento successivo e testimoniano la lettura.
+          if [ "${PAGE_COUNT:-0}" -lt 1 ] || [ "${CHAR_COUNT:-0}" -lt 10 ]; then
             case "$CATEGORY" in
               StorageObjectMissing)
-                echo "::error::REGRESSIONE #3846: l'oggetto non è stato trovato alla chiave persistita" ;;
+                echo "::error::REGRESSIONE #3846: oggetto non trovato alla chiave persistita ($FILE_PATH)" ;;
               *)
-                echo "::error::l'elaborazione non ha raggiunto Ready per un motivo NON di storage (categoria=$CATEGORY)" ;;
+                echo "::error::estrazione non avvenuta (pagine=$PAGE_COUNT, caratteri=$CHAR_COUNT, categoria=$CATEGORY)" ;;
             esac
             exit 1
           fi
 
-          # Ready senza testo significherebbe che l'estrazione ha girato a vuoto: il criterio del
-          # gate è che l'oggetto sia stato riletto, non che la riga cambi stato.
-          if [ "${TEXT_LEN:-0}" -lt 10 ]; then
-            echo "::error::ExtractedText vuoto o troppo corto ($TEXT_LEN caratteri)"
-            exit 1
-          fi
+          # Oltre l'estrazione, gli unici esiti accettabili sono Ready (stack completo) o un
+          # fallimento sulla dipendenza che il gate non avvia. Un fallimento di storage resta rosso.
+          case "$STATE|$CATEGORY" in
+            "Ready|") echo "ok: pipeline completa fino a Ready" ;;
+            "Failed|Service") echo "ok: letto ed estratto; l'embedding manca perché il gate non avvia i servizi AI" ;;
+            *) echo "::error::esito inatteso: stato=$STATE categoria=$CATEGORY"; exit 1 ;;
+          esac
 
           # La chiave persistita deve puntare a un oggetto che esiste davvero: è l'invariante che
           # #3846 violava — scrittura sotto {gameId}, lettura sotto {pdfId}.

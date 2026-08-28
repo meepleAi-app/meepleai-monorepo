@@ -32,6 +32,20 @@ internal sealed class S3BlobStorageService : IBlobStorageService
     }
 
     /// <summary>
+    /// Issue #3846: <c>DisablePayloadSigning</c> exists for S3-compatible providers that reject
+    /// <c>STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER</c>, but AWSSDK refuses to send an UNSIGNED
+    /// payload over cleartext: every PutObject against an <c>http://</c> endpoint fails with
+    /// "When DisablePayloadSigning is true, the request must be sent over HTTPS." — i.e. no upload
+    /// at all could reach a MinIO dev/E2E bucket. Keep the payload signed on cleartext endpoints
+    /// (the only ones where that error is possible) and unsigned on HTTPS, which is what production
+    /// (R2/AWS) uses: behaviour there is unchanged.
+    ///
+    /// The <c>UsesPlainHttp</c> predicate is the same gate as the presign scheme realignment
+    /// (#3498), so an operator opts into cleartext once and both paths follow.
+    /// </summary>
+    private bool DisablePayloadSigningForEndpoint => !BlobStorageServiceFactory.UsesPlainHttp(_options.Endpoint);
+
+    /// <summary>
     /// Exposes the S3 client for health check connectivity verification.
     /// </summary>
     internal IAmazonS3 S3Client => _s3Client;
@@ -83,7 +97,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 InputStream = uploadStream,
                 ContentType = "application/pdf",
                 AutoCloseStream = false, // Caller owns the original stream; we own `buffer` and dispose it below.
-                DisablePayloadSigning = true, // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
+                DisablePayloadSigning = DisablePayloadSigningForEndpoint, // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER — but only over HTTPS, see the field.
                 DisableDefaultChecksumValidation = true, // Issue #2271: ContentLength is explicit; skip the checksum re-read of the stream.
             };
             request.Headers.ContentLength = contentLength; // Issue #2271: explicit header required by R2 strict validation.
@@ -564,7 +578,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 InputStream = uploadStream,
                 ContentType = contentType,
                 AutoCloseStream = false,
-                DisablePayloadSigning = true,
+                DisablePayloadSigning = DisablePayloadSigningForEndpoint,
             };
 
             await _s3Client.PutObjectAsync(request, ct).ConfigureAwait(false);

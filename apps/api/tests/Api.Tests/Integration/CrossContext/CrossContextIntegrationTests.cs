@@ -1,5 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
+using Microsoft.Extensions.Options;
 using Api.Tests.TestHelpers;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -48,6 +50,20 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
+
+        // #3633: senza questo override ogni assert su audit_outbox trova 0 righe. Il default DI è
+        // OutboxOnly (cutover T9 di #1535): gli eventi vengono accodati in domain_event_outbox e NON
+        // pubblicati inline via MediatR, quindi DomainEventAuditHandler — che è ciò che scrive
+        // audit_outbox — non viene mai invocato. Nessuna eccezione, solo zero dispatch.
+        //
+        // #3866: questa classe era rimasta indietro rispetto a DomainEventDispatcherIntegrationTests
+        // e FullStackCrossContextWorkflowTests, che l'override ce l'hanno dal #3633; i suoi cinque
+        // rossi erano già nella baseline di main-dev, non li ha introdotti la parità NoTracking.
+        //
+        // ⚠️ Limite dichiarato, lo stesso di #3633: così questi test coprono il percorso Hybrid, non
+        // l'OutboxOnly che gira in produzione. Riscriverli sulla catena reale è #3633.
+        services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+            Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
 
         _serviceProvider = services.BuildServiceProvider();
         _eventCollector = _serviceProvider.GetRequiredService<IDomainEventCollector>();
@@ -99,12 +115,12 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
         // Assert - audit_outbox row created by DomainEventAuditHandler<GameCreatedEvent>
         // (Issue #1534: single canonical write path → audit_outbox)
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
+        var outboxRow = allOutbox.FirstOrDefault(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent"));
 
         outboxRow.Should().NotBeNull();
-        outboxRow!.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
-        outboxRow.PayloadJson.Should().Contain("\"Result\":\"Success\"");
-        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
+        AuditOutboxPayloadJson.Property(outboxRow!.PayloadJson, "Action").Should().Be("DomainEvent.GameCreatedEvent");
+        AuditOutboxPayloadJson.Property(outboxRow.PayloadJson, "Result").Should().Be("Success");
+        AuditOutboxPayloadJson.Detail(outboxRow.PayloadJson, "GameId").Should().Be(gameId.ToString());
 
         // Verify game persisted
         var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
@@ -133,11 +149,11 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
 
         // Assert - audit_outbox row from GameLinkedToBggEvent
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\""));
+        var outboxRow = allOutbox.FirstOrDefault(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameLinkedToBggEvent"));
 
         outboxRow.Should().NotBeNull();
-        outboxRow!.PayloadJson.Should().Contain("266192");
-        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
+        AuditOutboxPayloadJson.Detail(outboxRow!.PayloadJson, "BggId").Should().Be("266192");
+        AuditOutboxPayloadJson.Detail(outboxRow.PayloadJson, "GameId").Should().Be(gameId.ToString());
 
         // Verify BGG metadata persisted
         var savedGame = await _dbContext.SharedGames.FindAsync(new object[] { gameId }, TestCancellationToken);
@@ -172,13 +188,13 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
 
         // Assert - audit_outbox row for each game
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRows = allOutbox.Where(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"")).ToList();
+        var outboxRows = allOutbox.Where(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent")).ToList();
 
         outboxRows.Should().HaveCount(3);
         outboxRows.Should().AllSatisfy(row =>
         {
-            row.PayloadJson.Should().Contain("\"Result\":\"Success\"");
-            row.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
+            AuditOutboxPayloadJson.Property(row.PayloadJson, "Result").Should().Be("Success");
+            AuditOutboxPayloadJson.Property(row.PayloadJson, "Action").Should().Be("DomainEvent.GameCreatedEvent");
         });
 
         // Verify all games persisted
@@ -220,8 +236,8 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
             .ToList();
 
         outboxRows.Should().HaveCountGreaterThanOrEqualTo(2);
-        outboxRows.Should().Contain(row => row.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
-        outboxRows.Should().Contain(row => row.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\""));
+        outboxRows.Should().Contain(row => AuditOutboxPayloadJson.IsResource(row.PayloadJson, "GameCreatedEvent"));
+        outboxRows.Should().Contain(row => AuditOutboxPayloadJson.IsResource(row.PayloadJson, "GameLinkedToBggEvent"));
     }
 
     /// <summary>
@@ -249,8 +265,8 @@ public sealed class CrossContextIntegrationTests : IAsyncLifetime
 
         // audit_outbox row still created (handlers are resilient)
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"") &&
-                                                       o.PayloadJson.Contains(gameId.ToString()));
+        var outboxRow = allOutbox.FirstOrDefault(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent")
+            && string.Equals(AuditOutboxPayloadJson.Detail(o.PayloadJson, "GameId"), gameId.ToString(), StringComparison.Ordinal));
 
         outboxRow.Should().NotBeNull();
     }

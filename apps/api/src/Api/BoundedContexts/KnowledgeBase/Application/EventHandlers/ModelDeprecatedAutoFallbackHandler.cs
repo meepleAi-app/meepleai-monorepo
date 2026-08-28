@@ -49,7 +49,10 @@ internal sealed class ModelDeprecatedAutoFallbackHandler
         try
         {
             // Find strategy mappings that use the deprecated model as primary AND have fallbacks
+            // #3866: AsTracking is load-bearing — `mapping.PrimaryModel = fallbackModel` below only
+            // reaches the DB if the entity is tracked, and production defaults to NoTracking (PERF-06).
             var affectedMappings = await _dbContext.Set<StrategyModelMappingEntity>()
+                .AsTracking()
                 .Where(m => m.PrimaryModel == notification.ModelId
                     && notification.AffectedStrategies.Contains(m.Strategy)
                     && m.FallbackModels != null

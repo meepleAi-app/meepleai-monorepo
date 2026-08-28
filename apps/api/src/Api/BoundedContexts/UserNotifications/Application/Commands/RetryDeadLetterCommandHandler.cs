@@ -23,6 +23,8 @@ internal class RetryDeadLetterCommandHandler : ICommandHandler<RetryDeadLetterCo
     public async Task<bool> Handle(RetryDeadLetterCommand command, CancellationToken cancellationToken)
     {
         var entity = await _dbContext.Set<NotificationQueueEntity>()
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == command.ItemId && e.Status == "dead_letter", cancellationToken)
             .ConfigureAwait(false);
 

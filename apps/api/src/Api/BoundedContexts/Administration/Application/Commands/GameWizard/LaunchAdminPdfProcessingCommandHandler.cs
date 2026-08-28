@@ -64,6 +64,8 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
 
         // Find the PDF document (verify it belongs to the resolved game)
         var pdfEntity = await _dbContext.PdfDocuments
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(
                 p => p.Id == command.PdfDocumentId && p.SharedGameId == resolvedGameId,
                 cancellationToken)

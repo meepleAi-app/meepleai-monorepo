@@ -81,7 +81,12 @@ internal sealed class IncrementChunkUsageCountsCommandHandler
         // (citation budget per chat turn ≈ 10-20 chunks).
         var locatorSet = distinctLocators.ToHashSet();
 
+        // #3866: AsTracking is load-bearing — `chunk.UsageCount += 1` below only reaches the DB if
+        // the entity is tracked, and production defaults to NoTracking (PERF-06). Without it the
+        // counter was never incremented in production, while eight tests covered it and passed on a
+        // tracking-by-default test context.
         var candidates = await _dbContext.TextChunks
+            .AsTracking()
             .Where(c => pdfDocumentIds.Contains(c.PdfDocumentId) && chunkIndices.Contains(c.ChunkIndex))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

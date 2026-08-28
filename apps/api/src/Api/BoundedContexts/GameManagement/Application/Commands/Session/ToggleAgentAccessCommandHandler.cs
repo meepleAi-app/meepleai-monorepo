@@ -40,6 +40,8 @@ internal sealed class ToggleAgentAccessCommandHandler : IRequestHandler<ToggleAg
             throw new ForbiddenException("Only the session host can toggle agent access");
 
         var participant = await _dbContext.SessionParticipants
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(p => p.Id == request.ParticipantId && p.SessionId == request.SessionId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("SessionParticipant", request.ParticipantId.ToString());

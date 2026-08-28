@@ -318,6 +318,8 @@ internal static class PdfSeeder
         // Load the existing record tracked and reset it to Pending, clearing every error field
         // left over from the previous Failed run so the pipeline reprocesses it cleanly.
         var pdfEntity = await db.PdfDocuments
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(p => p.Id == existingId, ct)
             .ConfigureAwait(false);
         if (pdfEntity is null)

@@ -35,6 +35,8 @@ internal static class HealthStateOrphanCleanup
         ArgumentNullException.ThrowIfNull(registeredNames);
 
         var allRows = await db.ServiceHealthStates
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

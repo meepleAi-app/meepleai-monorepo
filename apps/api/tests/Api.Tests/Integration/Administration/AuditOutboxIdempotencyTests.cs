@@ -116,7 +116,12 @@ public sealed class AuditOutboxIdempotencyTests : IAsyncLifetime
         // internal test helper on AuditOutboxEntity. The audit_logs rows for these ids still exist
         // — this is exactly the scenario the idempotency pre-check must catch.
         var firstTwoIds = auditIds.Take(2).ToList();
+        // Issue #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking (PERF-06),
+        // so MarkPendingForTest() below mutated detached rows and SaveChangesAsync wrote nothing.
+        // The rows stayed Sent, the second drain found nothing to do, and the idempotency pre-check
+        // this test exists to exercise was never reached.
         var firstTwoRows = await db.AuditOutbox
+            .AsTracking()
             .Where(r => firstTwoIds.Contains(r.Id))
             .ToListAsync(TestCancellationToken);
         foreach (var row in firstTwoRows)

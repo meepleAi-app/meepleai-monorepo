@@ -198,7 +198,11 @@ public sealed class S1AcceptanceScenariosTests
 
         // Simulate recovery: re-flag the first 2 outbox rows back to Pending.
         var firstTwoIds = ids.Take(2).ToList();
+        // #3866: tracked — MarkPendingForTest() mutates these rows, and the DbContext default is
+        // NoTracking (PERF-06), so a plain read left the re-flag unwritten and the recovery drain
+        // found nothing.
         var firstTwo = await ctx.Db.AuditOutbox
+            .AsTracking()
             .Where(r => firstTwoIds.Contains(r.Id))
             .ToListAsync(TestCancellationToken);
         foreach (var row in firstTwo) row.MarkPendingForTest();

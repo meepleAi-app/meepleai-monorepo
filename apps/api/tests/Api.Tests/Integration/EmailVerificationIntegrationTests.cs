@@ -156,10 +156,20 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
         var verification = await _dbContext.EmailVerifications.FirstOrDefaultAsync(v => v.UserId == userId, TestCancellationToken);
         verification.Should().NotBeNull();
 
-        // Since we store the hash, we need to create a new test token and store its hash
+        // Since we store the hash, we need to create a new test token and store its hash.
+        // Issue #3866: this used to assign TokenHash on the entity read above and call
+        // SaveChangesAsync. With the production NoTracking default (PERF-06) that read is DETACHED,
+        // so the swap never reached the row and VerifyEmailAsync below looked up a hash that was
+        // not in the database. A set-based update states the precondition and proves it landed.
         var testToken = "test-verification-token-for-flow";
-        verification.TokenHash = CryptographyHelper.ComputeSha256HashBase64(testToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        var swapped = await _dbContext.EmailVerifications
+            .Where(v => v.Id == verification.Id)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(
+                    v => v.TokenHash,
+                    CryptographyHelper.ComputeSha256HashBase64(testToken)),
+                TestCancellationToken);
+        swapped.Should().Be(1, "the verification row must exist before it can be redeemed");
 
         // Act 2: Verify email
         var verifyResult = await service.VerifyEmailAsync(testToken, TestCancellationToken);

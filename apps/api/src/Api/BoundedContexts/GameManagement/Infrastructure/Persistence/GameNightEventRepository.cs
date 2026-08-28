@@ -137,7 +137,11 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     public async Task<IReadOnlyList<GameNightEvent>> GetEventsNeedingReminderAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {
-        // No AsNoTracking — reminder job must persist SentAt flag changes via SaveChangesAsync.
+        // Issue #3866: the note that used to be here ("no AsNoTracking so the reminder job can
+        // persist SentAt via SaveChangesAsync") described something that never happened — the
+        // DbContext default is NoTracking (PERF-06), so omitting AsNoTracking() does not track
+        // anything, and this method returns MAPPED DOMAIN objects in any case. The job writes the
+        // flag with a direct ExecuteUpdate (#2720), which is why it works.
         var entities = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
@@ -323,9 +327,10 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     public async Task<GameNightEvent?> FindByLinkedSessionIdAsync(
         Guid sessionId, CancellationToken cancellationToken = default)
     {
-        // No AsNoTracking — the caller (SessionStartedHandler, invariante #15) mutates
-        // the aggregate via HandleFirstSessionStarted and persists via UpdateAsync,
-        // so the entity must be tracked end-to-end for change detection on Status/UpdatedAt.
+        // Issue #3866: the note that used to be here claimed the entity stays tracked end-to-end.
+        // It does not — the DbContext default is NoTracking (PERF-06) and this method returns a
+        // MAPPED DOMAIN object anyway. Persistence works because UpdateAsync reconciles the detached
+        // aggregate itself (AttachOrUpdate), not because of change detection on this read.
         var entity = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)

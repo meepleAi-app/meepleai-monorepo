@@ -104,8 +104,13 @@ public sealed class SessionXminConcurrencyTests : IAsyncLifetime
         await using var firstContext = _fixture.CreateDbContext(_connectionString);
         await using var secondContext = _fixture.CreateDbContext(_connectionString);
 
-        var seenByFirst = await firstContext.SessionTrackingSessions.FirstAsync(s => s.Id == id);
-        var seenBySecond = await secondContext.SessionTrackingSessions.FirstAsync(s => s.Id == id);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var seenByFirst = await firstContext.SessionTrackingSessions.AsTracking().FirstAsync(s => s.Id == id);
+        var seenBySecond = await secondContext.SessionTrackingSessions.AsTracking().FirstAsync(s => s.Id == id);
 
         seenByFirst.Status = "in-progress";
         seenByFirst.StartedAt = DateTime.UtcNow;
@@ -128,7 +133,7 @@ public sealed class SessionXminConcurrencyTests : IAsyncLifetime
         var id = await SeedSessionAsync();
 
         await using var context = _fixture.CreateDbContext(_connectionString);
-        var session = await context.SessionTrackingSessions.FirstAsync(s => s.Id == id);
+        var session = await context.SessionTrackingSessions.AsTracking().FirstAsync(s => s.Id == id); // #3866
         session.ScoreData = """{"bob":7}""";
 
         var write = async () => await context.SaveChangesAsync();

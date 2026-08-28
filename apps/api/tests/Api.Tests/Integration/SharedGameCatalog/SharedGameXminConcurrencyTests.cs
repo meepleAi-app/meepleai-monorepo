@@ -71,8 +71,13 @@ public sealed class SharedGameXminConcurrencyTests : IAsyncLifetime
         await using var dbA = _fixture.CreateDbContext(_connectionString);
         await using var dbB = _fixture.CreateDbContext(_connectionString);
 
-        var gameA = await dbA.SharedGames.FirstAsync(g => g.Id == gameId);
-        var gameB = await dbB.SharedGames.FirstAsync(g => g.Id == gameId);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var gameA = await dbA.SharedGames.AsTracking().FirstAsync(g => g.Id == gameId);
+        var gameB = await dbB.SharedGames.AsTracking().FirstAsync(g => g.Id == gameId);
 
         gameA.Should().NotBeSameAs(gameB);
 

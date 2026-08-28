@@ -91,8 +91,13 @@ public sealed class RuleSpecXminConcurrencyTests : IAsyncLifetime
         await using var firstContext = _fixture.CreateDbContext(_connectionString);
         await using var secondContext = _fixture.CreateDbContext(_connectionString);
 
-        var seenByFirst = await firstContext.RuleSpecs.FirstAsync(r => r.Id == specId);
-        var seenBySecond = await secondContext.RuleSpecs.FirstAsync(r => r.Id == specId);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var seenByFirst = await firstContext.RuleSpecs.AsTracking().FirstAsync(r => r.Id == specId);
+        var seenBySecond = await secondContext.RuleSpecs.AsTracking().FirstAsync(r => r.Id == specId);
 
         seenByFirst.Version = "v2";
         await firstContext.SaveChangesAsync();

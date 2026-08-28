@@ -83,8 +83,13 @@ public sealed class CatalogSeedDraftXminConcurrencyTests : IAsyncLifetime
         await using var first = _fixture.CreateDbContext(_connectionString);
         await using var second = _fixture.CreateDbContext(_connectionString);
 
-        var seenByFirst = await first.CatalogSeedDrafts.FirstAsync(d => d.Id == id);
-        var seenBySecond = await second.CatalogSeedDrafts.FirstAsync(d => d.Id == id);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var seenByFirst = await first.CatalogSeedDrafts.AsTracking().FirstAsync(d => d.Id == id);
+        var seenBySecond = await second.CatalogSeedDrafts.AsTracking().FirstAsync(d => d.Id == id);
 
         seenByFirst.Status = "Fetched";
         seenByFirst.FetchedAt = DateTime.UtcNow;
@@ -108,7 +113,7 @@ public sealed class CatalogSeedDraftXminConcurrencyTests : IAsyncLifetime
         var id = await SeedDraftAsync();
 
         await using var context = _fixture.CreateDbContext(_connectionString);
-        var draft = await context.CatalogSeedDrafts.FirstAsync(d => d.Id == id);
+        var draft = await context.CatalogSeedDrafts.AsTracking().FirstAsync(d => d.Id == id); // #3866
         draft.Status = "Fetched";
 
         var write = async () => await context.SaveChangesAsync();

@@ -87,7 +87,26 @@ public sealed class UserTokenUsageRepository : RepositoryBase, IUserTokenUsageRe
 
     public async Task UpdateAsync(UserTokenUsage usage, CancellationToken cancellationToken = default)
     {
-        DbContext.Set<UserTokenUsage>().Update(usage);
+        ArgumentNullException.ThrowIfNull(usage);
+
+        // Issue #3866: reads run with the production NoTracking default (PERF-06), so every call
+        // hands us a FRESH instance of the row. TokenTrackingService does read-modify-write once per
+        // tracked usage, and it runs more than once inside a single scope: the first call leaves its
+        // instance tracked by Update(), and the second one attaches a second instance of the same
+        // key — 'cannot be tracked because another instance with the same key value is already being
+        // tracked'. Resolve the identity first and copy the values onto the tracked instance; every
+        // property of this aggregate is scalar (the two lists are jsonb converters), so SetValues
+        // carries all of them. Same shape as ReportExecutionRepository (#2541).
+        var tracked = DbContext.Set<UserTokenUsage>().Local.FirstOrDefault(e => e.Id == usage.Id);
+        if (tracked is not null && !ReferenceEquals(tracked, usage))
+        {
+            DbContext.Entry(tracked).CurrentValues.SetValues(usage);
+        }
+        else
+        {
+            DbContext.Set<UserTokenUsage>().Update(usage);
+        }
+
         await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 

@@ -322,6 +322,13 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         await Repository.AddAsync(session2, TestCancellationToken);
         await Repository.AddAsync(session3, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
+        // Issue #3866: production starts every request with an empty change tracker, so the code
+        // under test never finds the rows it is about to touch already tracked. Seeding through the
+        // same DbContext leaves them tracked, and RevokeAllUserSessionsAsync — which reads with the
+        // production NoTracking default and then attaches what it read — hits an identity conflict
+        // that cannot happen in production. Clearing here ends the arrange and starts the act from
+        // the state a real request would see.
+        DbContext.ChangeTracker.Clear();
 
         // Act
         await Repository.RevokeAllUserSessionsAsync(userId, TestCancellationToken);
@@ -347,6 +354,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         await DbContext.SaveChangesAsync(TestCancellationToken);
 
         var originalRevokedAt = session2.RevokedAt;
+        DbContext.ChangeTracker.Clear(); // #3866: end of arrange — act from an empty tracker, like a request
 
         // Act
         await Repository.RevokeAllUserSessionsAsync(userId, TestCancellationToken);
@@ -359,7 +367,13 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         var session2Updated = allSessions.First(s => s.Id == session2.Id);
 
         session1Updated.RevokedAt.Should().NotBeNull();
-        session2Updated.RevokedAt.Should().Be(originalRevokedAt); // Should not change
+        // Issue #3866: the read now comes from Postgres instead of the change tracker, so the value
+        // has been through a `timestamp` column — microsecond precision, against the 100ns ticks of
+        // the in-memory DateTime. An exact Be() was only ever comparing the object with itself.
+        session2Updated.RevokedAt.Should().BeCloseTo(
+            originalRevokedAt!.Value,
+            TimeSpan.FromMicroseconds(1),
+            "the already-revoked session must keep its original timestamp");
     }
 
     [Fact]
@@ -378,6 +392,7 @@ public class SessionRepositoryTests : SharedDatabaseTestBase<SessionRepository>
         await Repository.AddAsync(user1Session2, TestCancellationToken);
         await Repository.AddAsync(user2Session, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
+        DbContext.ChangeTracker.Clear(); // #3866: end of arrange — act from an empty tracker, like a request
 
         // Act
         await Repository.RevokeAllUserSessionsAsync(user1Id, TestCancellationToken);

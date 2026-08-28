@@ -89,6 +89,12 @@ public class LedgerEntryRepositoryIntegrationTests : IAsyncLifetime
 
         _context.LedgerEntries.AddRange(entries);
         await _context.SaveChangesAsync();
+
+        // Issue #3866: production starts every request with an empty change tracker. Leaving the
+        // seed tracked here makes the repository see TWO instances of the same row — the seeded one
+        // and the one a test re-reads with the production NoTracking default — and Update()/Remove()
+        // on the second throws an identity conflict that cannot happen in a real scope.
+        _context.ChangeTracker.Clear();
     }
 
     public ValueTask DisposeAsync()

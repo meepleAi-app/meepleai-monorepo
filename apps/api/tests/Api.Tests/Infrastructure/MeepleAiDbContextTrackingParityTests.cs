@@ -20,9 +20,9 @@ namespace Api.Tests.Infrastructure;
 /// found in production or by an audit, never by a test. On #3858 the first regression test passed
 /// against the broken code, and only turned red once the test context reproduced NoTracking.
 ///
-/// The parity is enforced in the constructor rather than left to each fixture: 287 test files build
-/// a context, and a rule that has to be remembered 287 times is not a rule. An explicit
-/// <c>UseQueryTrackingBehavior</c> on the options still wins — that is the documented way to opt out.
+/// The parity is enforced in <c>OnConfiguring</c> rather than left to each fixture: 287 test files
+/// build a context, and a rule that has to be remembered 287 times is not a rule. It deliberately
+/// does NOT live in the constructor — see <see cref="ConstructingContext_DoesNotForceTheModelToBeBuilt"/>.
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "Infrastructure")]
@@ -58,11 +58,40 @@ public sealed class MeepleAiDbContextTrackingParityTests
     }
 
     /// <summary>
+    /// The parity must not change WHEN the model is built. Assigning
+    /// <c>ChangeTracker.QueryTrackingBehavior</c> in the constructor forces the ChangeTracker — and
+    /// with it the model — to be built at construction time, turning every latent model
+    /// misconfiguration into a failure at <c>new MeepleAiDbContext(...)</c> even for a context nobody
+    /// queries. SQLite cannot map pgvector's <c>Vector</c>, so a fixture that swaps in SQLite to test
+    /// routing only (<c>EndpointContractTests</c>) died on "No suitable constructor was found for
+    /// entity type 'Vector'". <c>OnConfiguring</c> runs before the ChangeTracker exists, so the
+    /// default applies and the model stays lazy.
+    /// </summary>
+    [Fact]
+    public void ConstructingContext_DoesNotForceTheModelToBeBuilt()
+    {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseSqlite("DataSource=:memory:")
+            .Options;
+
+        var act = () =>
+        {
+            using var db = new MeepleAiDbContext(
+                options,
+                new Mock<IMediator>().Object,
+                new Mock<IDomainEventCollector>().Object);
+        };
+
+        act.Should().NotThrow(
+            "a context that is never queried must not pay for — nor fail on — building the model");
+    }
+
+    /// <summary>
     /// An opt-out has to exist: a fixture whose subject genuinely needs tracking must be able to say
     /// so, or the parity becomes a straitjacket. It is expressed ON THE INSTANCE, not on the options —
     /// <c>CoreOptionsExtension.QueryTrackingBehavior</c> already reads <c>TrackAll</c> when nothing was
-    /// configured, so the constructor cannot tell an explicit choice from an absent one and defaults
-    /// unconditionally. This test pins the seam that a fixture is expected to use.
+    /// configured, so <c>OnConfiguring</c> cannot tell an explicit choice from an absent one and
+    /// defaults unconditionally. This test pins the seam that a fixture is expected to use.
     /// </summary>
     [Fact]
     public void FixtureThatNeedsTracking_CanOptOutOnTheInstance()

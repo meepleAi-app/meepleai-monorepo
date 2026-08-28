@@ -70,7 +70,7 @@ public sealed class RetryJobRequeuePersistsIntegrationTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(
-            _isolatedDbConnectionString);
+            _isolatedDbConnectionString, useNoTrackingDefault: true);
 
         services.AddSingleton<IHttpContextAccessor>(new Mock<IHttpContextAccessor>().Object);
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();

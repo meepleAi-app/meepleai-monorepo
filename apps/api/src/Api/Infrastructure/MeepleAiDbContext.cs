@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
@@ -82,33 +81,6 @@ public class MeepleAiDbContext : DbContext
         // Check extensions to see if InMemory provider is being used
         _isInMemoryDatabase = options.Extensions
             .Any(e => e.GetType().Name.Contains("InMemory", StringComparison.OrdinalIgnoreCase));
-
-        // Issue #3866: production sets NoTracking on the options (PERF-06,
-        // InfrastructureServiceExtensions.cs), so an entity returned by a query is NOT tracked and
-        // mutating it before SaveChangesAsync writes nothing — silently. Test fixtures build their
-        // own context and, without that option, get EF Core's tracking-by-default: the whole family
-        // of "the handler mutated an untracked entity" defects is invisible to them. It has shipped
-        // five times (#1627, #1633, #2804, #3564, #3858) — on #3858 the first regression test passed
-        // against the broken code and only turned red once its context reproduced NoTracking.
-        //
-        // 287 test files build a context; a rule that must be remembered 287 times is not a rule.
-        // Defaulting here makes the parity structural, and production — which sets the same value on
-        // the options — is unaffected.
-        //
-        // Two seams were tried and do NOT work here, so don't reintroduce them:
-        //   - OnConfiguring: with options supplied by the caller (every DI and test path) an option
-        //     added there does not reach the already built ChangeTracker — the parity test stayed red.
-        //   - reading CoreOptionsExtension.QueryTrackingBehavior to detect an explicit choice: it is
-        //     never null, it already reads TrackAll when nothing was configured, so "unset" and
-        //     "explicitly TrackAll" are indistinguishable.
-        // Hence: default unconditionally, and let a fixture that genuinely needs tracking opt out on
-        // the instance right after construction:
-        //     db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
-#pragma warning disable MA0056 // Do not call overridable members in constructor — ChangeTracker is
-        // not overridden in this class, and EF Core exposes no other seam that applies to
-        // caller-supplied options (see above).
-        ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
-#pragma warning restore MA0056
     }
 
     public DbSet<UserEntity> Users => Set<UserEntity>();

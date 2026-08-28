@@ -47,7 +47,14 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         try
         {
             var pdfGuid = Guid.Parse(pdfId);
+            // Issue #3866: `.AsTracking()` is REQUIRED on both reads of this handler. The DbContext
+            // default is NoTracking (PERF-06), so each `Remove()` below had to ATTACH what the read
+            // returned. When the same row was reachable more than once in the scope that threw
+            // "cannot be tracked because another instance with the same key value is already being
+            // tracked" — wrapped as a PdfStorageException, i.e. a 500 on a delete that should
+            // succeed. A delete path needs one instance per row, which is what tracking gives.
             var pdfDoc = await _db.PdfDocuments
+                .AsTracking()
                 .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
 
             if (pdfDoc == null)
@@ -155,6 +162,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     private async Task DeleteVectorDocumentAsync(Guid pdfGuid, string pdfId, CancellationToken cancellationToken)
     {
         var vectorDoc = await _db.VectorDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
 
         if (vectorDoc == null)
@@ -200,9 +208,24 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             return false;
         }
 
+        // Issue #3866: `GetForEntityAsync` is a read query and — correctly — does not track, so
+        // `Remove()` had to ATTACH the instance it returned. When the same row was already tracked
+        // elsewhere in the scope that threw "cannot be tracked because another instance with the
+        // same key value is already being tracked", wrapped as a PdfStorageException: a 500 on a
+        // delete that should succeed. `GetByIdAsync` is the tracked read the repository documents
+        // for exactly this purpose (#3858), so the delete goes through it.
+        var trackedLink = await _entityLinkRepository
+            .GetByIdAsync(callerLink.Id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (trackedLink is null)
+        {
+            return false;
+        }
+
         // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
         // soft-delete (link.Delete()) used by DeleteEntityLinkCommandHandler.
-        _entityLinkRepository.Remove(callerLink);
+        _entityLinkRepository.Remove(trackedLink);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }

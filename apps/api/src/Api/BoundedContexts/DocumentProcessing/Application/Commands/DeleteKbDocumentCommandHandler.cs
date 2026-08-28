@@ -60,7 +60,13 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         var id = command.Id;
 
         // 1. Guard
+        // Issue #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking (PERF-06),
+        // so `_db.PdfDocuments.Remove(doc)` further down had to ATTACH the instance this read
+        // returned. Reached in a loop over several documents in one scope (OrphanPdfCleanupSeeder)
+        // that either collided on identity or left the row in place: the orphan cleanup reported
+        // success and the PDF was still there.
         var doc = await _db.PdfDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
 
         if (doc == null)

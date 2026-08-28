@@ -518,7 +518,13 @@ internal class TotpService : ITotpService
             try
             {
                 // Get all unused backup codes for user (within transaction)
+                // Issue #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking
+                // (PERF-06), so the `storedCode.IsUsed = true` below reached no change tracker and
+                // SaveChangesAsync wrote nothing. A backup code was accepted again, and again: the
+                // single-use guarantee this Serializable transaction exists to enforce did not hold.
+                // Same defect as #1627 in this very service, in a method it did not reach.
                 var backupCodes = await _dbContext.UserBackupCodes
+                    .AsTracking()
                     .Where(bc => bc.UserId == userId && !bc.IsUsed)
                     .ToListAsync(cancellationToken).ConfigureAwait(false);
 

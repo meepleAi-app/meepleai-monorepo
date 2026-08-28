@@ -78,7 +78,12 @@ internal sealed class UpsertScoreWithDiaryCommandHandler
             : request.Category!.Trim();
 
         // Locate the existing projection row (last-write-wins upsert scope).
+        // Issue #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking (PERF-06),
+        // so the `existing.ScoreValue = request.NewValue` below reached no change tracker. The diary
+        // entry recorded the change and the score itself stayed at its previous value: an update to
+        // an already-scored entry was lost, silently, while the response reported it applied.
         var existing = await _db.SessionTrackingScoreEntries
+            .AsTracking()
             .FirstOrDefaultAsync(
                 e => e.SessionId == request.SessionId
                   && e.ParticipantId == request.ParticipantId

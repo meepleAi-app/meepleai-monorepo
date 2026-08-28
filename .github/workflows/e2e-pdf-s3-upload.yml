@@ -1,10 +1,10 @@
 # Issue #3846 — gate E2E: upload PDF con storage remoto.
 #
 # Avvia lo stack con MinIO (`--profile storage`) + l'override storage E2E, carica un PDF via
-# POST /api/v1/ingest/pdf e pretende che la pipeline abbia RILETTO l'oggetto dal bucket e lo abbia
-# estratto (PageCount/CharacterCount valorizzati). Non pretende `Ready`: l'ultimo stadio è
-# l'embedding, che richiederebbe embedding-service o Ollama — dipendenze pesanti, estranee al
-# difetto sorvegliato. Vedi il commento sull'asserzione in fondo.
+# POST /api/v1/ingest/pdf e verifica due cose: che l'oggetto esista alla chiave PERSISTITA (sotto il
+# gameId, dove lo scrive l'upload) e che la pipeline abbia superato lettura ed estrazione. Non
+# pretende `Ready`: l'ultimo stadio è l'embedding, che richiederebbe embedding-service o Ollama —
+# dipendenze pesanti ed estranee al difetto sorvegliato. Vedi il commento sull'asserzione.
 #
 # Perché serve un gate dedicato: la suite gira con STORAGE_PROVIDER=local
 # (infra/secrets/test.secret), dove `FilePath` è un percorso assoluto reale e il fallback filesystem
@@ -168,53 +168,63 @@ jobs:
       - name: Assert the pipeline read the object back from the bucket
         run: |
           set -euo pipefail
-          ROW=$(docker exec meepleai-postgres psql -U meepleai -d meepleai_db -tAc             "select processing_state || '|' || coalesce(\"FilePath\",'') || '|' || coalesce(\"CharacterCount\",0) || '|' || coalesce(error_category,'') || '|' || coalesce(\"PageCount\",0) || '|' || coalesce(\"ProcessingError\",'') from pdf_documents order by \"UploadedAt\" desc limit 1;")
+          ROW=$(docker exec meepleai-postgres psql -U meepleai -d meepleai_db -tAc "select processing_state || '|' || coalesce(\"FilePath\",'') || '|' || coalesce(failed_at_state,'') || '|' || coalesce(error_category,'') || '|' || coalesce(\"ProcessingError\",'') from pdf_documents order by \"UploadedAt\" desc limit 1;")
           echo "riga: $ROW"
 
           STATE=$(echo "$ROW" | cut -d'|' -f1)
           FILE_PATH=$(echo "$ROW" | cut -d'|' -f2)
-          CHAR_COUNT=$(echo "$ROW" | cut -d'|' -f3)
+          FAILED_AT=$(echo "$ROW" | cut -d'|' -f3)
           CATEGORY=$(echo "$ROW" | cut -d'|' -f4)
-          PAGE_COUNT=$(echo "$ROW" | cut -d'|' -f5)
 
-          # 🔴 Il criterio è "l'oggetto è stato riletto dal bucket ed estratto", NON
-          # "processing_state = Ready". Ready richiede l'ultimo stadio, l'embedding, e quindi
-          # embedding-service o Ollama: dipendenze pesanti che questo gate non avvia e che non
-          # c'entrano con il difetto sorvegliato. Il mock in-process di DevTools non è utilizzabile
-          # perché l'immagine è compilata in Release e AddMeepleDevTools sta sotto #if DEBUG.
-          # PageCount/CharacterCount sono persistiti da ExtractPdfContentAsync PRIMA dello stadio di
-          # embedding, quindi sopravvivono a un fallimento successivo e testimoniano la lettura.
-          if [ "${PAGE_COUNT:-0}" -lt 1 ] || [ "${CHAR_COUNT:-0}" -lt 10 ]; then
-            case "$CATEGORY" in
-              StorageObjectMissing)
-                echo "::error::REGRESSIONE #3846: oggetto non trovato alla chiave persistita ($FILE_PATH)" ;;
-              *)
-                echo "::error::estrazione non avvenuta (pagine=$PAGE_COUNT, caratteri=$CHAR_COUNT, categoria=$CATEGORY)" ;;
-            esac
+          if [ -z "$FILE_PATH" ]; then
+            echo "::error::nessuna riga in pdf_documents: l'upload non ha nemmeno creato il documento"
             exit 1
           fi
 
-          # Oltre l'estrazione, gli unici esiti accettabili sono Ready (stack completo) o un
-          # fallimento sulla dipendenza che il gate non avvia. Un fallimento di storage resta rosso.
-          case "$STATE|$CATEGORY" in
-            "Ready|") echo "ok: pipeline completa fino a Ready" ;;
-            "Failed|Service") echo "ok: letto ed estratto; l'embedding manca perché il gate non avvia i servizi AI" ;;
-            *) echo "::error::esito inatteso: stato=$STATE categoria=$CATEGORY"; exit 1 ;;
-          esac
-
-          # La chiave persistita deve puntare a un oggetto che esiste davvero: è l'invariante che
-          # #3846 violava — scrittura sotto {gameId}, lettura sotto {pdfId}.
+          # Invariante di #3846, indipendente dall'esito della pipeline: la chiave PERSISTITA deve
+          # puntare a un oggetto che esiste davvero, e deve stare sotto il gameId — cioè dove la
+          # scrive UploadPdfCommandHandler, non sotto una cartella ricostruita dal pdfId.
           echo "--- l'oggetto esiste alla chiave persistita? ($FILE_PATH) ---"
-          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.e2e-storage.yml \
-            --profile storage run --rm --entrypoint sh minio-init -c "
+          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.e2e-storage.yml             --profile storage run --rm --entrypoint sh minio-init -c "
               set -e
               mc alias set myminio http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD >/dev/null
               mc stat myminio/meepleai-uploads/${FILE_PATH}
             "
 
           case "$FILE_PATH" in
-            *"${GATE_GAME_ID}"*) echo "ok: la chiave contiene il gameId, come scrive l'upload" ;;
+            *"${GATE_GAME_ID}"*) echo "ok: la chiave sta sotto il gameId, come la scrive l'upload" ;;
             *) echo "::error::chiave inattesa ($FILE_PATH): il layout è cambiato, il gate va riallineato"; exit 1 ;;
+          esac
+
+          # 🔴 Il criterio è "la pipeline ha superato lettura ed estrazione", NON "processing_state =
+          # Ready". Ready richiede l'ultimo stadio, l'embedding, e quindi embedding-service o Ollama:
+          # dipendenze pesanti ed estranee al difetto sorvegliato. (Il mock in-process di DevTools non
+          # è utilizzabile: l'immagine è Release e AddMeepleDevTools sta sotto #if DEBUG.)
+          #
+          # Su Failed le colonne di contenuto NON sono affidabili — ExtractedText, PageCount e
+          # CharacterCount sono scritti su un'entità AsNoTracking e clobberati dal repository, e solo
+          # FinalizeProcessingAsync li ri-persiste dopo Ready (#3281). L'osservabile che sopravvive è
+          # failed_at_state: se la lettura dal bucket fosse di nuovo rotta, il fallimento cadrebbe su
+          # Extracting con categoria StorageObjectMissing.
+          case "$STATE" in
+            Ready)
+              echo "ok: pipeline completa fino a Ready"
+              ;;
+            Failed)
+              if [ "$CATEGORY" = "StorageObjectMissing" ] || [ "$FAILED_AT" = "Extracting" ] || [ "$FAILED_AT" = "Uploading" ]; then
+                echo "::error::REGRESSIONE #3846: fallimento su lettura/estrazione (failed_at_state=$FAILED_AT, categoria=$CATEGORY)"
+                exit 1
+              fi
+              if [ "$CATEGORY" != "Service" ]; then
+                echo "::error::fallimento inatteso dopo l'estrazione (failed_at_state=$FAILED_AT, categoria=$CATEGORY)"
+                exit 1
+              fi
+              echo "ok: letto, estratto e chunkato (failed_at_state=$FAILED_AT); manca solo l'embedding, che il gate non avvia"
+              ;;
+            *)
+              echo "::error::stato inatteso: $STATE"
+              exit 1
+              ;;
           esac
 
       - name: Dump stack logs on failure

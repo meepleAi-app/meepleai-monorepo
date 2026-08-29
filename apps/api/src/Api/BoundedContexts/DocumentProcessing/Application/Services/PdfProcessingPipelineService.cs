@@ -1256,8 +1256,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     {
         try
         {
+            // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+            // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+            // il change tracker e SaveChangesAsync non scrive, e non solleva.
             var pdfDoc = await _db.PdfDocuments
-                .FindAsync(new object[] { pdfDocumentId }, CancellationToken.None)
+                .AsTracking()
+                .FirstOrDefaultAsync(p => p.Id == pdfDocumentId, CancellationToken.None)
                 .ConfigureAwait(false);
 
             if (pdfDoc != null

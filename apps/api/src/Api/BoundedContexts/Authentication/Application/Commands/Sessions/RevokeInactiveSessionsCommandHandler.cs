@@ -44,7 +44,11 @@ internal class RevokeInactiveSessionsCommandHandler : ICommandHandler<RevokeInac
         // 1. Are not already revoked
         // 2. Have LastSeenAt older than threshold (or null and CreatedAt older than threshold)
         // 3. Are not yet expired (we only revoke based on inactivity, not expiration)
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var inactiveSessions = await _db.UserSessions
+            .AsTracking()
             .Where(s => s.RevokedAt == null &&
                         s.ExpiresAt > now &&
                         ((s.LastSeenAt != null && s.LastSeenAt < inactivityThreshold) ||

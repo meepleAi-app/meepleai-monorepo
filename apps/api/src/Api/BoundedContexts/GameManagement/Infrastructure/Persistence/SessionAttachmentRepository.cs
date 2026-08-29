@@ -75,7 +75,11 @@ internal sealed class SessionAttachmentRepository : RepositoryBase, ISessionAtta
 
     public async Task<bool> SoftDeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var entity = await DbContext.SessionAttachments
+            .AsTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken)
             .ConfigureAwait(false);
 

@@ -29,7 +29,11 @@ public sealed class RagUserConfigRepository : RepositoryBase, IRagUserConfigRepo
 
     public async Task<RagUserConfigEntity> UpsertAsync(Guid userId, string configJson, CancellationToken ct = default)
     {
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var existing = await DbContext.RagUserConfigs
+            .AsTracking()
             .FirstOrDefaultAsync(c => c.UserId == userId, ct)
             .ConfigureAwait(false);
 

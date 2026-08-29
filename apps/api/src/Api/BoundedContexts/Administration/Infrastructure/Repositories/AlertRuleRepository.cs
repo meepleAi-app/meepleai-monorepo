@@ -47,7 +47,13 @@ internal class AlertRuleRepository : RepositoryBase, IAlertRuleRepository
     public async Task UpdateAsync(AlertRule alertRule, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(alertRule);
-        var entity = await DbContext.AlertRules.FindAsync(new object[] { alertRule.Id }, cancellationToken).ConfigureAwait(false);
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
+        var entity = await DbContext.AlertRules
+            .AsTracking()
+            .FirstOrDefaultAsync(e => e.Id == alertRule.Id, cancellationToken)
+            .ConfigureAwait(false);
         if (entity == null) throw new InvalidOperationException($"AlertRule {alertRule.Id} not found");
         entity.Name = alertRule.Name;
         entity.Severity = alertRule.Severity.ToDisplayString();

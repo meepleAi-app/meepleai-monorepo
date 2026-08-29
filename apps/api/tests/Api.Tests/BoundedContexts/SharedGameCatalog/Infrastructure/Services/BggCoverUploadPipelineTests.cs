@@ -176,6 +176,9 @@ public sealed class BggCoverUploadPipelineDiTests
                 ["S3_SECRET_KEY"] = "sk",
                 ["S3_BUCKET_NAME"] = "bucket",
                 ["S3_REGION"] = "auto",
+                // #3886: la registrazione e' ora condizionata a STORAGE_PROVIDER=s3, come in #3363.
+                // Questo test verifica il ramo cloud, quindi lo dichiara.
+                ["STORAGE_PROVIDER"] = "s3",
             })
             .Build();
 
@@ -186,12 +189,47 @@ public sealed class BggCoverUploadPipelineDiTests
         // "No service for type 'IConfiguration'" instead of returning the pipeline.
         services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(config);
         Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection.SharedGameCatalogServiceExtensions
-            .RegisterBggCoverUploadPipelineForTests(services);
+            .RegisterBggCoverUploadPipelineForTests(services, config);
 
         using var provider = services.BuildServiceProvider();
         var pipeline = provider.GetService<Api.BoundedContexts.SharedGameCatalog.Application.Services.IBggCoverUploadPipeline>();
 
         pipeline.Should().NotBeNull();
         pipeline.Should().BeOfType<BggCoverUploadPipeline>();
+    }
+
+    /// <summary>
+    /// #3886 (stesso difetto di #3363, altro bounded context): la factory pretende le <c>S3_*</c> e
+    /// lancia alla <b>risoluzione</b>, non all'uso. Il consumer viene risolto da MediatR mentre
+    /// costruisce l'handler, quindi in un ambiente local-storage la richiesta moriva con
+    /// «S3_ENDPOINT is required» <b>prima</b> di entrare nell'handler: 500 su qualunque input, non
+    /// solo sul percorso che carica una cover. Misurato sul wizard, dove un <c>PdfDocumentId</c>
+    /// inesistente rispondeva 500 invece del 404 prodotto dall'handler.
+    ///
+    /// <para>In modalita' locale la pipeline deve restare <b>non registrata</b>, cosi' l'iniezione
+    /// opzionale risolve a null e il passo cover — arricchimento best-effort — si salta.</para>
+    /// </summary>
+    [Fact]
+    public void LocalStorage_LeavesBggCoverUploadPipelineUnregistered()
+    {
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["STORAGE_PROVIDER"] = "local",
+                // Nessuna S3_*: e' esattamente lo stato di `make dev` e del bake CI.
+            })
+            .Build();
+
+        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+        services.AddSingleton<Microsoft.Extensions.Configuration.IConfiguration>(config);
+        Api.BoundedContexts.SharedGameCatalog.Infrastructure.DependencyInjection.SharedGameCatalogServiceExtensions
+            .RegisterBggCoverUploadPipelineForTests(services, config);
+
+        using var provider = services.BuildServiceProvider();
+
+        var resolve = () => provider.GetService<Api.BoundedContexts.SharedGameCatalog.Application.Services.IBggCoverUploadPipeline>();
+
+        resolve.Should().NotThrow("in local-storage la risoluzione non deve lanciare: e' quella eccezione che faceva 500 ogni richiesta");
+        resolve().Should().BeNull("non registrata significa iniezione opzionale a null, e passo cover saltato");
     }
 }

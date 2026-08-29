@@ -7,7 +7,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 internal sealed class BggCoverDownloader : IBggCoverDownloader
 {
     private readonly HttpClient _httpClient;
-    private readonly IBggCoverUploadPipeline _uploadPipeline;
+    /// <summary>
+    /// #3886: nullo quando <c>STORAGE_PROVIDER</c> non è <c>s3</c> — la pipeline non viene
+    /// registrata (vedi <c>SharedGameCatalogServiceExtensions.RegisterBggCoverUploadPipeline</c>).
+    /// L'upload della cover è arricchimento best-effort: senza destinazione si salta, non si rompe
+    /// la richiesta che lo contiene.
+    /// </summary>
+    private readonly IBggCoverUploadPipeline? _uploadPipeline;
     private readonly ILogger<BggCoverDownloader> _logger;
 
     // #3495 (finding C5): stream-and-cap the image body to bound memory. The HttpClient-level
@@ -15,13 +21,18 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
     // enforced here during the read.
     private const long MaxImageSizeBytes = 10 * 1024 * 1024;
 
+    // #3886: il default `= null` non e' cosmetico. BggCoverDownloader e' un typed HttpClient,
+    // quindi lo costruisce ActivatorUtilities, che NON onora le annotazioni nullable: senza un
+    // valore di default il servizio non registrato resta un parametro obbligatorio e la
+    // risoluzione lancia «Unable to resolve service for type IBggCoverUploadPipeline».
+    // Stessa forma di PdfProcessingPipelineService in #3363.
     public BggCoverDownloader(
         HttpClient httpClient,
-        IBggCoverUploadPipeline uploadPipeline,
-        ILogger<BggCoverDownloader> logger)
+        ILogger<BggCoverDownloader> logger,
+        IBggCoverUploadPipeline? uploadPipeline = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _uploadPipeline = uploadPipeline ?? throw new ArgumentNullException(nameof(uploadPipeline));
+        _uploadPipeline = uploadPipeline;
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -32,6 +43,16 @@ internal sealed class BggCoverDownloader : IBggCoverDownloader
     {
         if (string.IsNullOrWhiteSpace(remoteImageUrl))
         {
+            return null;
+        }
+
+        // #3886: nessuna destinazione R2 configurata → niente da caricare. Si esce subito, prima
+        // di spendere una richiesta HTTP verso BGG per un'immagine che non avrebbe dove andare.
+        if (_uploadPipeline is null)
+        {
+            _logger.LogDebug(
+                "BGG cover upload skipped: no R2 pipeline registered (STORAGE_PROVIDER is not s3). BggId={BggId}",
+                bggId);
             return null;
         }
 

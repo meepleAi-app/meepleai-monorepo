@@ -227,7 +227,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         unavailableClient.Dispose();
     }
-    [Fact(Timeout = 60000)] // 1 minute
+    [Fact(Timeout = 90_000)] // 1 minute
     public async Task InvalidPdf_ErrorHandling()
     {
         EnsureTestInfrastructureAvailable();

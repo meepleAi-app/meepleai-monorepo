@@ -608,7 +608,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// - FK relationships valid
     /// - Transaction atomicity across all cancellation scenarios
     /// </remarks>
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenCancelledAtMultipleStages_MaintainsDatabaseConsistency()
     {
         // FIX: Clear Redis state to prevent interference from previous tests

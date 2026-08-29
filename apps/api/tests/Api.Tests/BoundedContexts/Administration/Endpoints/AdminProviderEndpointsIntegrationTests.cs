@@ -30,10 +30,14 @@ namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 /// Providers:OpenRouter:ListModelsUrl → WireMock server URL via in-memory configuration.
 /// No factory subclassing needed.
 ///
-/// Rate limit strategy: IntegrationWebApplicationFactory always sets DISABLE_RATE_LIMITING=true,
-/// so the rate limit test is documented but skipped (marked Explicit) — a second factory with
-/// rate limiting enabled would add significant complexity for minimal additional coverage of a
-/// middleware concern already unit-tested in Task 11.
+/// Rate limit strategy: IntegrationWebApplicationFactory disables rate limiting per-host via its
+/// in-memory configuration. The scenarios that need a differently configured host — no API key, or
+/// rate limiting on — live in AdminProviderProbeHostVariantsIntegrationTests.cs, one host each.
+///
+/// Issue #3887: this class mutates NO process environment variable. Both the rate-limit switch and
+/// the provider API key are per-host configuration keys, because Environment.SetEnvironmentVariable
+/// is process-global and leaked into hosts built by parallel xUnit collections — which made this
+/// class fail on a different test at every run.
 /// </summary>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
@@ -41,6 +45,10 @@ namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 [Trait("Issue", "936")]
 public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
 {
+    // #3887: the provider API key travels through IConfiguration, never the process environment.
+    private const string OpenRouterApiKeyName = "OPENROUTER_API_KEY";
+    private const string OpenRouterApiKeyValue = "test-token-valid-secret";
+
     private readonly SharedTestcontainersFixture _fixture;
     private readonly string _testDbName;
     private WireMockServer _wireMock = null!;
@@ -68,22 +76,20 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
         // 1. Start WireMock before any env vars or factory creation
         _wireMock = WireMockServer.Start();
 
-        // 2. Set the OpenRouter API key env var so ProviderProbeService sees it.
-        //    Set BEFORE factory creation — ProviderProbeService reads Environment.GetEnvironmentVariable
-        //    at probe-time (not at startup), so this is safe to set here.
-        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", "test-token-valid-secret");
-
         // 3. Create an isolated test database
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
-        // 4. Build factory — override OpenRouter URL via extraConfig so it points at WireMock.
-        //    DISABLE_RATE_LIMITING is always true in IntegrationWebApplicationFactory.Create.
+        // 4. Build factory — override OpenRouter URL and API key via extraConfig.
+        //    Rate limiting is disabled per-host by the factory's own configuration.
         _factory = IntegrationWebApplicationFactory.Create(
             connectionString,
             extraConfig: new Dictionary<string, string?>
             {
                 // ASP.NET Core binds Providers__OpenRouter__ListModelsUrl → Providers:OpenRouter:ListModelsUrl
-                ["Providers:OpenRouter:BaseUrl"] = $"{_wireMock.Url}/api/v1"
+                ["Providers:OpenRouter:BaseUrl"] = $"{_wireMock.Url}/api/v1",
+                // #3887: ProviderCredentialResolver resolves the key through IConfiguration, so the
+                // probe sees it without touching the process environment.
+                [OpenRouterApiKeyName] = OpenRouterApiKeyValue
             });
 
         // 5. Migrate DB + seed users
@@ -106,9 +112,6 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        // Restore env vars
-        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", null);
-
         _superAdminClient?.Dispose();
         _editorClient?.Dispose();
 
@@ -200,34 +203,33 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// G1-S3: API key env var not set → 200 with tokenConfigured:false + errorCode:not_configured,
-    ///         no upstream HTTP request made.
-    /// ProviderProbeService reads env var at probe-time, so we can toggle it on the existing factory
-    /// without rebuilding. Restored in finally.
+    /// #3887 guard: rate limiting must be OFF on a default factory host purely because of its
+    /// in-memory configuration — no process environment variable involved.
+    ///
+    /// This is the load-bearing assertion of the #3887 change. AddRateLimitingServices runs during
+    /// service registration; the comment that justified the old env-var approach (#3102) claimed
+    /// configuration was not applied yet at that point. If that were true, every integration host
+    /// would silently fall back to rate limiting ENABLED, and this test would see a 429.
+    /// It probes 15 times against a 10/min policy: 15 × 200 proves the in-memory switch is read.
     /// </summary>
     [Fact(Timeout = 90_000)]
-    public async Task Probe_NoToken_Returns200WithNotConfigured()
+    public async Task DefaultFactory_DisablesRateLimitingViaConfigurationOnly()
     {
-        // Snapshot current WireMock log size — assert no NEW requests after probe.
-        var initialLogCount = _wireMock.LogEntries.Count();
+        _wireMock
+            .Given(Request.Create().WithPath("/api/v1/models").UsingGet())
+            .RespondWith(Response.Create()
+                .WithStatusCode(200)
+                .WithHeader("Content-Type", "application/json")
+                .WithBody("""{"data":[]}"""));
 
-        Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", null);
-        try
+        // AdminProviderProbe policy is 10 req/min per user — 15 calls would trip it if enabled.
+        for (int i = 0; i < 15; i++)
         {
             var request = BuildProbeRequest("openrouter", _superAdminToken);
             var response = await _superAdminClient.SendAsync(request);
-
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
-            var result = await ReadJsonAsync<JsonElement>(response);
-            result.GetProperty("tokenConfigured").GetBoolean().Should().BeFalse();
-            result.GetProperty("errorCode").GetString().Should().Be("not_configured");
-
-            _wireMock.LogEntries.Count().Should().Be(initialLogCount,
-                because: "no upstream HTTP call should be made when API key is not configured");
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("OPENROUTER_API_KEY", "test-token-valid-secret");
+            response.StatusCode.Should().Be(HttpStatusCode.OK,
+                because: $"call #{i + 1} must not be rate limited — the default factory disables "
+                       + "rate limiting through in-memory configuration only (#3887)");
         }
     }
 
@@ -356,71 +358,5 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
 
         entries.Should().NotBeEmpty(
             because: "unauthorized probe must also be recorded in audit log (G3)");
-    }
-
-    /// <summary>
-    /// G3: Rate limit policy AdminProviderProbe (10 req/min per user) returns 429 on 11th call.
-    /// Builds a dedicated factory with rate limiting re-enabled (default IntegrationWebApplicationFactory
-    /// disables it globally to prevent cross-test interference).
-    /// </summary>
-    [Fact(Timeout = 60_000)]
-    public async Task Probe_RateLimitExceeded_Returns429()
-    {
-        _wireMock
-            .Given(Request.Create().WithPath("/api/v1/models").UsingGet())
-            .RespondWith(Response.Create()
-                .WithStatusCode(200)
-                .WithHeader("Content-Type", "application/json")
-                .WithBody("""{"data":[]}"""));
-
-        var dbName = $"probe_ratelimit_{Guid.NewGuid():N}";
-        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
-
-        var prevDisable = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
-        var prevRateLimitEnv = Environment.GetEnvironmentVariable("RateLimiting__Enabled");
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
-        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "true");
-
-        try
-        {
-            using var factory = IntegrationWebApplicationFactory.Create(
-                connStr,
-                extraConfig: new Dictionary<string, string?>
-                {
-                    ["RateLimiting:Enabled"] = "true",
-                    ["Providers:OpenRouter:BaseUrl"] = $"{_wireMock.Url}/api/v1"
-                },
-                enableRateLimiting: true);
-
-            using var scope = factory.Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await db.Database.MigrateAsync();
-            var (_, token) = await TestSessionHelper.CreateSuperAdminSessionAsync(db);
-
-            using var client = factory.CreateClient();
-
-            int allowedCount = 0;
-            HttpStatusCode? lastStatus = null;
-            for (int i = 0; i < 11; i++)
-            {
-                var request = TestSessionHelper.CreateAuthenticatedRequest(
-                    HttpMethod.Post,
-                    "/api/v1/admin/providers/openrouter/probe",
-                    token);
-                var response = await client.SendAsync(request);
-                lastStatus = response.StatusCode;
-                if (response.StatusCode == HttpStatusCode.OK) allowedCount++;
-                else break;
-            }
-
-            allowedCount.Should().BeLessThanOrEqualTo(10);
-            lastStatus.Should().Be(HttpStatusCode.TooManyRequests);
-        }
-        finally
-        {
-            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", prevDisable);
-            Environment.SetEnvironmentVariable("RateLimiting__Enabled", prevRateLimitEnv);
-            await _fixture.DropIsolatedDatabaseAsync(dbName);
-        }
     }
 }

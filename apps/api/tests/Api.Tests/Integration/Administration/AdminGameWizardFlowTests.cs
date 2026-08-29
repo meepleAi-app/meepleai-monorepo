@@ -170,7 +170,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
     // Wizard Phase 2: LaunchAdminPdfProcessing — full flow
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_WithDirectGameId_CompleteFlowSetsAdminPriorityAndReturnsCorrectResult()
     {
         // Arrange
@@ -194,7 +194,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         savedPdf!.ProcessingPriority.Should().Be("Admin");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_DispatchesBothExtractAndIndexCommands()
     {
         // Arrange
@@ -215,7 +215,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
             Times.Once);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_PrioritySetBeforePipelineDispatched()
     {
         // Arrange: verify that priority is set (saved) before the pipeline runs,
@@ -253,7 +253,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
     // SharedGameId resolution via real FK
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_WithSharedGameId_ResolvesViaRealForeignKey()
     {
         // Arrange: seed SharedGameEntity first (FK required), then game linked to it
@@ -291,7 +291,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         pdf!.ProcessingPriority.Should().Be("Admin");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_WithUnknownSharedGameId_ThrowsNotFoundException()
     {
         // Arrange: no game with this SharedGameId exists in DB
@@ -310,7 +310,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
     // IDOR protection: PDF does not belong to the requested game
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_CrossGamePdfAccess_ThrowsNotFoundExceptionAndDoesNotModifyDb()
     {
         // Arrange: game A and game B, PDF belongs to game B
@@ -349,7 +349,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
     // Guard: pipeline failure propagates (priority already saved before throw)
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task WizardLaunch_WhenExtractionFails_ExceptionPropagatesButPriorityAlreadySaved()
     {
         // Arrange

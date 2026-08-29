@@ -43,14 +43,23 @@ internal static class RateLimitingServiceExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Issue #2705: Allow disabling rate limiting for integration tests
-        // Issue #3102: Also check DISABLE_RATE_LIMITING env var as fallback for WebApplicationFactory tests
-        // where configuration might not be applied yet during service registration
+        // Issue #2705: Allow disabling rate limiting from appsettings.
+        //
+        // Issue #3887: this method runs during service registration, and under
+        // WebApplicationFactory that happens BEFORE the factory's own configuration sources are
+        // applied — they land at builder.Build(). That is why #3102 had to read a
+        // DISABLE_RATE_LIMITING *process environment variable* here: it was the only channel that
+        // reached this line. But a process variable is global, so a test that flipped it to
+        // exercise a 429 turned rate limiting on for every host built meanwhile by a parallel xUnit
+        // collection — the whole point of #3887.
+        //
+        // The switch therefore moved to WebApplicationExtensions.ConfigureAuthMiddleware, which
+        // runs after Build() and reads the complete per-host configuration (env vars included, so
+        // production behaviour is unchanged) to decide whether to add UseRateLimiter() at all.
+        // Registration keeps only the appsettings-driven branch below; no process state is read.
         var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
-        var disableRateLimitingEnvVar = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
-        var disabledByEnvVar = string.Equals(disableRateLimitingEnvVar, "true", StringComparison.OrdinalIgnoreCase);
 
-        if (!rateLimitingEnabled || disabledByEnvVar)
+        if (!rateLimitingEnabled)
         {
             // Register a permissive rate limiter that allows all requests (used in tests)
             services.AddRateLimiter(options =>

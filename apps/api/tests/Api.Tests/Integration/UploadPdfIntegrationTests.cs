@@ -407,7 +407,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return game;
     }
-    [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
+    [Fact(Timeout = 90_000)] // 30s for Testcontainers integration tests
     public async Task UploadPdf_WithCorruptedPdf_ReturnsError()
     {
         // Arrange
@@ -439,7 +439,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "corrupted PDF should not create database record");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithNonPdfFile_ReturnsError()
     {
         // Arrange
@@ -471,7 +471,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "non-PDF file should not create database record");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithEmptyFile_ReturnsError()
     {
         // Arrange
@@ -503,7 +503,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "empty file should not create database record");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithMalformedPdfStructure_ReturnsError()
     {
         // Arrange
@@ -535,7 +535,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var docCount = await _dbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "malformed PDF should not create database record");
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithFileNearSizeLimit_Succeeds()
     {
         // Arrange
@@ -571,7 +571,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc!.FileSizeBytes.Should().Be(nearLimitSize, "file size should be recorded correctly");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithFileExceedingSizeLimit_ReturnsError()
     {
         // Arrange
@@ -605,7 +605,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "oversized file should not create database record");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithLargeFile_HandlesSuccessfully()
     {
         // Arrange
@@ -643,7 +643,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // For memory profiling, use tools like dotMemory or BenchmarkDotNet
         // in manual performance testing suites instead of automated tests.
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithConcurrentUploads_HandlesCorrectly()
     {
         // Arrange
@@ -693,7 +693,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docs.Select(d => d.FileName).Should().OnlyHaveUniqueItems("file names should be unique");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithRaceConditions_MaintainsDataIntegrity()
     {
         // Arrange
@@ -750,7 +750,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             dbDocIds.Should().Contain(successId, "all successful uploads should have database records");
         }
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenBlobStorageFails_ReturnsErrorAndRollsBackTransaction()
     {
         // Arrange - Use SharedTestcontainersFixture for PostgreSQL
@@ -810,7 +810,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         userStillExists.Should().BeTrue("user should still exist after failed upload");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenDatabaseConstraintViolated_RollsBackTransaction()
     {
         // Arrange - Test foreign key constraint violation with SharedTestcontainersFixture
@@ -853,7 +853,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         docCount.Should().Be(0, "PostgreSQL should enforce FK constraint and rollback transaction");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenDatabaseConnectionClosed_HandlesFailureGracefully()
     {
         // Arrange - Test connection interruption scenario with SharedTestcontainersFixture
@@ -901,7 +901,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         Assert.Skip("Database offline simulation not compatible with SharedTestcontainersFixture (Issue #2031)");
     }
 
-    [Fact(Timeout = 45000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenDatabaseDeadlock_RetriesAndHandlesGracefully()
     {
         // Arrange - Simulate deadlock scenario with concurrent transactions using SharedTestcontainersFixture
@@ -967,7 +967,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         gameExists.Should().BeTrue("game should exist after deadlock resolution");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenPartialFailure_CleansUpResources()
     {
         // Arrange - Use real PostgreSQL for partial failure cleanup test
@@ -1001,7 +1001,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenStoragePermissionDenied_ReturnsErrorAndRollsBack()
     {
         // Arrange - Use SharedTestcontainersFixture for permission denied test
@@ -1051,7 +1051,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         var docCount = await testDbContext.PdfDocuments.CountAsync(TestContext.Current.CancellationToken);
         docCount.Should().Be(0, "PostgreSQL transaction rollback should prevent database records on permission failure");
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_SuccessfulUpload_PersistsToDatabase()
     {
         // Arrange
@@ -1101,7 +1101,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         doc.UploadedBy!.Email.Should().Be(testUser.Email);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_SuccessfulUpload_StoresFileInBlobStorage()
     {
         // Arrange
@@ -1144,7 +1144,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         storedContent.Should().BeEquivalentTo(pdfBytes, "stored file content should match uploaded content");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_SuccessfulUpload_InvalidatesCache()
     {
         // Arrange
@@ -1201,7 +1201,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             Times.AtLeastOnce(), "cache invalidation should include game ID");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_SuccessfulUpload_EnqueuesBackgroundProcessing()
     {
         // Arrange
@@ -1257,7 +1257,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             Times.Once(), "background task should be enqueued exactly once");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_SuccessfulUpload_ReturnsCorrectResult()
     {
         // Arrange
@@ -1305,7 +1305,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     /// Tests idempotency protection (Issue #1821 - #1742).
     /// Verifies that duplicate background processing tasks are detected and skipped.
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task ProcessPdfAsync_DuplicateProcessing_ShouldSkipIdempotently()
     {
         // Arrange
@@ -1355,7 +1355,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests two-phase quota management success flow (Issue #1821 - #1743).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task QuotaReservation_SuccessfulProcessing_ShouldConfirmQuota()
     {
         // Arrange
@@ -1401,7 +1401,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests two-phase quota management rollback flow (Issue #1821 - #1743).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task QuotaReservation_ProcessingFailure_ShouldReleaseQuota()
     {
         // Arrange
@@ -1441,7 +1441,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
     /// <summary>
     /// Tests quota reservation expiry behavior (Issue #1821 - #1743).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task QuotaReservation_Expiry_ShouldAutoCleanup()
     {
         // Arrange

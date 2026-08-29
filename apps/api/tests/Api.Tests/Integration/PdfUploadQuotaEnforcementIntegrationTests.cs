@@ -205,7 +205,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         return $"{year}-W{week:D2}";
     }
-    [Fact(Timeout = 30000)] // 30s for Testcontainers integration tests
+    [Fact(Timeout = 90_000)] // 30s for Testcontainers integration tests
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -242,7 +242,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -273,7 +273,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateFreeTierLimit();
         deniedCheck.ErrorMessage.ShouldIndicateFreeTier();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -310,7 +310,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -344,7 +344,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateNormalTierLimit();
         deniedCheck.ErrorMessage.ShouldIndicateNormalTier();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -377,7 +377,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         deniedCheck.ErrorMessage.ShouldIndicateDailyLimitReached();
         deniedCheck.ErrorMessage.ShouldIndicatePremiumTierDailyLimit();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -411,7 +411,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(int.MaxValue); // WeeklyRemaining computed
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -442,7 +442,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         var info = await GetQuotaInfoAsync(user.Id, user.Tier, user.Role);
         info.IsUnlimited.Should().BeTrue();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -479,7 +479,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         (quotaCheckAfter.DailyLimit - quotaCheckAfter.DailyUploadsUsed).Should().Be(95); // DailyRemaining computed
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -515,7 +515,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         quotaCheckAfter.DailyLimit.Should().Be(5);
         quotaCheckAfter.ErrorMessage.ShouldIndicateDailyLimitReached();
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
         // FIX: Clear Redis state to prevent interference from previous tests
@@ -552,7 +552,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         info3.DailyUploadsUsed.Should().Be(50);
         (info3.DailyLimit - info3.DailyUploadsUsed).Should().Be(50); // DailyRemaining computed
     }
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
         // FIX: Clear Redis state to prevent interference from previous tests

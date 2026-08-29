@@ -44,14 +44,13 @@ internal static class IntegrationWebApplicationFactory
         Dictionary<string, string?>? extraConfig = null,
         bool enableRateLimiting = false)
     {
-        // Must be set before factory creation — middleware checks these env vars directly.
-        // Tests that need rate limiting (e.g., AdminProviderProbe rate-limit verification)
-        // pass enableRateLimiting:true to opt out of the global disable.
-        if (!enableRateLimiting)
-        {
-            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
-            Environment.SetEnvironmentVariable("RateLimiting__Enabled", "false");
-        }
+        // Issue #3887: rate limiting is switched off per-host through the in-memory configuration
+        // below, NOT by mutating the process environment. The previous implementation called
+        // Environment.SetEnvironmentVariable here, which is process-global: a test that flipped the
+        // switch to exercise a 429 opened a window in which every host built concurrently by another
+        // xUnit collection inherited rate limiting, and a test that built a host inside that window
+        // got a 429 instead of its own result. Tests that need rate limiting (e.g. the
+        // AdminProviderProbe 429 verification) pass enableRateLimiting:true.
         Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
 
         return new WebApplicationFactory<Program>()
@@ -101,8 +100,11 @@ internal static class IntegrationWebApplicationFactory
                         // Observability
                         ["Observability:Enabled"] = "false",
                         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
-                        // Rate limiting
-                        ["RateLimiting:Enabled"] = "false"
+                        // Rate limiting (#3887) — read after Build() by WebApplicationExtensions,
+                        // which decides whether to add UseRateLimiter() at all. extraConfig is merged
+                        // after this dictionary, so a caller can still override.
+                        ["RateLimiting:Enabled"] = enableRateLimiting ? "true" : "false",
+                        ["DISABLE_RATE_LIMITING"] = enableRateLimiting ? "false" : "true"
                     };
 
                     // Merge extra config if provided

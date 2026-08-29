@@ -336,9 +336,11 @@ internal static class E2ESharedInfrastructure
                 return;
             }
 
-            // Disable custom rate limiting middleware for E2E tests
-            // The middleware checks these env vars directly (not from configuration)
-            // Setting both DISABLE_RATE_LIMITING and ASPNETCORE_ENVIRONMENT for defense in depth
+            // Disable rate limiting for E2E tests.
+            // #3887: the authoritative switch is ["RateLimiting:Enabled"] = "false" in the in-memory
+            // configuration below — WebApplicationExtensions reads it after Build() and skips
+            // UseRateLimiter(). These process variables are kept only as defence in depth; they are
+            // set once and never restored, so they open no window for a parallel collection.
             Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "CI");
 
@@ -622,10 +624,9 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
 
-            // Rate limiting is disabled via environment variable RateLimiting__Enabled=false
-            // which is set in EnsureInitializedAsync() BEFORE the factory is created.
-            // The AddRateLimitingServices method in Program.cs reads this and uses NoLimiter policies.
-            // Additionally, the custom RateLimitingMiddleware checks DISABLE_RATE_LIMITING env var.
+            // #3887: rate limiting is disabled by ["RateLimiting:Enabled"] = "false" in this
+            // factory's in-memory configuration, which WebApplicationExtensions reads after Build()
+            // to decide whether to add UseRateLimiter() at all.
 
             // Remove any existing DbContext registrations first
             services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();

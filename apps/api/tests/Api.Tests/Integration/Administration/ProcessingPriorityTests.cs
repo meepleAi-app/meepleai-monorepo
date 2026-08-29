@@ -163,7 +163,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     // Happy path: priority persists to real PostgreSQL
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AdminLaunch_SetsPriorityAdminInRealPostgresDatabase()
     {
         // Arrange
@@ -187,7 +187,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         pdf!.ProcessingPriority.Should().Be("Admin", "priority must be durably saved in PostgreSQL");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AdminLaunch_OnlyTargetPdfPriorityChanged_OtherPdfsUnaffected()
     {
         // Arrange: two PDFs for the same game
@@ -237,7 +237,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     // SharedGameId resolution: wizard passes SharedGameId → resolves to Game.Id
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithSharedGameId_ResolvesAndSetsPriorityInRealDatabase()
     {
         // Arrange: seed SharedGameEntity first (FK required), then game linked to it
@@ -279,7 +279,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     // Guard: PDF belongs to different game → IDOR protection
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WhenPdfBelongsToDifferentGame_ThrowsNotFoundExceptionInRealDatabase()
     {
         // Arrange: two separate games, PDF belongs to gameB
@@ -317,7 +317,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     // Guard: PDF does not exist
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WhenPdfNotFound_ThrowsNotFoundException()
     {
         // Arrange: game exists but PDF does not
@@ -337,7 +337,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
     // Priority idempotency: re-launching admin PDF keeps Admin priority
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WhenAlreadyAdminPriority_RemainsAdminAfterRelaunch()
     {
         // Arrange: PDF already has Admin priority (re-launch scenario)

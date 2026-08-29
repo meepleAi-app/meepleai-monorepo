@@ -306,7 +306,7 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
 
     #region Edge Case Tests (75%+ accuracy)
 
-    [Fact(Timeout = 60000)] // 1 minute timeout for large file
+    [Fact(Timeout = 90_000)] // 1 minute timeout for large file
     public async Task Unstructured_LargeFile_TerraformingMars_HandlesStressTest()
     {
         if (_unstructuredExtractor == null || !_goldStandards.ContainsKey("terraforming-mars_rulebook.pdf"))

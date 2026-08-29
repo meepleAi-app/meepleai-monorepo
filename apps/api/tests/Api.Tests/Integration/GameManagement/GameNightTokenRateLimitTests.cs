@@ -58,18 +58,16 @@ public sealed class GameNightTokenRateLimitTests
         var dbName = $"gn_invite_ratelimit_{Guid.NewGuid():N}";
         var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
 
-        var prevDisable = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
-        var prevRateLimitEnv = Environment.GetEnvironmentVariable("RateLimiting__Enabled");
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
-        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "true");
-
         try
         {
+            // #3887: enableRateLimiting:true switches rate limiting on for THIS host only, via the
+            // factory's in-memory configuration. The previous version also blanked
+            // DISABLE_RATE_LIMITING in the process environment — a process-global change that turned
+            // rate limiting on for every host built meanwhile by a parallel xUnit collection.
             var baseFactory = IntegrationWebApplicationFactory.Create(
                 connStr,
                 extraConfig: new Dictionary<string, string?>
                 {
-                    ["RateLimiting:Enabled"] = "true",
                     ["GameNight:InvitationExpiryDays"] = "14"
                 },
                 enableRateLimiting: true);
@@ -131,8 +129,6 @@ public sealed class GameNightTokenRateLimitTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", prevDisable);
-            Environment.SetEnvironmentVariable("RateLimiting__Enabled", prevRateLimitEnv);
             await _fixture.DropIsolatedDatabaseAsync(dbName);
         }
     }

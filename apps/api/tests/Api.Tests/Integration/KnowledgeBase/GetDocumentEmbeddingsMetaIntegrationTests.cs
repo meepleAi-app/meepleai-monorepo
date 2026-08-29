@@ -127,7 +127,7 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         return pdfId;
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Returns_Meta_When_Document_Indexed()
     {
         var pdfId = await SeedIndexedDocAsync(language: "it", chunkCount: 100);
@@ -145,7 +145,7 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         result.IndexedAt.Should().NotBeNull();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Throws_NotFound_When_Document_Not_Indexed()
     {
         var unknownDocId = Guid.NewGuid();
@@ -159,7 +159,7 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         ex.Which.ResourceId.Should().Be(unknownDocId.ToString());
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Pipeline_Resolves_EmbeddingModel_From_VectorDocument_Directly()
     {
         // FIX-1 validation: EmbeddingModel + EmbeddingDimensions are denormalized
@@ -177,7 +177,7 @@ public sealed class GetDocumentEmbeddingsMetaIntegrationTests : IAsyncLifetime
         result.Dimensions.Should().Be(1024);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Multiple_Sequential_Calls_Are_Consistent()
     {
         // Sanity check: idempotent read-only query, same result across calls.

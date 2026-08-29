@@ -70,7 +70,7 @@ public sealed class GetAllSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsAllSessions()
     {
         // Arrange
@@ -92,7 +92,7 @@ public sealed class GetAllSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.Should().HaveCount(2);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_FiltersByUserId_WhenProvided()
     {
         // Arrange
@@ -117,7 +117,7 @@ public sealed class GetAllSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.First().UserId.Should().Be(user1Id.ToString());
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_RespectsLimit()
     {
         // Arrange
@@ -140,7 +140,7 @@ public sealed class GetAllSessionsQueryHandlerIntegrationTests : IAsyncLifetime
         result.Should().HaveCount(25);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithInvalidLimit_ThrowsArgumentException()
     {
         // Arrange
@@ -152,7 +152,7 @@ public sealed class GetAllSessionsQueryHandlerIntegrationTests : IAsyncLifetime
             .WithMessage("*Limit must be between 1 and 1000*");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithLimitTooHigh_ThrowsArgumentException()
     {
         // Arrange

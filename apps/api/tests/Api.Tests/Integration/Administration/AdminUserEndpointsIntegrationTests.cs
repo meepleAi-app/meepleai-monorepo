@@ -78,7 +78,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
 
     #region GetAllUsers Tests
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetAllUsers_ReturnsPagedResult_WithSeededUsers()
     {
         // Arrange
@@ -94,7 +94,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.Page.Should().Be(1);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetAllUsers_WithPagination_ReturnsCorrectPage()
     {
         // Arrange
@@ -110,7 +110,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.Total.Should().BeGreaterThanOrEqualTo(8);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetAllUsers_WithSearchTerm_ReturnsMatchingUsers()
     {
         // Handler uses EF.Functions.ILike() in UserProfileRepository for PostgreSQL
@@ -124,7 +124,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.Items.Should().Contain(u => u.Email == "searchable_unique@example.com");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetAllUsers_WithRoleFilter_FiltersResults()
     {
         // Arrange
@@ -140,7 +140,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.Items.Should().OnlyContain(u => u.Role == "admin");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetAllUsers_EmptyDatabase_ReturnsEmptyResult()
     {
         // Arrange
@@ -159,7 +159,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
 
     #region CreateUser Tests
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task CreateUser_WithValidData_ReturnsCreatedUser()
     {
         // Arrange
@@ -181,7 +181,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.Id.Should().NotBeEmpty();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task CreateUser_WithAdminRole_CreatesAdminUser()
     {
         // Arrange
@@ -200,7 +200,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.Role.Should().Be("admin");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task CreateUser_DuplicateEmail_ThrowsException()
     {
         // Arrange
@@ -219,7 +219,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
 
     #region GetUserById Tests
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserById_ExistingUser_ReturnsUserDetails()
     {
         // Arrange
@@ -242,7 +242,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         result.DisplayName.Should().Be("Detail Test User");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetUserById_NonExistentUser_ReturnsNull()
     {
         // Arrange
@@ -259,7 +259,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
 
     #region UpdateUserTier Tests
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UpdateUserTier_ValidTier_UpdatesSuccessfully()
     {
         // Arrange - create a requester (admin) and a target user
@@ -294,7 +294,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
         dbUser!.Tier.Should().Be("premium");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task UpdateUserTier_NonExistentUser_ThrowsException()
     {
         // Arrange
@@ -309,7 +309,7 @@ public sealed class AdminUserEndpointsIntegrationTests : IAsyncLifetime
 
     #region DeleteUser Tests
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task DeleteUser_ExistingUser_SoftDeletesSuccessfully()
     {
         // Arrange

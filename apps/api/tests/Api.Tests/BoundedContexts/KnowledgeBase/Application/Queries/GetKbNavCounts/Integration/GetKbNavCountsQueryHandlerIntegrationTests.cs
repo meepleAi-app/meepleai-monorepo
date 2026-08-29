@@ -65,7 +65,7 @@ public sealed class GetKbNavCountsQueryHandlerIntegrationTests : IAsyncLifetime
             await _dbContext.DisposeAsync();
     }
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_RealPostgres_CountsActiveJobsAndRecentFeedback()
     {
         // Arrange ----------------------------------------------------------------

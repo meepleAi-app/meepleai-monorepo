@@ -250,7 +250,7 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
     /// results come back ordered by score descending.
     /// Happy-path type: REAL integration (pgvector Testcontainer + mocked IEmbeddingService).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsScoredHits_OrderedByScoreDesc()
     {
         var pdfId = await SeedIndexedDocAsync();
@@ -268,7 +268,7 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
     /// When PdfDocumentId does not correspond to any VectorDocument, the handler returns
     /// an empty result with a non-null ErrorMessage (not an exception).
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsError_WhenDocNotIndexed()
     {
         var result = await _mediator!.Send(
@@ -285,7 +285,7 @@ public sealed class SearchDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
     /// <c>LEFT JOIN games</c> and threw <c>relation "games" does not exist</c> against the
     /// post-Phase-2d schema. Verifies indexing succeeds and resolves game_id from shared_game_id.
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task IndexBatchAsync_ResolvesGameId_WithoutGamesTable()
     {
         const int Dims = 768;

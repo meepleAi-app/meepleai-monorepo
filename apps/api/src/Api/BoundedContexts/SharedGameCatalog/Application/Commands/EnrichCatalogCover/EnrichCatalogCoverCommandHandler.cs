@@ -77,7 +77,12 @@ internal sealed class EnrichCatalogCoverCommandHandler
     private readonly WikidataCatalogProvider _wikidataProvider;
     private readonly IWikimediaCommonsClient _commonsClient;
     private readonly IWebpVariantGenerator _webpGenerator;
-    private readonly ICoverR2UploadPipeline _r2UploadPipeline;
+    /// <summary>
+    /// #3886: nullo quando <c>STORAGE_PROVIDER</c> non è <c>s3</c>. L'arricchimento cover non ha
+    /// destinazione, quindi fallisce in modo dichiarato con la stessa ragione dell'upload fallito,
+    /// invece di impedire la costruzione dell'handler.
+    /// </summary>
+    private readonly ICoverR2UploadPipeline? _r2UploadPipeline;
     private readonly TimeProvider _timeProvider;
     private readonly IHybridCacheService _cache;
     private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
@@ -89,18 +94,21 @@ internal sealed class EnrichCatalogCoverCommandHandler
         WikidataCatalogProvider wikidataProvider,
         IWikimediaCommonsClient commonsClient,
         IWebpVariantGenerator webpGenerator,
-        ICoverR2UploadPipeline r2UploadPipeline,
         TimeProvider timeProvider,
         IHybridCacheService cache,
         ICacheInvalidationRetryPolicy cacheRetryPolicy,
-        ILogger<EnrichCatalogCoverCommandHandler> logger)
+        ILogger<EnrichCatalogCoverCommandHandler> logger,
+        // #3886: default `= null` obbligatorio, non cosmetico — il container non onora le
+        // annotazioni nullable: senza valore di default un servizio non registrato resta un
+        // parametro richiesto e la risoluzione lancia. Stessa forma di #3363.
+        ICoverR2UploadPipeline? r2UploadPipeline = null)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _wikidataProvider = wikidataProvider ?? throw new ArgumentNullException(nameof(wikidataProvider));
         _commonsClient = commonsClient ?? throw new ArgumentNullException(nameof(commonsClient));
         _webpGenerator = webpGenerator ?? throw new ArgumentNullException(nameof(webpGenerator));
-        _r2UploadPipeline = r2UploadPipeline ?? throw new ArgumentNullException(nameof(r2UploadPipeline));
+        _r2UploadPipeline = r2UploadPipeline;
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
@@ -234,6 +242,19 @@ internal sealed class EnrichCatalogCoverCommandHandler
 
         // 8. M7 — R2 upload. The pipeline returns the suffix-stripped key
         //    contract per CoverUrlResolver.cs:73-79.
+        // #3886: senza pipeline registrata non esiste una destinazione per la cover. Si dichiara
+        // il fallimento con la ragione dell'upload — il chiamante la tratta già come esito atteso —
+        // invece di far esplodere la risoluzione dell'handler in ogni ambiente local-storage.
+        if (_r2UploadPipeline is null)
+        {
+            EmitOutcomeMetric(OutcomeFailed, FailReasonR2Upload);
+            _logger.LogWarning(
+                "SharedGame {GameId} QID {Qid}: nessuna pipeline R2 registrata (STORAGE_PROVIDER non e' s3).",
+                game.Id, game.WikidataQid);
+            return new EnrichCatalogCoverResult.Failed(
+                FailReasonR2Upload, "R2 upload pipeline is not configured (STORAGE_PROVIDER is not s3).");
+        }
+
         string r2Key;
         try
         {

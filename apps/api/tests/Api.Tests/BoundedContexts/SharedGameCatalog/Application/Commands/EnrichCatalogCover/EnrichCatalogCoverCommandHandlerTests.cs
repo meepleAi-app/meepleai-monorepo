@@ -677,11 +677,14 @@ public class EnrichCatalogCoverCommandHandlerTests
             wikidataProvider,
             commonsClient,
             webpGenerator,
-            r2Pipeline,
             fakeTime,
             cacheMock.Object,
             new PassthroughRetryPolicy(),
-            NullLogger<EnrichCatalogCoverCommandHandler>.Instance);
+            NullLogger<EnrichCatalogCoverCommandHandler>.Instance,
+            // #3886: la pipeline R2 e' ora l'ultimo parametro, opzionale con default null (non e'
+            // registrata quando STORAGE_PROVIDER non e' s3). Questo harness esercita il ramo cloud,
+            // quindi la passa esplicitamente.
+            r2Pipeline);
 
         return new TestHarness(handler, repo, uow, s3Mock, cacheMock, sparqlHandler, commonsHandler, fakeTime);
     }

@@ -246,16 +246,18 @@ internal static class SharedGameCatalogServiceExtensions
         // because the underlying AmazonS3Client is thread-safe and reuses
         // a connection pool — matching the BlobStorageServiceFactory lifetime.
         // CLAUDE.md pitfall #2565: register both the interface and the
-        // implementation. NOTE: this registration constructs the AmazonS3Client
-        // lazily inside the factory delegate; if STORAGE_PROVIDER is not "s3",
-        // the pipeline is still registered but UploadAsync will throw at first
-        // call (S3 misconfiguration surfaces synchronously instead of silently).
-        RegisterCoverR2UploadPipeline(services);
+        // implementation.
+        //
+        // #3886: la nota precedente diceva che «se STORAGE_PROVIDER non è "s3" la pipeline resta
+        // registrata ma UploadAsync lancia alla prima chiamata». Non è così: la factory legge le
+        // S3_* e lancia alla RISOLUZIONE, non all'uso — quindi il difetto non colpisce l'upload di
+        // una cover, colpisce ogni richiesta che risolve un consumer di questa pipeline.
+        RegisterCoverR2UploadPipeline(services, configuration);
 
         // Issue #2947 — BGG cover R2 upload pipeline (deterministic key). Same
         // S3_* config + lifetime as RegisterCoverR2UploadPipeline. Register both
         // the interface and the concrete type (CLAUDE.md pitfall #2565).
-        RegisterBggCoverUploadPipeline(services);
+        RegisterBggCoverUploadPipeline(services, configuration);
 
         // Issue #1823 Wave 3 M9 (ADR DEC-3j): retry/dead-letter classifier for
         // the WikidataCoverEnrichmentJob scheduler. Stateless + thread-safe —
@@ -320,8 +322,24 @@ internal static class SharedGameCatalogServiceExtensions
     /// endpoint/credentials between the two consumers. Singleton lifetime
     /// matches the long-lived AWS SDK client (thread-safe + connection pool).
     /// </summary>
-    private static void RegisterCoverR2UploadPipeline(IServiceCollection services)
+    private static void RegisterCoverR2UploadPipeline(IServiceCollection services, IConfiguration configuration)
     {
+        // #3886 (stesso difetto di #3363, altro bounded context): la factory pretende le S3_* e
+        // lancia alla RISOLUZIONE. Il consumer viene risolto da MediatR mentre costruisce l'handler,
+        // quindi in un ambiente local-storage la richiesta moriva con
+        // «S3_ENDPOINT is required» PRIMA di entrare nell'handler — 500 su qualunque input, non solo
+        // sul percorso che carica una cover. Misurato sul wizard: un PdfDocumentId inesistente
+        // rispondeva 500 invece del 404 che l'handler avrebbe prodotto.
+        //
+        // Come in #3363: si registra SOLO con STORAGE_PROVIDER=s3 (stesso criterio di
+        // BlobStorageServiceFactory). In locale resta non registrata, l'iniezione opzionale risolve
+        // a null e il passo cover — che è arricchimento best-effort — si salta.
+        var storageProvider = configuration["STORAGE_PROVIDER"]?.ToLowerInvariant() ?? "local";
+        if (!string.Equals(storageProvider, "s3", StringComparison.Ordinal))
+        {
+            return;
+        }
+
         services.AddSingleton<ICoverR2UploadPipeline>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
@@ -367,8 +385,24 @@ internal static class SharedGameCatalogServiceExtensions
     /// client. Mirrors <see cref="RegisterCoverR2UploadPipeline"/> (same S3_* env
     /// vars, same R2 header-strip hook, same singleton lifetime).
     /// </summary>
-    private static void RegisterBggCoverUploadPipeline(IServiceCollection services)
+    private static void RegisterBggCoverUploadPipeline(IServiceCollection services, IConfiguration configuration)
     {
+        // #3886 (stesso difetto di #3363, altro bounded context): la factory pretende le S3_* e
+        // lancia alla RISOLUZIONE. Il consumer viene risolto da MediatR mentre costruisce l'handler,
+        // quindi in un ambiente local-storage la richiesta moriva con
+        // «S3_ENDPOINT is required» PRIMA di entrare nell'handler — 500 su qualunque input, non solo
+        // sul percorso che carica una cover. Misurato sul wizard: un PdfDocumentId inesistente
+        // rispondeva 500 invece del 404 che l'handler avrebbe prodotto.
+        //
+        // Come in #3363: si registra SOLO con STORAGE_PROVIDER=s3 (stesso criterio di
+        // BlobStorageServiceFactory). In locale resta non registrata, l'iniezione opzionale risolve
+        // a null e il passo cover — che è arricchimento best-effort — si salta.
+        var storageProvider = configuration["STORAGE_PROVIDER"]?.ToLowerInvariant() ?? "local";
+        if (!string.Equals(storageProvider, "s3", StringComparison.Ordinal))
+        {
+            return;
+        }
+
         services.AddSingleton<IBggCoverUploadPipeline>(sp =>
         {
             var config = sp.GetRequiredService<IConfiguration>();
@@ -385,10 +419,17 @@ internal static class SharedGameCatalogServiceExtensions
     /// collection (the singleton factory resolves it via
     /// <c>sp.GetRequiredService&lt;IConfiguration&gt;()</c>).
     /// </summary>
-    internal static void RegisterBggCoverUploadPipelineForTests(IServiceCollection services)
+    /// <remarks>
+    /// #3886: il seam prende ora la <see cref="IConfiguration"/> perché la registrazione è
+    /// condizionata a <c>STORAGE_PROVIDER=s3</c>. Un test che vuole la pipeline registrata deve
+    /// dirlo esplicitamente, com'è giusto: è la stessa condizione che vale in produzione.
+    /// </remarks>
+    internal static void RegisterBggCoverUploadPipelineForTests(
+        IServiceCollection services,
+        IConfiguration configuration)
     {
         services.AddLogging();
-        RegisterBggCoverUploadPipeline(services);
+        RegisterBggCoverUploadPipeline(services, configuration);
     }
 
     /// <summary>

@@ -388,7 +388,12 @@ public class CreateSessionCommandHandler : ICommandHandler<CreateSessionCommand,
     {
         if (request.GameNightEventId.HasValue)
         {
+            // Issue #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking
+            // (PERF-06), so the GameIdsJson/UpdatedAt mutations further down reached no change
+            // tracker. Attaching a second game to an existing night appeared to work and left the
+            // night's game list unchanged.
             var existing = await _db.GameNightEvents
+                .AsTracking()
                 .Include(e => e.Sessions)
                 .FirstOrDefaultAsync(e => e.Id == request.GameNightEventId.Value, cancellationToken)
                 .ConfigureAwait(false);

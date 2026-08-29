@@ -1322,11 +1322,18 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         firstResult.Success.Should().BeTrue();
         var pdfId = firstResult.Document!.Id;
 
-        // Mark as already processed (simulate completed processing)
-        var pdfDoc = await _dbContext!.PdfDocuments.FirstOrDefaultAsync(d => d.Id == pdfId, TestCancellationToken);
-        pdfDoc.Should().NotBeNull();
-        pdfDoc!.ProcessingState = "Ready";
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // Mark as already processed (simulate completed processing).
+        // Issue #3866: this arrange used to read the row, assign ProcessingState and call
+        // SaveChangesAsync. With the production NoTracking default (PERF-06) the read returns a
+        // DETACHED instance, so that wrote nothing and the idempotency check under test was never
+        // actually given an already-processed document. A set-based update states the precondition
+        // and proves it landed.
+        var marked = await _dbContext!.PdfDocuments
+            .Where(d => d.Id == pdfId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(d => d.ProcessingState, "Ready"),
+                TestCancellationToken);
+        marked.Should().Be(1, "the uploaded document must exist before the duplicate run");
 
         // Act: Simulate duplicate background task — should be skipped by idempotency check
         var processPdfMethod = typeof(UploadPdfCommandHandler)
@@ -1338,8 +1345,9 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         await task!;
 
         // Assert: State should still be "Ready" — duplicate processing was skipped
-        await _dbContext.Entry(pdfDoc).ReloadAsync(TestCancellationToken);
-        pdfDoc.ProcessingState.Should().Be("Ready", "duplicate processing should be skipped for already-processed documents");
+        var afterDuplicate = await _dbContext.PdfDocuments
+            .FirstAsync(d => d.Id == pdfId, TestCancellationToken);
+        afterDuplicate.ProcessingState.Should().Be("Ready", "duplicate processing should be skipped for already-processed documents");
 
         if (File.Exists(filePath)) File.Delete(filePath);
     }

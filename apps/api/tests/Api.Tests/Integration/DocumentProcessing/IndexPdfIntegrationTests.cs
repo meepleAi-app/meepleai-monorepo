@@ -237,6 +237,12 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Issue #3866: production starts every request with an empty change tracker. Leaving the
+        // seed tracked here means the code under test — which reads with the production NoTracking
+        // default and then attaches what it read — gets a SECOND instance of the same row and
+        // throws an identity conflict that no real scope can produce.
+        _dbContext.ChangeTracker.Clear();
     }
 
     private async Task<Guid> CreateTestPdfAsync(

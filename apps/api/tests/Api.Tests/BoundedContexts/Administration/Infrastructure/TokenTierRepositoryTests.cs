@@ -139,6 +139,9 @@ public sealed class TokenTierRepositoryTests : IClassFixture<SharedTestcontainer
         var tier = TokenTier.CreateFreeTier();
         await repository.AddAsync(tier);
         await dbContext.SaveChangesAsync();
+        // Issue #3866: end of arrange. An admin deleting a tier never created it in the same scope;
+        // keeping the seed tracked would make DeleteAsync attach a second instance of the same row.
+        dbContext.ChangeTracker.Clear();
 
         // Act
         await repository.DeleteAsync(tier.Id);

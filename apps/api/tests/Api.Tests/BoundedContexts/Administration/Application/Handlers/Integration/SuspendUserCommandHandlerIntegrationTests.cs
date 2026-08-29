@@ -168,7 +168,10 @@ public sealed class SuspendUserCommandHandlerIntegrationTests : IAsyncLifetime
 
         // Set TotpSecretEncrypted directly on persistence row + seed 6 codes.
         // IsTwoFactorEnabled stays false on purpose (setup-in-progress window).
-        var persistedRow = await _dbContext.Users.FirstAsync(u => u.Id == userId);
+        // #3866: `.AsTracking()` — the DbContext default is NoTracking (PERF-06), so this
+        // assignment used to land on a detached row and the setup-in-progress state the test needs
+        // never existed in the database.
+        var persistedRow = await _dbContext.Users.AsTracking().FirstAsync(u => u.Id == userId);
         persistedRow.TotpSecretEncrypted = "fake_setup_secret_pending_confirmation";
 
         for (var i = 0; i < 6; i++)

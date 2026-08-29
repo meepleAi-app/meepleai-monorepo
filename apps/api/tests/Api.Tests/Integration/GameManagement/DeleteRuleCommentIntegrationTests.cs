@@ -164,6 +164,12 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
 
         _dbContext!.RuleSpecComments.Add(comment);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // Issue #3866: production starts every request with an empty change tracker. Seeding
+        // through the same DbContext the handler uses leaves the comment tracked, and the handler —
+        // which reads with the production NoTracking default and then Remove()s what it read —
+        // attaches a SECOND instance of the same row and throws an identity conflict that no real
+        // scope can produce.
+        _dbContext.ChangeTracker.Clear();
         return comment.Id;
     }
 
@@ -282,6 +288,7 @@ public sealed class DeleteRuleCommentIntegrationTests : IAsyncLifetime
         };
         _dbContext!.RuleSpecComments.Add(reply);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear(); // #3866: fine arrange — vedi CreateTestCommentAsync
 
         var handler = _serviceProvider!.GetRequiredService<DeleteRuleCommentCommandHandler>();
         var command = new DeleteRuleCommentCommand(

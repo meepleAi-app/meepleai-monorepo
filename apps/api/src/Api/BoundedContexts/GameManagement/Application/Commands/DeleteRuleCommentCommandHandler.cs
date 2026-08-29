@@ -24,7 +24,13 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
     public async Task<bool> Handle(DeleteRuleCommentCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+        // Issue #3866: `.AsTracking()` is REQUIRED on both reads of this handler. The DbContext
+        // default is NoTracking (PERF-06), so the comment and its replies came back as SEPARATE
+        // detached instances of the same rows: Remove() had to attach each of them, and the manual
+        // cascade in DeleteRepliesRecursivelyAsync collided with the graph reachable from the root.
+        // With tracking there is one instance per row, which is what a delete needs.
         var comment = await _dbContext.RuleSpecComments
+            .AsTracking()
             .Include(c => c.Replies)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
 .ConfigureAwait(false) ?? throw new InvalidOperationException($"Comment {command.CommentId} not found");
@@ -54,6 +60,7 @@ internal class DeleteRuleCommentCommandHandler : IRequestHandler<DeleteRuleComme
     private async Task DeleteRepliesRecursivelyAsync(Guid parentCommentId, CancellationToken cancellationToken)
     {
         var replies = await _dbContext.RuleSpecComments
+            .AsTracking()
             .Where(c => c.ParentCommentId == parentCommentId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 

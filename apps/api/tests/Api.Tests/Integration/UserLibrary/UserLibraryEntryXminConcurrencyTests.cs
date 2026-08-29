@@ -116,8 +116,13 @@ public sealed class UserLibraryEntryXminConcurrencyTests : IAsyncLifetime
         await using var firstContext = _fixture.CreateDbContext(_connectionString);
         await using var secondContext = _fixture.CreateDbContext(_connectionString);
 
-        var seenByFirst = await firstContext.UserLibraryEntries.FirstAsync(e => e.Id == id);
-        var seenBySecond = await secondContext.UserLibraryEntries.FirstAsync(e => e.Id == id);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var seenByFirst = await firstContext.UserLibraryEntries.AsTracking().FirstAsync(e => e.Id == id);
+        var seenBySecond = await secondContext.UserLibraryEntries.AsTracking().FirstAsync(e => e.Id == id);
 
         seenByFirst.Notes = "modificata dalla prima scheda";
         await firstContext.SaveChangesAsync();

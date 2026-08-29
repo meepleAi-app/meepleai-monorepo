@@ -126,14 +126,13 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         // Assert - audit_outbox row enqueued by DomainEventAuditHandler<GameCreatedEvent>
         // (Issue #1534: single canonical write path → audit_outbox; processor materializes audit_logs later)
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRows = allOutbox.Where(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"")).ToList();
+        var outboxRows = allOutbox.Where(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent")).ToList();
 
         outboxRows.Should().HaveCount(1);
         var outboxRow = outboxRows[0];
-        outboxRow.PayloadJson.Should().Contain("\"Action\":\"DomainEvent.GameCreatedEvent\"");
-        outboxRow.PayloadJson.Should().Contain("\"Result\":\"Success\"");
-        outboxRow.PayloadJson.Should().Contain("GameId");
-        outboxRow.PayloadJson.Should().Contain(gameId.ToString());
+        AuditOutboxPayloadJson.Property(outboxRow.PayloadJson, "Action").Should().Be("DomainEvent.GameCreatedEvent");
+        AuditOutboxPayloadJson.Property(outboxRow.PayloadJson, "Result").Should().Be("Success");
+        AuditOutboxPayloadJson.Detail(outboxRow.PayloadJson, "GameId").Should().Be(gameId.ToString());
     }
 
     /// <summary>
@@ -179,14 +178,14 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
         // (UserId is now a string field inside the serialized AuditOutboxPayload, not a typed column)
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
         var outboxRows = allOutbox
-            .Where(o => o.PayloadJson.Contains("\"Resource\":\"PasswordChangedEvent\""))
+            .Where(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "PasswordChangedEvent"))
             .OrderBy(o => o.CreatedAt)
             .ToList();
 
         outboxRows.Should().HaveCount(2);
-        outboxRows[0].PayloadJson.Should().Contain($"\"UserId\":\"{user.Id}\"");
-        outboxRows[1].PayloadJson.Should().Contain($"\"UserId\":\"{user.Id}\"");
-        outboxRows.All(o => o.PayloadJson.Contains("\"Result\":\"Success\"")).Should().BeTrue();
+        AuditOutboxPayloadJson.Detail(outboxRows[0].PayloadJson, "UserId").Should().Be(user.Id.ToString());
+        AuditOutboxPayloadJson.Detail(outboxRows[1].PayloadJson, "UserId").Should().Be(user.Id.ToString());
+        outboxRows.Should().OnlyContain(o => AuditOutboxPayloadJson.Has(o.PayloadJson, "Result", "Success"));
     }
 
     #endregion
@@ -214,10 +213,10 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         // Assert - audit_outbox row from domain event handler
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
+        var outboxRow = allOutbox.FirstOrDefault(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent"));
 
         outboxRow.Should().NotBeNull();
-        outboxRow!.PayloadJson.Should().Contain(gameId.ToString());
+        AuditOutboxPayloadJson.Detail(outboxRow!.PayloadJson, "GameId").Should().Be(gameId.ToString());
     }
 
     /// <summary>
@@ -254,10 +253,10 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         // Assert - audit_outbox rows from both contexts (game and user)
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var gameOutboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
+        var gameOutboxRow = allOutbox.FirstOrDefault(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent"));
 
         gameOutboxRow.Should().NotBeNull();
-        gameOutboxRow!.PayloadJson.Should().Contain(gameId.ToString());
+        AuditOutboxPayloadJson.Detail(gameOutboxRow!.PayloadJson, "GameId").Should().Be(gameId.ToString());
     }
 
     #endregion
@@ -294,7 +293,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         // audit_outbox row still created despite handler errors
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRow = allOutbox.FirstOrDefault(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\""));
+        var outboxRow = allOutbox.FirstOrDefault(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent"));
         outboxRow.Should().NotBeNull();
     }
 
@@ -331,7 +330,7 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         // Assert - All events dispatched (audit_outbox row per event)
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRows = allOutbox.Where(o => o.PayloadJson.Contains("\"Resource\":\"GameCreatedEvent\"")).ToList();
+        var outboxRows = allOutbox.Where(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameCreatedEvent")).ToList();
 
         outboxRows.Should().HaveCount(10);
     }
@@ -361,10 +360,10 @@ public sealed class DomainEventDispatcherIntegrationTests : IAsyncLifetime
 
         // Assert - audit_outbox row from GameLinkedToBggEvent
         var allOutbox = await _dbContext.AuditOutbox.ToListAsync(TestCancellationToken);
-        var outboxRows = allOutbox.Where(o => o.PayloadJson.Contains("\"Resource\":\"GameLinkedToBggEvent\"")).ToList();
+        var outboxRows = allOutbox.Where(o => AuditOutboxPayloadJson.IsResource(o.PayloadJson, "GameLinkedToBggEvent")).ToList();
 
         outboxRows.Should().HaveCount(1);
-        outboxRows[0].PayloadJson.Should().Contain("68448");
+        AuditOutboxPayloadJson.Detail(outboxRows[0].PayloadJson, "BggId").Should().Be("68448");
     }
 
     #endregion

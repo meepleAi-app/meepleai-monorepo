@@ -258,6 +258,11 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
+        // Issue #3866: the handler reads the document with the production NoTracking default and
+        // then Remove()s what it read. A real request never seeded that row in its own scope, so
+        // leaving the seed tracked here is what produces the identity conflict — not the handler.
+        _dbContext.ChangeTracker.Clear();
+
         return pdfId;
     }
 

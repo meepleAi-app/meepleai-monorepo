@@ -37,9 +37,14 @@ internal sealed class AppBudgetRepository : RepositoryBase, IAppBudgetRepository
     {
         ArgumentNullException.ThrowIfNull(budget);
 
-        // We deliberately re-query without AsNoTracking so EF can attach the
-        // existing row for an in-place update with concurrency checking.
+        // Issue #3866: `.AsTracking()` is REQUIRED and the comment that used to sit here — "we
+        // deliberately re-query without AsNoTracking so EF can attach the row" — was built on a
+        // false premise. The DbContext default IS NoTracking (PERF-06,
+        // InfrastructureServiceExtensions.cs), so omitting AsNoTracking() buys nothing: the row came
+        // back DETACHED, the in-place assignments below reached no change tracker, and
+        // SaveChangesAsync wrote nothing and raised nothing. Every edit was silently discarded.
         var tracked = await DbContext.AppBudgets
+            .AsTracking()
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 

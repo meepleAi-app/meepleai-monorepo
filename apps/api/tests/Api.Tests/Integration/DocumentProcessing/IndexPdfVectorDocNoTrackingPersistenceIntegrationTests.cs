@@ -34,7 +34,7 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// Failed — divergent tables.
 ///
 /// <para>The existing <c>IndexPdfIntegrationTests</c> misses this because it builds its DbContext via
-/// <c>IntegrationServiceCollectionBuilder.CreateBase(conn)</c> WITHOUT <c>useNoTrackingDefault: true</c>,
+/// a test context that tracked by default (the situation before #3866 made the parity unconditional),
 /// leaving EF Core's track-by-default behavior in place (which masks the bug). This suite explicitly
 /// opts into the production NoTracking default.</para>
 /// </summary>
@@ -58,9 +58,9 @@ public sealed class IndexPdfVectorDocNoTrackingPersistenceIntegrationTests : IAs
         _databaseName = $"indexpdf_vecdoc_notracking_{Guid.NewGuid():N}";
         var conn = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // CRUX: useNoTrackingDefault: true reproduces the production QueryTrackingBehavior.NoTracking
+        // CRUX: the context reproduces the production QueryTrackingBehavior.NoTracking default
         // default. Without it the test DbContext would track-by-default and mask the bug.
-        var services = IntegrationServiceCollectionBuilder.CreateBase(conn, useNoTrackingDefault: true);
+        var services = IntegrationServiceCollectionBuilder.CreateBase(conn);
 
         // Real chunking stack so ChunkAndEmbedTextAsync produces genuine chunks before the
         // (deliberately failing) embedding step drives execution to MarkIndexingFailedAsync.

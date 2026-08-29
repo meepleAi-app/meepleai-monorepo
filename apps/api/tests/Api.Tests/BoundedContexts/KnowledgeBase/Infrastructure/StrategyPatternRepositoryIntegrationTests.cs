@@ -16,6 +16,8 @@ using Npgsql;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
 using Xunit;
+// Issue #3866: the domain value object and the pgvector type share the name Vector.
+using DomainVector = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.Vector;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 
@@ -282,16 +284,17 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
 
         for (int i = 0; i < 3; i++)
         {
+            // Issue #3866: the embedding used to be assigned onto an entity read back from the
+            // context and then "saved". With the production NoTracking default (PERF-06) that read
+            // is DETACHED, so nothing was written: every row kept a NULL embedding and the
+            // `Where(p => p.Embedding != null)` below matched none of them. The repository writes
+            // the embedding on insert, which is the path production uses.
             var pattern = new StrategyPattern(
                 Guid.NewGuid(), _gameId, patternNames[i], "opening",
-                $"Description {i}", 0.8 - i * 0.1, "{}", "{}", "test");
+                $"Description {i}", 0.8 - i * 0.1, "{}", "{}", "test",
+                embedding: new DomainVector(embeddings[i]));
             await _repository!.AddAsync(pattern, TestCancellationToken);
             await _dbContext!.SaveChangesAsync(TestCancellationToken);
-
-            var entity = await _dbContext.StrategyPatterns
-                .FirstAsync(p => p.Id == pattern.Id, TestCancellationToken);
-            entity.Embedding = new Vector(embeddings[i]);
-            await _dbContext.SaveChangesAsync(TestCancellationToken);
         }
 
         var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
@@ -325,24 +328,18 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
         var embedding = CreateNormalizedEmbedding(0.5f);
 
         // Patterns across games and phases
+        // Issue #3866: embeddings go in on insert — see the note in
+        // VectorSimilaritySearch_ReturnsPatternsOrderedByDistance.
         var patterns = new[]
         {
-            new StrategyPattern(Guid.NewGuid(), _gameId, "Chess Opening", "opening", "Test", 0.8, "{}", "{}", "test"),
-            new StrategyPattern(Guid.NewGuid(), _gameId, "Chess Midgame", "midgame", "Test", 0.7, "{}", "{}", "test"),
-            new StrategyPattern(Guid.NewGuid(), otherGame.Id, "Go Opening", "opening", "Test", 0.9, "{}", "{}", "test"),
+            new StrategyPattern(Guid.NewGuid(), _gameId, "Chess Opening", "opening", "Test", 0.8, "{}", "{}", "test", new DomainVector(embedding)),
+            new StrategyPattern(Guid.NewGuid(), _gameId, "Chess Midgame", "midgame", "Test", 0.7, "{}", "{}", "test", new DomainVector(embedding)),
+            new StrategyPattern(Guid.NewGuid(), otherGame.Id, "Go Opening", "opening", "Test", 0.9, "{}", "{}", "test", new DomainVector(embedding)),
         };
 
         foreach (var p in patterns)
         {
             await _repository!.AddAsync(p, TestCancellationToken);
-        }
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        foreach (var p in patterns)
-        {
-            var entity = await _dbContext.StrategyPatterns
-                .FirstAsync(e => e.Id == p.Id, TestCancellationToken);
-            entity.Embedding = new Vector(embedding);
         }
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
@@ -368,16 +365,15 @@ public sealed class StrategyPatternRepositoryIntegrationTests : IAsyncLifetime
     {
         // Arrange
         var embedding = CreateNormalizedEmbedding(0.7f);
+        // Issue #3866: written on insert. This test stayed green with a NULL embedding only
+        // because `ORDER BY embedding <=> …` still returns the row.
         var pattern = new StrategyPattern(
             Guid.NewGuid(), _gameId, "Embedded Pattern", "endgame",
-            "Pattern with embedding", 0.95, "{}", "{}", "test");
+            "Pattern with embedding", 0.95, "{}", "{}", "test",
+            embedding: new DomainVector(embedding));
 
         await _repository!.AddAsync(pattern, TestCancellationToken);
         await _dbContext!.SaveChangesAsync(TestCancellationToken);
-
-        var entity = await _dbContext.StrategyPatterns
-            .FirstAsync(p => p.Id == pattern.Id, TestCancellationToken);
-        entity.Embedding = new Vector(embedding);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.7f));

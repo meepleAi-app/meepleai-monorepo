@@ -352,8 +352,16 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
             return; // nothing was persisted yet
         }
 
+        // Issue #3866: `.AsTracking()` on both reads below. The DbContext default is NoTracking
+        // (PERF-06), so each of them returned a SECOND instance of a row this very scope had just
+        // created and is still tracking; Remove() then threw "cannot be tracked because another
+        // instance with the same key value is already being tracked". The exception escaped this
+        // compensation helper into the generic catch of the caller, which reported an unrelated
+        // error message AND left the compensation undone. With tracking, identity resolution hands
+        // back the instance already in the tracker and Remove() operates on it.
         var providerLower = provider.ToLowerInvariant();
         var oauthAccountToRemove = await _db.OAuthAccounts
+            .AsTracking()
             .FirstOrDefaultAsync(
                 o => o.UserId == userIdToClean.Value && o.Provider == providerLower,
                 cancellationToken)
@@ -367,6 +375,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         if (isNewUserToClean)
         {
             var userToRemove = await _db.Users
+                .AsTracking()
                 .FirstOrDefaultAsync(u => u.Id == userIdToClean.Value, cancellationToken)
                 .ConfigureAwait(false);
             if (userToRemove != null)

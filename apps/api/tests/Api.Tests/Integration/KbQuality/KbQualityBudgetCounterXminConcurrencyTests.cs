@@ -92,9 +92,16 @@ public sealed class KbQualityBudgetCounterXminConcurrencyTests : IAsyncLifetime
         await using var firstContext = _fixture.CreateDbContext(_connectionString);
         await using var secondContext = _fixture.CreateDbContext(_connectionString);
 
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
         var seenByFirst = await firstContext.KbQualityBudgetCounters
+            .AsTracking()
             .FirstAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth);
         var seenBySecond = await secondContext.KbQualityBudgetCounters
+            .AsTracking()
             .FirstAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth);
 
         seenByFirst.IncrementSpent(15m);
@@ -122,6 +129,7 @@ public sealed class KbQualityBudgetCounterXminConcurrencyTests : IAsyncLifetime
         // Il contesto "lento" traccia la riga a 10: da qui in poi la sua copia è destinata a
         // diventare stale, ed è la condizione che il retry deve saper riconoscere.
         await slowContext.KbQualityBudgetCounters
+            .AsTracking() // #3866: senza tracking non esiste la copia stale che il retry deve riconoscere
             .FirstAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth);
 
         await using (var fastContext = _fixture.CreateDbContext(_connectionString))

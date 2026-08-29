@@ -430,10 +430,17 @@ public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (authorId, _) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
         // Set DisplayName on the author so the wire shape exposes a real label.
-        var authorEntity = await dbContext.Users.FirstAsync(u => u.Id == authorId);
-        authorEntity.DisplayName = "Marco Designer";
-        authorEntity.AvatarUrl = "https://example.com/marco.jpg";
-        await dbContext.SaveChangesAsync();
+        // Issue #3866: questo arrange leggeva l'utente e assegnava i due campi prima di
+        // SaveChangesAsync. Con il default NoTracking della produzione (PERF-06) quella lettura e'
+        // DETACHED: non veniva scritto nulla, l'endpoint restituiva il "Test User" originale e il
+        // test misurava una precondizione che non esisteva. Set-based, e verifica di aver toccato
+        // una riga.
+        var authorUpdated = await dbContext.Users
+            .Where(u => u.Id == authorId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(u => u.DisplayName, "Marco Designer")
+                .SetProperty(u => u.AvatarUrl, "https://example.com/marco.jpg"));
+        authorUpdated.Should().Be(1, "l'autore deve esistere prima che il dettaglio ne mostri il nome");
 
         var (_, viewerToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
         var toolkit = await SeedToolkitAsync(

@@ -174,7 +174,13 @@ internal sealed class EvaluationRepository
         {
             var yearMonth = CurrentYearMonth();
 
+            // Issue #3866: `.AsTracking()` is REQUIRED. The DbContext default is NoTracking
+            // (PERF-06), so this read returned a DETACHED counter: IncrementSpent below mutated an
+            // object EF was not watching, SaveChangesAsync wrote nothing and raised nothing, and
+            // every increment was lost — with the retry loop, which only runs on a concurrency
+            // conflict, never entering. Same defect as the token being inert, one layer up.
             var counter = await _db.KbQualityBudgetCounters
+                .AsTracking()
                 .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth, ct)
                 .ConfigureAwait(false);
 

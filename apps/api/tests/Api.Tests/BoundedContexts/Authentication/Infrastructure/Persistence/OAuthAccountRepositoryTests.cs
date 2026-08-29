@@ -370,7 +370,11 @@ public class OAuthAccountRepositoryTests : SharedDatabaseTestBase<OAuthAccountRe
         persisted.ProviderUserId.Should().Be(account.ProviderUserId);
         persisted.AccessTokenEncrypted.Should().Be(account.AccessTokenEncrypted);
         persisted.RefreshTokenEncrypted.Should().Be(account.RefreshTokenEncrypted);
-        persisted.TokenExpiresAt.Should().Be(account.TokenExpiresAt);
+        // Issue #3866: the read now comes from Postgres instead of the change tracker, so the value
+        // has been through a `timestamp` column — microsecond precision, against the 100ns ticks of
+        // the in-memory DateTime. An exact Be() was comparing the object with itself, which is
+        // precisely what a "domain → persistence" mapping test must NOT do.
+        persisted.TokenExpiresAt.Should().BeCloseTo(account.TokenExpiresAt!.Value, TimeSpan.FromMicroseconds(1));
     }
 
     [Fact]

@@ -42,10 +42,10 @@ namespace Api.Tests.Integration.DocumentProcessing;
 ///
 /// <para><b>Why a NEW test file instead of extending <see cref="ReindexDocumentVersionIntegrationTests"/>:</b>
 /// that sibling suite's DbContext (built via <see cref="IntegrationServiceCollectionBuilder.CreateBase"/>
-/// without <c>useNoTrackingDefault</c>) leaves EF Core's tracking-BY-DEFAULT behavior in place, so its
+/// before #3866) left EF Core's tracking-BY-DEFAULT behavior in place, so its
 /// <c>Reindex_ExplicitVersion_PersistsOnEntity</c> test would keep passing even if <c>.AsTracking()</c>
 /// were removed from the handler — it does not reproduce the production configuration and therefore
-/// cannot catch this regression. This suite explicitly opts into NoTracking to match production.</para>
+/// could not catch this regression. Since #3866 every test context matches production.</para>
 /// </summary>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
@@ -76,11 +76,11 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
         _databaseName = $"test_reindex_notrk_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // CRUX OF THE TEST: useNoTrackingDefault: true reproduces the production
-        // QueryTrackingBehavior.NoTracking default. Without this flag the test DbContext would
+        // CRUX OF THE TEST: the context reproduces the production QueryTrackingBehavior.NoTracking
+        // default — unconditional since #3866. With a tracking context the test DbContext would
         // track-by-default and mask the bug (see class doc comment).
         var services = IntegrationServiceCollectionBuilder.CreateBase(
-            _isolatedDbConnectionString, useNoTrackingDefault: true);
+            _isolatedDbConnectionString);
 
         // Best-effort enqueue fan-out (EnqueuePdfCommand) needs these registered so the inner
         // mediator.Send resolves cleanly instead of being swallowed by the handler's CA1031 catch.

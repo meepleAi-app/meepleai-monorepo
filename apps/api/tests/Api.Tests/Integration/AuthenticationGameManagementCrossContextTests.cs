@@ -352,6 +352,10 @@ public sealed class AuthenticationGameManagementCrossContextTests : IAsyncLifeti
         gameSession.Start();
         await gameSessionRepository.AddAsync(gameSession, TestCancellationToken);
         await DbContext.SaveChangesAsync(TestCancellationToken);
+        // Issue #3866: end of arrange — production revokes sessions it did not create in the same
+        // scope, so the tracker must be empty or RevokeAllUserSessionsAsync attaches a second
+        // instance of the seeded row and throws an identity conflict.
+        DbContext.ChangeTracker.Clear();
 
         // Act - Revoke all user sessions after game started
         await sessionRepository.RevokeAllUserSessionsAsync(user.Id, TestCancellationToken);

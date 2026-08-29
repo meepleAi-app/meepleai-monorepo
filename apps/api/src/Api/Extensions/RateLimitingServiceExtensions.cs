@@ -39,127 +39,29 @@ namespace Api.Extensions;
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
-    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        // Issue #2705: Allow disabling rate limiting from appsettings.
+        // Issue #2705 / #3102 / #3887: this method registers the REAL policies unconditionally.
+        // It deliberately reads no switch at all.
         //
-        // Issue #3887: this method runs during service registration, and under
-        // WebApplicationFactory that happens BEFORE the factory's own configuration sources are
-        // applied — they land at builder.Build(). That is why #3102 had to read a
-        // DISABLE_RATE_LIMITING *process environment variable* here: it was the only channel that
-        // reached this line. But a process variable is global, so a test that flipped it to
-        // exercise a 429 turned rate limiting on for every host built meanwhile by a parallel xUnit
-        // collection — the whole point of #3887.
+        // Why: under WebApplicationFactory, service registration runs BEFORE the factory's own
+        // configuration sources are applied — they land at builder.Build(). Any switch read here
+        // therefore resolves against process-wide state (appsettings + environment variables), not
+        // against the per-host configuration a test declared. #3102 leaned on that on purpose, via
+        // a DISABLE_RATE_LIMITING env var; the cost was that one test flipping it changed the
+        // behaviour of every host built meanwhile by a parallel xUnit collection (#3887).
         //
-        // The switch therefore moved to WebApplicationExtensions.ConfigureAuthMiddleware, which
-        // runs after Build() and reads the complete per-host configuration (env vars included, so
-        // production behaviour is unchanged) to decide whether to add UseRateLimiter() at all.
-        // Registration keeps only the appsettings-driven branch below; no process state is read.
-        var rateLimitingEnabled = configuration.GetValue("RateLimiting:Enabled", true);
-
-        if (!rateLimitingEnabled)
-        {
-            // Register a permissive rate limiter that allows all requests (used in tests)
-            services.AddRateLimiter(options =>
-            {
-                options.AddPolicy("SharedGamesAdmin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("SharedGamesPublic", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("FaqUpvote", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3098: Share request rate limiting policies
-                options.AddPolicy("ShareRequestAdmin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ShareRequestCreation", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ShareRequestQuery", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ShareRequestUpdate", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3098: User dashboard rate limiting policy
-                options.AddPolicy("UserDashboard", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3120: BGG search rate limiting policy
-                options.AddPolicy("BggSearch", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #3665: Private game proposal rate limiting policy
-                options.AddPolicy("ProposePrivateGame", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #4354: Bulk import rate limiting policy
-                options.AddPolicy("BulkImportAdmin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #4338: Agent query rate limiting policy
-                options.AddPolicy("AgentQuery", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #4683: Agent creation rate limiting policy
-                options.AddPolicy("AgentCreation", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // SEC-05: Auth rate limiting policies (disabled in tests)
-                options.AddPolicy("AuthLogin", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthRegister", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthVerify2FA", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthInvitation", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AuthPasswordReset", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("ContactForm", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AccessRequest", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #936: Admin provider probe policies (G3)
-                options.AddPolicy("AdminProviderProbe", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("AdminProviderProbeGlobal", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #1859: Admin provider key rotation (1/24h per provider+user)
-                options.AddPolicy("AdminProviderRotateKey", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #1169: Public game-night RSVP token policies (disabled in tests)
-                options.AddPolicy("GameNightTokenRead", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("GameNightTokenRespond", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                options.AddPolicy("LiveSessionCodeReadPublic", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-
-                // Issue #950 (W1-PR2): authenticated user-search autocomplete (disabled in tests)
-                options.AddPolicy("UsersSearch", _ =>
-                    RateLimitPartition.GetNoLimiter<string>("unlimited"));
-            });
-
-            return services;
-        }
+        // Registering NoLimiter policies from a switch read here had a subtler failure too: the
+        // middleware gate below decides independently, so the two reads could disagree and produce
+        // a host with UseRateLimiter() wired over policies that throttle nothing — silently.
+        //
+        // The single decision point is now WebApplicationExtensions.ConfigureAuthMiddleware, which
+        // runs after Build() and reads the complete per-host configuration (environment-variables
+        // source included, so production behaviour is unchanged) to decide whether to add
+        // UseRateLimiter() at all. No middleware, no throttling — the policies below are inert.
+        // The IConfiguration parameter was dropped with the switch: there is nothing left to read.
 
         services.AddRateLimiter(options =>
         {

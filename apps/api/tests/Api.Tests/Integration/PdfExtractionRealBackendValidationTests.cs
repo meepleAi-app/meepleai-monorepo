@@ -306,7 +306,10 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
 
     #region Edge Case Tests (75%+ accuracy)
 
-    [Fact(Timeout = 90_000)] // 1 minute timeout for large file
+    // #3887: deliberately NOT raised to the suite's 90s. This is a stress test and the 60s bound
+    // is the assertion — the performance ceiling for large-PDF extraction. Widening it would let a
+    // 50% extraction slowdown ship green, and no other assertion here measures duration.
+    [Fact(Timeout = 60_000)] // 1 minute ceiling for large file — this bound IS the guardrail
     public async Task Unstructured_LargeFile_TerraformingMars_HandlesStressTest()
     {
         if (_unstructuredExtractor == null || !_goldStandards.ContainsKey("terraforming-mars_rulebook.pdf"))

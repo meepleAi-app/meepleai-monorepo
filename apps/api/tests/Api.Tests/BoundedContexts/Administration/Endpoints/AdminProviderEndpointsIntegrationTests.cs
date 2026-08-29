@@ -43,6 +43,9 @@ namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "936")]
+// #3887: this class holds DefaultFactory_DisablesRateLimitingViaConfigurationOnly, the guard that
+// rejected the first version of that fix — so `dotnet test --filter Issue=3887` must reach it.
+[Trait("Issue", "3887")]
 public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
 {
     // #3887: the provider API key travels through IConfiguration, never the process environment.
@@ -171,7 +174,7 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
             because: "fingerprint must be an 8-char lowercase hex SHA256 prefix");
 
         // Raw API key must NOT appear in response body
-        body.Should().NotContain("test-token-valid-secret",
+        body.Should().NotContain(OpenRouterApiKeyValue,
             because: "raw API keys must never be returned in responses");
     }
 

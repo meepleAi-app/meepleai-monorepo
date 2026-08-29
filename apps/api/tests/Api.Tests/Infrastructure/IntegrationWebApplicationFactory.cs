@@ -101,10 +101,11 @@ internal static class IntegrationWebApplicationFactory
                         ["Observability:Enabled"] = "false",
                         ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "",
                         // Rate limiting (#3887) — read after Build() by WebApplicationExtensions,
-                        // which decides whether to add UseRateLimiter() at all. extraConfig is merged
-                        // after this dictionary, so a caller can still override.
-                        ["RateLimiting:Enabled"] = enableRateLimiting ? "true" : "false",
-                        ["DISABLE_RATE_LIMITING"] = enableRateLimiting ? "false" : "true"
+                        // which decides whether to add UseRateLimiter() at all. One key: the two
+                        // switches are the same bit, and DISABLE_RATE_LIMITING is the production env
+                        // alias, not a second per-host knob. extraConfig is merged after this
+                        // dictionary, so a caller can still override.
+                        ["RateLimiting:Enabled"] = enableRateLimiting ? "true" : "false"
                     };
 
                     // Merge extra config if provided

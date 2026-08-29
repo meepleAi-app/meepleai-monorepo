@@ -58,6 +58,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     /// Initialize PostgreSQL container before tests.
     /// Container is shared across all tests in the collection for performance.
     /// </summary>
+    [Obsolete]
     public async ValueTask InitializeAsync()
     {
         // Check if external connection string is provided (for CI/CD)
@@ -157,9 +158,6 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
                 ["HealthChecks:Redis:Enabled"] = "false",
                 // Issue #2705: Disable rate limiting for integration tests to prevent 429 errors
                 ["RateLimiting:Enabled"] = "false",
-                // Issue #3887: the second switch, as per-host configuration rather than as a
-                // process environment variable.
-                ["DISABLE_RATE_LIMITING"] = "true",
                 // Configure Redis/Qdrant URLs to dummy values (services are mocked)
                 ["REDIS_URL"] = "localhost:6379",
                 ["QDRANT_URL"] = "http://localhost:6333",

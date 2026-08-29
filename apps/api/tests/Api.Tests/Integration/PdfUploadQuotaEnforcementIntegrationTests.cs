@@ -205,7 +205,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         return $"{year}-W{week:D2}";
     }
-    [Fact(Timeout = 90_000)] // 30s for Testcontainers integration tests
+    [Fact(Timeout = 90_000)]
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
         // FIX: Clear Redis state to prevent interference from previous tests

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Administration.Domain.Repositories;
+using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Caching.Memory;
@@ -68,13 +69,19 @@ internal sealed class ProviderCredentialResolver : IProviderCredentialResolver
             return plaintext;
         }
 
-        // Issue #3887: read the fallback through IConfiguration, NOT Environment.GetEnvironmentVariable.
-        // Production configuration includes AddEnvironmentVariables(), so an OPENROUTER_API_KEY /
-        // DEEPSEEK_API_KEY env var resolves exactly as before. Reading it from configuration makes the
-        // value per-host, so a test can vary it without mutating the process — a process-global mutation
-        // leaks into every host built concurrently by other xUnit collections.
+        // Issue #3887: read the fallback through SecretsHelper, NOT Environment.GetEnvironmentVariable.
+        // Two reasons, both load-bearing:
+        //   1. Configuration-based: production configuration includes AddEnvironmentVariables(), so an
+        //      OPENROUTER_API_KEY / DEEPSEEK_API_KEY env var resolves exactly as before — but the value
+        //      becomes per-host, so a test can vary it without mutating the process. A process-global
+        //      mutation leaks into every host built concurrently by other xUnit collections.
+        //   2. SecretsHelper (not a raw indexer): it honours the <KEY>_FILE Docker-secret convention,
+        //      which every other consumer of these keys already uses (OpenRouterService,
+        //      ChunkTranslationService, VisionOcrAdapter, OpenRouterUsageService,
+        //      ModelAvailabilityCheckJob). Reading the raw key alone made this resolver the only path
+        //      that reported "not configured" in a deployment supplying the key as a secret file.
         var envVar = ProviderEnvVarMap.For(normalized);
-        var envValue = _configuration[envVar];
+        var envValue = SecretsHelper.GetSecretOrValue(_configuration, envVar, _logger, required: false);
         if (!string.IsNullOrWhiteSpace(envValue))
         {
             _cache.Set(cacheKey, envValue, CacheTtl);

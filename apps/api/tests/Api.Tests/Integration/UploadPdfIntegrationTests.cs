@@ -407,7 +407,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         return game;
     }
-    [Fact(Timeout = 90_000)] // 30s for Testcontainers integration tests
+    [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WithCorruptedPdf_ReturnsError()
     {
         // Arrange

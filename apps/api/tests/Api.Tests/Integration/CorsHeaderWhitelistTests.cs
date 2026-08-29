@@ -42,10 +42,10 @@ public class CorsTestFactory : WebApplicationFactory<Program>
             {
                 ["OPENROUTER_API_KEY"] = "test-openrouter-key",
                 ["OPENROUTER_API_KEY_FILE"] = null,
-                // #3887: state the rate-limit switches for this host instead of relying on a
-                // process env var that another factory happened to set earlier in the run.
+                // #3887: state the rate-limit switch for this host instead of relying on a process
+                // env var that another factory happened to set earlier in the run. One key only:
+                // DISABLE_RATE_LIMITING stays the production env alias, not a second test switch.
                 ["RateLimiting:Enabled"] = "false",
-                ["DISABLE_RATE_LIMITING"] = "true",
                 ["ConnectionStrings:Postgres"] = "Host=localhost;Port=5432;Database=dummy;Username=dummy;Password=dummy"
             });
         });

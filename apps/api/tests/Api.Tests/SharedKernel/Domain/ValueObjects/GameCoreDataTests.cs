@@ -84,6 +84,27 @@ public class GameCoreDataTests
         act.Should().Throw<ArgumentException>().WithMessage("*minPlayers*");
     }
 
+    /// <summary>
+    /// Issue #3883 — (0, 0) e' lo stato "conteggio giocatori ignoto", e lo schema lo ammette
+    /// esplicitamente: il check constraint su <c>shared_games</c> recita
+    /// <c>(min_players = 0 AND max_players = 0) OR (min_players > 0 AND max_players >= min_players)</c>.
+    /// Questo value object lo rifiutava, quindi ogni riga con quel conteggio faceva
+    /// <c>ArgumentException</c> e il middleware la trasformava in un <b>400 «Invalid request
+    /// parameters»</b> su endpoint di sola LETTURA — indistinguibile da una richiesta malformata.
+    /// La validazione ricalca ora il constraint alla lettera.
+    /// </summary>
+    [Fact]
+    public void Create_with_unknown_player_count_is_accepted()
+    {
+        var data = GameCoreData.Create(
+            title: "Gioco senza conteggio giocatori", yearPublished: 2000,
+            minPlayers: 0, maxPlayers: 0,
+            playingTimeMinutes: 60, minAge: 10);
+
+        data.MinPlayers.Should().Be(0);
+        data.MaxPlayers.Should().Be(0);
+    }
+
     [Fact]
     public void Create_with_minPlayers_greater_than_maxPlayers_throws()
     {

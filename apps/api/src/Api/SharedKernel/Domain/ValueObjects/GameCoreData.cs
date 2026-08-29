@@ -103,13 +103,28 @@ public sealed record GameCoreData
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("title cannot be empty or whitespace", nameof(title));
 
-        if (minPlayers < 1 || minPlayers > 100)
-            throw new ArgumentException("minPlayers must be in range 1..100", nameof(minPlayers));
+        // #3883: (0, 0) e' lo stato "conteggio giocatori ignoto", ed e' esplicitamente ammesso dallo
+        // schema — il check constraint su shared_games recita
+        //     (min_players = 0 AND max_players = 0) OR (min_players > 0 AND max_players >= min_players)
+        // Questo value object lo rifiutava, quindi ogni riga con quel conteggio faceva ArgumentException
+        // e il middleware la trasformava in un 400 «Invalid request parameters» su endpoint di sola
+        // LETTURA (GET /games/{id}, GET /games/{id}/agents): opaco per il chiamante e indistinguibile
+        // da una richiesta malformata. Stessa forma gia' riconosciuta come difetto in #3633
+        // (LiveGameSessionMapper), dove la degradazione e' stata resa coerente invece di lanciare.
+        //
+        // La validazione ricalca ora il constraint alla lettera: (0,0) passa, (0,5) no.
+        var playerCountUnknown = minPlayers == 0 && maxPlayers == 0;
 
-        if (maxPlayers < minPlayers || maxPlayers > 100)
-            throw new ArgumentException(
-                $"maxPlayers ({maxPlayers}) must be >= minPlayers ({minPlayers}) and <= 100",
-                nameof(maxPlayers));
+        if (!playerCountUnknown)
+        {
+            if (minPlayers < 1 || minPlayers > 100)
+                throw new ArgumentException("minPlayers must be in range 1..100 (or 0 with maxPlayers 0 for an unknown player count)", nameof(minPlayers));
+
+            if (maxPlayers < minPlayers || maxPlayers > 100)
+                throw new ArgumentException(
+                    $"maxPlayers ({maxPlayers}) must be >= minPlayers ({minPlayers}) and <= 100",
+                    nameof(maxPlayers));
+        }
 
         if (playingTimeMinutes < 0)
             throw new ArgumentException(

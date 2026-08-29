@@ -53,8 +53,12 @@ internal sealed class UpdateSharedGameFromBggCommandHandler : ICommandHandler<Up
             command.BggId,
             command.FieldsToUpdate is null or { Count: 0 } ? "ALL" : string.Join(", ", command.FieldsToUpdate));
 
-        // Get the tracked entity with all relationships for update
+        // Get the tracked entity with all relationships for update.
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var gameEntity = await _dbContext.Set<SharedGameEntity>()
+            .AsTracking()
             .Include(g => g.Designers)
             .Include(g => g.Publishers)
             .Include(g => g.Categories)

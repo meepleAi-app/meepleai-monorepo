@@ -44,7 +44,13 @@ internal class AlertConfigurationRepository : RepositoryBase, IAlertConfiguratio
     public async Task UpdateAsync(AlertConfiguration config, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(config);
-        var entity = await DbContext.AlertConfigurations.FindAsync(new object[] { config.Id }, cancellationToken).ConfigureAwait(false);
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
+        var entity = await DbContext.AlertConfigurations
+            .AsTracking()
+            .FirstOrDefaultAsync(e => e.Id == config.Id, cancellationToken)
+            .ConfigureAwait(false);
         if (entity == null) throw new InvalidOperationException($"AlertConfiguration {config.Id} not found");
         entity.ConfigValue = config.ConfigValue;
         entity.IsEncrypted = config.IsEncrypted;

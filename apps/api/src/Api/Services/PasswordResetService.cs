@@ -73,8 +73,13 @@ internal class PasswordResetService : IPasswordResetService
             return true;
         }
 
-        // Invalidate any existing unused tokens for this user
+        // Invalidate any existing unused tokens for this user.
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06), quindi
+        // senza di esso il token.IsUsed = true sotto non raggiungeva alcun change tracker: ogni
+        // "reinvia" lasciava validi anche i link precedenti, e un utente poteva accumulare token
+        // attivi senza limite.
         var existingTokens = await _db.PasswordResetTokens
+            .AsTracking()
             .Where(t => t.UserId == user.Id && !t.IsUsed && t.ExpiresAt > now)
             .ToListAsync(ct).ConfigureAwait(false);
 
@@ -200,7 +205,12 @@ internal class PasswordResetService : IPasswordResetService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var tokenHash = HashToken(token);
 
+        // #3882: .AsTracking() richiesto, ed e' il difetto piu' grave della famiglia. Senza, questa
+        // lettura e la navigazione User che la accompagna erano DETACHED: il token non veniva
+        // marcato usato (quindi RESTAVA RIUTILIZZABILE), la password non veniva cambiata, e le
+        // sessioni non venivano revocate. Il metodo ritornava comunque (true, user.Id).
         var resetToken = await _db.PasswordResetTokens
+            .AsTracking()
             .Include(t => t.User)
             .FirstOrDefaultAsync(t => t.TokenHash == tokenHash, ct).ConfigureAwait(false);
 
@@ -241,8 +251,11 @@ internal class PasswordResetService : IPasswordResetService
 
         user.PasswordHash = HashPassword(newPassword);
 
-        // Revoke all existing sessions for security
+        // Revoke all existing sessions for security.
+        // #3882: .AsTracking() richiesto — e' la mitigazione che questo commento dichiara, e senza
+        // tracking non avveniva: dopo un reset password le sessioni aperte restavano tutte valide.
         var existingSessions = await _db.UserSessions
+            .AsTracking()
             .Where(s => s.UserId == user.Id && s.RevokedAt == null)
             .ToListAsync(ct).ConfigureAwait(false);
 

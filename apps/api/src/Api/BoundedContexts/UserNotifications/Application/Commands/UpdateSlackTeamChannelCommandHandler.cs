@@ -23,7 +23,11 @@ internal class UpdateSlackTeamChannelCommandHandler : ICommandHandler<UpdateSlac
 
     public async Task Handle(UpdateSlackTeamChannelCommand command, CancellationToken cancellationToken)
     {
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var entity = await _dbContext.Set<SlackTeamChannelConfigEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == command.Id, cancellationToken)
             .ConfigureAwait(false);
 

@@ -78,7 +78,13 @@ internal sealed class ShareLinkRepository : RepositoryBase, IShareLinkRepository
     {
         ArgumentNullException.ThrowIfNull(entity);
         CollectDomainEvents(entity);
-        var existingEntity = await DbContext.ShareLinks.FindAsync(new object[] { entity.Id }, cancellationToken).ConfigureAwait(false);
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
+        var existingEntity = await DbContext.ShareLinks
+            .AsTracking()
+            .FirstOrDefaultAsync(e => e.Id == entity.Id, cancellationToken)
+            .ConfigureAwait(false);
         if (existingEntity == null)
         {
             throw new InvalidOperationException($"ShareLink {entity.Id} not found");

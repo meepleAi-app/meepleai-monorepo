@@ -277,7 +277,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             pdfDoc!.ProcessingPriority = priorityEnum.ToString();
 
             // Also update the ProcessingJob priority int for Quartz queue ordering
+            // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+            // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+            // il change tracker e SaveChangesAsync non scrive, e non solleva.
             var job = await _db.ProcessingJobs
+                .AsTracking()
                 .FirstOrDefaultAsync(j => j.PdfDocumentId == pdfDoc.Id, cancellationToken).ConfigureAwait(false);
             if (job != null)
             {

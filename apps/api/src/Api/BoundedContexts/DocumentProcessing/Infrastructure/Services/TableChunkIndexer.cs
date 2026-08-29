@@ -95,7 +95,11 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
         var now = DateTime.UtcNow;
 
         // Upsert the text_chunks row (deterministic id -> idempotent replace of this one region).
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var existing = await _db.TextChunks
+            .AsTracking()
             .FirstOrDefaultAsync(tc => tc.Id == chunkId, cancellationToken)
             .ConfigureAwait(false);
         int chunkIndex;

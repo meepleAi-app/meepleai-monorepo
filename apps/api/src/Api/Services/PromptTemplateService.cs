@@ -387,7 +387,11 @@ ANSWER:",
         try
         {
             // Step 1: Verify version exists and belongs to template
+            // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+            // quindi il versionToActivate.IsActive = true sotto non raggiungeva il change tracker.
+            // Il metodo apriva una transazione, committava e ritornava true senza cambiare una riga.
             var versionToActivate = await _dbContext.Set<PromptVersionEntity>()
+                .AsTracking()
                 .Include(v => v.Template)
                 .FirstOrDefaultAsync(v => v.Id == versionId && v.TemplateId == templateId, cancellationToken)
                 .ConfigureAwait(false);
@@ -488,7 +492,11 @@ ANSWER:",
     /// </summary>
     private async Task DeactivateOtherVersionsAsync(Guid templateId, Guid versionId, CancellationToken cancellationToken)
     {
+        // #3882: tracked — il ciclo sotto muta IsActive su ognuna. Nota che questo ciclo NON
+        // compariva nello scan della issue: la mutazione e il SaveChangesAsync stanno in metodi
+        // diversi, e lo scan cerca entrambi entro una finestra dalla lettura. Lo scan e' un minimo.
         var otherVersions = await _dbContext.Set<PromptVersionEntity>()
+            .AsTracking()
             .Where(v => v.TemplateId == templateId && v.Id != versionId && v.IsActive)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

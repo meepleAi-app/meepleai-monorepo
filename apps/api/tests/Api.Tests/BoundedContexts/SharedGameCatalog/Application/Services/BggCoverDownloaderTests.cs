@@ -143,4 +143,29 @@ public sealed class BggCoverDownloaderTests
             Times.Never(),
             ItExpr.IsAny<HttpRequestMessage>(),
             ItExpr.IsAny<CancellationToken>());
+
+    /// <summary>
+    /// #3886 — la pipeline BGG non e' piu' registrata quando <c>STORAGE_PROVIDER</c> non e'
+    /// <c>s3</c> (stessa scelta di #3363), quindi qui arriva <c>null</c>. Senza questo test il ramo
+    /// di degradazione resterebbe non esercitato.
+    ///
+    /// <para>Due invarianti: non lancia, e <b>non spende una richiesta HTTP</b> verso BGG per
+    /// un'immagine che non avrebbe dove andare — il caricamento e' arricchimento best-effort, e
+    /// senza destinazione il lavoro va saltato prima, non dopo.</para>
+    /// </summary>
+    [Fact]
+    public async Task DownloadAndUpload_WithoutPipeline_ReturnsNull_AndDoesNotCallBgg()
+    {
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+
+        var sut = new BggCoverDownloader(
+            new HttpClient(handler.Object),
+            _loggerMock.Object,
+            uploadPipeline: null);
+
+        var result = await sut.DownloadAndUploadAsync(13, PublicHttpsUrl, CancellationToken.None);
+
+        result.Should().BeNull("senza destinazione R2 non c'e' nulla da caricare");
+        handler.VerifyAll(); // MockBehavior.Strict: qualunque invio HTTP avrebbe gia' fatto fallire il test
+    }
 }

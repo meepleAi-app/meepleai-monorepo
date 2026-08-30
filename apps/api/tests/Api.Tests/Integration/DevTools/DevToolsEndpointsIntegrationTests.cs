@@ -174,6 +174,10 @@ public sealed class DevToolsEndpointsTestFactory : WebApplicationFactory<Program
             {
                 ["OPENROUTER_API_KEY"] = "test-key",
                 ["OPENROUTER_API_KEY_FILE"] = null,
+                // #3887: state the rate-limit switch for this host instead of relying on a process
+                // env var that another factory happened to set earlier in the run. One key only:
+                // DISABLE_RATE_LIMITING stays the production env alias, not a second test switch.
+                ["RateLimiting:Enabled"] = "false",
                 ["ConnectionStrings:Postgres"] =
                     "Host=localhost;Port=5432;Database=dummy;Username=dummy;Password=dummy",
             });

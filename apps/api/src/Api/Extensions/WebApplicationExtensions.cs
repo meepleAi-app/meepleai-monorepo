@@ -154,7 +154,26 @@ internal static class WebApplicationExtensions
         app.UseAntiforgery();
 
         // ISSUE #2424: Rate limiting middleware (must be after authorization)
-        app.UseRateLimiter();
+        //
+        // ISSUE #3887: the on/off decision lives here, and ONLY here. AddRateLimitingServices
+        // registers the real policies unconditionally and reads no switch at all. Service
+        // registration runs before a WebApplicationFactory applies its configuration sources, so a
+        // test host could only be told "no rate limiting" through a process environment variable —
+        // global state that leaked into every host built concurrently by another xUnit collection
+        // and made unrelated tests fail with 429. app.Configuration is the post-Build, per-host
+        // configuration and still includes the environment-variables source, so a
+        // DISABLE_RATE_LIMITING env var keeps working exactly as before in production.
+        // Both switches parse the same way (GetValue<bool>), so "1"/"True"/"yes" behave alike.
+        // This matters now that it is the ONLY place either flag is honoured: a misspelt value used
+        // to degrade gracefully because registration produced permissive policies as well.
+        var rateLimitingEnabled =
+            app.Configuration.GetValue("RateLimiting:Enabled", true)
+            && !app.Configuration.GetValue("DISABLE_RATE_LIMITING", false);
+
+        if (rateLimitingEnabled)
+        {
+            app.UseRateLimiter();
+        }
 
         // ISSUE #4275: BGG API tier-based rate limiting (must be after rate limiter)
         app.UseBggRateLimit();

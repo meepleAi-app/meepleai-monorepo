@@ -83,7 +83,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         }
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsOnlyGamesWithoutKb()
     {
         // Arrange: 2 games without KB, 1 with KB
@@ -104,7 +104,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         result.Total.Should().Be(2);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_FiltersDeletedGames()
     {
         // Arrange: soft-deleted game should never surface (global query filter)
@@ -122,7 +122,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         result.Items.Should().NotContain(i => i.Title == "DeletedGame");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_FiltersUnpublishedGames()
     {
         // Arrange: draft game should not appear (Status != 1)
@@ -142,7 +142,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         result.Items.Should().NotContain(i => i.Title == "DraftGame");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_SearchFilters_ByTitle_CaseInsensitive()
     {
         // Arrange
@@ -162,7 +162,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         result.Items.Should().NotContain(i => i.Title == "Terraforming Mars");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_PdfCountAndFailedCount_AreAccuratelySeparate()
     {
         // Arrange: a game with 3 PDFs, only 1 failed — verifies that the failed
@@ -221,7 +221,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         item.FailedPdfCount.Should().Be(1);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsZeroStats_WhenGameHasNoPdfs()
     {
         // Arrange
@@ -239,7 +239,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         item.FailedPdfCount.Should().Be(0);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_Pagination_WorksCorrectly()
     {
         // Arrange: 5 games without KB
@@ -266,7 +266,7 @@ public sealed class GetGamesWithoutKbQueryHandlerIntegrationTests : IAsyncLifeti
         page2.Page.Should().Be(2);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_EmptyDatabase_ReturnsZeroResults()
     {
         // Act

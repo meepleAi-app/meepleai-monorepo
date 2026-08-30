@@ -25,6 +25,10 @@ public class BggRateLimitTestFactory : WebApplicationFactory<Program>
                 ["BggRateLimit:FreeTier"] = "5",
                 ["BggRateLimit:NormalTier"] = "10",
                 ["BggRateLimit:PremiumTier"] = "20",
+                // #3887: this factory WANTS the real limiter (it exercises BGG tier limits),
+                // so it states the per-host switch explicitly instead of depending on whatever
+                // another factory left in the process environment.
+                ["RateLimiting:Enabled"] = "true",
                 ["DISABLE_RATE_LIMITING"] = "false"
             });
         });

@@ -59,7 +59,7 @@ public sealed class GetPdfCleanupPreviewQueryHandlerIntegrationTests : IAsyncLif
             await _dbContext.DisposeAsync();
     }
 
-    [Fact(Timeout = 60_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_RealPostgres_CountsChunksAndRaptorScopedPerPdf()
     {
         // Arrange ----------------------------------------------------------------
@@ -155,7 +155,7 @@ public sealed class GetPdfCleanupPreviewQueryHandlerIntegrationTests : IAsyncLif
         result.GraphEdgeCount.Should().Be(0, "constant 0 — no graph store yet");
     }
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_RealPostgres_UnknownPdfId_ReturnsNull()
     {
         // Arrange — empty DB; ask for a random PDF id

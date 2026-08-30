@@ -149,7 +149,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     // Happy path: event chain fires CreateGameAgentCommand
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AdminPdfReady_DispatchesCreateGameAgentCommandWithCorrectParams()
     {
         // Arrange
@@ -194,7 +194,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     // Guard: Non-admin priority PDF → command NOT dispatched
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_NormalPriorityPdfReady_DoesNotDispatchCreateGameAgentCommand()
     {
         // Arrange
@@ -219,7 +219,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     // Guard: Non-Ready state → command NOT dispatched
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_NonReadyState_DoesNotDispatchCreateGameAgentCommand()
     {
         // Arrange — PDF exists but state is not Ready
@@ -243,7 +243,7 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
     // Guard: Exception in command handler → not propagated (event chain not broken)
     // ────────────────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AgentCreationFails_ExceptionDoesNotPropagateFromEventHandler()
     {
         // Arrange

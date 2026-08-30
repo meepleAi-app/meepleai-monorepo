@@ -227,7 +227,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         unavailableClient.Dispose();
     }
-    [Fact(Timeout = 60000)] // 1 minute
+    // #3887: deliberately NOT raised to the suite's 90s — see PdfExtractionRealBackendValidationTests.
+    // The 60s bound is the performance ceiling under test, not incidental scaffolding.
+    [Fact(Timeout = 60_000)] // 1 minute ceiling — this bound IS the guardrail
     public async Task InvalidPdf_ErrorHandling()
     {
         EnsureTestInfrastructureAvailable();

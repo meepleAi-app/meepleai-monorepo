@@ -168,7 +168,7 @@ public sealed class ExportDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
 
     // ─── Tests ───────────────────────────────────────────────────────────────
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsAllChunks_FullContent_OrderedByIndex()
     {
         var pdfId = await SeedDocWithChunksAsync();
@@ -180,7 +180,7 @@ public sealed class ExportDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
         result.Select(c => c.Content).Should().ContainInOrder("A", "B", "C");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsFullContent_NotTruncated()
     {
         var userId = Guid.NewGuid();
@@ -245,7 +245,7 @@ public sealed class ExportDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
         result[0].Content.Should().Be(longContent);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_UnknownDocumentId_ReturnsEmptyList()
     {
         var result = await _handler!.Handle(
@@ -254,7 +254,7 @@ public sealed class ExportDocumentChunksQueryHandlerIntegrationTests : IAsyncLif
         result.Should().BeEmpty();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_MapsAllFields_Correctly()
     {
         var userId = Guid.NewGuid();

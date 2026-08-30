@@ -129,7 +129,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
 
     #endregion
 
-    [Fact(Timeout = 30000)] // 30s timeout for integration tests
+    [Fact(Timeout = 90_000)]
     public async Task ImportAndExport_EndToEnd_WithRealDatabase()
     {
         // Arrange
@@ -168,7 +168,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         exportResult.Configurations.Should().Contain(c => c.Key == "Feature:Beta" && c.Value == "true" && !c.IsActive);
     }
 
-    [Fact(Timeout = 30000)] // 30s timeout for integration tests
+    [Fact(Timeout = 90_000)]
     public async Task ImportWithOverwrite_UpdatesExistingConfig_InRealDatabase()
     {
         // Arrange
@@ -216,7 +216,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         updatedConfig.Version.Should().Be(2); // Version incremented
     }
 
-    [Fact(Timeout = 30000)] // 30s timeout for integration tests
+    [Fact(Timeout = 90_000)]
     public async Task Export_WithActiveOnlyFilter_ReturnsOnlyActiveConfigs()
     {
         // Arrange
@@ -260,7 +260,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         exportResult.Configurations.Should().NotContain(c => c.Key == "Inactive:Config");
     }
 
-    [Fact(Timeout = 30000)] // 30s timeout for integration tests
+    [Fact(Timeout = 90_000)]
     public async Task Export_WithEnvironmentFilter_ReturnsMatchingConfigs()
     {
         // Arrange

@@ -446,7 +446,7 @@ builder.Services.AddObservabilityServices(builder.Configuration, builder.Environ
 
 // ISSUE #2424: Rate limiting for API protection
 // Issue #2705: Pass configuration to allow disabling in integration tests
-builder.Services.AddRateLimitingServices(builder.Configuration);
+builder.Services.AddRateLimitingServices();
 
 // Configure JSON serialization for ASP.NET Core Minimal APIs
 // Accept camelCase from frontend (JavaScript convention) while backend uses PascalCase (C# convention)

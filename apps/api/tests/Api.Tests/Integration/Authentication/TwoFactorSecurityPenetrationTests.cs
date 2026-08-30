@@ -309,9 +309,12 @@ public class TwoFactorSecurityPenetrationTests : IAsyncLifetime
     /// <summary>
     /// SECURITY TEST: Rapid-fire TOTP verification attempts should be rate-limited.
     /// OWASP: Implement rate limiting to prevent automated attacks
-    /// FIX #1850: Added timeout to prevent test hanging indefinitely
+    /// FIX #1850: Added timeout to prevent test hanging indefinitely.
+    /// #3887: the guard was 10s, which the test could not meet — it timed out on main-dev too, in
+    /// isolation. Raised to the suite's 90s convention: enough for a Testcontainers-backed run,
+    /// still far below the 12+ minute hang #1850 was fencing off.
     /// </summary>
-    [Fact(Timeout = 10000)] // 10 second max (was hanging for 12+ minutes)
+    [Fact(Timeout = 90_000)]
     public async Task BruteForce_RapidFireAttack_ShouldBeRateLimited()
     {
         // Arrange

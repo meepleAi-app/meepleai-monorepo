@@ -42,9 +42,12 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     private string? _connectionString;
 
     /// <summary>
-    /// Issue #3102: Static constructor ensures DISABLE_RATE_LIMITING is set BEFORE
-    /// WebApplicationFactory creates the host. This is critical because AddRateLimitingServices
-    /// reads this env var during service registration, which happens before ConfigureWebHost.
+    /// Issue #3102: static constructor set DISABLE_RATE_LIMITING before host creation, because
+    /// AddRateLimitingServices read it during service registration — which runs before
+    /// ConfigureWebHost is applied.
+    /// Issue #3887: that read moved after Build(), so this factory's in-memory configuration is now
+    /// authoritative. The assignment is kept as defence in depth: it is set once and never
+    /// restored, which is deterministic — it was the *unsetting* at teardown that opened a window.
     /// </summary>
     static FrontendSdkTestFactory()
     {
@@ -55,6 +58,7 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     /// Initialize PostgreSQL container before tests.
     /// Container is shared across all tests in the collection for performance.
     /// </summary>
+    [Obsolete]
     public async ValueTask InitializeAsync()
     {
         // Check if external connection string is provided (for CI/CD)
@@ -121,8 +125,10 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     /// </summary>
     public new async ValueTask DisposeAsync()
     {
-        // Clear environment variable set during configuration
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
+        // #3887: do NOT blank DISABLE_RATE_LIMITING here. The variable is process-global, so
+        // clearing it at teardown turned rate limiting back ON for any host that a parallel xUnit
+        // collection happened to build afterwards — a 429 landing on an unrelated test. Setting it
+        // to "true" and leaving it set is deterministic; unsetting it is what opens the window.
 
         if (_postgresContainer != null)
         {
@@ -135,9 +141,8 @@ public class FrontendSdkTestFactory : WebApplicationFactory<Program>, IAsyncLife
     {
         builder.UseEnvironment("Testing");
 
-        // Issue #2705: Disable custom RateLimitingMiddleware via environment variable
-        // Issue #3102: Note - the static constructor sets this BEFORE host creation
-        // for the built-in rate limiter. This line ensures it's set for the custom middleware.
+        // Issue #2705 / #3102: redundant with the static constructor and with the in-memory
+        // configuration below (#3887); kept because it is set-and-never-restored, i.e. harmless.
         Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>

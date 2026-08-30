@@ -5,7 +5,10 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/actions/**'
+      - '.github/dependabot.yml'
+      - '.github/ISSUE_TEMPLATE/**'
       - 'scripts/validate-workflows.js'
+      - 'scripts/validate-github-labels.js'
   push:
     branches:
       - main
@@ -13,7 +16,10 @@ on:
     paths:
       - '.github/workflows/**'
       - '.github/actions/**'
+      - '.github/dependabot.yml'
+      - '.github/ISSUE_TEMPLATE/**'
       - 'scripts/validate-workflows.js'
+      - 'scripts/validate-github-labels.js'
 
 
 # Q2 2026 Security Review (#186) P1.2 AC5: default least-privilege.
@@ -31,6 +37,11 @@ jobs:
   validate-workflow-patterns:
     name: Validate pnpm Cache Patterns
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # #3895: le label stanno sotto l'API Issues; senza questo il gate
+      # non puo' leggerle e si ferma con exit 2 invece di dire "tutto ok".
+      issues: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -42,3 +53,11 @@ jobs:
 
       - name: Validate workflow files
         run: node scripts/validate-workflows.js
+
+      # #3895: ogni label citata in .github/ deve esistere davvero. Un
+      # riferimento a una label inesistente non fallisce, viene ignorato:
+      # e' cosi' che `auto-dependabot.yml` e' rimasto inerte per mesi.
+      - name: Validate GitHub labels (#3895)
+        run: node scripts/validate-github-labels.js --list
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

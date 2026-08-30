@@ -14,7 +14,9 @@ updates:
       - "meepleAi-app"
     labels:
       - "dependencies"
-      - "dotnet"
+      # #3895: i nomi devono esistere nel repo, altrimenti Dependabot
+      # commenta l'errore e applica solo quelle valide.
+      - ".NET"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
@@ -47,7 +49,7 @@ updates:
       - "meepleAi-app"
     labels:
       - "dependencies"
-      - "frontend"
+      - "area/frontend"
     commit-message:
       prefix: "chore(deps)"
       include: "scope"
@@ -102,7 +104,7 @@ updates:
     labels:
       - "dependencies"
       - "docker"
-      - "security"
+      - "area/security"
     commit-message:
       prefix: "chore(docker)"
       include: "scope"

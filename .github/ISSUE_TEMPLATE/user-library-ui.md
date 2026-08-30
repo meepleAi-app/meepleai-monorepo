@@ -2,7 +2,7 @@
 name: User Library UI Implementation
 about: Implement user library management UI (view, add, edit, remove games)
 title: 'feat(frontend): implement user library management page'
-labels: ['enhancement', 'frontend', 'user-library', 'ui']
+labels: ['enhancement', 'area/frontend']
 assignees: ''
 ---
 

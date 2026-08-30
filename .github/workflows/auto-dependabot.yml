@@ -2,7 +2,10 @@ name: Dependabot Auto-merge
 
 on:
   pull_request:
-    branches: [main, main-staging]
+    # #3895: tutte le sezioni di dependabot.yml hanno target-branch: main-dev.
+    # Senza main-dev qui, nessuna PR di Dependabot poteva attivare questo
+    # workflow — la seconda di due condizioni che non potevano avverarsi.
+    branches: [main, main-staging, main-dev]
     types: [opened, synchronize, reopened]
 
 # Ensure only one auto-merge workflow runs per PR
@@ -19,7 +22,10 @@ jobs:
   auto-merge:
     name: Auto-merge Dependabot PRs
     runs-on: ubuntu-latest
-    # Only run for Dependabot PRs with automerge label
+    # Only run for Dependabot PRs with automerge label.
+    # #3895: la label `automerge` ora esiste, ma resta DELIBERATAMENTE
+    # non applicata da dependabot.yml: va messa a mano, che era l'intento.
+    # Automergiare dipendenze per default e' una decisione di policy, non un fix.
     if: |
       github.actor == 'dependabot[bot]' &&
       contains(github.event.pull_request.labels.*.name, 'automerge')

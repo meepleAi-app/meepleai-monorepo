@@ -208,7 +208,7 @@ jobs:
             --profile storage logs --tail=200 api web minio minio-init || true
 
       - name: Setup pnpm + Node
-        uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d  # v3
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86  # v3
         with:
           version: 9
       - uses: actions/setup-node@v6

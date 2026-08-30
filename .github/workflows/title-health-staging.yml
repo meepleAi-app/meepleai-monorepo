@@ -124,7 +124,7 @@ jobs:
         # always() is required: without a status function the implicit success() skips this after the
         # guard fails. Only fire on a real regression (guard failed) in assert mode.
         if: ${{ always() && steps.guard.outcome == 'failure' && github.event.inputs.update_baseline != 'true' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const existing = await github.rest.issues.listForRepo({

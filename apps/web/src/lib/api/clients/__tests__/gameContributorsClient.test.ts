@@ -14,9 +14,12 @@ import type { HttpClient } from '../../core/httpClient';
 const MOCK_USER_ID_1 = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
 const MOCK_USER_ID_2 = 'bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbbbb';
 const MOCK_USER_ID_3 = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
-const MOCK_BADGE_ID_1 = '11111111-1111-4111-a111-111111111111';
-const MOCK_BADGE_ID_2 = '22222222-2222-4222-a222-222222222222';
-const MOCK_BADGE_ID_3 = '33333333-3333-4333-a333-333333333333';
+// #3853 — BadgeSummaryDto porta `Code`, non un id: il backend proietta
+// `Code = ub.Badge.Code`. Erano uuid perche' lo schema pretendeva un campo che
+// nessuna risposta ha mai avuto.
+const MOCK_BADGE_CODE_1 = 'TOP_CONTRIBUTOR';
+const MOCK_BADGE_CODE_2 = 'HELPER';
+const MOCK_BADGE_CODE_3 = 'FIRST_POST';
 
 const mockHttpClient: HttpClient = {
   get: vi.fn(),
@@ -35,7 +38,7 @@ const mockContributor = {
   firstContributionAt: '2023-06-15T00:00:00Z',
   topBadges: [
     {
-      id: MOCK_BADGE_ID_1,
+      code: MOCK_BADGE_CODE_1,
       name: 'Top Contributor',
       tier: 'Gold' as const,
       iconUrl: '/badges/gold.svg',
@@ -57,16 +60,24 @@ describe('GameContributorsClient - Issue #3026', () => {
       const result = await client.getGameContributors('game-123');
 
       expect(result).toEqual([mockContributor]);
-      expect(mockHttpClient.get).toHaveBeenCalledWith(
-        '/api/v1/shared-games/game-123/contributors'
-      );
+      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/shared-games/game-123/contributors');
     });
 
     it('should return multiple contributors sorted by contribution count', async () => {
       const contributors = [
         { ...mockContributor, userId: MOCK_USER_ID_1, contributionCount: 50 },
-        { ...mockContributor, userId: MOCK_USER_ID_2, contributionCount: 30, isPrimaryContributor: false },
-        { ...mockContributor, userId: MOCK_USER_ID_3, contributionCount: 10, isPrimaryContributor: false },
+        {
+          ...mockContributor,
+          userId: MOCK_USER_ID_2,
+          contributionCount: 30,
+          isPrimaryContributor: false,
+        },
+        {
+          ...mockContributor,
+          userId: MOCK_USER_ID_3,
+          contributionCount: 10,
+          isPrimaryContributor: false,
+        },
       ];
       vi.mocked(mockHttpClient.get).mockResolvedValue({ contributors });
 
@@ -106,9 +117,19 @@ describe('GameContributorsClient - Issue #3026', () => {
       const contributorMultiBadges = {
         ...mockContributor,
         topBadges: [
-          { id: MOCK_BADGE_ID_1, name: 'Veteran', tier: 'Platinum' as const, iconUrl: '/badges/veteran.svg' },
-          { id: MOCK_BADGE_ID_2, name: 'Helper', tier: 'Silver' as const, iconUrl: '/badges/helper.svg' },
-          { id: MOCK_BADGE_ID_3, name: 'First Post', tier: 'Bronze' as const, iconUrl: null },
+          {
+            code: MOCK_BADGE_CODE_1,
+            name: 'Veteran',
+            tier: 'Platinum' as const,
+            iconUrl: '/badges/veteran.svg',
+          },
+          {
+            code: MOCK_BADGE_CODE_2,
+            name: 'Helper',
+            tier: 'Silver' as const,
+            iconUrl: '/badges/helper.svg',
+          },
+          { code: MOCK_BADGE_CODE_3, name: 'First Post', tier: 'Bronze' as const, iconUrl: null },
         ],
       };
       vi.mocked(mockHttpClient.get).mockResolvedValue({
@@ -126,9 +147,7 @@ describe('GameContributorsClient - Issue #3026', () => {
 
       const client = createGameContributorsClient({ httpClient: mockHttpClient });
 
-      await expect(client.getGameContributors('nonexistent')).rejects.toThrow(
-        'Game not found'
-      );
+      await expect(client.getGameContributors('nonexistent')).rejects.toThrow('Game not found');
     });
 
     it('should handle network error', async () => {
@@ -136,9 +155,7 @@ describe('GameContributorsClient - Issue #3026', () => {
 
       const client = createGameContributorsClient({ httpClient: mockHttpClient });
 
-      await expect(client.getGameContributors('game-123')).rejects.toThrow(
-        'Network error'
-      );
+      await expect(client.getGameContributors('game-123')).rejects.toThrow('Network error');
     });
 
     it('should handle contributor with null avatar', async () => {

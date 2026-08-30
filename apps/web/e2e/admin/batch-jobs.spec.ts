@@ -18,19 +18,30 @@ import type { Page } from '@playwright/test';
 const API_BASE =
   process.env.PLAYWRIGHT_API_BASE || process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
+/**
+ * #3853 — allineata al record C# `BatchJobDto`
+ * (Administration/Application/DTOs/BatchJobDtos.cs). La forma precedente dichiarava
+ * `parameters`, `resultData` e `duration`: le prime due non esistono nel contratto, la
+ * terza si chiama `durationSeconds`. I campi nullable sono `| null` e sempre PRESENTI,
+ * non opzionali — il serializzatore delle risposte scrive i null.
+ */
 interface BatchJobDto {
   id: string;
-  type: 'ResourceForecast' | 'CostAnalysis' | 'DataCleanup' | 'BggSync' | 'AgentBenchmark';
+  type:
+    | 'ResourceForecast'
+    | 'CostAnalysis'
+    | 'DataCleanup'
+    | 'BggSync'
+    | 'AgentBenchmark'
+    | 'VectorReembedding';
   status: 'Queued' | 'Running' | 'Completed' | 'Failed' | 'Cancelled';
   progress: number;
-  parameters: string;
-  resultData?: string;
-  resultSummary?: string;
-  errorMessage?: string;
-  duration: number | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  durationSeconds: number | null;
+  resultSummary: string | null;
+  errorMessage: string | null;
   createdAt: string;
-  startedAt?: string;
-  completedAt?: string;
 }
 
 /**
@@ -38,7 +49,12 @@ interface BatchJobDto {
  */
 async function setupBatchJobMocks(page: Page) {
   const generateJobs = (count: number): BatchJobDto[] => {
-    const types: BatchJobDto['type'][] = ['ResourceForecast', 'CostAnalysis', 'DataCleanup', 'BggSync'];
+    const types: BatchJobDto['type'][] = [
+      'ResourceForecast',
+      'CostAnalysis',
+      'DataCleanup',
+      'BggSync',
+    ];
     const statuses: BatchJobDto['status'][] = ['Queued', 'Running', 'Completed', 'Failed'];
 
     return Array.from({ length: count }, (_, i) => {
@@ -50,16 +66,19 @@ async function setupBatchJobMocks(page: Page) {
         type,
         status,
         progress: status === 'Running' ? 50 : status === 'Completed' ? 100 : 0,
-        parameters: JSON.stringify({ days: 30 }),
-        resultSummary: status === 'Completed' ? `${type} completed successfully` : undefined,
-        errorMessage: status === 'Failed' ? 'Simulated error for testing' : undefined,
-        duration: status === 'Completed' ? 120 : null,
+        resultSummary: status === 'Completed' ? `${type} completed successfully` : null,
+        errorMessage: status === 'Failed' ? 'Simulated error for testing' : null,
+        durationSeconds: status === 'Completed' ? 120 : null,
         createdAt: new Date(Date.now() - i * 3600000).toISOString(),
-        startedAt: status !== 'Queued' ? new Date(Date.now() - i * 3600000 + 1000).toISOString() : undefined,
+        // null, non undefined: il serializzatore delle risposte scrive i null, quindi la
+        // chiave arriva sempre. `undefined` sparisce da JSON.stringify e produrrebbe un
+        // payload che nessuna risposta reale ha — proprio il difetto di #3853 al contrario.
+        startedAt:
+          status !== 'Queued' ? new Date(Date.now() - i * 3600000 + 1000).toISOString() : null,
         completedAt:
           status === 'Completed' || status === 'Failed'
             ? new Date(Date.now() - i * 3600000 + 120000).toISOString()
-            : undefined,
+            : null,
       };
     });
   };
@@ -67,7 +86,7 @@ async function setupBatchJobMocks(page: Page) {
   const allJobs = generateJobs(20);
 
   // Mock admin auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -84,13 +103,14 @@ async function setupBatchJobMocks(page: Page) {
   });
 
   // Mock get all batch jobs endpoint with filtering and pagination
-  await page.route(`${API_BASE}/api/v1/admin/batch-jobs**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/batch-jobs**`, async route => {
     const url = new URL(route.request().url());
     const status = url.searchParams.get('status');
     const page = parseInt(url.searchParams.get('page') || '1');
     const pageSize = parseInt(url.searchParams.get('pageSize') || '20');
 
-    const filteredJobs = status && status !== 'all' ? allJobs.filter((j) => j.status === status) : allJobs;
+    const filteredJobs =
+      status && status !== 'all' ? allJobs.filter(j => j.status === status) : allJobs;
 
     const skip = (page - 1) * pageSize;
     const paginatedJobs = filteredJobs.slice(skip, skip + pageSize);
@@ -108,15 +128,18 @@ async function setupBatchJobMocks(page: Page) {
   });
 
   // Mock create batch job endpoint
-  await page.route(`${API_BASE}/api/v1/admin/batch-jobs`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/batch-jobs`, async route => {
     if (route.request().method() === 'POST') {
       const newJob: BatchJobDto = {
         id: `job-new-${Date.now()}`,
         type: 'ResourceForecast',
         status: 'Queued',
         progress: 0,
-        parameters: '{"days":30}',
-        duration: null,
+        startedAt: null,
+        completedAt: null,
+        durationSeconds: null,
+        resultSummary: null,
+        errorMessage: null,
         createdAt: new Date().toISOString(),
       };
 
@@ -131,9 +154,9 @@ async function setupBatchJobMocks(page: Page) {
   });
 
   // Mock get single job endpoint
-  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*`, async route => {
     const jobId = route.request().url().split('/').pop()?.split('?')[0];
-    const job = allJobs.find((j) => j.id === jobId);
+    const job = allJobs.find(j => j.id === jobId);
 
     if (!job) {
       await route.fulfill({
@@ -152,9 +175,9 @@ async function setupBatchJobMocks(page: Page) {
   });
 
   // Mock cancel job endpoint
-  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*/cancel`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*/cancel`, async route => {
     const jobId = route.request().url().split('/').slice(-2)[0];
-    const job = allJobs.find((j) => j.id === jobId);
+    const job = allJobs.find(j => j.id === jobId);
 
     if (job && (job.status === 'Queued' || job.status === 'Running')) {
       job.status = 'Cancelled';
@@ -169,9 +192,9 @@ async function setupBatchJobMocks(page: Page) {
   });
 
   // Mock retry job endpoint
-  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*/retry`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*/retry`, async route => {
     const jobId = route.request().url().split('/').slice(-2)[0];
-    const job = allJobs.find((j) => j.id === jobId);
+    const job = allJobs.find(j => j.id === jobId);
 
     if (job && job.status === 'Failed') {
       job.status = 'Queued';
@@ -189,10 +212,10 @@ async function setupBatchJobMocks(page: Page) {
   });
 
   // Mock delete job endpoint
-  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/batch-jobs/*`, async route => {
     if (route.request().method() === 'DELETE') {
       const jobId = route.request().url().split('/').pop();
-      const index = allJobs.findIndex((j) => j.id === jobId);
+      const index = allJobs.findIndex(j => j.id === jobId);
       if (index !== -1) {
         allJobs.splice(index, 1);
       }
@@ -216,9 +239,7 @@ test.describe('Batch Job Management', () => {
 
     // Should display page header
     await expect(page.getByRole('heading', { name: /Batch Jobs/i })).toBeVisible();
-    await expect(
-      page.getByText(/Manage background processing jobs and tasks/i)
-    ).toBeVisible();
+    await expect(page.getByText(/Manage background processing jobs and tasks/i)).toBeVisible();
 
     // Should display job table
     await expect(page.getByRole('table')).toBeVisible();
@@ -250,9 +271,12 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Find running job row
-    const runningRow = page.locator('[data-testid^="batch-job-row-"]').filter({
-      has: page.getByText('Running'),
-    }).first();
+    const runningRow = page
+      .locator('[data-testid^="batch-job-row-"]')
+      .filter({
+        has: page.getByText('Running'),
+      })
+      .first();
 
     // Should display progress bar
     await expect(runningRow.locator('[role="progressbar"]')).toBeVisible();
@@ -340,9 +364,12 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Find queued job row
-    const queuedRow = page.locator('[data-testid^="batch-job-row-"]').filter({
-      has: page.getByText('Queued'),
-    }).first();
+    const queuedRow = page
+      .locator('[data-testid^="batch-job-row-"]')
+      .filter({
+        has: page.getByText('Queued'),
+      })
+      .first();
 
     // Click cancel button (stop icon)
     await queuedRow.getByRole('button', { name: /Cancel job/i }).click();
@@ -356,9 +383,12 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Find failed job row
-    const failedRow = page.locator('[data-testid^="batch-job-row-"]').filter({
-      has: page.getByText('Failed'),
-    }).first();
+    const failedRow = page
+      .locator('[data-testid^="batch-job-row-"]')
+      .filter({
+        has: page.getByText('Failed'),
+      })
+      .first();
 
     // Click retry button
     await failedRow.getByRole('button', { name: /Retry job/i }).click();
@@ -372,7 +402,7 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Setup dialog handler for confirmation
-    page.on('dialog', (dialog) => {
+    page.on('dialog', dialog => {
       expect(dialog.message()).toContain('Are you sure');
       dialog.accept();
     });
@@ -392,9 +422,12 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Click on completed job
-    const completedRow = page.locator('[data-testid^="batch-job-row-"]').filter({
-      has: page.getByText('Completed'),
-    }).first();
+    const completedRow = page
+      .locator('[data-testid^="batch-job-row-"]')
+      .filter({
+        has: page.getByText('Completed'),
+      })
+      .first();
 
     await completedRow.click();
 
@@ -416,9 +449,12 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Click on failed job
-    const failedRow = page.locator('[data-testid^="batch-job-row-"]').filter({
-      has: page.getByText('Failed'),
-    }).first();
+    const failedRow = page
+      .locator('[data-testid^="batch-job-row-"]')
+      .filter({
+        has: page.getByText('Failed'),
+      })
+      .first();
 
     await failedRow.click();
 
@@ -470,7 +506,7 @@ test.describe('Batch Job Management', () => {
 
   test('should display empty state when no jobs exist', async ({ page }) => {
     // Mock empty response
-    await page.route(`${API_BASE}/api/v1/admin/batch-jobs**`, async (route) => {
+    await page.route(`${API_BASE}/api/v1/admin/batch-jobs**`, async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -495,9 +531,12 @@ test.describe('Batch Job Management', () => {
     await page.waitForLoadState('networkidle');
 
     // Find completed job with duration
-    const completedRow = page.locator('[data-testid^="batch-job-row-"]').filter({
-      has: page.getByText('Completed'),
-    }).first();
+    const completedRow = page
+      .locator('[data-testid^="batch-job-row-"]')
+      .filter({
+        has: page.getByText('Completed'),
+      })
+      .first();
 
     // Should display duration (e.g., "2m 0s")
     await expect(completedRow.getByText(/\d+m \d+s|\d+s/)).toBeVisible();

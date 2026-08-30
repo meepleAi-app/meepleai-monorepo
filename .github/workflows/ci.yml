@@ -567,7 +567,7 @@ jobs:
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Download backend artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: backend-build-${{ github.run_id }}
           path: /tmp/
@@ -760,7 +760,7 @@ jobs:
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
       - name: Download backend artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: backend-build-${{ github.run_id }}
           path: /tmp/
@@ -1083,7 +1083,7 @@ jobs:
           working-directory: apps/api
 
       - name: Download backend artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: backend-build-${{ github.run_id }}
           path: /tmp/
@@ -1174,7 +1174,7 @@ jobs:
           working-directory: apps/web
 
       - name: Download frontend artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: frontend-build-${{ github.run_id }}
           path: /tmp/
@@ -1268,7 +1268,7 @@ jobs:
           working-directory: apps/web
 
       - name: Download frontend (a11y) artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: frontend-build-a11y-${{ github.run_id }}
           path: /tmp/

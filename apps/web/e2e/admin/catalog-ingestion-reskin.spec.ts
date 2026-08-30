@@ -6,7 +6,7 @@
  * 2. Provider switching shows/hides BGG-specific config controls
  * 3. CSV provider + Run sync now opens the CSV/Excel import modal
  *
- * Auth pattern: page.route() mock for /api/v1/auth/me (same as batch-jobs.spec.ts + AdminHelper)
+ * Auth pattern: page.route() mock for /api/v1/auth/me (same as AdminHelper)
  * API mocks: /api/v1/admin/catalog-ingestion/status + /api/v1/admin/catalog-ingestion/runs
  *
  * NOTE: E2E tests require a running Next.js dev/prod server (pnpm dev or pnpm build && pnpm start).

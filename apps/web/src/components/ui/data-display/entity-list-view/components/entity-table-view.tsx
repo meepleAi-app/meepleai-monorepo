@@ -22,9 +22,9 @@ import { cn } from '@/lib/utils';
 
 import { DataTable, SortableHeader } from '../../data-table';
 
+import type { ColumnDef, SortingState } from '../../data-table';
 import type { MeepleCardProps, MeepleEntityType } from '../../meeple-card';
 import type { TableColumnConfig } from '../entity-list-view.types';
-import type { ColumnDef, SortingState } from '@tanstack/react-table';
 
 // ============================================================================
 // Entity color maps (canonical tokens — Issue #2955 Fase 2)

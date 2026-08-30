@@ -1,6 +1,5 @@
 'use client';
 
-import { ColumnDef } from '@tanstack/react-table';
 import { ArchiveRestore, FlaskConical, MoreHorizontal, Pencil, Rocket, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -8,6 +7,7 @@ import {
   Badge,
   Button,
   DataTable,
+  type ColumnDef,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,

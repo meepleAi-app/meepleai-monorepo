@@ -163,6 +163,15 @@ vi.mock('framer-motion', () => {
     useInView: () => [React.useRef(null), true],
     // Disable motion by returning true for reduced motion preference
     useReducedMotion: () => true,
+    // #3898: `AppProviders` monta <MotionConfig> tramite MotionProvider. Senza
+    // questa voce l'import risolverebbe a `undefined` e qualunque test che
+    // renderizza l'albero dei provider esploderebbe con "Element type is
+    // invalid". Qui e' un passthrough: il filtro vero non serve, perche' i
+    // motion.* di questo mock rimuovono da se' le prop di animazione. Il
+    // comportamento reale e' coperto da
+    // src/components/providers/__tests__/MotionProvider.test.tsx, che carica
+    // framer-motion vera con vi.unmock.
+    MotionConfig: ({ children }: any) => children,
   };
 });
 
@@ -539,7 +548,20 @@ beforeAll(() => {
     if (isRadixDialogMessage(args[0])) {
       return;
     }
-    // Suppress expected framer-motion prop warnings in React 19
+    // Suppress expected framer-motion prop warnings in React 19.
+    //
+    // #3898: verificato su una run completa (24.025 test) che questa
+    // soppressione e' VIVA — 6 occorrenze, tutte da sei file di
+    // src/components/rag-dashboard/__tests__/ che mockano framer-motion per
+    // conto proprio senza rimuovere le prop di animazione, a differenza del
+    // mock globale qui sopra. Non e' un difetto di prodotto: e' il mock locale
+    // che inoltra `whileHover` a un elemento reale.
+    //
+    // Il fix vero e' far rimuovere le prop di animazione a quei sei mock (o
+    // togliere il mock locale e usare quello globale), non allargare questa
+    // lista. Ogni voce qui deve portare il numero della issue che la
+    // giustifica, altrimenti la lista diventa il posto dove i warning vanno a
+    // morire — che e' il meccanismo per cui #3898 sarebbe passata inosservata.
     if (
       typeof args[0] === 'string' &&
       args[0].includes('React does not recognize the `whileHover` prop')

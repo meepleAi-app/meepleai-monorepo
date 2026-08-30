@@ -59,7 +59,7 @@ export function MeepleContributorCard({
           <span className="text-xs text-muted-foreground mr-1">Badges:</span>
           <div className="flex items-center gap-1.5">
             {contributor.topBadges.map(badge => (
-              <BadgeIcon key={badge.id} badge={badge} size="sm" />
+              <BadgeIcon key={badge.code} badge={badge} size="sm" />
             ))}
           </div>
         </div>

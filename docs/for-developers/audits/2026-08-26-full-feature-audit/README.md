@@ -287,7 +287,7 @@ distinguere ciò che non è un difetto vale quanto elencare ciò che lo è.
 | [#3856](https://github.com/meepleAi-app/meepleai-monorepo/issues/3856) | I mazzi di un toolbox finiscono in una tabella di sessioni e violano la FK | P1 | aperto |
 | [#3855](https://github.com/meepleAi-app/meepleai-monorepo/issues/3855) | L'agente altera le house rule e le attribuisce a pagine del manuale che non le contengono | P1 | aperto |
 | [#3854](https://github.com/meepleAi-app/meepleai-monorepo/issues/3854) | Toolkit: due strutture parallele, la creazione scrive dove l'aggiunta di strumenti non legge | P1 | aperto |
-| [#3853](https://github.com/meepleAi-app/meepleai-monorepo/issues/3853) | 9 pagine admin scartano risposte valide: schema Zod più stretto del contratto backend | P2 | aperto |
+| [#3853](https://github.com/meepleAi-app/meepleai-monorepo/issues/3853) | 9 pagine admin scartano risposte valide: schema Zod più stretto del contratto backend | P2 | **aperto** — contenitore paginato corretto in [PR #3870](https://github.com/meepleAi-app/meepleai-monorepo/pull/3870); i DTO **annidati** in una seconda passata (batch-jobs ×3, badge ×1). Resta il DoD 3 (errore di validazione visibile all'utente), che è una scelta di prodotto |
 | [#3850](https://github.com/meepleAi-app/meepleai-monorepo/issues/3850) | Il messaggio "informazione non disponibile" è in inglese in conversazioni italiane | P3 | aperto |
 
 ## Cosa funziona, verificato con prove

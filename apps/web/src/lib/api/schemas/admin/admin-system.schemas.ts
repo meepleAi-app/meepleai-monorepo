@@ -8,12 +8,16 @@ import { z } from 'zod';
 
 // ========== Batch Jobs (Issue #3693) ==========
 
+// I valori vengono da `JobType` (Administration/Domain/Enums/JobType.cs), serializzato
+// come stringa da JsonStringEnumConverter. VectorReembedding mancava: un job di quel tipo
+// faceva fallire la validazione dell'intera risposta.
 export const BatchJobTypeSchema = z.enum([
   'ResourceForecast',
   'CostAnalysis',
   'DataCleanup',
   'BggSync',
   'AgentBenchmark',
+  'VectorReembedding',
 ]);
 export type BatchJobType = z.infer<typeof BatchJobTypeSchema>;
 
@@ -26,18 +30,35 @@ export const BatchJobStatusSchema = z.enum([
 ]);
 export type BatchJobStatus = z.infer<typeof BatchJobStatusSchema>;
 
+/**
+ * #3853 — allineato campo per campo a `BatchJobDto`
+ * (Administration/Application/DTOs/BatchJobDtos.cs), che il query handler costruisce
+ * posizionalmente da `job.*`:
+ *
+ *   Id · Type · Status · Progress · StartedAt · CompletedAt · DurationSeconds ·
+ *   ResultSummary · ErrorMessage · CreatedAt
+ *
+ * Lo schema pretendeva `parameters`, `results` e `duration`. `parameters` e `results`
+ * non esistono nel contratto; `duration` si chiama `durationSeconds`. Essendo
+ * `.nullable()` e non `.optional()`, una chiave assente fa fallire la validazione: il
+ * client scartava una risposta valida.
+ *
+ * Non si vedeva perché il solo chiamante (`use-infrastructure-kpis`) chiede
+ * `?status=queued&pageSize=1` e legge `total`: con la coda vuota `jobs` è `[]` e lo
+ * schema dell'elemento non viene mai esercitato. Il KPI funzionava finché non c'era
+ * nulla da mostrare, e si rompeva esattamente quando qualcosa c'era.
+ */
 export const BatchJobDtoSchema = z.object({
   id: z.string().uuid(),
   type: BatchJobTypeSchema,
   status: BatchJobStatusSchema,
-  parameters: z.record(z.string(), z.any()).nullable(),
-  results: z.record(z.string(), z.any()).nullable(),
-  errorMessage: z.string().nullable(),
   progress: z.number().min(0).max(100),
-  createdAt: z.string().datetime({ offset: true }),
   startedAt: z.string().datetime({ offset: true }).nullable(),
   completedAt: z.string().datetime({ offset: true }).nullable(),
-  duration: z.number().nullable(),
+  durationSeconds: z.number().int().nullable(),
+  resultSummary: z.string().nullable(),
+  errorMessage: z.string().nullable(),
+  createdAt: z.string().datetime({ offset: true }),
 });
 export type BatchJobDto = z.infer<typeof BatchJobDtoSchema>;
 
@@ -55,8 +76,12 @@ export const CreateBatchJobRequestSchema = z.object({
 });
 export type CreateBatchJobRequest = z.infer<typeof CreateBatchJobRequestSchema>;
 
+// #3853 — il backend restituisce `CreateBatchJobResponse(Guid JobId)`, non `id`.
+// Allineato lo schema invece di rinominare il campo lato backend: qui il frontend non
+// aveva ragione su un dato mancante, aveva usato un nome diverso da quello servito, e
+// una rinomina di contratto e' una rottura a fronte di un beneficio solo estetico.
 export const CreateBatchJobResponseSchema = z.object({
-  id: z.string().uuid(),
+  jobId: z.string().uuid(),
 });
 export type CreateBatchJobResponse = z.infer<typeof CreateBatchJobResponseSchema>;
 

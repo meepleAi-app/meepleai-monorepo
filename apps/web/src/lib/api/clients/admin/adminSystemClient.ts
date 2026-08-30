@@ -86,7 +86,8 @@ export function createAdminSystemClient(http: HttpClient) {
 
     // ========== Batch Jobs (Issue #3693) ==========
 
-    async createBatchJob(request: CreateBatchJobRequest): Promise<{ id: string }> {
+    // #3853 — il backend risponde `{ jobId }`, non `{ id }`.
+    async createBatchJob(request: CreateBatchJobRequest): Promise<{ jobId: string }> {
       return http.post(
         '/api/v1/admin/operations/batch-jobs',
         request,

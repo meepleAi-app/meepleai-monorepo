@@ -88,8 +88,14 @@ export function createSessionInviteClient({
       await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/propose`, request);
     },
 
+    // #3840 — path separato da /scores/confirm, che appartiene alla conferma di una lettura
+    // dell'assistente (liveSessionsClient.confirmScore). Qui l'host ratifica una proposta:
+    // stesso flusso di /scores/propose, passo successivo.
     async confirmScore(sessionId, request) {
-      await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/confirm`, request);
+      await httpClient.post(
+        `${BASE}/${encodeURIComponent(sessionId)}/scores/proposals/confirm`,
+        request
+      );
     },
   };
 }

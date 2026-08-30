@@ -50,20 +50,6 @@ public sealed class NoDuplicateRouteTests : IAsyncLifetime
         await _fixture.DropIsolatedDatabaseAsync(_testDbName);
     }
 
-    /// <summary>
-    /// Known duplicate awaiting a domain decision (#3840).
-    ///
-    /// The two registrations of this route send DIFFERENT commands —
-    /// <c>ConfirmScoreCommand</c> vs <c>ConfirmScoreProposalCommand</c> — so picking
-    /// one is a decision about the live-scoring model, not a mechanical fix. The
-    /// entry is listed here rather than weakening the guard, so new duplicates
-    /// still fail while this one stays visible and tracked.
-    /// </summary>
-    private static readonly HashSet<string> KnownDuplicates = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "POST /api/v1/live-sessions/{sessionId}/scores/confirm",
-    };
-
     [Fact]
     public void NoRouteTemplate_IsRegisteredTwiceForTheSameHttpMethod()
     {
@@ -79,7 +65,7 @@ public sealed class NoDuplicateRouteTests : IAsyncLifetime
                         Endpoint = e.DisplayName ?? "(senza nome)"
                     }))
             .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
-            .Where(g => g.Count() > 1 && !KnownDuplicates.Contains(g.Key))
+            .Where(g => g.Count() > 1)
             .Select(g => $"{g.Key} → {g.Count()} registrazioni: {string.Join(" | ", g.Select(x => x.Endpoint))}")
             .OrderBy(s => s, StringComparer.Ordinal)
             .ToList();
@@ -91,5 +77,39 @@ public sealed class NoDuplicateRouteTests : IAsyncLifetime
             "a route registered twice for the same method throws AmbiguousMatchException (HTTP 500) " +
             "on every request, while the endpoint looks correctly registered. Duplicates found: " +
             string.Join(" ;; ", duplicates));
+    }
+
+    /// <summary>
+    /// Pins the #3840 decision: the two live-scoring confirmations are separate routes.
+    ///
+    /// <c>/scores/confirm</c> confirms a reading produced by the assistant — any session
+    /// participant may call it. <c>/scores/proposals/confirm</c> is the host ratifying
+    /// another player's proposal, and it broadcasts over SignalR. They were registered on
+    /// the same template, so both answered 500; merging them back would restore that.
+    ///
+    /// The generic guard above only catches the duplicate. Without this test, deleting
+    /// either registration outright would also be "no duplicates" — and silently drop one
+    /// of the two flows.
+    /// </summary>
+    [Fact]
+    public void BothLiveScoringConfirmations_AreRegisteredExactlyOnce()
+    {
+        var dataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
+
+        // RawText may or may not carry the leading slash depending on how the group was
+        // composed; normalising here keeps the assertion about the route, not its spelling.
+        var postTemplates = dataSource.Endpoints
+            .OfType<RouteEndpoint>()
+            .Where(e => e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("POST") == true)
+            .Select(e => (e.RoutePattern.RawText ?? string.Empty).TrimStart('/'))
+            .ToList();
+
+        postTemplates.Should().ContainSingle(
+            t => string.Equals(t, "api/v1/live-sessions/{sessionId}/scores/confirm", StringComparison.OrdinalIgnoreCase),
+            "the participant-facing confirmation (ConfirmScoreCommand) must stay reachable exactly once");
+
+        postTemplates.Should().ContainSingle(
+            t => string.Equals(t, "api/v1/live-sessions/{sessionId}/scores/proposals/confirm", StringComparison.OrdinalIgnoreCase),
+            "the host-facing proposal ratification (ConfirmScoreProposalCommand) must stay reachable exactly once");
     }
 }

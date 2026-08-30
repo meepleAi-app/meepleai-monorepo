@@ -86,8 +86,12 @@ test.describe('Improvvisata Score Parsing — Integration', () => {
     } else {
       // Lower confidence: confirm manually, then verify auto-record path wasn't triggered
       console.log(`[Score Parse] Confidence ${result.confidence} — confirming manually`);
+      // #3840 — questo è il flusso assistente (parse → confirm), il cui contratto è
+      // `playerId`. Il payload diceva `targetPlayerId`, che appartiene alla conferma di
+      // una proposta: il binding lasciava PlayerId = Guid.Empty. Non emergeva perché la
+      // rotta era registrata due volte e rispondeva 500 prima di arrivare al modello.
       await api.post(`/api/v1/live-sessions/${sessionId}/scores/confirm`, {
-        data: { targetPlayerId: playerIds[0], round: 1, dimension: 'points', value: 15 },
+        data: { playerId: playerIds[0], round: 1, dimension: 'points', value: 15 },
         headers: JSON_HEADERS,
       });
       const scores = await getScores(api, sessionId);
@@ -112,7 +116,7 @@ test.describe('Improvvisata Score Parsing — Integration', () => {
       // Confirm the score
       const confirmRes = await api.post(`/api/v1/live-sessions/${sessionId}/scores/confirm`, {
         data: {
-          targetPlayerId: playerIds[0],
+          playerId: playerIds[0], // #3840 — flusso assistente: il contratto è playerId
           round: 1,
           dimension: 'points',
           value: result.value ?? 10,

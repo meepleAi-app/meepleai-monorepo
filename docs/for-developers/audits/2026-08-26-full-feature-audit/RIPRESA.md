@@ -40,7 +40,7 @@ ai comandi con argomenti che iniziano per `/`.
 | #3838 | L'audit di sicurezza registra solo i login | mancano logout, 2FA, cambio ruolo |
 | #3873 | IsAdmin() come guardia sbaglia in DUE direzioni opposte | autorizzazione, non meccanica |
 | #3866 | 14 file di test su 20 non riproducono NoTracking | la lacuna che ha lasciato passare 5 difetti |
-| #3840 | scores/confirm registrata due volte | serve una decisione sullo scoring live |
+| ~~#3840~~ | ~~scores/confirm registrata due volte~~ | **chiusa**: separata su `scores/proposals/confirm` |
 | #3853 | Restano i 6 candidati non verificati + il DoD «errore visibile all'utente» | il match per nome restringe, non prova |
 | #3836 | Il gruppo /badges non esiste lato backend | esporne meta' e' decidere il prodotto |
 

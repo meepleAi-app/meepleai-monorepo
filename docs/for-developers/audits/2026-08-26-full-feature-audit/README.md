@@ -266,7 +266,7 @@ distinguere ciò che non è un difetto vale quanto elencare ciò che lo è.
 | # | Cosa | Severità | Stato |
 |---|---|---|---|
 | [#3831](https://github.com/meepleAi-app/meepleai-monorepo/issues/3831) | 4 famiglie di endpoint admin irraggiungibili: prefisso `/api/v1` raddoppiato | P0 | **chiuso** — [PR #3832](https://github.com/meepleAi-app/meepleai-monorepo/pull/3832) mergiata, verificata dal vivo (4 famiglie ora 200) |
-| [#3840](https://github.com/meepleAi-app/meepleai-monorepo/issues/3840) | Un'impersonificazione avviata non si può terminare (rotta registrata due volte) | P0 | **parziale** — [PR #3841](https://github.com/meepleAi-app/meepleai-monorepo/pull/3841) mergiata; ciclo impersonate→end verificato (200, `RevokedAt` valorizzato). Resta il secondo duplicato `scores/confirm` |
+| [#3840](https://github.com/meepleAi-app/meepleai-monorepo/issues/3840) | Un'impersonificazione avviata non si può terminare (rotta registrata due volte) | P0 | **chiuso** — [PR #3841](https://github.com/meepleAi-app/meepleai-monorepo/pull/3841) per `impersonation/end` (ciclo verificato: 200, `RevokedAt` valorizzato); il secondo duplicato `scores/confirm` separato su `scores/proposals/confirm`, allowlist del guard rimossa |
 | [#3846](https://github.com/meepleAi-app/meepleai-monorepo/issues/3846) | Upload PDF: risponde 200 e l'elaborazione fallisce, senza segnale all'utente | P1 | aperto |
 | [#3847](https://github.com/meepleAi-app/meepleai-monorepo/issues/3847) | 30 endpoint rispondono 500 su richiesta malformata | P1 | aperto |
 | [#3843](https://github.com/meepleAi-app/meepleai-monorepo/issues/3843) | 7 endpoint in 500: query concorrenti sullo stesso DbContext | P1 | aperto |

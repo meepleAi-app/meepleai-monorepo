@@ -114,6 +114,14 @@ jobs:
         working-directory: apps/web
     steps:
       - uses: actions/checkout@v6
+      # Gate dell'issue #3891: gira PRIMA della install perche' e' la install
+      # stessa a fallire (ERR_PNPM_LOCKFILE_CONFIG_MISMATCH, ~600 ms) quando un
+      # lockfile arriva senza la sezione `overrides` — ed e' cio' che produce
+      # ogni PR Dependabot generata da un pnpm 11. Il gate nomina la causa
+      # invece di lasciare l'errore criptico. Usa solo node, gia' sul runner.
+      - name: pnpm settings gate (#3891)
+        run: node scripts/check-pnpm-settings-location.mjs
+
       - uses: ./.github/actions/setup-frontend
         with:
           node-version: '20'

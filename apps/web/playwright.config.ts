@@ -59,6 +59,14 @@ export default defineConfig({
   // il testMatch di default, quindi senza questa esclusione `pnpm test:e2e` li
   // raccoglierebbe e fallirebbe sullo storageState assente (#3837).
   testIgnore: ['**/audit/**'],
+  // #3901: il `testMatch` di default di Playwright include anche `**/*.test.ts`.
+  // Sotto e2e/ ci sono 4 unit test vitest in `__tests__/` (helper e manifest):
+  // Playwright li raccoglieva e li caricava, e ognuno importa `vitest` ->
+  // "Vitest cannot be imported in a CommonJS module using require()". Quattro
+  // file, quattro errori, e la collection abortiva PRIMA di eseguire qualunque
+  // test: `Test Count: 0` su tutti e 13 i job. Nel repo la convenzione e' netta
+  // — 395 `.spec.ts` sono E2E, i `.test.ts` sono unit e restano a vitest.
+  testMatch: '**/*.spec.ts',
   timeout: process.env.CI === 'true' ? 90000 : 60000, // Issue #20375956158: 90s in CI for accessibility tests, 60s local
   fullyParallel: process.env.CI !== 'true', // Issue #1868: Disable parallel in CI to prevent axe-core race conditions
   forbidOnly: process.env.CI === 'true',

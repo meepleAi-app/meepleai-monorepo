@@ -23,8 +23,12 @@ test.describe('useGameTitle E2E', () => {
     });
   });
 
+  // #3901: Playwright pretende il destructuring sul primo parametro della
+  // condizione (`First argument must use the object destructuring pattern`).
+  // Con `_fixtures` la condizione non veniva rifiutata a runtime ma in fase di
+  // COLLECTION, abortendo l'intera suite: 0 test raccolti su 13 job.
   test.skip(
-    (_fixtures, testInfo) => !testInfo.project.metadata?.seedTranslations,
+    ({}, testInfo) => !testInfo.project.metadata?.seedTranslations,
     'Requires sub-PR 3/3 seed translations to land first'
   );
 

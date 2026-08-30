@@ -14,8 +14,12 @@
  *      assertion that no consumer re-introduces a call to the removed route.
  *
  * ## Anti-pattern avoided
- * The previous false-green pattern (`page.route('**/ game - sessions; /**', abort)`) was
- * a blind abort that would pass even if the page never hit that route at all. This
+ * The previous false-green pattern was a blanket `page.route()` on a wildcard
+ * game-sessions glob with `abort` — a blind abort that would pass even if the
+ * page never hit that route at all. (Il glob non si scrive qui: conteneva la
+ * sequenza che chiude un blocco di commento, e chiudendolo trasformava questa
+ * prosa in codice -> `ReferenceError: game is not defined` al caricamento del
+ * modulo, con la collection dell'intera suite abortita. Vedi #3901.) This
  * spec uses EXPLICIT route intercept with request tracking to assert:
  *   - native stream: intercepted and counted (≥ 1 call).
  *   - legacy stream/v2 (removed): intercepted and counted → must be ZERO calls.

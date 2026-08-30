@@ -132,10 +132,19 @@ continua a rispondere 422 anche fornendo `reason` e un limite: non è marcato co
 Emerso eseguendo il ciclo per davvero: `impersonate` risponde 200, `end` risponde 500.
 
 Il guard aggiunto copre l'intera tabella delle rotte e ha trovato un **secondo** duplicato:
-`POST /live-sessions/{sessionId}/scores/confirm`, anch'esso in 500. Quello **non è stato corretto**:
-le due registrazioni inviano comandi diversi (`ConfirmScoreCommand` contro
-`ConfirmScoreProposalCommand`, che porta l'identità del richiedente), quindi sceglierne una è una
-decisione sul modello dello scoring live e non spetta all'audit.
+`POST /live-sessions/{sessionId}/scores/confirm`, anch'esso in 500. Le due registrazioni inviano
+comandi diversi (`ConfirmScoreCommand` contro `ConfirmScoreProposalCommand`, che porta l'identità
+del richiedente), quindi sceglierne una era una decisione sul modello dello scoring live e non
+spettava all'audit.
+
+**Risolto separando, non scegliendo.** Sono due goal con attori diversi: `/scores/confirm` è un
+partecipante che conferma una lettura dell'assistente, la ratifica di una proposta è dell'host e
+trasmette su SignalR. La seconda è passata a `/scores/proposals/confirm`, simmetrica a
+`/scores/propose` che la precede nello stesso flusso. La rinomina è costata zero rotture: quel
+client frontend non aveva **alcun chiamante** — il flusso proponi→ratifica è cablato solo a metà,
+`GuestJoinView` propone e nessuna interfaccia conferma. Il guard non ha più allowlist, e un
+secondo test pinna la separazione: cancellare una delle due registrazioni sarebbe anch'esso
+«nessun duplicato».
 
 ### 🔍 P1 — Il cambio di tier rifiuta ogni valore — [#3842](https://github.com/meepleAi-app/meepleai-monorepo/issues/3842)
 

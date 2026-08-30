@@ -57,7 +57,16 @@ internal static class SessionInviteEndpoints
             .WithSummary("Propose a score")
             .WithDescription("Player proposes a score. Host will be notified for confirmation.");
 
-        group.MapPost("/live-sessions/{sessionId}/scores/confirm", HandleConfirmScore)
+        // #3840 — questa rotta era registrata su /scores/confirm, dove la registra anche
+        // LiveSessionEndpoints per una semantica diversa (ConfirmScoreCommand: il partecipante
+        // conferma una lettura dell'assistente). Due registrazioni sullo stesso (metodo, template)
+        // non falliscono all'avvio: ASP.NET solleva AmbiguousMatchException a ogni richiesta, e
+        // ENTRAMBE le semantiche rispondevano 500.
+        //
+        // Separate invece di sceglierne una: sono due goal con attori diversi — qui ratifica
+        // l'host, là conferma un partecipante qualsiasi. Il path segue /scores/propose, che è
+        // il passo che precede questo nello stesso flusso (E3-3).
+        group.MapPost("/live-sessions/{sessionId}/scores/proposals/confirm", HandleConfirmScore)
             .RequireAuthenticatedUser()
             .Produces(204)
             .Produces(403)

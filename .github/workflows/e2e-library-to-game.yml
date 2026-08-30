@@ -48,7 +48,9 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d  # v4
         with:
-          version: 9
+          # pnpm 10: gli override di apps/web stanno in pnpm-workspace.yaml,
+          # che pnpm 9 non legge (#3891) -> --frozen-lockfile fallirebbe.
+          version: 10
 
       - name: Get pnpm store directory
         shell: bash

@@ -129,7 +129,9 @@ jobs:
       - name: Setup pnpm + Node
         uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86  # v3
         with:
-          version: 9
+          # pnpm 10: gli override di apps/web stanno in pnpm-workspace.yaml,
+          # che pnpm 9 non legge (#3891) -> --frozen-lockfile fallirebbe.
+          version: 10
       - uses: actions/setup-node@v6
         with:
           node-version: 22

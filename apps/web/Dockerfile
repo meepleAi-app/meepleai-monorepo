@@ -26,7 +26,7 @@ RUN apk add --no-cache \
 RUN npm install -g pnpm@10
 
 # Copy package files
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install dependencies (including devDependencies for build stage)
 RUN pnpm install --frozen-lockfile

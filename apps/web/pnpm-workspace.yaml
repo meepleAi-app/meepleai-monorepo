@@ -1,0 +1,56 @@
+# Impostazioni pnpm di apps/web.
+#
+# `overrides` sta QUI e non sotto la chiave `pnpm` di package.json: da pnpm 11
+# quella chiave non viene piu' letta ("The \"pnpm\" field in package.json is no
+# longer read by pnpm"), e un pnpm 11 che rigenera il lockfile lo riscrive senza
+# la sezione `overrides` — riportando dentro le versioni transitive vulnerabili.
+# E' quello che succedeva alle PR di Dependabot, che usa un pnpm piu' recente
+# della CI: 16 pacchetti su 33 regredivano, 10 sotto il pin (glob 7.2.3,
+# dompurify 3.1.7, brace-expansion 1.1.18, picomatch 2.3.2, ...). Vedi #3891.
+#
+# pnpm 10 (la versione della CI) e pnpm 11 leggono entrambi gli override da qui.
+# pnpm 9 NO: pretende anche `packages:` e ignora `overrides` in questo file.
+# Nessun workflow su apps/web deve tornare a pnpm 9.
+#
+# Ogni voce e' un pin di sicurezza su una dipendenza transitiva: toglierla
+# reintroduce la vulnerabilita' corrispondente. Il gate che se ne accorge e'
+# `pnpm install --frozen-lockfile` (ERR_PNPM_LOCKFILE_CONFIG_MISMATCH), quindi
+# non va rilassato.
+overrides:
+  '@babel/runtime': '>=7.26.10'
+  '@babel/core': '>=7.29.6'
+  '@isaacs/brace-expansion': '>=5.0.1'
+  axios: '>=1.18.0'
+  dompurify: '>=3.4.9'
+  flatted: '>=3.4.2'
+  glob: '>=10.5.0'
+  handlebars: '>=4.7.9'
+  js-yaml: '>=4.2.0'
+  lodash: '>=4.18.1'
+  lodash-es: '>=4.18.1'
+  markdown-it: '>=14.1.1'
+  picomatch: '>=4.0.4'
+  postcss: '>=8.5.18'
+  fast-uri: '>=3.1.5 <4'
+  brace-expansion: '>=5.0.9'
+  sharp: '>=0.35.0'
+  protobufjs: '>=8.4.1'
+  qs: '>=6.14.2'
+  shell-quote: '>=1.9.0'
+  form-data: '>=4.0.6'
+  undici: '>=7.29.0 <8'
+  vite: '>=8.0.16 <8.1.0'
+  storybook: '>=10.1.10'
+  tar: '>=7.5.8'
+  ajv: '>=8.20.0'
+  eslint>ajv: ^6.12.6
+  '@eslint/eslintrc>ajv': ^6.12.6
+  bn.js: '>=5.2.3'
+  minimatch: '>=10.2.3'
+  eslint-plugin-import>minimatch: ^3.1.2
+  webpack: '>=5.104.1'
+  pdfjs-dist: 6.2.108
+  serialize-javascript: '>=7.0.3'
+  rollup: '>=4.59.0'
+  basic-ftp: '>=5.2.0'
+  '@microsoft/signalr>ws': '>=7.5.11'

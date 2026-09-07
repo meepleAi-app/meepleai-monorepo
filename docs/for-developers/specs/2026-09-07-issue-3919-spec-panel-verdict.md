@@ -5,7 +5,7 @@
 **Data**: 2026-09-07
 **Metodo**: `/sc:spec-panel` — modalità critique (Wiegers · Adzic · Cockburn · Fowler · Newman · Nygard · Crispin · Hightower)
 **Misure**: `apps/web` @ `bd244d1a0`; il diff verso `main-dev` (`b486c656d`) non tocca alcun file glass o di token
-**Stato**: verdetto emesso, riformulazione proposta. Nessun codice modificato.
+**Stato**: verdetto emesso, riformulazione proposta, **tre alpha decisi** (§6: 0,20 / 0,85 / 0,95). Nessun codice modificato.
 **Bloccate da questa issue**: [#3920](https://github.com/meepleAi-app/meepleai-monorepo/issues/3920) (regola ESLint) · [#3921](https://github.com/meepleAi-app/meepleai-monorepo/issues/3921) · [#3922](https://github.com/meepleAi-app/meepleai-monorepo/issues/3922) · [#3923](https://github.com/meepleAi-app/meepleai-monorepo/issues/3923) (le 3 ondate di codemod)
 
 ---
@@ -269,19 +269,13 @@ quinta superficie di partenza, diversa dalle altre quattro.
 (rettifica già registrata nel piano, §O). Se si preferisce il nome nuovo, la PR migra i 4 consumatori
 nella stessa PR: due primitive glass coesistenti sono la frammentazione che l'Epic riduce.
 
-**Scala, con numeri.** Proposta da discutere, non da adottare a scatola chiusa:
+**Scala, con numeri** — derivazione completa in §6:
 
-| Livello | α | Perché | Superfici già conformi |
+| Livello | α | Blur | Vincolo che lo fissa |
 |---|---|---|---|
-| `decorative` | **0,20** | mediana della fascia bassa; 29 usi già a `/20` | 29 |
-| `functional` | **0,80** | 7,49:1 in dark sul fondo peggiore, 10,0:1 in light — margine reale sopra la soglia ≈0,66 | 54 |
-| `content` | **0,97** | i 10 usi di `/95` salgono di 2 punti; long-form resta leggibile su qualunque fondo | 10 |
-
-Con questi valori, 282 superfici oggi in `functional` (`/70`, `/85`) cambiano opacità. È il costo
-dichiarato di F-3: `/70` **non** è sicuro in dark sul fondo peggiore. Se il progetto preferisce
-conservare i 276 usi di `/70`, allora `GlassSurface` deve garantire il contrasto in un altro modo —
-per esempio rendendo `functional` opaco quando porta testo, o vietando `functional` sopra immagini.
-Quella scelta va fatta qui.
+| `decorative` | **0,20** | sm | nessun contrasto (non porta testo): decide il riuso (29 usi) e il fallimento rumoroso |
+| `functional` | **0,85** | md | `--text-sec` in dark sul fondo peggiore (soglia 0,781) — e è il valore già de-facto del sistema |
+| `content` | **0,95** | none/sm | `--text-sec` in **AAA** sul fondo peggiore (soglia 0,914 light / 0,907 dark) |
 
 **AC riscritti** (i tre che cambiano):
 
@@ -300,8 +294,9 @@ Quella scelta va fatta qui.
   tutti e 13 gli alpha, così le tre ondate non ridecidono 289 volte.
 - **Il token canonico `--glass-bg` (0,88) è ricondotto alla scala**, o la scala lo accoglie. Il chrome
   globale è il primo consumatore di #3921.
-- **La superficie di partenza è dichiarata**: `--bg-card` canonico, non `--card`. Con la differenza
-  di resa in dark misurata prima/dopo (F-5).
+- **La superficie di partenza è `--bg-card` canonico, non `--card`.** Non è una preferenza: con
+  `--card` (grigio `#2d2d2d` in dark) la soglia AA per `--text-sec` sale a **0,859**, sopra il valore
+  scelto — gli 8 punti fra le due superfici sono più del margine di sicurezza (§6.3, F-5).
 - **`GlassSurface` compone via `color-mix()` sopra una superficie parametrica**, così un solo token di
   alpha serve tutte le superfici (F-4) — e i token vivono in `@theme inline` se e solo se servono
   utility Tailwind.
@@ -324,3 +319,116 @@ della issue prima che #3921 apra*.
   e promossa a `error` alla fine.
 - Il vincolo responsive: il degrado del blur sotto `md` **esiste già** (`design-tokens.css:740-749`,
   fallback opaco sotto 768px) e va ereditato, non riprogettato.
+
+---
+
+## 6. Derivazione dei tre alpha (2026-09-07)
+
+Il §4 nella sua prima stesura proponeva 0,20 / 0,80 / 0,97 tarando su `--text`. Risolti i vincoli su
+tutti i token di testo, il valore che comanda è un altro e la terna cambia. Script rieseguibili:
+composizione in sRGB come la fa il browser, luminanza WCAG 2.1 su sRGB linearizzato, ricerca binaria
+della soglia.
+
+### 6.1 Il vincolo binding è `--text-sec`, non `--text`
+
+Alpha minimo perché il testo resti leggibile **sul fondo peggiore** (bianco sotto il tema scuro, nero
+sotto il chiaro), superficie `--bg-card` canonico:
+
+| tema · testo | AA 4,5:1 | AAA 7:1 |
+|---|---|---|
+| light · `--text` | 0,531 | 0,671 |
+| light · `--text-sec` | 0,739 | 0,914 |
+| dark · `--text` | 0,658 | 0,781 |
+| **dark · `--text-sec`** | **0,781** | 0,907 |
+| light/dark · `--text-muted` | **mai** | **mai** |
+
+`--text-sec` è ciò che portano sottotitoli e metadati delle card — cioè proprio le superfici che
+stanno sopra le copertine. Tararsi su `--text` lascia scoperto il caso più comune.
+
+### 6.2 `functional` = 0,85
+
+0,80 supera la soglia di due punti (4,81:1 contro 4,5). 0,85 dà **5,76:1 in dark** e **6,01:1 in
+light**: un margine che sopravvive a un ritocco futuro dei token di testo.
+
+L'argomento che chiude è però un altro: **0,85 è già il valore che il sistema ha scelto da sé** dove
+il problema si presenta. `--glass-bg` dark canonical è `rgba(30,22,14,0.85)`; `--glass-bg-light-strong`
+è 0,85; `EntityBadge` usa `bg-card/85`; `MenuPlaceholder` usa `bg-white/85`. Sono i componenti che
+stanno sopra le cover: chi li ha scritti ha trovato empiricamente la soglia che qui esce dal calcolo.
+Ed è il tetto già dichiarato dalla issue, quindi il range non cambia.
+
+**Effetto sul chrome globale (F-2)**: 0,88 → 0,85 vale **Δ 0,5/255 sul fondo di pagina**, dove il
+chrome effettivamente sta; in dark `--glass-bg` è già 0,85 e non cambia nulla. Il dilemma «o `content`
+scende a 0,88, o il chrome cambia opacità» si scioglie senza che si veda.
+
+### 6.3 La superficie di partenza sposta la soglia di 8 punti
+
+| superficie · dark · `--text-sec` | soglia AA |
+|---|---|
+| `--bg-card` canonico `#1e1710` | 0,781 |
+| `bg-card` → `--card` Tailwind `#2d2d2d` | **0,859** |
+
+Con `--card`, **0,85 non basterebbe**. La raccomandazione di F-5 smette di essere una preferenza
+estetica e diventa una precondizione di accessibilità.
+
+### 6.4 `content` = 0,95 · `decorative` = 0,20
+
+**`content` = 0,95** è il minimo che porta `--text-sec` in **AAA** sul fondo peggiore (7,61:1 light ·
+7,98:1 dark). Centra l'obiettivo dell'Epic «AAA dove possibile su chat, upload, rules», coincide col
+limite già scritto nella issue e lascia conformi i 10 usi di `/95`. 0,97 aggiungerebbe margine senza
+cambiare la classe di conformità.
+
+**`decorative` = 0,20** non ha vincolo di contrasto — non porta testo. Decidono il riuso (29 usi, il
+più diffuso della fascia) e il fatto che l'errore sia **rumoroso**: chi ci mette testo ottiene 1,22:1
+in dark, un fallimento visibile a occhio nudo.
+
+⚠️ Da scrivere nella doc del livello: fra 0,15 e 0,25 la superficie è **invisibile sul fondo di
+pagina** (1,01–1,03:1 in entrambi i temi). `decorative` esiste solo sopra un'immagine o un gradiente,
+oppure accompagnato da un bordo.
+
+### 6.5 Mappatura dei 13 alpha e costo
+
+**45 usi restano invariati, 627 migrano** (502 salgono di opacità, 125 scendono).
+
+| alpha | usi | → livello | Δ |
+|---|---|---|---|
+| /5 · /10 · /15 | 53 | `decorative` | +15 · +10 · +5 |
+| /20 | 29 | `decorative` | — |
+| /25 · /30 · /40 | 51 | `decorative` | −5 · −10 · −20 |
+| /50 · /60 | 119 | `functional` | +35 · +25 |
+| /70 | 276 | `functional` | +15 |
+| /80 | 54 | `functional` | +5 |
+| /85 | 6 | `functional` | — |
+| /90 | 74 | `functional` | −5 |
+| /95 | 10 | `content` | — |
+
+Il numero che rende accettabile la migrazione dei 276 usi di `/70`:
+
+| contesto | Δ max canale |
+|---|---|
+| sopra il fondo di pagina (dark) | **1,5/255** — invisibile |
+| sopra il fondo di pagina (light) | **2,5/255** — invisibile |
+| sopra una cover di luminanza opposta | 36–38/255 — visibile |
+
+Il costo percettivo si concentra **solo** sui casi in cui il valore vecchio rompeva l'accessibilità.
+
+Campionamento a validazione della mappa: `/50` sono pannelli con bordo e testo
+(`toolkit/stats/client.tsx:88`, `queue-item.tsx:108`, `config-tab.tsx:80`) → `functional`; `/90` sono
+**campi di input** (`contact/page.tsx`, 4 occorrenze) → `functional`, non `content`; `/60` è misto,
+5 su 57 sono skeleton e vanno a `decorative`.
+
+### 6.6 Due conseguenze per il codemod
+
+1. **`--text-muted` è fuori portata a qualunque alpha**, anche su superficie completamente opaca
+   (3,43:1 su bianco puro in light). Non è un difetto introdotto dalla scala e la scala non può
+   ripararlo: va usato solo per testo grande (≥24px, o ≥18,66px bold) o per elementi non testuali.
+   Va scritto nella doc, altrimenti qualcuno tenterà di risolverlo alzando l'alpha.
+2. **Le 27 varianti `dark:bg-card/α` vanno rimosse, e dodici vanno nella direzione sbagliata**:
+   `dark:bg-card/5` (×4), `/10` (×4), `/15` (×3) *abbassano* l'opacità nel tema dove la soglia è più
+   alta (0,781 dark contro 0,739 light). L'intuizione diffusa — «in dark serve meno opacità» — è
+   invertita rispetto alla matematica.
+
+### 6.7 Limiti dichiarati
+
+Bianco e nero puri sono il caso limite raggiungibile, non il caso medio: le cover reali stanno in
+mezzo. E il calcolo assume che `backdrop-filter: blur()` non sposti la **media** della luminanza del
+fondo — vero per la media, non per un singolo glifo sopra un dettaglio ad alto contrasto.

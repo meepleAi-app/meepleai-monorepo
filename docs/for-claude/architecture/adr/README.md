@@ -67,6 +67,14 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 | [088](adr-088-mechanic-cards-as-rag-retrieval-source.md) | Mechanic Cards as RAG Retrieval Source | 2026-07-30 | Proposed |
 | [090](adr-090-in-session-grounded-answer-ownership.md) | In-Session Grounded Answer Ownership (KnowledgeBase owner, SessionTracking consumer) | 2026-08-02 | Accepted |
 
+### Frontend Routing & Information Architecture (091–099)
+
+> Nuovo range: i precedenti si fermavano a 090 e nessuno copriva le decisioni di routing/IA del frontend. Vale la stessa nota di drift della sezione sopra — questa elenca solo l'ADR aggiunto dal suo PR.
+
+| ADR | Title | Date | Status |
+|-----|-------|------|--------|
+| [091](adr-091-canonical-game-detail-tree.md) | Albero canonico del dettaglio gioco (`/games/[id]`) | 2026-09-07 | Accepted |
+
 ## ADR Lifecycle
 
 | Status | Description |

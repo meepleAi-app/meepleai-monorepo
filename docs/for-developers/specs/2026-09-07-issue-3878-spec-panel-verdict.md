@@ -73,7 +73,7 @@ scriverà: si limiterà a definire la variabile d'ambiente e a dichiarare chiuso
 | # | Come fallisce | Cosa fa il codice | Cosa vede l'utente |
 |---|---|---|---|
 | **A** | `Failed` **con** `errorMessage` | `onError` → la pagina smonta il componente (F-1) | **niente** |
-| **B** | `Failed` **senza** `errorMessage` | `onError` non parte (`&& transformedProgress.errorMessage`, `ProcessingProgress.tsx:149`); il banner interno richiede anch'esso `errorMessage` (`:505`) | barra rossa a 0% e «Processing status: Failed», **senza causa** |
+| **B** | `Failed` **senza** `errorMessage` | `onError` non parte (`&& transformedProgress.errorMessage`, `ProcessingProgress.tsx:149`); il banner interno richiede anch'esso `errorMessage` (`:505`) | barra rossa a 0% e «Processing status: Processing failed», **senza causa** |
 | **C** | fallimento **prima** che la pipeline scriva `Failed` — il caso di #3846: lo storage | nessuno stato terminale, il polling continua | 10 minuti di attesa, poi «Processing timeout exceeded» |
 | **D** | errore di rete durante il polling | `setNetworkError`, il componente **resta montato** | banner arancione — **l'unico dei quattro che funziona** |
 
@@ -90,7 +90,7 @@ l'annullamento richiesto dall'utente scrive anch'esso `Failed`, con messaggio «
 user» (`:1074`). Il polling lo legge, `errorMessage` è valorizzato, parte `onError` — e la pagina smonta
 il componente. Cioè: **il bottone «Cancel Processing» del componente fa sparire il componente senza
 alcuna conferma a schermo**, per il percorso che il componente stesso offre e che i suoi test coprono
-con sette casi. È la dimostrazione più economica di F-1: non serve un PDF che fallisce davvero per
+con otto casi. È la dimostrazione più economica di F-1: non serve un PDF che fallisce davvero per
 riprodurlo.
 
 Esempio eseguibile per il caso oggi scoperto:

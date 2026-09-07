@@ -49,6 +49,9 @@ import { type CategorizedError } from '@/lib/errorUtils';
 
 const enableProcessingProgress = process.env.NEXT_PUBLIC_ENABLE_PROGRESS_UI === 'true';
 
+/** Id del banner di fallimento: descrive il bottone Parse quando è disabilitato (#3878). */
+const PROCESSING_ERROR_ID = 'upload-processing-error';
+
 interface UploadClientProps {
   autoUpload?: boolean;
   onUploadStart?: () => void;
@@ -338,6 +341,24 @@ export function UploadClient({
           </Card>
         )}
 
+        {/*
+         * Issue #3878: il fallimento dell'elaborazione era scritto in
+         * `processingError` e non letto da alcun ramo di render, quindi il
+         * pannello di progresso spariva senza lasciare traccia. Questo banner
+         * è persistente: sopravvive alla fine del polling e allo smontaggio di
+         * ProcessingProgress, ed è ciò che descrive il bottone Parse disabilitato.
+         */}
+        {wizardState.processingError && (
+          <Card
+            id={PROCESSING_ERROR_ID}
+            role="alert"
+            className="p-4 mb-6 bg-destructive/10 border-destructive"
+          >
+            <p className="font-semibold text-destructive">PDF processing failed</p>
+            <p className="text-destructive">{wizardState.processingError}</p>
+          </Card>
+        )}
+
         {/* Step 1: Upload */}
         {wizardState.currentStep === 'upload' && (
           <div className="space-y-6">
@@ -466,6 +487,7 @@ export function UploadClient({
                 onClick={handleParse}
                 isLoading={parsing}
                 disabled={parsing || wizardState.processingStatus !== 'completed'}
+                aria-describedby={wizardState.processingError ? PROCESSING_ERROR_ID : undefined}
               >
                 {parsing ? 'Loading rules…' : 'Parse PDF'}
               </LoadingButton>

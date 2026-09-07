@@ -42,13 +42,15 @@ vi.mock('../../loading', () => ({
  * Helper to create mock API response matching backend ProcessingProgress model.
  * Issue #3371: Schema alignment with backend.
  */
-function createMockProgress(overrides: {
-  currentStep?: string;
-  percentComplete?: number;
-  errorMessage?: string | null;
-  pagesProcessed?: number;
-  totalPages?: number;
-} = {}) {
+function createMockProgress(
+  overrides: {
+    currentStep?: string;
+    percentComplete?: number;
+    errorMessage?: string | null;
+    pagesProcessed?: number;
+    totalPages?: number;
+  } = {}
+) {
   return {
     currentStep: overrides.currentStep ?? 'Extracting',
     percentComplete: overrides.percentComplete ?? 50,
@@ -78,9 +80,7 @@ describe('ProcessingProgress', () => {
   describe('Loading State', () => {
     it('shows skeleton loader while initial fetch is in progress', () => {
       // Never resolve the API call
-      vi.mocked(api.pdf.getProcessingProgress).mockImplementation(
-        () => new Promise(() => {})
-      );
+      vi.mocked(api.pdf.getProcessingProgress).mockImplementation(() => new Promise(() => {}));
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -164,12 +164,7 @@ describe('ProcessingProgress', () => {
         completedAt: '2026-02-01T10:35:00.000Z',
       });
 
-      render(
-        <ProcessingProgress
-          pdfId={defaultPdfId}
-          onComplete={mockOnComplete}
-        />
-      );
+      render(<ProcessingProgress pdfId={defaultPdfId} onComplete={mockOnComplete} />);
 
       await waitFor(() => {
         expect(mockOnComplete).toHaveBeenCalledTimes(1);
@@ -182,12 +177,7 @@ describe('ProcessingProgress', () => {
         completedAt: '2026-02-01T10:35:00.000Z',
       });
 
-      render(
-        <ProcessingProgress
-          pdfId={defaultPdfId}
-          onComplete={mockOnComplete}
-        />
-      );
+      render(<ProcessingProgress pdfId={defaultPdfId} onComplete={mockOnComplete} />);
 
       await waitFor(() => {
         expect(mockOnComplete).toHaveBeenCalled();
@@ -205,12 +195,7 @@ describe('ProcessingProgress', () => {
         createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage })
       );
 
-      render(
-        <ProcessingProgress
-          pdfId={defaultPdfId}
-          onError={mockOnError}
-        />
-      );
+      render(<ProcessingProgress pdfId={defaultPdfId} onError={mockOnError} />);
 
       await waitFor(() => {
         expect(mockOnError).toHaveBeenCalledWith(errorMessage);
@@ -219,7 +204,11 @@ describe('ProcessingProgress', () => {
 
     it('displays error message when processing fails', async () => {
       vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
-        createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage: 'OCR failed for this document' })
+        createMockProgress({
+          currentStep: 'Failed',
+          percentComplete: 0,
+          errorMessage: 'OCR failed for this document',
+        })
       );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
@@ -227,6 +216,25 @@ describe('ProcessingProgress', () => {
       await waitFor(() => {
         expect(screen.getByText(/OCR failed for this document/)).toBeInTheDocument();
       });
+    });
+
+    /**
+     * Issue #3878, caso B: `errorMessage` è `nullable().optional()` nel contratto
+     * (pdf.schemas.ts), quindi un fallimento senza messaggio è raggiungibile. Prima
+     * di questa correzione `onError` non partiva affatto e il pannello mostrava solo
+     * «Processing failed» senza causa: il chiamante non sapeva che fosse fallito.
+     */
+    it('calls onError even when the backend reports no error message', async () => {
+      vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
+        createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage: null })
+      );
+
+      render(<ProcessingProgress pdfId={defaultPdfId} onError={mockOnError} />);
+
+      await waitFor(() => {
+        expect(mockOnError).toHaveBeenCalledTimes(1);
+      });
+      expect(mockOnError).toHaveBeenCalledWith(expect.stringMatching(/failed/i));
     });
   });
 
@@ -370,9 +378,7 @@ describe('ProcessingProgress', () => {
         createMockProgress({ currentStep: 'Chunking', percentComplete: 50 })
       );
       // Never resolve cancel API
-      vi.mocked(api.pdf.cancelProcessing).mockImplementation(
-        () => new Promise(() => {})
-      );
+      vi.mocked(api.pdf.cancelProcessing).mockImplementation(() => new Promise(() => {}));
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -392,9 +398,7 @@ describe('ProcessingProgress', () => {
       vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
         createMockProgress({ currentStep: 'Embedding', percentComplete: 50 })
       );
-      vi.mocked(api.pdf.cancelProcessing).mockRejectedValue(
-        new Error('Cancel request failed')
-      );
+      vi.mocked(api.pdf.cancelProcessing).mockRejectedValue(new Error('Cancel request failed'));
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);
 
@@ -477,7 +481,11 @@ describe('ProcessingProgress', () => {
 
     it('error messages have role="alert"', async () => {
       vi.mocked(api.pdf.getProcessingProgress).mockResolvedValue(
-        createMockProgress({ currentStep: 'Failed', percentComplete: 0, errorMessage: 'Processing failed' })
+        createMockProgress({
+          currentStep: 'Failed',
+          percentComplete: 0,
+          errorMessage: 'Processing failed',
+        })
       );
 
       render(<ProcessingProgress pdfId={defaultPdfId} />);

@@ -234,8 +234,10 @@ invita a ricaricare.
 ## 7. Verifiche eseguite
 
 ```bash
-# il flag non e' definito in nessun ambiente (conferma della issue)
-rg -n "NEXT_PUBLIC_ENABLE_PROGRESS_UI" infra/ apps/web/
+# il flag non e' definito in nessun ambiente (conferma della issue).
+# Va cercato nella CONFIGURAZIONE: su tutto apps/web/ trova le due righe del sorgente
+# che lo leggono (upload-client.tsx:50 e :137), che non dimostrano nulla sul suo valore.
+rg -n "NEXT_PUBLIC_ENABLE_PROGRESS_UI" infra/ apps/web/Dockerfile apps/web/next.config.js apps/web/.env*
 
 # il campo scritto dal reducer non e' letto da nessun ramo di render
 rg -n "processingError|wizardState\.error" "apps/web/src/app/(authenticated)/upload/upload-client.tsx"

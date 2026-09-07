@@ -97,7 +97,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
   const latestProgressRef = useRef<ProcessingProgressType | null>(null);
-  const hasNotifiedCompletionRef = useRef(false);
+  const hasNotifiedTerminalRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -107,7 +107,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
   }, []);
 
   useEffect(() => {
-    hasNotifiedCompletionRef.current = false;
+    hasNotifiedTerminalRef.current = false;
     latestProgressRef.current = null;
     setProgress(null);
     setLoading(true);
@@ -136,21 +136,21 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       setNetworkError(null);
       setLoading(false);
 
-      // Check for completion
-      if (isProcessingComplete(transformedProgress.currentStep)) {
-        if (
-          transformedProgress.currentStep === ProcessingStep.Completed &&
-          onComplete &&
-          !hasNotifiedCompletionRef.current
-        ) {
-          hasNotifiedCompletionRef.current = true;
-          onComplete();
-        } else if (
-          transformedProgress.currentStep === ProcessingStep.Failed &&
-          onError &&
-          transformedProgress.errorMessage
-        ) {
-          onError(transformedProgress.errorMessage);
+      // Check for completion.
+      // Issue #3878: lo stato terminale notifica UNA volta sola, sia in successo
+      // sia in fallimento. Prima `onError` era subordinato a `errorMessage`, che il
+      // contratto dichiara `nullable().optional()`: un fallimento senza messaggio
+      // non veniva segnalato affatto e il chiamante non sapeva di dover reagire.
+      if (
+        isProcessingComplete(transformedProgress.currentStep) &&
+        !hasNotifiedTerminalRef.current
+      ) {
+        hasNotifiedTerminalRef.current = true;
+
+        if (transformedProgress.currentStep === ProcessingStep.Completed) {
+          onComplete?.();
+        } else {
+          onError?.(transformedProgress.errorMessage ?? 'Processing failed with no reported cause');
         }
       }
     } catch (error) {

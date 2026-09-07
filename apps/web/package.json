@@ -46,6 +46,7 @@
     "lint:fix": "eslint . --fix",
     "lint:pnpm-settings": "node scripts/check-pnpm-settings-location.mjs",
     "lint:no-cover-fixme": "node scripts/no-cover-fixme.mjs",
+    "audit:glass-alpha": "node scripts/glass-alpha-audit.mjs",
     "lint:tokens": "node scripts/lint-tokens.mjs",
     "lint:tokens:mockups": "node scripts/lint-tokens-mockups.mjs",
     "audit-mockups:discover": "node scripts/audit-mockups/discover-clusters.mjs",

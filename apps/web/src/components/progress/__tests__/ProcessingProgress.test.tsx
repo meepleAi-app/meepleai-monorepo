@@ -234,7 +234,9 @@ describe('ProcessingProgress', () => {
       await waitFor(() => {
         expect(mockOnError).toHaveBeenCalledTimes(1);
       });
-      expect(mockOnError).toHaveBeenCalledWith(expect.stringMatching(/failed/i));
+      // Il fallback deve dire all'utente qualcosa che il titolo del banner non
+      // ripete già: che una causa non è stata riportata.
+      expect(mockOnError).toHaveBeenCalledWith(expect.stringMatching(/no reported cause/i));
     });
   });
 

@@ -150,7 +150,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         if (transformedProgress.currentStep === ProcessingStep.Completed) {
           onComplete?.();
         } else {
-          onError?.(transformedProgress.errorMessage ?? getStepLabel(ProcessingStep.Failed));
+          onError?.(transformedProgress.errorMessage ?? 'Processing failed with no reported cause');
         }
       }
     } catch (error) {

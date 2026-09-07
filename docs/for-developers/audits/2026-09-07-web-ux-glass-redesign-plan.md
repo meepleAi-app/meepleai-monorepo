@@ -66,9 +66,27 @@ Quattro test del gate a11y principale puntano a una route inesistente: axe passa
 
 > Precedente noto nel repo: cluster «gate CI che non esaminano niente» (#3622 / #3625 / #3629 / #3632 / #3659 / #3662).
 
-### A.5 Route fantasma `/settings`
+### A.5 `/settings` — indirizzo disallineato (rettificato 2026-09-07)
 
-`/settings` è referenziata da `src/config/contextual-tabs.ts:33`, `src/config/navigation-emoji.ts:8`, `components/admin/QuickActions` e da 3 stories — **ma la route non esiste**. Le impostazioni reali sono frammentate su `/profile`, `/notifications/preferences`, `/cookie-settings`.
+> ⚠️ **Rettifica.** La prima stesura diceva «dead link in produzione, P0». Verificando il codice prima di implementare, la diagnosi si è rivelata sbagliata in due punti. Priorità corretta: **P1**.
+
+`/settings` non esiste come route, ma **nessun link cliccabile ci punta**:
+
+| Riferimento | Tipo | Raggiungibile? |
+|---|---|---|
+| `config/contextual-tabs.ts:33-36` · `config/navigation-emoji.ts:8` | config | ❌ inerte (nessuno ci naviga) |
+| `lib/constants/notification-routes.ts:35,39` | costanti | ❌ **dead code**: `NotificationRoutes` è importato solo dal proprio test |
+| `components/library/LibraryQuotaBadge.tsx:49` | `<Link href>` | ❌ **dead code**: componente non montato |
+| `components/admin/__tests__/QuickActions.test.tsx:129` | fixture | ❌ — **il componente non contiene `/settings`**: la prima stesura lo attribuiva erroneamente al componente |
+| `locales/it.json:1050` | **testo mostrato all'utente** | ⚠️ **sì** |
+
+L'unico riferimento realmente esposto è una frase in una pagina di privacy/consenso: «**Gestione del consenso** disponibile in `/settings/ai-consent`». È dentro backtick (reso come codice inline, non come link), quindi non è cliccabile — ma è un'istruzione sbagliata su come esercitare un diritto.
+
+**E l'hub Settings esiste già.** `components/features/settings/` contiene `settings-sections.ts` con **7 sezioni** (profile · security · ai-consent · notifications · preferences · api-keys · services), `SettingsTab.tsx` con il layout elenco+pannello, `sections/AiConsentSection.tsx`, stories e 3 file di test. È montato e funzionante a **`/profile?tab=settings&section=<id>`** (`ProfilePageContent.tsx:45,47,59,432`).
+
+> L'audit `2026-07-16-design-coverage-audit.md` segnalava come #1608 P0 che il tab `settings` potesse non essere nel tipo `Tab`, rendendo il wizard 2FA irraggiungibile. **Quel difetto è risolto**: `VALID_TABS` include `'settings'`.
+
+Il difetto reale è quindi un **disallineamento di indirizzo**, non un link rotto — e il lavoro di #3938 scende da «costruire l'hub» (2 g) a «esporlo su una route e riallineare i riferimenti» (~0,5–1 g).
 
 ### A.6 Issue aperte
 
@@ -164,9 +182,9 @@ Priorità: **P0** blocca il redesign · **P1** core UX · **P2** importante · *
 
 | # | Rilievo | Pri |
 |---|---|---|
-| B10.1 | **`/settings` non esiste** ma è referenziata da 2 file di config + admin QuickActions → **dead link in produzione** | **P0** |
-| B10.2 | I domini richiesti (Profile/Preferences/Privacy/Advanced) sono sparsi su `/profile`, `/notifications/preferences`, `/cookie-settings` | P1 |
-| B10.3 | `ui/settings-list` + `ui/settings-row` esistono con test → primitive pronte per il layout sidebar+panel | — (riuso) |
+| B10.1 | **`/settings` non esiste**, ma nessun link cliccabile ci punta: i riferimenti sono config inerte e dead code (§A.5 rettificata). L'unico esposto all'utente è una frase in una pagina di consenso che indica un percorso inesistente | **P1** *(era P0)* |
+| B10.2 | **L'hub esiste già**, con 7 sezioni, a `/profile?tab=settings&section=<id>`. Non va costruito: va esposto e riallineato | — (riuso) |
+| B10.3 | `ui/settings-list` + `ui/settings-row` esistono con test, **e sono già usati** da `SettingsTab` | — (riuso) |
 
 ### B.11 Admin UI
 
@@ -578,3 +596,23 @@ Epic: **#3916**
 | UX-15 | **#3943** | storie a 8 stati |
 
 **Conteggio verificato**: 18 issue aperte prima · +1 Epic · +26 child = **45 aperte** (`gh issue list --state open | jq length`). Il numero #3926 appartiene a un altro processo, non a questo piano.
+
+---
+
+## O. Rettifiche emerse in implementazione
+
+Registro di ciò che il codice ha smentito, man mano che le issue vengono lavorate. Serve a evitare che il piano invecchi in silenzio.
+
+| Data | Voce del piano | Rettifica | Effetto |
+|---|---|---|---|
+| 2026-09-07 | §A.5 «`/settings` dead link P0» | Nessun link cliccabile: config inerte + dead code. L'unico riferimento esposto è testo in una pagina di consenso | #3918 da P0 a **P1** |
+| 2026-09-07 | §F «UX-11: costruire l'hub Settings, 2 g» | **L'hub esiste già** (7 sezioni, `SettingsTab`, montato a `/profile?tab=settings`) | #3938 da 2 g a **~0,5–1 g** |
+| 2026-09-07 | §F «UX-02a: creare `GlassSurface`» | **`ui/surfaces/GlassCard.tsx` esiste** con 4 consumatori — manca solo il concetto di livello | #3919 diventa «estendere», non «creare» |
+| 2026-09-07 | §A.4 «il gate a11y scansiona 1 route inesistente» | Erano **due** route sbagliate: `/board-game-ai/games` (404, 5 esecuzioni) **e** `/library`, che senza sessione reindirizza a `/login` (3 esecuzioni). Più un terzo test con `if (length > 0)` senza `else` | #3917 più ampia del previsto — corretta |
+| 2026-09-07 | §B «contrasto: nessun difetto noto sulle entity color» | Riparato il gate, sono emerse violazioni reali: `getEntityToken()` restituiva il colore **base** come colore del testo (toolkit 4,29:1 · agent 4,26:1 contro 4,5). Corretto alla radice; **130 occorrenze** dello stesso pattern scritte a mano restano fuori dalla primitiva | dato passato a #3922 |
+
+### Nota di metodo
+
+Quattro rettifiche su cinque vanno nella stessa direzione: **il repository conteneva già più di quanto il piano assumesse**. È coerente con §A.2 (design system maturo) ed è un argomento a favore dello STEP B del loop — ispezionare il codice prima di implementare — piuttosto che fidarsi della stima scritta in fase di planning.
+
+La quinta va nella direzione opposta e vale come monito: dove il piano dava un difetto per circoscritto (una route sbagliata), ce n'erano tre della stessa famiglia. Un gate cieco tende ad esserlo in più modi contemporaneamente, perché nessuno dei modi produce un segnale.

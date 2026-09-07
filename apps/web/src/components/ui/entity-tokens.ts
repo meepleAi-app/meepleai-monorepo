@@ -1,13 +1,5 @@
 export type EntityType =
-  | 'game'
-  | 'player'
-  | 'session'
-  | 'agent'
-  | 'kb'
-  | 'chat'
-  | 'event'
-  | 'toolkit'
-  | 'tool';
+  'game' | 'player' | 'session' | 'agent' | 'kb' | 'chat' | 'event' | 'toolkit' | 'tool';
 
 export interface EntityToken {
   readonly bg: string;
@@ -75,7 +67,18 @@ export function getEntityToken(type: EntityType): EntityToken {
   return {
     bg: `bg-entity-${k}`,
     bgSoft: `bg-entity-${k}/10`,
-    text: `text-entity-${k}`,
+    // `-text` variant, not the base entity color (#3917). The base hues are
+    // calibrated for non-text use (borders, fills, decorative accents) and sit
+    // around 3:1 on light surfaces; as TEXT on the `bgSoft` tint they fall just
+    // under AA. Measured on /shared-games before this change:
+    //   toolkit  #17823e on #e8f3ec = 4.29:1  (needs 4.5)
+    //   agent    #9d6607 on #f5f0e6 = 4.26:1  (needs 4.5)
+    // The `-text` variants exist precisely for this — see the per-token WCAG
+    // annotations in design-tokens-canonical.css, one of which already records
+    // "replaces text-entity-toolkit (4.16:1 fail on toolkit/12 bg)". They are
+    // theme-aware (the canonical file overrides them under [data-theme=dark]),
+    // so this is correct in both themes.
+    text: `text-entity-${k}-text`,
     border: `border-entity-${k}`,
     emoji: EMOJI[type],
     label: LABEL[type],

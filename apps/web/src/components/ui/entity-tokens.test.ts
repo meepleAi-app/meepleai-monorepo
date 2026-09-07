@@ -52,4 +52,33 @@ describe('entity-tokens', () => {
 
     expect(missing).toEqual([]);
   });
+
+  // #3917: `text` now resolves to the `-text` variant, which is the shade
+  // calibrated for AA when the entity color is used as TEXT on a light tint
+  // (the base hues are sized for borders and fills, ~3:1). Same Tailwind v4
+  // trap as the test above: a variant missing from `@theme inline` emits no
+  // CSS, so the class would be inert and the text would silently inherit its
+  // colour — the failure mode #3161 documents.
+  it('registers a @theme `-text` entity utility for every tailwind key (TW v4)', () => {
+    const globalsCss = readFileSync(resolve(process.cwd(), 'src/styles/globals.css'), 'utf8');
+    const themeStart = globalsCss.indexOf('@theme inline');
+    const braceStart = globalsCss.indexOf('{', themeStart);
+    const braceEnd = globalsCss.indexOf('}', braceStart);
+    const themeBlock = globalsCss.slice(braceStart, braceEnd);
+
+    const missing = ENTITY_TOKENS.map(t =>
+      getEntityToken(t).text.replace('text-entity-', '')
+    ).filter(key => !themeBlock.includes(`--color-entity-${key}:`));
+
+    expect(missing).toEqual([]);
+  });
+
+  it('uses the AA-calibrated `-text` variant, not the base entity colour', () => {
+    // Regression guard for the /shared-games contrast failures uncovered once
+    // the a11y gate stopped scanning a 404 (#3917): toolkit 4.29:1 and agent
+    // 4.26:1 against their own `bgSoft` tint, both just under the 4.5:1 floor.
+    expect(getEntityToken('toolkit').text).toBe('text-entity-toolkit-text');
+    expect(getEntityToken('agent').text).toBe('text-entity-agent-text');
+    expect(getEntityToken('kb').text).toBe('text-entity-document-text');
+  });
 });

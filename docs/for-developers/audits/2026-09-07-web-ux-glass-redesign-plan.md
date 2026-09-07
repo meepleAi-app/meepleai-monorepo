@@ -565,7 +565,7 @@ Epic: **#3916**
 |---|---|---|
 | UX-00a | **#3901** *(preesistente)* | la suite Playwright non raccoglie test |
 | UX-00b | **#3917** | gate a11y su `/board-game-ai/games`, route inesistente |
-| UX-00c | **#3918** | `/settings` referenziata ma inesistente |
+| UX-00c | ~~#3918~~ | **chiusa come duplicato** (spec review 2026-09-07), fusa in #3938 |
 | UX-01 | — | **eliminata**: `site-map.md` + `pnpm audit:*` |
 | UX-02a | **#3919** | scala glass a 3 livelli + `GlassSurface` |
 | UX-02b | **#3920** | regola `local/no-adhoc-glass-surface` |
@@ -588,7 +588,9 @@ Epic: **#3916**
 | UX-08 | **#3937** | `ContextualAskPanel` |
 | UX-09 | — | **assorbita** in #3922 (chat già conforme) |
 | UX-10 | **#3878** *(preesistente)* | UI di fallimento upload spenta |
-| UX-11 | **#3938** | hub `/settings` |
+| UX-11 | **#3938** | *(riscritta)* montare l'hub **esistente** su `/settings` + riallineare i riferimenti |
+| — | **#3946** | *(nuova)* i testi legali indicavano `/settings/ai-consent`, inesistente — PR #3949 |
+| — | **#3948** | *(nuova)* privacy policy IT ed EN divergono sulla base giuridica AI |
 | UX-12 | **#3939** | audit empty / loading / error |
 | UX-13a | **#3940** | gate a11y su chat, upload, rules, game-detail |
 | UX-13b | **#3941** | `prefers-reduced-motion` |
@@ -609,6 +611,9 @@ Registro di ciò che il codice ha smentito, man mano che le issue vengono lavora
 | 2026-09-07 | §F «UX-11: costruire l'hub Settings, 2 g» | **L'hub esiste già** (7 sezioni, `SettingsTab`, montato a `/profile?tab=settings`) | #3938 da 2 g a **~0,5–1 g** |
 | 2026-09-07 | §F «UX-02a: creare `GlassSurface`» | **`ui/surfaces/GlassCard.tsx` esiste** con 4 consumatori — manca solo il concetto di livello | #3919 diventa «estendere», non «creare» |
 | 2026-09-07 | §A.4 «il gate a11y scansiona 1 route inesistente» | Erano **due** route sbagliate: `/board-game-ai/games` (404, 5 esecuzioni) **e** `/library`, che senza sessione reindirizza a `/login` (3 esecuzioni). Più un terzo test con `if (length > 0)` senza `else` | #3917 più ampia del previsto — corretta |
+| 2026-09-07 | §F «UX-00c e UX-11 sono due issue» | **Decidevano lo stesso indirizzo.** L'opzione raccomandata da #3918 (redirect `/settings` → `/profile`) confliggeva inoltre con `gotoChecked` di #3917, che vieta i redirect: #3940 avrebbe fallito | #3918 **chiusa**, fusa in #3938 |
+| 2026-09-07 | §A.5 «l'unico riferimento esposto è testo, non cliccabile» | Vero, ma **sottovalutato**: sono 5 occorrenze su 3 chiavi in Termini e Privacy, e indicano come esercitare un diritto. Estratte in #3946, corrette | PR #3949 |
+| 2026-09-07 | — *(non previsto dal piano)* | Le versioni **IT ed EN della privacy policy divergono** su tre affermazioni sostanziali (infrastruttura UE, revoca del consenso, DPA/audit rights). Non colmata: richiede verifica di fatti non desumibili dal codice | #3948 aperta |
 | 2026-09-07 | §B «contrasto: nessun difetto noto sulle entity color» | Riparato il gate, sono emerse violazioni reali: `getEntityToken()` restituiva il colore **base** come colore del testo (toolkit 4,29:1 · agent 4,26:1 contro 4,5). Corretto alla radice; **130 occorrenze** dello stesso pattern scritte a mano restano fuori dalla primitiva | dato passato a #3922 |
 
 ### Nota di metodo

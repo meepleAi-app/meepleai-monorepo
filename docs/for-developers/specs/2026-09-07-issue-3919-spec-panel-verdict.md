@@ -26,8 +26,11 @@ proposto non se ne accorgerebbe.
 
 ## 2. Il terreno, ricontato
 
-I due numeri della issue reggono: **526** `backdrop-blur*` su **308** file; **673** occorrenze di
-`bg-card/α` su 13 alpha (la issue dice ~671). Ciò che il conteggio non mostra è come si distribuiscono
+I due numeri della issue reggono: **526** `backdrop-blur*` su **308** file; **672** occorrenze di
+`bg-card/α` su **14** alpha (la issue dice ~671 su 13). Due rettifiche minori, prodotte dallo script
+di §6 quando è stato messo a contare da sé: il 673° “uso” è un regex in un test
+(`LibraryHybridGrid.test.tsx:212`), non una superficie; e gli alpha distinti sono 14, perché la issue
+e il piano omettono `/25`, che ne ha uno solo. Ciò che il conteggio non mostra è come si distribuiscono
 rispetto alla scala proposta:
 
 | Livello | Intervallo | Alpha presenti | Occorrenze |
@@ -327,7 +330,12 @@ della issue prima che #3921 apra*.
 Il §4 nella sua prima stesura proponeva 0,20 / 0,80 / 0,97 tarando su `--text`. Risolti i vincoli su
 tutti i token di testo, il valore che comanda è un altro e la terna cambia. Script rieseguibili:
 composizione in sRGB come la fa il browser, luminanza WCAG 2.1 su sRGB linearizzato, ricerca binaria
-della soglia.
+della soglia. Lo strumento vive nel repo: `apps/web/scripts/glass-alpha-audit.mjs`
+(`pnpm audit:glass-alpha`, `--json` per l'output machine-readable), con 23 test in
+`scripts/__tests__/`. Non ha i token hardcoded — li legge da `design-tokens-canonical.css`, così
+quando un token cambia lo script cambia risposta invece di mentire; se non li trova esce con 2 senza
+emettere verdetto. Esce con 1 se un livello che ammette testo scende sotto 4,5:1, quindi può diventare
+un gate il giorno in cui i token della scala esistono.
 
 ### 6.1 Il vincolo binding è `--text-sec`, non `--text`
 
@@ -387,7 +395,11 @@ oppure accompagnato da un bordo.
 
 ### 6.5 Mappatura dei 13 alpha e costo
 
-**45 usi restano invariati, 627 migrano** (502 salgono di opacità, 125 scendono).
+**45 usi restano invariati, 627 migrano** (502 salgono di opacità, 125 scendono). La mappa è una
+**decisione**, non un calcolo: derivarla dalla distanza fra i livelli sbaglierebbe due volte — `/50`
+finirebbe in `decorative` (50 < 52,5) e `/90` in `content`, mentre il campionamento qui sotto dice
+`functional` per entrambi. La regola vera è che una superficie che porta testo non scende sotto
+`functional`, e l'alpha da solo non sa se il nodo porta testo.
 
 | alpha | usi | → livello | Δ |
 |---|---|---|---|

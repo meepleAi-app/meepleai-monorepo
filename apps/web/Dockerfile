@@ -58,11 +58,18 @@ ARG NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=false
 # compose `env_file` arrives too late and the header ships with the closed default. Defaults to
 # false — prod/staging images are unaffected.
 ARG NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=false
+# Issue #3878: accende la UI di avanzamento dell'elaborazione PDF (pannello di
+# progresso allo step 2 del wizard + tracker allo step 4). Stessa ragione del
+# flag qui sopra: `process.env.NEXT_PUBLIC_*` è letto a livello di modulo e
+# congelato da `next build`, quindi fornirlo solo a runtime non ha alcun effetto
+# e il sintomo è indistinguibile dal flag lasciato a false. Default false.
+ARG NEXT_PUBLIC_ENABLE_PROGRESS_UI=false
 ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED=$NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED
 ENV NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB=$NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB
+ENV NEXT_PUBLIC_ENABLE_PROGRESS_UI=$NEXT_PUBLIC_ENABLE_PROGRESS_UI
 
 # Ensure public directory exists (Next.js may need it)
 RUN mkdir -p public

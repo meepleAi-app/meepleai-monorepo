@@ -552,6 +552,7 @@ jobs:
             NEXT_PUBLIC_API_BASE=https://meepleai.app
             NEXT_PUBLIC_APP_URL=https://meepleai.app
             NEXT_PUBLIC_SITE_URL=https://meepleai.app
+            NEXT_PUBLIC_ENABLE_PROGRESS_UI=true
 
       - name: Build Summary
         run: |

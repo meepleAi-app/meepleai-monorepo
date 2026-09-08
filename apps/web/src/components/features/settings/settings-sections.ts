@@ -3,13 +3,7 @@ import { User, Shield, FileCheck, Bell, Settings as Cog, Key, Link2 } from 'luci
 import type { LucideIcon } from 'lucide-react';
 
 export type SettingsSectionId =
-  | 'profile'
-  | 'security'
-  | 'ai-consent'
-  | 'notifications'
-  | 'preferences'
-  | 'api-keys'
-  | 'services';
+  'profile' | 'security' | 'ai-consent' | 'notifications' | 'preferences' | 'api-keys' | 'services';
 
 export interface SettingsSectionDef {
   id: SettingsSectionId;
@@ -55,7 +49,6 @@ export const SETTINGS_SECTIONS: SettingsSectionDef[] = [
     subtitle: 'Email, push, digest',
     entity: 'entity-chat',
     icon: Bell,
-    placeholder: true,
   },
   {
     id: 'preferences',

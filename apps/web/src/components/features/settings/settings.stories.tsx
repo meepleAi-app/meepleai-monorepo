@@ -110,14 +110,14 @@ export const Frame05_AiConsentSection: Story = {
 };
 
 export const Frame06_NotificationsPlaceholder: Story = {
-  name: '06 · Desktop · Notifications section (placeholder)',
+  name: '06 · Desktop · Notifications section',
   args: { initialSection: 'notifications' },
   parameters: {
     msw: { handlers: mswForSettingsState('default') },
     docs: {
       description: {
         story:
-          'Section flagged placeholder: true in SETTINGS_SECTIONS. Real notification preferences live at /notifications/preferences (separate route).',
+          '#3961: was a placeholder while the real preferences lived at /notifications/preferences. Now renders NotificationPreferences directly — the footer of every email links here.',
       },
     },
   },

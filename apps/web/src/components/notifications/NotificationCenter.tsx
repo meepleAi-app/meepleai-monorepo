@@ -193,7 +193,7 @@ export function NotificationCenter({ open, onOpenChange }: NotificationCenterPro
                 <ChevronRight className="h-4 w-4" />
               </Link>
               <Link
-                href="/notifications/preferences"
+                href="/settings/notifications"
                 onClick={() => onOpenChange(false)}
                 className="flex items-center gap-1 p-2 text-sm text-muted-foreground hover:text-primary transition-colors rounded-md hover:bg-accent"
                 data-testid="notification-center-preferences"

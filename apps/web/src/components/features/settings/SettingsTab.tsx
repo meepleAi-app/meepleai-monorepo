@@ -4,6 +4,7 @@ import type React from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 
+import { NotificationPreferences } from '@/components/notifications/NotificationPreferences';
 import { api } from '@/lib/api';
 
 import { AiConsentSection } from './sections/AiConsentSection';
@@ -46,6 +47,13 @@ export function SettingsTab({ activeSection, onChangeSection }: Props): React.JS
           <ApiKeysSection />
         ) : activeSection === 'ai-consent' ? (
           <AiConsentSection />
+        ) : activeSection === 'notifications' ? (
+          // #3961: this section was a placeholder while the real preferences
+          // lived at `/notifications/preferences`. The footer of every email
+          // links to `/settings/notifications`, so that link landed on
+          // "Settings UI in development". The component is reused as-is — it
+          // takes no props and no routing hooks.
+          <NotificationPreferences />
         ) : null}
       </div>
     </div>

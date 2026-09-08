@@ -44,9 +44,12 @@ describe('SettingsTab router', () => {
     wrap(<SettingsTab activeSection="profile" onChangeSection={() => {}} />);
     expect(screen.getByTestId('sec-profile')).toBeInTheDocument();
   });
-  it('renders placeholder for notifications', () => {
+  it('renders the real preferences for notifications (#3961)', () => {
+    // Was a placeholder while the panel lived at /notifications/preferences.
+    // The footer of every email links to /settings/notifications, so that
+    // link used to land on "Settings UI in development".
     wrap(<SettingsTab activeSection="notifications" onChangeSection={() => {}} />);
-    expect(screen.getByText(/in development|coming soon/i)).toBeInTheDocument();
+    expect(screen.queryByText(/in development|coming soon/i)).not.toBeInTheDocument();
   });
   it('renders placeholder for services', () => {
     wrap(<SettingsTab activeSection="services" onChangeSection={() => {}} />);

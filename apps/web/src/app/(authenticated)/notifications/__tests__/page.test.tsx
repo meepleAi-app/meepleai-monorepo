@@ -271,9 +271,10 @@ describe('NotificationsPage', () => {
 
     // Heading: explicit "no notifications yet" headline (#2183 contextual copy)
     expect(screen.getByText(EMPTY.notificationsEmptyDefault)).toBeInTheDocument();
-    // CTA to /notifications/preferences must always render
+    // CTA to the preferences must always render. #3961: consolidated onto
+    // /settings/notifications — the address the backend links to from email.
     const cta = screen.getByTestId('notifications-empty-preferences-cta');
-    expect(cta).toHaveAttribute('href', '/notifications/preferences');
+    expect(cta).toHaveAttribute('href', '/settings/notifications');
   });
 
   it('should show empty state with unread message when unread-only toggle is on (#2181)', async () => {

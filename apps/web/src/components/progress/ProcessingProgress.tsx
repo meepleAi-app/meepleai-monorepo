@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 import { api, type ProcessingProgress as ApiProcessingProgress } from '@/lib/api';
 import { ProcessingStep, isProcessingComplete, getStepLabel, getStepOrder } from '@/types/pdf';
@@ -252,180 +252,36 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
     setShowCancelDialog(false);
   }, []);
 
-  // Styles
-  const containerStyle: CSSProperties = {
-    padding: '24px',
-    border: '1px solid #e0e0e0',
-    borderRadius: '8px',
-    backgroundColor: '#f9fafb',
-  };
+  // Presentazione (#3878): classi semantiche al posto degli stili inline.
+  // Gli stili inline erano invisibili a `local/no-hardcoded-color-utility`, che
+  // ispeziona solo l'attributo `className`: il pannello aveva colori fissi e in
+  // tema scuro restava chiaro su fondo scuro. I token seguono il tema.
+  const containerClass = 'rounded-lg border border-border bg-card p-6';
 
-  const headerStyle: CSSProperties = {
-    marginTop: 0,
-    marginBottom: '16px',
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#333',
-  };
+  /**
+   * `--c-success`/`--c-warning` passano AA solo come decorativo/bordo; per il
+   * TESTO il design system impone le varianti `-ink` (design-tokens-canonical.css).
+   */
+  const progressBarFillClass =
+    progress?.currentStep === ProcessingStep.Completed
+      ? 'bg-[hsl(var(--c-success))]'
+      : progress?.currentStep === ProcessingStep.Failed
+        ? 'bg-destructive'
+        : 'bg-primary';
 
-  const progressBarContainerStyle: CSSProperties = {
-    width: '100%',
-    height: '12px',
-    backgroundColor: '#e5e7eb',
-    borderRadius: '999px',
-    overflow: 'hidden',
-    marginBottom: '16px',
-  };
-
-  const progressBarFillStyle: CSSProperties = {
-    width: `${progress?.percentComplete ?? 0}%`,
-    height: '100%',
-    backgroundColor:
-      progress?.currentStep === ProcessingStep.Completed
-        ? '#34a853'
-        : progress?.currentStep === ProcessingStep.Failed
-          ? '#d93025'
-          : '#0070f3',
-    transition: 'width 0.6s ease',
-  };
-
-  const stepIndicatorContainerStyle: CSSProperties = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '20px',
-    gap: '8px',
-  };
-
-  const stepIndicatorStyle = (step: ProcessingStep): CSSProperties => {
+  const stepIndicatorClass = (step: ProcessingStep): string => {
     const currentStepOrder = progress ? getStepOrder(progress.currentStep) : -1;
     const stepOrder = getStepOrder(step);
     const isActive = progress?.currentStep === step;
     const isCompleted = stepOrder < currentStepOrder;
 
-    return {
-      flex: 1,
-      textAlign: 'center',
-      padding: '8px 4px',
-      borderRadius: '4px',
-      fontSize: '12px',
-      backgroundColor: isActive ? '#e3f2fd' : isCompleted ? '#e8f5e9' : '#f5f5f5',
-      border: `2px solid ${isActive ? '#0070f3' : isCompleted ? '#34a853' : '#ddd'}`,
-      color: isActive ? '#0070f3' : isCompleted ? '#34a853' : '#666',
-      fontWeight: isActive ? 600 : 400,
-    };
-  };
-
-  const statusTextStyle: CSSProperties = {
-    marginBottom: '12px',
-    fontSize: '16px',
-    color: '#444',
-    fontWeight: 500,
-  };
-
-  const timeRemainingStyle: CSSProperties = {
-    marginBottom: '16px',
-    fontSize: '14px',
-    color: '#666',
-  };
-
-  const errorMessageStyle: CSSProperties = {
-    padding: '12px',
-    backgroundColor: '#ffebee',
-    border: '1px solid #d93025',
-    borderRadius: '4px',
-    color: '#d93025',
-    marginBottom: '16px',
-    fontSize: '14px',
-  };
-
-  const networkErrorStyle: CSSProperties = {
-    padding: '12px',
-    backgroundColor: '#fff3e0',
-    border: '1px solid #ff9800',
-    borderRadius: '4px',
-    color: '#ff6f00',
-    marginBottom: '16px',
-    fontSize: '14px',
-  };
-
-  const buttonContainerStyle: CSSProperties = {
-    display: 'flex',
-    gap: '12px',
-  };
-
-  const cancelButtonStyle: CSSProperties = {
-    padding: '10px 20px',
-    backgroundColor: canceling ? '#ccc' : '#d93025',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 500,
-    cursor: canceling ? 'not-allowed' : 'pointer',
-  };
-
-  const dialogOverlayStyle: CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  };
-
-  const dialogStyle: CSSProperties = {
-    backgroundColor: 'white',
-    padding: '24px',
-    borderRadius: '8px',
-    maxWidth: '400px',
-    width: '90%',
-  };
-
-  const dialogTitleStyle: CSSProperties = {
-    marginTop: 0,
-    marginBottom: '16px',
-    fontSize: '18px',
-    fontWeight: 600,
-    color: '#333',
-  };
-
-  const dialogTextStyle: CSSProperties = {
-    marginBottom: '20px',
-    fontSize: '14px',
-    color: '#666',
-    lineHeight: 1.5,
-  };
-
-  const dialogButtonContainerStyle: CSSProperties = {
-    display: 'flex',
-    gap: '12px',
-    justifyContent: 'flex-end',
-  };
-
-  const dialogCancelButtonStyle: CSSProperties = {
-    padding: '8px 16px',
-    backgroundColor: '#666',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 500,
-    cursor: 'pointer',
-  };
-
-  const dialogConfirmButtonStyle: CSSProperties = {
-    padding: '8px 16px',
-    backgroundColor: '#d93025',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: 500,
-    cursor: 'pointer',
+    if (isActive) {
+      return 'flex-1 rounded border-2 border-primary bg-primary/10 px-1 py-2 text-center text-xs font-semibold text-primary';
+    }
+    if (isCompleted) {
+      return 'flex-1 rounded border-2 border-[hsl(var(--c-success)/0.4)] bg-[hsl(var(--c-success)/0.1)] px-1 py-2 text-center text-xs text-[hsl(var(--c-success-ink))]';
+    }
+    return 'flex-1 rounded border-2 border-border bg-muted px-1 py-2 text-center text-xs text-muted-foreground';
   };
 
   // Non-terminal steps for step indicator
@@ -439,15 +295,15 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
 
   if (loading && !progress) {
     return (
-      <div style={containerStyle}>
+      <div className={containerClass}>
         <SkeletonLoader variant="processingProgress" ariaLabel="Loading processing progress" />
       </div>
     );
   }
 
   return (
-    <div data-testid="processing-progress" style={containerStyle}>
-      <h3 style={headerStyle}>PDF Processing Progress</h3>
+    <div data-testid="processing-progress" className={containerClass}>
+      <h3 className="mb-4 mt-0 text-lg font-semibold text-foreground">PDF Processing Progress</h3>
 
       {/* Progress Bar */}
       <div
@@ -457,15 +313,18 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
         aria-valuemin={0}
         aria-valuemax={100}
         aria-live="polite"
-        style={progressBarContainerStyle}
+        className="mb-4 h-3 w-full overflow-hidden rounded-full bg-muted"
       >
-        <div style={progressBarFillStyle} />
+        <div
+          className={`h-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${progressBarFillClass}`}
+          style={{ width: `${progress?.percentComplete ?? 0}%` }}
+        />
       </div>
 
       {/* Step Indicators */}
-      <div style={stepIndicatorContainerStyle} aria-label="Processing steps">
+      <div className="mb-5 flex justify-between gap-2" aria-label="Processing steps">
         {steps.map(step => (
-          <div key={step} style={stepIndicatorStyle(step)} title={getStepLabel(step)}>
+          <div key={step} className={stepIndicatorClass(step)} title={getStepLabel(step)}>
             {step}
           </div>
         ))}
@@ -474,7 +333,10 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {/* Network Error - Display even when progress is null */}
       {/* This allows errors to be shown during initial fetch failures */}
       {networkError && (
-        <div style={networkErrorStyle} role="alert">
+        <div
+          className="mb-4 rounded border border-[hsl(var(--c-warning)/0.4)] bg-[hsl(var(--c-warning)/0.1)] p-3 text-sm text-[hsl(var(--c-warning-ink))]"
+          role="alert"
+        >
           <strong>Network Error:</strong> {networkError}
         </div>
       )}
@@ -482,7 +344,7 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {/* Current Status */}
       {progress && (
         <div>
-          <p style={statusTextStyle}>
+          <p className="mb-3 text-base font-medium text-foreground">
             <strong>Processing status:</strong> {getStepLabel(progress.currentStep)}
           </p>
 
@@ -490,31 +352,34 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
           {progress.estimatedTimeRemaining !== undefined &&
             progress.estimatedTimeRemaining !== null &&
             !isProcessingComplete(progress.currentStep) && (
-              <p style={timeRemainingStyle}>
+              <p className="mb-4 text-sm text-muted-foreground">
                 <strong>Estimated time remaining:</strong>{' '}
                 {formatTimeRemaining(progress.estimatedTimeRemaining)}
               </p>
             )}
 
           {/* Progress Percentage */}
-          <p style={timeRemainingStyle}>
+          <p className="mb-4 text-sm text-muted-foreground">
             <strong>Progress:</strong> {progress.percentComplete}%
           </p>
 
           {/* Error Message - Processing failure errors */}
           {progress.currentStep === ProcessingStep.Failed && progress.errorMessage && (
-            <div style={errorMessageStyle} role="alert">
+            <div
+              className="mb-4 rounded border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
+              role="alert"
+            >
               <strong>Error:</strong> {progress.errorMessage}
             </div>
           )}
 
           {/* Cancel Button */}
           {!isProcessingComplete(progress.currentStep) && (
-            <div style={buttonContainerStyle}>
+            <div className="flex gap-3">
               <button
                 onClick={handleCancelClick}
                 disabled={canceling}
-                style={cancelButtonStyle}
+                className="rounded bg-destructive px-5 py-2.5 text-sm font-medium text-destructive-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Cancel PDF processing"
               >
                 {canceling ? 'Canceling...' : 'Cancel Processing'}
@@ -527,24 +392,36 @@ export function ProcessingProgress({ pdfId, onComplete, onError }: ProcessingPro
       {/* Cancel Confirmation Dialog */}
       {showCancelDialog && (
         <div
-          style={dialogOverlayStyle}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[hsl(var(--c-overlay-scrim))]"
           onClick={handleCancelDialogClose}
           role="dialog"
           aria-modal="true"
           aria-labelledby="cancel-dialog-title"
         >
-          <div style={dialogStyle} onClick={e => e.stopPropagation()}>
-            <h4 id="cancel-dialog-title" style={dialogTitleStyle}>
+          <div
+            className="w-[90%] max-w-md rounded-lg bg-card p-6"
+            onClick={e => e.stopPropagation()}
+          >
+            <h4
+              id="cancel-dialog-title"
+              className="mb-4 mt-0 text-lg font-semibold text-foreground"
+            >
               Cancel PDF Processing?
             </h4>
-            <p style={dialogTextStyle}>
+            <p className="mb-5 text-sm leading-relaxed text-muted-foreground">
               Are you sure you want to cancel the PDF processing? This action cannot be undone.
             </p>
-            <div style={dialogButtonContainerStyle}>
-              <button onClick={handleCancelDialogClose} style={dialogCancelButtonStyle}>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelDialogClose}
+                className="rounded bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground"
+              >
                 No, Continue Processing
               </button>
-              <button onClick={handleConfirmCancel} style={dialogConfirmButtonStyle}>
+              <button
+                onClick={handleConfirmCancel}
+                className="rounded bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground"
+              >
                 Yes, Cancel
               </button>
             </div>

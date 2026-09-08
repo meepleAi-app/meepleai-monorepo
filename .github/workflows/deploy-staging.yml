@@ -915,7 +915,7 @@ jobs:
       # non nomina la causa. Ora la dipendenza e' dichiarata.
       - name: Download migration SQL artifact
         if: vars.DEPLOY_METHOD == 'ssh' && needs.generate-migration.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: migration-sql-${{ github.run_id }}
           path: /tmp

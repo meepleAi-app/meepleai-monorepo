@@ -444,7 +444,7 @@ jobs:
           EXIT_CODE: ${{ steps.ragsmoke.outputs.exit_code }}
           BASELINE_SNAPSHOT: ${{ steps.ragsmoke.outputs.baseline_snapshot }}
           CURRENT_SNAPSHOT: ${{ steps.ragsmoke.outputs.current_snapshot }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             // #3645: un solo titolo per due guasti diversi ha mandato la diagnosi fuori strada

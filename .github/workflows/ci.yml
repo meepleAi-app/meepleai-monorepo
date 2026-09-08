@@ -1421,7 +1421,7 @@ jobs:
       actions: read
     steps:
       - name: Compute timings + report
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -1516,7 +1516,7 @@ jobs:
           fetch-depth: 0
 
       - name: Generate Preview Comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           FRONTEND_CHANGED: ${{ needs.changes.outputs.frontend }}
           BACKEND_CHANGED: ${{ needs.changes.outputs.backend }}

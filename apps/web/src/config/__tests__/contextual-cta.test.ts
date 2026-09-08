@@ -6,7 +6,8 @@ describe('getCtaForPathname', () => {
     const cta = getCtaForPathname('/library');
     expect(cta).not.toBeNull();
     expect(cta!.label).toBe('Esplora Catalogo');
-    expect(cta!.href).toBe('/catalog');
+    // #3938: was '/catalog', a route that never existed.
+    expect(cta!.href).toBe('/games');
   });
 
   it('returns library CTA for /library/some-game-id', () => {

@@ -14,7 +14,8 @@ describe('ContextualCTA', () => {
     render(<ContextualCTA />);
     const link = screen.getByRole('link', { name: /esplora catalogo/i });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/catalog');
+    // #3938: was '/catalog', a route that never existed.
+    expect(link).toHaveAttribute('href', '/games');
   });
 
   it('renders sessions CTA link on /sessions', () => {

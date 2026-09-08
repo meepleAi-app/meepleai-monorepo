@@ -30,10 +30,19 @@ export const CONTEXTUAL_TABS: Record<string, ContextualTab[]> = {
     { label: 'Overview', href: '/dashboard' },
     { label: 'Attivita recente', href: '/dashboard?tab=activity' },
   ],
+  // #3938: these were inert — nothing navigated to `/settings`, so
+  // `getTabsForPathname` was never called with it. They also used `?tab=` and
+  // named sections (`account`) that do not exist. The hub is addressed by
+  // sub-route (ADR-091) and its ids come from `SETTINGS_SECTIONS`.
+  // Listed here are the five implemented sections; `notifications` and
+  // `services` are placeholders in `settings-sections.ts` and are left out so
+  // this strip does not advertise empty destinations.
   '/settings': [
-    { label: 'Profilo', href: '/settings?tab=profile' },
-    { label: 'Preferenze', href: '/settings?tab=preferences' },
-    { label: 'Account', href: '/settings?tab=account' },
+    { label: 'Profilo', href: '/settings/profile' },
+    { label: 'Sicurezza', href: '/settings/security' },
+    { label: 'AI e dati', href: '/settings/ai-consent' },
+    { label: 'Preferenze', href: '/settings/preferences' },
+    { label: 'Chiavi API', href: '/settings/api-keys' },
   ],
 };
 

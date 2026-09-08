@@ -13,8 +13,10 @@ describe('getCtaForPathname', () => {
       expect(getCtaForPathname('/library')?.label).toBe('Esplora Catalogo');
     });
 
-    it('href è "/catalog"', () => {
-      expect(getCtaForPathname('/library')?.href).toBe('/catalog');
+    it('href è "/games"', () => {
+      // #3938: era '/catalog', una route che non è mai esistita. Il catalogo
+      // per un utente autenticato è `/games` (tab di default: Discover).
+      expect(getCtaForPathname('/library')?.href).toBe('/games');
     });
 
     it('gradient è definito', () => {

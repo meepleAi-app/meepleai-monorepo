@@ -12,18 +12,11 @@ import {
   Heart,
   LayoutDashboard,
   Package,
-  Settings,
   Trophy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import {
-  DEFAULT_SECTION,
-  isValidSection,
-  type SettingsSectionId,
-} from '@/components/features/settings/settings-sections';
-import { SettingsTab } from '@/components/features/settings/SettingsTab';
 import { AchievementsGrid } from '@/components/profile/AchievementsGrid';
 import { ActivityFeed } from '@/components/profile/ActivityFeed';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
@@ -42,9 +35,16 @@ import { useRecentsStore } from '@/stores/use-recents';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'overview' | 'achievements' | 'activity' | 'settings';
+// #3938: the `settings` tab moved out to its own route, `/settings`. `/profile`
+// keeps the public identity (overview, achievements, activity); the settings
+// hub keeps the same `SettingsTab` component, only at a canonical address.
+// `?tab=settings` is still accepted and redirects — see the effect below.
+type Tab = 'overview' | 'achievements' | 'activity';
 
-const VALID_TABS = new Set<Tab>(['overview', 'achievements', 'activity', 'settings']);
+const VALID_TABS = new Set<Tab>(['overview', 'achievements', 'activity']);
+
+/** Legacy tab value that now lives at `/settings` (#3938). */
+const MOVED_SETTINGS_TAB = 'settings';
 
 // ─── TabBar ───────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,6 @@ function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void 
     { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
     { id: 'achievements', label: 'Achievement', icon: Trophy },
     { id: 'activity', label: 'Attività', icon: Activity },
-    { id: 'settings', label: 'Impostazioni', icon: Settings },
   ];
 
   return (
@@ -334,31 +333,32 @@ export function ProfilePageContent(): React.JSX.Element {
 
   const rawTab = searchParams.get('tab');
   const activeTab: Tab = VALID_TABS.has(rawTab as Tab) ? (rawTab as Tab) : 'overview';
-  const rawSection = searchParams.get('section');
-  const sectionFromUrl = isValidSection(rawSection) ? rawSection : null;
-  const activeSection: SettingsSectionId = sectionFromUrl ?? DEFAULT_SECTION;
 
-  function buildQuery(next: { tab?: Tab; section?: SettingsSectionId }): string {
+  function buildQuery(next: { tab?: Tab }): string {
     const params = new URLSearchParams(searchParams.toString());
     if (next.tab !== undefined) {
       params.set('tab', next.tab);
-      if (next.tab !== 'settings') params.delete('section');
+      // `section` only ever qualified the settings tab, which has moved (#3938).
+      params.delete('section');
     }
-    if (next.section !== undefined) params.set('section', next.section);
     return params.toString();
   }
 
-  function setQuery(next: { tab?: Tab; section?: SettingsSectionId }): void {
+  function setQuery(next: { tab?: Tab }): void {
     router.replace(`${pathname}?${buildQuery(next)}`, { scroll: false });
   }
 
-  // G5: invalid-section fallback
+  // #3938: `/profile?tab=settings` moved to `/settings`. Forward it, carrying
+  // `?section=` so a bookmarked section still lands where it used to.
+  // The redirect goes in this direction only: `/settings` itself must resolve
+  // without redirecting, or the a11y check `gotoChecked` (#3917) fails when
+  // #3940 re-enables it.
   useEffect(() => {
-    if (activeTab === 'settings' && rawSection !== null && sectionFromUrl === null) {
-      setQuery({ tab: 'settings', section: DEFAULT_SECTION });
-    }
+    if (rawTab !== MOVED_SETTINGS_TAB) return;
+    const section = searchParams.get('section');
+    router.replace(section !== null ? `/settings/${encodeURIComponent(section)}` : '/settings');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, rawSection, sectionFromUrl]);
+  }, [rawTab]);
 
   const { data: profile } = useQuery({
     queryKey: [...userKeys.current(), 'profile'],
@@ -418,23 +418,12 @@ export function ProfilePageContent(): React.JSX.Element {
         </div>
 
         {/* Tabs */}
-        <TabBar
-          active={activeTab}
-          onChange={t =>
-            setQuery({ tab: t, ...(t === 'settings' ? { section: DEFAULT_SECTION } : {}) })
-          }
-        />
+        <TabBar active={activeTab} onChange={t => setQuery({ tab: t })} />
 
         {/* Tab Content */}
         {activeTab === 'overview' && <OverviewTab />}
         {activeTab === 'achievements' && <AchievementsTab />}
         {activeTab === 'activity' && <ActivityTab />}
-        {activeTab === 'settings' && (
-          <SettingsTab
-            activeSection={activeSection}
-            onChangeSection={s => setQuery({ tab: 'settings', section: s })}
-          />
-        )}
       </div>
     </div>
   );

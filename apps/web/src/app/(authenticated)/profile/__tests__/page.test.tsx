@@ -171,7 +171,7 @@ describe('ProfilePage', () => {
     });
   });
 
-  it('renders tab bar with four tabs including Settings', async () => {
+  it('renders tab bar with three tabs — Settings moved to /settings (#3938)', async () => {
     setSearchParams('');
     renderWithQuery(<ProfilePage />);
 
@@ -180,9 +180,11 @@ describe('ProfilePage', () => {
       expect(screen.getByRole('tab', { name: /Panoramica/i })).toBeInTheDocument();
     });
 
-    ['Panoramica', 'Achievement', 'Attività', 'Impostazioni'].forEach(name =>
+    ['Panoramica', 'Achievement', 'Attività'].forEach(name =>
       expect(screen.getByRole('tab', { name })).toBeInTheDocument()
     );
+    // The settings hub now lives at its own route (#3938).
+    expect(screen.queryByRole('tab', { name: 'Impostazioni' })).not.toBeInTheDocument();
   });
 
   it('shows library stats on Overview tab', async () => {
@@ -252,29 +254,21 @@ describe('ProfilePage', () => {
   });
 
   describe('ProfilePage — Settings tab (#1608)', () => {
-    it('activates the Settings tab from ?tab=settings', async () => {
+    it('forwards ?tab=settings to /settings, carrying the section (#3938)', async () => {
       setSearchParams('tab=settings&section=security');
       renderWithQuery(<ProfilePage />);
 
       await waitFor(() => {
-        expect(screen.getByRole('tab', { name: 'Impostazioni' })).toBeInTheDocument();
+        expect(mockReplace).toHaveBeenCalledWith('/settings/security');
       });
-
-      expect(screen.getByRole('tab', { name: 'Impostazioni' })).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
     });
 
-    it('replaces the URL when section param is invalid (G5)', async () => {
-      setSearchParams('tab=settings&section=BOGUS');
+    it('forwards a bare ?tab=settings to /settings (#3938)', async () => {
+      setSearchParams('tab=settings');
       renderWithQuery(<ProfilePage />);
 
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith(
-          expect.stringMatching(/\/profile\?tab=settings.*section=profile/),
-          expect.objectContaining({ scroll: false })
-        );
+        expect(mockReplace).toHaveBeenCalledWith('/settings');
       });
     });
   });

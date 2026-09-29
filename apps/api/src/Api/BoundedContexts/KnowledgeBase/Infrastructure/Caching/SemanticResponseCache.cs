@@ -20,7 +20,7 @@ internal sealed class SemanticResponseCache(
             var db = redis.GetDatabase();
             var server = redis.GetServer(redis.GetEndPoints()[0]);
             // server.Keys() is synchronous and blocks a thread-pool thread — wrap in Task.Run to avoid starvation on hot query path
-            var keys = await Task.Run(() => server.Keys(pattern: $"rag:cache:{gameId}:*").ToList(), ct)
+            var keys = await Task.Run(() => server.Keys(pattern: $"rag:cache:{gameId}:v2:*").ToList(), ct)
                 .ConfigureAwait(false);
 
             // Pipeline all StringGetAsync calls to avoid serial round-trips per key
@@ -57,7 +57,12 @@ internal sealed class SemanticResponseCache(
         try
         {
             var db = redis.GetDatabase();
-            var key = $"rag:cache:{gameId}:{Guid.NewGuid():N}";
+            // #3855: v2 perche' la voce ora porta (snippet, pagina, documento) invece del solo
+            // snippet. Le voci v1 restano in Redis ma non vengono piu' lette, e scadono da
+            // sole entro il TTL: un bump di prefisso evita che una deserializzazione fallita
+            // su schema vecchio faccia eccezione a ogni lookup. L'invalidazione per gioco
+            // resta sul prefisso nudo, quindi continua a purgare sia v1 sia v2.
+            var key = $"rag:cache:{gameId}:v2:{Guid.NewGuid():N}";
             var entry = new CacheEntry(queryVector, response);
             var json = JsonSerializer.Serialize(entry);
             await db.StringSetAsync(key, json, Ttl).ConfigureAwait(false);

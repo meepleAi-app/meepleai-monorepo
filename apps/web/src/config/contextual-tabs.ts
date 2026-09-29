@@ -34,13 +34,16 @@ export const CONTEXTUAL_TABS: Record<string, ContextualTab[]> = {
   // `getTabsForPathname` was never called with it. They also used `?tab=` and
   // named sections (`account`) that do not exist. The hub is addressed by
   // sub-route (ADR-091) and its ids come from `SETTINGS_SECTIONS`.
-  // Listed here are the five implemented sections; `notifications` and
-  // `services` are placeholders in `settings-sections.ts` and are left out so
-  // this strip does not advertise empty destinations.
+  // The criterion for listing a section is `placeholder: true` in
+  // `settings-sections.ts`, which now holds for `services` alone: `notifications`
+  // renders the real `NotificationPreferences` panel since #3961, and it is where
+  // the footer of every email points, so leaving it out hid the one destination
+  // users arrive at from outside the app.
   '/settings': [
     { label: 'Profilo', href: '/settings/profile' },
     { label: 'Sicurezza', href: '/settings/security' },
     { label: 'AI e dati', href: '/settings/ai-consent' },
+    { label: 'Notifiche', href: '/settings/notifications' },
     { label: 'Preferenze', href: '/settings/preferences' },
     { label: 'Chiavi API', href: '/settings/api-keys' },
   ],

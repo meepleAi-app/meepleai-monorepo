@@ -285,10 +285,16 @@ export class AuthPage extends BasePage implements IAuthPage {
   // ========================================================================
 
   /**
-   * Navigate to settings page for 2FA management
+   * Navigate to the settings section that hosts 2FA management.
+   *
+   * Issue #3938 made the settings sections addressable (`/settings/<section>`)
+   * and dropped the `/settings*` redirects. Plain `/settings` now resolves,
+   * but it renders `DEFAULT_SECTION` (`profile`), which holds no 2FA control:
+   * the cards these methods drive (`TwoFactorStatusCard`, `ActiveSessionsCard`)
+   * live in `SecuritySection`, i.e. `/settings/security`.
    */
   async gotoSettings(): Promise<void> {
-    await this.page.goto('/settings');
+    await this.page.goto('/settings/security');
     await this.waitForLoad();
   }
 
@@ -593,11 +599,22 @@ export class AuthPage extends BasePage implements IAuthPage {
   // ========================================================================
 
   /**
-   * Navigate to settings page for OAuth account management
-   * (Issue #1672: /profile deprecated, now redirects to /settings)
+   * Navigate to the user profile page.
+   *
+   * The note this replaces ("Issue #1672: /profile deprecated, now redirects
+   * to /settings") was stale twice over: that redirect was reverted long ago,
+   * and #3938 removed the opposite `/settings` -> `/profile?tab=settings`
+   * redirects as well. Both addresses resolve on their own today, and
+   * `/profile` keeps its overview/achievements/activity tabs.
+   *
+   * Caveat for the OAuth helpers below: no page renders link/unlink controls
+   * for OAuth accounts -- nothing under `apps/web/src` consumes
+   * `/api/v1/users/me/oauth-accounts` -- so they match nothing here, and
+   * nothing in the settings hub either. Sending them to another URL would
+   * only hide that.
    */
   async gotoProfile(): Promise<void> {
-    await this.page.goto('/settings');
+    await this.page.goto('/profile');
     await this.waitForLoad();
   }
 

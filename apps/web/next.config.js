@@ -247,44 +247,14 @@ const nextConfig = {
       },
 
       // Profile / Settings consolidation
-      // NOTE: /profile → /settings (Issue #1672) is REMOVED — /profile is now
-      //       the canonical profile page; /settings redirects here instead.
-      {
-        source: '/settings/notifications',
-        destination: '/profile?tab=settings&section=notifications',
-        permanent: true,
-      },
-      {
-        source: '/settings/security',
-        destination: '/profile?tab=settings&section=security',
-        permanent: true,
-      },
-      {
-        source: '/settings/ai-consent',
-        destination: '/profile?tab=settings&section=ai-consent',
-        permanent: true,
-      },
-      {
-        source: '/settings/profile',
-        destination: '/profile?tab=settings&section=profile',
-        permanent: true,
-      },
-      {
-        source: '/settings/preferences',
-        destination: '/profile?tab=settings&section=preferences',
-        permanent: true,
-      },
-      {
-        source: '/settings/api-keys',
-        destination: '/profile?tab=settings&section=api-keys',
-        permanent: true,
-      },
-      {
-        source: '/settings/services',
-        destination: '/profile?tab=settings&section=services',
-        permanent: true,
-      },
-      { source: '/settings', destination: '/profile?tab=settings', permanent: true },
+      // NOTE: the eight `/settings*` redirects that used to live here — seven per-section
+      //       plus `/settings` itself — are REMOVED (#3938/#3946/#3961). They shadowed the
+      //       settings hub: Next resolves config redirects BEFORE filesystem routing, so
+      //       `settings/page.tsx` and `settings/[section]/page.tsx` were unreachable, and
+      //       the return forward in ProfilePageContent closed the loop. The catch-all that
+      //       sat further down is gone for the same reason. `/profile` stays canonical for
+      //       the profile page; the settings hub is canonical for settings.
+      //       Guarded by `src/config/__tests__/static-hrefs.test.ts`.
       {
         source: '/profile/achievements',
         destination: '/profile?tab=achievements',
@@ -357,9 +327,6 @@ const nextConfig = {
       // NOTE (Wave B.1, Issue #633): Removed legacy redirects for /games, /games/catalog, /games/add
       // — superseded by the V2 GamesLibraryView at apps/web/src/app/(authenticated)/games/page.tsx
       // which handles tab=library|catalog|kb internally and links to /games/new for adding.
-
-      // Catch-all for any other /settings sub-paths
-      { source: '/settings/:path*', destination: '/profile?tab=settings', permanent: true },
 
       // ── Issue #5040: Admin Route Consolidation ─────────────────────────────
 

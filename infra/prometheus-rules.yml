@@ -46,7 +46,7 @@ groups:
       # RAG error rate (from custom metrics)
       - record: meepleai:rag:error_rate:5m
         expr: |
-          rate(meepleai_rag_errors_errors_total[5m]) OR on() vector(0)
+          rate(meepleai_rag_errors_total_errors_total[5m]) OR on() vector(0)
         labels:
           service: meepleai-api
           category: rag
@@ -133,7 +133,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(meepleai_rag_first_token_latency_ms_bucket[5m])
+            rate(meepleai_rag_first_token_latency_milliseconds_bucket[5m])
           )
         labels:
           service: meepleai-api
@@ -145,9 +145,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(meepleai_rag_first_token_latency_ms_bucket{le="800"}[1h]))
+              sum(rate(meepleai_rag_first_token_latency_milliseconds_bucket{le="800"}[1h]))
               /
-              sum(rate(meepleai_rag_first_token_latency_ms_count[1h]))
+              sum(rate(meepleai_rag_first_token_latency_milliseconds_count[1h]))
             )
           ) OR on() vector(0)
         labels:
@@ -158,9 +158,9 @@ groups:
         expr: |
           (
             1 - (
-              sum(rate(meepleai_rag_first_token_latency_ms_bucket{le="800"}[6h]))
+              sum(rate(meepleai_rag_first_token_latency_milliseconds_bucket{le="800"}[6h]))
               /
-              sum(rate(meepleai_rag_first_token_latency_ms_count[6h]))
+              sum(rate(meepleai_rag_first_token_latency_milliseconds_count[6h]))
             )
           ) OR on() vector(0)
         labels:
@@ -1051,7 +1051,7 @@ groups:
   #
   # Metric: meepleai.rag.first_token_latency (Histogram<double>, ms)
   #   Code: MeepleAiMetrics.Rag.cs:78-81
-  #   Scraped name: meepleai_rag_first_token_latency_ms_bucket/_count/_sum
+  #   Scraped name: meepleai_rag_first_token_latency_milliseconds_bucket/_count/_sum
   #
   # Cardinality: metric recorded with NO session/game/user tags (bounded safe).
   - name: meepleai_slo_live_rag_recording_rules
@@ -1064,7 +1064,7 @@ groups:
         expr: |
           histogram_quantile(
             0.95,
-            rate(meepleai_rag_first_token_latency_ms_bucket[5m])
+            rate(meepleai_rag_first_token_latency_milliseconds_bucket[5m])
           )
         labels:
           service: meepleai-api
@@ -1082,7 +1082,7 @@ groups:
       # filteredChunks.Count == 0 after pgvector nearest-neighbour search.
       # Metric: meepleai.rag.retrieval_empty (Counter<long>)
       #   Scraped: meepleai_rag_retrieval_empty_retrievals_total
-      # Denominator: meepleai_rag_first_token_latency_ms_count (answers served on
+      # Denominator: meepleai_rag_first_token_latency_milliseconds_count (answers served on
       #   this path, consistent cardinality — no session tags on either metric).
       #
       # Threshold: >5% of live-RAG answers have zero retrieved chunks.
@@ -1094,7 +1094,7 @@ groups:
           (
             rate(meepleai_rag_retrieval_empty_retrievals_total[15m])
             /
-            (rate(meepleai_rag_first_token_latency_ms_count[15m]) > 0)
+            (rate(meepleai_rag_first_token_latency_milliseconds_count[15m]) > 0)
           ) > 0.05
         for: 15m
         labels:
@@ -1125,7 +1125,7 @@ groups:
       # Total request rate across all terminal results.
       - record: meepleai:shared_game_detail:request_rate:5m
         expr: |
-          sum(rate(meepleai_shared_game_detail_requests_requests_total[5m])) OR on() vector(0)
+          sum(rate(meepleai_shared_game_detail_requests_total_requests_total[5m])) OR on() vector(0)
         labels:
           service: meepleai-api
           category: shared_game_detail
@@ -1135,9 +1135,9 @@ groups:
       - record: meepleai:shared_game_detail:error_ratio:5m
         expr: |
           (
-            sum(rate(meepleai_shared_game_detail_requests_requests_total{result="error"}[5m]))
+            sum(rate(meepleai_shared_game_detail_requests_total_requests_total{result="error"}[5m]))
             /
-            sum(rate(meepleai_shared_game_detail_requests_requests_total[5m]))
+            sum(rate(meepleai_shared_game_detail_requests_total_requests_total[5m]))
           ) OR on() vector(0)
         labels:
           service: meepleai-api
@@ -1153,9 +1153,9 @@ groups:
       - record: meepleai:shared_game_detail:cache_hit_ratio:5m
         expr: |
           (
-            sum(rate(meepleai_shared_game_detail_cache_hits_events_total{source="hit"}[5m]))
+            sum(rate(meepleai_shared_game_detail_cache_hits_total_events_total{source="hit"}[5m]))
             /
-            sum(rate(meepleai_shared_game_detail_cache_hits_events_total[5m]))
+            sum(rate(meepleai_shared_game_detail_cache_hits_total_events_total[5m]))
           )
         labels:
           service: meepleai-api

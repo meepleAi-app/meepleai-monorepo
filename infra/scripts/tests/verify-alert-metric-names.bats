@@ -138,5 +138,35 @@ explain() {
     # entrambi i casi va guardato, perche' e' la modalita' che gira nella CI (#3821).
     run bash "$SCRIPT"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"nessuna regola cieca"* ]]
+    [[ "$output" == *"OK"* ]]
+}
+
+@test "il controllo dichiara che cosa ha esaminato, e non sono zero" {
+    # Un gate verde e un gate che non ha guardato niente stampano lo stesso «OK»: questi
+    # contatori sono cio' che li distingue, quindi vanno asseriti e non solo stampati (#3814).
+    run bash "$SCRIPT"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"dichiarazioni C# con unit:"* ]]
+    [[ "$output" == *"identificatori citati:"* ]]
+    # zero dichiarazioni o zero identificatori significano che l'estrazione si e' rotta
+    [[ ! "$output" =~ "dichiarazioni C# con unit: 0 " ]]
+    [[ ! "$output" =~ "identificatori citati: 0" ]]
+}
+
+@test "un identificatore che nessuno espone fa fallire il controllo" {
+    # La prova che il gate PUO' fallire. Senza, «verde» non significa nulla — ed e' il difetto
+    # che questo stesso gate previene, applicato a se stesso (#3814).
+    local selftest="$BATS_TEST_DIRNAME/../../../infra/prometheus/alerts/_bats-selftest.yml"
+    cat > "$selftest" <<'YAML'
+groups:
+  - name: bats_selftest
+    rules:
+      # il nome del codice C#, che l'exporter non espone mai in questa forma
+      - alert: BatsSelfTestBlind
+        expr: rate(meepleai_bgg_url_attempted_render_total[5m]) > 0
+YAML
+    run bash "$SCRIPT"
+    rm -f "$selftest"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"meepleai_bgg_url_attempted_render_total"* ]]
 }

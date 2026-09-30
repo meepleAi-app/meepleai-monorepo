@@ -41,6 +41,18 @@ import { dirname, join } from 'node:path';
  * `nome: valore` rientrate di due spazi, nome eventualmente fra apici singoli
  * (obbligatori per le chiavi che iniziano con `@`).
  *
+ * I commenti vengono scartati, sia su riga propria sia a fine riga, e gli apici
+ * (singoli o doppi) vengono tolti dal valore. pnpm-workspace.yaml e' scritto a mano
+ * ed e' l'unico posto dove un pin di sicurezza porta la sua motivazione: senza
+ * questo, un commento dentro il blocco finiva nella chiave o nel valore e il gate
+ * falliva mandando a `pnpm install --lockfile-only`, che non avrebbe risolto nulla
+ * — pnpm scrive nel lockfile il valore *parsato*, quindi rigenerare non avvicina i
+ * due file di un byte. Un pin senza il perche' e' quello che invecchia in silenzio,
+ * quindi il commento deve poter stare li', anche accanto al pin.
+ *
+ * Il rientro deve essere di almeno due spazi, non esattamente due: un rientro
+ * uniforme piu' largo e' YAML valido e pnpm lo applica.
+ *
  * Volutamente senza dipendenze: apps/web non ha un parser YAML e questo gate
  * deve poter girare prima di qualunque install.
  *
@@ -56,13 +68,56 @@ export function parseOverrides(text) {
   const out = {};
   for (const line of lines.slice(start + 1)) {
     if (line.trim() === '') continue;
+    if (line.trim().startsWith('#')) continue;
     if (!line.startsWith('  ')) break;
-    const m = /^ {2}(?:'([^']*)'|([^:]+)):\s*(.*)$/.exec(line);
+    const m = /^ {2,}(?:'([^']*)'|"([^"]*)"|([^:]+?))\s*:\s*(.*)$/.exec(line);
     if (!m) continue;
-    const key = m[1] ?? m[2];
-    out[key] = m[3].replace(/^'(.*)'$/, '$1').trim();
+    const key = m[1] ?? m[2] ?? m[3].trim();
+    out[key] = parseScalar(m[4]);
   }
   return out;
+}
+
+/**
+ * Riduce uno scalare YAML al valore che pnpm ci legge: toglie gli apici e scarta il
+ * commento che segue. Il confronto e' contro il lockfile, dove pnpm scrive il valore
+ * gia' parsato — un commento non arriva mai fin la', quindi confrontare il testo
+ * grezzo delle due righe fa divergere file che in realta' concordano, e il rimedio
+ * suggerito (rigenerare il lockfile) non puo' funzionare.
+ *
+ * YAML apre un commento solo su ` #` (spazio piu' cancelletto) e solo fuori dagli
+ * apici: `'>=1.0.0#sha'` e la chiave `foo#bar` restano interi.
+ *
+ * Non e' un parser YAML: gli override di pnpm sono range semver, dove l'unico escape
+ * che YAML puo' produrre e' l'apice raddoppiato dentro gli apici singoli. Le sequenze
+ * di escape degli apici doppi non sono gestite perche' un semver non le contiene; se
+ * un giorno un valore ne avesse bisogno, il confronto col lockfile lo segnalerebbe
+ * invece di accettarlo in silenzio.
+ *
+ * @param {string} raw il testo che segue i due punti
+ * @returns {string}
+ */
+function parseScalar(raw) {
+  const s = raw.trim();
+  for (const quote of ["'", '"']) {
+    if (!s.startsWith(quote)) continue;
+    let value = '';
+    for (let i = 1; i < s.length; i += 1) {
+      if (s[i] === quote) {
+        // In apici singoli `''` e' un apice letterale, non la chiusura.
+        if (quote === "'" && s[i + 1] === "'") {
+          value += "'";
+          i += 1;
+          continue;
+        }
+        return value; // chiuso: quel che segue e' commento o spaziatura
+      }
+      value += s[i];
+    }
+    return value; // apice mai chiuso: il confronto col lockfile lo segnalera'
+  }
+  const comment = s.search(/\s#/);
+  return (comment === -1 ? s : s.slice(0, comment)).trim();
 }
 
 /**

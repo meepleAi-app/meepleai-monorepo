@@ -33,7 +33,11 @@ overrides:
   postcss: '>=8.5.18'
   fast-uri: '>=3.1.6 <4'
   brace-expansion: '>=5.0.9'
-  sharp: '>=0.35.0'
+  # Alzato per GHSA-g89c-p67h-r497 / GHSA-2jg2-4ch7-h545 (libheif), patchate in 0.35.4.
+  # A '>=0.35.0' l'override era gia' soddisfatto da 0.35.3: un reinstall non alzava nulla,
+  # e la patch e' arrivata solo con un `pnpm update sharp --prod` esplicito. Il vincolo qui
+  # e' cio' che rende la correzione dichiarata invece che incisa nel solo lockfile (#3707).
+  sharp: '>=0.35.4'
   protobufjs: '>=8.4.1'
   qs: '>=6.14.2'
   shell-quote: '>=1.9.0'

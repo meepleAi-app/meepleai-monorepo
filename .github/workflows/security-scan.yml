@@ -216,13 +216,65 @@ jobs:
           pnpm audit --audit-level=high > audit-report.txt 2>&1 || true
           cat audit-report.txt
 
-          # Check for HIGH/CRITICAL in production dependencies only
-          # Dev dependencies (like @chromatic-com/playwright) with transitive vulnerabilities are acceptable
-          if pnpm audit --audit-level=high --prod 2>&1 | grep -i "high\|critical"; then
-            echo "❌ HIGH/CRITICAL vulnerabilities found in production dependencies"
-            exit 1
-          fi
-          echo "✅ No HIGH/CRITICAL vulnerabilities in production dependencies"
+          # Solo dipendenze di produzione: una transitiva sotto una devDependency
+          # (p.es. @chromatic-com/playwright) non raggiunge il bundle servito.
+          #
+          # L'asserzione conta gli `advisories` che il report contiene, non i conteggi di
+          # `metadata.vulnerabilities`. Quel campo e' il sommario che il registry
+          # restituisce e che pnpm ripassa senza ricalcolare: il ramo `--json` filtra
+          # `advisories` e lascia `metadata` intatto. Fidarsene sbaglia in entrambe le
+          # direzioni. Verde a torto: un sommario vuoto, con le chiavi in altro case o
+          # con valori null viene letto come zero e manda verde un report che contiene
+          # una CRITICAL. Rosso senza rimedio: un GHSA accettato via
+          # `auditConfig.ignoreGhsas` — l'unico modo pnpm-nativo di accettare un rischio
+          # — sparisce da `advisories` ma non da `metadata`, quindi il gate resterebbe
+          # rosso su un albero che pnpm considera pulito, e nessuna configurazione
+          # potrebbe soddisfarlo. E' lo stesso rosso cronico da cui #3707 e' nata.
+          #
+          # Prima di #3990 questo braccio era `grep -i "high\|critical"` sull'intero
+          # output, dove il nome di un pacchetto o il titolo di un advisory bastavano a
+          # decidere l'esito. La DoD 5 di #3707 aveva corretto solo il braccio .NET qui
+          # sopra; questo e' rimasto indietro.
+          #
+          # `pnpm audit` esce non-zero anche per sole moderate, quindi l'exit code non e'
+          # il segnale: lo e' il JSON. Un JSON assente o malformato, o un report privo di
+          # `advisories`, fa fallire lo step — uno scan guasto deve essere rosso, non
+          # verde-perche'-vuoto.
+          pnpm audit --prod --json > audit-prod.json 2>&1 || true
+          node -e '
+            const fs = require("fs");
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync("audit-prod.json", "utf8"));
+            } catch (err) {
+              console.error("❌ pnpm audit non ha prodotto JSON valido — scan inattendibile");
+              console.error(fs.readFileSync("audit-prod.json", "utf8").slice(0, 2000));
+              process.exit(1);
+            }
+            const advisories = report?.advisories;
+            if (!advisories || typeof advisories !== "object") {
+              console.error("❌ report privo di advisories — scan inattendibile");
+              console.error(JSON.stringify(report).slice(0, 2000));
+              process.exit(1);
+            }
+            const found = Object.values(advisories);
+            const blocking = found.filter(a => ["high", "critical"].includes(String(a?.severity).toLowerCase()));
+            const counts = report?.metadata?.vulnerabilities;
+            console.log("advisory di produzione ricevuti:", found.length, "| metadata (diagnostica):", JSON.stringify(counts ?? null));
+            const sommario = (counts?.high ?? 0) + (counts?.critical ?? 0);
+            if (sommario > 0 && blocking.length === 0) {
+              console.log(`⚠️  metadata dichiara ${sommario} high/critical, ma nessuno è fra gli advisory ricevuti.`);
+              console.log("    Atteso se un GHSA è accettato via auditConfig; altrimenti il sommario del registry è incoerente.");
+            }
+            if (blocking.length > 0) {
+              for (const a of blocking) {
+                console.error(`  ${String(a.severity).toUpperCase()} ${a.module_name} ${a.vulnerable_versions ?? ""} — ${a.github_advisory_id ?? a.url ?? ""}`);
+              }
+              console.error(`❌ ${blocking.length} advisory high/critical nelle dipendenze di produzione`);
+              process.exit(1);
+            }
+            console.log("✅ Zero advisory high/critical nelle dipendenze di produzione");
+          '
 
   # Dockerfile lint with Hadolint
   # Q2 2026 Security Review (#186) P1.4a

@@ -111,7 +111,7 @@ export function SideDrawer({ open, onClose }: SideDrawerProps) {
         {/* Account + logout */}
         <div className="px-3 py-4 border-t shrink-0 flex flex-col gap-0.5">
           <Link
-            href="/profile?tab=settings"
+            href="/settings"
             onClick={onClose}
             className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/70 hover:bg-muted hover:text-foreground transition-colors"
           >

@@ -38,6 +38,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 
+import { mockAuthEndpoints, seedAuthSession } from './_helpers/seedAuthSession';
+
 // WCAG 2.1 AA tags for axe-core
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -438,12 +440,21 @@ test.describe('Accessibility - Authenticated Pages', () => {
     expect(results.violations, formatViolations(results.violations)).toEqual([]);
   });
 
-  // NOTE (#3917/#3918): `/settings` does not exist — the settings hub currently
-  // lives at `/profile?tab=settings&section=<id>`. When this test is un-skipped
-  // (#3940), `gotoChecked` will fail loudly on the 404 rather than pass on it.
-  // Point it at the canonical address decided by #3918 before enabling.
-  test.skip('Settings (/settings) - requires auth @a11y @authenticated', async ({ page }) => {
-    // TODO: Implement after auth setup is added
+  // Un-skipped with the fix that made the hub reachable (#3938/#3946/#3961).
+  //
+  // The note that used to sit here said `/settings` did not exist. It did: #3938 had
+  // created the route, and nine 308s in `next.config.js` were shadowing it — which is
+  // also why `gotoChecked` would have failed, not on a 404 but on its second assertion,
+  // landing on `/profile` instead of the requested path. Removing the redirects satisfies
+  // both. This test is the coverage that would have caught the defect, so it is enabled
+  // here rather than deferred.
+  //
+  // Its two neighbours above stay skipped: their blocker is the missing auth setup, which
+  // is a separate concern and covers routes outside this change.
+  test('Settings (/settings) - requires auth @a11y @authenticated', async ({ page }) => {
+    await seedAuthSession(page);
+    await mockAuthEndpoints(page);
+
     await gotoChecked(page, '/settings');
 
     const results = await createAxeBuilder(page).analyze();

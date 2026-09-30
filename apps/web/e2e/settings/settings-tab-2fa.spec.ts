@@ -1,11 +1,20 @@
 /**
- * E3: 2FA enrollment happy-path via Settings tab — real pipeline (#1608)
+ * E3: 2FA enrollment happy-path via the settings hub — real pipeline (#1608)
  *
  * Tests:
- *   1. Deep-link /settings/security → redirect → /profile?tab=settings&section=security
- *      (no redirect loop, Security section visible)
- *   2. Full enrollment wizard: QR/secret → mint real TOTP → enable2FA call → backup codes →
+ *   1. Deep-link /settings/security resolves and STAYS there (no redirect, no loop),
+ *      with the Security section rendered
+ *   2. Legacy /profile?tab=settings&section=security still forwards to /settings/security
+ *   3. Full enrollment wizard: QR/secret → mint real TOTP → enable2FA call → backup codes →
  *      ack checkbox → Done → 2FA status flips to "Enabled"
+ *
+ * Routing note (#3938): this file used to assert the opposite of test 1. Before the settings
+ * hub had an address, every `/settings/*` path was a `next.config.js` redirect onto
+ * `/profile?tab=settings&section=<id>`. Those redirects shadowed the real routes — Next
+ * resolves config redirects BEFORE filesystem routing, so `settings/page.tsx` and
+ * `settings/[section]/page.tsx` were unreachable — and they are gone. `/profile` no longer
+ * has a settings tab at all (`VALID_TABS` = overview|achievements|activity), and the only
+ * surviving redirect runs the other way, from the legacy profile URL to the hub (test 2).
  *
  * Auth pattern: mirrors profile-settings.spec.ts — mock-based session (no real BE needed for
  * auth layer). The 2FA setup endpoint returns a KNOWN static Base32 secret so mintTotp()
@@ -22,6 +31,8 @@
  * .NET OtpNet backend (`new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp()`).
  */
 
+import { seedAuthSession } from '../_helpers/seedAuthSession';
+import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 import { test, expect } from '../fixtures';
 import { mintTotp } from '../fixtures/totp';
 
@@ -54,8 +65,18 @@ const STATIC_SECRET = 'JBSWY3DPEHPK3PXP';
  * dedicated handlers — so the full request chain through the FE component fires.
  */
 async function setupSecuritySectionMocks(page: Page): Promise<void> {
+  // Cookies FIRST: `/settings` is in PROTECTED_ROUTES, so without a session cookie
+  // proxy.ts answers every navigation below with a 307 to /login and the assertions
+  // would measure the login page instead (#633). The `PLAYWRIGHT_AUTH_BYPASS` flag does
+  // not help on its own: `proxy.ts` still requires the cookie to be present.
+  await seedAuthSession(page);
+  // Il banner del consenso cookie e' un `role="dialog"`: senza seminare il consenso,
+  // `getByRole('dialog')` lo cattura al posto del wizard 2FA e l'asserzione di chiusura
+  // non puo' mai riuscire.
+  await seedCookieConsent(page);
+
   // Catch-all FIRST (lowest specificity — more specific routes override it)
-  await page.route(`${API_BASE}/api/**`, async route => {
+  await page.route(/\/api\/.*/, async route => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -71,7 +92,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // Authenticated identity
-  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+  await page.route(/\/api\/v1\/auth\/me(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -88,7 +109,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // 2FA status — disabled at start
-  await page.route(`${API_BASE}/api/v1/users/me/2fa/status`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/2fa\/status(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -97,7 +118,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // 2FA setup → return known static secret so mintTotp() produces the right code
-  await page.route(`${API_BASE}/api/v1/auth/2fa/setup`, async route => {
+  await page.route(/\/api\/v1\/auth\/2fa\/setup(\?.*)?$/, async route => {
     if (route.request().method() !== 'POST') {
       await route.continue();
       return;
@@ -127,7 +148,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // 2FA enable → accept any 6-digit code (real pipeline: code is submitted by the UI wizard)
-  await page.route(`${API_BASE}/api/v1/auth/2fa/enable`, async route => {
+  await page.route(/\/api\/v1\/auth\/2fa\/enable(\?.*)?$/, async route => {
     if (route.request().method() !== 'POST') {
       await route.continue();
       return;
@@ -164,7 +185,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // Active sessions (needed by ActiveSessionsCard)
-  await page.route(`${API_BASE}/api/v1/auth/sessions`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/sessions(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -182,8 +203,10 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
     });
   });
 
-  // Library stats (consumed by OverviewTab which may render on the same page)
-  await page.route(`${API_BASE}/api/v1/users/me/library/stats`, async route => {
+  // Library stats — no test lands on /profile any more (#3938), but the catch-all answers
+  // every GET with `[]`, which is the wrong shape for this endpoint. Kept so a stray call
+  // from the authenticated shell cannot fail a schema parse.
+  await page.route(/\/api\/v1\/users\/me\/library\/stats(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -215,29 +238,56 @@ test.describe('Settings tab — 2FA enrollment (real pipeline) #1608', () => {
     await setupSecuritySectionMocks(page);
   });
 
-  test('deep-link /settings/security redirects to the profile settings tab without a loop', async ({
+  test('deep-link /settings/security lands on the settings hub and stays there', async ({
     page,
   }) => {
-    // The next.config.js permanent redirect maps /settings/security →
-    // /profile?tab=settings&section=security
-    await page.goto('/settings/security');
+    // #3938: `/settings/security` is a real route (`settings/[section]/page.tsx`), not a 308
+    // onto `/profile?tab=settings&section=security`. The address the user asked for is the
+    // address they must keep.
+    const response = await page.goto('/settings/security');
+
+    // Status first: a 404 keeps the pathname, so every URL assertion below would still pass
+    // on a route that no longer exists. Without this the test would go green the day the
+    // shadowing redirect comes back as a deletion.
+    expect(response, 'navigation to /settings/security produced no response').not.toBeNull();
+    expect(response!.status(), '/settings/security must resolve, not 404').toBeLessThan(400);
+
     await page.waitForLoadState('networkidle');
 
-    await expect(page).toHaveURL(/\/profile(\?.*)?/);
-    await expect(page).toHaveURL(/tab=settings/);
-    await expect(page).toHaveURL(/section=security/);
+    // No redirect: the landed pathname equals the requested one — same check `gotoChecked`
+    // makes in e2e/accessibility.spec.ts (#3917).
+    expect(new URL(page.url()).pathname).toBe('/settings/security');
+
+    // Landing is not enough: `settings/[section]/page.tsx` degrades an unknown section onto
+    // DEFAULT_SECTION (`profile`) instead of 404-ing, so assert that *security* is the active
+    // section. The hub marks it with aria-current="page" on the sub-nav row, not role="tab".
+    const subNav = page.getByRole('navigation', { name: 'Settings sections' });
+    await expect(subNav.locator('[aria-current="page"]')).toContainText('Security');
 
     // Security section is visible — TwoFactorStatusCard rendered
     await expect(page.getByTestId('2fa-status')).toBeVisible();
 
-    // No redirect loop: URL is stable after a short pause
+    // No redirect loop: URL is still the requested one after a short pause
     await page.waitForTimeout(400);
-    await expect(page).toHaveURL(/\/profile/);
-    await expect(page).not.toHaveURL(/settings\/security/);
+    expect(new URL(page.url()).pathname).toBe('/settings/security');
+  });
+
+  test('legacy /profile?tab=settings&section=security forwards to the hub', async ({ page }) => {
+    // The redirect survived #3938, reversed: `ProfilePageContent` forwards the bookmarked
+    // profile URL to the hub, carrying `?section=` so the section is preserved. It is a
+    // client-side `router.replace` inside an effect, so assert on the URL and let Playwright
+    // retry through hydration rather than waiting for networkidle first.
+    await page.goto('/profile?tab=settings&section=security');
+
+    await expect(page).toHaveURL(/\/settings\/security$/);
+    await expect(page.getByTestId('2fa-status')).toBeVisible();
   });
 
   test('completes 2FA enrollment end-to-end via the wizard', async ({ page }) => {
-    await page.goto('/profile?tab=settings&section=security');
+    // Canonical address (#3938). This used to enter from `/profile?tab=settings&section=security`,
+    // which now only works through the client-side forward asserted above — an extra hop that
+    // races `networkidle`, and not what this test is about. Enter where the wizard lives.
+    await page.goto('/settings/security');
     await page.waitForLoadState('networkidle');
 
     // ── Step 0: Security section renders with 2FA disabled ──────────────────

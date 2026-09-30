@@ -216,13 +216,42 @@ jobs:
           pnpm audit --audit-level=high > audit-report.txt 2>&1 || true
           cat audit-report.txt
 
-          # Check for HIGH/CRITICAL in production dependencies only
-          # Dev dependencies (like @chromatic-com/playwright) with transitive vulnerabilities are acceptable
-          if pnpm audit --audit-level=high --prod 2>&1 | grep -i "high\|critical"; then
-            echo "❌ HIGH/CRITICAL vulnerabilities found in production dependencies"
-            exit 1
-          fi
-          echo "✅ No HIGH/CRITICAL vulnerabilities in production dependencies"
+          # Solo dipendenze di produzione: una transitiva sotto una devDependency
+          # (p.es. @chromatic-com/playwright) non raggiunge il bundle servito.
+          #
+          # L'asserzione e' sui conteggi di `metadata.vulnerabilities`, non su un
+          # grep dell'output: #3707 aveva gia' sostituito il grep grezzo con un
+          # controllo di colonna sul braccio .NET qui sopra, ma il braccio npm era
+          # rimasto un `grep -i "high\|critical"` sull'intero testo, dove il nome di
+          # un pacchetto o il titolo di un advisory bastano a decidere l'esito.
+          #
+          # `pnpm audit` esce non-zero anche per sole moderate, quindi l'exit code non
+          # e' il segnale; e' il JSON. Un JSON assente o malformato fa fallire il parse
+          # e quindi lo step: uno scan guasto deve essere rosso, non verde-perche'-vuoto.
+          pnpm audit --prod --json > audit-prod.json 2>&1 || true
+          node -e '
+            const fs = require("fs");
+            let report;
+            try {
+              report = JSON.parse(fs.readFileSync("audit-prod.json", "utf8"));
+            } catch (err) {
+              console.error("❌ pnpm audit non ha prodotto JSON valido — scan inattendibile");
+              console.error(fs.readFileSync("audit-prod.json", "utf8").slice(0, 2000));
+              process.exit(1);
+            }
+            const counts = report?.metadata?.vulnerabilities;
+            if (!counts) {
+              console.error("❌ metadata.vulnerabilities assente — scan inattendibile");
+              process.exit(1);
+            }
+            console.log("Conteggi produzione:", JSON.stringify(counts));
+            const blocking = (counts.high ?? 0) + (counts.critical ?? 0);
+            if (blocking > 0) {
+              console.error(`❌ ${counts.critical ?? 0} critical, ${counts.high ?? 0} high nelle dipendenze di produzione`);
+              process.exit(1);
+            }
+            console.log("✅ Zero HIGH/CRITICAL nelle dipendenze di produzione");
+          '
 
   # Dockerfile lint with Hadolint
   # Q2 2026 Security Review (#186) P1.4a

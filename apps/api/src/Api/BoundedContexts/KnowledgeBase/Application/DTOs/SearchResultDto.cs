@@ -73,7 +73,9 @@ internal record RagValidationResultDto(
 /// </summary>
 internal record CitationDto(
     string DocumentId,
-    int PageNumber,
+    // #3855: nullable perche' una citazione servita dalla cache puo' non portare la pagina, e in
+    // quel caso dichiararlo e' onesto mentre un numero plausibile e' una fonte falsa.
+    int? PageNumber,
     string Snippet,
     double RelevanceScore
 );

@@ -215,7 +215,17 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // The cache is keyed on (GameId, queryVector) with no card fingerprint, so a cached no-card answer
         // must not shadow a claim-injected one, and a claim answer must not be replayed after suppression
         // (spec §6.2). Claim-injected answers are simply not cached in v1 (bounded, documented trade-off).
-        if (!query.BypassCache && !injectClaims)
+        //
+        // #3855: lo stesso vale per le house rule, e con una ragione in piu'. La chiave e'
+        // `rag:cache:{gameId}:*` — per gioco, senza utente — mentre le house rule sono per utente
+        // (`GetByGameAndOwnerAsync`) e i giochi sono condivisi. Senza questa guardia: la risposta
+        // modellata sulla regola di A, che la cita verbatim dopo #3875, finisce in una cache che
+        // serve anche B; e una risposta generica gia' in cache sopprime la regola di chi ce l'ha,
+        // cosi' che il fix di #3875 non entra mai in gioco sul percorso di default.
+        //
+        // E' la guardia di lettura a chiudere entrambi i versi: se non si legge, `queryVector`
+        // resta null e la scrittura piu' sotto non parte. Quella a valle e' difesa in profondita'.
+        if (!query.BypassCache && !injectClaims && houseRuleMatch is null)
         {
             try
             {
@@ -253,11 +263,15 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                             LlmConfidence: 0,
                             OverallConfidence: 0,
                             IsLowQuality: false,
+                            // #3855: la pagina e il documento vengono dalla voce in cache. Prima
+                            // erano `i + 1` e stringa vuota: un indice posizionale in un campo che
+                            // il frontend usa come coordinata navigabile e' una fonte inventata,
+                            // non un'approssimazione.
                             Citations: cached.Citations
-                                .Select((c, i) => new CitationDto(
-                                    DocumentId: string.Empty,
-                                    PageNumber: i + 1,
-                                    Snippet: c,
+                                .Select(c => new CitationDto(
+                                    DocumentId: c.DocumentId,
+                                    PageNumber: c.PageNumber,
+                                    Snippet: c.Snippet,
                                     RelevanceScore: 0))
                                 .ToList());
                     }
@@ -435,17 +449,22 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // P1-5: Store successful response in semantic cache for future queries
         // Don't cache low-quality or no-context responses to avoid polluting the cache.
         // R1: never cache a claim-injected answer (no card fingerprint in the key — spec §6.2).
-        if (!query.BypassCache && queryVector != null && !injectClaims && !IsLowQualityResponse(response))
+        // #3855: ne' una risposta modellata su una house rule, per la stessa ragione piu' il fatto
+        // che la regola e' di un utente e la cache e' di tutto il gioco.
+        if (!query.BypassCache && queryVector != null && !injectClaims && houseRuleMatch is null
+            && !IsLowQualityResponse(response))
         {
-            var citationTexts = response.Citations?
-                .Select(c => c.Snippet)
+            // #3855: si conserva la tripla, non il solo snippet. Buttare pagina e documento qui e'
+            // cio' che costringeva la lettura a ricostruirli, e a inventarli.
+            var citations = response.Citations?
+                .Select(c => new CachedCitation(c.Snippet, c.PageNumber, c.DocumentId))
                 .ToList() ?? [];
             await _responseCache.SetAsync(
                 query.GameId,
                 queryVector,
                 new CachedRagResponse(
                     response.Answer,
-                    citationTexts,
+                    citations,
                     llmResult.Cost.ModelId ?? "unknown",
                     DateTimeOffset.UtcNow),
                 cancellationToken).ConfigureAwait(false);

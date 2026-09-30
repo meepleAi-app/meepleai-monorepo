@@ -412,6 +412,147 @@ public class AskQuestionQueryHandlerPhase2Tests
             "che non ne ha");
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // La cache semantica e le house rule (#3855)
+    //
+    // La correzione di #3875 vive tutta nell'assemblaggio del system prompt, e i suoi test
+    // girano su un cache-miss. Sul percorso di default (`BypassCache = false`) non entra mai in
+    // gioco: la chiave e' `rag:cache:{gameId}:*`, senza utente, mentre le house rule sono per
+    // utente e i giochi sono condivisi.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Una risposta modellata sulla house rule di un utente non deve finire in una cache
+    /// condivisa da tutto il gioco: chi non ha quella regola se la vedrebbe servire come se
+    /// fosse il regolamento.
+    ///
+    /// E' lo stesso trattamento gia' dato ai claim iniettati, per la stessa ragione scritta
+    /// sopra la guardia di lettura: la chiave non porta impronta del contenuto iniettato.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenHouseRuleMatched_DoesNotWriteToSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string houseRule = "In our group, the pawn can also move diagonally.";
+        const string answer = "Based on your house rule, the pawn moves diagonally.";
+
+        SetupDefaultMocksWithSearchResults(gameId, answer);
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(houseRule);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "la risposta cita la house rule verbatim (#3875) e la cache e' per gioco, non per " +
+            "utente: scriverla li' la rende servibile a chiunque interroghi lo stesso gioco");
+    }
+
+    /// <summary>
+    /// Chi ha una house rule non deve nemmeno leggere dalla cache condivisa: una risposta
+    /// generica gia' cacheata da un altro utente sopprimerebbe la regola, e il fix di #3875 non
+    /// entrerebbe mai in gioco.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenHouseRuleMatched_DoesNotReadFromSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        const string houseRule = "In our group, the pawn can also move diagonally.";
+
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        _mockHouseRuleMatcher
+            .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(houseRule);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: userId);
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una risposta generica in cache non deve poter sopprimere la house rule di chi ce l'ha");
+    }
+
+    /// <summary>
+    /// Su cache-hit le pagine citate devono essere quelle vere, non l'indice nella lista.
+    ///
+    /// E' il sintomo del titolo di #3855 — «le attribuisce a pagine del manuale che non le
+    /// contengono» — su un secondo percorso, indipendente dalle house rule e attivo su ogni hit.
+    /// `DocumentId` vuoto e `RelevanceScore` a zero sono assenze oneste; un numero di pagina
+    /// posizionale e' una fonte inventata, e il frontend lo tratta come coordinata navigabile.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_DoesNotFabricatePageNumbers()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // tre citazioni: con l'indice posizionale diventerebbero le pagine 1, 2, 3
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Snippet from page 42.", 42, "doc-a"),
+                new("Snippet from page 7.", 7, "doc-b"),
+                new("Snippet without a page.", null, null),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        result.Citations.Should().HaveCount(3);
+        // la forma con collezione esplicita, non `Equal(42, 7, null, "perche'")`: quel `params`
+        // leggerebbe la motivazione come un quarto elemento atteso
+        result.Citations!.Select(c => c.PageNumber).Should().Equal(
+            new int?[] { 42, 7, null },
+            "le pagine devono venire dalla voce in cache; 1,2,3 significherebbe che sono " +
+            "l'indice nella lista");
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(
+            new string?[] { "doc-a", "doc-b", null },
+            "senza documentId il deep link alla pagina non puo' essere costruito");
+    }
+
     /// <summary>
     /// Senza house rule il system prompt non deve cambiare: l'istruzione e' condizionale, non
     /// una zavorra su ogni richiesta.

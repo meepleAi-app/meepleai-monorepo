@@ -9,14 +9,19 @@ public sealed class SemanticResponseCacheTests
     [Fact]
     public void CachedRagResponse_ConstructsWithAllFields()
     {
+        // #3855: la citazione porta (snippet, pagina, documento). La fixture precedente era
+        // `["[Page 1] Context"]`, che suggeriva un marcatore di pagina dentro il testo: in
+        // produzione li' finiva `c.Snippet` nudo, e la pagina veniva poi reinventata in lettura.
         var response = new CachedRagResponse(
             Answer: "Test answer",
-            Citations: ["[Page 1] Context"],
+            Citations: [new CachedCitation("Context from the rulebook.", 12, "doc-1")],
             ModelUsed: "deepseek-chat",
             CachedAt: DateTimeOffset.UtcNow);
 
         Assert.Equal("Test answer", response.Answer);
         Assert.Single(response.Citations);
+        Assert.Equal(12, response.Citations[0].PageNumber);
+        Assert.Equal("doc-1", response.Citations[0].DocumentId);
     }
 
     [Theory]
@@ -32,14 +37,18 @@ public sealed class SemanticResponseCacheTests
     [Fact]
     public void CachedRagResponse_Citations_IsReadOnlyList()
     {
-        // Verify Citations is exposed as IReadOnlyList<string> (immutable contract on the record)
-        var citations = new List<string> { "[Page 1]", "[Page 3]" };
+        // Verify Citations is exposed as IReadOnlyList<CachedCitation> (immutable contract)
+        var citations = new List<CachedCitation>
+        {
+            new("Opening move rules.", 1, "doc-1"),
+            new("Endgame scoring.", 3, "doc-1"),
+        };
         var response = new CachedRagResponse("answer", citations, "model", DateTimeOffset.UtcNow);
 
-        Assert.IsAssignableFrom<IReadOnlyList<string>>(response.Citations);
+        Assert.IsAssignableFrom<IReadOnlyList<CachedCitation>>(response.Citations);
         Assert.Equal(2, response.Citations.Count);
-        Assert.Equal("[Page 1]", response.Citations[0]);
-        Assert.Equal("[Page 3]", response.Citations[1]);
+        Assert.Equal(1, response.Citations[0].PageNumber);
+        Assert.Equal(3, response.Citations[1].PageNumber);
     }
 
     [Fact]

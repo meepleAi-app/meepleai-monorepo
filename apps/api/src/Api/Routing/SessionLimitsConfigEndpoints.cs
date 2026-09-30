@@ -110,7 +110,7 @@ internal static class SessionLimitsConfigEndpoints
         var requestingRole = Role.Parse(session.Principal!.EffectiveActor.Role);
 
         // Users can only check their own quota, admins can check any user
-        if (id != requestingUserId && !requestingRole.IsAdmin())
+        if (id != requestingUserId && !requestingRole.HasPermission(Role.Admin))
         {
             return Results.Forbid();
         }

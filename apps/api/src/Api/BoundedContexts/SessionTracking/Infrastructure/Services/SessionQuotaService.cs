@@ -48,7 +48,7 @@ internal sealed class SessionQuotaService : ISessionQuotaService
         ArgumentNullException.ThrowIfNull(userRole);
 
         // Admin and Editor bypass quota checks (unlimited)
-        if (userRole.IsAdmin() || userRole.IsEditor())
+        if (userRole.HasPermission(Role.Editor))
         {
             return SessionQuotaResult.Unlimited();
         }
@@ -89,7 +89,7 @@ internal sealed class SessionQuotaService : ISessionQuotaService
         ArgumentNullException.ThrowIfNull(userRole);
 
         // Admin and Editor have unlimited quota
-        if (userRole.IsAdmin() || userRole.IsEditor())
+        if (userRole.HasPermission(Role.Editor))
         {
             // Still return actual count for admins (useful for analytics)
             var adminCount = await CountActiveSessionsAsync(userId, cancellationToken).ConfigureAwait(false);

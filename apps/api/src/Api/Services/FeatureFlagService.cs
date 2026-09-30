@@ -142,7 +142,7 @@ internal class FeatureFlagService : IFeatureFlagService
             throw new ArgumentException("Feature name cannot be empty", nameof(featureName));
 
         // Admin users bypass all tier-based restrictions
-        if (user.Role.IsAdmin())
+        if (user.Role.HasPermission(Role.Admin))
         {
             _logger.LogDebug("Feature {FeatureName} granted for admin user {UserId} (tier bypass)",
                 LogSanitizer.Sanitize(featureName), user.Id);
@@ -178,10 +178,25 @@ internal class FeatureFlagService : IFeatureFlagService
     /// <summary>
     /// Maps Role value object to UserRole enum for feature flag checking.
     /// </summary>
+    /// <remarks>
+    /// #3873 — l'ordine e' dal ruolo piu' alto al piu' basso, e i cinque rami sono tutti
+    /// espliciti perche' il fallback e' <see cref="UserRole.User"/>: prima, superadmin e
+    /// creator ci finivano dentro. Per superadmin era l'opposto di quanto l'enum dichiara
+    /// (SuperAdmin = «can manage other admins and global feature flags», Admin = «no global
+    /// feature flags»), cioe' il ruolo proprietario dei flag globali veniva valutato come
+    /// utente semplice.
+    ///
+    /// Il valore mappato diventa un pezzo di chiave di configurazione in
+    /// <c>IsEnabledAsync</c> (<c>$"{featureName}.{role}"</c>), non un livello confrontato:
+    /// aggiungere due valori non rompe nessun consumatore, e in assenza di una chiave
+    /// per-ruolo si continua a cadere sul flag globale.
+    /// </remarks>
     private static UserRole MapRoleToUserRole(Role role)
     {
+        if (role.IsSuperAdmin()) return UserRole.SuperAdmin;
         if (role.IsAdmin()) return UserRole.Admin;
         if (role.IsEditor()) return UserRole.Editor;
+        if (role.IsCreator()) return UserRole.Creator;
         return UserRole.User;
     }
 

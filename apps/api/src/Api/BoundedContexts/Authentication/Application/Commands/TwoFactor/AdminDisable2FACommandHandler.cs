@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.Authentication.Application.Commands.TwoFactor;
@@ -39,7 +40,7 @@ internal class AdminDisable2FACommandHandler : ICommandHandler<AdminDisable2FACo
                 return new AdminDisable2FAResult(Success: false, ErrorMessage: "Admin user not found");
             }
 
-            if (!adminUser.Role.IsAdmin())
+            if (!adminUser.Role.HasPermission(Role.Admin))
             {
                 _logger.LogWarning("User {AdminUserId} attempted admin 2FA disable without admin role", command.AdminUserId);
                 return new AdminDisable2FAResult(Success: false, ErrorMessage: "Unauthorized: Admin role required");

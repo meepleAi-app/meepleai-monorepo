@@ -43,7 +43,7 @@ internal sealed class DeleteOwnAccountCommandHandler
             throw new NotFoundException("User", command.UserId.ToString());
 
         // Prevent deletion of the last admin
-        if (user.Role.IsAdmin())
+        if (user.Role.IsAdmin() || user.Role.IsSuperAdmin())
         {
             var adminCount = await _userRepository.CountAdminsAsync(cancellationToken).ConfigureAwait(false);
             if (adminCount <= 1)

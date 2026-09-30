@@ -124,6 +124,63 @@ describe('parseOverrides', () => {
     });
   });
 
+  it('scarta il commento a fine riga', () => {
+    // Regressione gemella della precedente, e la forma piu' probabile: la motivazione di
+    // un pin sta accanto al pin, non sopra. YAML chiude lo scalare e apre un commento; il
+    // parser prendeva tutto il resto della riga come valore, quindi il confronto col
+    // lockfile dichiarava «valore diverso» — e la rigenerazione suggerita non poteva
+    // risolvere, perche' pnpm non scrive i commenti nel lockfile.
+    const inline = [
+      'overrides:',
+      "  sharp: '>=0.35.4'  # GHSA-g89c-p67h-r497 (libheif), patchata in 0.35.4",
+      '  axios: >=1.18.0  # nota su uno scalare non quotato',
+      '',
+    ].join('\n');
+
+    expect(parseOverrides(inline)).toEqual({
+      sharp: '>=0.35.4',
+      axios: '>=1.18.0',
+    });
+  });
+
+  it('de-quota i valori fra apici doppi', () => {
+    const doppi = ['overrides:', '  sharp: ">=0.35.4"', '  axios: ">=1.18.0"  # con nota', ''].join(
+      '\n'
+    );
+
+    expect(parseOverrides(doppi)).toEqual({
+      sharp: '>=0.35.4',
+      axios: '>=1.18.0',
+    });
+  });
+
+  it('accetta un rientro uniforme diverso da due spazi', () => {
+    // YAML valido, e pnpm applica i pin. Il parser fissava `^ {2}` e lasciava il rientro
+    // in eccesso dentro la chiave, che diventava `  sharp`.
+    const rientro4 = ['overrides:', "    sharp: '>=0.35.4'", "    axios: '>=1.18.0'", ''].join(
+      '\n'
+    );
+
+    expect(parseOverrides(rientro4)).toEqual({
+      sharp: '>=0.35.4',
+      axios: '>=1.18.0',
+    });
+  });
+
+  it('conserva il cancelletto quando non apre un commento', () => {
+    // YAML apre un commento solo su ` #`. Dentro uno scalare quotato, o attaccato a un
+    // carattere, il cancelletto e' un carattere come gli altri: questi due pin devono
+    // sopravvivere allo scarto dei commenti.
+    const cancelletti = ['overrides:', "  'foo#bar': '1.0.0'", "  baz: '>=1.0.0#sha'", ''].join(
+      '\n'
+    );
+
+    expect(parseOverrides(cancelletti)).toEqual({
+      'foo#bar': '1.0.0',
+      baz: '>=1.0.0#sha',
+    });
+  });
+
   it('restituisce null quando la sezione non esiste', () => {
     expect(parseOverrides(LOCK_YAML_SENZA_OVERRIDES)).toBeNull();
     expect(parseOverrides(null)).toBeNull();
@@ -134,6 +191,19 @@ describe('checkPnpmSettings', () => {
   it('non segnala nulla quando config e lockfile coincidono', () => {
     expect(
       checkPnpmSettings({ packageJson: PKG_OK, workspaceYaml: WS_YAML, lockYaml: LOCK_YAML })
+    ).toEqual([]);
+  });
+
+  it('non segnala nulla quando il pin porta la motivazione a fine riga', () => {
+    // Lo scenario osservato: pnpm scrive nel lockfile il valore parsato, senza il commento.
+    // Il gate deve confrontare i valori, non il testo grezzo delle due righe — altrimenti
+    // manda a rigenerare un lockfile che e' gia' corretto.
+    const wsInline = WS_YAML.replace(
+      "  axios: '>=1.18.0'",
+      "  axios: '>=1.18.0'  # GHSA-xxxx (nota accanto al pin)"
+    );
+    expect(
+      checkPnpmSettings({ packageJson: PKG_OK, workspaceYaml: wsInline, lockYaml: LOCK_YAML })
     ).toEqual([]);
   });
 
@@ -211,8 +281,19 @@ describe('apps/web reale', () => {
     expect(pkg.pnpm).toBeUndefined();
 
     const overrides = parseOverrides(readFileSync(join(WEB_ROOT, 'pnpm-workspace.yaml'), 'utf8'));
-    // Pin storici che l'issue cita per nome: se spariscono, sparisce la mitigazione.
-    for (const pin of ['axios', 'dompurify', 'handlebars', 'tar', 'undici', 'qs', 'form-data']) {
+    // Pin che una issue cita per nome: se spariscono, sparisce la mitigazione. `sharp`
+    // copre GHSA-g89c-p67h-r497 / GHSA-2jg2-4ch7-h545 (libheif), entrambe HIGH.
+    const protetti = [
+      'axios',
+      'dompurify',
+      'handlebars',
+      'tar',
+      'undici',
+      'qs',
+      'form-data',
+      'sharp',
+    ];
+    for (const pin of protetti) {
       expect(Object.keys(overrides ?? {}), `pin mancante: ${pin}`).toContain(pin);
     }
   });

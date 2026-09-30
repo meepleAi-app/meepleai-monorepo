@@ -8,11 +8,39 @@ Write-Host ""
 # 1. Frontend dependency vulnerabilities
 Write-Host "📦 1. Checking Frontend Dependencies..." -ForegroundColor Yellow
 Set-Location apps/web
-$frontendVuln = pnpm audit --audit-level=high --prod 2>&1 | Out-String
-if ($frontendVuln -match "(?i)(high|critical)" -and $frontendVuln -notmatch "GHSA-wgrm-67xf-hhpq") {
-    Write-Host "❌ HIGH/CRITICAL vulnerabilities found (excluding pdfjs-dist TODO #4242)" -ForegroundColor Red
+# Stessa asserzione del gate CI (#3990): si contano gli `advisories` che il report
+# contiene. Non `metadata.vulnerabilities`, che e' il sommario restituito dal registry e
+# ripassato da pnpm senza ricalcolo; e non un -match sull'intero output, dove il nome di
+# un pacchetto o il titolo di un advisory bastavano a decidere l'esito.
+#
+# Qui c'era anche una `-notmatch "GHSA-..."` che escludeva un advisory pdfjs-dist
+# rimandando a un TODO #4242 — un'issue che non esiste. Due problemi in uno: la clausola
+# si applicava all'INTERO output, quindi al riapparire di quell'advisory qualunque altra
+# CRITICAL sarebbe passata; e l'eccezione non era tracciata da nulla. Rimossa: se un
+# rischio va accettato, si accetta per advisory e per pacchetto, con un riferimento vero.
+#
+# `pnpm audit` esce non-zero anche per sole moderate, quindi l'exit code non e' il
+# segnale: lo e' il JSON.
+$frontendJson = pnpm audit --prod --json 2>&1 | Out-String
+try {
+    $report = $frontendJson | ConvertFrom-Json -ErrorAction Stop
+} catch {
+    $report = $null
+}
+if ($null -eq $report -or $null -eq $report.advisories) {
+    Write-Host "❌ pnpm audit did not produce a readable report - scan unreliable" -ForegroundColor Red
+    Write-Host $frontendJson.Substring(0, [Math]::Min(500, $frontendJson.Length)) -ForegroundColor Gray
 } else {
-    Write-Host "✅ No HIGH/CRITICAL vulnerabilities in production dependencies" -ForegroundColor Green
+    $blocking = @($report.advisories.PSObject.Properties.Value |
+        Where-Object { $_.severity -in @('high', 'critical') })
+    if ($blocking.Count -gt 0) {
+        Write-Host "❌ $($blocking.Count) high/critical advisories in production dependencies" -ForegroundColor Red
+        foreach ($a in $blocking) {
+            Write-Host "   $($a.severity.ToUpper()) $($a.module_name) $($a.vulnerable_versions) - $($a.github_advisory_id)" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "✅ No high/critical advisories in production dependencies" -ForegroundColor Green
+    }
 }
 Set-Location ..\..
 Write-Host ""
@@ -21,10 +49,16 @@ Write-Host ""
 Write-Host "📦 2. Checking Backend Dependencies..." -ForegroundColor Yellow
 Set-Location apps/api
 dotnet list package --vulnerable --include-transitive > vuln-report.txt 2>&1
-$backendVuln = Get-Content vuln-report.txt -Raw
-if ($backendVuln -match "(?i)(High|Critical)") {
-    Write-Host "❌ HIGH/CRITICAL vulnerabilities found in .NET packages" -ForegroundColor Red
-    Get-Content vuln-report.txt
+# Come il braccio .NET del gate CI (#3707): l'asserzione e' sulla colonna Severity delle
+# righe "> pacchetto" (penultimo campo, prima dell'URL dell'advisory), non su un -match
+# dell'intero report — dove un nome di pacchetto o un URL potevano far scattare il gate.
+$backendBlocking = @(Get-Content vuln-report.txt | Where-Object {
+    $fields = -split $_
+    $fields.Count -ge 3 -and $fields[0] -eq '>' -and $fields[$fields.Count - 2] -in @('High', 'Critical')
+})
+if ($backendBlocking.Count -gt 0) {
+    Write-Host "❌ $($backendBlocking.Count) .NET packages with High/Critical vulnerabilities" -ForegroundColor Red
+    $backendBlocking | ForEach-Object { Write-Host "  $_" -ForegroundColor Red }
 } else {
     Write-Host "✅ No HIGH/CRITICAL vulnerabilities in .NET packages" -ForegroundColor Green
 }

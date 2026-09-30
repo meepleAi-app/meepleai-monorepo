@@ -5,6 +5,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
+using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Services;
 
@@ -591,6 +593,219 @@ public class FeatureFlagServiceTests
         roleFlag.FeatureName.Should().Be("Features.Test");
         roleFlag.RoleRestriction.Should().Be("Admin");
         roleFlag.TierRestriction.Should().BeNull();
+    }
+
+    #endregion
+
+    #region #3873 — CONCEDE: the tier bypass must cover every privileged role
+
+    private const string BypassFeatureName = "Features.MultiAgent";
+
+    /// <summary>
+    /// Arranges the discriminating mock shape for the tier-bypass tests: the feature is enabled
+    /// GLOBALLY but explicitly DENIED for the caller's tier.
+    /// With this shape the only path to <c>true</c> is the privileged bypass at the top of
+    /// <see cref="FeatureFlagService.CanAccessFeatureAsync"/>, which returns before any lookup:
+    /// a <c>true</c> cannot have come from the tier gate, and a <c>false</c> proves the bypass
+    /// never fired. A shape with everything absent would not separate the two.
+    /// </summary>
+    private void ArrangeGlobalEnabledButTierDenied(UserTier tier)
+    {
+        // Catch-all first (Moq: later setups win on overlap) — every other key, notably the
+        // role-scoped override "<feature>.<UserRole>", is absent.
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>(It.IsAny<string>(), null, null))
+            .ReturnsAsync((bool?)null);
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>(BypassFeatureName, null, null))
+            .ReturnsAsync(true);
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>($"{BypassFeatureName}.Tier.{tier.Value}", null, null))
+            .ReturnsAsync(false);
+    }
+
+    /// <summary>
+    /// #3873 DoD 5 — superadmin as the subject. The guard at FeatureFlagService.cs:145 is
+    /// <c>Role.IsAdmin()</c>, an exact string match on "admin", so superadmin — which outranks
+    /// admin everywhere else per <c>Role.HasPermission</c> — is currently denied the bypass.
+    /// </summary>
+    [Fact]
+    public async Task CanAccessFeatureAsync_SuperAdminBypassesTierRestrictions_ReturnsTrue()
+    {
+        // Arrange
+        var tier = UserTier.Free;
+        ArrangeGlobalEnabledButTierDenied(tier);
+        var superAdmin = new UserBuilder().AsSuperAdmin().WithTier(tier).Build();
+
+        // Act
+        var canAccess = await _service.CanAccessFeatureAsync(superAdmin, BypassFeatureName);
+
+        // Assert
+        canAccess.Should().BeTrue(
+            "superadmin outranks admin in Role.HasPermission, so it must bypass tier restrictions too");
+
+        // The bypass returns before touching configuration: proves it is the bypass, not the tier gate.
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>(It.IsAny<string>(), null, null),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// The direction that already works today and must keep working after the fix.
+    /// </summary>
+    [Fact]
+    public async Task CanAccessFeatureAsync_AdminBypassesTierRestrictions_ReturnsTrue()
+    {
+        // Arrange
+        var tier = UserTier.Free;
+        ArrangeGlobalEnabledButTierDenied(tier);
+        var admin = new UserBuilder().AsAdmin().WithTier(tier).Build();
+
+        // Act
+        var canAccess = await _service.CanAccessFeatureAsync(admin, BypassFeatureName);
+
+        // Assert
+        canAccess.Should().BeTrue("admin bypasses tier restrictions");
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>(It.IsAny<string>(), null, null),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Anti-widening net: widening <c>IsAdmin()</c> to cover superadmin must not turn the bypass
+    /// into a general privilege. Only <c>HasPermission(Role.Admin)</c> = {admin, superadmin} may pass.
+    /// </summary>
+    [Theory]
+    [InlineData("editor")]
+    [InlineData("creator")]
+    [InlineData("user")]
+    public async Task CanAccessFeatureAsync_UnprivilegedRole_DoesNotBypassTierRestrictions_ReturnsFalse(string roleValue)
+    {
+        // Arrange
+        var tier = UserTier.Free;
+        ArrangeGlobalEnabledButTierDenied(tier);
+        var user = new UserBuilder().WithRole(AuthRole.Parse(roleValue)).WithTier(tier).Build();
+
+        // Act
+        var canAccess = await _service.CanAccessFeatureAsync(user, BypassFeatureName);
+
+        // Assert
+        canAccess.Should().BeFalse(
+            "only admin and superadmin may bypass the tier gate, so {0} must be stopped by it", roleValue);
+
+        // The tier gate was actually reached — i.e. no early return happened.
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{BypassFeatureName}.Tier.{tier.Value}", null, null),
+            Times.Once);
+    }
+
+    #endregion
+
+    #region #3873 — MapRoleToUserRole: creator must read the creator key, not the user key
+
+    private const string MappedFeatureName = "Features.Toolkit";
+
+    /// <summary>
+    /// Arranges the discriminating mock shape for the role-mapping tests. <c>MapRoleToUserRole</c>
+    /// is private and its result is only ever used as a <b>config-key fragment</b> in
+    /// <c>IsEnabledAsync</c> (<c>$"{featureName}.{role}"</c>), so it is observed here through the
+    /// key that gets looked up: the ".Creator" key answers <c>true</c> and the ".User" key answers
+    /// <c>false</c>. Whichever value the mapping produced decides the outcome, and the two are
+    /// opposite — an outcome of <c>true</c> can only mean ".Creator" was consulted. The tier gate
+    /// downstream is opened explicitly so it cannot mask the role verdict.
+    /// </summary>
+    private void ArrangeCreatorKeyTrueUserKeyFalse(UserTier tier)
+    {
+        // Catch-all first (Moq: later setups win on overlap).
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>(It.IsAny<string>(), null, null))
+            .ReturnsAsync((bool?)null);
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.Creator}", null, null))
+            .ReturnsAsync(true);
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.User}", null, null))
+            .ReturnsAsync(false);
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>($"{MappedFeatureName}.Tier.{tier.Value}", null, null))
+            .ReturnsAsync(true);
+    }
+
+    /// <summary>
+    /// #3873 — creator is the <b>only</b> role on which the mapping fix is observable through
+    /// <c>CanAccessFeatureAsync</c>: admin and superadmin are intercepted by the privileged
+    /// bypass at the top of the method, before the mapping runs, and editor and user were already
+    /// mapped correctly. Before the fix creator fell into the <c>UserRole.User</c> fallback, so a
+    /// creator-scoped flag was unreachable and the user-scoped flag governed creators instead.
+    /// </summary>
+    [Fact]
+    public async Task CanAccessFeatureAsync_Creator_ConsultsTheCreatorRoleKey_NotTheUserRoleKey()
+    {
+        // Arrange
+        var tier = UserTier.Free;
+        ArrangeCreatorKeyTrueUserKeyFalse(tier);
+        var creator = new UserBuilder().AsCreator().WithTier(tier).Build();
+
+        // Act
+        var canAccess = await _service.CanAccessFeatureAsync(creator, MappedFeatureName);
+
+        // Assert
+        canAccess.Should().BeTrue(
+            "a creator must be governed by the '.Creator' flag, which is enabled, not by the " +
+            "'.User' flag, which is disabled");
+
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.Creator}", null, null),
+            Times.Once);
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.User}", null, null),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Non-regression net for the same mock shape: adding the Creator branch must not divert a
+    /// plain user onto it. This direction already held before the fix and must keep holding.
+    /// </summary>
+    [Fact]
+    public async Task CanAccessFeatureAsync_PlainUser_StillConsultsTheUserRoleKey()
+    {
+        // Arrange
+        var tier = UserTier.Free;
+        ArrangeCreatorKeyTrueUserKeyFalse(tier);
+        var plainUser = new UserBuilder().WithRole(AuthRole.User).WithTier(tier).Build();
+
+        // Act
+        var canAccess = await _service.CanAccessFeatureAsync(plainUser, MappedFeatureName);
+
+        // Assert
+        canAccess.Should().BeFalse("the '.User' flag is disabled and governs a plain user");
+
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.User}", null, null),
+            Times.Once);
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.Creator}", null, null),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// Non-regression net: editor was already mapped correctly and must stay on its own key.
+    /// </summary>
+    [Fact]
+    public async Task CanAccessFeatureAsync_Editor_ConsultsTheEditorRoleKey()
+    {
+        // Arrange
+        var tier = UserTier.Free;
+        ArrangeCreatorKeyTrueUserKeyFalse(tier);
+        _mockConfigService.Setup(c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.Editor}", null, null))
+            .ReturnsAsync(true);
+        var editor = new UserBuilder().AsEditor().WithTier(tier).Build();
+
+        // Act
+        var canAccess = await _service.CanAccessFeatureAsync(editor, MappedFeatureName);
+
+        // Assert
+        canAccess.Should().BeTrue("the '.Editor' flag is enabled and governs an editor");
+
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.Editor}", null, null),
+            Times.Once);
+        _mockConfigService.Verify(
+            c => c.GetValueAsync<bool?>($"{MappedFeatureName}.{UserRole.User}", null, null),
+            Times.Never);
     }
 
     #endregion

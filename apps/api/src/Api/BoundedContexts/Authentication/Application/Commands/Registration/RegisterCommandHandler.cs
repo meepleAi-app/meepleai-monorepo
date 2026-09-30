@@ -97,7 +97,7 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
         if (!string.IsNullOrWhiteSpace(command.Role))
         {
             var requested = Role.Parse(command.Role);
-            if (requested.IsAdmin() || requested.IsEditor())
+            if (!requested.IsUser())
             {
                 throw new DomainException("Only administrators can assign elevated roles");
             }

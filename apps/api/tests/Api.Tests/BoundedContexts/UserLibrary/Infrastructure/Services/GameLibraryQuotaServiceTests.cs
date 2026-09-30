@@ -77,6 +77,48 @@ public class GameLibraryQuotaServiceTests
             Times.Never);
     }
 
+    /// <summary>
+    /// Issue #3873 — DoD 5. Tabella dell'esenzione da quota sui CINQUE ruoli.
+    /// L'esenzione deve coincidere con <c>HasPermission(Role.Editor)</c> = {editor, admin, superadmin};
+    /// <c>creator</c> e <c>user</c> restano soggetti alla quota di tier.
+    /// La libreria e' esattamente AL limite free (5): un ruolo esente passa comunque,
+    /// un ruolo soggetto a quota viene negato — cosi' il caso non-bypass non puo' passare per caso.
+    /// </summary>
+    [Theory]
+    [InlineData("superadmin", true, int.MaxValue, 0)]
+    [InlineData("admin", true, int.MaxValue, 0)]
+    [InlineData("editor", true, int.MaxValue, 0)]
+    [InlineData("creator", false, 5, 5)]
+    [InlineData("user", false, 5, 5)]
+    public async Task CheckQuotaAsync_AllFiveRoles_ExemptsOnlyEditorAdminSuperAdmin(
+        string roleValue, bool expectedIsAllowed, int expectedMaxAllowed, int expectedCurrentCount)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.Parse(roleValue);
+
+        // I ruoli soggetti a quota percorrono repository + config: senza questi setup
+        // fallirebbero per la ragione sbagliata (conteggio 0 di default).
+        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(5); // esattamente al limite free
+
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
+            .ReturnsAsync((int?)null); // usa i default (free = 5)
+
+        // Act
+        var result = await _service.CheckQuotaAsync(userId, userTier, userRole);
+
+        // Assert
+        result.IsAllowed.Should().Be(
+            expectedIsAllowed,
+            "il ruolo '{0}' {1} essere esente dalla quota (HasPermission(Role.Editor))",
+            roleValue,
+            expectedIsAllowed ? "deve" : "NON deve");
+        result.MaxAllowed.Should().Be(expectedMaxAllowed);
+        result.CurrentCount.Should().Be(expectedCurrentCount);
+    }
+
     #endregion
 
     #region CheckQuotaAsync - Tier Limit Tests
@@ -290,6 +332,47 @@ public class GameLibraryQuotaServiceTests
         info.IsUnlimited.Should().BeTrue();
         info.GamesInLibrary.Should().Be(actualCount);
         info.MaxGames.Should().Be(int.MaxValue);
+    }
+
+    /// <summary>
+    /// Issue #3873 — DoD 5. Stessa tabella di <see cref="CheckQuotaAsync_AllFiveRoles_ExemptsOnlyEditorAdminSuperAdmin"/>
+    /// applicata a <c>GetQuotaInfoAsync</c>: l'esenzione vive in una seconda guardia (riga 86) che
+    /// va fissata separatamente. Tier free (limite 5), libreria a 3.
+    /// </summary>
+    [Theory]
+    [InlineData("superadmin", true, int.MaxValue, int.MaxValue)]
+    [InlineData("admin", true, int.MaxValue, int.MaxValue)]
+    [InlineData("editor", true, int.MaxValue, int.MaxValue)]
+    [InlineData("creator", false, 5, 2)]
+    [InlineData("user", false, 5, 2)]
+    public async Task GetQuotaInfoAsync_AllFiveRoles_ExemptsOnlyEditorAdminSuperAdmin(
+        string roleValue, bool expectedIsUnlimited, int expectedMaxGames, int expectedRemainingSlots)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userTier = UserTier.Free;
+        var userRole = AuthRole.Parse(roleValue);
+        const int actualCount = 3;
+
+        // Entrambi i rami leggono il conteggio reale; solo il ramo non-esente legge la config.
+        _libraryRepositoryMock.Setup(r => r.GetUserLibraryCountAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(actualCount);
+
+        _configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>(), null, null))
+            .ReturnsAsync((int?)null); // usa i default (free = 5)
+
+        // Act
+        var info = await _service.GetQuotaInfoAsync(userId, userTier, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().Be(
+            expectedIsUnlimited,
+            "il ruolo '{0}' {1} avere quota illimitata (HasPermission(Role.Editor))",
+            roleValue,
+            expectedIsUnlimited ? "deve" : "NON deve");
+        info.MaxGames.Should().Be(expectedMaxGames);
+        info.RemainingSlots.Should().Be(expectedRemainingSlots);
+        info.GamesInLibrary.Should().Be(actualCount, "il conteggio reale e' restituito in entrambi i rami");
     }
 
     #endregion

@@ -101,6 +101,24 @@ internal class UserBuilder
     }
 
     /// <summary>
+    /// Sets the user as creator (Epic #4068).
+    /// </summary>
+    public UserBuilder AsCreator()
+    {
+        _role = Role.Creator;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the user as superadmin (issue #3873: the role every exact-match guard forgets).
+    /// </summary>
+    public UserBuilder AsSuperAdmin()
+    {
+        _role = Role.SuperAdmin;
+        return this;
+    }
+
+    /// <summary>
     /// Sets the user tier.
     /// </summary>
     public UserBuilder WithTier(UserTier tier)

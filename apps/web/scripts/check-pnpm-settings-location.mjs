@@ -41,6 +41,13 @@ import { dirname, join } from 'node:path';
  * `nome: valore` rientrate di due spazi, nome eventualmente fra apici singoli
  * (obbligatori per le chiavi che iniziano con `@`).
  *
+ * Le righe di commento vengono saltate. pnpm-workspace.yaml e' scritto a mano ed
+ * e' l'unico posto dove un pin di sicurezza porta la sua motivazione: senza
+ * questo, un commento dentro il blocco veniva letto come una chiave e il gate
+ * falliva mandando a `pnpm install --lockfile-only`, che non avrebbe risolto
+ * nulla. Un pin senza il perche' e' quello che invecchia in silenzio, quindi il
+ * commento deve poter stare li'.
+ *
  * Volutamente senza dipendenze: apps/web non ha un parser YAML e questo gate
  * deve poter girare prima di qualunque install.
  *
@@ -56,6 +63,7 @@ export function parseOverrides(text) {
   const out = {};
   for (const line of lines.slice(start + 1)) {
     if (line.trim() === '') continue;
+    if (line.trim().startsWith('#')) continue;
     if (!line.startsWith('  ')) break;
     const m = /^ {2}(?:'([^']*)'|([^:]+)):\s*(.*)$/.exec(line);
     if (!m) continue;

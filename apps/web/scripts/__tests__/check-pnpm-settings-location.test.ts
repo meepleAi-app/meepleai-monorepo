@@ -104,6 +104,26 @@ describe('parseOverrides', () => {
     ]);
   });
 
+  it('salta i commenti dentro il blocco', () => {
+    // Regressione: il parser leggeva la riga di commento come una chiave, e il gate
+    // falliva con «mancanti nel lockfile: # ...» mandando a rigenerare il lockfile —
+    // che non avrebbe risolto nulla. pnpm-workspace.yaml e' l'unico posto dove un pin
+    // di sicurezza porta la sua motivazione, quindi il commento deve poter stare li'.
+    const conCommenti = [
+      'overrides:',
+      '  # Alzato per GHSA-xxxx: la 0.35.3 era gia dentro il range precedente.',
+      "  sharp: '>=0.35.4'",
+      '  # altra nota',
+      "  axios: '>=1.18.0'",
+      '',
+    ].join('\n');
+
+    expect(parseOverrides(conCommenti)).toEqual({
+      sharp: '>=0.35.4',
+      axios: '>=1.18.0',
+    });
+  });
+
   it('restituisce null quando la sezione non esiste', () => {
     expect(parseOverrides(LOCK_YAML_SENZA_OVERRIDES)).toBeNull();
     expect(parseOverrides(null)).toBeNull();

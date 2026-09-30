@@ -31,6 +31,8 @@
  * .NET OtpNet backend (`new Totp(Base32Encoding.ToBytes(secret)).ComputeTotp()`).
  */
 
+import { seedAuthSession } from '../_helpers/seedAuthSession';
+import { seedCookieConsent } from '../_helpers/seedCookieConsent';
 import { test, expect } from '../fixtures';
 import { mintTotp } from '../fixtures/totp';
 
@@ -63,8 +65,18 @@ const STATIC_SECRET = 'JBSWY3DPEHPK3PXP';
  * dedicated handlers — so the full request chain through the FE component fires.
  */
 async function setupSecuritySectionMocks(page: Page): Promise<void> {
+  // Cookies FIRST: `/settings` is in PROTECTED_ROUTES, so without a session cookie
+  // proxy.ts answers every navigation below with a 307 to /login and the assertions
+  // would measure the login page instead (#633). The `PLAYWRIGHT_AUTH_BYPASS` flag does
+  // not help on its own: `proxy.ts` still requires the cookie to be present.
+  await seedAuthSession(page);
+  // Il banner del consenso cookie e' un `role="dialog"`: senza seminare il consenso,
+  // `getByRole('dialog')` lo cattura al posto del wizard 2FA e l'asserzione di chiusura
+  // non puo' mai riuscire.
+  await seedCookieConsent(page);
+
   // Catch-all FIRST (lowest specificity — more specific routes override it)
-  await page.route(`${API_BASE}/api/**`, async route => {
+  await page.route(/\/api\/.*/, async route => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
@@ -80,7 +92,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // Authenticated identity
-  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+  await page.route(/\/api\/v1\/auth\/me(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -97,7 +109,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // 2FA status — disabled at start
-  await page.route(`${API_BASE}/api/v1/users/me/2fa/status`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/2fa\/status(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -106,7 +118,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // 2FA setup → return known static secret so mintTotp() produces the right code
-  await page.route(`${API_BASE}/api/v1/auth/2fa/setup`, async route => {
+  await page.route(/\/api\/v1\/auth\/2fa\/setup(\?.*)?$/, async route => {
     if (route.request().method() !== 'POST') {
       await route.continue();
       return;
@@ -136,7 +148,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // 2FA enable → accept any 6-digit code (real pipeline: code is submitted by the UI wizard)
-  await page.route(`${API_BASE}/api/v1/auth/2fa/enable`, async route => {
+  await page.route(/\/api\/v1\/auth\/2fa\/enable(\?.*)?$/, async route => {
     if (route.request().method() !== 'POST') {
       await route.continue();
       return;
@@ -173,7 +185,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   });
 
   // Active sessions (needed by ActiveSessionsCard)
-  await page.route(`${API_BASE}/api/v1/auth/sessions`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/sessions(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -194,7 +206,7 @@ async function setupSecuritySectionMocks(page: Page): Promise<void> {
   // Library stats — no test lands on /profile any more (#3938), but the catch-all answers
   // every GET with `[]`, which is the wrong shape for this endpoint. Kept so a stray call
   // from the authenticated shell cannot fail a schema parse.
-  await page.route(`${API_BASE}/api/v1/users/me/library/stats`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/library\/stats(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

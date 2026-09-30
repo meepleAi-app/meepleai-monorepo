@@ -57,6 +57,7 @@
  *    are verified by a single navigation instead of two.
  */
 
+import { seedAuthSession } from '../_helpers/seedAuthSession';
 import { test, expect } from '../fixtures';
 
 import type { Page } from '@playwright/test';
@@ -105,6 +106,12 @@ async function setupSettingsMocks(
   getDisplayName: () => string;
   updateUser: (updates: Partial<MockUserProfile>) => void;
 }> {
+  // Cookies FIRST: `/settings` e `/profile` sono in PROTECTED_ROUTES, quindi senza cookie
+  // di sessione proxy.ts risponde a ogni navigazione qui sotto con un 307 verso /login, e
+  // le asserzioni misurerebbero la pagina di login (#633). `PLAYWRIGHT_AUTH_BYPASS` da solo
+  // non basta: proxy.ts richiede comunque che il cookie sia presente.
+  await seedAuthSession(page);
+
   const user: MockUserProfile = {
     id: 'test-user-id',
     email: initialUser.email ?? 'test@meepleai.dev',
@@ -118,7 +125,7 @@ async function setupSettingsMocks(
   };
 
   // Catch-all — prevents unmocked calls from reaching real backends in CI
-  await page.route(`${API_BASE}/api/**`, async route => {
+  await page.route(/\/api\/.*/, async route => {
     const method = route.request().method();
     if (method === 'GET') {
       await route.fulfill({
@@ -144,7 +151,7 @@ async function setupSettingsMocks(
   });
 
   // Auth identity
-  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+  await page.route(/\/api\/v1\/auth\/me(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -156,12 +163,20 @@ async function setupSettingsMocks(
   });
 
   // Profile GET + PUT/PATCH
-  await page.route(`${API_BASE}/api/v1/auth/profile`, async route => {
+  await page.route(/\/api\/v1\/users\/profile(\?.*)?$/, async route => {
     const method = route.request().method();
     if (method === 'PUT' || method === 'PATCH') {
       const body = await route.request().postDataJSON();
+      // profilo e preferenze vivono sulla stessa risorsa: un secondo handler sullo stesso
+      // pattern non servirebbe a nulla, perche' Playwright consulta le route in ordine
+      // inverso di registrazione e solo l'ultima registrata risponderebbe.
       if (body.displayName !== undefined) user.displayName = body.displayName;
       if (body.email !== undefined) user.email = body.email;
+      if (body.theme !== undefined) user.theme = body.theme;
+      if (body.language !== undefined) user.language = body.language;
+      if (typeof body.emailNotifications === 'boolean')
+        user.emailNotifications = body.emailNotifications;
+      // UpdateProfileResponseSchema pretende { ok, message }
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -176,8 +191,27 @@ async function setupSettingsMocks(
     }
   });
 
-  // Preferences GET + PUT/PATCH
-  await page.route(`${API_BASE}/api/v1/auth/preferences`, async route => {
+  // UserProfileSchema: id uuid, createdAt datetime, piu' i campi preferenze inclusi nel
+  // profilo dal #1675. Un solo posto da cui costruirlo, cosi' GET e PUT non divergono.
+  const profileBody = () => ({
+    id: '99999999-9999-4999-8999-999999999999',
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role,
+    createdAt: user.createdAt,
+    isTwoFactorEnabled: false,
+    twoFactorEnabledAt: null,
+    language: user.language,
+    theme: user.theme,
+    emailNotifications: user.emailNotifications,
+    dataRetentionDays: 365,
+    avatarUrl: user.avatarUrl,
+  });
+
+  // Preferenze utente: endpoint PROPRIO, `/api/v1/users/preferences`, distinto da
+  // `/users/profile`. Accorparli lascia la PUT senza handler e la sezione mostra
+  // «Response validation failed for /api/v1/users/preferences».
+  await page.route(/\/api\/v1\/users\/preferences(\?.*)?$/, async route => {
     const method = route.request().method();
     if (method === 'PUT' || method === 'PATCH') {
       const body = await route.request().postDataJSON();
@@ -185,12 +219,15 @@ async function setupSettingsMocks(
       if (body.language !== undefined) user.language = body.language;
       if (typeof body.emailNotifications === 'boolean')
         user.emailNotifications = body.emailNotifications;
+      // `updatePreferences` valida la risposta con UserProfileSchema, non con {ok,message}:
+      // la PUT deve restituire il profilo intero.
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ message: 'Preferences saved successfully' }),
+        body: JSON.stringify(profileBody()),
       });
     } else {
+      // la GET usa invece UserPreferencesSchema, che pretende anche dataRetentionDays
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -198,6 +235,7 @@ async function setupSettingsMocks(
           theme: user.theme,
           language: user.language,
           emailNotifications: user.emailNotifications,
+          dataRetentionDays: 365,
         }),
       });
     }
@@ -208,7 +246,7 @@ async function setupSettingsMocks(
   // `[]`, which fails `NotificationPreferencesSchema` and drops the panel into its
   // error state, so this route is load-bearing. `userId` MUST be a UUID for the
   // same reason (`z.string().uuid()`), which is why it is not `user.id`.
-  await page.route(`${API_BASE}/api/v1/notifications/preferences`, async route => {
+  await page.route(/\/api\/v1\/notifications\/preferences(\?.*)?$/, async route => {
     if (route.request().method() !== 'GET') {
       await route.fulfill({
         status: 200,
@@ -237,7 +275,7 @@ async function setupSettingsMocks(
   });
 
   // 2FA status
-  await page.route(`${API_BASE}/api/v1/users/me/2fa/status`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/2fa\/status(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -246,7 +284,7 @@ async function setupSettingsMocks(
   });
 
   // 2FA setup / confirm / disable (keep for SecuritySection flows)
-  await page.route(`${API_BASE}/api/v1/users/me/2fa/setup`, async route => {
+  await page.route(/\/api\/v1\/auth\/2fa\/setup(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -259,13 +297,16 @@ async function setupSettingsMocks(
   });
 
   // Active sessions
-  await page.route(`${API_BASE}/api/v1/auth/sessions`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/sessions(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify([
         {
-          id: 'session-1',
+          // UserSessionInfoSchema: id e userId sono uuid, userEmail e' obbligatoria
+          id: '11111111-1111-4111-8111-111111111111',
+          userId: '99999999-9999-4999-8999-999999999999',
+          userEmail: 'test@meepleai.dev',
           userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120',
           ipAddress: '127.0.0.1',
           createdAt: new Date().toISOString(),
@@ -274,7 +315,9 @@ async function setupSettingsMocks(
           revokedAt: null,
         },
         {
-          id: 'session-2',
+          id: '22222222-2222-4222-8222-222222222222',
+          userId: '99999999-9999-4999-8999-999999999999',
+          userEmail: 'test@meepleai.dev',
           userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) Safari/604',
           ipAddress: '192.168.1.50',
           createdAt: new Date(Date.now() - 3_600_000).toISOString(),
@@ -287,7 +330,7 @@ async function setupSettingsMocks(
   });
 
   // Revoke single session + revoke-all
-  await page.route(`${API_BASE}/api/v1/auth/sessions/**`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/sessions\/.*/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -296,30 +339,38 @@ async function setupSettingsMocks(
   });
 
   // API keys list
-  await page.route(`${API_BASE}/api/v1/auth/api-keys`, async route => {
+  await page.route(/\/api\/v1\/api-keys(\?.*)?$/, async route => {
     const method = route.request().method();
     if (method === 'POST') {
       await route.fulfill({
         status: 201,
         contentType: 'application/json',
+        // CreateApiKeyResponseSchema: id uuid, piu' scopes/createdAt/expiresAt obbligatori
         body: JSON.stringify({
-          id: 'key-1',
+          id: '33333333-3333-4333-8333-333333333333',
           keyName: 'Test Key',
           keyPrefix: 'mk_test',
           plaintextKey: 'mk_test_abc123secret',
+          scopes: 'read',
+          createdAt: new Date().toISOString(),
+          expiresAt: null,
         }),
       });
     } else {
+      // ListApiKeysResponseSchema pretende items + total + page + pageSize: con il solo
+      // `items` la validazione fallisce, la query va in errore e la sezione rende
+      // «Failed to load API keys» invece del form. Un mock che non rispetta lo schema
+      // non e' un mock: e' un 200 che il client rifiuta.
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ items: [] }),
+        body: JSON.stringify({ items: [], total: 0, page: 1, pageSize: 20 }),
       });
     }
   });
 
   // AI consent
-  await page.route(`${API_BASE}/api/v1/users/me/ai-consent`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/ai-consent(\?.*)?$/, async route => {
     const method = route.request().method();
     if (method === 'PUT') {
       await route.fulfill({
@@ -343,7 +394,7 @@ async function setupSettingsMocks(
   });
 
   // Library stats (needed by OverviewTab)
-  await page.route(`${API_BASE}/api/v1/users/me/library/stats`, async route => {
+  await page.route(/\/api\/v1\/users\/me\/library\/stats(\?.*)?$/, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -464,9 +515,13 @@ test.describe('Settings - Update Profile', () => {
 
     await page.getByTestId('save-profile-button').click();
 
-    // Feedback alert — success
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('alert')).toContainText(/profile updated|updated|saved/i);
+    // Feedback alert — success. Il filtro sul testo esclude `__next-route-announcer__`,
+    // che Next monta VUOTO con `role="alert"` su ogni pagina: senza, `getByRole('alert')`
+    // risolve a due elementi e strict mode fallisce prima di guardare il contenuto.
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      /profile updated|updated|saved/i
+    );
   });
 
   test('should show email input as editable (not disabled)', async ({ page }) => {
@@ -515,8 +570,10 @@ test.describe('Settings - Preferences', () => {
 
     await page.getByTestId('save-preferences-button').click();
 
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByRole('alert')).toContainText(/preferences updated|saved|success/i);
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toContainText(
+      /preferences updated|saved|success/i
+    );
   });
 
   test('should change language preference and save', async ({ page }) => {
@@ -528,7 +585,7 @@ test.describe('Settings - Preferences', () => {
 
     await page.getByTestId('save-preferences-button').click();
 
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible({ timeout: 5000 });
   });
 
   test('should toggle email notifications and save', async ({ page }) => {
@@ -541,7 +598,7 @@ test.describe('Settings - Preferences', () => {
 
     await page.getByTestId('save-preferences-button').click();
 
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -706,7 +763,7 @@ test.describe('Settings - Error Handling', () => {
     // Belt and braces: the edge guard fires first (`/settings` is in
     // PROTECTED_ROUTES and no session cookie is present), but if it ever let the
     // request through, the client would see this 401 and bounce to /login too.
-    await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
+    await page.route(/\/api\/v1\/auth\/me(\?.*)?$/, async route => {
       await route.fulfill({
         status: 401,
         contentType: 'application/json',
@@ -728,7 +785,7 @@ test.describe('Settings - Error Handling', () => {
     await setupSettingsMocks(page);
 
     // Override profile PUT to return 500
-    await page.route(`${API_BASE}/api/v1/auth/profile`, async route => {
+    await page.route(/\/api\/v1\/users\/profile(\?.*)?$/, async route => {
       if (['PUT', 'PATCH'].includes(route.request().method())) {
         await route.fulfill({
           status: 500,
@@ -756,6 +813,6 @@ test.describe('Settings - Error Handling', () => {
     await page.getByTestId('save-profile-button').click();
 
     // Should show error feedback
-    await expect(page.getByRole('alert')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('alert').filter({ hasText: /\S/ })).toBeVisible({ timeout: 5000 });
   });
 });

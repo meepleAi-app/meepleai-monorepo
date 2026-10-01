@@ -72,7 +72,7 @@ public class RoleTests
         var role = Role.Parse(roleValue);
 
         // Act & Assert
-        role.IsAdmin().Should().Be(expectedIsAdmin);
+        role.IsExactlyAdmin().Should().Be(expectedIsAdmin);
         role.IsEditor().Should().Be(expectedIsEditor);
         role.IsUser().Should().Be(expectedIsUser);
     }

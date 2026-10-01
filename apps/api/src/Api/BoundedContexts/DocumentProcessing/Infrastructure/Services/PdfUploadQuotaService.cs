@@ -60,7 +60,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         CancellationToken cancellationToken = default)
     {
         // SuperAdmin, Admin and Editor bypass quota checks (unlimited)
-        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
+        if (userRole.IsSuperAdmin() || userRole.IsExactlyAdmin() || userRole.IsEditor())
         {
             return PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue);
         }
@@ -344,7 +344,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
     {
         ArgumentNullException.ThrowIfNull(userTier);
         // SuperAdmin, Admin and Editor have unlimited quota
-        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
+        if (userRole.IsSuperAdmin() || userRole.IsExactlyAdmin() || userRole.IsEditor())
         {
             return new PdfUploadQuotaInfo
             {
@@ -514,7 +514,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         CancellationToken cancellationToken = default)
     {
         // SuperAdmin, Admin and Editor bypass quota checks (unlimited)
-        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
+        if (userRole.IsSuperAdmin() || userRole.IsExactlyAdmin() || userRole.IsEditor())
         {
             return PerGameQuotaResult.Unlimited();
         }
@@ -604,7 +604,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         CancellationToken cancellationToken = default)
     {
         // SuperAdmin, Admin and Editor have unlimited quota
-        if (userRole.IsSuperAdmin() || userRole.IsAdmin() || userRole.IsEditor())
+        if (userRole.IsSuperAdmin() || userRole.IsExactlyAdmin() || userRole.IsEditor())
         {
             return new PerGameQuotaInfo
             {

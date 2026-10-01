@@ -194,7 +194,7 @@ internal class FeatureFlagService : IFeatureFlagService
     private static UserRole MapRoleToUserRole(Role role)
     {
         if (role.IsSuperAdmin()) return UserRole.SuperAdmin;
-        if (role.IsAdmin()) return UserRole.Admin;
+        if (role.IsExactlyAdmin()) return UserRole.Admin;
         if (role.IsEditor()) return UserRole.Editor;
         if (role.IsCreator()) return UserRole.Creator;
         return UserRole.User;

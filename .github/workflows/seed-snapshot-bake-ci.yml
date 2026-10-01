@@ -34,6 +34,12 @@ on:
       - 'infra/scripts/wait-for-healthy.sh'
       - 'infra/docker-compose.yml'
       - 'infra/compose.dev.yml'
+      # #3998: il bake fonde TRE compose, e l'override e' suo — un cambio qui cambia
+      # cosa il bake avvia e non accendeva niente.
+      - 'infra/compose.bake.yml'
+      # #3998: i template dei secret decidono cosa arriva al container, perche'
+      # `make secrets-setup` li copia verbatim e compose li carica via env_file.
+      - 'infra/secrets/*.secret.example'
       - 'infra/seed-schema.version'
       - '.github/workflows/seed-snapshot-bake-ci.yml'
   pull_request:
@@ -45,6 +51,12 @@ on:
       - 'infra/scripts/wait-for-healthy.sh'
       - 'infra/docker-compose.yml'
       - 'infra/compose.dev.yml'
+      # #3998: il bake fonde TRE compose, e l'override e' suo — un cambio qui cambia
+      # cosa il bake avvia e non accendeva niente.
+      - 'infra/compose.bake.yml'
+      # #3998: i template dei secret decidono cosa arriva al container, perche'
+      # `make secrets-setup` li copia verbatim e compose li carica via env_file.
+      - 'infra/secrets/*.secret.example'
       - 'infra/seed-schema.version'
       - '.github/workflows/seed-snapshot-bake-ci.yml'
   workflow_dispatch:

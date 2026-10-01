@@ -92,7 +92,18 @@ while :; do
     case "$state" in
         running)
             if [ "$health" = "healthy" ]; then
-                echo "[wait-for-healthy] $CONTAINER: healthy" >&2
+                # #3998 — la misura si stampa anche quando va bene.
+                #
+                # La DoD chiedeva timeout «tarati su una misura dichiarata», e la misura esisteva
+                # solo scavando nei log di una run riuscita: `Container … Started` meno
+                # `healthy`, a mano, su un job che il ramo diagnostico non stampa. Emetterla qui
+                # la rende disponibile a ogni giro, e fa tarare da se' anche i contesti che non
+                # ho potuto misurare (il bake full usa 600s e non e' ancora girato sul fix).
+                elapsed=$(( $(date +%s) - start ))
+                echo "[wait-for-healthy] $CONTAINER: healthy in ${elapsed}s (timeout ${TIMEOUT}s)" >&2
+                if [ "$elapsed" -gt 0 ]; then
+                    echo "[wait-for-healthy] margine: $(( TIMEOUT / elapsed ))x — se scende sotto 2x, il timeout va alzato prima che diventi un flaky" >&2
+                fi
                 exit 0
             fi
             if [ "$health" = "none" ]; then

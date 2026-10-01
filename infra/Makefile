@@ -261,6 +261,15 @@ seed-status-badge: ## Regenerate README snapshot-freshness badge between <!-- sn
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
 	$(COMPOSE) -f compose.dev.yml -f compose.bake.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
+# #3998 — 180s non e' scelto a sentimento: e' ~6x il boot sano misurato. Tre bake verdi
+# consecutivi (9a538d99a, fb3b3493b, 3ed916558, 2026-10-01) hanno dato 28,45s / 28,79s / 28,63s
+# dal `Container meepleai-api Started` al primo `healthy` — spread 0,34s, cioe' 1,2%.
+#
+# Il margine resta largo di proposito e NON va stretto sul misurato: i tempi su GitHub Actions
+# oscillano molto (nello stesso repo `actions/checkout` e' stato visto fra 29s e 9m39s), e un
+# timeout tarato sul caso tipico diventa un flaky al primo runner lento. `wait-for-healthy.sh`
+# stampa ora il tempo e il margine a ogni run riuscita, quindi la taratura si ri-misura da se'
+# invece di dipendere da questa riga di commento.
 	@bash scripts/wait-for-healthy.sh api ${SEED_INDEX_HEALTH_TIMEOUT:-180}
 	@bash scripts/seed-index-wait.sh
 	@bash scripts/seed-index-dump.sh

@@ -74,3 +74,16 @@ setup() {
     [ "$status" -eq 0 ]
     [ "$output" = "1" ]
 }
+
+@test "il Makefile e' nei paths del bake (lo esegue: make seed-index)" {
+    # Il commit che ha corretto il `$` non raddoppiato non accendeva il bake, perche'
+    # infra/Makefile non era fra i trigger — benche' il job esegua `make seed-index`, cioe'
+    # benche' quel file decida cosa il bake fa. Stessa famiglia del buco su compose.bake.yml.
+    wf="$BATS_TEST_DIRNAME/../../../.github/workflows/seed-snapshot-bake-ci.yml"
+    [ -f "$wf" ]
+
+    run grep -c "^      - 'infra/Makefile'$" "$wf"
+    [ "$status" -eq 0 ]
+    # Due blocchi: push e pull_request. Se diventa 1, i due trigger sono divergiati.
+    [ "$output" = "2" ]
+}

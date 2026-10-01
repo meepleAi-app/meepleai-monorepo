@@ -51,9 +51,14 @@ diagnose() {
             echo "  -- $(basename "$report")" >&2
             # jq c'e' sui runner GitHub; in locale puo' mancare, e allora si stampa il json
             # grezzo invece di non stampare niente.
+            #
+            # L'ordine delle due redirezioni e' load-bearing: `2>/dev/null >&2` manda a
+            # /dev/null anche **stdout**, perche' `>&2` duplica il fd 2 corrente, che la
+            # prima redirezione ha gia' puntato a /dev/null. E' il difetto che ha fatto
+            # comparire `crash.1.dmp.crashreport.json` nell'elenco senza il suo contenuto.
             jq -r '.payload.threads[]? | "  thread \(.native_thread_id // "?"):",
                    (.stack_frames[]? | "    \(.module_name // "?")!\(.method_name // "?")")' \
-                "$report" 2>/dev/null >&2 || cat "$report" >&2
+                "$report" >&2 2>/dev/null || cat "$report" >&2
         done
         if [ "$found" = 0 ]; then
             echo "  (nessun crash report: il processo non e' stato terminato da un segnale," >&2

@@ -242,13 +242,57 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                         _logger.LogInformation(
                             "[AskQuestionHandler] Cache hit for game {GameId} — serving cached response",
                             query.GameId);
+                        // #3855 ha reso `PageNumber` e `DocumentId` nullable in
+                        // `CachedCitation` perche' «un'assenza dichiarata e' onesta, mentre un
+                        // numero inventato e' una fonte falsa che il frontend tratta come
+                        // coordinata navigabile» — ma `CitationDto.DocumentId` e' rimasto
+                        // `string`, e il percorso di cache-hit non compilava in Release (CS8604).
+                        //
+                        // Le due uscite erano reintrodurre la stringa vuota che #3855 ha appena
+                        // rimosso, o omettere la citazione. Si omette: il frontend dichiara
+                        // `documentId: string` (`apps/web/src/types/domain.ts`) e lo usa come
+                        // coordinata navigabile, quindi una citazione senza documento non e'
+                        // mostrabile comunque. Dichiarare l'assenza a livello di lista e' lo
+                        // stesso principio che #3855 applica a livello di campo.
+                        //
+                        // Condizione transitoria: solo le voci scritte prima di #3855 portano un
+                        // DocumentId nullo, e la cache ha un TTL.
+                        //
+                        // `foreach` invece di `.Where().Select()` perche' il flow analysis del
+                        // compilatore non attraversa due lambda: con LINQ servirebbe un `!`, cioe'
+                        // una promessa al posto di una prova.
+                        var servableCitations = new List<CitationDto>(cached.Citations.Count);
+                        foreach (var citation in cached.Citations)
+                        {
+                            if (string.IsNullOrEmpty(citation.DocumentId))
+                            {
+                                continue;
+                            }
+
+                            servableCitations.Add(new CitationDto(
+                                DocumentId: citation.DocumentId,
+                                PageNumber: citation.PageNumber,
+                                Snippet: citation.Snippet,
+                                RelevanceScore: 0));
+                        }
+
+                        if (servableCitations.Count != cached.Citations.Count)
+                        {
+                            _logger.LogWarning(
+                                "[AskQuestionHandler] {Dropped} citazioni in cache per il gioco {GameId} non hanno DocumentId e non sono servibili (voci anteriori a #3855)",
+                                cached.Citations.Count - servableCitations.Count,
+                                query.GameId);
+                        }
+
                         var cacheMetrics = new RagQueryMetrics(
                             ThreadId: query.ThreadId,
                             GameId: query.GameId,
                             QueryLength: query.Question.Length,
                             ChunksRetrieved: 0,
                             ChunksUsed: 0,
-                            CitationsCount: cached.Citations.Count,
+                            // le citazioni servite, non quelle conservate: se differiscono, la riga
+                            // di warning sopra lo dice.
+                            CitationsCount: servableCitations.Count,
                             Strategy: $"cache|tier:{queryRoutingTier}",
                             ModelUsed: cached.ModelUsed,
                             LatencyMs: (int)(DateTime.UtcNow - startTime).TotalMilliseconds,
@@ -263,17 +307,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                             LlmConfidence: 0,
                             OverallConfidence: 0,
                             IsLowQuality: false,
-                            // #3855: la pagina e il documento vengono dalla voce in cache. Prima
-                            // erano `i + 1` e stringa vuota: un indice posizionale in un campo che
-                            // il frontend usa come coordinata navigabile e' una fonte inventata,
-                            // non un'approssimazione.
-                            Citations: cached.Citations
-                                .Select(c => new CitationDto(
-                                    DocumentId: c.DocumentId,
-                                    PageNumber: c.PageNumber,
-                                    Snippet: c.Snippet,
-                                    RelevanceScore: 0))
-                                .ToList());
+                            Citations: servableCitations);
                     }
                 }
             }

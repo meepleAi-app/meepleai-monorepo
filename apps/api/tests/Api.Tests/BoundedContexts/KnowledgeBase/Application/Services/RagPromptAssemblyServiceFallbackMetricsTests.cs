@@ -32,6 +32,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Area", "Observability")]
+// #3994: nella stessa collection di RagPromptAssemblyServiceRetrievalEmptyMetricsTests.
+// `MeepleAiMetrics.RagRetrievalEmpty` e' un contatore statico globale al processo, e il
+// percorso di retrieval vuoto di questo servizio lo incrementa (RagPromptAssemblyService.cs:341):
+// girando in parallelo, questi test contaminavano l'assertion "non deve incrementare" di T3-AC-2.
+[Collection("RetrievalEmptyMetrics")]
 public class RagPromptAssemblyServiceFallbackMetricsTests
 {
     private const string CounterName = "meepleai.rag.retrieval.fallbacks";

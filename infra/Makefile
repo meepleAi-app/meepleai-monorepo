@@ -261,7 +261,26 @@ seed-status-badge: ## Regenerate README snapshot-freshness badge between <!-- sn
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
 	$(COMPOSE) -f compose.dev.yml -f compose.bake.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
-	@bash scripts/wait-for-healthy.sh api ${SEED_INDEX_HEALTH_TIMEOUT:-180}
+# #3998 — il dollaro va RADDOPPIATO, o la variabile e' inerte.
+#
+# In una ricetta make `$` apre una variabile MAKE: `${SEED_INDEX_HEALTH_TIMEOUT:-180}` fa cercare
+# a make una variabile di nome `SEED_INDEX_HEALTH_TIMEOUT:-180`, che non esiste, e espande a
+# STRINGA VUOTA — anche quando la variabile d'ambiente c'e'. Con `$$` make passa `${...}` alla
+# shell, che applica il default.
+#
+# Conseguenze di quando era a dollaro singolo: `SEED_INDEX_HEALTH_TIMEOUT` non ha mai avuto
+# effetto su questo target, il timeout reale era 120s (il `${2:-120}` dentro lo script, non i 180
+# scritti qui), e il bake full — che imposta `SEED_INDEX_HEALTH_TIMEOUT: '600'` in
+# seed-snapshot-bake-full.yml — girava anche lui a 120s. Trovato dalla riga di misura che
+# `wait-for-healthy.sh` ora stampa a ogni successo: diceva `timeout 120s` dove il commento
+# prometteva 180.
+#
+# 180s e' ~5x il boot sano misurato. Quattro bake verdi del 2026-10-01: 28,45s (9a538d99a),
+# 28,79s (fb3b3493b), 28,63s (3ed916558) e 33s sul giro successivo — cioe' il 18% di varianza
+# fra giri identici, che e' la ragione per NON stringere la soglia sul caso tipico. Nello stesso
+# repo `actions/checkout` e' stato visto fra 29s e 9m39s: un timeout tarato sul misurato diventa
+# un flaky al primo runner lento, e un gate rosso per rumore insegna a ignorare i gate rossi.
+	@bash scripts/wait-for-healthy.sh api $${SEED_INDEX_HEALTH_TIMEOUT:-180}
 	@bash scripts/seed-index-wait.sh
 	@bash scripts/seed-index-dump.sh
 	@echo "::notice:: snapshot pronto in data/snapshots/ — lancia 'make seed-index-publish' per caricarlo"

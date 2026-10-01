@@ -37,6 +37,11 @@ on:
       # #3998: il bake fonde TRE compose, e l'override e' suo — un cambio qui cambia
       # cosa il bake avvia e non accendeva niente.
       - 'infra/compose.bake.yml'
+      # #3998: il job esegue `make seed-index`, quindi il Makefile decide cosa il bake FA —
+      # quali compose fonde, con che timeout attende l'health, in che ordine. Il `$` non
+      # raddoppiato che teneva SEED_INDEX_HEALTH_TIMEOUT inerte stava proprio qui, e il
+      # commit che l'ha corretto non accendeva questo workflow.
+      - 'infra/Makefile'
       # #3998: i template dei secret decidono cosa arriva al container, perche'
       # `make secrets-setup` li copia verbatim e compose li carica via env_file.
       - 'infra/secrets/*.secret.example'
@@ -54,6 +59,11 @@ on:
       # #3998: il bake fonde TRE compose, e l'override e' suo — un cambio qui cambia
       # cosa il bake avvia e non accendeva niente.
       - 'infra/compose.bake.yml'
+      # #3998: il job esegue `make seed-index`, quindi il Makefile decide cosa il bake FA —
+      # quali compose fonde, con che timeout attende l'health, in che ordine. Il `$` non
+      # raddoppiato che teneva SEED_INDEX_HEALTH_TIMEOUT inerte stava proprio qui, e il
+      # commit che l'ha corretto non accendeva questo workflow.
+      - 'infra/Makefile'
       # #3998: i template dei secret decidono cosa arriva al container, perche'
       # `make secrets-setup` li copia verbatim e compose li carica via env_file.
       - 'infra/secrets/*.secret.example'

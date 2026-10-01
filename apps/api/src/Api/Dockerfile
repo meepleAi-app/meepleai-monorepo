@@ -29,6 +29,19 @@ WORKDIR /src
 ENV DOTNET_GCServer=0
 ENV DOTNET_GCConcurrent=1
 
+# #4000: Directory.Build.props va copiato insieme al csproj, non dopo. MSBuild lo cerca
+# risalendo dalla directory del progetto, e nel container il progetto sta in
+# /src/apps/api/src/Api/: senza questa COPY, sopra di lui non c'e' nessun props e il build
+# dell'immagine applica un insieme di regole DIVERSO da quello del locale e della CI — una
+# divergenza che nessuno ha scelto, conseguenza di cosa il contesto contiene.
+#
+# E' cosi' che #3981 e' passata verde in locale e in `Backend Fast` rompendo il solo build
+# dell'immagine, quindi il bake e il deploy, con un CS8604 che da nessun'altra parte era un
+# errore. Prima di aggiungere questa riga le due categorie `CS*` sono state rimosse da
+# `NoWarn` (costo misurato: zero occorrenze su tutti e tre i progetti), cosi' copiare il props
+# NON rende il build dell'immagine piu' permissivo: le 22 voci restanti sono analyzer, e il
+# `-p:SkipAnalyzers=true` qui sotto le disattiva comunque.
+COPY apps/api/Directory.Build.props ./apps/api/
 COPY apps/api/src/Api/Api.csproj ./apps/api/src/Api/
 
 # Patch 2: NuGet cache mount (BuildKit) → restore reuse cross-build.

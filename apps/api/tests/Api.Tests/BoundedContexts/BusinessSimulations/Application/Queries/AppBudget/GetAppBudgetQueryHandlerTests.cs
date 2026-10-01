@@ -107,22 +107,27 @@ public sealed class GetAppBudgetQueryHandlerTests : IAsyncLifetime
     [Fact]
     public async Task Handle_ComputesSpendBreakdownAndProjection()
     {
-        // Pin the fake clock to a recent real instant so LedgerEntry's
-        // 1-day-future guard accepts our seed dates. Choose hour 12 so
-        // "earlier today" is unambiguously inside the day window.
-        var realNow = DateTime.UtcNow;
-        var anchor = new DateTime(realNow.Year, realNow.Month, Math.Min(realNow.Day, 28), 12, 0, 0, DateTimeKind.Utc);
+        // Ancora FISSA con giorno > 1, e non `DateTime.UtcNow`: il test distingue «oggi» da
+        // «prima di oggi ma in questo mese», e il giorno 1 non ammette quella distinzione —
+        // qualunque istante «prima di oggi» cade nel mese precedente. Il ramo condizionale
+        // che c'era prima provava a cavarsela con `todayMorning.AddHours(-1)`, che e' ancora
+        // oggi: il primo di ogni mese i 80 finivano in `Today` e l'assert cadeva. Osservato
+        // il 2026-10-01, con `Spent.Today` a 92.40 invece di 12.40.
+        //
+        // La data resta nel passato reale per sempre, quindi la guardia di LedgerEntry
+        // (`date > DateTime.UtcNow.AddDays(1)`, che legge l'orologio di sistema e non il
+        // TimeProvider) la accetta e non invecchia. `AnchorToday` della classe non e'
+        // riusabile qui: e' il 2026-06-01, cioe' proprio un giorno 1.
+        var anchor = new DateTime(2026, 6, 15, 12, 0, 0, DateTimeKind.Utc);
         _timeProvider.SetNow(anchor);
 
         var budget = AppBudgetAggregate.Create(Money.Create(1200m, "USD"), 80, 95, "admin");
         await _repository.UpsertAsync(budget, CancellationToken.None);
 
-        // Seed three expense rows: one today, one earlier this month, one in
-        // the prior calendar month (must be excluded).
+        // Tre righe di spesa: una oggi, una prima in questo mese, una nel mese precedente
+        // (deve essere esclusa).
         var todayMorning = new DateTime(anchor.Year, anchor.Month, anchor.Day, 6, 0, 0, DateTimeKind.Utc);
-        var earlierThisMonth = anchor.Day > 1
-            ? new DateTime(anchor.Year, anchor.Month, 1, 12, 0, 0, DateTimeKind.Utc)
-            : todayMorning.AddHours(-1); // fallback for day-1-of-month edge
+        var earlierThisMonth = new DateTime(anchor.Year, anchor.Month, 1, 12, 0, 0, DateTimeKind.Utc);
         var lastMonth = anchor.AddMonths(-1);
 
         await SeedExpenseAsync(todayMorning, 12.40m, LedgerCategory.TokenUsage);
@@ -132,17 +137,16 @@ public sealed class GetAppBudgetQueryHandlerTests : IAsyncLifetime
         var result = await _handler.Handle(new GetAppBudgetQuery(), CancellationToken.None);
 
         result.Should().NotBeNull();
-        result!.Spent.Today.Should().Be(12.40m);
+        result!.Spent.Today.Should().Be(12.40m, "solo la riga di stamattina cade oggi");
 
-        // Last-month row excluded → today + earlier-this-month = 92.40
-        // (or 12.40 alone if anchor.Day == 1 fallback path was taken).
-        var expectedThisMonth = anchor.Day > 1 ? 92.40m : 12.40m;
-        result.Spent.ThisMonth.Should().Be(expectedThisMonth);
+        // Riga del mese precedente esclusa → oggi + prima-in-questo-mese = 92.40
+        result.Spent.ThisMonth.Should().Be(92.40m, "la riga di maggio e' fuori dal mese corrente");
 
-        // Projection = thisMonth / dayOfMonth * monthLength (round HalfUp 2dp).
+        // Projection = thisMonth / dayOfMonth * monthLength (round HalfUp 2dp):
+        // 92.40 / 15 * 30 = 184.80
         var monthLength = DateTime.DaysInMonth(anchor.Year, anchor.Month);
         var expectedProjection = Math.Round(
-            expectedThisMonth / anchor.Day * monthLength,
+            92.40m / anchor.Day * monthLength,
             2,
             MidpointRounding.AwayFromZero);
         result.Spent.ProjectedMonthEnd.Should().Be(expectedProjection);

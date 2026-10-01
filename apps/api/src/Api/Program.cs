@@ -115,6 +115,38 @@ Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
 
+// #3998 — qualunque eccezione non gestita deve lasciare una riga di log.
+//
+// Per cinque settimane il bake dello snapshot e' morto senza che un solo log dicesse cosa
+// fosse andato storto: il runtime dovrebbe stampare «Unhandled exception. <tipo>: <messaggio>»
+// su stderr prima di abortire, e non lo fa — `[createdump]` arriva da stderr e si legge, i log
+// Serilog arrivano fino all'ultima riga prima della morte, quindi non e' stderr a essere perso.
+// Il perche' resta da chiarire; intanto l'applicazione non puo' dipendere da quel messaggio.
+//
+// Il crash report del runtime da' il tipo (`System.InvalidOperationException`) ma non il
+// messaggio, e i frame gestiti sono `?!?` perche' il Dockerfile cancella i .pdb. Lo stack non
+// aiuta a localizzare: nei top-level statements `Program.<Main>` e' il wrapper sincrono
+// generato dal compilatore, che rilancia il Task di TUTTO Main — quindi
+// `TaskAwaiter.ThrowForNonSuccess` sopra di lui non indica l'await che ha fallito.
+//
+// Questo handler non puo' impedire la terminazione, e non ci prova: serve a scrivere
+// l'eccezione — tipo, messaggio e stack — prima che il processo se ne vada. `CloseAndFlush`
+// perche' il processo sta morendo e il sink non verrebbe svuotato.
+AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+{
+    if (eventArgs.ExceptionObject is Exception unhandled)
+    {
+        Log.Fatal(unhandled, "Unhandled exception reached the process boundary. Terminating={Terminating}", eventArgs.IsTerminating);
+    }
+    else
+    {
+        Log.Fatal("Unhandled non-Exception object reached the process boundary: {Object}. Terminating={Terminating}",
+            eventArgs.ExceptionObject, eventArgs.IsTerminating);
+    }
+
+    Log.CloseAndFlush();
+};
+
 // ISSUE-2510: Validate secrets from infra/secrets/ directory
 // Load and validate all secrets with 3-level validation (Critical/Important/Optional)
 // Note: Using temporary logger factory since DI container not yet built
@@ -1050,26 +1082,48 @@ app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 // ISSUE-2511: Startup health check for critical services
 using (var scope = app.Services.CreateScope())
 {
-    var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
     var healthLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    var startupCheck = await healthCheckService.CheckHealthAsync(
-        check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
-
-    var criticalFailures = startupCheck.Entries
-        .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
-        .ToList();
-
-    if (criticalFailures.Count > 0)
+    // #3998 — questo blocco misura la salute dei servizi, e non deve poter impedire l'avvio.
+    // Lo diceva già il suo messaggio ("Application starting in degraded mode") per il caso di
+    // un check che torna Unhealthy, ma `CheckHealthAsync` non si limita a tornare Unhealthy:
+    // può LANCIARE, e l'eccezione risaliva fino a `Main` — dove non c'è nessun try/catch — e
+    // uccideva il processo prima che Kestrel ascoltasse.
+    //
+    // È ciò che ha tenuto rosso il bake dello snapshot per cinque settimane: una
+    // InvalidOperationException non gestita (misurata dal crash report del runtime, signal 6
+    // = SIGABRT), con zero righe di log perché il tratto che precede non ne produce e perché
+    // qui si moriva prima di entrambi i rami che loggano.
+    try
     {
-        var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
-        healthLogger.LogCritical(
-            "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
-            failedServices);
+        var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+
+        var startupCheck = await healthCheckService.CheckHealthAsync(
+            check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
+
+        var criticalFailures = startupCheck.Entries
+            .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
+            .ToList();
+
+        if (criticalFailures.Count > 0)
+        {
+            var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
+            healthLogger.LogCritical(
+                "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
+                failedServices);
+        }
+        else
+        {
+            healthLogger.LogInformation("All critical services passed startup health check.");
+        }
     }
-    else
+    catch (Exception ex)
     {
-        healthLogger.LogInformation("All critical services passed startup health check.");
+        // L'eccezione va loggata CON l'oggetto: il tipo da solo non basta a trovare la causa,
+        // ed è esattamente ciò che è mancato per cinque settimane.
+        healthLogger.LogCritical(
+            ex,
+            "Startup health check threw instead of reporting status. Application starting in degraded mode.");
     }
 }
 

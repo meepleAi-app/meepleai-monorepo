@@ -84,9 +84,23 @@ RUN apt-get update \
     && adduser --disabled-password --gecos '' --uid 1001 apiuser \
     && mkdir -p /app/pdf_uploads
 
+# #3998 — i .pdb sono il motivo per cui un crash report non si riesce a leggere.
+#
+# Senza di loro `createdump` scrive `?!?` al posto di ogni frame gestito: il report da' il
+# TIPO dell'eccezione e non il punto in cui nasce, e per cinque settimane quello e' stato il
+# limite della diagnosi del bake. I frame che si leggono comunque arrivano dai metadati, e
+# non bastano: `Program.<Main>` nei top-level statements e' il wrapper sincrono generato dal
+# compilatore, che rilancia il Task di TUTTO Main — quindi non localizza niente.
+#
+# Restano cancellati per default, perche' i ~10MB contano sull'immagine che va in staging.
+# `KEEP_PDB=1` li conserva, e il bake lo passa: la' l'immagine e' usata in un job e
+# scartata, e uno stack leggibile vale molto piu' di dieci megabyte.
+ARG KEEP_PDB=0
+
 # Copy published files and remove debug/doc artifacts to reduce image size (~10MB savings)
 COPY --from=build --chown=apiuser:apiuser /app/publish .
-RUN find . -name "*.pdb" -delete && find . -name "*.xml" -delete \
+RUN if [ "$KEEP_PDB" != "1" ]; then find . -name "*.pdb" -delete; fi \
+    && find . -name "*.xml" -delete \
     && chown -R apiuser:apiuser /app/pdf_uploads
 
 # Switch to non-root user

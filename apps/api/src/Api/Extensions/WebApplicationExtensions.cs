@@ -133,6 +133,39 @@ internal static class WebApplicationExtensions
         });
     }
 
+    /// <summary>
+    /// Reads a boolean switch, treating an empty or whitespace-only value as absent.
+    /// <para>
+    /// ISSUE #3998 — the defect this exists for: <c>IConfiguration.GetValue&lt;bool&gt;(key, default)</c>
+    /// falls back to the default only when the key is MISSING. When the key is present and holds the
+    /// empty string it converts it, and <c>BooleanConverter</c> → <c>bool.Parse("")</c> throws
+    /// <c>InvalidOperationException</c>. Docker Compose makes that case the norm rather than the
+    /// exception: <c>infra/compose.dev.yml</c> passes
+    /// <c>DISABLE_RATE_LIMITING: ${DISABLE_RATE_LIMITING:-}</c>, and <c>${VAR:-}</c> expands to the
+    /// empty string whenever VAR is not in the host environment. So an unset optional switch reaches
+    /// the container as a present-but-empty key.
+    /// </para>
+    /// <para>
+    /// The throw happened during <c>ConfigureMiddlewarePipeline</c>, before Kestrel started
+    /// listening, so the process died with no HTTP surface and nothing in the logs — the snapshot
+    /// bake was red for five weeks because of it. Measured breadth at the time of the fix: of the
+    /// variables the compose files pass as <c>${X:-}</c>, this is the only one read through a typed
+    /// conversion; the others are strings, where empty is harmless. To re-measure:
+    /// <c>grep -hoE '\$\{[A-Za-z_][A-Za-z0-9_]*:-\}' infra/compose*.yml | sed -E 's/^\$\{//; s/:-\}$//' | sort -u</c>
+    /// </para>
+    /// Non-empty values keep going through <c>GetValue&lt;bool&gt;</c> unchanged, so a misspelt value
+    /// still throws instead of silently becoming the default.
+    /// </summary>
+    /// <remarks>
+    /// <c>internal</c> and not <c>private</c> so the regression test can exercise it directly:
+    /// reproducing the defect through the middleware pipeline would need a full host, while the
+    /// behaviour that matters is a three-way decision on one string.
+    /// </remarks>
+    internal static bool ReadFlag(IConfiguration configuration, string key, bool defaultValue) =>
+        string.IsNullOrWhiteSpace(configuration[key])
+            ? defaultValue
+            : configuration.GetValue<bool>(key);
+
     private static void ConfigureAuthMiddleware(WebApplication app)
     {
         // AUTH-03: Session cookie authentication (must be before API key and authorization)
@@ -163,12 +196,21 @@ internal static class WebApplicationExtensions
         // and made unrelated tests fail with 429. app.Configuration is the post-Build, per-host
         // configuration and still includes the environment-variables source, so a
         // DISABLE_RATE_LIMITING env var keeps working exactly as before in production.
-        // Both switches parse the same way (GetValue<bool>), so "1"/"True"/"yes" behave alike.
         // This matters now that it is the ONLY place either flag is honoured: a misspelt value used
         // to degrade gracefully because registration produced permissive policies as well.
+        //
+        // ISSUE #3998: both switches go through ReadFlag, because a variable set to the EMPTY
+        // STRING is not the same thing as an absent one — and `GetValue<bool>` treats it as a
+        // value, not as "use the default". That is what kept the snapshot bake red for five weeks.
+        //
+        // Correction to an earlier note here, which claimed that `"1"/"True"/"yes" behave alike`:
+        // they do not. `GetValue<bool>` goes through `BooleanConverter` → `bool.Parse`, which
+        // accepts only `true`/`false` (case-insensitive). `"1"` and `"yes"` throw, exactly like
+        // `""` did. ReadFlag deliberately keeps that strictness for non-empty values: a typo must
+        // stay loud, per the paragraph above.
         var rateLimitingEnabled =
-            app.Configuration.GetValue("RateLimiting:Enabled", true)
-            && !app.Configuration.GetValue("DISABLE_RATE_LIMITING", false);
+            ReadFlag(app.Configuration, "RateLimiting:Enabled", defaultValue: true)
+            && !ReadFlag(app.Configuration, "DISABLE_RATE_LIMITING", defaultValue: false);
 
         if (rateLimitingEnabled)
         {

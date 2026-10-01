@@ -517,14 +517,19 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        // tre citazioni: con l'indice posizionale diventerebbero le pagine 1, 2, 3
+        // tre citazioni: con l'indice posizionale diventerebbero le pagine 1, 2, 3.
+        //
+        // La terza porta un DocumentId perche' qui si misura la pagina, non la servibilita':
+        // senza DocumentId la citazione viene omessa a monte (vedi
+        // Handle_OnCacheHit_WithNullDocumentIdCitation_OmitsOnlyThatCitation) e l'assenza di
+        // pagina che questo test vuole osservare non arriverebbe mai all'assert.
         var cached = new CachedRagResponse(
             Answer: "Cached answer.",
             Citations: new List<CachedCitation>
             {
                 new("Snippet from page 42.", 42, "doc-a"),
                 new("Snippet from page 7.", 7, "doc-b"),
-                new("Snippet without a page.", null, null),
+                new("Snippet without a page.", null, "doc-c"),
             },
             ModelUsed: "test-model",
             CachedAt: DateTimeOffset.UtcNow);
@@ -549,8 +554,200 @@ public class AskQuestionQueryHandlerPhase2Tests
             "le pagine devono venire dalla voce in cache; 1,2,3 significherebbe che sono " +
             "l'indice nella lista");
         result.Citations!.Select(c => c.DocumentId).Should().Equal(
-            new string?[] { "doc-a", "doc-b", null },
-            "senza documentId il deep link alla pagina non puo' essere costruito");
+            new string?[] { "doc-a", "doc-b", "doc-c" },
+            "il documentId deve venire dalla voce in cache");
+    }
+
+    // -------------------------------------------------------------------------
+    // Cache-hit: una citazione senza DocumentId non e' servibile
+    //
+    // `CachedCitation.DocumentId` e' `string?` (#3855: «un'assenza dichiarata e' onesta, mentre
+    // un numero inventato e' una fonte falsa che il frontend tratta come coordinata navigabile»)
+    // mentre `CitationDto.DocumentId` e' `string`. Il percorso di cache-hit passava il primo al
+    // secondo e **non compilava in Release** (CS8604), cioe' l'immagine Docker dell'api non si
+    // costruiva. I tre test qui sotto inchiodano la correzione scelta — omettere la citazione —
+    // contro le due alternative che avrebbero fatto compilare senza risolvere: `?? ""`, che
+    // reintroduce la stringa vuota rimossa di proposito da #3855, e `!`, che e' una promessa al
+    // posto di una prova.
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// La citazione senza DocumentId sparisce; le altre restano, nell'ordine, intatte.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_WithNullDocumentIdCitation_OmitsOnlyThatCitation()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // la voce centrale e' anteriore a #3855: nessun DocumentId conservato
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Snippet from page 42.", 42, "doc-a"),
+                new("Snippet senza documento.", 7, null),
+                new("Snippet from page 13.", 13, "doc-c"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(
+            "Cached answer.",
+            "la risposta arriva dalla cache: se fosse quella dell'LLM il test non sta " +
+            "misurando il ramo di cache-hit");
+        result.Citations.Should().HaveCount(2);
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(
+            new[] { "doc-a", "doc-c" },
+            "un DocumentId nullo non e' servibile e la citazione va omessa; una stringa vuota " +
+            "al suo posto sarebbe la coordinata inventata che #3855 ha rimosso");
+        result.Citations!.Select(c => c.Snippet).Should().NotContain(
+            "Snippet senza documento.",
+            "la citazione omessa non deve sopravvivere con un altro campo");
+        result.Citations!.Select(c => c.PageNumber).Should().Equal(
+            new int?[] { 42, 13 },
+            "le citazioni superstiti devono restare intatte, non ricompattate su nuovi indici");
+    }
+
+    /// <summary>
+    /// `RagQueryMetrics.CitationsCount` conta le citazioni **servite**, non quelle conservate.
+    ///
+    /// E' un cambio di comportamento deliberato: prima la metrica leggeva
+    /// `cached.Citations.Count`. Se tornasse a farlo, la dashboard di qualita' conterebbe fonti
+    /// che la risposta non contiene.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_CitationsCountMetric_CountsServedNotStored()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // 4 conservate, 2 servibili
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Con documento.", 1, "doc-a"),
+                new("Senza documento.", 2, null),
+                new("Documento vuoto.", 3, ""),
+                new("Con documento, di nuovo.", 4, "doc-d"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var trackerMock = new Mock<IRagQualityTracker>();
+        var trackedMetrics = new List<RagQueryMetrics>();
+        trackerMock
+            .Setup(t => t.TrackQueryAsync(It.IsAny<RagQueryMetrics>(), It.IsAny<CancellationToken>()))
+            .Callback<RagQueryMetrics, CancellationToken>((m, _) => trackedMetrics.Add(m))
+            .Returns(Task.CompletedTask);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler(qualityTracker: trackerMock.Object)
+            .Handle(query, TestContext.Current.CancellationToken);
+
+        // il ramo di cache-hit traccia una volta e ritorna: se ci fossero due metriche il flusso
+        // e' proseguito fino all'LLM e la misura sotto non riguarda la cache
+        trackedMetrics.Should().HaveCount(1);
+        trackedMetrics[0].CacheHit.Should().BeTrue();
+        trackedMetrics[0].CitationsCount.Should().Be(
+            2,
+            "la metrica conta le citazioni servite; 4 significherebbe che e' tornata a leggere " +
+            "cached.Citations.Count e conta fonti che la risposta non contiene");
+        trackedMetrics[0].CitationsCount.Should().Be(
+            result.Citations!.Count,
+            "metrica e payload devono raccontare la stessa risposta");
+
+        // la stringa vuota e' trattata come assenza, non come documento di nome ""
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(new[] { "doc-a", "doc-d" });
+    }
+
+    /// <summary>
+    /// La rete contro un filtro troppo avido: con tutti i DocumentId valorizzati non si perde
+    /// nulla, ne' nel payload ne' nella metrica.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_WithAllDocumentIdsPresent_LosesNoCitation()
+    {
+        var gameId = Guid.NewGuid();
+
+        SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
+
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // include una pagina assente e uno snippet vuoto: solo DocumentId decide la servibilita'
+        var cached = new CachedRagResponse(
+            Answer: "Cached answer.",
+            Citations: new List<CachedCitation>
+            {
+                new("Snippet A.", 42, "doc-a"),
+                new("", 7, "doc-b"),
+                new("Snippet C.", null, "doc-c"),
+            },
+            ModelUsed: "test-model",
+            CachedAt: DateTimeOffset.UtcNow);
+
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cached);
+
+        var trackerMock = new Mock<IRagQualityTracker>();
+        var trackedMetrics = new List<RagQueryMetrics>();
+        trackerMock
+            .Setup(t => t.TrackQueryAsync(It.IsAny<RagQueryMetrics>(), It.IsAny<CancellationToken>()))
+            .Callback<RagQueryMetrics, CancellationToken>((m, _) => trackedMetrics.Add(m))
+            .Returns(Task.CompletedTask);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        var result = await BuildHandler(qualityTracker: trackerMock.Object)
+            .Handle(query, TestContext.Current.CancellationToken);
+
+        result.Citations.Should().HaveCount(
+            3,
+            "il filtro guarda solo DocumentId: una pagina assente o uno snippet vuoto non " +
+            "rendono la citazione inservibile");
+        result.Citations!.Select(c => c.DocumentId).Should().Equal(new[] { "doc-a", "doc-b", "doc-c" });
+        result.Citations!.Select(c => c.PageNumber).Should().Equal(new int?[] { 42, 7, null });
+        trackedMetrics.Should().HaveCount(1);
+        trackedMetrics[0].CitationsCount.Should().Be(3);
     }
 
     /// <summary>
@@ -860,7 +1057,8 @@ public class AskQuestionQueryHandlerPhase2Tests
         Api.Configuration.LlmQueryComplexityRoutingOptions? routingOverrides = null,
         IRagAccessService? ragAccessService = null,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
-        Api.Services.IFeatureFlagService? featureFlags = null) =>
+        Api.Services.IFeatureFlagService? featureFlags = null,
+        IRagQualityTracker? qualityTracker = null) =>
         new(
             _searchHandler,
             CreatePassthroughReranker(),
@@ -872,7 +1070,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
             ragAccessService ?? CreatePermissiveRagAccessServiceMock(),
-            Mock.Of<IRagQualityTracker>(),
+            qualityTracker ?? Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
             _mockEmbeddingService.Object,

@@ -32,6 +32,9 @@ public class AgentTierLimitsTests
     [InlineData("Editor")]
     [InlineData("admin")]
     [InlineData("ADMIN")]
+    [InlineData("SuperAdmin")]
+    [InlineData("superadmin")]
+    [InlineData("SUPERADMIN")]
     public void GetMaxAgents_AdminRole_ReturnsMaxValue(string role)
     {
         var result = AgentTierLimits.GetMaxAgents("free", role);
@@ -54,14 +57,38 @@ public class AgentTierLimitsTests
     [InlineData("Editor", true)]
     [InlineData("admin", true)]
     [InlineData("editor", true)]
+    [InlineData("superadmin", true)]
+    [InlineData("SuperAdmin", true)]
     [InlineData("user", false)]
     [InlineData("User", false)]
+    // Creator e' escluso per scelta, non per omissione: HasPermission(Role.Editor) e' falso
+    // per creator, quindi paga il limite del tier come un utente.
+    [InlineData("creator", false)]
+    [InlineData("Creator", false)]
     [InlineData(null, false)]
     [InlineData("", false)]
+    // Un ruolo ignoto fallisce chiuso.
+    [InlineData("wizard", false)]
     public void IsAdminOrEditor_ReturnsCorrectly(string? role, bool expected)
     {
         var result = AgentTierLimits.IsAdminOrEditor(role);
         result.Should().Be(expected);
+    }
+
+    /// <summary>
+    /// #3994: `IsAdminOrEditor` enumerava "Admin" ed "Editor" come letterali, quindi
+    /// superadmin cadeva nel lookup per tier. L'account di bootstrap viene creato
+    /// `Role.SuperAdmin` (SeedAdminUserCommandHandler) ed eredita il `UserTier.Free` di
+    /// default (`User.cs`), quindi era proprio lui a ricevere i limiti del tier gratuito.
+    /// Questa e' la coppia esatta che il difetto colpiva.
+    /// </summary>
+    [Fact]
+    public void GetMaxAgents_SuperAdminOnFreeTier_IsUnrestricted()
+    {
+        var result = AgentTierLimits.GetMaxAgents("free", "superadmin");
+
+        result.Should().Be(int.MaxValue);
+        result.Should().NotBe(AgentTierLimits.MaxAgentsPerTier["free"]);
     }
 
     [Fact]

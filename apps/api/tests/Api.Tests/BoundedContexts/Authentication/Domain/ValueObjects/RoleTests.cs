@@ -214,4 +214,53 @@ public class RoleTests
         superAdmin.HasPermission(Role.Admin).Should().BeTrue();
         superAdmin.HasPermission(Role.SuperAdmin).Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData("user")]
+    [InlineData("creator")]
+    [InlineData("editor")]
+    [InlineData("admin")]
+    [InlineData("superadmin")]
+    [InlineData("SuperAdmin")]
+    [InlineData("ADMIN")]
+    public void TryParse_WithValidRole_ReturnsTrueAndNormalizes(string value)
+    {
+        var ok = Role.TryParse(value, out var role);
+
+        ok.Should().BeTrue();
+        role.Value.Should().Be(value.ToLowerInvariant());
+    }
+
+    /// <summary>
+    /// #3994: TryParse esiste per i chiamanti che ricevono il ruolo come stringa grezza
+    /// (claims, DTO, config) e non possono permettersi un throw. Deve fallire chiuso, cioe'
+    /// restituire false su assente e ignoto, perche' chi lo usa decide un privilegio.
+    /// </summary>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("wizard")]
+    [InlineData("administrator")]
+    public void TryParse_WithAbsentOrUnknownRole_FailsClosed(string? value)
+    {
+        var ok = Role.TryParse(value, out var role);
+
+        ok.Should().BeFalse();
+        // Il parametro out non e' null, cosi' il chiamante non deve gestire il caso; ma
+        // vale il ruolo meno privilegiato, perche' un false ignorato non conceda nulla.
+        role.Should().NotBeNull();
+        role.HasPermission(Role.Editor).Should().BeFalse();
+        role.HasPermission(Role.Admin).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryParse_AgreesWithParse_OnEveryValidRole()
+    {
+        foreach (var value in new[] { "user", "creator", "editor", "admin", "superadmin" })
+        {
+            Role.TryParse(value, out var tryParsed).Should().BeTrue();
+            tryParsed.Should().Be(Role.Parse(value));
+        }
+    }
 }

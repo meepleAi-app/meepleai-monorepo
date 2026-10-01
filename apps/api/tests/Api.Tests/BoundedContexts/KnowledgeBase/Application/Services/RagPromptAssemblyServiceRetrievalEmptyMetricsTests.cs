@@ -31,6 +31,15 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 /// <remarks>
 /// The [Collection] attribute serializes these tests to prevent a parallel T3-AC-1
 /// (which fires the global counter) from contaminating the T3-AC-2 "must NOT fire" assertion.
+/// /// <para>
+/// #3994 — correzione: una [Collection] serializza i test <b>dentro</b> di se', mentre le
+/// collection girano in parallelo <b>fra loro</b>. Dei cinque file che istanziano
+/// RagPromptAssemblyService, solo questo era nella collection: gli altri quattro giravano in
+/// parallelo e potevano incrementare lo stesso contatore statico globale mentre T3-AC-2
+/// misurava "non deve incrementare". Il contatore non ha tag, quindi il test non puo'
+/// distinguere il proprio incremento da quello di un altro: l'unica difesa e' la collection
+/// condivisa, e ora tutti e cinque i file la dichiarano.
+/// </para>
 /// </remarks>
 [Collection("RetrievalEmptyMetrics")]
 [Trait("Category", TestCategories.Unit)]

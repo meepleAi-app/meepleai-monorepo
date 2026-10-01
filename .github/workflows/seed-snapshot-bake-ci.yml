@@ -7,7 +7,9 @@ name: Seed Snapshot Bake (CI smoke — ci.yml manifest)
 # every push that touches anything that could break the seed pipeline:
 #
 #   - any of the seeder manifests (dev/staging/prod/ci)
-#   - any EF migration .cs file
+#   - any EF migration .cs file (#3998: il glob puntava a `Api/Migrations/**`, che
+#     non esiste — le migration stanno sotto `Api/Infrastructure/Migrations/`, quindi
+#     questo gate non si e' MAI acceso su una migration)
 #   - any of the seed-* / snapshot-* / wait-for-healthy shell scripts
 #   - the bake docker compose files
 #   - the seed-schema.version sentinel (#2126 D9)
@@ -26,7 +28,7 @@ on:
       - main-staging
     paths:
       - 'apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/*.yml'
-      - 'apps/api/src/Api/Migrations/**'
+      - 'apps/api/src/Api/Infrastructure/Migrations/**'
       - 'infra/scripts/seed-index-*.sh'
       - 'infra/scripts/snapshot-*.sh'
       - 'infra/scripts/wait-for-healthy.sh'
@@ -37,9 +39,12 @@ on:
   pull_request:
     paths:
       - 'apps/api/src/Api/Infrastructure/Seeders/Catalog/Manifests/*.yml'
-      - 'apps/api/src/Api/Migrations/**'
+      - 'apps/api/src/Api/Infrastructure/Migrations/**'
       - 'infra/scripts/seed-index-*.sh'
       - 'infra/scripts/snapshot-*.sh'
+      - 'infra/scripts/wait-for-healthy.sh'
+      - 'infra/docker-compose.yml'
+      - 'infra/compose.dev.yml'
       - 'infra/seed-schema.version'
       - '.github/workflows/seed-snapshot-bake-ci.yml'
   workflow_dispatch:

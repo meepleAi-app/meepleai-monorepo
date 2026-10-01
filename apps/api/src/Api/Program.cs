@@ -1050,26 +1050,48 @@ app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 // ISSUE-2511: Startup health check for critical services
 using (var scope = app.Services.CreateScope())
 {
-    var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
     var healthLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    var startupCheck = await healthCheckService.CheckHealthAsync(
-        check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
-
-    var criticalFailures = startupCheck.Entries
-        .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
-        .ToList();
-
-    if (criticalFailures.Count > 0)
+    // #3998 — questo blocco misura la salute dei servizi, e non deve poter impedire l'avvio.
+    // Lo diceva già il suo messaggio ("Application starting in degraded mode") per il caso di
+    // un check che torna Unhealthy, ma `CheckHealthAsync` non si limita a tornare Unhealthy:
+    // può LANCIARE, e l'eccezione risaliva fino a `Main` — dove non c'è nessun try/catch — e
+    // uccideva il processo prima che Kestrel ascoltasse.
+    //
+    // È ciò che ha tenuto rosso il bake dello snapshot per cinque settimane: una
+    // InvalidOperationException non gestita (misurata dal crash report del runtime, signal 6
+    // = SIGABRT), con zero righe di log perché il tratto che precede non ne produce e perché
+    // qui si moriva prima di entrambi i rami che loggano.
+    try
     {
-        var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
-        healthLogger.LogCritical(
-            "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
-            failedServices);
+        var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+
+        var startupCheck = await healthCheckService.CheckHealthAsync(
+            check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
+
+        var criticalFailures = startupCheck.Entries
+            .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
+            .ToList();
+
+        if (criticalFailures.Count > 0)
+        {
+            var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
+            healthLogger.LogCritical(
+                "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
+                failedServices);
+        }
+        else
+        {
+            healthLogger.LogInformation("All critical services passed startup health check.");
+        }
     }
-    else
+    catch (Exception ex)
     {
-        healthLogger.LogInformation("All critical services passed startup health check.");
+        // L'eccezione va loggata CON l'oggetto: il tipo da solo non basta a trovare la causa,
+        // ed è esattamente ciò che è mancato per cinque settimane.
+        healthLogger.LogCritical(
+            ex,
+            "Startup health check threw instead of reporting status. Application starting in degraded mode.");
     }
 }
 

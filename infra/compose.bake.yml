@@ -1,0 +1,20 @@
+# infra/compose.bake.yml
+#
+# Override per il bake dello snapshot (#3998).
+#
+# `restart: unless-stopped` su `api` (in docker-compose.yml) e' giusto in sviluppo, dove un
+# riavvio automatico risparmia un comando. Nel bake fa il contrario di quel che serve:
+# nasconde il fallimento invece di ripararlo.
+#
+# Un container che riparte azzera `State.Health.Status` a `starting` e `State.StartedAt` a
+# ogni giro, quindi lo start_period riparte e `FailingStreak` non arriva mai alla soglia:
+# `wait-for-healthy` non osserva ne' `healthy` ne' `unhealthy` e consuma tutto il timeout
+# riportando `starting`. E' cio' che il bake ha fatto per cinque settimane, con tredici
+# riavvii in centottanta secondi. In piu' `ExitCode`, `FinishedAt` e `OOMKilled` letti su un
+# container `running` descrivono una terminazione passata, non la morte che si sta cercando.
+#
+# Con `restart: "no"` il container resta `exited`, lo script lo rileva e fallisce subito, e
+# quei tre campi diventano significativi.
+services:
+  api:
+    restart: "no"

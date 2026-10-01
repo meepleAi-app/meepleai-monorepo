@@ -62,7 +62,30 @@ public sealed class Role : ValueObject
         return true;
     }
 
-    public bool IsAdmin() => string.Equals(Value, "admin", StringComparison.Ordinal);
+    /// <summary>
+    /// True only for the role <c>admin</c> itself — NOT for <c>superadmin</c>, which outranks it.
+    /// </summary>
+    /// <remarks>
+    /// ISSUE #3994 — this was called <c>IsAdmin()</c> until it was renamed, and the old name is why
+    /// the same defect shipped three times (#3842, #3873, #4003): the backend also has a
+    /// <c>ClaimsPrincipal.IsAdmin()</c> extension whose semantics are the OPPOSITE on this exact
+    /// point — it answers <c>IsInRole("Admin") || IsInRole("SuperAdmin")</c>. Two identically named
+    /// predicates disagreeing about superadmin meant a call site could not be read without first
+    /// resolving the type of the receiver, so "exclude superadmin" kept being written by accident.
+    /// <para>
+    /// The name now states it. For "admin privileges or above" use
+    /// <c>HasPermission(Role.Admin)</c> = {admin, superadmin}; this predicate is for the few places
+    /// that genuinely need identity, such as a dispatch over the five roles.
+    /// </para>
+    /// <para>
+    /// Renaming rather than removing is deliberate: <c>HasPermission</c> itself uses it (below), so
+    /// removing it would put a raw literal in the canonical place, and
+    /// <c>FeatureFlagService</c> dispatches over all five identity predicates — dropping one would
+    /// leave four predicates plus a literal. The asymmetry with the other four names is the point:
+    /// this is the only one with a homonym.
+    /// </para>
+    /// </remarks>
+    public bool IsExactlyAdmin() => string.Equals(Value, "admin", StringComparison.Ordinal);
     public bool IsEditor() => string.Equals(Value, "editor", StringComparison.Ordinal);
     public bool IsCreator() => string.Equals(Value, "creator", StringComparison.Ordinal); // Epic #4068
     public bool IsUser() => string.Equals(Value, "user", StringComparison.Ordinal);
@@ -75,7 +98,7 @@ public sealed class Role : ValueObject
         if (IsSuperAdmin()) return true;
 
         // Admin has all permissions except SuperAdmin
-        if (IsAdmin() && !requiredRole.IsSuperAdmin()) return true;
+        if (IsExactlyAdmin() && !requiredRole.IsSuperAdmin()) return true;
 
         // Creator has creator + user permissions (Epic #4068)
         if (IsCreator() && (requiredRole.IsCreator() || requiredRole.IsUser())) return true;

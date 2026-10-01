@@ -46,7 +46,7 @@ internal class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
             throw new DomainException($"User {command.UserId} not found");
 
         // Prevent deletion of last admin
-        if (user.Role.IsAdmin() || user.Role.IsSuperAdmin())
+        if (user.Role.IsExactlyAdmin() || user.Role.IsSuperAdmin())
         {
             var adminCount = await _userRepository.CountAdminsAsync(cancellationToken).ConfigureAwait(false);
             if (adminCount <= 1)

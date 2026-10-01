@@ -56,6 +56,15 @@ diagnose() {
             # /dev/null anche **stdout**, perche' `>&2` duplica il fd 2 corrente, che la
             # prima redirezione ha gia' puntato a /dev/null. E' il difetto che ha fatto
             # comparire `crash.1.dmp.crashreport.json` nell'elenco senza il suo contenuto.
+            # Prima tutto il report MENO gli stack. Lo schema del crashreport cambia fra
+            # versioni del runtime, e assumerlo e' il modo di perdere il campo che serve:
+            # `del(...)` lascia emergere qualunque chiave ci sia — segnale, motivo del
+            # crash, tipo e messaggio dell'eccezione — senza doverla nominare.
+            jq 'del(.payload.threads[]?.stack_frames)' "$report" >&2 2>/dev/null || true
+
+            # Poi gli stack. I frame gestiti restano `?!?` perche' il Dockerfile cancella i
+            # .pdb (`find . -name "*.pdb" -delete`): resta leggibile la catena dove il nome
+            # arriva dai metadati e non dai simboli.
             jq -r '.payload.threads[]? | "  thread \(.native_thread_id // "?"):",
                    (.stack_frames[]? | "    \(.module_name // "?")!\(.method_name // "?")")' \
                 "$report" >&2 2>/dev/null || cat "$report" >&2

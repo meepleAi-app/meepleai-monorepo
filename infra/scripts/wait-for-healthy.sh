@@ -33,6 +33,36 @@ diagnose() {
     # corta non lo contiene mai.
     echo "[wait-for-healthy] log del container (le ultime ${HEALTH_LOG_LINES:-2000} righe):" >&2
     docker logs "$CONTAINER" --tail "${HEALTH_LOG_LINES:-2000}" >&2 2>/dev/null || true
+
+    # #3998 — un `exit=139` e' un SIGSEGV, e i log non bastano a localizzarlo: in `Program.cs`
+    # il tratto fra la fine del seeding e `RunAsync()` non logga nulla per costruzione, quindi
+    # l'ultima riga scritta non dice dove l'esecuzione sia arrivata.
+    #
+    # Con `DOTNET_EnableCrashReport=1` (vedi infra/compose.bake.yml) il runtime scrive accanto
+    # al dump un `.crashreport.json` con lo stack di ogni thread in chiaro. Il container e'
+    # `exited`, quindi `docker exec` non lo raggiunge ma `docker cp` si'.
+    echo "[wait-for-healthy] crash report del runtime .NET:" >&2
+    crashdir=$(mktemp -d)
+    if docker cp "$CONTAINER:/tmp/." "$crashdir" >/dev/null 2>&1; then
+        found=0
+        for report in "$crashdir"/*.crashreport.json; do
+            [ -f "$report" ] || continue
+            found=1
+            echo "  -- $(basename "$report")" >&2
+            # jq c'e' sui runner GitHub; in locale puo' mancare, e allora si stampa il json
+            # grezzo invece di non stampare niente.
+            jq -r '.payload.threads[]? | "  thread \(.native_thread_id // "?"):",
+                   (.stack_frames[]? | "    \(.module_name // "?")!\(.method_name // "?")")' \
+                "$report" 2>/dev/null >&2 || cat "$report" >&2
+        done
+        if [ "$found" = 0 ]; then
+            echo "  (nessun crash report: il processo non e' stato terminato da un segnale," >&2
+            echo "   oppure createdump non ha potuto scrivere — serve cap_add: SYS_PTRACE)" >&2
+        fi
+    else
+        echo "  (docker cp non ha potuto leggere /tmp dal container)" >&2
+    fi
+    rm -rf "$crashdir"
 }
 
 start=$(date +%s)

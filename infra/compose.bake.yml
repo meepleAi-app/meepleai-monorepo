@@ -14,7 +14,29 @@
 # container `running` descrivono una terminazione passata, non la morte che si sta cercando.
 #
 # Con `restart: "no"` il container resta `exited`, lo script lo rileva e fallisce subito, e
-# quei tre campi diventano significativi.
+# quei tre campi diventano significativi. Il primo smoke cosi' configurato ha dato
+# `exit=139` (128+11 = SIGSEGV) con `oom=false`: il processo non esce, segfaulta, circa due
+# secondi dopo la fine del seeding.
 services:
   api:
     restart: "no"
+
+    # Il tratto in cui muore — `Program.cs` fra la fine del seeding e `RunAsync()` — non
+    # logga nulla per costruzione: quattro registrazioni di gauge osservabili piu' il
+    # mapping degli endpoint. Il silenzio nei log quindi non e' un indizio e non dice dove
+    # l'esecuzione sia arrivata; serve lo stack del thread che e' morto.
+    #
+    # `DOTNET_EnableCrashReport=1` fa scrivere al runtime, accanto al dump, un
+    # `<dump>.crashreport.json` con lo stack di ogni thread in chiaro: si legge con `cat`,
+    # senza lldb ne' `dotnet-dump analyze`. Il tipo 1 (mini) tiene stack e moduli e resta
+    # piccolo, e `/tmp` e' scrivibile da `apiuser` senza toccare volumi ne' permessi.
+    environment:
+      DOTNET_DbgEnableMiniDump: "1"
+      DOTNET_DbgMiniDumpType: "1"
+      DOTNET_DbgMiniDumpName: "/tmp/crash.%p.dmp"
+      DOTNET_EnableCrashReport: "1"
+
+    # `createdump` legge il processo che sta morendo via ptrace: senza questa capability non
+    # produce ne' dump ne' crash report, e scrive soltanto un errore.
+    cap_add:
+      - SYS_PTRACE

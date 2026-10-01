@@ -1,3 +1,5 @@
+using Api.SharedKernel.Domain.ValueObjects;
+
 namespace Api.BoundedContexts.KnowledgeBase.Domain;
 
 /// <summary>
@@ -27,7 +29,7 @@ internal static class ChatSessionTierLimits
 
     /// <summary>
     /// Returns the maximum number of active chat sessions for a given tier and role.
-    /// Admin/Editor roles get unrestricted access (returns 0 = unlimited).
+    /// Editor, admin and superadmin get unrestricted access (returns 0 = unlimited).
     /// </summary>
     public static int GetLimit(string? tier, string? role)
     {
@@ -39,9 +41,18 @@ internal static class ChatSessionTierLimits
     }
 
     /// <summary>
-    /// Returns true if the role is Admin or Editor (unrestricted).
+    /// True when the role is unrestricted: editor, admin or superadmin — the same set as
+    /// <c>Role.HasPermission(Role.Editor)</c>, and the set that
+    /// <c>ClaimsPrincipalExtensions.IsAdminOrEditor</c> already mirrors from
+    /// "AdminOrEditorPolicy". Creator is deliberately excluded and pays the tier limit.
+    /// <para>
+    /// #3994: this used to enumerate "Admin" and "Editor" as literals, so superadmin fell
+    /// through to the per-tier lookup. The bootstrap account is created as
+    /// <c>Role.SuperAdmin</c> and inherits the default <c>UserTier.Free</c>, so it was the
+    /// account getting free-tier limits.
+    /// </para>
+    /// An absent or unknown role fails closed, i.e. pays the tier limit.
     /// </summary>
     public static bool IsAdminOrEditor(string? role) =>
-        string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(role, "Editor", StringComparison.OrdinalIgnoreCase);
+        Role.TryParse(role, out var parsed) && parsed.HasPermission(Role.Editor);
 }

@@ -37,6 +37,31 @@ public sealed class Role : ValueObject
         return new Role(normalized);
     }
 
+    /// <summary>
+    /// Parses a role without throwing, for the callers that receive the role as a raw
+    /// string coming from outside the domain (claims, DTOs, config) and must decide what
+    /// an absent or unknown value means. Returns false — i.e. fails closed — for null,
+    /// whitespace and any value outside <see cref="ValidRoles"/>.
+    /// </summary>
+    public static bool TryParse(string? value, out Role role)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            role = User;
+            return false;
+        }
+
+        var normalized = value.ToLowerInvariant();
+        if (!ValidRoles.Contains(normalized))
+        {
+            role = User;
+            return false;
+        }
+
+        role = new Role(normalized);
+        return true;
+    }
+
     public bool IsAdmin() => string.Equals(Value, "admin", StringComparison.Ordinal);
     public bool IsEditor() => string.Equals(Value, "editor", StringComparison.Ordinal);
     public bool IsCreator() => string.Equals(Value, "creator", StringComparison.Ordinal); // Epic #4068

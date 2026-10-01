@@ -115,6 +115,38 @@ Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
 
+// #3998 — qualunque eccezione non gestita deve lasciare una riga di log.
+//
+// Per cinque settimane il bake dello snapshot e' morto senza che un solo log dicesse cosa
+// fosse andato storto: il runtime dovrebbe stampare «Unhandled exception. <tipo>: <messaggio>»
+// su stderr prima di abortire, e non lo fa — `[createdump]` arriva da stderr e si legge, i log
+// Serilog arrivano fino all'ultima riga prima della morte, quindi non e' stderr a essere perso.
+// Il perche' resta da chiarire; intanto l'applicazione non puo' dipendere da quel messaggio.
+//
+// Il crash report del runtime da' il tipo (`System.InvalidOperationException`) ma non il
+// messaggio, e i frame gestiti sono `?!?` perche' il Dockerfile cancella i .pdb. Lo stack non
+// aiuta a localizzare: nei top-level statements `Program.<Main>` e' il wrapper sincrono
+// generato dal compilatore, che rilancia il Task di TUTTO Main — quindi
+// `TaskAwaiter.ThrowForNonSuccess` sopra di lui non indica l'await che ha fallito.
+//
+// Questo handler non puo' impedire la terminazione, e non ci prova: serve a scrivere
+// l'eccezione — tipo, messaggio e stack — prima che il processo se ne vada. `CloseAndFlush`
+// perche' il processo sta morendo e il sink non verrebbe svuotato.
+AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+{
+    if (eventArgs.ExceptionObject is Exception unhandled)
+    {
+        Log.Fatal(unhandled, "Unhandled exception reached the process boundary. Terminating={Terminating}", eventArgs.IsTerminating);
+    }
+    else
+    {
+        Log.Fatal("Unhandled non-Exception object reached the process boundary: {Object}. Terminating={Terminating}",
+            eventArgs.ExceptionObject, eventArgs.IsTerminating);
+    }
+
+    Log.CloseAndFlush();
+};
+
 // ISSUE-2510: Validate secrets from infra/secrets/ directory
 // Load and validate all secrets with 3-level validation (Critical/Important/Optional)
 // Note: Using temporary logger factory since DI container not yet built

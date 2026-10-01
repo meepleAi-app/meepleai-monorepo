@@ -21,6 +21,15 @@ services:
   api:
     restart: "no"
 
+    # I .pdb restano nell'immagine del bake. Senza di loro `createdump` scrive `?!?` al posto
+    # di ogni frame gestito, e il crash report da' il tipo dell'eccezione senza il punto in cui
+    # nasce — che e' stato il limite della diagnosi per cinque settimane. Qui l'immagine vive
+    # un job e viene scartata, quindi i ~10MB non contano; sull'immagine di staging si'
+    # (default `KEEP_PDB=0` nel Dockerfile).
+    build:
+      args:
+        KEEP_PDB: "1"
+
     # Il tratto in cui muore — `Program.cs` fra la fine del seeding e `RunAsync()` — non
     # logga nulla per costruzione: quattro registrazioni di gauge osservabili piu' il
     # mapping degli endpoint. Il silenzio nei log quindi non e' un indizio e non dice dove

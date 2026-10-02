@@ -125,27 +125,35 @@ describe('calculateOptimalPosition', () => {
     });
   });
 
-  describe('Performance', () => {
-    it('calculates position in <16ms', () => {
+  // Questi due test cronometravano `calculateOptimalPosition` contro una soglia di
+  // 16ms. Le soglie sono state RIMOSSE, non alzate, chiudendo #3953: su runner
+  // condiviso `performance.now()` misura la contesa di CPU, non il costo del
+  // calcolo — una soglia assoluta lì non garantisce nulla di verificabile. Al suo
+  // posto asseriscono l'invariante che la soglia difendeva per procura: la funzione
+  // è puramente geometrica (nessun I/O, nessun loop sui dati) e restituisce sempre
+  // un piazzamento valido, anche quando il tooltip non ci sta nel viewport.
+  // 🔴 Non reintrodurre `expect(elapsed).toBeLessThan(N)`: se serve difendere il
+  // costo, serve un benchmark con baseline, non un'asserzione in `pnpm test`.
+  describe('Robustezza su input estremi', () => {
+    it('restituisce un piazzamento valido per un tooltip di dimensioni normali', () => {
       const trigger = new DOMRect(500, 500, 100, 40);
       const tooltip = { width: 200, height: 100 };
 
-      const start = performance.now();
-      calculateOptimalPosition(trigger, tooltip, viewport);
-      const elapsed = performance.now() - start;
+      const pos = calculateOptimalPosition(trigger, tooltip, viewport);
 
-      expect(elapsed).toBeLessThan(16);
+      expect(['top', 'bottom', 'left', 'right']).toContain(pos.placement);
     });
 
-    it('handles large tooltips efficiently', () => {
+    it('restituisce un piazzamento valido per un tooltip più grande di ogni spazio disponibile', () => {
       const trigger = new DOMRect(500, 500, 100, 40);
+      // 800x600 non ci sta in nessuna delle quattro direzioni attorno al trigger:
+      // la funzione deve comunque scegliere, non restituire un piazzamento assente.
       const tooltip = { width: 800, height: 600 };
 
-      const start = performance.now();
-      calculateOptimalPosition(trigger, tooltip, viewport);
-      const elapsed = performance.now() - start;
+      const pos = calculateOptimalPosition(trigger, tooltip, viewport);
 
-      expect(elapsed).toBeLessThan(16);
+      expect(['top', 'bottom', 'left', 'right']).toContain(pos.placement);
+      expect(pos.top ?? pos.bottom).toBeDefined();
     });
   });
 });
@@ -153,7 +161,9 @@ describe('calculateOptimalPosition', () => {
 describe('debounce', () => {
   it('delays function execution', async () => {
     let called = false;
-    const fn = debounce(() => { called = true; }, 50);
+    const fn = debounce(() => {
+      called = true;
+    }, 50);
 
     fn();
     expect(called).toBe(false);
@@ -164,7 +174,9 @@ describe('debounce', () => {
 
   it('cancels previous call on rapid fire', async () => {
     let callCount = 0;
-    const fn = debounce(() => { callCount++; }, 50);
+    const fn = debounce(() => {
+      callCount++;
+    }, 50);
 
     fn();
     fn();

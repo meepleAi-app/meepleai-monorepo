@@ -38,6 +38,47 @@ jobs:
   mirror:
     name: Copia le immagini upstream nel GHCR del progetto
     runs-on: ubuntu-latest
+    # La lista sta a livello di JOB, non dentro un singolo step, perche' la leggono DUE step: la
+    # copia e la verifica di leggibilita' anonima. Duplicarla significherebbe che un giorno i tag
+    # divergono e la verifica interroga un tag che la copia non ha pushato.
+    env:
+      # Sorgente pinnata per digest + tag di destinazione nel mirror.
+      #
+      # Perche' ripubblicazioni e non l'upstream MinIO: l'upstream non esiste piu' da nessuna
+      # parte (verificato su Docker Hub, quay.io, ghcr.io/minio, mirror.gcr.io). Queste sono
+      # ripubblicazioni del BINARIO MinIO, e questo conta: il requisito piu' stretto del repo
+      # e' un presigned GET SigV4 scaricabile da un browser anonimo
+      # (apps/web/e2e/smoke-real-backend/cover-r2-strict.spec.ts:89-95), e un'implementazione
+      # diversa andrebbe verificata a campione mentre il binario originale no.
+      #
+      # SERVER = `alpine/minio`, non `bitnamilegacy/minio`, e la ragione e' misurata:
+      #
+      #   immagine                  Entrypoint                              Cmd                                   Volume
+      #   alpine/minio              minio                                   server /data --console-address :9001  /data
+      #   bitnamilegacy/minio       /opt/bitnami/scripts/minio/entrypoint.sh /opt/bitnami/scripts/minio/run.sh     /bitnami/minio/data
+      #
+      # `alpine/minio` ha esattamente l'interfaccia che i compose gia' usano — il suo Cmd di
+      # default E' il `command:` del servizio, e il volume e' `/data` come `minio_data:/data`.
+      # Bitnami avrebbe richiesto di riscrivere command, volume e utente.
+      #
+      # CLIENT = `bitnamilegacy/minio-client`, perche' `alpine/mc` non esiste (verificato) e
+      # `alpine/minio` NON contiene `mc` (`command -v mc` → assente). Il suo `mc` e' in
+      # /opt/bitnami/minio-client/bin/mc ed e' nel PATH.
+      #
+      # ⚠️ ARCHITETTURE, misurate il 2026-10-02 — le due immagini NON sono equivalenti:
+      #   alpine/minio              manifest list: amd64, arm64, arm, ppc64le, s390x
+      #   bitnamilegacy/minio-client manifest singolo: SOLO amd64
+      # Il client va bene perche' serve solo al `minio-init` del dev locale: nessun compose di
+      # staging referenzia minio (`grep -c minio infra/compose.staging*.yml` → 0) e il VPS
+      # staging e' arm64. Se un domani minio dovesse servire su staging, il CLIENT non partira'
+      # e serve un `mc` arm64 — il server invece ce l'ha gia'.
+      #
+      # Entrambi i namespace possono sparire come e' sparito l'originale: e' esattamente il
+      # motivo per cui finiscono qui dentro invece di essere referenziati dai compose.
+      MIRROR: |
+        alpine/minio@sha256:cf23643a6cf9ce159c57643ceb88279e431262282428c9e0bf3a7ef1a97e84b4 mirror/minio RELEASE.2025-10-15
+        bitnamilegacy/minio-client@sha256:9aa490587da3c5b6e0e77319fab2b34bc2ef61a03a7f6463575e533793bf7108 mirror/minio-client 2025.7.21
+
     steps:
       - name: Valida la conferma
         run: |
@@ -54,35 +95,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Mirror
-        env:
-          # Sorgente pinnata per digest + tag di destinazione nel mirror.
-          #
-          # Perche' ripubblicazioni e non l'upstream MinIO: l'upstream non esiste piu' da nessuna
-          # parte (verificato su Docker Hub, quay.io, ghcr.io/minio, mirror.gcr.io). Queste sono
-          # ripubblicazioni del BINARIO MinIO, e questo conta: il requisito piu' stretto del repo
-          # e' un presigned GET SigV4 scaricabile da un browser anonimo
-          # (apps/web/e2e/smoke-real-backend/cover-r2-strict.spec.ts:89-95), e un'implementazione
-          # diversa andrebbe verificata a campione mentre il binario originale no.
-          #
-          # SERVER = `alpine/minio`, non `bitnamilegacy/minio`, e la ragione e' misurata:
-          #
-          #   immagine                  Entrypoint                              Cmd                                   Volume
-          #   alpine/minio              minio                                   server /data --console-address :9001  /data
-          #   bitnamilegacy/minio       /opt/bitnami/scripts/minio/entrypoint.sh /opt/bitnami/scripts/minio/run.sh     /bitnami/minio/data
-          #
-          # `alpine/minio` ha esattamente l'interfaccia che i compose gia' usano — il suo Cmd di
-          # default E' il `command:` del servizio, e il volume e' `/data` come `minio_data:/data`.
-          # Bitnami avrebbe richiesto di riscrivere command, volume e utente.
-          #
-          # CLIENT = `bitnamilegacy/minio-client`, perche' `alpine/mc` non esiste (verificato) e
-          # `alpine/minio` NON contiene `mc` (`command -v mc` → assente). Il suo `mc` e' in
-          # /opt/bitnami/minio-client/bin/mc ed e' nel PATH.
-          #
-          # Entrambi i namespace possono sparire come e' sparito l'originale: e' esattamente il
-          # motivo per cui finiscono qui dentro invece di essere referenziati dai compose.
-          MIRROR: |
-            alpine/minio@sha256:cf23643a6cf9ce159c57643ceb88279e431262282428c9e0bf3a7ef1a97e84b4 mirror/minio RELEASE.2025-10-15
-            bitnamilegacy/minio-client@sha256:9aa490587da3c5b6e0e77319fab2b34bc2ef61a03a7f6463575e533793bf7108 mirror/minio-client 2025.7.21
         run: |
           set -euo pipefail
           OWNER_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
@@ -97,13 +109,30 @@ jobs:
             # architettura, quella del runner.
             docker buildx imagetools create --tag "$target" "$src"
 
-            # Verifica che la copia sia leggibile e riporti lo stesso digest della sorgente.
+            # Verifica che la copia sia leggibile e che il contenuto sia quello pinnato.
+            #
+            # Il digest del mirror combacia con la sorgente SOLO se la sorgente e' gia' una
+            # manifest list. Se e' un manifest singolo, `imagetools create` lo AVVOLGE in una
+            # lista di un elemento, quindi l'indice ha per forza un digest nuovo mentre il
+            # manifest referenziato resta bit-identico. Misurato il 2026-10-02:
+            #   alpine/minio            cf23643a… -> cf23643a…  (list multi-arch: identico)
+            #   bitnamilegacy/minio-cl. 9aa49058… -> 468f5fed…  (manifest singolo: avvolto)
+            # e l'indice 468f5fed… contiene esattamente `"digest": "sha256:9aa49058…"`.
+            # Confrontare solo i due digest boccia quindi una copia corretta: la verifica
+            # accetta l'uguaglianza OPPURE la presenza del digest sorgente fra i manifest
+            # dell'indice. Entrambe provano che il contenuto servito e' quello pinnato;
+            # nessuna delle due accetta un contenuto diverso.
             src_digest="${src##*@}"
             got=$(docker buildx imagetools inspect "$target" --format '{{.Manifest.Digest}}')
             echo "sorgente: $src_digest"
             echo "mirror:   $got"
-            if [ "$got" != "$src_digest" ]; then
-              echo "::error::il digest del mirror non combacia con la sorgente"
+            if [ "$got" = "$src_digest" ]; then
+              echo "digest identico: la sorgente era gia' una manifest list"
+            elif docker buildx imagetools inspect --raw "$target" | grep -qF "\"$src_digest\""; then
+              echo "digest diverso ma l'indice del mirror referenzia la sorgente: manifest singolo avvolto"
+            else
+              echo "::error::il mirror non referenzia il digest sorgente $src_digest"
+              docker buildx imagetools inspect --raw "$target"
               exit 1
             fi
             echo "::endgroup::"
@@ -111,10 +140,49 @@ jobs:
 
           echo "Mirror completato. I compose possono puntare a ghcr.io/${OWNER_REPO}/mirror/*"
 
-      - name: Promemoria sulla visibilita del package
+      - name: Verifica che il mirror sia leggibile SENZA login
         run: |
-          # I package GHCR nascono **privati**, e un `docker compose pull` da una macchina di
-          # sviluppo senza `docker login ghcr.io` fallirebbe con un 401 che somiglia molto
-          # all'errore da cui parte #3978. Va reso pubblico una volta, a mano, dalla pagina del
-          # package — non esiste un'API stabile per farlo dal workflow.
-          echo "::notice::Se e' il primo mirror, rendi pubblici i package in Settings → Packages, altrimenti serve 'docker login ghcr.io' anche in locale."
+          set -euo pipefail
+          OWNER_REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+
+          # Questo step sostituisce il promemoria «rendi pubblici i package a mano» che stava qui.
+          # Il promemoria era FALSO per questo repo, e la misura lo ha smentito il 2026-10-02: i due
+          # tag rispondono 200 con un token ANONIMO del registry, e si scaricano dopo
+          # `docker logout ghcr.io`. La ragione e' che il repo e' pubblico (`gh repo view` →
+          # visibility=PUBLIC) e GHCR collega il package creato dal GITHUB_TOKEN al repository,
+          # da cui eredita la visibilita' alla creazione. Il promemoria resterebbe vero solo se il
+          # repo diventasse privato.
+          #
+          # Ma la condizione che conta per #3978 non e' «il package e' marcato pubblico»: e'
+          # «un dev che parte da un checkout pulito, senza `docker login ghcr.io`, riesce a fare
+          # `make dev`». Quella e' verificabile, quindi la verifichiamo a ogni run invece di
+          # raccomandarla a parole — il token anonimo qui sotto NON usa le credenziali del runner.
+          # `exit 1` diretto e non un flag: il `while` gira in una subshell del pipe, quindi una
+          # variabile impostata qui dentro non sopravvive al `done` e un controllo dopo il loop
+          # leggerebbe sempre il valore iniziale. Uscire dalla subshell fa fallire lo step perche'
+          # la subshell e' l'ultimo comando della pipeline.
+          # Stessa lista dello step di copia: tre campi, il primo (la sorgente) non serve qui.
+          echo "$MIRROR" | while read -r _src dest tag; do
+            [ -n "${dest:-}" ] || continue
+            path="${OWNER_REPO}/${dest}"
+            tok=$(curl -sS "https://ghcr.io/token?scope=repository:${path}:pull&service=ghcr.io" \
+                  | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            code=$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer ${tok}" \
+                   -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.index.v1+json' \
+                   "https://ghcr.io/v2/${path}/manifests/${tag}")
+            # 401/403 e 404 hanno rimedi opposti e vanno distinti, altrimenti l'errore manda a
+            # cambiare la visibilita' di un package che in realta' non ha quel tag (misurato: un
+            # tag inesistente risponde 404, non 401).
+            case "$code" in
+              200) echo "anonimo OK  ${dest}:${tag} (HTTP $code)" ;;
+              401|403)
+                echo "::error::${dest}:${tag} esiste ma NON e' leggibile in anonimo (HTTP $code) — rendilo pubblico in Settings → Packages, altrimenti 'make dev' richiede 'docker login ghcr.io'"
+                exit 1 ;;
+              404)
+                echo "::error::${dest}:${tag} non esiste nel mirror (HTTP 404) — il tag nella lista MIRROR non combacia con quello pushato"
+                exit 1 ;;
+              *)
+                echo "::error::${dest}:${tag} risposta inattesa dal registry (HTTP $code)"
+                exit 1 ;;
+            esac
+          done

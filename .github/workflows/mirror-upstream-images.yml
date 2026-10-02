@@ -78,6 +78,14 @@ jobs:
           # `alpine/minio` NON contiene `mc` (`command -v mc` → assente). Il suo `mc` e' in
           # /opt/bitnami/minio-client/bin/mc ed e' nel PATH.
           #
+          # ⚠️ ARCHITETTURE, misurate il 2026-10-02 — le due immagini NON sono equivalenti:
+          #   alpine/minio              manifest list: amd64, arm64, arm, ppc64le, s390x
+          #   bitnamilegacy/minio-client manifest singolo: SOLO amd64
+          # Il client va bene perche' serve solo al `minio-init` del dev locale: nessun compose di
+          # staging referenzia minio (`grep -c minio infra/compose.staging*.yml` → 0) e il VPS
+          # staging e' arm64. Se un domani minio dovesse servire su staging, il CLIENT non partira'
+          # e serve un `mc` arm64 — il server invece ce l'ha gia'.
+          #
           # Entrambi i namespace possono sparire come e' sparito l'originale: e' esattamente il
           # motivo per cui finiscono qui dentro invece di essere referenziati dai compose.
           MIRROR: |
@@ -97,13 +105,30 @@ jobs:
             # architettura, quella del runner.
             docker buildx imagetools create --tag "$target" "$src"
 
-            # Verifica che la copia sia leggibile e riporti lo stesso digest della sorgente.
+            # Verifica che la copia sia leggibile e che il contenuto sia quello pinnato.
+            #
+            # Il digest del mirror combacia con la sorgente SOLO se la sorgente e' gia' una
+            # manifest list. Se e' un manifest singolo, `imagetools create` lo AVVOLGE in una
+            # lista di un elemento, quindi l'indice ha per forza un digest nuovo mentre il
+            # manifest referenziato resta bit-identico. Misurato il 2026-10-02:
+            #   alpine/minio            cf23643a… -> cf23643a…  (list multi-arch: identico)
+            #   bitnamilegacy/minio-cl. 9aa49058… -> 468f5fed…  (manifest singolo: avvolto)
+            # e l'indice 468f5fed… contiene esattamente `"digest": "sha256:9aa49058…"`.
+            # Confrontare solo i due digest boccia quindi una copia corretta: la verifica
+            # accetta l'uguaglianza OPPURE la presenza del digest sorgente fra i manifest
+            # dell'indice. Entrambe provano che il contenuto servito e' quello pinnato;
+            # nessuna delle due accetta un contenuto diverso.
             src_digest="${src##*@}"
             got=$(docker buildx imagetools inspect "$target" --format '{{.Manifest.Digest}}')
             echo "sorgente: $src_digest"
             echo "mirror:   $got"
-            if [ "$got" != "$src_digest" ]; then
-              echo "::error::il digest del mirror non combacia con la sorgente"
+            if [ "$got" = "$src_digest" ]; then
+              echo "digest identico: la sorgente era gia' una manifest list"
+            elif docker buildx imagetools inspect --raw "$target" | grep -qF "\"$src_digest\""; then
+              echo "digest diverso ma l'indice del mirror referenzia la sorgente: manifest singolo avvolto"
+            else
+              echo "::error::il mirror non referenzia il digest sorgente $src_digest"
+              docker buildx imagetools inspect --raw "$target"
               exit 1
             fi
             echo "::endgroup::"

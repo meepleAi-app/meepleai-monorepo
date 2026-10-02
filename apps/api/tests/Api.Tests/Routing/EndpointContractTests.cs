@@ -15,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Moq;
 using StackExchange.Redis;
 using Xunit;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.Routing;
 
@@ -190,6 +191,12 @@ public sealed class RouteContractTestFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // #3978 / REQ-AI-TEST-001 — guardia fail-closed sugli host AI a pagamento.
+        // Questa factory era una delle sei (su otto che costruiscono un host) che NON la
+        // installava: senza, una richiesta verso un provider a consumo USCIVA dalla macchina
+        // e moriva con 401 lato provider, cioe il divieto valeva per fortuna, non per costruzione.
+        builder.ConfigureServices(services => services.AddPaidAiHostGuard());
+
         builder.UseEnvironment("Testing");
 
         builder.ConfigureAppConfiguration((_, configBuilder) =>

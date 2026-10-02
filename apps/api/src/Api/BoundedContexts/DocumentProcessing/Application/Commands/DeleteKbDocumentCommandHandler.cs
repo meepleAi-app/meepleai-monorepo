@@ -33,6 +33,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
     private readonly IVectorStoreAdapter _vectorStore;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
+    private readonly Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache _semanticCache;
     private readonly IMediator? _mediator;
     private readonly ILogger<DeleteKbDocumentCommandHandler> _logger;
 
@@ -42,6 +43,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         IVectorStoreAdapter vectorStore,
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache semanticCache,
         ILogger<DeleteKbDocumentCommandHandler> logger,
         IMediator? mediator = null)
     {
@@ -50,6 +52,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+        _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mediator = mediator;
     }
@@ -176,6 +179,39 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         try
         {
             await _cacheService.InvalidateGameAsync(gameId, cancellationToken).ConfigureAwait(false);
+        // #3982 — anche la cache SEMANTICA, non solo quella delle risposte AI.
+        //
+        // Finora la cancellazione invalidava `IAiResponseCacheService` e lasciava intatta
+        // `ISemanticResponseCache`: le risposte costruite sul manuale cancellato continuavano a
+        // essere servite per le 24h del suo TTL, citazioni comprese. Il caso che lo rende netto e'
+        // la rimozione per copyright o su richiesta — la cancellazione viene dichiarata compiuta
+        // mentre il contenuto e' ancora rispondibile.
+        //
+        // L'iniezione attraversa il confine verso KnowledgeBase, e segue un precedente dello stesso
+        // bounded context: `IndexPdfCommandHandler` (DocumentProcessing) inietta
+        // `ISemanticResponseCache` dal 2026-09. Non e' un pattern nuovo introdotto qui.
+        //
+        // `Guid.TryParse` e non `Parse`: l'interfaccia AI lavora su `string`, quella semantica su
+        // `Guid`, e un id non parsabile non deve fare esplodere una cancellazione gia' avvenuta.
+        if (Guid.TryParse(gameId, out var semanticGameId))
+        {
+            try
+            {
+                await _semanticCache.InvalidateGameAsync(semanticGameId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+#pragma warning disable CA1031 // Do not catch general exception types — best-effort, come sopra
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogWarning(ex,
+                    "Invalid operation invalidating the semantic cache for game {GameId} after {Operation} — stale answers may be served until the TTL expires",
+                    gameId, operation);
+            }
+        }
         }
         catch (OperationCanceledException)
         {

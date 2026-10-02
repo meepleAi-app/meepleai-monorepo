@@ -25,18 +25,70 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
     private readonly MeepleAiDbContext _db;
     private readonly IMediator _mediator;
     private readonly TimeProvider _timeProvider;
+    private readonly ISemanticResponseCache _semanticCache;
     private readonly ILogger<PdfIndexingPipeline> _logger;
 
     public PdfIndexingPipeline(
         MeepleAiDbContext db,
         IMediator mediator,
         TimeProvider timeProvider,
+        ISemanticResponseCache semanticCache,
         ILogger<PdfIndexingPipeline> logger)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
+        _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
+
+    /// <summary>
+    /// Invalidates the semantic response cache for a game whose index just changed.
+    /// <para>
+    /// ISSUE #3982 — why this lives in the pipeline and not in the callers. The invalidation used to
+    /// sit in <c>IndexPdfCommandHandler</c>, one of FOUR callers of <see cref="IndexAsync"/>:
+    /// the other three — <c>UploadPdfCommandHandler.Processing</c>,
+    /// <c>CompleteChunkedUploadCommandHandler</c> and <c>PdfProcessingPipelineService</c> — wrote a
+    /// new index and left day-old answers being served for the full 24h TTL. The pipeline already
+    /// knew it had four callers (see the comment on <c>wasNotCompletedBefore</c> below); the cache
+    /// contract says "called on re-index", and this is where the re-index happens. Putting it here
+    /// makes the omission not expressible.
+    /// </para>
+    /// <para>
+    /// Best-effort by design, like the AI-cache invalidation in the delete handlers: a cache that
+    /// fails to clear must not fail an index that is already committed. The cost of swallowing is a
+    /// stale answer for at most the TTL; the cost of throwing is a document indexed in the database
+    /// and reported as failed.
+    /// </para>
+    /// <para>
+    /// No invalidation when <paramref name="gameId"/> is null: nothing is ever cached without a
+    /// game. <c>AskQuestionQueryHandler</c> keys both reads and writes on <c>query.GameId</c>
+    /// (:238, :496), which is a real game — so there are no entries under a placeholder to clear.
+    /// </para>
+    /// </summary>
+    private async Task InvalidateSemanticCacheSafelyAsync(Guid? gameId, Guid pdfDocumentId, CancellationToken cancellationToken)
+    {
+        if (!gameId.HasValue)
+        {
+            return;
+        }
+
+        try
+        {
+            await _semanticCache.InvalidateGameAsync(gameId.Value, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types — see <para> above
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex,
+                "Failed to invalidate the semantic response cache for game {GameId} after indexing PDF {PdfDocumentId} — stale answers may be served until the TTL expires",
+                gameId.Value, pdfDocumentId);
+        }
     }
 
     public async Task IndexAsync(
@@ -138,6 +190,13 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
                 pdfDocumentId);
             return;
         }
+
+        // #3982 — qui, e non dopo il bail: il bail che segue riguarda la RIPUBBLICAZIONE DI EVENTI,
+        // non la cache. Un re-index su un documento gia' `completed` riscrive i chunk e rende
+        // stantie le risposte in cache esattamente come il primo index, quindi va invalidata anche
+        // su quel percorso. Dopo il SaveChanges perche' invalidare una cache per un indice che non
+        // si e' committato aprirebbe una finestra in cui si riempie di nuovo col vecchio contenuto.
+        await InvalidateSemanticCacheSafelyAsync(gameId, pdfDocumentId, cancellationToken).ConfigureAwait(false);
 
         if (!wasNotCompletedBefore)
         {

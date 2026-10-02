@@ -62,3 +62,59 @@ jobs:
               echo "::warning file=${f}::Both ${f} and ${f%.disabled} exist — disabled file may shadow active one"
             fi
           done
+
+      - name: Detect paid AI secrets in automatically-triggered workflows
+        run: |
+          set -euo pipefail
+          # REQ-AI-TEST-001 — «automated tests must never consume paid AI tokens» — e' gia'
+          # applicato a runtime da PaidAiHostGuardHandler, che blocca gli host a pagamento prima
+          # della rete. Questo gate protegge l'altra meta' dell'invariante, quella che oggi vale
+          # per CONVENZIONE e che nessuno misura: la chiave reale arriva a UN SOLO workflow, e
+          # quel workflow parte solo a mano.
+          #
+          # Misurato il 2026-10-02: `secrets.OPENROUTER_API_KEY` compare una volta in tutti i
+          # workflow, in e2e-smoke-real-llm-weekly.yml, il cui blocco `on:` contiene solo
+          # `workflow_dispatch:`. Tutti gli altri iniettano un placeholder (`test-key`,
+          # `test-key-for-ci-placeholder`, `sk-or-v1-dummy-key-for-ci-testing-only`).
+          # Senza questo gate, un workflow nuovo che scrivesse `${{ secrets.OPENROUTER_API_KEY }}`
+          # sotto `push:` passerebbe in silenzio, e la spesa comparirebbe sulla fattura, non in CI.
+          #
+          # Spec: docs/for-developers/specs/2026-10-02-test-dependency-tiers-and-observable-skips.md (R4.4)
+          PAID_KEYS='OPENROUTER_API_KEY|DEEPSEEK_API_KEY|OPENAI_API_KEY|ANTHROPIC_API_KEY'
+          AUTO_TRIGGERS='push|pull_request|pull_request_target|schedule|workflow_call'
+          violations=''
+
+          for wf in .github/workflows/*.yml; do
+            # Le righe di commento sono escluse: una chiave NOMINATA in un commento non e' una
+            # chiave USATA. Senza questa esclusione il gate denuncia se stesso, perche' il commento
+            # qui sopra cita la forma esatta da vietare — verificato, era il primo esito del test.
+            grep -vE '^[[:space:]]*#' "$wf" | grep -qE "secrets\.($PAID_KEYS)" || continue
+
+            # Il blocco `on:`: dalla riga successiva a `^on:` fino alla prossima riga che inizia
+            # a colonna 0 con un carattere che non sia spazio o '#'. I commenti sono scartati,
+            # perche' un trigger commentato non e' attivo (il cron di
+            # e2e-smoke-real-llm-weekly.yml e' documentato come disabilitato in prosa).
+            auto=$(awk '/^on:/{f=1;next} /^[^[:space:]#]/{f=0} f' "$wf" \
+                   | grep -vE '^[[:space:]]*#' \
+                   | grep -oE "^[[:space:]]{1,4}($AUTO_TRIGGERS):" || true)
+
+            if [ -n "$auto" ]; then
+              key=$(grep -ohE "secrets\.($PAID_KEYS)" "$wf" | sort -u | tr '\n' ' ')
+              trig=$(echo "$auto" | tr -d ' :' | sort -u | tr '\n' ' ')
+              violations="${violations}  ${wf} — chiave: ${key}| trigger automatici: ${trig}"$'\n'
+            fi
+          done
+
+          if [ -n "$violations" ]; then
+            echo "::error::Un workflow a trigger AUTOMATICO usa una chiave AI a consumo (REQ-AI-TEST-001)"
+            echo ""
+            echo "$violations"
+            echo "Come correggere, in ordine di preferenza:"
+            echo "  1. Inietta un placeholder invece della chiave reale, come fanno ci.yml e dev-async.yml"
+            echo "     (es. OPENROUTER_API_KEY: test-key-for-ci-placeholder)"
+            echo "  2. Se il workflow deve davvero spendere, togli ogni trigger automatico e lascia"
+            echo "     solo workflow_dispatch, come e2e-smoke-real-llm-weekly.yml"
+            exit 1
+          fi
+
+          echo "::notice::Nessun workflow automatico usa una chiave AI a consumo ✓"

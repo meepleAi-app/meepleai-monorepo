@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using FluentAssertions;
 using Xunit;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.Integration;
 
@@ -17,6 +18,12 @@ public class BggRateLimitTestFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // #3978 / REQ-AI-TEST-001 — guardia fail-closed sugli host AI a pagamento.
+        // Questa factory era una delle sei (su otto che costruiscono un host) che NON la
+        // installava: senza, una richiesta verso un provider a consumo USCIVA dalla macchina
+        // e moriva con 401 lato provider, cioe il divieto valeva per fortuna, non per costruzione.
+        builder.ConfigureServices(services => services.AddPaidAiHostGuard());
+
         builder.ConfigureAppConfiguration((context, config) =>
         {
             // Enable rate limiting for integration tests

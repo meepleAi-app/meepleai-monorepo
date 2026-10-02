@@ -122,13 +122,27 @@ jobs:
             # accetta l'uguaglianza OPPURE la presenza del digest sorgente fra i manifest
             # dell'indice. Entrambe provano che il contenuto servito e' quello pinnato;
             # nessuna delle due accetta un contenuto diverso.
+            #
+            # La seconda condizione interroga SOLO `manifests[].digest` con jq. Prima era un `grep`
+            # sul JSON intero, che e' cieco alla posizione: in questi indici ci sono altri campi che
+            # contengono digest — misurati sull'indice di mirror/minio il 2026-10-02, 12 campi
+            # `digest` piu' 6 annotazioni `vnd.docker.reference.digest` delle attestation.
+            #
+            # Onesta' sulla portata del cambio: su QUESTE immagini i due guard danno lo stesso
+            # esito, perche' tutte e 6 quelle annotazioni puntano a digest che sono anche in
+            # `manifests[]` (verificato: zero digest presenti solo in annotazione). Il guard stretto
+            # non corregge quindi un falso positivo osservato, fa una cosa piu' noiosa e piu' utile:
+            # rende il codice conforme a cio' che la riga sopra promette, senza dipendere da quella
+            # coincidenza, che e' una proprieta' di come Docker costruisce gli indici oggi e non un
+            # invariante su cui valga la pena appoggiarsi.
             src_digest="${src##*@}"
             got=$(docker buildx imagetools inspect "$target" --format '{{.Manifest.Digest}}')
             echo "sorgente: $src_digest"
             echo "mirror:   $got"
             if [ "$got" = "$src_digest" ]; then
               echo "digest identico: la sorgente era gia' una manifest list"
-            elif docker buildx imagetools inspect --raw "$target" | grep -qF "\"$src_digest\""; then
+            elif docker buildx imagetools inspect --raw "$target" \
+                 | jq -e --arg d "$src_digest" '[.manifests[]?.digest] | index($d) != null' >/dev/null; then
               echo "digest diverso ma l'indice del mirror referenzia la sorgente: manifest singolo avvolto"
             else
               echo "::error::il mirror non referenzia il digest sorgente $src_digest"

@@ -652,7 +652,9 @@ services:
     # digest. La sorgente e' una ripubblicazione del binario MinIO, scelta fra le disponibili
     # perche' ha esattamente l'interfaccia che questo servizio usa gia': il suo Cmd di default E'
     # il `command` qui sotto e il suo volume e' `/data` (Bitnami avrebbe richiesto di riscrivere
-    # command, volume e utente).
+    # command e volume). L'UTENTE invece va riscritto comunque — vedi `user: root` qui sotto: era
+    # elencato come costo della sola alternativa Bitnami, ed e' un errore, perche' nessuna delle
+    # due immagini gira come root e il volume lo richiede.
     #
     # Dipendere dal proprio mirror e non da un registry di terzi e' la correzione della causa
     # prima: la sparizione di un upstream diventa un aggiornamento, non un blocco.
@@ -660,6 +662,38 @@ services:
     container_name: meepleai-minio
     restart: unless-stopped
     profiles: [storage]
+    # #3978 — `user: root` NON e' cosmetico: senza questa riga il servizio non parte affatto.
+    # `alpine/minio` gira come utente `minio` (il vecchio `minio/minio` girava come root) e un
+    # volume Docker nasce `root:root` 755, quindi il processo non puo' scrivere in /data:
+    #
+    #   volume con dati preesistenti (uid 0:0)  FATAL Unable to initialize backend: Unable to write
+    #   volume VUOTO, appena creato             FATAL Unable to initialize backend: file access denied
+    #
+    # Il secondo caso e' quello che rende la riga necessaria e non un rimedio alla migrazione:
+    # senza, lo stack e' rotto anche per un dev che parte da zero. Misurato il 2026-10-02 su
+    # entrambi i volumi, con `/minio/health/ready` interrogato e non dedotto: `--user root` →
+    # running + ready in entrambi, dati preesistenti intatti.
+    #
+    # Alternative scartate: `bitnamilegacy/minio` gira come uid 1001 e avrebbe lo stesso problema
+    # oltre a richiedere command e volume diversi; un init container che fa `chown` aggiunge un
+    # servizio al grafo per ottenere lo stesso effetto. Root in un MinIO di sviluppo locale, dietro
+    # al profilo `storage`, e' il costo minore.
+    user: root
+    # #3978 — il SERVER non aveva alcuna credenziale, quindi cadeva sui default di MinIO
+    # (`minioadmin:minioadmin`) mentre `minio-init` qui sotto usa `minioadmin123`. Misurato il
+    # 2026-10-02 contro il server in esecuzione:
+    #   mc alias set … minioadmin minioadmin     → `mc ls` elenca i bucket
+    #   mc alias set … minioadmin minioadmin123  → auth fallita
+    # Conseguenza: su uno stack nuovo il bucket NON veniva creato. Non se ne accorgeva nessuno
+    # perche' su un volume con `meepleai-uploads` gia' dentro (datato 2026-07-14) non serviva
+    # crearlo, e perche' `minio-init` esce 0 anche quando non lo crea — vedi la guardia nel suo
+    # entrypoint. I default sono gli stessi dei due `${…:-}` di minio-init: cambiarne uno solo
+    # rompe di nuovo l'accoppiata.
+    # Le credenziali root di MinIO vengono lette dall'env a ogni avvio e non sono persistite nel
+    # backend, quindi allinearle non invalida un volume esistente.
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -703,12 +737,26 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    # #3978 — le due guardie qui sotto (`|| exit 1` su alias set, e `mc ls` dopo `mc mb`) non sono
+    # ridondanti: senza di esse questo container usciva **0** dichiarando «Bucket created
+    # successfully» mentre il bucket non veniva creato. Misurato il 2026-10-02 su un progetto
+    # compose con volumi vuoti:
+    #   mc: <ERROR> Unable to initialize new alias … signature does not match
+    #   Bucket created successfully `myminio/meepleai-uploads`.
+    #   Bucket meepleai-uploads ready
+    #   exit=0   →   ls sul volume: bucket ASSENTE
+    # `mc mb --ignore-existing` stampa quel messaggio e ritorna 0 anche quando l'alias non e'
+    # autenticato, quindi il suo codice di uscita non e' evidenza che il bucket esista: va
+    # interrogato. L'`api` dipende da questo container con
+    # `condition: service_completed_successfully`, percio' un exit 0 bugiardo lo faceva partire su
+    # uno storage senza bucket e il primo presign tornava null.
     entrypoint: >
       /bin/sh -c "
       : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set — refusing to run with an empty credential'};
       : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set — refusing to run with an empty credential'};
-      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} || exit 1;
       mc mb myminio/meepleai-uploads --ignore-existing;
+      mc ls myminio/meepleai-uploads >/dev/null 2>&1 || { echo 'FATALE: il bucket meepleai-uploads non esiste dopo mc mb'; exit 1; };
       echo 'Bucket meepleai-uploads ready';
       "
     networks:

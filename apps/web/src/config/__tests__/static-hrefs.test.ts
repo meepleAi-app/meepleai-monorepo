@@ -57,17 +57,20 @@ const KNOWN_BROKEN = {
 /**
  * Routes whose own redirect covers them entirely — the `/settings` defect, elsewhere.
  *
- * Each of these is a redirect whose `source` equals an existing route, so the route can
- * never be served. They are real defects of the same class, but fixing them here would
- * bury a settings change under an unrelated refactor, so they are declared instead of
- * silenced: the count is asserted, the debt cannot grow, and shrinking it forces an
- * update here.
+ * **Vuota da #3976: il debito e' chiuso**, e con la lista vuota la guardia qui sotto («no
+ * redirect makes an existing route unreachable») e' incondizionata.
+ *
+ * Le tre voci che c'erano — `/profile/achievements`, `/play-records/stats`,
+ * `/admin/shared-games` — erano pagine mai servite, e in tutti e tre i casi la DESTINAZIONE del
+ * redirect era quella viva, per decisioni gia' scritte nel codice: #2202 aveva spostato gli
+ * achievements nel tab (rimuovendo un link che tornava alla pagina), #5039 aveva reso canonico
+ * `/play-records?tab=stats`, e `/admin/content` ha il tab `shared` come default. Le pagine sono
+ * state cancellate e i redirect restano come cortesia per i segnalibri.
+ *
+ * Se questa lista torna a riempirsi, serve una ragione scritta: ogni voce e' una route che il
+ * progetto contiene e non puo' servire.
  */
-const KNOWN_SHADOWED = [
-  '/profile/achievements',
-  '/play-records/stats',
-  '/admin/shared-games',
-] as const;
+const KNOWN_SHADOWED: readonly string[] = [];
 
 interface Redirect {
   readonly source: string;
@@ -218,7 +221,7 @@ describe('next.config redirects — do not shadow real routes', () => {
       .flatMap(({ source }) =>
         routes.filter(route => covers(source, route)).map(route => ({ source, route }))
       )
-      .filter(({ route }) => !KNOWN_SHADOWED.includes(route as (typeof KNOWN_SHADOWED)[number]));
+      .filter(({ route }) => !KNOWN_SHADOWED.includes(route));
 
     expect(
       shadowed.map(({ source, route }) => `${source} shadows ${route}`),
@@ -226,17 +229,11 @@ describe('next.config redirects — do not shadow real routes', () => {
     ).toEqual([]);
   });
 
-  it('the known shadowing debt does not grow', async () => {
-    const redirects = await loadRedirects();
-
-    const actual = routes.filter(
-      route =>
-        KNOWN_SHADOWED.includes(route as (typeof KNOWN_SHADOWED)[number]) &&
-        redirects.some(({ source }) => covers(source, route))
-    );
-
-    // Fixing some is welcome — then shorten KNOWN_SHADOWED in the same PR.
-    expect(actual.sort()).toEqual([...KNOWN_SHADOWED].sort());
+  it('the shadowing debt is closed — no route is excluded from the guard', () => {
+    // #3976 ha chiuso il debito. Finche' questa lista e' vuota, il test sopra e' incondizionato:
+    // nessuna route e' esentata. Riempirla di nuovo significa reintrodurre un'esenzione, e questa
+    // asserzione obbliga a farlo di proposito invece che per inerzia.
+    expect(KNOWN_SHADOWED).toEqual([]);
   });
 
   it('every settings section is reachable at its own address', async () => {

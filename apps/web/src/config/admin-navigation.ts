@@ -149,10 +149,16 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         activePattern: /^\/admin\/game-sessions/,
       },
       {
-        href: '/admin/shared-games',
+        // #3976: la pagina `/admin/shared-games` era irraggiungibile (il redirect in
+        // next.config.js ha `source` uguale alla route) ed e' stata cancellata, perche' la
+        // destinazione viva e' il tab: `/admin/content` ha `shared` come default. L'href punta
+        // direttamente, cosi' evita il 308 e non e' piu' un href rotto.
+        href: '/admin/content?tab=shared',
         label: 'Shared Games',
         icon: ShareIcon,
-        activePattern: /^\/admin\/shared-games$/,
+        // L'activePattern resta su /admin/shared-games* perche' il sottoalbero (all, new,
+        // import, categories, cover-gap) e' raggiungibile e deve ancora illuminare questa voce.
+        activePattern: /^\/admin\/(shared-games|content)/,
       },
       {
         href: '/admin/shared-games/new',

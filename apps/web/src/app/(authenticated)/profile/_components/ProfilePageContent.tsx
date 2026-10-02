@@ -270,7 +270,9 @@ function OverviewTab() {
         <CardContent>
           <div className="space-y-2">
             <QuickActionLink
-              href="/profile/achievements"
+              // #3976: il tab e' la vista viva (#2202 ha rimosso il link che tornava qui);
+              // puntare direttamente evita il 308 che il redirect di cortesia impone.
+              href="/profile?tab=achievements"
               icon={Trophy}
               label="Achievements"
               description="Vedi badge e traguardi"

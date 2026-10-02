@@ -3,10 +3,13 @@
 /**
  * StatisticsView — Play Records statistics (Task 5 reskin · #2438 trend/range)
  *
- * Reusable stats body rendered both by the standalone `/play-records/stats`
- * route (legacy, redirected) AND inline by `/play-records?tab=stats` (the
- * canonical entry per route-consolidation #5039 — next.config redirects the
- * standalone path to the tab).
+ * Stats body rendered inline by `/play-records?tab=stats`, the canonical entry per
+ * route-consolidation #5039.
+ *
+ * #3976: la pagina standalone `/play-records/stats` e' stata cancellata. Non era «legacy,
+ * redirected» ma irraggiungibile: il redirect in next.config.js ha `source` uguale alla route, e
+ * Next risolve i redirect PRIMA del routing da filesystem, quindi quella pagina non e' mai stata
+ * servita — pur avendo test verdi e una storia. Il redirect resta come cortesia per i segnalibri.
  *
  * - Date-range preset filter (Tutto · 30g · 90g · 12 mesi) → narrows stats (#2438)
  * - StatsHero: 4-col KPI (Partite/Giochi/Win rate/Preferito)

@@ -162,14 +162,39 @@ services:
       ollama:
         condition: service_healthy
     restart: "no"
+    environment:
+      # Il modello di EMBEDDING. Il codice lo legge da EMBEDDING_MODEL con lo stesso default
+      # (Program.cs, AdminKBSettingsEndpoints.cs): se cambi uno, cambia l'altro.
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      # Il modello di CHAT. 🔴 Prima di #3978 questo servizio scaricava SOLO l'embedding, mentre
+      # `LlmProviderSelector` instrada su Ollama (riga 86: «AutomatedTest source: always routed to
+      # Ollama») chiedendo il modello risolto da `GetDefaultModelForProviderAsync("Ollama")`, che in
+      # assenza di una StrategyModelMapping nel DB cade su `AgentDefaults.OllamaFallbackModel`
+      # = "llama3:8b". Risultato: ogni chat instradata su Ollama rispondeva 404 «model not found»,
+      # e l'unico percorso LLM gratuito e locale del progetto era inutilizzabile.
+      #
+      # Il default qui DEVE restare allineato a AgentDefaults.OllamaFallbackModel: sono due fonti
+      # che devono dire la stessa cosa, e divergere riporta il 404.
+      # Per una macchina modesta: `OLLAMA_CHAT_MODEL=qwen2.5:1.5b make dev` scarica ~1GB invece di
+      # ~4.7GB, ma allora il modello va mappato in StrategyModelMapping, altrimenti il fallback
+      # hardcoded continua a chiedere llama3:8b e il 404 torna.
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3:8b}
+    # La verifica su /api/tags dopo ogni pull non e' ridondante: `POST /api/pull` risponde 200 e poi
+    # STREAMMA il progresso, quindi un errore a meta' scaricamento non cambia lo status e `curl -sf`
+    # esce 0 comunque. E' lo stesso difetto del `mc mb` di minio-init documentato sopra — un codice
+    # di uscita che non e' evidenza dell'effetto. Qui l'effetto si interroga.
     command: >
       sh -c '
-        echo "Pulling nomic-embed-text model..." &&
-        curl -sf -X POST http://ollama:11434/api/pull \
-          -d "{\"name\":\"nomic-embed-text\"}" \
-          --output /dev/null &&
-        echo "✓ nomic-embed-text pull initiated" ||
-        (echo "✗ Model pull failed — check Ollama logs" && exit 1)
+        set -eu
+        for M in "$${OLLAMA_EMBED_MODEL}" "$${OLLAMA_CHAT_MODEL}"; do
+          echo "Pulling $$M ..."
+          curl -sf -X POST http://ollama:11434/api/pull -d "{\"name\":\"$$M\"}" --output /dev/null
+          curl -sf http://ollama:11434/api/tags | grep -q "\"$$M\"" || {
+            echo "✗ FATALE: $$M non compare in /api/tags dopo il pull" ;
+            exit 1 ;
+          }
+          echo "✓ $$M disponibile"
+        done
       '
     networks:
       - meepleai

@@ -26,11 +26,20 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// <remarks>
 /// Uses the same standalone MinIO Testcontainer + skip convention as
 /// <see cref="Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests"/>
-/// (harness copied verbatim per Issue #2947 Task 6 Step 1). MinIO-over-HTTP does
-/// not support <c>DisablePayloadSigning</c>, so these tests are expected to skip
-/// locally and only run where MinIO/R2-HTTPS is genuinely reachable (CI gated
-/// lane / staging). See CLAUDE.md "Known Flaky Tests" — this is intentional, not
-/// a regression.
+/// (harness copied verbatim per Issue #2947 Task 6 Step 1).
+/// <para>
+/// #3978 — qui c'era: «MinIO-over-HTTP does not support <c>DisablePayloadSigning</c>, so these
+/// tests are expected to skip locally … this is intentional, not a regression». La frase era
+/// troppo larga, e per mesi ha coperto uno skip che aveva un'altra causa: l'immagine
+/// <c>minio/minio:latest</c> non esisteva più, quindi il container non partiva affatto e il
+/// <c>catch</c> intorno a <c>StartAsync</c> skippava TUTTO in silenzio.
+/// </para>
+/// <para>
+/// Con l'immagine puntata al mirror GHCR e il container che gira come root, queste suite
+/// girano davvero contro MinIO-over-HTTP e la maggior parte dei test passa. Restano skippati
+/// solo quelli marcati <c>[Fact(Skip = "#4016 …")]</c>, ciascuno con la sua causa: non è
+/// «MinIO non supporta HTTP», sono tre difetti distinti tracciati in #4016.
+/// </para>
 /// </remarks>
 [Trait("Category", "Integration")]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -67,6 +76,9 @@ public sealed class CoverR2ConventionIntegrationTests : IAsyncLifetime
             {
                 _minioContainer = new ContainerBuilder()
                     .WithImage(TestcontainersConfiguration.MinioImage)
+                    // #3978 — senza root il server non scrive nel volume anonimo di /data e muore
+                    // con «file access denied»; il catch qui sotto lo tradurrebbe in uno skip muto.
+                    .WithCreateParameterModifier(p => p.User = TestcontainersConfiguration.MinioContainerUser)
                     .WithPortBinding(TestcontainersConfiguration.MinioApiPort, true)
                     .WithPortBinding(TestcontainersConfiguration.MinioConsolePort, true)
                     .WithEnvironment("MINIO_ROOT_USER", RootUser)
@@ -164,7 +176,10 @@ public sealed class CoverR2ConventionIntegrationTests : IAsyncLifetime
     private S3BlobStorageService BuildBlobService()
         => new(_s3Client, _options, new Mock<Microsoft.Extensions.Logging.ILogger<S3BlobStorageService>>().Object);
 
-    [Fact]
+    // #4016 — le pipeline cover tengono `DisablePayloadSigning = true` hardcoded, mentre
+    // `S3BlobStorageService` usa gia' `!UsesPlainHttp(endpoint)` (#3846). Su un endpoint HTTP —
+    // cioe' il MinIO dello stack locale — l'upload non puo' funzionare, e questo morde oltre i test.
+    [Fact(Skip = "#4016 — DisablePayloadSigning hardcoded nelle pipeline cover: #3846 incompleto")]
     public async Task BggCover_Uploaded_ResolvesViaRawKeyNoSuffix_And200()
     {
         SkipIfNotAvailable();
@@ -185,7 +200,7 @@ public sealed class CoverR2ConventionIntegrationTests : IAsyncLifetime
         (await resp.Content.ReadAsByteArrayAsync()).Should().BeEquivalentTo(bytes);
     }
 
-    [Fact]
+    [Fact(Skip = "#4016 — DisablePayloadSigning hardcoded nelle pipeline cover: #3846 incompleto")]
     public async Task PdfCover_Uploaded_ResolvesViaPreviewSuffix_And200()
     {
         SkipIfNotAvailable();

@@ -90,8 +90,8 @@
 | cadvisor | gcr.io/cadvisor/cadvisor:v0.49.1 | meepleai-cadvisor | monitoring | 8080 | 0.5 | 512M |
 | n8n | n8nio/n8n:1.114.4 | meepleai-n8n | automation | 5678 | 1.0 | 1G |
 | mailpit | axllent/mailpit:v1.22 | mailpit | automation | 8025, 1025 | 0.5 | 128M |
-| minio | minio/minio:RELEASE.2024-11-07T00-52-20Z | meepleai-minio | storage | 9000, 9001 | 0.5 | 512M |
-| minio-init | minio/mc:RELEASE.2024-11-17T19-35-25Z | meepleai-minio-init | storage | - | - | - |
+| minio | ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio:RELEASE.2025-10-15 | meepleai-minio | storage | 9000, 9001 | 0.5 | 512M |
+| minio-init | ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio-client:2025.7.21 | meepleai-minio-init | storage | - | - | - |
 
 ### Named Volumes (13)
 
@@ -2122,16 +2122,23 @@ The storage stack runs under the `storage` profile.
 
 | Property | Value |
 |----------|-------|
-| Image | `minio/minio:RELEASE.2024-11-07T00-52-20Z` |
+| Image | `ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio:RELEASE.2025-10-15` |
 | Container | `meepleai-minio` |
 | Ports | 9000 (S3 API), 9001 (Web Console) |
 | Profile | `storage` |
 | Volume | `minio_data` → `/data` |
 | Command | `server /data --console-address ":9001"` |
+| User | `root` — **obbligatorio**, vedi sotto |
 | CPU / RAM Limit | 0.5 / 512M |
-| Health Check | `mc ready local` |
+| Health Check | `wget -q --spider http://localhost:9000/minio/health/ready` |
 
-**Init container** (`minio-init`): Uses `minio/mc:RELEASE.2024-11-17T19-35-25Z` to create the `meepleai-uploads` bucket on first startup. Runs once and exits.
+**Perché un mirror GHCR e non `minio/minio`** (#3978): nel 2026-09 le immagini MinIO sono scomparse da Docker Hub a livello di *repository*, non di tag — `minio/minio` e `minio/mc` rispondono `denied` su qualunque tag, e lo stesso vale su quay.io, ghcr.io/minio e mirror.gcr.io. Le immagini sono ora copiate nel GHCR del progetto da `.github/workflows/mirror-upstream-images.yml`, pinnate per digest, e sono leggibili senza `docker login`.
+
+**Perché `user: root`** (#3978): la ripubblicazione `alpine/minio` gira come utente `minio`, mentre la vecchia `minio/minio` girava come root. Un volume Docker nasce `root:root` 755, quindi il processo non-root non può scrivere in `/data` e il server muore con `FATAL Unable to initialize backend`. Succede **anche su un volume vuoto**, quindi non è un problema della sola migrazione: senza quella riga lo stack non parte nemmeno da zero.
+
+**Perché la health check non usa più `mc ready local`** (#3978): quel `mc` veniva dal binario bundlato nell'immagine *server* di MinIO, e `alpine/minio` non lo contiene (`command -v mc` → assente). La probe passa all'endpoint HTTP di readiness, che è anche quello che i due workflow E2E interrogano dall'esterno. `wget` e non `curl`: nell'immagine c'è il wget di busybox, curl no.
+
+**Init container** (`minio-init`): Uses `ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio-client:2025.7.21` to create the `meepleai-uploads` bucket on first startup. Runs once and exits. Il suo entrypoint **verifica** il bucket con `mc ls` dopo `mc mb`: `mc mb --ignore-existing` stampa «Bucket created successfully» e ritorna 0 anche con l'alias non autenticato, quindi il suo codice di uscita non è evidenza che il bucket esista. L'immagine del client è **solo amd64** (il server è multi-arch): basta per il `minio-init` di sviluppo locale, non basterebbe su un host arm64.
 
 #### Daily Operations
 

@@ -278,7 +278,9 @@ Prima di rilassare la soglia — o di allargare l'attesa — di un test di timin
 
 In [#3711](https://github.com/meepleAi-app/meepleai-monorepo/issues/3711) la stessa domanda ha avuto risposta opposta, e vale come precedente: `SubscribeAsync` è un `IAsyncEnumerable` **lazy**, quindi `pool.TryAdd` non gira all'invocazione ma alla prima `MoveNextAsync` del consumer — un istante deciso dal thread pool, che il `Task.Delay(50)` del test provava a indovinare. Il servizio era corretto (la consegna è garantita solo dopo la registrazione; il resto lo copre Last-Event-ID + replay), quindi il fix è stato **sincronizzare** sullo stato osservabile (`GetConnectionCount`) invece di attendere. Regola pratica: davanti a un'attesa fissa in un test, cerca prima l'osservabile su cui sincronizzarti — allargare il delay è la sconfitta, non il fix.
 
-**Policy**: PRs MUST NOT grow the unit-test fail count above baseline (zero). Future regressions: fix the root cause OR skip with `[Trait("Skip", "<issue#>")]` and add a row here in the same PR.
+**Policy**: PRs MUST NOT grow the unit-test fail count above baseline (zero). Future regressions: fix the root cause OR skip with `[Fact(Skip = "#<issue>")]` / `[Theory(Skip = "#<issue>")]` and add a row here in the same PR.
+
+> 🔴 La policy diceva `[Trait("Skip", "<issue#>")]`, e **quel meccanismo è inerte**: un Trait non impedisce l'esecuzione del test, nessun filtro CI lo esclude (`grep -n 'Category!=' .github/workflows/*.yml` elenca Integration/E2E/Performance/Manual/Slow, non Skip), e `#3625` ne aveva rimosso uno proprio perché non faceva nulla — l'unica occorrenza rimasta nel repo è il commento storico in `DashboardEndpointPerformanceTests.cs`. `TestCategoryGateArchitectureTests` legge `FactAttribute`/`TheoryAttribute`.`Skip` via `CustomAttributeData`, non un Trait. Chi seguiva la policy alla lettera scriveva uno skip che non skippava, e il test restava rosso nel conteggio che la policy stessa dice di non far crescere.
 
 ## AI Assistant Rules
 

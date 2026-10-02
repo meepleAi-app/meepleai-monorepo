@@ -750,6 +750,14 @@ services:
     # interrogato. L'`api` dipende da questo container con
     # `condition: service_completed_successfully`, percio' un exit 0 bugiardo lo faceva partire su
     # uno storage senza bucket e il primo presign tornava null.
+    # ⚠️ Le due guardie `:?` qui sotto, introdotte da #3498 come rete contro una credenziale
+    # ASSENTE, oggi non possono piu' scattare: da quando il servizio `minio` e questo `minio-init`
+    # dichiarano `environment` con un default `${…:-minioadmin}`, le due variabili non sono mai ne'
+    # assenti ne' vuote. Restano perche' sono innocue e perche' tornerebbero utili se qualcuno
+    # togliesse i default, ma NON sono piu' la rete di sicurezza che il commento #3498 descrive:
+    # quel ruolo e' passato al `|| exit 1` sull'alias e alla verifica `mc ls`. Il caso che oggi
+    # morde non e' «credenziale assente», e' «credenziale PRESENTE ma diversa da quella del
+    # server», che una guardia `:?` non vede per costruzione.
     entrypoint: >
       /bin/sh -c "
       : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set — refusing to run with an empty credential'};

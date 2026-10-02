@@ -19,6 +19,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -314,6 +315,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
             _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
@@ -370,7 +372,13 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<DeletePdfCommandHandler>>();
         var entityLinks = scope.ServiceProvider.GetRequiredService<IEntityLinkRepository>();
 
-        return new DeletePdfCommandHandler(dbContext, blobStorage, cache, logger, entityLinks);
+        return new DeletePdfCommandHandler(
+            dbContext,
+            blobStorage,
+            cache,
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
+            logger,
+            entityLinks);
     }
     [Fact]
     public async Task DeleteWithDbUpdateException_ThrowsPdfStorageException()
@@ -391,6 +399,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             disposedContext,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
             _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
@@ -413,6 +422,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             _serviceProvider!.GetRequiredService<IBlobStorageService>(),
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
             _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );
@@ -450,6 +460,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _dbContext!,
             blobStorageMock.Object,
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
+            _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
             _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
         );

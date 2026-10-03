@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 [Trait("BoundedContext", "KnowledgeBase")]
 public class CrossGameStreamQaQueryHandlerInlineCitationTests
 {
-    [Fact(Skip = "See class XML doc — coverage via RagPromptAssemblyServiceInlineCitationTests")]
+    [Fact(Skip = "LIMITE: copertura equivalente altrove, vedi la doc XML della classe — RagPromptAssemblyServiceInlineCitationTests")]
     public void Handler_OptsInToInlineCitationMarkers()
     {
         // Placeholder: documents the intended contract.

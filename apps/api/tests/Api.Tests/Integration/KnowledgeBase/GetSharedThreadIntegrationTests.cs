@@ -61,7 +61,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
     {
         if (_serviceProvider == null || _dbContext == null)
         {
-            Assert.Skip("Shared Testcontainers fixture not available. GetSharedThread integration tests require PostgreSQL and Redis.");
+            Assert.Skip("GUASTO: la fixture Testcontainers condivisa non e partita. GetSharedThread integration tests require PostgreSQL and Redis.");
         }
     }
 

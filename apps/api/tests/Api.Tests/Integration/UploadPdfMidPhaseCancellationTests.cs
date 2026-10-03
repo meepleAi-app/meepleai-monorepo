@@ -395,7 +395,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// <para><b>Production Scenario:</b> Long PDF extraction cancelled by user timeout</para>
     /// <para><b>Expected Behavior:</b> Release resources, no memory leaks</para>
     /// </summary>
-    [Fact(Skip = "PR2 #1684 follow-up: test asserts handler returns a result on cancellation, but the production code (correctly) propagates OperationCanceledException through SaveChangesAsync. Once the upstream DI mocks were fixed (#1684), cancellation now reaches the handler and surfaces TaskCanceledException — exposing this brittle assertion. Tracked as follow-up: rewrite the test to expect cancellation OR assert resource-release without requiring a non-null return.", Timeout = 90000)]
+    [Fact(Skip = "DIFETTO: #1684 follow-up: test asserts handler returns a result on cancellation, but the production code (correctly) propagates OperationCanceledException through SaveChangesAsync. Once the upstream DI mocks were fixed (#1684), cancellation now reaches the handler and surfaces TaskCanceledException — exposing this brittle assertion. Tracked as follow-up: rewrite the test to expect cancellation OR assert resource-release without requiring a non-null return.", Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources()
     {
         // FIX: Clear Redis state to prevent interference from previous tests

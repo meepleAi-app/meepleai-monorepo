@@ -44,7 +44,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         if (_extractor == null)
         {
-            Assert.Skip("PDF services not enabled. Set TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
+            Assert.Skip("PREVISTO: servizi PDF non abilitati. Imposta TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
                        "  cd apps/smoldocling-service && docker build -t infra-smoldocling-service:latest .");
         }
     }
@@ -118,7 +118,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage rulebook (21MB, Italian, moderate complexity)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
         var fileSize = new FileInfo(BarragePdfPath).Length;
@@ -147,7 +147,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use small PDF to ensure normal completion (testing timeout requires cancellation)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -169,7 +169,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
 
@@ -271,7 +271,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         EnsureTestInfrastructureAvailable();
 
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages, complex layout)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var fileSize = new FileInfo(TerraformingMarsPdfPath).Length;
@@ -296,7 +296,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage PDF for concurrent processing
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         const int concurrentRequests = 3;
         _output($"Testing {concurrentRequests} concurrent requests");
@@ -329,7 +329,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     public async Task ServiceRestart_RecoveryAfterTemporaryFailure()
     {
         // Skip when using SharedTestcontainersFixture (cannot restart shared container)
-        Assert.Skip("Service restart test incompatible with shared containers. " +
+        Assert.Skip("LIMITE: il test di restart del servizio non e esprimibile con container condivisi. " +
                    "This test validates infrastructure resilience (container stop/start), " +
                    "which requires a dedicated container instance. " +
                    "Consider testing service recovery behavior through circuit breaker simulation instead.");

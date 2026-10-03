@@ -179,7 +179,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
     // HasToolkit
     // ---------------------------------------------------------------
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasToolkitTrue_ReturnsOnlyGamesWithNonDefaultToolkit()
     {
         // Arrange
@@ -203,7 +203,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Items.Should().ContainSingle().Which.Title.Should().Be("With Toolkit");
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasToolkitTrue_ExcludesGamesWithOnlyDefaultToolkit()
     {
         // BR-02: "with-toolkit" chip means at least one *non-default* (user
@@ -224,7 +224,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Total.Should().Be(0);
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasToolkitTrue_ExcludesToolkitsAttachedToUnapprovedGames()
     {
         // Cross-BC join requires Game.ApprovalStatus == Approved (2).
@@ -244,7 +244,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Total.Should().Be(0);
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasToolkitFalse_ReturnsOnlyGamesWithoutNonDefaultToolkit()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -264,7 +264,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Items.Should().ContainSingle().Which.Title.Should().Be("No Toolkit");
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasToolkitNull_DoesNotApplyFilter()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -284,7 +284,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
     // HasAgent
     // ---------------------------------------------------------------
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasAgentTrue_ReturnsOnlyGamesWithLinkedAgent()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -304,7 +304,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Items.Should().ContainSingle().Which.Title.Should().Be("With Agent");
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasAgentTrue_ExcludesAgentsAttachedToUnapprovedGames()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -322,7 +322,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Total.Should().Be(0);
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasAgentFalse_ReturnsOnlyGamesWithoutLinkedAgent()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -346,7 +346,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
     // IsTopRated
     // ---------------------------------------------------------------
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_IsTopRatedTrue_UsesDefaultThresholdOf4_0()
     {
         // Default threshold lowered from 4.5m → 4.0m in Wave A.3b (Issue #596)
@@ -369,7 +369,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Top", "AtThreshold" });
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_IsTopRatedFalse_IncludesNullRatingsAndBelowThreshold()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -387,7 +387,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Below", "Unrated" });
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_IsTopRatedTrue_RespectsConfiguredThresholdOverride()
     {
         // Verifies SharedGameCatalog:TopRatedThreshold from IConfiguration
@@ -408,7 +408,7 @@ public sealed class SearchSharedGamesQuery_FilterTests
         result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Top" });
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce cross-BC nested sub-queries (ctxGames.Any inside Select projection); follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_IsTopRatedNull_DoesNotApplyFilter()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();

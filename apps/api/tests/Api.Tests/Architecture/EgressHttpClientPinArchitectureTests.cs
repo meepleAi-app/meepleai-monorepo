@@ -163,7 +163,7 @@ public sealed class EgressHttpClientPinArchitectureTests
             }
 
             var text = File.ReadAllText(path);
-            foreach (var offset in FindCodeOccurrences(text, "AddHttpClient"))
+            foreach (var offset in SourceScanner.FindCodeOccurrences(text, "AddHttpClient"))
             {
                 var after = offset + "AddHttpClient".Length;
 
@@ -173,7 +173,7 @@ public sealed class EgressHttpClientPinArchitectureTests
                     continue;
                 }
 
-                var statement = ReadStatement(text, offset);
+                var statement = SourceScanner.ReadStatement(text, offset);
                 var line = text.Take(offset).Count(c => c == '\n') + 1;
                 registrations.Add(new Registration(
                     ParseClientName(text, after),
@@ -252,138 +252,6 @@ public sealed class EgressHttpClientPinArchitectureTests
     /// returned text — the callers match method names against it, and this file's own registrations
     /// mention <c>ConfigurePrimaryHttpMessageHandler</c> in prose right next to the real call.
     /// </summary>
-    private static string ReadStatement(string text, int start)
-    {
-        var code = new System.Text.StringBuilder();
-        var depth = 0;
-        for (var i = start; i < text.Length; i++)
-        {
-            var skipped = SkipTrivia(text, i);
-            if (skipped != i)
-            {
-                // Comment or literal: keep a separator so adjacent identifiers don't fuse.
-                code.Append(' ');
-                i = skipped - 1;
-                continue;
-            }
-
-            var c = text[i];
-            if (c is '(' or '{' or '[')
-            {
-                depth++;
-            }
-            else if (c is ')' or '}' or ']')
-            {
-                depth--;
-            }
-            else if (c == ';' && depth <= 0)
-            {
-                break;
-            }
-
-            code.Append(c);
-        }
-
-        return code.ToString();
-    }
-
-    /// <summary>
-    /// Offsets of <paramref name="needle"/> that sit in real code — occurrences inside comments,
-    /// string literals or char literals are ignored (the codebase mentions AddHttpClient in prose).
-    /// </summary>
-    private static List<int> FindCodeOccurrences(string text, string needle)
-    {
-        var found = new List<int>();
-        for (var i = 0; i < text.Length; i++)
-        {
-            var skipped = SkipTrivia(text, i);
-            if (skipped != i)
-            {
-                i = skipped - 1;
-                continue;
-            }
-
-            if (string.CompareOrdinal(text, i, needle, 0, needle.Length) == 0)
-            {
-                found.Add(i);
-                i += needle.Length - 1;
-            }
-        }
-
-        return found;
-    }
-
-    /// <summary>
-    /// If <paramref name="index"/> starts a comment or a string/char literal, returns the offset just
-    /// past it; otherwise returns <paramref name="index"/> unchanged.
-    /// </summary>
-    private static int SkipTrivia(string text, int index)
-    {
-        if (index + 1 < text.Length && text[index] == '/' && text[index + 1] == '/')
-        {
-            var end = text.IndexOf('\n', index);
-            return end < 0 ? text.Length : end + 1;
-        }
-
-        if (index + 1 < text.Length && text[index] == '/' && text[index + 1] == '*')
-        {
-            var end = text.IndexOf("*/", index + 2, StringComparison.Ordinal);
-            return end < 0 ? text.Length : end + 2;
-        }
-
-        if (index + 1 < text.Length && text[index] == '@' && text[index + 1] == '"')
-        {
-            var i = index + 2;
-            while (i < text.Length)
-            {
-                if (text[i] == '"')
-                {
-                    if (i + 1 < text.Length && text[i + 1] == '"')
-                    {
-                        i += 2;
-                        continue;
-                    }
-
-                    return i + 1;
-                }
-
-                i++;
-            }
-
-            return text.Length;
-        }
-
-        if (text[index] is '"' or '\'')
-        {
-            var quote = text[index];
-            var i = index + 1;
-            while (i < text.Length)
-            {
-                if (text[i] == '\\')
-                {
-                    i += 2;
-                    continue;
-                }
-
-                if (text[i] == quote)
-                {
-                    return i + 1;
-                }
-
-                if (text[i] == '\n')
-                {
-                    // Unterminated on this line — treat as ordinary text rather than swallowing the file.
-                    return index;
-                }
-
-                i++;
-            }
-
-            return index;
-        }
-
-        return index;
-    }
 
     private static int SkipWhitespace(string text, int index)
     {

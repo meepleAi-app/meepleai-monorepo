@@ -38,7 +38,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
     private void SkipIfNotAvailable()
     {
         if (_skipTests)
-            Assert.Skip("S3 storage tests require Docker or TEST_S3_ENDPOINT environment variable");
+            Assert.Skip("GUASTO: storage S3 non raggiungibile. MinIO e un servizio L1 e in dev e gia configurato (#4018): se non risponde, l ambiente e rotto, non incompleto. Dettaglio dell errore nel log della fixture; questo salto dovra diventare un fallimento, vedi #4022");
     }
 
     public async ValueTask InitializeAsync()
@@ -166,7 +166,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
     // `pdf_uploads/`. Entrambi esistono nel codice (`pdf_uploads` e' in IBlobStorageService e nelle
     // migration), quindi la convenzione corrente per questo percorso va stabilita prima di scegliere
     // quale lato allineare.
-    [Fact(Skip = "#4016 — prefisso `pdfs/` contro `pdf_uploads/` atteso: convenzione da stabilire")]
+    [Fact(Skip = "DIFETTO: #4016 — prefisso `pdfs/` contro `pdf_uploads/` atteso: convenzione da stabilire")]
     public async Task StoreAsync_ValidFile_ReturnsSuccessWithFileId()
     {
         SkipIfNotAvailable();
@@ -233,7 +233,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
     // attende SigV4 (`X-Amz-Signature`). Quale dei due sia la verita' non e' stato determinato: R2 non
     // accetta SigV2, quindi potrebbe essere un difetto di prodotto e non un'asserzione obsoleta.
     // Skip tracciato, non rimosso: prima girava solo perche' il container MinIO non partiva affatto.
-    [Fact(Skip = "#4016 — presign SigV2 contro SigV4 atteso: da determinare quale lato e' sbagliato")]
+    [Fact(Skip = "DIFETTO: #4016 — presign SigV2 contro SigV4 atteso: da determinare quale lato e' sbagliato")]
     public async Task GetPresignedDownloadUrlAsync_AfterStore_ReturnsValidUrl()
     {
         SkipIfNotAvailable();

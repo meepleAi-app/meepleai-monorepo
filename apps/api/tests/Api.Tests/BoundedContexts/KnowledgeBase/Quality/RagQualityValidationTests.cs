@@ -72,7 +72,7 @@ public class RagQualityValidationTests : IAsyncLifetime
     /// Main test: Validate RAG quality with 20 sample questions.
     /// Calls real /agents/qa endpoint and validates responses against success metrics.
     /// </summary>
-    [Fact(Skip = "Requires backend running on localhost:8080. Run manually: cd apps/api/src/Api && dotnet run", Timeout = 120000)] // 2 minute timeout for 20 questions @ 5s each
+    [Fact(Skip = "PREVISTO: richiede il backend in esecuzione su localhost:8080. Run manually: cd apps/api/src/Api && dotnet run", Timeout = 120000)] // 2 minute timeout for 20 questions @ 5s each
     public async Task ValidateRagQuality_With20SampleQuestions_MeetsSuccessMetrics()
     {
         // Arrange

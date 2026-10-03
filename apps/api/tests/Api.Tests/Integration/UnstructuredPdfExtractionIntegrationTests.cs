@@ -41,7 +41,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         if (_extractor == null)
         {
-            Assert.Skip("PDF services not enabled. Set TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
+            Assert.Skip("PREVISTO: servizi PDF non abilitati. Imposta TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
                        "  cd apps/unstructured-service && docker build -t infra-unstructured-service:latest .");
         }
     }
@@ -108,7 +108,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         EnsureTestInfrastructureAvailable();
 
         // Arrange - Use Barrage rulebook (21MB, Italian)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
         _output($"Testing with Barrage rulebook ({new FileInfo(BarragePdfPath).Length / 1024 / 1024}MB)");
@@ -131,7 +131,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Terraforming Mars rulebook (38MB, Italian, complex layout)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         _output($"Testing with Terraforming Mars rulebook ({new FileInfo(TerraformingMarsPdfPath).Length / 1024 / 1024}MB)");
@@ -156,7 +156,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -181,7 +181,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Board game rulebooks typically have tables
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -204,7 +204,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -239,7 +239,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         // and verify our client handles it correctly
 
         // Arrange - use small PDF to ensure it completes (testing timeout requires mock)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -302,7 +302,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var fileSize = new FileInfo(TerraformingMarsPdfPath).Length;
@@ -324,7 +324,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -352,7 +352,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -383,7 +383,7 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Full E2E test simulating actual usage
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
 
         _output("=== E2E Pipeline Test ===");
 

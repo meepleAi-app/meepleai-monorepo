@@ -36,8 +36,16 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
-    private const string BarragePdfPath = "../../../../data/rulebook/barrage_rulebook.pdf";
-    private const string TerraformingMarsPdfPath = "../../../../data/rulebook/terraforming-mars_rulebook.pdf";
+    // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
+    // La forma precedente — "../../../../data/rulebook/barrage_rulebook.pdf" — dalla working directory dei test
+    // (bin/Debug/net9.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
+    private static readonly string BarragePdfPath = PdfCorpus.Resolve("data/rulebook/barrage_rulebook.pdf");
+    // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
+    // La forma precedente — "../../../../data/rulebook/terraforming-mars_rulebook.pdf" — dalla working directory dei test
+    // (bin/Debug/net9.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
+    private static readonly string TerraformingMarsPdfPath = PdfCorpus.Resolve("data/rulebook/terraforming-mars_rulebook.pdf");
 
     // Helper to check if tests can run
     private void EnsureTestInfrastructureAvailable()
@@ -118,7 +126,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage rulebook (21MB, Italian, moderate complexity)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
         var fileSize = new FileInfo(BarragePdfPath).Length;
@@ -147,7 +157,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use small PDF to ensure normal completion (testing timeout requires cancellation)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -169,7 +181,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
 
@@ -271,7 +285,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         EnsureTestInfrastructureAvailable();
 
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages, complex layout)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var fileSize = new FileInfo(TerraformingMarsPdfPath).Length;
@@ -296,7 +312,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage PDF for concurrent processing
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         const int concurrentRequests = 3;
         _output($"Testing {concurrentRequests} concurrent requests");

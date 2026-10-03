@@ -33,8 +33,16 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
-    private const string BarragePdfPath = "../../../../data/rulebook/barrage_rulebook.pdf";
-    private const string TerraformingMarsPdfPath = "../../../../data/rulebook/terraforming-mars_rulebook.pdf";
+    // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
+    // La forma precedente — "../../../../data/rulebook/barrage_rulebook.pdf" — dalla working directory dei test
+    // (bin/Debug/net9.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
+    private static readonly string BarragePdfPath = PdfCorpus.Resolve("data/rulebook/barrage_rulebook.pdf");
+    // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
+    // La forma precedente — "../../../../data/rulebook/terraforming-mars_rulebook.pdf" — dalla working directory dei test
+    // (bin/Debug/net9.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
+    private static readonly string TerraformingMarsPdfPath = PdfCorpus.Resolve("data/rulebook/terraforming-mars_rulebook.pdf");
 
     // Helper to check if tests can run
     private void EnsureTestInfrastructureAvailable()
@@ -108,7 +116,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         EnsureTestInfrastructureAvailable();
 
         // Arrange - Use Barrage rulebook (21MB, Italian)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
         _output($"Testing with Barrage rulebook ({new FileInfo(BarragePdfPath).Length / 1024 / 1024}MB)");
@@ -131,7 +141,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Terraforming Mars rulebook (38MB, Italian, complex layout)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         _output($"Testing with Terraforming Mars rulebook ({new FileInfo(TerraformingMarsPdfPath).Length / 1024 / 1024}MB)");
@@ -156,7 +168,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -181,7 +195,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Board game rulebooks typically have tables
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -204,7 +220,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -239,7 +257,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
         // and verify our client handles it correctly
 
         // Arrange - use small PDF to ensure it completes (testing timeout requires mock)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -302,7 +322,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var fileSize = new FileInfo(TerraformingMarsPdfPath).Length;
@@ -324,7 +346,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -352,7 +376,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -383,7 +409,9 @@ public class UnstructuredPdfExtractionIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Full E2E test simulating actual usage
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"PREVISTO: PDF di test non trovato: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         _output("=== E2E Pipeline Test ===");
 

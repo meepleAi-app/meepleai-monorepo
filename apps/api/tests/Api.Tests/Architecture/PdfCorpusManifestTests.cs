@@ -87,6 +87,91 @@ public sealed class PdfCorpusManifestTests
         act.Should().Throw<ArgumentException>();
     }
 
+    /// <summary>
+    /// #4044 — nessun sorgente di test raggiunge <c>data/</c> con una risalita a conteggio fisso.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Il pattern è ricomparso **quattro volte** in tre file oltre al manifest
+    /// (<c>SmolDoclingIntegrationTests</c>, <c>ThreeStagePdfPipelineE2ETests</c>,
+    /// <c>UnstructuredPdfExtractionIntegrationTests</c>), e in un caso era sbagliato due volte: la
+    /// profondità <b>e</b> il segmento <c>rulebook/</c> mancante. Ogni istanza produceva una guardia
+    /// <c>File.Exists</c> che saltava SEMPRE, su PDF committati e presenti.
+    /// </para>
+    /// <para>
+    /// 🔴 La scansione lavora sul testo GREZZO, non su
+    /// <see cref="SourceScanner.FindCodeOccurrences"/>: quel metodo salta i letterali, e la cosa da
+    /// vietare <b>è</b> un letterale. È lo stesso errore che il gate di #4021 ha commesso e che la
+    /// sua contro-prova ha scoperto. Si escludono invece le righe di commento, perché le note che
+    /// citano la forma vecchia per spiegarla sono legittime — e ce ne sono.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void NoTestSourceReachesDataWithAFixedDepthClimb()
+    {
+        var offenders = new List<string>();
+        var testsRoot = Path.Combine(PdfCorpus.RepositoryRoot, "apps", "api", "tests", "Api.Tests");
+
+        foreach (var path in Directory.EnumerateFiles(testsRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            // Questo file è l'unica eccezione, e deve esserlo: i test della normalizzazione
+            // (`ResolutionIgnoresTheLeadingUpwardSegments`) e la contro-prova qui sotto devono poter
+            // NOMINARE la forma vietata — altrimenti non si può né provare che viene normalizzata né
+            // che la scansione la riconosce. Il gate l'ha scoperto da sé fallendo su se stesso.
+            if (string.Equals(
+                    Path.GetFileName(path),
+                    "PdfCorpusManifestTests.cs",
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var relative = Path.GetRelativePath(testsRoot, path).Replace('\\', '/');
+            var lineNumber = 0;
+
+            foreach (var line in File.ReadLines(path))
+            {
+                lineNumber++;
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("//", StringComparison.Ordinal)
+                    || trimmed.StartsWith("*", StringComparison.Ordinal))
+                {
+                    continue; // una nota che cita la forma vecchia per spiegarla
+                }
+
+                if (line.Contains("\"../../", StringComparison.Ordinal)
+                    && line.Contains("/data/", StringComparison.Ordinal))
+                {
+                    offenders.Add($"  {relative}:{lineNumber}: {trimmed}");
+                }
+            }
+        }
+
+        offenders.Should().BeEmpty(
+            "un percorso verso data/ con una risalita a conteggio fisso dipende dalla profondità "
+            + "della working directory, che per i test è bin/Debug/net9.0 — quattro livelli su "
+            + "portano a apps/api/tests/, che non contiene data/. Usa "
+            + $"{nameof(PdfCorpus)}.{nameof(PdfCorpus.Resolve)}(\"data/...\"), che risale a .git. "
+            + "Siti non conformi:" + Environment.NewLine
+            + string.Join(Environment.NewLine, offenders));
+    }
+
+    [Fact]
+    public void TheFixedDepthScanWouldSeeTheOldForm()
+    {
+        // Contro-prova: se la condizione di ricerca smettesse di combaciare — un'altra forma di
+        // quoting, un separatore diverso — il test sopra passerebbe sul vuoto. Qui si verifica che
+        // la stessa condizione riconosca la stringa che esisteva davvero nel repo.
+        const string oldForm = "    private const string P = \"../../../../data/rulebook/x.pdf\";";
+
+        var matches = oldForm.Contains("\"../../", StringComparison.Ordinal)
+            && oldForm.Contains("/data/", StringComparison.Ordinal);
+
+        matches.Should().BeTrue(
+            "la condizione del gate deve riconoscere la forma che #4044 ha rimosso, altrimenti "
+            + "quel gate non sorveglia niente");
+    }
+
     private static string ManifestPath()
     {
         var local = PdfCorpus.ManifestPath;

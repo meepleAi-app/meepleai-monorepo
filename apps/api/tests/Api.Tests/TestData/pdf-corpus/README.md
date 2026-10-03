@@ -44,7 +44,7 @@ Actual PDFs stored in: ../../../../data/rulebook/
 
 | PDF | Size | Pages | Language | Key Features |
 |-----|------|-------|----------|--------------|
-| cantan_en_rulebook.pdf | 12 MB | 16 | EN | Setup diagrams, visual-heavy |
+| catan_en_rulebook.pdf | 12 MB | 16 | EN | Setup diagrams, visual-heavy |
 | root_rulebook.pdf | 18 MB | 24 | EN | Asymmetric rules, faction tables |
 | barrage_rulebook.pdf | 21 MB | 28 | EN | Heavy iconography, complex boards |
 

@@ -117,8 +117,8 @@
     }
   },
   "complex": {
-    "cantan_en_rulebook.pdf": {
-      "relativePath": "../../../../data/rulebook/cantan_en_rulebook.pdf",
+    "catan_en_rulebook.pdf": {
+      "relativePath": "../../../../data/rulebook/catan_en_rulebook.pdf",
       "fileSize": 12582912,
       "expectedPages": 16,
       "expectedWordCount": 7500,

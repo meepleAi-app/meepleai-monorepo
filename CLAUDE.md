@@ -282,6 +282,22 @@ In [#3711](https://github.com/meepleAi-app/meepleai-monorepo/issues/3711) la ste
 
 **Policy**: PRs MUST NOT grow the unit-test fail count above baseline (zero). Future regressions: fix the root cause OR skip with `[Fact(Skip = "#<issue>")]` / `[Theory(Skip = "#<issue>")]` and add a row here in the same PR.
 
+**🔴 Il motivo di ogni salto deve dichiarare chi deve agire** (#4021, gate `SkipReasonClassArchitectureTests`, `Category=Unit`, **blocca in dev-fast**). Quattro classi, e il motivo deve cominciare con una di esse:
+
+| classe | quando | cosa deve contenere |
+|---|---|---|
+| `PREVISTO:` | servizio opzionale per progetto (L3/L4) | **come** abilitare il test: variabile, comando o chiave |
+| `GUASTO:` | un servizio che *dovrebbe* esserci non è sano | l'**errore osservato**, non la condizione generica |
+| `DIFETTO:` | il prodotto è rotto, il test è corretto | il **numero della issue** |
+| `LIMITE:` | il test non è esprimibile sotto questo harness | la limitazione **e** dove andrebbe spostato |
+
+L'elenco `Exempt` del gate è **vuoto**: non aggiungerci una voce senza la ragione per cui non puoi classificare quel sito *adesso* e la issue che la chiude. Due regole che il gate non può dedurre dal codice:
+
+- **L'assenza di un servizio si ACCERTA con una sonda, non si deduce da una risposta.** Un `500` è anche — e soprattutto — ciò che produce un bug del prodotto: `E2ETestBase.AssertSuccessAsync` lo fa fallire, e il prerequisito si sonda prima con `E2EServiceProbe.SkipUnlessHealthyAsync(Client, Checks.<nome>, "<come abilitarlo>")`. Passare una stringa cruda invece di una costante di `Checks` è bloccato da un gate: un nome che quell'host non registra fa saltare test che funzionano (#4023 — tre test passati sono diventati salti, visibile solo incrociando due run).
+- **Un servizio L1** (postgres, redis, minio, mailpit — `L1Services`) **non si salta: fallisce.** Usa `L1Services.FailBecauseUnavailable`. Verificato con un drill: immagine MinIO a un tag inesistente ⇒ le due suite di #3978 vanno da 12 superati / 0 non superati a **0 / 12**.
+
+Spec: [`2026-10-02-test-dependency-tiers-and-observable-skips.md`](./docs/for-developers/specs/2026-10-02-test-dependency-tiers-and-observable-skips.md).
+
 > 🔴 La policy diceva `[Trait("Skip", "<issue#>")]`, e **quel meccanismo è inerte**: un Trait non impedisce l'esecuzione del test, nessun filtro CI lo esclude (`grep -n 'Category!=' .github/workflows/*.yml` elenca Integration/E2E/Performance/Manual/Slow, non Skip), e `#3625` ne aveva rimosso uno proprio perché non faceva nulla — l'unica occorrenza rimasta nel repo è il commento storico in `DashboardEndpointPerformanceTests.cs`. `TestCategoryGateArchitectureTests` legge `FactAttribute`/`TheoryAttribute`.`Skip` via `CustomAttributeData`, non un Trait. Chi seguiva la policy alla lettera scriveva uno skip che non skippava, e il test restava rosso nel conteggio che la policy stessa dice di non far crescere.
 
 ## AI Assistant Rules
@@ -318,6 +334,7 @@ In [#3711](https://github.com/meepleAi-app/meepleai-monorepo/issues/3711) la ste
 | [ADR-090](./docs/for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) | In-session grounded answer: `KnowledgeBase` OWNS it; `SessionTracking` consumes via `IMediator` (never inject KB services), public DTO boundary. The #3390 grounded pipeline is duplicated across `AskGroundedSessionQueryHandler` + `ChatWithSessionAgentCommandHandler` — a correctness/copyright fix must touch both until consolidated on a shared KB service (where Slice 4 enhancements wire) |
 | #3737 | 🔴 **`FuseGlobally`: un segnale assente che vale `0` è LOAD-BEARING** — rende la fusione *congiuntiva* (serve evidenza da entrambi i bracci) e tiene giù i match lessicali generici, cioè il difetto di #3735. Non rimuoverlo. I pesi `0.7/0.3` sono tarati contro una query codificata `passage:`: se si corregge il prefisso e5, la taratura **non regge più** e le due cose vanno misurate insieme. Non tarare a mente — 3 ipotesi ragionate con test unit verdi, 3 bocciature del gate (10/11 → 8/11 → 5/11) a ~45 min l'una. Usa l'artifact `rag-fusion-tuning-<run_id>` del gate |
 | #3740 | 🔴 **Una colonna assente dalla proiezione non si manifesta come `null` se l'entità ha un default non-null.** Le tre SELECT di lettura di `PgVectorStoreAdapter` omettevano `lang` mentre `Embedding.Language` porta l'inizializzatore `= "en"`: ogni candidato arrivava `"en"` qualunque fosse la lingua vera del chunk. Da lì l'inferenza sbagliata che il corpus del gate fosse monolingua (è **9840 en / 943 it / 107 de**), e il no-op byte-identico della correzione per lingua #3743. **Corretto**: le tre SELECT proiettano `lang`, e la lingua per candidato arriva fino al campo `l` del dump `[RAG-TUNE]`. Nessun consumatore la leggeva ancora sul percorso di ricerca, quindi il fix è abilitante, non un cambio di comportamento. Corpora comunque distinti per granularità: gate 10.890 chunk (Docnet) vs staging 56.367 (heading-aware). Storia: [audit](./docs/for-developers/audits/2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md) |
+| #4032 | 🔴 **`backend-e2e-tests.yml` non gira sulle PR verso `main-dev`**: il trigger è `pull_request` verso `main`/`main-staging`. Una PR che modifica le suite E2E può essere mergiata con tutti i check verdi **senza che un solo test E2E sia girato**. Per osservarle: `gh workflow run backend-e2e-tests.yml --ref <branch>` (~16 min) — **e un run di CONTROLLO su `main-dev` intatto**, perché il gate porta fallimenti preesistenti invisibili da oltre un mese (ultimo verde: una PR di release del 2026-08-26) e senza il controllo la tua PR sembra la causa di tutto. Confronta i **tre** conteggi, non solo `Failed`: un `Passed` che scende sono test che non girano più — è così che si è visto che tre test passati erano diventati salti in #4023. Gli insiemi di **nomi** falliti (`comm -13`/`comm -23`) sono una prova più forte dei conteggi |
 
 ---
 

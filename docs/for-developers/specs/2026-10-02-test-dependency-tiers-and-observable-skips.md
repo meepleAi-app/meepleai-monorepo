@@ -140,8 +140,22 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
 
 - **R2.1** La baseline dei salti per shard vive in un **file che un gate legge**, non in un `echo`
   dentro un workflow né in un documento. Prosa che nessuno rimisura è il difetto §1.3.
-- **R2.2** Il gate confronta il `Skipped: N` del trailer con la baseline e **fallisce** su un aumento
-  non dichiarato, come già si pretende per i fallimenti.
+- **R2.2** Il gate confronta il conteggio dei salti con la baseline e **fallisce** su un aumento non
+  dichiarato.
+
+  > ⚠️ Correzione del 2026-10-03: questo requisito diceva «come già si pretende per i fallimenti».
+  > **Falso.** Nessun workflow confronta `Failed: N` con una baseline: in `dev-async.yml` la baseline
+  > dei fallimenti compare **solo** in due `echo` (righe 296 e 300) e nessuno la legge. Il braccio dei
+  > fallimenti va **costruito**, non esteso. Il pattern da seguire esiste altrove nel repo, due volte:
+  > `infra/scripts/rag-smoke-assert.sh` e `infra/scripts/title-health-assert.sh`, entrambi con una
+  > baseline in `infra/fixtures/<nome>-baseline.json`, un flag `--update-baseline`, una suite bats e
+  > un'invocazione di una riga dal workflow.
+  >
+  > 🔴 E la **fonte** del conteggio non è ovvia: nel `.trx` il campo `Counters/@notExecuted` vale
+  > **0** su tutti e tre gli shard mentre i salti reali sono **45 · 11 · 8** (misurato sul run
+  > 36997819474). Il conteggio vero è il numero di elementi `<UnitTestResult outcome="NotExecuted">`.
+  > Un gate scritto col campo apparentemente ovvio leggerebbe sempre zero — il gate verde e vuoto,
+  > costruito dentro il lavoro che dovrebbe chiuderne la famiglia.
 - **R2.3a** L'ambito della policy sui conteggi passa da *unit test* a **ogni gate che pubblica un
   conteggio** (dev-fast, ci, dev-async per shard).
 - **R2.3b** Uno skip introdotto come rimedio a un fallimento **sposta** il test da `Failed` a

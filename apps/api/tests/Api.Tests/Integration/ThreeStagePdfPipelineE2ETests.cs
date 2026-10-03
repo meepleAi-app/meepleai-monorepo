@@ -13,6 +13,7 @@ using Moq;
 using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.Integration;
 
@@ -37,9 +38,14 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     private readonly ITextChunkingService _chunkingService;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
-    // Test PDF paths (relative to bin/Debug/net9.0/)
-    // NOTE: Temporarily disabled until Docker images are built in CI
-    private const string BarragePdfPath = "../../../../data/barrage_rulebook.pdf";
+    // #4044 — percorso risolto dalla RADICE del repository, non dalla working directory del test.
+    // Il commento che stava qui diceva «relative to bin/Debug/net9.0/»: era esattamente
+    // l'assunzione che rendeva il percorso sbagliato.
+    // La forma precedente — "../../../../data/barrage_rulebook.pdf" — era sbagliata DUE volte: la
+    // profondità (quattro livelli su portano a apps/api/tests/, che non contiene data/) e il
+    // segmento `rulebook/` mancante, perché il file sta in data/rulebook/. La guardia File.Exists
+    // qui sotto saltava quindi SEMPRE, su un PDF committato e presente.
+    private static readonly string BarragePdfPath = PdfCorpus.Resolve("data/rulebook/barrage_rulebook.pdf");
     private const int RealServiceTargetP95LatencyMs = 35_000; // CPU-only Testcontainers need more headroom than 5s
 
     public ThreeStagePdfPipelineE2ETests()
@@ -231,7 +237,9 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         // This test uses real Testcontainers for performance measurement
         if (!File.Exists(BarragePdfPath))
         {
-            Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
+            Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
         }
 
         _output("Test 6: Performance P95 latency with real Docker services");

@@ -37,7 +37,7 @@ jobs:
 
       - name: Extract dedup_key from issue body
         id: extract
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const body = context.payload.issue.body ?? '';
@@ -76,7 +76,7 @@ jobs:
           EOF
 
       - name: Close debt issue
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           DEDUP_KEY: ${{ steps.extract.outputs.key }}
         with:

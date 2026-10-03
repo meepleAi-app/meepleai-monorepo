@@ -87,10 +87,17 @@ public sealed class SkipReasonClassArchitectureTests
         // i motivi avrebbe prolungato la vita di un helper da rimuovere; la sostituzione è
         // E2EServiceProbe, che interroga /health dell'app IN-PROCESSO con lo stesso HttpClient del
         // test.
-        ["Integration/PdfExtractionRealBackendValidationTests.cs"] =
-            "I motivi uniscono due cause con un OR («Unstructured service not available OR gold " +
-            "standard missing»), quindi non sono classificabili senza prima separarle: la prima è " +
-            "PREVISTO, la seconda è un difetto del setup. Separazione in #4023.",
+        // Integration/PdfExtractionRealBackendValidationTests.cs — separato in #4040, e separarlo ha
+        // scoperto due difetti che l'OR teneva nascosti: i percorsi del manifest non risolvevano da
+        // nessuna working directory (quindi sette salti «PDF not found» erano INCONDIZIONATI, su file
+        // committati e presenti), e una voce portava un typo nel nome. Ora le cause sono tre e
+        // distinte — servizio non configurato (PREVISTO), voce assente dal manifest committato
+        // (GUASTO), PDF non trovato al percorso risolto (GUASTO) — e un gate `Category=Unit`
+        // (PdfCorpusManifestTests) verifica il manifest contro il filesystem in millisecondi.
+        //
+        // 🔴 L'ELENCO È VUOTO. Se devi aggiungerci una voce, aggiungi anche la ragione per cui non
+        // puoi classificare quel sito ADESSO, e la issue che la chiude: era di dieci voci il
+        // 2026-10-02 e ciascuna si è chiusa guardandola.
     };
 
     [Fact]

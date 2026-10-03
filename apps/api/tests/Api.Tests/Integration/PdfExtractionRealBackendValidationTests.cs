@@ -155,21 +155,41 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     public async Task Unstructured_SimplePdfs_MeetsAccuracyThreshold(string filename)
     {
         // Skip if service not available
-        if (_unstructuredExtractor == null || !_goldStandards.ContainsKey(filename))
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip($"Unstructured service not available or gold standard missing for {filename}");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey(filename))
+        {
+            // GUASTO e non PREVISTO: il manifest e' COMMITTATO, quindi una voce che manca per un
+            // filename che un test chiede e' un disallineamento fra [InlineData] e dati, da riparare.
+            Assert.Skip(
+                $"GUASTO: {filename} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards[filename];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output($"\n📄 Testing: {filename} (Simple tier)");
 
         // Act
-        await using var pdfStream = File.OpenRead(standard.RelativePath);
+        await using var pdfStream = File.OpenRead(resolved);
         var result = await _unstructuredExtractor.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert
@@ -190,21 +210,41 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [Fact]
     public async Task Unstructured_ItalianPdf_MultilingualSupport()
     {
-        if (_unstructuredExtractor == null || !_goldStandards.ContainsKey("scacchi-fide_2017_rulebook.pdf"))
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip("Unstructured service not available or gold standard missing");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey("scacchi-fide_2017_rulebook.pdf"))
+        {
+            // GUASTO e non PREVISTO: il manifest e' COMMITTATO, quindi una voce che manca per un
+            // filename che un test chiede e' un disallineamento fra [InlineData] e dati, da riparare.
+            Assert.Skip(
+                $"GUASTO: {"scacchi-fide_2017_rulebook.pdf"} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards["scacchi-fide_2017_rulebook.pdf"];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output("\n🌍 Testing: Italian language support");
 
         // Act
-        await using var pdfStream = File.OpenRead(standard.RelativePath);
+        await using var pdfStream = File.OpenRead(resolved);
         var result = await _unstructuredExtractor.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert - Italian key phrases
@@ -227,21 +267,41 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [InlineData("pandemic_rulebook.pdf")]
     public async Task Unstructured_ModeratePdfs_HandlesMultiColumnLayouts(string filename)
     {
-        if (_unstructuredExtractor == null || !_goldStandards.ContainsKey(filename))
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip($"Unstructured service not available or gold standard missing for {filename}");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey(filename))
+        {
+            // GUASTO e non PREVISTO: il manifest e' COMMITTATO, quindi una voce che manca per un
+            // filename che un test chiede e' un disallineamento fra [InlineData] e dati, da riparare.
+            Assert.Skip(
+                $"GUASTO: {filename} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards[filename];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output($"\n📄 Testing: {filename} (Moderate tier - multi-column)");
 
         // Act
-        await using var pdfStream = File.OpenRead(standard.RelativePath);
+        await using var pdfStream = File.OpenRead(resolved);
         var stopwatch = Stopwatch.StartNew();
         var result = await _unstructuredExtractor.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
         stopwatch.Stop();
@@ -267,21 +327,41 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [InlineData("root_rulebook.pdf")]
     public async Task Unstructured_ComplexPdfs_HandlesHeavyLayoutsAndTables(string filename)
     {
-        if (_unstructuredExtractor == null || !_goldStandards.ContainsKey(filename))
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip($"Unstructured service not available or gold standard missing for {filename}");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey(filename))
+        {
+            // GUASTO e non PREVISTO: il manifest e' COMMITTATO, quindi una voce che manca per un
+            // filename che un test chiede e' un disallineamento fra [InlineData] e dati, da riparare.
+            Assert.Skip(
+                $"GUASTO: {filename} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards[filename];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output($"\n📄 Testing: {filename} (Complex tier - heavy layouts)");
 
         // Act
-        await using var pdfStream = File.OpenRead(standard.RelativePath);
+        await using var pdfStream = File.OpenRead(resolved);
         var stopwatch = Stopwatch.StartNew();
         var result = await _unstructuredExtractor.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
         stopwatch.Stop();
@@ -312,21 +392,41 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [Fact(Timeout = 60_000)] // 1 minute ceiling for large file — this bound IS the guardrail
     public async Task Unstructured_LargeFile_TerraformingMars_HandlesStressTest()
     {
-        if (_unstructuredExtractor == null || !_goldStandards.ContainsKey("terraforming-mars_rulebook.pdf"))
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip("Unstructured service not available or gold standard missing");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey("terraforming-mars_rulebook.pdf"))
+        {
+            // GUASTO e non PREVISTO: il manifest e' COMMITTATO, quindi una voce che manca per un
+            // filename che un test chiede e' un disallineamento fra [InlineData] e dati, da riparare.
+            Assert.Skip(
+                $"GUASTO: {"terraforming-mars_rulebook.pdf"} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards["terraforming-mars_rulebook.pdf"];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output($"\n🔥 Stress Test: terraforming-mars_rulebook.pdf (38MB, {standard.ExpectedPages} pages)");
 
         // Act
-        await using var pdfStream = File.OpenRead(standard.RelativePath);
+        await using var pdfStream = File.OpenRead(resolved);
         var stopwatch = Stopwatch.StartNew();
         var result = await _unstructuredExtractor.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
         stopwatch.Stop();
@@ -356,9 +456,12 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [Trait("TestType", "Performance")]
     public async Task PerformanceBenchmark_AllComplexityTiers_WithinP95Targets()
     {
-        if (_unstructuredExtractor == null)
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip("Unstructured service not available for performance benchmarking");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente, quindi "
+                + "non c'e' nulla da misurare. Per eseguire: TEST_PDF_SERVICES=true e "
+                + "cd infra && make dev (profilo ai).");
         }
 
         _output("\n⚡ Performance Benchmark: Testing all complexity tiers\n");
@@ -367,13 +470,14 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
 
         foreach (var (filename, standard) in _goldStandards.OrderBy(x => x.Value.FileSize))
         {
-            if (!File.Exists(standard.RelativePath))
+            var resolved = PdfCorpus.Resolve(standard.RelativePath);
+            if (!File.Exists(resolved))
             {
-                _output($"⚠️ Skipping {filename}: File not found");
+                _output($"⚠️ Skipping {filename}: File not found at {resolved}");
                 continue;
             }
 
-            await using var pdfStream = File.OpenRead(standard.RelativePath);
+            await using var pdfStream = File.OpenRead(resolved);
             var stopwatch = Stopwatch.StartNew();
 
             try
@@ -419,21 +523,41 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [InlineData("barrage_rulebook.pdf", "complex")]
     public async Task Unstructured_KeyPhraseDetection_AcrossTiers(string filename, string tier)
     {
-        if (_unstructuredExtractor == null || !_goldStandards.ContainsKey(filename))
+        if (_unstructuredExtractor is null)
         {
-            Assert.Skip($"Unstructured service not available or gold standard missing for {filename}");
+            Assert.Skip(
+                "PREVISTO: il servizio Unstructured non e' configurato in questo ambiente. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey(filename))
+        {
+            // GUASTO e non PREVISTO: il manifest e' COMMITTATO, quindi una voce che manca per un
+            // filename che un test chiede e' un disallineamento fra [InlineData] e dati, da riparare.
+            Assert.Skip(
+                $"GUASTO: {filename} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards[filename];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output($"\n🔍 Key Phrase Detection: {filename} ({tier})");
 
         // Act
-        await using var pdfStream = File.OpenRead(standard.RelativePath);
+        await using var pdfStream = File.OpenRead(resolved);
         var result = await _unstructuredExtractor.ExtractTextAsync(pdfStream, enableOcrFallback: true, TestCancellationToken);
 
         // Assert - All key phrases must be detected
@@ -482,24 +606,47 @@ public class PdfExtractionRealBackendValidationTests : IAsyncLifetime
     [InlineData("pandemic_rulebook.pdf")]
     public async Task CompareExtractors_SamePdf_BothProduceQualityResults(string filename)
     {
-        if (_unstructuredExtractor == null || _smoldoclingExtractor == null || !_goldStandards.ContainsKey(filename))
+        // Tre cause distinte, tre motivi: un OR fra loro diceva «Both PDF services required» anche
+        // quando i servizi c'erano entrambi e mancava la voce nel manifest (#4040).
+        if (_unstructuredExtractor is null || _smoldoclingExtractor is null)
         {
-            Assert.Skip("Both PDF services required for comparison test");
+            var missing = _unstructuredExtractor is null
+                ? (_smoldoclingExtractor is null ? "Unstructured e SmolDocling" : "Unstructured")
+                : "SmolDocling";
+            Assert.Skip(
+                $"PREVISTO: il confronto richiede entrambi gli estrattori e manca {missing}. "
+                + "Per eseguire: TEST_PDF_SERVICES=true e cd infra && make dev (profilo ai).");
+        }
+
+        if (!_goldStandards.ContainsKey(filename))
+        {
+            Assert.Skip(
+                $"GUASTO: {filename} non ha una voce in {PdfCorpus.ManifestPath}, che e' committato. "
+                + "Allinea il manifest all'[InlineData] del test, o viceversa: "
+                + $"voci caricate = {_goldStandards.Count}.");
         }
 
         var standard = _goldStandards[filename];
-        if (!File.Exists(standard.RelativePath))
+        var resolved = PdfCorpus.Resolve(standard.RelativePath);
+        if (!File.Exists(resolved))
         {
-            Assert.Skip($"PDF not found: {standard.RelativePath}");
+            // GUASTO: i PDF del corpus sono committati in data/rulebook/. Se non si trovano, la
+            // causa e' il percorso o il file, non un ambiente incompleto — e il motivo lo dice,
+            // perche' «PDF not found» da solo chiudeva l'indagine (#4040).
+            Assert.Skip(
+                $"GUASTO: il PDF del corpus non esiste in {resolved} (dichiarato come "
+                + $"'{standard.RelativePath}' nel manifest, risolto dalla radice del repository). "
+                + "Quei file sono COMMITTATI in data/rulebook/: se manca, controlla il nome nel "
+                + "manifest prima dell'ambiente.");
         }
 
         _output($"\n⚖️ Comparison Test: {filename}");
 
         // Act - Extract with both services
-        await using var stream1 = File.OpenRead(standard.RelativePath);
+        await using var stream1 = File.OpenRead(resolved);
         var unstructuredResult = await _unstructuredExtractor.ExtractTextAsync(stream1, enableOcrFallback: true, TestCancellationToken);
 
-        await using var stream2 = File.OpenRead(standard.RelativePath);
+        await using var stream2 = File.OpenRead(resolved);
         var smoldoclingResult = await _smoldoclingExtractor.ExtractTextAsync(stream2, enableOcrFallback: true, TestCancellationToken);
 
         // Assert - Both should succeed

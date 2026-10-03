@@ -427,8 +427,19 @@ jobs:
       # Mirror of the DS-17-2 lint:tokens:mockups pattern (#2070). Baseline locked to
       # the current inventory; a NEW BGG reference fails the gate. Reduce the baseline
       # opportunistically as cleanup PRs land. See ADR-059 §2.
+      #
+      # 🔴 325 → 313 il 2026-10-03. Il tetto era rimasto a `325`, l'inventario del
+      # 2026-06-14 (`audits/2026-06-14-bgg-mockup-violations.json`), mentre la misura
+      # reale era scesa a `313` (31 mockup + 282 FE source, stabile su due giri). Dodici
+      # riferimenti BGG puliti e il tetto non abbassato = spazio perché dodici NUOVI
+      # entrino senza far fallire il gate — e questa superficie è sotto un freeze
+      # dichiarato (#2123, Prometheus SLO=0, «any nonzero = P1»), quindi il gioco qui
+      # costa più che altrove. Il tetto morde: `--max-baseline 312` esce 1.
+      #
+      # Questa riga va riabbassata a OGNI pulizia. Il comando che dà il valore corrente:
+      #   cd apps/web && pnpm lint:bgg-mockups
       - name: BGG mockup + FE copy gate (#2151)
-        run: pnpm lint:bgg-mockups --strict --max-baseline 325
+        run: pnpm lint:bgg-mockups --strict --max-baseline 313
 
       - name: Upload BGG mockup violations report
         if: always()

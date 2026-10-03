@@ -73,10 +73,50 @@ setup() {
     [[ "$output" == *"controprova non disponibile"* ]]
 }
 
-@test "run troncata dal TestSessionTimeout: FALLISCE perche i conteggi sono parziali" {
+@test "run troncata: esce 2 (NON MISURABILE), non 1, e non confronta" {
+    # #4036 — «non ho potuto misurare» e «ho misurato una regressione» sono due cose diverse.
+    # Confonderle renderebbe il segnale inutile: lo shard Games sfora il TestSessionTimeout in modo
+    # cronico (#3742), quindi con un solo codice resterebbe rosso per sempre per una ragione che non
+    # e' un salto in piu', e chi legge imparerebbe a ignorarlo.
     run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/troncato.logfixture" --baseline "$BASELINE"
-    [ "$status" -eq 1 ]
+    [ "$status" -eq 2 ]
     [[ "$output" == *"TRONCATA"* ]]
+    [[ "$output" == *"NON e' stato eseguito"* ]]
+    # Si ferma PRIMA del confronto: se dicesse «entro la baseline» starebbe rivendicando una misura
+    # che non ha fatto.
+    [[ "$output" != *"entro la baseline"* ]]
+}
+
+@test "run troncata ma un salto in piu: resta 2, perche il conteggio non e confrontabile" {
+    # Il caso che distingue i due codici: su una run troncata nemmeno un conteggio PIU' ALTO della
+    # baseline e' una regressione dimostrata — potrebbe esserlo, ma da conteggi parziali non lo si
+    # sa, e un gate che lo afferma mente nella direzione opposta a quella solita.
+    #
+    # Il log deve dichiarare gli stessi 4 salti del .trx: la controprova sul trailer gira PRIMA
+    # della verifica di troncatura, e due fonti che si contraddicono sulla stessa run parziale
+    # restano un difetto della misura (exit 1) anche quando la run e' troncata. Scoperto scrivendo
+    # questo test con la fixture sbagliata, che usciva 1 per discordanza e non per il motivo creduto.
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/un-salto-in-piu.trx" --log "$FIX/troncato-con-un-salto-in-piu.logfixture" --baseline "$BASELINE"
+    [ "$status" -eq 2 ]
+    [[ "$output" != *"SALTI sono aumentati"* ]]
+}
+
+@test "run troncata con fonti discordanti: esce 1, la discordanza vince sulla troncatura" {
+    # Fissa l'ordine deciso sopra, invece di lasciarlo implicito nel codice: una run troncata non
+    # giustifica due fonti che si contraddicono.
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/un-salto-in-piu.trx" --log "$FIX/troncato.logfixture" --baseline "$BASELINE"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"fonti discordanti"* ]]
+}
+
+@test "senza --log: avverte che la troncatura non e verificabile" {
+    # Il .trx di una run abortita ha la stessa forma di quello di una run completa, solo con meno
+    # elementi: senza il log la troncatura e' INVISIBILE. Verificato sul run reale 36997819474, dove
+    # l'invocazione col solo .trx di Games diceva «entro la baseline» su una run fermata a 773 test.
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --baseline "$BASELINE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"nessun --log"* ]]
+    [[ "$output" == *"non e' verificabile"* ]]
 }
 
 # ─── input illeggibile ───────────────────────────────────────────────────────────────────────────

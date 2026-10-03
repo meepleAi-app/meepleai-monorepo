@@ -307,16 +307,35 @@ jobs:
           # scritto col campo ovvio leggerebbe sempre zero. La sua suite bats gira nel job
           # *Infra Scripts* di dev-fast, dove la prova costa secondi invece dei ~90 minuti di qui.
           #
-          # SOLA SEGNALAZIONE in questa prima versione (`|| true`): il confronto va osservato su
-          # almeno una run reale prima di poter far fallire il job. La promozione a errore è #4024
-          # T1c, e consiste nel togliere il `|| true`.
+          # #4036 — da sola segnalazione a ERRORE. Due difetti correggevano il «basta togliere il
+          # `|| true`» con cui questo blocco era arrivato:
+          #
+          # 1. 🔴 Lo script era in PIPE verso `tee`, e il default di GitHub Actions è `bash -e {0}`:
+          #    senza `pipefail` lo stato della pipeline è quello di `tee`, cioè 0. Rimosso il
+          #    `|| true`, il gate sarebbe rimasto verde su qualunque esito — il gate verde e vuoto,
+          #    dentro il lavoro che dovrebbe chiuderne la famiglia. Lo stato va catturato, non
+          #    dedotto dalla pipeline.
+          # 2. Il comparatore e il guardiano della troncatura qui sotto segnalavano la STESSA cosa.
+          #    Ora ciascun segnale ha un solo proprietario: exit 1 = regressione dei salti o dei
+          #    fallimenti (blocca, ed è questo blocco); exit 2 = non misurabile perché la run è
+          #    troncata (segnalato qui, e il job lo fa fallire il guardiano sotto, che è di #3742).
+          set +e
           bash infra/scripts/shard-skip-assert.sh \
             --shard "${SHARD}" \
             --trx "${trx_files[0]}" \
-            --log "$log" 2>&1 | tee /tmp/shard-assert.out || true
+            --log "$log" > /tmp/shard-assert.out 2>&1
+          assert_rc=$?
+          set -e
+          cat /tmp/shard-assert.out
+
+          case "$assert_rc" in
+            0) assert_label="entro la baseline ✓" ;;
+            2) assert_label="⚠️ NON MISURABILE — run troncata, confronto non eseguito (#3742)" ;;
+            *) assert_label="❌ REGRESSIONE dei conteggi" ; status=1 ;;
+          esac
           {
             echo
-            echo "<details><summary>Conteggi contro la baseline (#4024, sola segnalazione)</summary>"
+            echo "<details><summary>Conteggi contro la baseline (#4024): ${assert_label}</summary>"
             echo
             echo '```'
             cat /tmp/shard-assert.out

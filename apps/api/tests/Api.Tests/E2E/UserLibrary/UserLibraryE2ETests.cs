@@ -167,8 +167,11 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         var response = await Client.PatchAsJsonAsync($"/api/v1/library/games/{_testGameId}", statusPayload);
 
         // Assert - Skip if endpoint has missing dependencies in test environment
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("UpdateGameStatus returned 500 — service likely unavailable");
+        // #4023: un 500 e un difetto del prodotto, non l assenza di un servizio. Se un
+        // prerequisito manca davvero, si accerta in testa al test con
+        // E2EServiceProbe.SkipUnlessHealthyAsync — non si deduce da questa risposta.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "UpdateGameStatus ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.NoContent,

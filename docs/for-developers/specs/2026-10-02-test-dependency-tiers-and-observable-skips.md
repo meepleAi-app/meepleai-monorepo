@@ -210,15 +210,28 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   motivo di un `Assert.Skip` è un argomento dentro un corpo di metodo, dove
   `GetCustomAttributesData()` non arriva.
   **Due cose che il gate ha dimostrato di non essere decorativo**, entrambe la notte stessa:
-  (a) la sua contro-prova `TheScanFindsTheKnownPopulation` ha scoperto che la prima stesura trovava
+  (a) la sua contro-prova — oggi `TheScanFindsWhatARawGrepFinds`, nata come
+  `TheScanFindsTheKnownPopulation` — ha scoperto che la prima stesura trovava
   **0 siti su 22 file** contenenti `Assert.Skip(` — perché riusava `SourceScanner.ReadStatement`,
   che *salta i letterali*, per leggere un motivo che **è** un letterale; il test principale passava
   vacuamente; (b) `EveryExemptionStillAppliesToSomething` ha dichiarato stale due esenzioni appena
   il lavoro sottostante le ha svuotate (`E2EServiceProbe.cs` in #4023,
-  `AdminGameCreationJourneyE2ETests.cs` in #4033), costringendo a rimuoverle nello stesso passaggio.
+  `AdminGameCreationJourneyE2ETests.cs` in #4033, `E2ETestPrerequisites.cs` alla sua cancellazione),
+  costringendo a rimuoverle nello stesso passaggio.
   **Limite dichiarato**: un motivo costruito in una **variabile** è invisibile a una scansione dei
   sorgenti. Dove serve, il prefisso va garantito da un test del costruttore del motivo.
-- [ ] **A2** — fatto in **#4030**, con un residuo dichiarato. Esistono
+  **Corretto anche un difetto della contro-prova stessa** (#4033): pretendeva «almeno 100 siti», un
+  numero preso da una misura, ed è diventata rossa quando il lavoro ha *rimosso* salti — cioè per il
+  risultato che doveva ottenere. Ora il confronto è **relativo** e su due fonti: un conteggio grezzo
+  dei marcatori, e la **riflessione** sugli attributi, che non passa dalla lista di marcatori e
+  quindi intercetta anche un rinominio in xUnit (il primo arco, da solo, no: i due conteggi
+  scenderebbero insieme).
+  **Verifica a runtime, indipendente dalla scansione**: nella selezione senza Docker
+  (`make test-no-docker`, `23728` superati) i `19` test ignorati portano **tutti** una classe:
+  diciotto `LIMITE` (sedici «EF Core InMemory non traduce cross-BC nested sub-queries», uno
+  `ExecuteDeleteAsync`, uno «copertura equivalente altrove») e uno `PREVISTO`. Il gate scansiona i
+  sorgenti; questo conferma che la stessa proprietà vale su ciò che xUnit riporta davvero.
+- [x] **A2** — fatto in **#4030**, **chiuso in #4036**. Esistono
   `infra/fixtures/dev-async-shard-baseline.json` (con `runId` e `capturedAt`) e
   `infra/scripts/shard-skip-assert.sh`, che **fallisce** su un aumento non dichiarato di fallimenti
   *o di salti*. Prova in CI, non a mano: i casi girano nel job *Infra Scripts* di dev-fast
@@ -230,10 +243,20 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   `<UnitTestResult outcome="NotExecuted">`. Un gate scritto col campo apparentemente ovvio avrebbe
   letto sempre zero: sarebbe stato il gate verde e vuoto costruito dentro il lavoro che dovrebbe
   chiuderne la famiglia.
-  **Residuo (T1c)**: dentro `dev-async.yml` il comparatore è ancora in **report-only** (`|| true`).
-  Promuoverlo a errore nello stesso passaggio in cui lo si introduce significherebbe spedire un gate
-  di cui non si è mai visto l'output su un `.trx` prodotto da dev-async invece che da una fixture.
-  La casella si spunta quando il `|| true` sparisce.
+  **La promozione a errore (#4036) non era «togliere il `|| true`»**, e le due ragioni sono
+  entrambe difetti di #4030:
+  (a) lo script era in **pipe** verso `tee`, e il default di GitHub Actions è `bash -e {0}` — senza
+  `pipefail` lo stato della pipeline è quello di `tee`, cioè 0: togliere il `|| true` avrebbe
+  lasciato il gate verde su qualunque esito;
+  (b) 🔴 **la riga `Games` della baseline veniva da un run TRONCATO** — `Aborting test run: test run
+  timeout`, `Total: 773` in 1 h 13 m, e `Total: 791` nel run precedente. Due run, due tagli a
+  conteggi diversi, perché il taglio cade su un confine di *tempo* e non di *selezione* (causa in
+  #3742). Quelle cifre non misuravano lo shard: misuravano ciò che entra in 75 minuti, e **una
+  regressione nei salti di Games può restare invisibile** perché il test che la rivelerebbe può non
+  essere stato eseguito.
+  Da qui il terzo codice d'uscita — `2` = non misurabile — per non confondere «non ho potuto
+  misurare» con «ho misurato una regressione»: con un solo codice Games resterebbe rosso per sempre
+  per una ragione che non è un salto, e chi legge imparerebbe a ignorare il segnale.
 - [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
   (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
   puntata a un tag inesistente:
@@ -275,13 +298,24 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   verifica fino al modello risolto. Resta il presupposto che il percorso Ollama **funzioni**: non
   funzionava, perché `OLLAMA_CHAT_MODEL` era letta da compose e ignorata dall'API (ogni chat →
   `404 model not found`); corretto nello stesso passaggio.
-- [ ] **A7** I siti «service likely unavailable» sono convertiti a una sonda o riclassificati.
-  **Misura**: il grep di §1 torna a zero, con il pattern validato su un positivo noto.
-  **Stato**: convertiti in due passaggi — **#4023** (`E2ETestBase` e le sei suite che la estendono)
-  e **#4033** (`AdminGameCreationJourneyE2ETests`, l'unica che richiedeva giudizio). La casella si
-  spunta quando entrambe sono su `main-dev` e il grep misura zero: finché una delle due è aperta, il
-  conteggio non è zero **per costruzione**, non per un sito dimenticato — verificato che i file
-  residui su ciascun branch sono esattamente quelli nel diff dell'altra PR, senza un terzo insieme.
+- [x] **A7** I siti «service likely unavailable» sono convertiti a una sonda o riclassificati.
+  Fatto in due passaggi: **#4023** (`E2ETestBase` e le sei suite che la estendono) e **#4033**
+  (`AdminGameCreationJourneyE2ETests`, l'unica che richiedeva giudizio — risolto misurando: nessuna
+  delle sue asserzioni ammetteva un 500, quindi togliere i rami fa rispettare il contratto già
+  scritto nel test). Il residuo di #4023, `E2ETestPrerequisites`, è stato **cancellato**: 218 righe,
+  nove metodi pubblici, zero chiamanti, e sondava `localhost:8080` e Qdrant `:6333` trattando ogni
+  non-2xx come assenza — era il difetto, non un chiamante del difetto.
+  **Misurato su `main-dev`**, escludendo i commenti:
+
+  ```
+  grep -rnE 'Assert\.Skip\([^;]*service likely unavailable' --include=*.cs apps/api/tests/ \
+    | grep -vE ':\s*(///|//|\*)'
+  → (vuoto)
+  ```
+
+  Restano **due** occorrenze della stringa, entrambe **documentazione XML** che cita l'anti-pattern
+  per spiegarlo (`E2EServiceProbe.cs`, `E2ETestBase.cs`): la misura autorevole è il gate di A1, che
+  scansiona il **codice** via `SourceScanner.FindCodeOccurrences` e i commenti non li conta.
   **Il criterio taceva su una cosa che è emersa convertendo**: una sonda sbagliata è peggio del
   difetto che sostituisce. In #4023 la prima stesura ha gatato tre test su un check `orchestrator`
   che quell'host non registra, e **tre test che passavano sono diventati salti** — visibile solo

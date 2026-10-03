@@ -1,0 +1,35 @@
+{
+  "_comment": [
+    "Baseline dei conteggi per shard di dev-async — #4024, spec R2.",
+    "",
+    "Confrontata da infra/scripts/shard-skip-assert.sh, che FALLISCE su un aumento non",
+    "dichiarato di failed o di skipped. Sostituisce la riga di prosa che dev-async.yml",
+    "stampava senza confrontarla, e che era gia' falsa: diceva Core 9 / KnowledgeBase 4 /",
+    "Games 3 mentre i fallimenti misurati erano 4 / 23 / 2.",
+    "",
+    "I salti vengono contati dagli ELEMENTI <UnitTestResult outcome=\"NotExecuted\"> del .trx,",
+    "mai da Counters/@notExecuted, che vale 0 su tutti e tre gli shard anche con 45 salti.",
+    "",
+    "Per aggiornare: shard-skip-assert.sh --shard <nome> --trx <file> --update-baseline,",
+    "e aggiornare runId e capturedAt qui sotto — una baseline che non dice da dove viene non",
+    "e' verificabile. Prima di aggiornarla a un run piu' recente, controllare che i tre job",
+    "non siano 'skipped': gh run view <id> --json jobs. Un run in cui il path filter ha",
+    "saltato il backend risulta 'success' e porterebbe una baseline di zero."
+  ],
+  "runId": "36997819474",
+  "capturedAt": "2026-10-02",
+  "shards": {
+    "Core": {
+      "failed": 4,
+      "skipped": 45
+    },
+    "KnowledgeBase": {
+      "failed": 23,
+      "skipped": 11
+    },
+    "Games": {
+      "failed": 2,
+      "skipped": 8
+    }
+  }
+}

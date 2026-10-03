@@ -65,10 +65,11 @@ public sealed class SkipReasonClassArchitectureTests
     /// </summary>
     private static readonly Dictionary<string, string> Exempt = new(StringComparer.Ordinal)
     {
-        ["E2E/SharedGameCatalog/AdminGameCreationJourneyE2ETests.cs"] =
-            "In conversione in #4023 (T2): i motivi deducono l'assenza del servizio da una risposta " +
-            "ricevuta («returned 500 — service likely unavailable»), che è il difetto che #4023 " +
-            "corregge. Classificarli adesso significherebbe rifare il lavoro due volte.",
+        // L'esenzione per E2E/SharedGameCatalog/AdminGameCreationJourneyE2ETests.cs è stata RIMOSSA
+        // in #4033: quel file non ha più siti di salto. Il dubbio che la teneva qui — «BGG API
+        // disabled in E2E, quindi lì un 500 può essere il comportamento ATTESO» — si è risolto
+        // misurando invece di decidere: nessuna delle asserzioni del file ammette un 500, quindi
+        // togliere i rami non inventa un contratto nuovo, fa rispettare quello già scritto.
         ["E2E/KnowledgeBase/ChatE2ETests.cs"] =
             "In conversione in #4023 (T2), stessa causa: i motivi deducono l'assenza del servizio " +
             "dal codice di risposta ricevuto.",

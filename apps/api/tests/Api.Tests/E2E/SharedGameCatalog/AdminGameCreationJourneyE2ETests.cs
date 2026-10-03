@@ -123,8 +123,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/shared-games/bgg/search?searchTerm=Catan");
 
         // Assert - BGG API disabled in E2E, may return empty or service unavailable
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("BggSearch returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: BggSearch — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.ServiceUnavailable,
@@ -142,8 +147,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/shared-games/bgg/check-duplicate/13");
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("BggCheckDuplicate returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: BggCheckDuplicate — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.ServiceUnavailable);
@@ -183,8 +193,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/admin/shared-games/import-bgg", payload);
 
         // Assert - BGG disabled, will fail to fetch details
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ImportFromBgg returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: ImportFromBgg — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.Created,
             HttpStatusCode.BadRequest,
@@ -225,8 +240,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/admin/shared-games", payload);
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CreateSharedGame returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CreateSharedGame — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.Created,
             HttpStatusCode.OK,
@@ -301,8 +321,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.PostAsync("/api/v1/ingest/pdf", content);
 
         // Assert - Upload may succeed even without processing services
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("UploadPdf returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: UploadPdf — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             new[] { HttpStatusCode.OK, HttpStatusCode.Created, HttpStatusCode.Accepted, HttpStatusCode.BadRequest },
             // #3662: in CI qui arriva 403, in locale no. Il corpo e' l'unico modo per sapere chi rifiuta.
@@ -340,8 +365,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         }
 
         // Assert - All uploads should reach the endpoint (success or known error)
-        if (uploadResults.Any(s => s == HttpStatusCode.InternalServerError))
-            Assert.Skip("UploadMultiplePdfs returned 500 — service likely unavailable");
+        uploadResults.Should().NotContain(HttpStatusCode.InternalServerError,
+            "#4033: UploadMultiplePdfs — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + "La raccolta porta solo gli status, quindi qui non c'è un corpo da mostrare.");
         uploadResults.Should().AllSatisfy(status =>
             status.Should().BeOneOf(
                 HttpStatusCode.OK,
@@ -386,8 +416,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/queue/status");
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AdminQueue_GetStatus returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AdminQueue_GetStatus — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Forbidden);
@@ -410,8 +445,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/queue?page=1&pageSize=10");
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AdminQueue_ListJobs returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AdminQueue_ListJobs — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Forbidden);
@@ -428,8 +468,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/queue/alerts");
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AdminQueue_GetAlerts returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AdminQueue_GetAlerts — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Forbidden);
@@ -446,8 +491,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/queue/metrics?period=24h");
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AdminQueue_GetMetrics returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AdminQueue_GetMetrics — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Forbidden);
@@ -488,8 +538,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/admin/kb/vector-stats");
 
         // Assert - vector services may be disabled in E2E, may return error
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AdminKb_GetVectorStats returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AdminKb_GetVectorStats — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Forbidden,
@@ -507,8 +562,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.GetAsync($"/api/v1/knowledge-base/{_testSharedGameId}/status");
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("KnowledgeBaseStatus returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: KnowledgeBaseStatus — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.NotFound);
@@ -545,8 +605,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/user", payload);
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CreateAgent returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CreateAgent — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.Created,
             HttpStatusCode.OK,
@@ -593,8 +658,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             $"/api/v1/admin/shared-games/{_testSharedGameId}/link-agent/{agent.Id}", null);
 
         // Assert
-        if (linkResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("LinkAgentToSharedGame returned 500 — service likely unavailable");
+        linkResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: LinkAgentToSharedGame — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(linkResponse));
         linkResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.NoContent,
@@ -668,8 +738,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var chatResponse = await Client.PostAsJsonAsync($"/api/v1/agents/{agent.Id}/chat", chatPayload);
 
         // Assert - LLM disabled in E2E, endpoint reachable but may fail on LLM call
-        if (chatResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AgentChat returned 500 — service likely unavailable");
+        chatResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AgentChat — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(chatResponse));
         chatResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest,
@@ -716,8 +791,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             $"/api/v1/admin/agent-definitions/{agent.Id}/playground/chat", playgroundPayload);
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AgentPlayground returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AgentPlayground — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest,
@@ -737,8 +817,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
             $"/api/v1/admin/games/{_testSharedGameId}/agent/auto-test", null);
 
         // Assert - May fail without LLM/Qdrant
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("AgentAutoTest returned 500 — service likely unavailable");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: AgentAutoTest — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.NotFound,
@@ -803,8 +888,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
 
         var uploadResponse = await Client.PostAsync("/api/v1/ingest/pdf", formContent);
 
-        if (uploadResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CompleteAdminJourney PDF upload returned 500 — service likely unavailable");
+        uploadResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CompleteAdminJourney PDF upload — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(uploadResponse));
         uploadResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.Created,
@@ -814,16 +904,26 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         // === Step 5: Check queue status ===
         var queueResponse = await Client.GetAsync("/api/v1/admin/queue/status");
 
-        if (queueResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CompleteAdminJourney queue status returned 500 — service likely unavailable");
+        queueResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CompleteAdminJourney queue status — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(queueResponse));
         queueResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, HttpStatusCode.Forbidden);
 
         // === Step 6: Check KB status for game ===
         var kbStatusResponse = await Client.GetAsync($"/api/v1/knowledge-base/{gameId}/status");
 
-        if (kbStatusResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CompleteAdminJourney KB status returned 500 — service likely unavailable");
+        kbStatusResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CompleteAdminJourney KB status — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(kbStatusResponse));
         kbStatusResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, HttpStatusCode.NotFound);
 
@@ -853,8 +953,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var linkResponse = await Client.PostAsync(
             $"/api/v1/admin/shared-games/{gameId}/link-agent/{agent.Id}", null);
 
-        if (linkResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CompleteAdminJourney link agent returned 500 — service likely unavailable");
+        linkResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CompleteAdminJourney link agent — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(linkResponse));
         linkResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, HttpStatusCode.NoContent,
             HttpStatusCode.NotFound, HttpStatusCode.Conflict);
@@ -863,8 +968,13 @@ public sealed class AdminGameCreationJourneyE2ETests : E2ETestBase
         var chatPayload = new { message = "How do I set up the board?" };
         var chatResponse = await Client.PostAsJsonAsync($"/api/v1/agents/{agent.Id}/chat", chatPayload);
 
-        if (chatResponse.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CompleteAdminJourney agent chat returned 500 — service likely unavailable");
+        chatResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "#4033: CompleteAdminJourney agent chat — il 500 non è fra gli stati ammessi"
+            + " dall'asserzione qui sotto, quindi in assenza del servizio esterno il"
+            + " contratto è un ALTRO stato. Se è un altro ancora, va aggiunto là: non"
+            + " tollerato qui, perché questo ramo accettava qualunque 500, compreso"
+            + " quello di una regressione. "
+            + await DescribeResponseAsync(chatResponse));
         chatResponse.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest,

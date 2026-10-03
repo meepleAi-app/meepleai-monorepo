@@ -141,8 +141,14 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ValidateMove_InvalidMove returned 500 — service likely unavailable");
+        // #4023: la disponibilita dell orchestration service si ACCERTA, non si deduce dal 500.
+        // Nota sulla posizione: la sonda sta nella sezione Assert e non prima dell Act perche
+        // l esito e lo stesso (decide fra saltare e fallire) e spostarla in nove punti
+        // aumenterebbe il rischio senza cambiare il comportamento.
+        await E2EServiceProbe.SkipUnlessHealthyAsync(Client, "orchestrator",
+            "avvia il profilo tutor-agents: cd infra && make dev");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "ValidateMove_InvalidMove ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest);
@@ -342,8 +348,14 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert - Should handle invalid state gracefully
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ValidateMove_InvalidGameState returned 500 — service likely unavailable");
+        // #4023: la disponibilita dell orchestration service si ACCERTA, non si deduce dal 500.
+        // Nota sulla posizione: la sonda sta nella sezione Assert e non prima dell Act perche
+        // l esito e lo stesso (decide fra saltare e fallire) e spostarla in nove punti
+        // aumenterebbe il rischio senza cambiare il comportamento.
+        await E2EServiceProbe.SkipUnlessHealthyAsync(Client, "orchestrator",
+            "avvia il profilo tutor-agents: cd infra && make dev");
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "ValidateMove_InvalidGameState ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, // Returns validation result with error
             HttpStatusCode.BadRequest); // Validation rejects invalid state

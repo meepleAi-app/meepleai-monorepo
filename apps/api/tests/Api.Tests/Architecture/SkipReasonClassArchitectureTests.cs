@@ -66,25 +66,17 @@ public sealed class SkipReasonClassArchitectureTests
     private static readonly Dictionary<string, string> Exempt = new(StringComparer.Ordinal)
     {
         ["E2E/SharedGameCatalog/AdminGameCreationJourneyE2ETests.cs"] =
-            "In conversione in #4023 (T2): i motivi deducono l'assenza del servizio da una risposta " +
-            "ricevuta («returned 500 — service likely unavailable»), che è il difetto che #4023 " +
-            "corregge. Classificarli adesso significherebbe rifare il lavoro due volte.",
-        ["E2E/KnowledgeBase/ChatE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: i motivi deducono l'assenza del servizio " +
-            "dal codice di risposta ricevuto.",
-        ["E2E/KnowledgeBase/ArbitroAgentE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/SharedGameCatalog/ShareRequestE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/UserNotifications/NotificationsE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/UserLibrary/UserLibraryE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/DocumentProcessing/DocumentProcessingE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/Infrastructure/E2ETestBase.cs"] =
-            "In conversione in #4023 (T2): è la base condivisa degli otto file, quindi va convertita " +
-            "insieme a loro e non prima, o le suite figlie si troverebbero due comportamenti.",
+            "Ultima suite in conversione in #4023 (T2), e l'unica che richiede giudizio invece di una " +
+            "sostituzione: il suo commento dice «BGG API disabled in E2E», quindi lì un 500 può " +
+            "essere il comportamento ATTESO in assenza di BGG — va stabilito cosa l'endpoint deve " +
+            "fare, non solo che non deve dare 500.",
+        ["E2E/Infrastructure/E2EServiceProbe.cs"] =
+            "Chiama Assert.Skip(reason) con una VARIABILE: il motivo è costruito da " +
+            "E2EServiceProbe.BuildSkipReason, quindi un gate che legge i sorgenti non può vederne il " +
+            "prefisso. Il prefisso è garantito dove va garantito, cioè dai test di BuildSkipReason " +
+            "(E2EServiceProbeTests verifica che ogni stato produca un motivo che inizia con " +
+            "PREVISTO:). Esentare qui è corretto; estendere il gate a risolvere le variabili locali " +
+            "costerebbe più di quanto proteggerebbe.",
         ["Helpers/E2ETestPrerequisites.cs"] =
             "Codice morto con zero chiamanti, e implementa il difetto che #4023 corregge: sonda " +
             "localhost:8080 e Qdrant :6333 (servizio che questo repo non ha più) e tratta ogni " +

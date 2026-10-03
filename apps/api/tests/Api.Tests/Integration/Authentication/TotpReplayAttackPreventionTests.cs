@@ -73,7 +73,7 @@ public sealed class TotpReplayAttackPreventionTests : IAsyncLifetime
     {
         if (_totpService == null || _dbContext == null)
         {
-            Assert.Skip("GUASTO: la fixture Testcontainers condivisa non e partita. TOTP replay attack tests require PostgreSQL.");
+            L1Services.FailBecauseUnavailable("postgres", "la fixture Testcontainers condivisa non e partita: _totpService o _dbContext sono null");
         }
     }
 

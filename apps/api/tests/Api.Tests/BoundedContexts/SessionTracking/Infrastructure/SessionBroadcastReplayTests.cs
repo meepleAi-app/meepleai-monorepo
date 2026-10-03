@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using StackExchange.Redis;
 using Testcontainers.Redis;
 using Xunit;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure;
 
@@ -169,7 +170,7 @@ public sealed class SessionBroadcastReplayTests
         if (fixture is null)
         {
             // Observable skip (NOT a silent no-op pass) so a green run never masks an unexecuted test.
-            Assert.Skip("GUASTO: Docker o Redis non raggiungibili — la fixture Testcontainers non e partita. Redis e un servizio L1: questo salto dovra diventare un fallimento, vedi #4022");
+            L1Services.FailBecauseUnavailable("redis", "la fixture Testcontainers non e partita: il container Redis non e disponibile");
             return;
         }
 
@@ -247,7 +248,7 @@ public sealed class SessionBroadcastReplayTests
         if (fixture is null)
         {
             // Observable skip (NOT a silent no-op pass) so a green run never masks an unexecuted test.
-            Assert.Skip("GUASTO: Docker o Redis non raggiungibili — la fixture Testcontainers non e partita. Redis e un servizio L1: questo salto dovra diventare un fallimento, vedi #4022");
+            L1Services.FailBecauseUnavailable("redis", "la fixture Testcontainers non e partita: il container Redis non e disponibile");
             return;
         }
 
@@ -303,7 +304,7 @@ public sealed class SessionBroadcastReplayTests
         if (fixture is null)
         {
             // Observable skip (NOT a silent no-op pass) so a green run never masks an unexecuted test.
-            Assert.Skip("GUASTO: Docker o Redis non raggiungibili — la fixture Testcontainers non e partita. Redis e un servizio L1: questo salto dovra diventare un fallimento, vedi #4022");
+            L1Services.FailBecauseUnavailable("redis", "la fixture Testcontainers non e partita: il container Redis non e disponibile");
             return;
         }
 
@@ -380,7 +381,7 @@ public sealed class SessionBroadcastReplayTests
         {
             // Docker not available — observable skip (NOT a silent no-op pass) so a green run
             // never masks an unexecuted regression test.
-            Assert.Skip("GUASTO: Docker o Redis non raggiungibili — la fixture Testcontainers non e partita. Redis e un servizio L1: questo salto dovra diventare un fallimento, vedi #4022");
+            L1Services.FailBecauseUnavailable("redis", "la fixture Testcontainers non e partita: il container Redis non e disponibile");
             return;
         }
 

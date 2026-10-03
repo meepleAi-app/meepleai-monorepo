@@ -38,7 +38,7 @@ public sealed class S3BlobStorageIntegrationTests : IAsyncLifetime
     private void SkipIfNotAvailable()
     {
         if (_skipTests)
-            Assert.Skip("GUASTO: storage S3 non raggiungibile. MinIO e un servizio L1 e in dev e gia configurato (#4018): se non risponde, l ambiente e rotto, non incompleto. Dettaglio dell errore nel log della fixture; questo salto dovra diventare un fallimento, vedi #4022");
+            L1Services.FailBecauseUnavailable("minio", "il container MinIO non e partito oppure TEST_S3_ENDPOINT non risponde; il dettaglio e nel log della fixture");
     }
 
     public async ValueTask InitializeAsync()

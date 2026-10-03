@@ -204,21 +204,62 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
 
 ## 7. Criteri di accettazione
 
-- [ ] **A1** Ogni sito di salto in `apps/api/tests/**` porta una delle quattro classi.
-  **Misura**: un test di architettura che **scansiona i sorgenti**, sul modello di
-  `EgressHttpClientPinArchitectureTests.ScanRegistrations()` (`Directory.EnumerateFiles` +
-  `FindCodeOccurrences` + `ReadStatement`, che ignorano commenti e letterali) — **non** sul modello di
-  `TestCategoryGateArchitectureTests`, che legge solo `GetCustomAttributesData()` e per riflessione
-  non può vedere l'argomento di un `Assert.Skip` dentro un corpo di metodo. Il gate legge
-  l'**istruzione**, non la riga, perché il motivo può essere interpolato o spezzato. Chi non è
-  conforme va in un elenco `Exempt` con una motivazione per voce, come fa il gate egress.
-- [ ] **A2** Esiste il file di baseline di R2.1 e il gate di R2.2 fallisce su un aumento non
-  dichiarato. **Prova**: aggiungere uno skip non dichiarato ⇒ gate rosso.
-- [ ] **A3** Con MinIO irraggiungibile le due suite di #3978 **falliscono**. **Prova**: puntare
-  l'immagine a un tag inesistente; atteso rosso, non giallo.
-- [ ] **A4** Esiste la lista L1 eseguibile e un test che fallisce se un L1 viene saltato.
-- [ ] **A5** Nessun test selezionato dai gate automatici può selezionare un **model id a pagamento**.
-  **Prova**: un test che tenta un model id paid dentro un gate automatico fallisce fail-closed.
+- [x] **A1** — fatto in **#4027**. Ogni sito di salto in `apps/api/tests/**` porta una delle quattro
+  classi, verificato da `SkipReasonClassArchitectureTests`, che **scansiona i sorgenti** via
+  `SourceScanner` (estratto da `EgressHttpClientPinArchitectureTests`) e non per riflessione: il
+  motivo di un `Assert.Skip` è un argomento dentro un corpo di metodo, dove
+  `GetCustomAttributesData()` non arriva.
+  **Due cose che il gate ha dimostrato di non essere decorativo**, entrambe la notte stessa:
+  (a) la sua contro-prova `TheScanFindsTheKnownPopulation` ha scoperto che la prima stesura trovava
+  **0 siti su 22 file** contenenti `Assert.Skip(` — perché riusava `SourceScanner.ReadStatement`,
+  che *salta i letterali*, per leggere un motivo che **è** un letterale; il test principale passava
+  vacuamente; (b) `EveryExemptionStillAppliesToSomething` ha dichiarato stale due esenzioni appena
+  il lavoro sottostante le ha svuotate (`E2EServiceProbe.cs` in #4023,
+  `AdminGameCreationJourneyE2ETests.cs` in #4033), costringendo a rimuoverle nello stesso passaggio.
+  **Limite dichiarato**: un motivo costruito in una **variabile** è invisibile a una scansione dei
+  sorgenti. Dove serve, il prefisso va garantito da un test del costruttore del motivo.
+- [ ] **A2** — fatto in **#4030**, con un residuo dichiarato. Esistono
+  `infra/fixtures/dev-async-shard-baseline.json` (con `runId` e `capturedAt`) e
+  `infra/scripts/shard-skip-assert.sh`, che **fallisce** su un aumento non dichiarato di fallimenti
+  *o di salti*. Prova in CI, non a mano: i casi girano nel job *Infra Scripts* di dev-fast
+  (run `37109361903`, `ok 58`–`ok 70`), fra cui il decisivo — un `.trx` con `notExecuted="0"` **e**
+  tre elementi `NotExecuted` ⇒ `skipped=3`.
+  🔴 **La trappola che il criterio non prevedeva**: nel `.trx` i salti hanno due rappresentazioni e
+  una è falsa. `Counters/@notExecuted` vale **0** su tutti e tre gli shard anche con 45 salti
+  (misurato sul run `36997819474`); il conteggio vero sta negli elementi
+  `<UnitTestResult outcome="NotExecuted">`. Un gate scritto col campo apparentemente ovvio avrebbe
+  letto sempre zero: sarebbe stato il gate verde e vuoto costruito dentro il lavoro che dovrebbe
+  chiuderne la famiglia.
+  **Residuo (T1c)**: dentro `dev-async.yml` il comparatore è ancora in **report-only** (`|| true`).
+  Promuoverlo a errore nello stesso passaggio in cui lo si introduce significherebbe spedire un gate
+  di cui non si è mai visto l'output su un `.trx` prodotto da dev-async invece che da una fixture.
+  La casella si spunta quando il `|| true` sparisce.
+- [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
+  (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
+  puntata a un tag inesistente:
+
+  | | immagine valida | tag inesistente |
+  |---|---|---|
+  | Superati | 12 | **0** |
+  | **Non superati** | 0 | **12** |
+  | Ignorati | 4 | 4 |
+
+  I 4 ignorati sono gli stessi nei due casi e sono `DIFETTO: #4016` — salti statici su bug noti di
+  prodotto, che non dipendono dall'ambiente e quindi *devono* restare invariati. Il messaggio dei 12
+  fallimenti è quello di `L1Services.FailBecauseUnavailable`: «*un servizio L1 deve esserci, quindi
+  la sua assenza è un guasto da riparare. Un salto la nasconderebbe — è così che l'immagine MinIO
+  sparita è passata inosservata per un mese (#3978)*». Ripristinato il tag, il verde torna
+  (contro-verifica eseguita).
+  È lo scenario esatto di #3978, e ora è **rosso invece che giallo**.
+- [x] **A4** — fatto in **#4028**. `apps/api/tests/Api.Tests/Infrastructure/L1Services.cs` è la lista
+  L1 **eseguibile** (postgres, redis, minio, mailpit, ciascuno col comando che lo avvia) con
+  `FailBecauseUnavailable`, e `L1NeverSkippedArchitectureTests` fallisce se un L1 viene saltato. Le
+  esenzioni residue nominano la issue che le chiude, non un numero.
+- [x] **A5** — fatto in **#4019**, e il criterio sottostimava il lavoro: la guardia esisteva ma
+  copriva **2 superfici su 8**. Ora `PaidAiGuardCoverageArchitectureTests` misura la copertura, e il
+  gate su `.github/workflows/**` in `validate-workflows.yml` impedisce a un workflow nuovo di
+  iniettare una chiave reale al posto di un placeholder (`PAID_KEYS` copre `OPENROUTER_API_KEY`,
+  `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
 - [x] **A6** — ⛔ **non raggiungibile per design, e la parte raggiungibile è fatta** (#4025).
   La prima metà del criterio — «gira contro due provider cambiando solo configurazione» — è
   **preclusa da una decisione di prodotto, non da un difetto**: `LlmProviderSelector` instrada
@@ -234,8 +275,19 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   verifica fino al modello risolto. Resta il presupposto che il percorso Ollama **funzioni**: non
   funzionava, perché `OLLAMA_CHAT_MODEL` era letta da compose e ignorata dall'API (ogni chat →
   `404 model not found`); corretto nello stesso passaggio.
-- [ ] **A7** I 39 siti «service likely unavailable» sono convertiti a una sonda o riclassificati.
+- [ ] **A7** I siti «service likely unavailable» sono convertiti a una sonda o riclassificati.
   **Misura**: il grep di §1 torna a zero, con il pattern validato su un positivo noto.
+  **Stato**: convertiti in due passaggi — **#4023** (`E2ETestBase` e le sei suite che la estendono)
+  e **#4033** (`AdminGameCreationJourneyE2ETests`, l'unica che richiedeva giudizio). La casella si
+  spunta quando entrambe sono su `main-dev` e il grep misura zero: finché una delle due è aperta, il
+  conteggio non è zero **per costruzione**, non per un sito dimenticato — verificato che i file
+  residui su ciascun branch sono esattamente quelli nel diff dell'altra PR, senza un terzo insieme.
+  **Il criterio taceva su una cosa che è emersa convertendo**: una sonda sbagliata è peggio del
+  difetto che sostituisce. In #4023 la prima stesura ha gatato tre test su un check `orchestrator`
+  che quell'host non registra, e **tre test che passavano sono diventati salti** — visibile solo
+  confrontando due run dello stesso gate (`37108228227` contro `37109312581`). Da lì la regola che
+  la sonda ora applica: **un check assente non è un servizio assente**, è una sonda che non può
+  accertare niente, e quindi **fallisce**.
 
 ## 8. Punti aperti
 

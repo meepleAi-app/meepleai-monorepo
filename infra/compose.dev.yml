@@ -56,6 +56,11 @@ services:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
       OLLAMA_URL: http://ollama:11434
+      # #4025 — la stessa espressione di ollama-pull in docker-compose.yml, con lo stesso default.
+      # Prima l'API non riceveva questa variabile: compose scaricava il modello richiesto e l'API
+      # ne chiedeva un altro (llama3:8b hardcoded), quindi una chat su Ollama rispondeva 404. Se i
+      # due default divergono torna lo stesso difetto, in forma piu' difficile da vedere.
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3:8b}
       EMBEDDING_PROVIDER: external
       Embedding__Provider: External
       EMBEDDING_MODEL: intfloat/multilingual-e5-base

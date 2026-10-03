@@ -102,8 +102,10 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
-        // Assert - Skip if orchestration service unavailable in test environment
-        await AssertSuccessOrSkipIfServiceUnavailable(response, "ValidateMove_ValidOpeningMove");
+                // #4023: la disponibilita del servizio si ACCERTA prima, non si deduce dal 500 della risposta.
+        await E2EServiceProbe.SkipUnlessHealthyAsync(Client, "orchestrator",
+            "avvia il profilo tutor-agents: cd infra && make dev");
+        await AssertSuccessAsync(response, "ValidateMove_ValidOpeningMove");
 
         if (response.IsSuccessStatusCode)
         {

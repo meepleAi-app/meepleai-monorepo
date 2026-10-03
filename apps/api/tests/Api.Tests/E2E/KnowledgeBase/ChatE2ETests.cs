@@ -78,8 +78,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/chat-threads", createPayload);
 
-        // Assert - Skip if service unavailable (500), fail on non-2xx
-        await AssertSuccessOrSkipIfServiceUnavailable(response, "CreateChatThread");
+                // #4023: creare un thread e un operazione sul DB, non dipende da un servizio esterno:
+        // un 500 qui e un difetto del prodotto e deve restare un fallimento.
+        await AssertSuccessAsync(response, "CreateChatThread");
 
         if (response.IsSuccessStatusCode)
         {

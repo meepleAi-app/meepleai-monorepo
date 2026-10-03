@@ -30,6 +30,10 @@
 # Uso:
 #   bash scripts/shard-skip-assert.sh --shard Core --trx path/to/integration-test-results.trx
 #   bash scripts/shard-skip-assert.sh --shard Core --trx <file> --log integration-Core.log
+#
+# Nota per chi aggiunge fixture: .gitignore esclude *.log, quindi le fixture di log in
+# scripts/tests/fixtures/ usano l estensione .logfixture — altrimenti non vengono committate e
+# la suite bats fallisce in CI per file mancanti, non per un difetto dello script.
 #   bash scripts/shard-skip-assert.sh --shard Core --trx <file> --update-baseline
 #
 # Exit: 0 = conteggi entro la baseline (o baseline aggiornata); 1 = aumento non dichiarato,

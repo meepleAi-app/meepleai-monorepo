@@ -55,26 +55,26 @@ setup() {
 # ─── la controprova dal trailer del log ──────────────────────────────────────────────────────────
 
 @test "trailer coerente col .trx: la controprova passa" {
-    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/coerente.log" --baseline "$BASELINE"
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/coerente.logfixture" --baseline "$BASELINE"
     [ "$status" -eq 0 ]
     [[ "$output" == *"controprova dal trailer: coerente"* ]]
 }
 
 @test "trailer discordante dal .trx: FALLISCE senza scegliere quale fonte credere" {
-    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/discordante.log" --baseline "$BASELINE"
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/discordante.logfixture" --baseline "$BASELINE"
     [ "$status" -eq 1 ]
     [[ "$output" == *"fonti discordanti"* ]]
 }
 
 @test "log senza trailer: avverte che la controprova manca, e non la inventa" {
     # Test host crashato o dotnet test mai partito. Il .trx resta l'unica fonte: lo si dice.
-    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/senza-trailer.log" --baseline "$BASELINE"
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/senza-trailer.logfixture" --baseline "$BASELINE"
     [ "$status" -eq 0 ]
     [[ "$output" == *"controprova non disponibile"* ]]
 }
 
 @test "run troncata dal TestSessionTimeout: FALLISCE perche i conteggi sono parziali" {
-    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/troncato.log" --baseline "$BASELINE"
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --log "$FIX/troncato.logfixture" --baseline "$BASELINE"
     [ "$status" -eq 1 ]
     [[ "$output" == *"TRONCATA"* ]]
 }

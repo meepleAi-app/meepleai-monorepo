@@ -70,7 +70,7 @@ public class BggRateLimitIntegrationTests : IClassFixture<BggRateLimitTestFactor
         });
     }
 
-    private const string SkipReason = "Requires real auth token infrastructure — placeholder 'test-token' returns 401";
+    private const string SkipReason = "LIMITE: richiede un infrastruttura di token reali — placeholder 'test-token' returns 401";
 
     [Fact(Skip = SkipReason)]
     public async Task BggSearch_WithinLimit_ReturnsSuccessWithHeaders()

@@ -38,7 +38,7 @@ public class GoldenDatasetLoaderTests
     {
         Assert.SkipUnless(
             DatasetIsPresent(),
-            $"tests/data/golden_dataset.json non trovato. Generalo dalla root del repository:\n"
+            $"PREVISTO: tests/data/golden_dataset.json non trovato. Generalo dalla root del repository:\n"
                 + $"    {GenerateCommand}\n"
                 + "Il dataset è deliberatamente non committato (tests/data/README.md).");
 

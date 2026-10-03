@@ -117,7 +117,7 @@ public sealed class ExcelImportIntegrationTests : IAsyncLifetime
         pandemic.GameDataStatus.Should().Be((int)GameDataStatus.Skeleton);
     }
 
-    [Fact(Skip = "CI flaky: duplicate key on ix_shared_games_bgg_id due to test isolation issue — concurrent test classes seed same bgg_id")]
+    [Fact(Skip = "DIFETTO: #4026 — i test non isolano i propri dati e collidono sull indice unico ix_shared_games_bgg_id; l esito dipende dall ordine di esecuzione — concurrent test classes seed same bgg_id")]
     public async Task ImportExcel_DuplicateBggId_SkipsSecondRow()
     {
         // Arrange - pre-seed a game with BggId 174430

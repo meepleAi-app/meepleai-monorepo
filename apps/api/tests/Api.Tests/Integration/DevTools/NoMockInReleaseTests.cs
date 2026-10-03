@@ -14,7 +14,7 @@ namespace Api.Tests.Integration.DevTools;
 /// </summary>
 public class NoMockInReleaseTests
 {
-    [Fact(Skip = "Only runs in Release build via CI workflow; local Debug always includes DevTools")]
+    [Fact(Skip = "PREVISTO: gira solo in build Release via CI workflow; local Debug always includes DevTools")]
     public void ReleaseAssembly_HasNoDevToolsTypes()
     {
         // Walk up from test bin to Api Release build directory

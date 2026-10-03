@@ -96,7 +96,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
             SortDescending: false,
             HasKnowledgeBase: hasKnowledgeBase);
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_NoKbFilter_ReturnsAllGames()
     {
         // Arrange
@@ -115,7 +115,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         result.Total.Should().Be(2);
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasKnowledgeBaseTrue_ReturnsOnlyKbGames()
     {
         // Arrange
@@ -137,7 +137,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         result.Items.Select(g => g.Title).Should().BeEquivalentTo(new[] { "Azul", "Catan" });
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_HasKnowledgeBaseFalse_ReturnsOnlyNonKbGames()
     {
         // Arrange
@@ -158,7 +158,7 @@ public sealed class SearchSharedGamesQuery_KbFilterTests
         result.Items.Should().OnlyContain(g => !g.HasKnowledgeBase);
     }
 
-    [Fact(Skip = "EF Core InMemory provider cannot translate the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
+    [Fact(Skip = "LIMITE: EF Core InMemory non traduce the cross-BC nested sub-queries (ctxGames.Any) introduced by Issue #593 (Wave A.3a) Commit 1 in the SharedGameDto projection; follow-up converts to Testcontainers integration test — tracked in Wave A.3a spec §10.")]
     public async Task Handle_ProjectionIncludesHasKnowledgeBaseField()
     {
         // Arrange

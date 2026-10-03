@@ -45,7 +45,7 @@ public class GoldenDatasetAccuracyIntegrationTests
         var datasetPath = FindGoldenDatasetPath();
         Assert.SkipUnless(
             datasetPath is not null,
-            "tests/data/golden_dataset.json non trovato. Generalo dalla root del repository:\n"
+            "PREVISTO: tests/data/golden_dataset.json non trovato. Generalo dalla root del repository:\n"
                 + "    dotnet run --project tools/golden-dataset-generator/GenerateGoldenDatasetSimple.csproj");
 
         _mockLoaderLogger = new Mock<ILogger<GoldenDatasetLoader>>();

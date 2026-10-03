@@ -37,7 +37,7 @@ namespace Api.Tests.Integration.SharedGameCatalog;
 /// <para>
 /// Con l'immagine puntata al mirror GHCR e il container che gira come root, queste suite
 /// girano davvero contro MinIO-over-HTTP e la maggior parte dei test passa. Restano skippati
-/// solo quelli marcati <c>[Fact(Skip = "#4016 …")]</c>, ciascuno con la sua causa: non è
+/// solo quelli marcati <c>[Fact(Skip = "DIFETTO: #4016 …")]</c>, ciascuno con la sua causa: non è
 /// «MinIO non supporta HTTP», sono tre difetti distinti tracciati in #4016.
 /// </para>
 /// </remarks>
@@ -57,7 +57,7 @@ public sealed class CoverR2ConventionIntegrationTests : IAsyncLifetime
     private void SkipIfNotAvailable()
     {
         if (_skipTests)
-            Assert.Skip("S3 storage tests require Docker or TEST_S3_ENDPOINT environment variable");
+            Assert.Skip("GUASTO: storage S3 non raggiungibile. MinIO e un servizio L1 e in dev e gia configurato (#4018): se non risponde, l ambiente e rotto, non incompleto. Dettaglio dell errore nel log della fixture; questo salto dovra diventare un fallimento, vedi #4022");
     }
 
     public async ValueTask InitializeAsync()
@@ -179,7 +179,7 @@ public sealed class CoverR2ConventionIntegrationTests : IAsyncLifetime
     // #4016 — le pipeline cover tengono `DisablePayloadSigning = true` hardcoded, mentre
     // `S3BlobStorageService` usa gia' `!UsesPlainHttp(endpoint)` (#3846). Su un endpoint HTTP —
     // cioe' il MinIO dello stack locale — l'upload non puo' funzionare, e questo morde oltre i test.
-    [Fact(Skip = "#4016 — DisablePayloadSigning hardcoded nelle pipeline cover: #3846 incompleto")]
+    [Fact(Skip = "DIFETTO: #4016 — DisablePayloadSigning hardcoded nelle pipeline cover: #3846 incompleto")]
     public async Task BggCover_Uploaded_ResolvesViaRawKeyNoSuffix_And200()
     {
         SkipIfNotAvailable();
@@ -200,7 +200,7 @@ public sealed class CoverR2ConventionIntegrationTests : IAsyncLifetime
         (await resp.Content.ReadAsByteArrayAsync()).Should().BeEquivalentTo(bytes);
     }
 
-    [Fact(Skip = "#4016 — DisablePayloadSigning hardcoded nelle pipeline cover: #3846 incompleto")]
+    [Fact(Skip = "DIFETTO: #4016 — DisablePayloadSigning hardcoded nelle pipeline cover: #3846 incompleto")]
     public async Task PdfCover_Uploaded_ResolvesViaPreviewSuffix_And200()
     {
         SkipIfNotAvailable();

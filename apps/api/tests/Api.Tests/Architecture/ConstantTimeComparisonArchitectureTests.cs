@@ -10,7 +10,7 @@ namespace Api.Tests.Architecture;
 /// <para>
 /// <b>Perché strutturale e non cronometrico.</b> La suite originale
 /// (<c>TimingAttackSecurityTests</c>) misurava tempi di parete: 5 test su 8 erano
-/// <c>[Fact(Skip = "Timing tests are inherently flaky in CI environments")]</c>, e la motivazione
+/// <c>[Fact(Skip = "LIMITE: un test di timing non e esprimibile su runner condiviso — la misura dipende dalla contesa di CPU, non dal codice (vedi #3953). Va riscritto come benchmark con baseline o cancellato")]</c>, e la motivazione
 /// era corretta — JIT, scheduling, carico e GC rendono la misura inaffidabile. Ma la garanzia che
 /// quei test volevano dare non è «i tempi sono simili»: è <b>«il confronto non termina in anticipo
 /// sul primo byte diverso»</b>, e quella dipende interamente dalla primitiva usata. È verificabile

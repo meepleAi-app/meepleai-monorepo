@@ -51,7 +51,7 @@ public sealed class ShareLinkIntegrationTests : IAsyncLifetime
     {
         if (_serviceProvider == null || _dbContext == null)
         {
-            Assert.Skip("Shared Testcontainers fixture not available. ShareLink integration tests require PostgreSQL and Redis.");
+            Assert.Skip("GUASTO: la fixture Testcontainers condivisa non e partita. ShareLink integration tests require PostgreSQL and Redis.");
         }
     }
 

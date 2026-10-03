@@ -250,7 +250,7 @@ public class RagPromptAssemblyServiceInlineCitationTests
 [Trait("Requires", "LLM")]
 public class RagPromptAssemblyServiceInlineCitationLlmIntegrationTests
 {
-    [Fact(Skip = "Manual run only — see class XML doc. RUN_LLM_INTEGRATION_TESTS gate + OPENROUTER_API_KEY required.")]
+    [Fact(Skip = "PREVISTO: esecuzione manuale — see class XML doc. RUN_LLM_INTEGRATION_TESTS gate + OPENROUTER_API_KEY required.")]
     public Task RealLlmEmitsBracketedMarkersInMajorityOfRuns()
     {
         // Manual procedure (when enabling this test):

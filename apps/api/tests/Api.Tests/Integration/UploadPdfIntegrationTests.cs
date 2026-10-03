@@ -898,7 +898,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
 
         // Issue #2031: Cannot stop shared PostgreSQL container during test execution
         // Skip this specific offline simulation test with SharedTestcontainersFixture
-        Assert.Skip("Database offline simulation not compatible with SharedTestcontainersFixture (Issue #2031)");
+        Assert.Skip("LIMITE: la simulazione di DB offline non e compatibile with SharedTestcontainersFixture (Issue #2031)");
     }
 
     [Fact(Timeout = 90_000)]

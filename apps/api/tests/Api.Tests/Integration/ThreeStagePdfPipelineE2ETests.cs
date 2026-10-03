@@ -231,7 +231,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
         // This test uses real Testcontainers for performance measurement
         if (!File.Exists(BarragePdfPath))
         {
-            Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+            Assert.Skip($"PREVISTO: PDF di test non trovato: {BarragePdfPath}");
         }
 
         _output("Test 6: Performance P95 latency with real Docker services");

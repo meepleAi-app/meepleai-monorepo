@@ -28,6 +28,25 @@ using FluentAssertions;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>
+/// La fixture di <see cref="SharedGameCatalogEndpointsIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// #4050. Host condiviso per la classe, database fresco per test. Il gancio
+/// <see cref="ConfigureHost"/> porta le policy di autorizzazione del catalogo, che sono senza
+/// stato: registrarle una volta per classe invece che per test non cambia cio' che i test vedono.
+/// Il seeding, invece, resta nell'<c>InitializeAsync</c> della classe di test, perche' deve
+/// finire nel database di QUEL test.
+/// </remarks>
+public sealed class SharedGameCatalogEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "sharedgame_endpoints")
+{
+    protected override WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory) =>
+        factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.AddSharedGameCatalogPolicies()));
+}
+
+/// <summary>
 /// Integration tests for SharedGameCatalog HTTP endpoints
 /// Tests: Public access, Authorization, Cache scenarios
 /// Issue #2371 Phase 2
@@ -35,49 +54,36 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
+public sealed class SharedGameCatalogEndpointsIntegrationTests
+    : IClassFixture<SharedGameCatalogEndpointsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly SharedGameCatalogEndpointsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
     // Issue #2707: Removed _dbContext field - use fresh scope for each operation to prevent ObjectDisposedException
 
     internal static readonly Guid TestUserId = Guid.NewGuid();
 
-    public SharedGameCatalogEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public SharedGameCatalogEndpointsIntegrationTests(SharedGameCatalogEndpointsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"sharedgame_endpoints_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
+    // #4050. Host e policy vengono dalla fixture, pagati una volta per classe; qui resta un
+    // database clonato dal template (gia' migrato) piu' il seeding di questo test.
+    //
+    // 🔴 BeginTestAsync DEVE precedere lo scope: con l'ordine invertito il seeding andrebbe nel
+    // database di avvio mentre le richieste HTTP leggono quello per test, e i test vedrebbero un
+    // catalogo vuoto — un fallimento che somiglia a un bug dell'endpoint.
     public async ValueTask InitializeAsync()
     {
-        // Create isolated test database
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
 
-        // Create WebApplicationFactory using shared factory + test-specific policies
-        _factory = IntegrationWebApplicationFactory.Create(connectionString)
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    // Register authorization policies (test-specific)
-                    services.AddSharedGameCatalogPolicies();
-                });
-            });
-
-        // Issue #2707: Initialize database using scoped context (disposed after setup)
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-
-            // Seed test data within the same scope
-            await SeedTestDataAsync(dbContext);
-        }
-
-        _client = _factory.CreateClient();
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await SeedTestDataAsync(dbContext);
     }
 
     private async Task SeedTestDataAsync(MeepleAiDbContext dbContext)
@@ -110,13 +116,9 @@ public sealed class SharedGameCatalogEndpointsIntegrationTests : IAsyncLifetime
         await dbContext.SaveChangesAsync();
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        _factory?.Dispose();
-        // Issue #2707: No _dbContext field to dispose - all contexts are scoped and disposed automatically
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe ai test
+    // successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task GetCategories_ReturnsCategories()

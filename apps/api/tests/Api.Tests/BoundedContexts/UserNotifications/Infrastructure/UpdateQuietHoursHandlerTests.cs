@@ -14,6 +14,19 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 
 /// <summary>
+/// La fixture di <see cref="UpdateQuietHoursHandlerTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class UpdateQuietHoursHandlerTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "t2995_quiethours");
+
+/// <summary>
 /// Issue #2995 (ADR-076): quiet-hours are settable e2e via <c>UpdateQuietHoursCommand</c>. These drive
 /// the command through the real MediatR pipeline (Testcontainers Postgres) and re-read the persisted
 /// COLUMNS in a fresh NoTracking scope — the guard against the PERF-06 "load+mutate+save is a silent
@@ -22,37 +35,29 @@ namespace Api.Tests.BoundedContexts.UserNotifications.Infrastructure;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserNotifications")]
-public sealed class UpdateQuietHoursHandlerTests : IAsyncLifetime
+public sealed class UpdateQuietHoursHandlerTests
+    : IClassFixture<UpdateQuietHoursHandlerTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly UpdateQuietHoursHandlerTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private Guid _userId;
 
-    public UpdateQuietHoursHandlerTests(SharedTestcontainersFixture fixture)
+    public UpdateQuietHoursHandlerTests(UpdateQuietHoursHandlerTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"t2995_quiethours_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var conn = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(conn);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
         (_userId, _) = await TestSessionHelper.CreateUserSessionAsync(db, Guid.NewGuid());
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory is not null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     private async Task SendAsync(UpdateQuietHoursCommand command)
     {

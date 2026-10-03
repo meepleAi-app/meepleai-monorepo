@@ -16,6 +16,19 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="HistorySessionScoreProviderTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class HistorySessionScoreProviderTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "history_score");
+
+/// <summary>
 /// Integration tests for #3080 — <see cref="IHistorySessionScoreProvider"/> resolves the
 /// polymorphic score for a history GameSession by bridging, on a real Postgres:
 /// GameSession ← LiveGameSession.CorrelatedGameSessionId, and
@@ -24,36 +37,25 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class HistorySessionScoreProviderTests : IAsyncLifetime
+public sealed class HistorySessionScoreProviderTests
+    : IClassFixture<HistorySessionScoreProviderTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"history_score_{Guid.NewGuid():N}";
+    private readonly HistorySessionScoreProviderTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public HistorySessionScoreProviderTests(SharedTestcontainersFixture fixture)
+    public HistorySessionScoreProviderTests(HistorySessionScoreProviderTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        db.Database.Migrate();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────────
     // The correlated live session bridges the completed GameSession to the

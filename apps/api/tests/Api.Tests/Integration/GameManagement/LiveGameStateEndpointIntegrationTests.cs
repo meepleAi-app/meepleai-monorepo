@@ -16,6 +16,19 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="LiveGameStateEndpointIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class LiveGameStateEndpointIntegrationTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "live_gamestate");
+
+/// <summary>
 /// Integration tests for the #3025 L1 live game-state endpoint
 /// (PUT /api/v1/live-sessions/{id}/game-state), proving end-to-end the write→persist→expose path:
 /// the creator's PUT round-trips onto the GET DTO's <c>gameState</c>, and a non-participant is
@@ -29,37 +42,25 @@ namespace Api.Tests.Integration.GameManagement;
 [Trait("BoundedContext", "GameManagement")]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("Issue", "3025")]
-public sealed class LiveGameStateEndpointIntegrationTests : IAsyncLifetime
+public sealed class LiveGameStateEndpointIntegrationTests
+    : IClassFixture<LiveGameStateEndpointIntegrationTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"live_gamestate_{Guid.NewGuid():N}";
+    private readonly LiveGameStateEndpointIntegrationTestsHostFixture _hostFixture;
     private Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> _factory = null!;
 
-    public LiveGameStateEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public LiveGameStateEndpointIntegrationTests(LiveGameStateEndpointIntegrationTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact(DisplayName = "PUT /game-state as creator persists and round-trips on GET")]
     public async Task UpdateGameState_AsCreator_PersistsAndIsReturnedByGet()

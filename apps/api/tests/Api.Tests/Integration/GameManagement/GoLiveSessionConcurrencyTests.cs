@@ -19,6 +19,19 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="GoLiveSessionConcurrencyTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class GoLiveSessionConcurrencyTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "golive_concurrency");
+
+/// <summary>
 /// Integration test for the explicit go-live sub-resource (epic #3188 Slice 2):
 /// two concurrent <see cref="GoLiveSessionCommand"/>s targeting two DISTINCT pending drafts of the
 /// SAME game night must resolve to exactly one live session — the other loses with a 409-mapping
@@ -39,36 +52,25 @@ namespace Api.Tests.Integration.GameManagement;
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class GoLiveSessionConcurrencyTests : IAsyncLifetime
+public sealed class GoLiveSessionConcurrencyTests
+    : IClassFixture<GoLiveSessionConcurrencyTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"golive_concurrency_{Guid.NewGuid():N}";
+    private readonly GoLiveSessionConcurrencyTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public GoLiveSessionConcurrencyTests(SharedTestcontainersFixture fixture)
+    public GoLiveSessionConcurrencyTests(GoLiveSessionConcurrencyTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        db.Database.Migrate();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact(DisplayName = "Two concurrent go-lives on the same night: exactly one wins, the other 409s, no double-live")]
     public async Task TwoConcurrentGoLive_SameNight_OnlyOneWins()

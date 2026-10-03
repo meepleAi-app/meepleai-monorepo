@@ -71,6 +71,7 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     private string? _templateDatabase;
     private string _adminConnectionString = null!;
     private int _testOrdinal;
+    private WebApplicationFactory<Program>? _baseFactory;
 
     public WebApplicationFactory<Program> Factory { get; private set; } = null!;
     public HttpClient Client { get; private set; } = null!;
@@ -78,17 +79,64 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     /// <summary>Il nome del database che il test corrente sta usando. Per diagnostica.</summary>
     public string? CurrentDatabase { get; private set; }
 
+    /// <summary>
+    /// La connection string del database del test corrente.
+    /// </summary>
+    /// <remarks>
+    /// Serve alle classi di test che non passano solo dall'host: aprono una
+    /// <see cref="NpgsqlConnection"/> grezza per leggere <c>xmin</c>, o costruiscono un secondo
+    /// <c>DbContext</c> per simulare uno scrittore concorrente. Prima tenevano loro la stringa
+    /// restituita da <c>CreateIsolatedDatabaseAsync</c>; qui la fonte e' una, ed e' la stessa che
+    /// l'host vede, quindi non possono divergere.
+    /// </remarks>
+    public string? CurrentConnectionString { get; private set; }
+
+    /// <summary>
+    /// Chiavi di configurazione aggiuntive per l'host, oltre a quelle di default.
+    /// </summary>
+    /// <remarks>
+    /// Equivale al parametro <c>extraConfig</c> che la classe di test passava a
+    /// <c>IntegrationWebApplicationFactory.Create</c>. Non puo' cambiare la stringa di connessione:
+    /// la sorgente mutabile entra DOPO queste chiavi e vince (vedi l'ordine dei provider in
+    /// <c>IntegrationWebApplicationFactory</c>), che e' il motivo per cui il database per test
+    /// funziona anche su un host personalizzato.
+    /// </remarks>
+    protected virtual Dictionary<string, string?>? ExtraConfiguration => null;
+
+    /// <summary>Se l'host deve abilitare il rate limiting. Spento per default, come i test.</summary>
+    protected virtual bool EnableRateLimiting => false;
+
+    /// <summary>
+    /// Ultimo passaggio sull'host: qui la fixture concreta sostituisce servizi con dei doppi.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Riceve la factory e ne restituisce una — tipicamente
+    /// <c>factory.WithWebHostBuilder(b =&gt; b.ConfigureTestServices(...))</c>, che costruisce un
+    /// OGGETTO NUOVO invece di mutare quello ricevuto. La fixture tiene comunque un riferimento
+    /// all'originale e lo dispone: scartarlo qui lo lascerebbe non disposto.
+    /// </para>
+    /// <para>
+    /// 🔴 I doppi registrati qui vivono quanto la CLASSE, non quanto il test, perche' l'host e'
+    /// costruito una volta. Un mock con stato — un <c>Mock</c> su cui si fa <c>Verify</c>, una
+    /// coda in memoria — accumula le chiamate di tutti i test della classe. Se il doppio ha stato,
+    /// azzeralo nell'<c>InitializeAsync</c> della classe di test (dopo <c>BeginTestAsync</c>), o
+    /// non usare questa fixture: e' la differenza fra «database per test» e «host per test», e
+    /// qui solo il primo e' per test.
+    /// </para>
+    /// </remarks>
+    protected virtual WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory) => factory;
+
     protected SharedHostPerTestDatabaseFixture(SharedTestcontainersFixture shared, string databasePrefix)
     {
         _shared = shared;
         // Il prefisso entra in un nome di database: va validato qui, perché più in basso finirebbe
         // in una CREATE DATABASE interpolata.
-        if (!System.Text.RegularExpressions.Regex.IsMatch(
-                databasePrefix, "^[a-z0-9_]+$", System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromSeconds(1)))
-        {
-            throw new ArgumentException(
-                "il prefisso del database deve contenere solo [a-z0-9_]", nameof(databasePrefix));
-        }
+        // I suffissi apposti qui sono `_tmpl`, `_boot` e `_t<ordinale>`: cinque caratteri il più
+        // lungo. Perché il limite non sia un'eleganza sta scritto in TestDatabaseName — in #4050 è
+        // costato tre test falliti e una diagnosi che accusava una coda di chiusura inesistente.
+        TestDatabaseName.ValidatePrefix(databasePrefix, longestSuffixLength: 5, nameof(databasePrefix));
 
         _prefix = $"{databasePrefix}_{Guid.NewGuid():N}";
     }
@@ -149,9 +197,15 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             _connectionSource.Provider.SetConnectionString(bootConnection);
 
             // 3. L'HOST: costruito una volta, con la stringa di connessione mutabile.
-            Factory = IntegrationWebApplicationFactory.Create(
+            _baseFactory = IntegrationWebApplicationFactory.Create(
                 bootConnection,
+                extraConfig: ExtraConfiguration,
+                enableRateLimiting: EnableRateLimiting,
                 mutableConnectionString: _connectionSource);
+
+            // ConfigureHost di norma restituisce un oggetto NUOVO (WithWebHostBuilder non muta il
+            // ricevente), quindi _baseFactory resta da disporre a parte: vedi SafeDisposeAsync.
+            Factory = ConfigureHost(_baseFactory);
 
             // `WithWebHostBuilder` è PIGRO: senza questa riga il costo dell'host finirebbe nel primo
             // test invece che qui, e la strumentazione riporterebbe host=0,0 — lo stesso inganno
@@ -192,7 +246,8 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
         await CloneFromTemplateAsync(name);
         _createdDatabases.Add(name);
         CurrentDatabase = name;
-        _connectionSource.Provider.SetConnectionString(ConnectionTo(name));
+        CurrentConnectionString = ConnectionTo(name);
+        _connectionSource.Provider.SetConnectionString(CurrentConnectionString);
 
         TestContext.Current?.SendDiagnosticMessage(
             $"per-test-db {GetType().Name} {name} " +
@@ -310,6 +365,13 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             if (Factory is not null)
             {
                 await Factory.DisposeAsync();
+            }
+
+            // ConfigureHost puo' aver restituito un oggetto diverso: l'originale ha comunque un
+            // host da chiudere e non lo chiude nessun altro.
+            if (_baseFactory is not null && !ReferenceEquals(_baseFactory, Factory))
+            {
+                await _baseFactory.DisposeAsync();
             }
         }
         catch

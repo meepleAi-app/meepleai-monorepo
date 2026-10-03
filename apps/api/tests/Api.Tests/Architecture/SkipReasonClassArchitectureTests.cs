@@ -65,27 +65,21 @@ public sealed class SkipReasonClassArchitectureTests
     /// </summary>
     private static readonly Dictionary<string, string> Exempt = new(StringComparer.Ordinal)
     {
-        // L'esenzione per E2E/SharedGameCatalog/AdminGameCreationJourneyE2ETests.cs è stata RIMOSSA
-        // in #4033: quel file non ha più siti di salto. Il dubbio che la teneva qui — «BGG API
-        // disabled in E2E, quindi lì un 500 può essere il comportamento ATTESO» — si è risolto
-        // misurando invece di decidere: nessuna delle asserzioni del file ammette un 500, quindi
-        // togliere i rami non inventa un contratto nuovo, fa rispettare quello già scritto.
-        ["E2E/KnowledgeBase/ChatE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: i motivi deducono l'assenza del servizio " +
-            "dal codice di risposta ricevuto.",
-        ["E2E/KnowledgeBase/ArbitroAgentE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/SharedGameCatalog/ShareRequestE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/UserNotifications/NotificationsE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/UserLibrary/UserLibraryE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/DocumentProcessing/DocumentProcessingE2ETests.cs"] =
-            "In conversione in #4023 (T2), stessa causa: l'assenza è dedotta da una risposta.",
-        ["E2E/Infrastructure/E2ETestBase.cs"] =
-            "In conversione in #4023 (T2): è la base condivisa degli otto file, quindi va convertita " +
-            "insieme a loro e non prima, o le suite figlie si troverebbero due comportamenti.",
+        // Due esenzioni RIMOSSE, e tenute qui come nota perché il perché non si perda.
+        //
+        // E2E/SharedGameCatalog/AdminGameCreationJourneyE2ETests.cs — via in #4033: quel file non ha
+        // più siti di salto. Il dubbio che la teneva («BGG API disabled in E2E, quindi lì un 500 può
+        // essere il comportamento ATTESO») si è risolto misurando invece di decidere: nessuna delle
+        // asserzioni del file ammette un 500, quindi togliere i rami non inventa un contratto nuovo,
+        // fa rispettare quello già scritto.
+        //
+        // E2E/Infrastructure/E2EServiceProbe.cs — via in #4023: il gate l'ha dichiarata stale e
+        // aveva ragione. Quel file chiama Assert.Skip con una VARIABILE, e dopo la riscrittura di
+        // Decide non c'è più un letterale entro la finestra di ricerca, così il sito non viene
+        // nemmeno rilevato. Vale come limite dichiarato di questo gate, non come copertura:
+        // 🔴 un motivo di salto costruito in una variabile è INVISIBILE a una scansione dei
+        // sorgenti. Dove serve, il prefisso va garantito da un test del costruttore del motivo —
+        // per la sonda lo fa E2EServiceProbeTests.UnhealthyCheck_SkipsWithHowToEnable.
         ["Helpers/E2ETestPrerequisites.cs"] =
             "Codice morto con zero chiamanti, e implementa il difetto che #4023 corregge: sonda " +
             "localhost:8080 e Qdrant :6333 (servizio che questo repo non ha più) e tratta ogni " +
@@ -120,18 +114,130 @@ public sealed class SkipReasonClassArchitectureTests
     /// limite inferiore della popolazione nota, così la rottura della scansione si manifesta come un
     /// fallimento invece che come un verde silenzioso.
     /// </summary>
+    /// <remarks>
+    /// 🔴 Il confronto è **relativo**, non un numero fisso, e la ragione è un difetto misurato.
+    /// La prima stesura pretendeva «almeno 100 siti», con il valore preso da una misura del
+    /// 2026-10-03. Due giorni di lavoro che <i>rimuovono</i> salti — #4023 e #4033 — l'hanno portata
+    /// a 82, e il test è diventato rosso per una riduzione <b>legittima</b>: la cosa che il lavoro
+    /// doveva ottenere. Un pavimento assoluto in un test è lo stesso difetto del totale in prosa in
+    /// un documento: invecchia da solo, e chi lo incontra lo alza senza chiedersi perché.
+    /// <para>
+    /// Quello che va sorvegliato non è il numero di salti, che deve poter scendere: è che lo
+    /// <b>scanner veda ciò che c'è</b>. Quindi si confronta con un conteggio grezzo dei marcatori —
+    /// un `IndexOf` che non salta né commenti né letterali — e si pretende che lo scanner ne trovi
+    /// almeno la metà. Se smettesse di combaciare, i siti crollerebbero verso zero mentre i
+    /// marcatori restano, e questo test lo direbbe. Se i salti scendono per lavoro fatto, i due
+    /// conteggi scendono insieme e nessuno deve ritarare niente.
+    /// </para>
+    /// </remarks>
     [Fact]
-    public void TheScanFindsTheKnownPopulation()
+    public void TheScanFindsWhatARawGrepFinds()
     {
         var sites = ScanSkipSites();
+        var raw = CountRawMarkers();
 
-        sites.Should().HaveCountGreaterThanOrEqualTo(100,
-            "il 2026-10-03 i siti di salto erano 93 a runtime più 45 statici. Se questo conteggio " +
-            "crolla, il gate principale sta misurando il vuoto: controlla SkipMarkers contro " +
-            "`grep -rhoE 'Assert\\.Skip|\\[(Fact|Theory)\\(Skip' --include=*.cs apps/api/tests/`");
+        raw.Should().BeGreaterThan(0,
+            "senza nemmeno un marcatore nei sorgenti non c'è niente da sorvegliare, e il gate " +
+            "principale passerebbe sul vuoto: controlla LocateTestsRoot() e SkipMarkers");
 
-        sites.Select(s => s.RelativePath).Distinct().Should().HaveCountGreaterThanOrEqualTo(20,
-            "i siti erano distribuiti su 23 file a runtime più quelli statici");
+        sites.Should().HaveCountGreaterThanOrEqualTo(
+            raw / 2,
+            $"lo scanner ha trovato {sites.Count} siti dove un conteggio grezzo dei marcatori ne "
+            + $"vede {raw}. Un divario così ampio non è una riduzione dei salti — quelli calano in "
+            + "entrambi i conteggi — ma uno scanner che non combacia più: un formato nuovo, o un "
+            + "helper che consuma il testo prima della ricerca (è esattamente così che la prima "
+            + "stesura trovava 0 siti su 22 file). Il gate principale starebbe misurando il vuoto.");
+
+        // 🔴 Il confronto qui sopra ha un limite che va detto: `raw` usa la STESSA
+        // <see cref="SkipMarkers"/> dello scanner, quindi un marcatore che smette di combaciare —
+        // un rinominio in xUnit — abbassa i due conteggi insieme e il test passerebbe. Serve una
+        // fonte che non passi da quella lista: la RIFLESSIONE sugli attributi, che vede
+        // `[Fact(Skip = …)]` senza sapere come è scritto nel sorgente.
+        var reflected = CountStaticSkipsByReflection();
+
+        reflected.Should().BeGreaterThan(0,
+            "nessun [Fact(Skip)]/[Theory(Skip)] nell'assembly: o sono spariti tutti — e allora "
+            + "questo confronto non serve più — o la riflessione sta guardando nel posto sbagliato");
+
+        sites.Should().HaveCountGreaterThanOrEqualTo(
+            reflected,
+            $"la riflessione vede {reflected} salti statici, lo scanner dei sorgenti ne trova "
+            + $"{sites.Count} in tutto (statici E a runtime). Se il totale sta sotto i soli "
+            + "statici, i marcatori non combaciano più col modo in cui i salti sono scritti.");
+    }
+
+    /// <summary>
+    /// I salti statici visti dalla <b>riflessione</b>, cioè senza passare da
+    /// <see cref="SkipMarkers"/>.
+    /// </summary>
+    /// <remarks>
+    /// È la fonte indipendente del confronto. La riflessione non può fare il lavoro del gate — non
+    /// vede l'argomento di un <c>Assert.Skip</c> dentro un corpo di metodo, che è la ragione per cui
+    /// questo gate scansiona i sorgenti — ma per gli attributi è autorevole, e basta a smascherare
+    /// una lista di marcatori che non combacia più.
+    /// </remarks>
+    private static int CountStaticSkipsByReflection()
+    {
+        var count = 0;
+
+        foreach (var type in typeof(SkipReasonClassArchitectureTests).Assembly.GetTypes())
+        {
+            foreach (var method in type.GetMethods(
+                System.Reflection.BindingFlags.Public
+                | System.Reflection.BindingFlags.NonPublic
+                | System.Reflection.BindingFlags.Instance
+                | System.Reflection.BindingFlags.Static
+                | System.Reflection.BindingFlags.DeclaredOnly))
+            {
+                foreach (var attribute in method.GetCustomAttributesData())
+                {
+                    var name = attribute.AttributeType.Name;
+                    if (name is not ("FactAttribute" or "TheoryAttribute"))
+                    {
+                        continue;
+                    }
+
+                    if (attribute.NamedArguments.Any(a =>
+                            string.Equals(a.MemberName, "Skip", StringComparison.Ordinal)))
+                    {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Conteggio grezzo dei marcatori: <b>include</b> commenti e letterali, deliberatamente.
+    /// </summary>
+    /// <remarks>
+    /// È il termine di confronto di <see cref="TheScanFindsWhatARawGrepFinds"/> e deve essere
+    /// ingenuo: se usasse <see cref="SourceScanner.FindCodeOccurrences"/> misurerebbe la stessa cosa
+    /// dello scanner e il confronto non proverebbe nulla. Lo scarto fisiologico fra i due — gli
+    /// esempi nelle documentazioni XML, che nel repo esistono — è assorbito dalla soglia a metà.
+    /// </remarks>
+    private static int CountRawMarkers()
+    {
+        var testsRoot = LocateTestsRoot();
+        var total = 0;
+
+        foreach (var path in Directory.EnumerateFiles(testsRoot, "*.cs", SearchOption.AllDirectories))
+        {
+            var text = File.ReadAllText(path);
+            foreach (var marker in SkipMarkers)
+            {
+                var at = 0;
+                while ((at = text.IndexOf(marker, at, StringComparison.Ordinal)) >= 0)
+                {
+                    total++;
+                    at += marker.Length;
+                }
+            }
+        }
+
+        return total;
     }
 
     /// <summary>

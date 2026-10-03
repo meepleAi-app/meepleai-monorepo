@@ -56,6 +56,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
     private readonly IGroundedAnswerService _groundedAnswerService;
     private readonly ILiveSessionStreamGateway _liveSessionStreamGateway;
     private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
+    private readonly TimeProvider _timeProvider;
 
     // Summary generation thresholds
     private const int SummaryThreshold = 10;
@@ -86,7 +87,8 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         ILogger<ChatWithSessionAgentCommandHandler> logger,
         IGroundedAnswerService groundedAnswerService,
         ILiveSessionStreamGateway liveSessionStreamGateway,
-        IOptions<SessionAgentOptions>? sessionAgentOptions = null)
+        IOptions<SessionAgentOptions>? sessionAgentOptions = null,
+        TimeProvider? timeProvider = null)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _definitionRepository = definitionRepository ?? throw new ArgumentNullException(nameof(definitionRepository));
@@ -105,6 +107,11 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         _groundedAnswerService = groundedAnswerService ?? throw new ArgumentNullException(nameof(groundedAnswerService));
         _liveSessionStreamGateway = liveSessionStreamGateway ?? throw new ArgumentNullException(nameof(liveSessionStreamGateway));
         _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
+
+        // #3601: l'orologio che arma la deadline per chunk. In produzione e' quello di sistema, e il
+        // comportamento e' identico a prima; nei test e' un FakeTimeProvider, e la deadline diventa
+        // deterministica invece di gareggiare col wall-clock di un runner sotto carico.
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -355,7 +362,21 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
         bool clientDisconnected = false;
         try
         {
-            using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            // #3601: la deadline vive su una sorgente SUA, costruita con _timeProvider, e lo stream
+            // osserva il token linkato delle due. Due conseguenze, entrambe volute:
+            //
+            //  1. In test l'orologio e' finto, quindi la deadline non gareggia piu' col wall-clock
+            //     di un runner sotto carico. Prima il margine era reale e la mitigazione (allargarlo)
+            //     aveva una vita media: il carico contro cui il test gareggiava era la suite stessa,
+            //     che cresce a ogni PR.
+            //  2. La causa della cancellazione si LEGGE invece di dedurla. Prima entrambe le cause
+            //     cancellavano la stessa sorgente e si distinguevano con
+            //     `streamCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested`,
+            //     che attribuisce al client una scadenza avvenuta mentre il client si disconnetteva.
+            //     Ora sono due sorgenti e la domanda e' diretta.
+            using var deadlineCts = new CancellationTokenSource(Timeout.InfiniteTimeSpan, _timeProvider);
+            using var streamCts = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken, deadlineCts.Token);
             var enumerator = _llmService.GenerateCompletionStreamAsync(
                 systemPrompt,
                 assembled.UserPrompt,
@@ -366,7 +387,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 while (true)
                 {
                     // Arm per-chunk deadline before awaiting the next chunk.
-                    streamCts.CancelAfter(perChunkTimeout);
+                    deadlineCts.CancelAfter(perChunkTimeout);
 
                     bool moved;
                     try
@@ -375,9 +396,9 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                     }
                     catch (OperationCanceledException)
                     {
-                        if (streamCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+                        if (deadlineCts.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                         {
-                            // The streamCts deadline fired — the chunk took too long.
+                            // The per-chunk deadline fired — the chunk took too long.
                             chunkTimedOut = true;
                         }
                         else
@@ -390,7 +411,7 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
 
                     // Disarm the deadline now that a chunk has arrived (or the stream ended).
                     // Processing the chunk does NOT count against the NEXT chunk's deadline.
-                    streamCts.CancelAfter(Timeout.InfiniteTimeSpan);
+                    deadlineCts.CancelAfter(Timeout.InfiniteTimeSpan);
 
                     if (!moved)
                     {

@@ -37,12 +37,19 @@ internal static class IntegrationWebApplicationFactory
     /// <param name="connectionString">PostgreSQL connection string for the isolated test database.</param>
     /// <param name="redisConnectionString">Optional Redis connection string. If null, Redis is mocked.</param>
     /// <param name="extraConfig">Optional extra configuration keys to add beyond the defaults.</param>
+    /// <param name="mutableConnectionString">
+    /// #4050 — sorgente di configurazione aggiunta <b>per ultima</b>, che permette di cambiare la
+    /// stringa di connessione su un host già costruito. La passano le fixture che pagano l'host una
+    /// volta e danno a ogni test un database suo; chi costruisce un host per test la lascia
+    /// <c>null</c> e <paramref name="connectionString"/> resta l'unica.
+    /// </param>
     /// <returns>A configured WebApplicationFactory ready for creating HttpClient instances.</returns>
     public static WebApplicationFactory<Program> Create(
         string connectionString,
         string? redisConnectionString = null,
         Dictionary<string, string?>? extraConfig = null,
-        bool enableRateLimiting = false)
+        bool enableRateLimiting = false,
+        MutableConnectionStringSource? mutableConnectionString = null)
     {
         // Issue #3887: rate limiting is switched off per-host through the in-memory configuration
         // below, NOT by mutating the process environment. The previous implementation called
@@ -118,6 +125,15 @@ internal static class IntegrationWebApplicationFactory
                     }
 
                     configBuilder.AddInMemoryCollection(config);
+
+                    // #4050 — sorgente aggiunta PER ULTIMA, così la sua stringa di connessione
+                    // vince su quella del dizionario qui sopra. Serve alle fixture che costruiscono
+                    // l'host una volta e danno a ogni test un database suo: vedi
+                    // MutableConnectionStringSource per il perché il DbContext la rilegge.
+                    if (mutableConnectionString != null)
+                    {
+                        configBuilder.Add(mutableConnectionString);
+                    }
                 });
 
                 // ConfigureServices (NOT ConfigureTestServices) — runs before IStartupFilter

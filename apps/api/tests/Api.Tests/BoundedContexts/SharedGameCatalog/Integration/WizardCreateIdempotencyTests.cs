@@ -19,35 +19,20 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
 /// <summary>
-/// Integration tests for G5: Idempotency-Key support on POST /admin/shared-games/wizard/create.
-/// Verifies double-submit protection, body-mismatch 422, and different-key independence.
-/// Uses in-process IDistributedCache (AddDistributedMemoryCache) via IntegrationWebApplicationFactory
-/// with Redis:Enabled=false (default), which is sufficient for same-process idempotency verification.
+/// La fixture di <see cref="WizardCreateIdempotencyTests"/>.
 /// </summary>
-[Collection("Integration-GroupC")]
-[Trait("Category", TestCategories.Integration)]
-[Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
+/// <remarks>
+/// #4050. Host condiviso per la classe, database fresco per test. I doppi di BGG e del
+/// downloader delle copertine vivono quanto la classe: nessun test li interroga, servono perche'
+/// <c>SharedGame.Create()</c> pretende descrizione e immagini non vuote e perche' il downloader
+/// non faccia HTTP vero. Il client resta per test, perche' porta gli header di autenticazione.
+/// </remarks>
+public sealed class WizardCreateIdempotencyHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "wizard_idempotency_test")
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
-    private Guid _testUserId;
-
-    public WizardCreateIdempotencyTests(SharedTestcontainersFixture fixture)
-    {
-        _fixture = fixture;
-        _testDbName = $"wizard_idempotency_test_{Guid.NewGuid():N}";
-        _testUserId = Guid.NewGuid();
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString)
-            .WithWebHostBuilder(builder =>
+    protected override Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> ConfigureHost(
+        Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> factory) =>
+        factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
                 {
@@ -110,24 +95,49 @@ public sealed class WizardCreateIdempotencyTests : IAsyncLifetime
                     });
                 });
             });
+}
 
-        // Migrate DB
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
+/// <summary>
+/// Integration tests for G5: Idempotency-Key support on POST /admin/shared-games/wizard/create.
+/// Verifies double-submit protection, body-mismatch 422, and different-key independence.
+/// Uses in-process IDistributedCache (AddDistributedMemoryCache) via IntegrationWebApplicationFactory
+/// with Redis:Enabled=false (default), which is sufficient for same-process idempotency verification.
+/// </summary>
+[Collection("Integration-GroupC")]
+[Trait("Category", TestCategories.Integration)]
+[Trait("BoundedContext", "SharedGameCatalog")]
+public sealed class WizardCreateIdempotencyTests
+    : IClassFixture<WizardCreateIdempotencyHostFixture>, IAsyncLifetime
+{
+    private readonly WizardCreateIdempotencyHostFixture _hostFixture;
+    private Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactory<Program> _factory = null!;
+    private HttpClient _client = null!;
+    private Guid _testUserId;
+
+    public WizardCreateIdempotencyTests(WizardCreateIdempotencyHostFixture hostFixture)
+    {
+        _hostFixture = hostFixture;
+        _testUserId = Guid.NewGuid();
+    }
+
+    // #4050. Host e doppi vengono dalla fixture; qui restano un database clonato dal template
+    // (gia' migrato) e un client nuovo, perche' DefaultRequestHeaders.Add aggiunge e non
+    // sostituisce: su un client per classe gli header si accumulerebbero a ogni test.
+    public async ValueTask InitializeAsync()
+    {
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
         _client = _factory.CreateClient();
         _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeader, _testUserId.ToString());
         _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeader, "Admin");
     }
 
-    public async ValueTask DisposeAsync()
+    // Host e database appartengono alla fixture; il client e' di questa istanza.
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

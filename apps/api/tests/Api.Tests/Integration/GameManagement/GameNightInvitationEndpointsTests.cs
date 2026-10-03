@@ -20,6 +20,54 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="GameNightInvitationEndpointsTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. L'host di questa classe non e'
+/// quello di default — porta due chiavi di configurazione e sostituisce il servizio email — ed e'
+/// il motivo per cui la fixture ha i ganci <see cref="ExtraConfiguration"/> e
+/// <see cref="ConfigureHost"/>: senza, una classe cosi' resterebbe a costruirsi l'host per test.
+/// </para>
+/// <para>
+/// Il doppio del servizio email vive quanto la classe, non quanto il test, perche' l'host e'
+/// costruito una volta. Qui e' innocuo: nessun test lo interroga (<c>grep _emailServiceMock</c>
+/// trova solo la dichiarazione, la configurazione e la registrazione), serve soltanto a non
+/// aprire una connessione SMTP. Se un domani un test ci facesse <c>Verify</c>, conterebbe anche
+/// le chiamate dei test precedenti.
+/// </para>
+/// </remarks>
+public sealed class GameNightInvitationHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "game_night_invite_e2e")
+{
+    private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+
+    protected override Dictionary<string, string?>? ExtraConfiguration => new()
+    {
+        ["App:BaseUrl"] = "https://meepleai.test",
+        ["GameNight:InvitationExpiryDays"] = "14",
+    };
+
+    protected override WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory)
+    {
+        _emailServiceMock
+            .Setup(s => s.SendGameNightInvitationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        return factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll(typeof(IGameNightEmailService));
+            s.AddSingleton(_emailServiceMock.Object);
+        }));
+    }
+}
+
+/// <summary>
 /// E2E integration tests for the public token-based RSVP endpoints introduced in
 /// Issue #607 (Wave A.5a). Validates the full HTTP surface (status codes, request/response
 /// shape, idempotency D2 b, anonymous access) end-to-end against a real PostgreSQL database
@@ -38,62 +86,31 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class GameNightInvitationEndpointsTests : IAsyncLifetime
+public sealed class GameNightInvitationEndpointsTests
+    : IClassFixture<GameNightInvitationHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+    private readonly GameNightInvitationHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public GameNightInvitationEndpointsTests(SharedTestcontainersFixture fixture)
+    public GameNightInvitationEndpointsTests(GameNightInvitationHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"game_night_invite_e2e_{Guid.NewGuid():N}";
-
-        _emailServiceMock
-            .Setup(s => s.SendGameNightInvitationEmailAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        _hostFixture = hostFixture;
     }
 
+    // #4050. Host, configurazione e doppio del servizio email vengono dalla fixture, pagati una
+    // volta per classe; qui resta un database clonato dal template. La migrazione e' sparita
+    // perche' il template e' gia' migrato.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(
-            connectionString,
-            extraConfig: new Dictionary<string, string?>
-            {
-                ["App:BaseUrl"] = "https://meepleai.test",
-                ["GameNight:InvitationExpiryDays"] = "14"
-            });
-
-        // Override email service to a no-op mock (avoid SMTP)
-        _factory = _factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
-        {
-            s.RemoveAll(typeof(IGameNightEmailService));
-            s.AddSingleton(_emailServiceMock.Object);
-        }));
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe ai test
+    // successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ────────────────────────────────────────────────────────────────────
     // Helpers

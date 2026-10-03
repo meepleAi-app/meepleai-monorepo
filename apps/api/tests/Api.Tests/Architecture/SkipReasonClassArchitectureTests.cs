@@ -70,13 +70,13 @@ public sealed class SkipReasonClassArchitectureTests
             "sostituzione: il suo commento dice «BGG API disabled in E2E», quindi lì un 500 può " +
             "essere il comportamento ATTESO in assenza di BGG — va stabilito cosa l'endpoint deve " +
             "fare, non solo che non deve dare 500.",
-        ["E2E/Infrastructure/E2EServiceProbe.cs"] =
-            "Chiama Assert.Skip(reason) con una VARIABILE: il motivo è costruito da " +
-            "E2EServiceProbe.BuildSkipReason, quindi un gate che legge i sorgenti non può vederne il " +
-            "prefisso. Il prefisso è garantito dove va garantito, cioè dai test di BuildSkipReason " +
-            "(E2EServiceProbeTests verifica che ogni stato produca un motivo che inizia con " +
-            "PREVISTO:). Esentare qui è corretto; estendere il gate a risolvere le variabili locali " +
-            "costerebbe più di quanto proteggerebbe.",
+        // L'esenzione per E2E/Infrastructure/E2EServiceProbe.cs è stata RIMOSSA in #4023: il gate
+        // l'ha dichiarata stale e aveva ragione. Quel file chiama Assert.Skip con una variabile, e
+        // dopo la riscrittura di Decide non c'è più un letterale entro la finestra di ricerca, così
+        // il sito non viene nemmeno rilevato. Vale come limite dichiarato di questo gate, non come
+        // copertura: 🔴 un motivo di salto costruito in una variabile è INVISIBILE a una scansione
+        // dei sorgenti. Dove serve, il prefisso va garantito da un test del costruttore del motivo
+        // — per la sonda lo fa E2EServiceProbeTests.UnhealthyCheck_SkipsWithHowToEnable.
         ["Helpers/E2ETestPrerequisites.cs"] =
             "Codice morto con zero chiamanti, e implementa il difetto che #4023 corregge: sonda " +
             "localhost:8080 e Qdrant :6333 (servizio che questo repo non ha più) e tratta ogni " +

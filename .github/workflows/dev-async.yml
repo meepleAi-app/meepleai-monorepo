@@ -319,30 +319,43 @@ jobs:
           #    Ora ciascun segnale ha un solo proprietario: exit 1 = regressione dei salti o dei
           #    fallimenti (blocca, ed è questo blocco); exit 2 = non misurabile perché la run è
           #    troncata (segnalato qui, e il job lo fa fallire il guardiano sotto, che è di #3742).
-          set +e
-          bash infra/scripts/shard-skip-assert.sh \
-            --shard "${SHARD}" \
-            --trx "${trx_files[0]}" \
-            --log "$log" > /tmp/shard-assert.out 2>&1
-          assert_rc=$?
-          set -e
-          cat /tmp/shard-assert.out
-
-          case "$assert_rc" in
-            0) assert_label="entro la baseline ✓" ;;
-            2) assert_label="⚠️ NON MISURABILE — run troncata, confronto non eseguito (#3742)" ;;
-            *) assert_label="❌ REGRESSIONE dei conteggi" ; status=1 ;;
-          esac
-          {
-            echo
-            echo "<details><summary>Conteggi contro la baseline (#4024): ${assert_label}</summary>"
-            echo
-            echo '```'
+          # 🔴 Percorso ASSOLUTO, e non è pedanteria: questo step ha `working-directory: apps/api`,
+          # quindi `bash infra/scripts/…` cercava `apps/api/infra/scripts/…` e usciva
+          # «No such file or directory». Con il `|| true` della prima versione quell'errore era
+          # INGHIOTTITO: il comparatore introdotto in #4030 non ha girato NEMMENO UNA VOLTA, e il
+          # summary mostrava un blocco vuoto che si leggeva come «nessuna anomalia». Scoperto nel
+          # run 37111650114 leggendo il log invece del colore del job.
+          comparator="${GITHUB_WORKSPACE}/infra/scripts/shard-skip-assert.sh"
+          if [ ! -f "$comparator" ]; then
+            echo "::error::comparatore non trovato in $comparator — il percorso e' sbagliato, non e' un problema dei conteggi"
+            status=1
+          else
+            set +e
+            bash "$comparator" \
+              --shard "${SHARD}" \
+              --trx "${trx_files[0]}" \
+              --log "$log" > /tmp/shard-assert.out 2>&1
+            assert_rc=$?
+            set -e
             cat /tmp/shard-assert.out
-            echo '```'
-            echo
-            echo "</details>"
-          } >> "$GITHUB_STEP_SUMMARY"
+
+            case "$assert_rc" in
+              0) assert_label="entro la baseline ✓" ;;
+              2) assert_label="⚠️ NON MISURABILE — run troncata, confronto non eseguito (#3742)" ;;
+              *) assert_label="❌ REGRESSIONE dei conteggi" ; status=1 ;;
+            esac
+
+            {
+              echo
+              echo "<details><summary>Conteggi contro la baseline (#4024): ${assert_label}</summary>"
+              echo
+              echo '```'
+              cat /tmp/shard-assert.out
+              echo '```'
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
           if grep -qa 'Aborting test run: test run timeout' "$log"; then
             echo "::error::Shard ${SHARD} TRONCATO: il TestSessionTimeout e scattato. La selezione NON e stata misurata per intero: i conteggi qui sopra sono parziali e non confrontabili con la baseline dei fallimenti (#3633). Il guard e' di #3742."

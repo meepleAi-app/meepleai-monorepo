@@ -14,7 +14,11 @@
     "e aggiornare runId e capturedAt qui sotto — una baseline che non dice da dove viene non",
     "e' verificabile. Prima di aggiornarla a un run piu' recente, controllare che i tre job",
     "non siano 'skipped': gh run view <id> --json jobs. Un run in cui il path filter ha",
-    "saltato il backend risulta 'success' e porterebbe una baseline di zero."
+    "saltato il backend risulta 'success' e porterebbe una baseline di zero.",
+    "",
+    "E controllare che il run NON sia troncato, che e' il modo in cui questa baseline e' nata",
+    "sbagliata per Games — vedi la nota 'Games' qui sotto:",
+    "  grep -c 'Aborting test run: test run timeout' integration-<shard>.log   -> deve dare 0"
   ],
   "runId": "36997819474",
   "capturedAt": "2026-10-02",
@@ -28,6 +32,25 @@
       "skipped": 11
     },
     "Games": {
+      "_comment": [
+        "🔴 QUESTI DUE NUMERI NON MISURANO LO SHARD: misurano cio' che e' entrato in 75 minuti.",
+        "",
+        "Lo shard Games sfora il TestSessionTimeout in modo cronico. Misurato su due run",
+        "consecutivi, scaricando i log degli artifact:",
+        "  36997819474 -> 'Aborting test run: test run timeout of 4500000 ms exceeded'",
+        "                 Failed: 2, Passed: 763, Skipped: 8, Total: 773, 1 h 13 m",
+        "  37070363707 -> idem, Total: 791",
+        "Due run, due tagli a conteggi diversi, perche' il taglio cade su un confine di TEMPO e non",
+        "di selezione. La causa e' documentata in #3742: GroupA vuota e GroupB con una classe sola,",
+        "quindi una catena seriale di 113 classi in GroupC per tutto il resto della run.",
+        "",
+        "Conseguenza da non perdere: finche' dura, una regressione nei salti di questo shard puo'",
+        "restare INVISIBILE, perche' il test che la rivelerebbe puo' non essere stato eseguito.",
+        "Per questo shard-skip-assert.sh esce 2 (NON MISURABILE) invece di confrontare, e queste",
+        "cifre restano come limite inferiore, non come attesa.",
+        "",
+        "Ricatturare quando #3742 e' chiusa, da un run il cui log non contenga la riga di abort."
+      ],
       "failed": 2,
       "skipped": 8
     }

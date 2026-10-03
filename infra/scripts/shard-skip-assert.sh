@@ -36,8 +36,19 @@
 # la suite bats fallisce in CI per file mancanti, non per un difetto dello script.
 #   bash scripts/shard-skip-assert.sh --shard Core --trx <file> --update-baseline
 #
-# Exit: 0 = conteggi entro la baseline (o baseline aggiornata); 1 = aumento non dichiarato,
-#       fonti discordanti, o input illeggibile.
+# Exit: 0 = conteggi entro la baseline (o baseline aggiornata)
+#       1 = REGRESSIONE o input inutilizzabile: aumento non dichiarato, fonti discordanti,
+#           .trx illeggibile, shard assente dalla baseline
+#       2 = NON MISURABILE: la run e' stata troncata dal TestSessionTimeout, quindi i conteggi sono
+#           parziali e un confronto con la baseline non significherebbe nulla
+#
+# 🔴 Perche' 2 e non 1 (#4036). «Non ho potuto misurare» e «ho misurato una regressione» sono due
+# cose diverse, e confonderle rende il segnale inutile: lo shard Games sfora il TestSessionTimeout
+# in modo cronico (causa documentata in #3742: GroupA vuota e GroupB con una classe sola, quindi una
+# catena seriale di 113 classi in GroupC), quindi con un solo codice d'uscita resterebbe rosso per
+# sempre per una ragione che NON e' un salto in piu' — e chi legge imparerebbe a ignorarlo.
+# La troncatura ha gia' il suo guardiano in dev-async.yml, che fa fallire il job: questo script la
+# segnala e si ferma, senza rivendicare un confronto che non ha fatto.
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"   # infra/
@@ -118,9 +129,18 @@ if [ -n "$LOG" ] && [ -f "$LOG" ]; then
   fi
 
   if grep -qa 'Aborting test run: test run timeout' "$LOG"; then
-    echo "::error::[$SHARD] run TRONCATA dal TestSessionTimeout: i conteggi sono parziali e non confrontabili con la baseline (#3633, guard di #3742)." >&2
-    exit 1
+    # Exit 2 = NON MISURABILE, non «regressione»: vedi la nota in testa. Il fallimento del job per
+    # la troncatura lo decide dev-async.yml, che ha il suo guardiano (#3742); qui ci si ferma prima
+    # di confrontare, perche' confrontare conteggi parziali con una baseline e' l'errore vero.
+    echo "::warning::[$SHARD] run TRONCATA dal TestSessionTimeout: i conteggi sono PARZIALI, quindi il confronto con la baseline NON e' stato eseguito. Non e' una regressione dei salti: e' l'impossibilita' di misurarli (#3742). Finche' dura, una regressione nei salti di questo shard puo' restare invisibile, perche' il test che la rivelerebbe puo' non essere stato eseguito." >&2
+    exit 2
   fi
+else
+  # 🔴 Senza il log la troncatura NON e' rilevabile: il .trx di una run abortita ha la stessa forma
+  # di quello di una run completa, solo con meno elementi. Verificato sullo shard Games del run
+  # 36997819474, dove l'invocazione col solo .trx dice «conteggi entro la baseline» su una run che
+  # si era fermata a 773 test su timeout. Dirlo, invece di far credere che il confronto sia completo.
+  echo "::warning::[$SHARD] nessun --log: la troncatura della run non e' verificabile, quindi questo confronto NON garantisce di aver misurato la selezione intera. In CI passa sempre --log."
 fi
 
 # --- baseline ------------------------------------------------------------------------------------

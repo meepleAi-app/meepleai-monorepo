@@ -342,6 +342,14 @@ ci-be-unit: ## Backend unit tests — mirrors ci.yml backend-unit job
 	cd $(API) && dotnet test $(API_TESTS) --filter "Category=Unit" --nologo -v q
 	@echo "✅ Backend unit tests passed"
 
+test-no-docker: ## Tutto cio che NON richiede Docker — la via per lavorare a container spenti (#4022)
+	@echo "🔵 Selezione senza Docker (stesso filtro di dev-fast)..."
+	cd $(API_SRC) && dotnet build --nologo -v q
+	cd $(API) && dotnet test $(API_TESTS) \
+		--filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow" \
+		--nologo -v q
+	@echo "✅ Selezione senza Docker passata"
+
 ci-be-unit-coverage: ## Backend unit tests with coverage report (lcov in tests/Api.Tests/coverage/)
 	@echo "🔵 Backend unit tests + coverage..."
 	cd $(API_SRC) && dotnet build --nologo -v q
@@ -524,7 +532,7 @@ eval-merge-labels: ## Merge a human-reviewed LabelingReview into a dataset and p
         secrets-setup secrets-sync \
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
-        ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
+        ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all test-no-docker \
         sec-scan sec-pentest security-audit test-e2e test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \

@@ -18,12 +18,37 @@
     "",
     "E controllare che il run NON sia troncato, che e' il modo in cui questa baseline e' nata",
     "sbagliata per Games — vedi la nota 'Games' qui sotto:",
-    "  grep -c 'Aborting test run: test run timeout' integration-<shard>.log   -> deve dare 0"
+    "  grep -c 'Aborting test run: test run timeout' integration-<shard>.log   -> deve dare 0",
+    "",
+    "🔴 LA TRONCATURA SI STA ALLARGANDO, e il comparatore l'ha vista al suo PRIMO giro reale",
+    "(run 37120481942, 2026-10-03). Core era COMPLETO nel run da cui questa baseline viene:",
+    "  36997819474  Core  Failed: 4, Passed: 911, Skipped: 45, Total: 960, 1 h 05 m  nessun abort",
+    "  37120481942  Core  Failed: 4, Passed: 901, Skipped: 45, Total: 950, 1 h 13 m  Test Run Aborted.",
+    "Un giorno dopo, dieci test in meno e la sessione abortita: Core era otto minuti sotto il",
+    "TestSessionTimeout di 75 minuti e ora lo supera. Due shard su tre sono quindi NON MISURABILI",
+    "(exit 2 del comparatore), e su quelli il gate dei salti NON protegge — #3742.",
+    "",
+    "Perche' questo e' il caso d'uso che giustifica il gate: `Skipped: 45` di Core combacia con la",
+    "riga qui sotto, quindi un confronto ingenuo avrebbe detto «entro la baseline». E il job era",
+    "GIA' rosso per i suoi quattro fallimenti noti, quindi nemmeno il colore diceva niente. Senza",
+    "la guardia sulla troncatura, il degrado sarebbe passato inosservato esattamente come lo skip",
+    "di #3978."
   ],
   "runId": "36997819474",
   "capturedAt": "2026-10-02",
   "shards": {
     "Core": {
+      "_comment": [
+        "Questi valori vengono da un run COMPLETO (36997819474: 960 test in 1 h 05 m, nessun",
+        "abort), quindi al contrario di Games misurano davvero lo shard.",
+        "",
+        "Ma dal 2026-10-03 Core TRONCA: nel run 37120481942 si e' fermato a 950 test in 1 h 13 m",
+        "con 'Test Run Aborted.'. Finche' dura, il comparatore esce 2 (NON MISURABILE) e questi",
+        "valori restano un riferimento storico, non un'attesa verificata a ogni run.",
+        "",
+        "Non ricatturarli da un run troncato: darebbero un limite inferiore spacciato per misura.",
+        "La causa e' #3742."
+      ],
       "failed": 4,
       "skipped": 45
     },

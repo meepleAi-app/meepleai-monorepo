@@ -292,8 +292,37 @@ jobs:
             echo '```'
             echo "${summary:-(riepilogo non trovato nel log)}"
             echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # #4024 — il confronto con la baseline, che prima NON esisteva.
+          #
+          # Qui c'era una riga di prosa: «Baseline attesa per shard: Core 9 · KnowledgeBase 4 ·
+          # Games 3 (#3633)». Non veniva confrontata con nulla, e i suoi numeri erano GIA' FALSI:
+          # i fallimenti misurati sul run 36997819474 sono 4 · 23 · 2. Un totale in prosa dentro un
+          # workflow invecchia come qualunque altro, e stampare non è misurare.
+          #
+          # Lo script confronta fallimenti E salti con infra/fixtures/dev-async-shard-baseline.json.
+          # Conta i salti dagli elementi `<UnitTestResult outcome="NotExecuted">` e non da
+          # `Counters/@notExecuted`, che vale 0 su tutti e tre gli shard anche con 45 salti — un gate
+          # scritto col campo ovvio leggerebbe sempre zero. La sua suite bats gira nel job
+          # *Infra Scripts* di dev-fast, dove la prova costa secondi invece dei ~90 minuti di qui.
+          #
+          # SOLA SEGNALAZIONE in questa prima versione (`|| true`): il confronto va osservato su
+          # almeno una run reale prima di poter far fallire il job. La promozione a errore è #4024
+          # T1c, e consiste nel togliere il `|| true`.
+          bash infra/scripts/shard-skip-assert.sh \
+            --shard "${SHARD}" \
+            --trx "${trx_files[0]}" \
+            --log "$log" 2>&1 | tee /tmp/shard-assert.out || true
+          {
             echo
-            echo "Baseline attesa per shard: Core 9 · KnowledgeBase 4 · Games 3 (#3633)."
+            echo "<details><summary>Conteggi contro la baseline (#4024, sola segnalazione)</summary>"
+            echo
+            echo '```'
+            cat /tmp/shard-assert.out
+            echo '```'
+            echo
+            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"
 
           if grep -qa 'Aborting test run: test run timeout' "$log"; then

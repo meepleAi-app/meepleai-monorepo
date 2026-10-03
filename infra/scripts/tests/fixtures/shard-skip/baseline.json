@@ -1,0 +1,7 @@
+{
+  "runId": "fixture",
+  "capturedAt": "2026-10-03",
+  "shards": {
+    "Probe": { "failed": 2, "skipped": 3 }
+  }
+}

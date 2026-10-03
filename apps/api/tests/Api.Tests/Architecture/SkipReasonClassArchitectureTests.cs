@@ -80,11 +80,13 @@ public sealed class SkipReasonClassArchitectureTests
         // 🔴 un motivo di salto costruito in una variabile è INVISIBILE a una scansione dei
         // sorgenti. Dove serve, il prefisso va garantito da un test del costruttore del motivo —
         // per la sonda lo fa E2EServiceProbeTests.UnhealthyCheck_SkipsWithHowToEnable.
-        ["Helpers/E2ETestPrerequisites.cs"] =
-            "Codice morto con zero chiamanti, e implementa il difetto che #4023 corregge: sonda " +
-            "localhost:8080 e Qdrant :6333 (servizio che questo repo non ha più) e tratta ogni " +
-            "non-2xx come assenza. #4023 lo corregge o lo deprecta; classificarne i motivi " +
-            "prolungherebbe la vita di un helper da rimuovere.",
+        // Helpers/E2ETestPrerequisites.cs — il FILE è stato CANCELLATO in #4023, non esentato:
+        // zero chiamanti, e implementava proprio il difetto che #4023 corregge (sondava
+        // localhost:8080 e Qdrant :6333 — un processo esterno che quelle suite non usano e un
+        // servizio che questo repo non ha più — trattando ogni non-2xx come assenza). Classificarne
+        // i motivi avrebbe prolungato la vita di un helper da rimuovere; la sostituzione è
+        // E2EServiceProbe, che interroga /health dell'app IN-PROCESSO con lo stesso HttpClient del
+        // test.
         ["Integration/PdfExtractionRealBackendValidationTests.cs"] =
             "I motivi uniscono due cause con un OR («Unstructured service not available OR gold " +
             "standard missing»), quindi non sono classificabili senza prima separarle: la prima è " +

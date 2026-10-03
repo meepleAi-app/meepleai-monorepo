@@ -1,10 +1,14 @@
 {
-  "generatedAt": "2026-06-16T11:49:06.112Z",
+  "generatedAt": "2026-10-03T15:39:38.884Z",
   "marker": "MOCKUP-ANNOTATION",
   "threshold": 80,
   "denominator": "mappable",
-  "total": 70,
-  "covered": 70,
-  "uncovered": [],
-  "coveragePct": 100
+  "total": 3,
+  "covered": 0,
+  "uncovered": [
+    "src/app/(authenticated)/library/wishlist/page.tsx",
+    "src/app/(authenticated)/sessions/[id]/live/page.tsx",
+    "src/app/(authenticated)/sessions/[id]/page.tsx"
+  ],
+  "coveragePct": 0
 }

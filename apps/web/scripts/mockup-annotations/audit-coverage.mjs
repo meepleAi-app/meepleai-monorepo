@@ -145,8 +145,23 @@ export function collectCoverage(globPattern, cwd, opts = {}) {
  *   - coverage >= threshold ⇒ pass
  *   - otherwise ⇒ fail with `diff` = threshold − coverage (positive)
  */
+/**
+ * Valuta la copertura contro una soglia.
+ *
+ * 🔴 Un denominatore VUOTO non soddisfa una soglia: la rende invalutabile.
+ * La prima stesura faceva `if (stats.total === 0) return { pass: true }`, con un test che lo
+ * asseriva («passes when total is zero — nothing to cover»). L'intento era difendibile in
+ * astratto, ma in un GATE e' il modo piu' silenzioso di non misurare niente, e si e' verificato:
+ * `mockup-annotations:audit --denominator mappable --threshold 80` passava con
+ * `coverage 0% (0/0)` perche' il parser dell'indice non estraeva piu' nessuna rotta. Una soglia
+ * dell'80% che divide per zero non e' mai stata messa alla prova.
+ *
+ * «Non ho potuto misurare» non e' «ho misurato e va bene». Con una soglia richiesta, un totale a
+ * zero e' quindi un FALLIMENTO, marcato `empty: true` perche' il chiamante possa dire la cosa
+ * giusta: il difetto sta in cio' che si sta contando, non nella copertura.
+ */
 export function evaluateThreshold(stats, threshold) {
-  if (stats.total === 0) return { pass: true, diff: 0 };
+  if (stats.total === 0) return { pass: false, diff: threshold, empty: true };
   if (stats.coverage >= threshold) return { pass: true, diff: 0 };
   return { pass: false, diff: threshold - stats.coverage };
 }
@@ -352,6 +367,21 @@ async function main() {
   }
 
   if (args.threshold !== null && !result.pass) {
+    // Il denominatore vuoto ha un messaggio SUO: dire «copertura sotto soglia» manderebbe a
+    // cercare pagine da annotare quando il difetto sta in cio' che si sta contando.
+    if (result.empty) {
+      process.stderr.write(
+        `[mockup-annotations:audit] NON MISURABILE: il denominatore e' VUOTO (0 file) con scope ` +
+          `'${args.scope}' e denominator='${stats.denominator}', quindi la soglia di ` +
+          `${args.threshold}% non e' stata messa alla prova.\n` +
+          `       Non e' «niente da coprire»: e' «non ho trovato cosa coprire». Con ` +
+          `denominator=mappable il denominatore viene dalle righe page-mock di ` +
+          `admin-mockups/MOCKUPS_INDEX.md le cui rotte risolvono a un page.tsx reale: se e' zero, ` +
+          `controlla il parser dell'indice PRIMA dell'indice stesso.\n`
+      );
+      process.exit(1);
+    }
+
     process.stderr.write(
       `[mockup-annotations:audit] FAIL: coverage ${formatPct(stats.coverage)}% below threshold ${args.threshold}% (delta ${formatPct(result.diff)}%)\n` +
         '       Add @mockup annotations to the uncovered routes or lower --threshold.\n'

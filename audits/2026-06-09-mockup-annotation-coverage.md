@@ -2,17 +2,23 @@
 
 | Field | Value |
 |---|---|
-| **Date** | 2026-06-16 |
+| **Date** | 2026-10-03 |
 | **Generator** | `pnpm mockup-annotations:audit` (DS-17-1) |
 | **Spec** | [`2026-06-09-mockup-to-app-drift-spec-panel-review.md`](../docs/superpowers/specs/2026-06-09-mockup-to-app-drift-spec-panel-review.md) |
 | **Marker** | `MOCKUP-ANNOTATION` |
 | **Denominator** | `mappable` |
-| **Coverage** | 100% — 70 / 70 |
-| **Status** | threshold met (≥ 80%) |
+| **Coverage** | 0% — 0 / 3 |
+| **Status** | below threshold (< 80%) — pass marker absent |
 
 ## Uncovered routes
 
-_(none — full coverage)_
+Routes missing the `@mockup` JSDoc block. Run `pnpm mockup-annotations:inject --apply` after extending MOCKUPS_INDEX.md.
+
+| File |
+|---|
+| `src/app/(authenticated)/library/wishlist/page.tsx` |
+| `src/app/(authenticated)/sessions/[id]/live/page.tsx` |
+| `src/app/(authenticated)/sessions/[id]/page.tsx` |
 
 ## Refs
 

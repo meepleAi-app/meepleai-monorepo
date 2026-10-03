@@ -14,6 +14,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { globSync } from 'glob';
 
 import {
   ANNOTATION_MARKER,
@@ -176,8 +177,65 @@ describe('evaluateThreshold', () => {
     expect(r.diff).toBeCloseTo(0.01, 2);
   });
 
-  it('passes when total is zero (nothing to cover)', () => {
+  // 🔴 Questo test asseriva il contrario — `pass: true` — e quell'asserzione E' il difetto.
+  // Un denominatore vuoto non soddisfa una soglia: la rende invalutabile. In produzione e'
+  // successo: `--denominator mappable --threshold 80` passava con `coverage 0% (0/0)` perche' il
+  // parser di MOCKUPS_INDEX.md non estraeva piu' nessuna rotta. Una soglia dell'80% che divide
+  // per zero non e' mai stata messa alla prova, e il gate — dichiarato bloccante — non misurava
+  // niente. «Non ho potuto misurare» non e' «ho misurato e va bene».
+  it('FALLISCE quando il totale e zero, perche la soglia non e valutabile', () => {
     const r = evaluateThreshold({ coverage: 0, total: 0 }, 80);
-    expect(r.pass).toBe(true);
+    expect(r.pass).toBe(false);
+    expect(r.empty).toBe(true);
+    expect(r.diff).toBe(80);
+  });
+
+  it('distingue il denominatore vuoto da una copertura davvero sotto soglia', () => {
+    // Senza il flag `empty` il chiamante direbbe «copertura sotto soglia» in entrambi i casi, e
+    // manderebbe a cercare pagine da annotare quando il difetto sta in cio' che si sta contando.
+    const vuoto = evaluateThreshold({ coverage: 0, total: 0 }, 80);
+    const scoperto = evaluateThreshold({ coverage: 0, total: 3 }, 80);
+
+    expect(vuoto.empty).toBe(true);
+    expect(scoperto.empty).toBeUndefined();
+    expect(vuoto.pass).toBe(false);
+    expect(scoperto.pass).toBe(false);
+  });
+});
+
+/**
+ * 🔴 L'unica suite che tocca l'indice REALE, e la ragione per cui esiste.
+ *
+ * Tutti gli altri test di questo file e del parser usano fixture sintetiche, scritte nel formato
+ * DOCUMENTATO della colonna «Mapped routes»: una lista di rotte fra backtick separate da virgole.
+ * `admin-mockups/MOCKUPS_INDEX.md` e' derivato da quel formato — le sue celle sono
+ * `` `/rotta` `` seguita da prosa che contiene virgole e parentesi — e il parser, che spezzava
+ * sulle virgole, non estraeva piu' nessuna rotta valida.
+ *
+ * Nessun test lo vedeva: passavano tutti, contro il formato che descrivevano. Da qui la regola —
+ * un parser di un file COMMITTATO vuole almeno un test contro quel file, non solo contro la sua
+ * forma ideale.
+ */
+describe('MOCKUPS_INDEX.md reale', () => {
+  const repoRoot = resolve(__dirname, '..', '..', '..', '..', '..');
+  const webRoot = resolve(repoRoot, 'apps', 'web');
+  const indexPath = resolve(repoRoot, 'admin-mockups', 'MOCKUPS_INDEX.md');
+
+  it('esiste dove gli script lo cercano', () => {
+    expect(existsSync(indexPath)).toBe(true);
+  });
+
+  it('produce un insieme mappable NON VUOTO, altrimenti il gate divide per zero', () => {
+    const routeFiles = globSync('src/app/**/page.tsx', {
+      cwd: webRoot,
+      ignore: ['**/node_modules/**', '**/.next/**'],
+      nodir: true,
+    }).map(p => p.replace(/\\/g, '/'));
+
+    expect(routeFiles.length).toBeGreaterThan(0);
+
+    const mappable = mappableRouteSet(routeFiles, indexPath);
+
+    expect(mappable.size).toBeGreaterThan(0);
   });
 });

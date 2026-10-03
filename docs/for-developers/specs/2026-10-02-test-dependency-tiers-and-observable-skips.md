@@ -219,8 +219,21 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
 - [ ] **A4** Esiste la lista L1 eseguibile e un test che fallisce se un L1 viene saltato.
 - [ ] **A5** Nessun test selezionato dai gate automatici può selezionare un **model id a pagamento**.
   **Prova**: un test che tenta un model id paid dentro un gate automatico fallisce fail-closed.
-- [ ] **A6** Lo stesso test del percorso AI gira contro due provider cambiando solo configurazione,
-  **e asserisce in ciascuna esecuzione quale provider ha risposto** (R5.3).
+- [x] **A6** — ⛔ **non raggiungibile per design, e la parte raggiungibile è fatta** (#4025).
+  La prima metà del criterio — «gira contro due provider cambiando solo configurazione» — è
+  **preclusa da una decisione di prodotto, non da un difetto**: `LlmProviderSelector` instrada
+  `RequestSource.AutomatedTest` su Ollama *qualunque* sia la strategia, perché un test automatico
+  non consumi quota OpenRouter gratuita. Un test parametrico sui due provider passerebbe quindi due
+  volte sullo stesso, che è esattamente il falso verde che R5.3 descrive. Raggiungere A6 alla
+  lettera richiederebbe di far spendere quota a un gate automatico — il contrario di R4 e del
+  vincolo dichiarato dal richiedente («i test a consumo non devono essere automatici»).
+  Il vincolo è **fissato da un test** (`OllamaChatModelConfigurationTests.UnTestAutomatizzatoEPinnatoSuOllamaPerDesign`)
+  invece di essere aggirato: se il pin cadesse, si rilegge questo criterio, non si silenzia il test.
+  La seconda metà — **«asserisce quale provider ha risposto»** — è invece soddisfatta:
+  `ProviderSelectionResult.Decision` porta `ProviderName`, `ModelId` e `Reason`, e un test lo
+  verifica fino al modello risolto. Resta il presupposto che il percorso Ollama **funzioni**: non
+  funzionava, perché `OLLAMA_CHAT_MODEL` era letta da compose e ignorata dall'API (ogni chat →
+  `404 model not found`); corretto nello stesso passaggio.
 - [ ] **A7** I 39 siti «service likely unavailable» sono convertiti a una sonda o riclassificati.
   **Misura**: il grep di §1 torna a zero, con il pattern validato su un positivo noto.
 

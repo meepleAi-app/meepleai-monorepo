@@ -66,6 +66,46 @@ function cleanRoute(raw) {
 }
 
 /**
+ * Estrae le rotte dalla cella «Mapped routes» di una riga dell'indice.
+ *
+ * 🔴 Perché non basta `split(',')`. Questa funzione nasce da un difetto misurato:
+ * `mockup-annotations:audit --denominator mappable --threshold 80` passava con
+ * `coverage 0% (0/0)` — una soglia dell'80% che divide per zero, quindi mai messa alla prova.
+ * Causa: la cella REALE dell'indice porta la rotta fra backtick **seguita da prosa**, e la prosa
+ * contiene virgole e parentesi:
+ *
+ *   | `sp4-library-wishlist.html` | page-mock | `/library/wishlist` — personal wishlist (priority Alta/Media/Bassa, target price…) |
+ *
+ * Spezzando sulle virgole, il primo frammento diventa
+ * `/library/wishlist — personal wishlist (priority Alta/Media/Bassa`, che inizia con `/` e quindi
+ * veniva accettato come rotta. Nessuna delle quindici rotte dell'indice risolveva a un
+ * `page.tsx`, e l'insieme «mappable» era vuoto. I test del parser non lo vedevano perché
+ * esercitavano il formato DOCUMENTATO — una cella di sole rotte — da cui l'indice è derivato.
+ *
+ * La convenzione che l'indice rispetta davvero, in tutte le sue righe, è: **le rotte stanno fra
+ * backtick**. Quindi si estraggono quelle, e si tiene la vecchia divisione per virgole solo come
+ * ripiego per una cella senza backtick.
+ */
+function extractRoutes(cell) {
+  const quoted = [...cell.matchAll(/`([^`]+)`/g)]
+    .map((m) => cleanRoute(m[1]))
+    .filter((s) => s.startsWith('/'));
+
+  if (quoted.length > 0) {
+    return [...new Set(quoted)];
+  }
+
+  return [
+    ...new Set(
+      cell
+        .split(',')
+        .map((s) => cleanRoute(s))
+        .filter((s) => s.startsWith('/')),
+    ),
+  ];
+}
+
+/**
  * Parse MOCKUPS_INDEX.md markdown body. Returns one entry per page-mock row
  * with at least one extractable Next.js route.
  *
@@ -79,10 +119,7 @@ export function parseMockupsIndex(md) {
     const [, mockup, type, routesCell] = m;
     if (type !== 'page-mock') continue;
 
-    const routes = routesCell
-      .split(',')
-      .map((s) => cleanRoute(s))
-      .filter((s) => s.startsWith('/'));
+    const routes = extractRoutes(routesCell);
     if (routes.length === 0) continue;
 
     entries.push({ mockup, type, routes });

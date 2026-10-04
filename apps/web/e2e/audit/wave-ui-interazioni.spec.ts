@@ -82,15 +82,33 @@ test.describe('Interazioni — utente', () => {
       readOnly: e.readOnly,
       disabled: e.disabled,
       ariaDisabled: e.getAttribute('aria-disabled'),
+      // Il placeholder distingue «non costruito e lo dice» da «rotto in silenzio»: senza di esso
+      // i due casi hanno lo stesso stato del DOM e si leggono allo stesso modo.
+      placeholder: e.placeholder,
     }));
 
     if (stato.readOnly || stato.disabled || stato.ariaDisabled === 'true') {
+      // Un campo inerte che **dichiara** di esserlo non è un difetto: è una funzione non ancora
+      // costruita, comunicata. Era proprio questo l'oggetto di #3848 — il campo invitava a cercare
+      // e non rispondeva — e la correzione è stata cambiare il messaggio, non abilitare la ricerca.
+      // Segnare `difforme` qui rende rosso un comportamento corretto, e un difforme che nessuno
+      // puo` chiudere insegna a ignorare la colonna.
+      // Il placeholder va riconosciuto in **entrambe** le lingue: la UI rende in italiano o in
+      // inglese secondo il `locale` del contesto del browser, e Playwright usa `en-US` per
+      // default. Un regex solo italiano segnava `difforme` su "Search is not available yet" —
+      // cioè sullo stesso messaggio corretto, in un'altra lingua.
+      const dichiarato =
+        /non ancora disponibile|non disponibile|coming soon|not available yet|not yet available/i.test(
+          stato.placeholder ?? ''
+        );
       registra({
         caso: 'ricerca catalogo',
         rotta: '/games',
         ruolo: 'user',
-        esito: 'difforme',
-        osservato: `campo visibile ma non utilizzabile — readOnly: ${stato.readOnly} · disabled: ${stato.disabled} · aria-disabled: ${stato.ariaDisabled} (#3848)`,
+        esito: dichiarato ? 'da-guardare' : 'difforme',
+        osservato: dichiarato
+          ? `ricerca non implementata, e il campo lo dichiara — placeholder: "${stato.placeholder}" · aria-disabled: ${stato.ariaDisabled} (#3848 chiusa così)`
+          : `campo visibile ma non utilizzabile e NON lo dichiara — placeholder: "${stato.placeholder}" · readOnly: ${stato.readOnly} · disabled: ${stato.disabled} · aria-disabled: ${stato.ariaDisabled} (regressione di #3848)`,
       });
       return;
     }

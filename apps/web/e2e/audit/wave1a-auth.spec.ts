@@ -43,7 +43,19 @@ test.describe('Authentication — ondata 1A', () => {
     );
 
     await page.goto('/register');
-    await page.waitForLoadState('domcontentloaded');
+
+    // 🔴 `domcontentloaded` non basta: la pagina decide quale modulo rendere dopo aver letto la
+    // configurazione, quindi a documento pronto il contenuto non c'è ancora e si misura il vuoto.
+    // Questo caso ha oscillato fra `atteso` e `difforme` su due passate a dieci minuti di
+    // distanza, con il prodotto stabile — verificato con tre caricamenti consecutivi, tutti e tre
+    // con l'intestazione «Richiedi accesso». Era il test a leggere troppo presto.
+    // Si attende ciò di cui si ha bisogno: un modulo con un campo, qualunque dei due sia.
+    await page
+      .locator('form input, input[type="email"], input[type="password"]')
+      .first()
+      .waitFor({ state: 'visible', timeout: 15_000 })
+      .catch(() => undefined);
+
     const body = await page.locator('body').innerText();
 
     // Con la registrazione chiusa il prodotto promette il modulo di richiesta

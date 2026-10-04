@@ -21,12 +21,27 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 const RESULTS_DIR = path.join(__dirname, '../../audit-results');
-const ENTRIES = path.join(RESULTS_DIR, 'entries.jsonl');
+
+/**
+ * I JSONL che **questa passata** scrive, e solo quelli.
+ *
+ * Non `probe-*.jsonl` né `user-mutations.jsonl`/`config-mutations.jsonl`: li producono gli script
+ * di `scripts/audit/`, che girano separatamente. Azzerarli qui cancellerebbe evidenze di un'altra
+ * fase, e l'errore sarebbe silenzioso come quello che questo file corregge.
+ *
+ * L'elenco si ricava con:
+ *   grep -rhoE "'[a-z0-9-]+\.jsonl'" apps/web/e2e/audit/*.ts | sort -u
+ */
+const PASSATA = ['entries.jsonl', 'ui-interazioni.jsonl', 'ui-flussi.jsonl', 'wave1a.jsonl'];
 
 export default function resetEntries(): void {
   mkdirSync(RESULTS_DIR, { recursive: true });
-  writeFileSync(ENTRIES, '', 'utf8');
-  // Su stdout e non in un file: se questa riga non compare nel log della passata, il JSONL che
-  // il report leggerà contiene anche osservazioni precedenti.
-  console.log(`[audit] azzerato ${path.relative(process.cwd(), ENTRIES)} per questa passata`);
+  for (const nome of PASSATA) {
+    writeFileSync(path.join(RESULTS_DIR, nome), '', 'utf8');
+  }
+  // Su stdout e non in un file: se questa riga non compare nel log della passata, i JSONL che il
+  // report leggerà contengono anche osservazioni precedenti. `ui-interazioni.jsonl` ne aveva
+  // accumulate quattro — 24 righe per 6 casi — e gli esiti `difforme` di una passata vecchia
+  // sopravvivevano a una correzione, perché nulla li cancellava.
+  console.log(`[audit] azzerati ${PASSATA.join(', ')} per questa passata`);
 }

@@ -83,27 +83,138 @@ dotnet test --filter "Category=Integration"
 
 ---
 
-### E2E Tests (~700 tests)
-**Requires**: Full infrastructure + running API
+### E2E Tests
+**Requires**: Full infrastructure + running API + **tre prerequisiti non ovvi** (vedi sotto)
+
+Per il conteggio, misuralo invece di fidarti di un numero scritto:
+
+```bash
+cd apps/web && npx playwright test --list --reporter=list | tail -1
+# e la ripartizione per project:
+cd apps/web && npx playwright test --list --reporter=list \
+  | grep -oP '^\s+\[\K[^\]]+' | sort | uniq -c | sort -rn
+```
+
+> ⚠️ Questa sezione dichiarava «~700 tests». Misurato il 2026-10-04: **18.780 test in 392 file**, di cui lo stesso insieme di **3.121** replicato su 6 project browser/viewport. Un numero in prosa qui invecchia in silenzio: usa il comando.
 
 #### Step 1: Start Infrastructure Services
 
 ```bash
 cd infra
-docker compose up -d postgres qdrant redis
+make dev-core          # oppure: docker compose up -d postgres redis minio
 ```
+
+> ⚠️ Questa sezione istruiva ad avviare `qdrant`. **Lo stack non usa Qdrant**: il vettoriale è
+> `pgvector` dentro Postgres (immagine `pgvector/pgvector:pg16`). Verifica con
+> `docker ps --format '{{.Names}}\t{{.Image}}'`.
 
 **Verify Services**:
 ```bash
-# PostgreSQL
-docker exec -it meepleai-postgres psql -U meepleai -d meepleai -c "SELECT version();"
+# PostgreSQL — il database e' meepleai_staging, non "meepleai"
+docker exec -it meepleai-postgres psql -U meepleai -d meepleai_staging -c "SELECT version();"
 
-# Qdrant
-curl http://localhost:PostgreSQL :5432/collections
+# pgvector e' un'estensione, non un servizio a parte
+docker exec -it meepleai-postgres psql -U meepleai -d meepleai_staging \
+  -c "SELECT extname, extversion FROM pg_extension WHERE extname='vector';"
 
 # Redis
 docker exec -it meepleai-redis redis-cli ping
 ```
+
+#### Step 1b 🔴 — I tre prerequisiti che bloccano un run locale
+
+Misurati il 2026-10-04 facendo girare lo **stesso** spec (`e2e/a11y/games-library.spec.ts`, 3 test)
+in tre configurazioni. Nessuno dei tre fallimenti era un difetto dei test o del prodotto:
+
+| configurazione | esito |
+|---|---|
+| contro il container `meepleai-web` | **0/3** in 130 s |
+| contro `next dev` avviato da Playwright | **1/3** in 4,1 min |
+| contro `next start` (build col flag) | **3/3 in 7,7 s** |
+
+**(a) Il container web puo' essere `healthy` e irraggiungibile dall'host.**
+L'healthcheck di Docker sonda *dall'interno*, quindi un port proxy incagliato gli e' invisibile.
+Sintomo: `curl` esce **52** («Empty reply from server») su una porta in `LISTENING`, mentre
+dall'interno la stessa URL risponde 200.
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:3000/        # dall'host
+docker exec meepleai-web node -e "fetch('http://localhost:3000/').then(r=>console.log(r.status))"
+# se il primo e' 000 e il secondo 200 -> port proxy incagliato: docker restart meepleai-web
+```
+
+**(b) Playwright RIUSA il server esistente, e quello sbagliato non ha il bypass di auth.**
+`playwright.config.ts` ha un blocco `webServer` che avvia un Next.js proprio con
+`PLAYWRIGHT_AUTH_BYPASS: 'true'`, ma anche `reuseExistingServer: !process.env.CI`. In locale
+`CI` non e' impostato, quindi **se qualcosa ascolta sulla 3000 Playwright non avvia nulla** e quelle
+env non esistono per il processo che serve le pagine. `proxy.ts` pretende
+`PLAYWRIGHT_AUTH_BYPASS === 'true'` per fidarsi del cookie di sessione; senza, ogni rotta sotto
+`src/app/(authenticated)/**` redirige:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/library   # 307 -> /login
+```
+
+Rimedio: liberare la 3000 (`docker stop meepleai-web`) e lasciare che Playwright avvii il suo
+server. In alternativa, aggiungere `PLAYWRIGHT_AUTH_BYPASS=true` all'env del container e
+riavviarlo — **non** serve un rebuild, perche' non e' una variabile `NEXT_PUBLIC_*` inlineata.
+
+**(c) `next dev` compila su richiesta e sfonda il timeout dei test.**
+Il timeout locale e' 60 s (`playwright.config.ts`); la prima visita a una rotta in dev mode puo'
+costare di piu'. Il sintomo inganna: il test fallisce con `Test timeout of 60000ms exceeded` **dopo**
+aver renderizzato correttamente la pagina, e sembra un problema a11y o di selettore.
+
+```bash
+cd apps/web
+NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 pnpm build     # una volta
+FORCE_PRODUCTION_SERVER=true npx playwright test <spec> --project=desktop-chrome
+```
+
+Il flag `NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1` al **build** serve perche' con `next start`
+`NODE_ENV=production`, e `proxy.ts` ammette il bypass solo se `NODE_ENV !== 'production'` **oppure**
+quel flag e' inlineato.
+
+#### Step 1c 🔴 — L'autenticazione ha tre meccanismi, e solo uno non richiede credenziali
+
+Misurato il 2026-10-04: su 131 fallimenti di un primo run, **71 (54%) finivano su una pagina di
+login**. Non e' un difetto dell'app: e' quale meccanismo lo spec usa.
+
+| meccanismo | come riconoscerlo | serve una credenziale? |
+|---|---|---|
+| cookie + bypass | chiama `seedAuthSession(` o `seedMockRoleCookies(` | **no** |
+| login vero | importa `test` da `e2e/fixtures` (`authenticateAsAdmin()`) | **sì** |
+| nessuno | nessuno dei due | solo rotte pubbliche |
+
+```bash
+cd apps/web
+for h in 'seedAuthSession(' 'seedMockRoleCookies('; do
+  printf '%-24s %s spec\n' "$h" "$(grep -rl "$h" e2e/ --include=*.spec.ts | wc -l)"
+done
+grep -rl "from '\.\./fixtures'" e2e/ --include=*.spec.ts | wc -l   # login vero
+```
+
+🔴 **Le credenziali del login vero vengono dall'ambiente, e `.env.test` non esiste** (e' gitignorato;
+il template e' `.env.test.example`). Peggio: `dotenv -e .env.test` **non fallisce** su un file
+mancante — procede in silenzio con exit 0, e il run stampa `injected env (0) from .env.test`. Quel
+`(0)` e' l'unico segnale, ed e' facile non vederlo.
+
+Senza quelle variabili, `e2e/fixtures/api-client.ts` cade sul default `admin@meepleai.dev`, che nel
+DB locale **non esiste** (c'e' `admin@meepleai.app`, TLD diverso). Verifica prima di accusare l'app:
+
+```bash
+# quale utente esiste davvero
+docker exec meepleai-postgres psql -U meepleai -d meepleai_staging \
+  -tAc 'select "Email", "Role" from users order by "Email"'
+
+# una credenziale funziona? (200 = sì)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' -d '{"email":"...","password":"..."}'
+```
+
+⚠️ Attenzione a `/api/v1/seed-e2e-users`: esiste ed e' il meccanismo previsto, ma
+`RequireAdminSession()` lo protegge — **serve gia' una sessione admin per creare l'admin**. Se in
+locale non c'e' una credenziale amministrativa valida, quella strada e' chiusa e gli spec `e2e/admin`
+restano bloccati.
 
 #### Step 2: Configure Secrets
 

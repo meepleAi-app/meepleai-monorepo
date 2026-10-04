@@ -83,27 +83,220 @@ dotnet test --filter "Category=Integration"
 
 ---
 
-### E2E Tests (~700 tests)
-**Requires**: Full infrastructure + running API
+### E2E Tests
+**Requires**: Full infrastructure + running API + **tre prerequisiti non ovvi** (vedi sotto)
+
+Per il conteggio, misuralo invece di fidarti di un numero scritto:
+
+```bash
+cd apps/web && npx playwright test --list --reporter=list | tail -1
+# e la ripartizione per project:
+cd apps/web && npx playwright test --list --reporter=list \
+  | grep -oP '^\s+\[\K[^\]]+' | sort | uniq -c | sort -rn
+```
+
+> ⚠️ Questa sezione dichiarava «~700 tests». Misurato il 2026-10-04: **18.780 test in 392 file**, di cui lo stesso insieme di **3.121** replicato su 6 project browser/viewport. Un numero in prosa qui invecchia in silenzio: usa il comando.
 
 #### Step 1: Start Infrastructure Services
 
 ```bash
 cd infra
-docker compose up -d postgres qdrant redis
+make dev-core          # oppure: docker compose up -d postgres redis minio
 ```
+
+> ⚠️ Questa sezione istruiva ad avviare `qdrant`. **Lo stack non usa Qdrant**: il vettoriale è
+> `pgvector` dentro Postgres (immagine `pgvector/pgvector:pg16`). Verifica con
+> `docker ps --format '{{.Names}}\t{{.Image}}'`.
 
 **Verify Services**:
 ```bash
-# PostgreSQL
-docker exec -it meepleai-postgres psql -U meepleai -d meepleai -c "SELECT version();"
+# PostgreSQL — il database e' meepleai_staging, non "meepleai"
+docker exec -it meepleai-postgres psql -U meepleai -d meepleai_staging -c "SELECT version();"
 
-# Qdrant
-curl http://localhost:PostgreSQL :5432/collections
+# pgvector e' un'estensione, non un servizio a parte
+docker exec -it meepleai-postgres psql -U meepleai -d meepleai_staging \
+  -c "SELECT extname, extversion FROM pg_extension WHERE extname='vector';"
 
 # Redis
 docker exec -it meepleai-redis redis-cli ping
 ```
+
+#### Step 1b 🔴 — I tre prerequisiti che bloccano un run locale
+
+Misurati il 2026-10-04 facendo girare lo **stesso** spec (`e2e/a11y/games-library.spec.ts`, 3 test)
+in più configurazioni. Nessuno dei fallimenti era un difetto dei test o del prodotto:
+
+| configurazione | esito |
+|---|---|
+| contro il container `meepleai-web` | **0/3** in 130 s |
+| contro `next dev` avviato da Playwright, a freddo | **1/3** in 4,1 min |
+| contro `next dev` già caldo e riusato | **3/3 in 7,7 s** |
+
+> ⚠️ Quel «3/3 in 7,7 s» era inizialmente attribuito a `next start`. **Sbagliato**: 7,7 s non bastano
+> ad avviare un server, e `reuseExistingServer: !CI` aveva fatto riusare il `next dev` della prova
+> precedente, già caldo e col bypass attivo. È lo stesso inganno del punto (b) qui sotto, visto dal
+> lato opposto — e si riconosce solo da un tempo troppo breve per essere vero.
+
+**(a) Il container web puo' essere `healthy` e irraggiungibile dall'host.**
+L'healthcheck di Docker sonda *dall'interno*, quindi un port proxy incagliato gli e' invisibile.
+Sintomo: `curl` esce **52** («Empty reply from server») su una porta in `LISTENING`, mentre
+dall'interno la stessa URL risponde 200.
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' http://localhost:3000/        # dall'host
+docker exec meepleai-web node -e "fetch('http://localhost:3000/').then(r=>console.log(r.status))"
+# se il primo e' 000 e il secondo 200 -> port proxy incagliato: docker restart meepleai-web
+```
+
+**(b) Playwright RIUSA il server esistente, e quello sbagliato non ha il bypass di auth.**
+`playwright.config.ts` ha un blocco `webServer` che avvia un Next.js proprio con
+`PLAYWRIGHT_AUTH_BYPASS: 'true'`, ma anche `reuseExistingServer: !process.env.CI`. In locale
+`CI` non e' impostato, quindi **se qualcosa ascolta sulla 3000 Playwright non avvia nulla** e quelle
+env non esistono per il processo che serve le pagine. `proxy.ts` pretende
+`PLAYWRIGHT_AUTH_BYPASS === 'true'` per fidarsi del cookie di sessione; senza, ogni rotta sotto
+`src/app/(authenticated)/**` redirige:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:3000/library   # 307 -> /login
+```
+
+Rimedio: liberare la 3000 (`docker stop meepleai-web`) e lasciare che Playwright avvii il suo
+server. In alternativa, aggiungere `PLAYWRIGHT_AUTH_BYPASS=true` all'env del container e
+riavviarlo — **non** serve un rebuild, perche' non e' una variabile `NEXT_PUBLIC_*` inlineata.
+
+**(c) `next dev` compila su richiesta e sfonda il timeout dei test.**
+Il timeout locale e' 60 s (`playwright.config.ts`); la prima visita a una rotta in dev mode puo'
+costare di piu'. Il sintomo inganna: il test fallisce con `Test timeout of 60000ms exceeded` **dopo**
+aver renderizzato correttamente la pagina, e sembra un problema a11y o di selettore.
+
+```bash
+cd apps/web
+NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 pnpm build     # una volta
+FORCE_PRODUCTION_SERVER=true npx playwright test <spec> --project=desktop-chrome
+```
+
+🔴 **E qui c'e' la trappola peggiore: con `FORCE_PRODUCTION_SERVER=true` il bypass di auth e' MORTO,
+e Playwright non te lo dice.**
+
+`proxy.ts` ammette il bypass se `NODE_ENV !== 'production'` **oppure** se
+`NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED === '1'`. Con `next start` `NODE_ENV` e' `production`,
+quindi il primo ramo si piega a `false` e il bundler lo elimina: nel chunk compilato resta
+
+```js
+o = "1" === process.env.NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED
+ && "true" === process.env.PLAYWRIGHT_AUTH_BYPASS && !!a;
+```
+
+Ma il blocco `webServer` di `playwright.config.ts` imposta **solo** `PLAYWRIGHT_AUTH_BYPASS` (e
+`NEXT_PUBLIC_MECHANIC_VALIDATION_ENABLED`): **non** il flag visual-test. Quindi la prima condizione
+e' falsa, il bypass non si innesca, e ogni rotta `(authenticated)` redirige — su TUTTA la suite,
+con fallimenti che somigliano a selettori invecchiati.
+
+Il flag va passato **a runtime** al server (nel chunk e' una lettura a runtime, non un valore
+inlineato), quindi basta averlo nell'ambiente da cui lanci Playwright:
+
+```bash
+NEXT_PUBLIC_VISUAL_TEST_FIXTURE_ENABLED=1 FORCE_PRODUCTION_SERVER=true \
+  pnpm exec dotenv -e .env.test -- playwright test <spec> --project=desktop-chrome
+```
+
+Verifica in un colpo, senza passare da Playwright:
+
+```bash
+# server avviato con ENTRAMBE le variabili
+curl -s -o /dev/null -w '%{http_code}\n' \
+  -H 'Cookie: meepleai_session=playwright-fixture-session-token; meepleai_user_role=admin' \
+  http://localhost:3000/library
+# 200 = bypass attivo | 307 = bypass morto
+```
+
+⚠️ Quando ripeti questa sonda, **accertati che il server vecchio sia morto**: `pkill` puo' non
+liberare la porta, e si finisce a interrogare l'istanza precedente leggendo il suo esito come
+quello della configurazione nuova. Costa un `curl` verificare che la 3000 risponda `000` prima di
+riavviare.
+
+#### Step 1c 🔴 — L'autenticazione ha tre meccanismi, e solo uno non richiede credenziali
+
+Misurato il 2026-10-04: su 131 fallimenti di un primo run, **71 (54%) finivano su una pagina di
+login**. Non e' un difetto dell'app: e' quale meccanismo lo spec usa.
+
+| meccanismo | come riconoscerlo | serve una credenziale? |
+|---|---|---|
+| cookie + bypass | chiama `seedAuthSession(` o `seedMockRoleCookies(` | **no** |
+| login vero | importa `test` da `e2e/fixtures` (`authenticateAsAdmin()`) | **sì** |
+| nessuno | nessuno dei due | solo rotte pubbliche |
+
+```bash
+cd apps/web
+for h in 'seedAuthSession(' 'seedMockRoleCookies('; do
+  printf '%-24s %s spec\n' "$h" "$(grep -rl "$h" e2e/ --include=*.spec.ts | wc -l)"
+done
+grep -rl "from '\.\./fixtures'" e2e/ --include=*.spec.ts | wc -l   # login vero
+```
+
+🔴 **Le credenziali del login vero vengono dall'ambiente, e `.env.test` non esiste** (e' gitignorato;
+il template e' `.env.test.example`). E `dotenv -e .env.test` **non fallisce** su un file mancante:
+procede in silenzio con exit 0.
+
+⚠️ Il run stampa `injected env (0) from .env.test`, ma **quel messaggio non distingue i due casi**:
+dice `(0)` sia quando il file manca sia quando le variabili sono gia' state caricate da un primo
+`dotenv` (la riga viene da `e2e/global-setup.ts`, che ricarica lo stesso file). Non usarlo come
+diagnosi. L'unica verifica che risponde:
+
+```bash
+cd apps/web && pnpm exec dotenv -e .env.test -- node -e \
+  'console.log("ADMIN_EMAIL:", process.env.ADMIN_EMAIL || "(ASSENTE)")'
+```
+
+Senza quelle variabili, `e2e/fixtures/api-client.ts` cade sul default `admin@meepleai.dev`, che nel
+DB locale **non esiste** (c'e' `admin@meepleai.app`, TLD diverso). Verifica prima di accusare l'app:
+
+```bash
+# quale utente esiste davvero
+docker exec meepleai-postgres psql -U meepleai -d meepleai_staging \
+  -tAc 'select "Email", "Role" from users order by "Email"'
+
+# una credenziale funziona? (200 = sì)
+curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' -d '{"email":"...","password":"..."}'
+```
+
+⚠️ Attenzione a `/api/v1/seed-e2e-users`: esiste ed e' il meccanismo previsto, ma
+`RequireAdminSession()` lo protegge — **serve gia' una sessione admin per creare l'admin**. Anche
+`POST /api/v1/auth/register` e' chiuso quando la registrazione e' a invito (403
+«Registration is currently unavailable»), e il toggle sta nell'admin UI: lo stesso anello.
+
+Via d'uscita **additiva**, senza indovinare l'algoritmo di hashing: il formato e'
+`v1.600000.<salt>.<hash>` con salt casuale letto dalla stringa in verifica, e l'email non entra
+nell'hash. Quindi si puo' creare un utente nuovo **copiando in-database** l'hash di un utente che
+funziona — quel nuovo utente condividera' la stessa password, e nessun segreto passa dalla shell:
+
+```sql
+insert into users ("Id","Email","DisplayName","PasswordHash","Role","Tier","CreatedAt",
+                   "IsDemoAccount","IsSuspended","Status","EmailVerified","IsContributor",
+                   "OnboardingCompleted","OnboardingSkipped")
+select gen_random_uuid(), 'e2e-admin@meepleai.test', 'E2E Admin (solo locale)',
+       "PasswordHash", 'admin', 'free', now(), false, false, 'Active', true, false, true, false
+from users where "Email" = '<un utente la cui password conosci>';
+```
+
+Reversibile con `delete from users where "Email" = 'e2e-admin@meepleai.test';`.
+
+#### Step 1d 🔴 — Due configurazioni coerenti, e la suite le mischia
+
+È la conclusione che spiega la maggior parte dei fallimenti locali. Il bypass fa rendere la
+**pagina**, ma le chiamate API partono dal browser verso il backend **vero**, che non conosce il
+token finto e risponde 401: la shell autenticata appare e il contenuto che dipende dai dati no.
+Il sintomo e' un `waitForSelector` che scade su una pagina apparentemente corretta.
+
+| configurazione | cosa serve | esempio nel repo |
+|---|---|---|
+| **A — tutto finto** | bypass + cookie + `page.route()` per **ogni** endpoint che la pagina usa | `e2e/admin/catalog-seed.spec.ts` |
+| **B — login vero** | credenziali reali, sessione reale, **nessun** bypass | `e2e/audit/` (ha `playwright.audit.config.ts` proprio) |
+
+Gli spec che seminano il cookie ma **non** mockano le API stanno in mezzo, e in locale non possono
+passare: non e' ne' A ne' B. Prima di indagare un selettore, stabilisci in quale configurazione lo
+spec vive — e se ci vive davvero.
 
 #### Step 2: Configure Secrets
 

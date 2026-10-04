@@ -60,13 +60,16 @@ import { PdfImageRegionOverlay } from './PdfImageRegionOverlay';
 // two of them through barrels (`features/mechanic-card/index.ts`,
 // `features/game-chat/index.ts`) that re-export a consumer wholesale. A per-caller
 // `dynamic()` has to be re-established by every new caller and lapses silently when
-// one forgets: #4058 reached a published route while this viewer's own consumer
-// (MechanicCitationPanel) documented pdfjs as "lazily pulled".
+// one forgets: #4058 reached a published route while a doc comment two hops up the
+// chain described this viewer as the thing that "lazily pulls pdfjs"
+// (MechanicCitationPanel.tsx:17-18, which reaches it via PdfQuoteViewer, not directly).
+// Lazily loaded it was — but by `React.lazy`, which still evaluates on the server.
 //
 // Only the JS is deferred. The two CSS imports above stay static on purpose: a
 // stylesheet is resolved by the bundler and never `require`d in Node, so it cannot
-// throw — measured, by the three app-router entries that reach
-// `react-pdf/dist/Page/TextLayer.css` statically and answer 200.
+// throw. The entries that reach `react-pdf/dist/Page/TextLayer.css` statically all
+// answer 200 — count them rather than trust a number here, which ages:
+//   grep -rl "react-pdf/dist/Page/TextLayer.css" src/
 //
 // Pattern source: src/components/chat-unified/PdfPageModal.tsx, which already
 // splits react-pdf this way — and is precisely why the routes that reach react-pdf

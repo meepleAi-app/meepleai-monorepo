@@ -98,8 +98,11 @@
      * Why measured and not a constant: the same banner is 169px tall at 1366px
      * of viewport width and 281px at 390px (the action row wraps), so a desktop
      * constant would leave mobile covered and a mobile one would waste 112px of
-     * desktop. Declared here so both consumers resolve to zero clearance while
-     * no banner is on screen — the state after the first visit. */
+     * desktop. Declared here as documentation and as the single place that
+     * names the token: both consumers already carry their own `0px` fallback
+     * inside `var()`, so removing this line would change nothing observable —
+     * it is here so a third consumer finds the token declared instead of
+     * inferring it from a `var()` call site. */
     --cookie-banner-height: 0px;
 
     /* ============================================================================

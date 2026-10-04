@@ -34,9 +34,11 @@ const LazyComponentMap = dynamic(
       },
     })),
   // 🔴 `ssr: false` è load-bearing, non un'ottimizzazione. `dynamic()` da solo NON è un confine
-  // SSR: in `next/dist/shared/lib/dynamic.js` il ramo `noSSR` scatta solo per
-  // `typeof options.ssr === 'boolean' && !options.ssr`; senza il flag il loader viene invocato
-  // dentro il render del componente, anche sul server. Da qui `component-map.ts` raggiunge
+  // SSR: l'App Router passa da `next/dist/shared/lib/lazy-dynamic/loadable.js`, dove
+  // `defaultOptions` porta `ssr: true` e il ramo è
+  //   `opts.ssr ? <Lazy/> : <BailoutToCSR reason="next/dynamic"><Lazy/></BailoutToCSR>`
+  // Solo il secondo tiene il modulo fuori dal render server; con il default il `React.lazy`
+  // valuta il loader anche lì. Da qui `component-map.ts` raggiunge
   // `meeple-info-card` → `PdfViewerModal` → `react-pdf` → `pdfjs-dist`, che a module scope esegue
   // un polyfill di `Iterator.prototype.join` senza guardia su `typeof Iterator`: su Node 20 quel
   // global non esiste e la rotta risponde 500 (#4058). Il runtime dell'immagine è Node 20.18.3,

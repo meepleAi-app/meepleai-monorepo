@@ -92,9 +92,13 @@ function usePublishedBannerHeight(isVisible: boolean) {
       return;
     }
 
-    // `offsetHeight` rather than getBoundingClientRect(): the banner enters with
-    // `animate-in slide-in-from-bottom`, a transform that would make the rect
-    // report a shifted box mid-animation. offsetHeight ignores transforms.
+    // `offsetHeight` rather than getBoundingClientRect(): both report the same
+    // number here — `slide-in-from-bottom` is a pure translation, so it moves the
+    // rect's position but leaves its `height` at the layout height. offsetHeight is
+    // chosen because it is the layout box by definition and rounds to an integer
+    // pixel, which is what a CSS length consumer wants; a future entrance animation
+    // that scales instead of translating would make the rect's height wrong, and
+    // this one would not notice.
     const publish = () => {
       document.documentElement.style.setProperty(BANNER_HEIGHT_VAR, `${el.offsetHeight}px`);
     };

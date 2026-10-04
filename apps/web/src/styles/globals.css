@@ -224,6 +224,31 @@
     color: var(--text);
     /* Safety net: prevent horizontal page scroll on mobile viewports */
     overflow-x: clip;
+    /* #4060: the cookie banner is `position: fixed; bottom: 0` and the document
+     * reserved no space for it, so every control that fell inside its band got
+     * the banner's click instead of its own — measured with
+     * `document.elementFromPoint` on each control's centre at 1366x768:
+     * 4 on /games, 3 on /dashboard, 2 on /library, 1 on /settings, 1 on
+     * /game-nights/new.
+     * ⚠️ This is a PARTIAL mitigation, for one reason: `padding-bottom`
+     * lengthens the document, it does not move content. At scroll offset 0 the
+     * band is still covered — and that, with no scrolling, is the condition the
+     * defect was measured under. It also does nothing for `position: fixed` or
+     * `sticky` siblings, which are outside the flow; those have to consume
+     * `--cookie-banner-height` themselves, as `BackToSessionFAB` does.
+     * What it DOES do: all five routes above sit under `(authenticated)` →
+     * `DesktopShell`, whose `min-h-dvh flex flex-col` is a MINIMUM height, so
+     * the `flex-1 overflow-y-auto` on `<main>` does not become a nested
+     * scrollport — the document grows and this padding adds exactly the
+     * banner's height of scroll, which is what lets a control in the band be
+     * scrolled clear of it.
+     * (An earlier version of this comment claimed the opposite — "4 of the 5
+     * routes … outside this scrollport", citing AdminShell though none of the
+     * five is an admin route. Wrong on the count, the shell and the effect, and
+     * it would have talked someone into deleting a line that works.)
+     * Resolves to 0px when no banner is mounted — default in
+     * design-tokens.css. */
+    padding-bottom: var(--cookie-banner-height, 0px);
   }
 
   /* MeepleAI Background Texture System - Issue #2905 */

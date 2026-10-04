@@ -84,7 +84,47 @@ dotnet test --filter "Category=Integration"
 ---
 
 ### E2E Tests
-**Requires**: Full infrastructure + running API + **tre prerequisiti non ovvi** (vedi sotto)
+**Requires**: Full infrastructure + running API + **quattro prerequisiti non ovvi** (vedi sotto)
+
+> 🔴 **Prerequisito zero: l'immagine che stai misurando.** `make dev` e `make dev-core` fanno
+> `up -d`: riusano l'immagine esistente e **non** la ricostruiscono. Un container `healthy` che
+> risponde 200 non dice quale codice sta servendo. Il 2026-10-04 lo stack locale serviva
+> `meepleai-web` costruita il **2026-07-29** — oltre due mesi prima di `HEAD` — e ogni numero
+> raccolto contro di essa descriveva un prodotto che non esisteva più.
+>
+> ```bash
+> docker image inspect meepleai-web --format '{{.Created}}'   # <- questa, non quella del container
+> docker image inspect meepleai-api --format '{{.Created}}'
+> git log -1 --format=%ad --date=short                        # confronta
+> ```
+>
+> Quando un'anomalia riguarda una stringa (una URL, un selettore, un flag), cercala nel bundle: è
+> la prova diretta, e non richiede altre ipotesi.
+>
+> ```bash
+> docker exec meepleai-web sh -c \
+>   'grep -rhoE ".{12}game-sessions/session-statistics" /app/.next/static/chunks'
+> # -> `ait b.get(`/game-sessions/session-statistics`   = forma SENZA /api/v1, corretta da #3835
+> ```
+>
+> Quel 404 sembrava un difetto del frontend. Era un difetto chiuso il giorno **dopo** la creazione
+> del container. Ricostruisci prima di interpretare:
+>
+> ```bash
+> cd infra
+> docker compose -f docker-compose.yml -f compose.dev.yml build web
+> docker compose -f docker-compose.yml -f compose.dev.yml up -d web
+> ```
+>
+> ⚠️ Sempre con l'overlay `compose.dev.yml`. Senza, il container perde `ASPNETCORE_ENVIRONMENT` e
+> va in crash-loop su `DataProtection:KeysPath is required in Production and Staging`.
+>
+> Nota sulla coerenza di quell'immagine: il `Dockerfile` imposta `NODE_ENV=production`, ma
+> `infra/env/web.env.dev` lo riporta a `development` a runtime. Il server serve quindi un bundle di
+> produzione dichiarandosi in sviluppo, e in quello stato alcune librerie stampano in console
+> avvisi che un audit raccoglie come anomalie del prodotto (esempio osservato: violazioni axe
+> `Heading order invalid` su decine di rotte). Tienilo presente quando leggi gli errori di console
+> di una passata locale.
 
 Per il conteggio, misuralo invece di fidarti di un numero scritto:
 

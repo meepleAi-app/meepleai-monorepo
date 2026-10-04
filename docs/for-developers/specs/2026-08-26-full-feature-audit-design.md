@@ -68,6 +68,42 @@ Postgres locale seedato ed estrae un id valido per tipo di entità.
 Senza questo passaggio il crawler produrrebbe 404 e chiameremmo "rotto" ciò che è solo non
 indirizzato.
 
+#### Come si rigenera la mappa (#4056)
+
+```bash
+cd apps/web
+AUDIT_USER_EMAIL=… AUDIT_USER_PASSWORD=… \
+AUDIT_ADMIN_EMAIL=… AUDIT_ADMIN_PASSWORD=… \
+  pnpm audit:params          # semina le condivisioni via API, legge il DB, scrive la mappa
+pnpm audit:params --check    # non semina e non scrive: dice solo quali rotte resterebbero saltate
+pnpm audit:params --no-seed  # solo query SQL (SOVRASCRIVE la mappa: non usarlo come diagnostica)
+```
+
+Tre cose che il file non dice da sé:
+
+1. **Su un checkout pulito la mappa non esiste.** `route-params.json` è gitignored
+   (`.gitignore:327`) e fino a #4056 nessun comando lo produceva: `resolveParams(psqlRunner())`
+   esisteva, era documentato per questo scopo e non era chiamato da nessuno tranne i suoi test
+   unitari. Senza il file, `crawl.spec.ts` ricade su una mappa **vuota**
+   (`existsSync(PARAMS) ? … : {}`) e salta ogni rotta parametrica — e poiché il crawler **non
+   asserisce**, nulla diventa rosso. Dove il file sopravvive da una passata precedente invecchia:
+   dopo un ri-seeding del database il report attribuisce al prodotto un "not found" che è della
+   mappa.
+2. **`[token]`, `[code]` e `[name]` sono generici come `[id]`**, e si risolvono per prefisso di
+   rotta (`GENERIC_PARAM_SOURCES`). Lo stesso `[token]` indica un invito utente, la condivisione di
+   un game-night, il join di una live session, la condivisione di un play-record o quella di una
+   libreria: un valore unico ne soddisferebbe uno e manderebbe gli altri su un 404. Chi aggiunge
+   una rotta con un parametro generico aggiunge la sua riga lì, altrimenti il crawler la salta.
+3. **Un valore non è ricavabile dal database per costruzione.** `invitation_tokens` conserva
+   `token_hash`: il token di `/invites/[token]` esiste solo nella risposta di
+   `POST /api/v1/admin/invitations`. Per questo `seed-share-params.ts` crea le entità con le API
+   del prodotto e cattura ciò che il DB non conserva — e, come effetto utile, esercita i flussi di
+   condivisione invece di lasciarli dietro un salto.
+
+Lo stato di copertura si legge dall'uscita del comando, non si assume: `--check` stampa le rotte
+che resterebbero saltate e i nomi dei parametri senza valore, ed esce con codice 1 quando la
+copertura non è completa.
+
 ### 3. Crawler esplorativo — `e2e/audit/crawl.spec.ts` + `playwright.audit.config.ts`
 
 Config separata da `playwright.config.ts`: **niente `PLAYWRIGHT_AUTH_BYPASS`**. Login reale via UI

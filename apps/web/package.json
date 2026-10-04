@@ -40,6 +40,7 @@
     "test:a11y:e2e:errors": "dotenv -e .env.test -- cross-env FORCE_PRODUCTION_SERVER=true playwright test e2e/accessibility.spec.ts --grep '@error-state' --project=desktop-chrome --workers=1",
     "audit:a11y": "tsx scripts/run-accessibility-audit.ts",
     "audit:inventory": "tsx scripts/audit/main-inventory.ts",
+    "audit:params": "tsx scripts/audit/main-params.ts",
     "audit:crawl": "playwright test --config=playwright.audit.config.ts",
     "audit:report": "tsx scripts/audit/main-report.ts",
     "lint": "eslint . --max-warnings=510",

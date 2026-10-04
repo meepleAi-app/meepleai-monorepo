@@ -16,6 +16,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e/audit',
+  // #4056. Azzera entries.jsonl: il crawler scrive in append e due passate nello stesso file
+  // venivano classificate insieme dal report, con la riga vecchia a decidere il verdetto.
+  globalSetup: require.resolve('./e2e/audit/reset-entries'),
   timeout: 90_000,
   // Un audit non deve nascondere l'intermittenza dietro un retry: se una pagina
   // è instabile, quella è l'informazione che cerchiamo.

@@ -224,6 +224,22 @@
     color: var(--text);
     /* Safety net: prevent horizontal page scroll on mobile viewports */
     overflow-x: clip;
+    /* #4060: the cookie banner is `position: fixed; bottom: 0` and the document
+     * reserved no space for it, so every control that fell inside its band got
+     * the banner's click instead of its own — measured with
+     * `document.elementFromPoint` on each control's centre at 1366x768:
+     * 4 on /games, 3 on /dashboard, 2 on /library, 1 on /settings, 1 on
+     * /game-nights/new.
+     * ⚠️ This is a PARTIAL mitigation and the issue says why: `padding-bottom`
+     * lengthens the document, it does not move content, so at scroll offset 0
+     * the band is still covered — which is the condition the defect was
+     * measured under. It does nothing at all for `position: fixed` or `sticky`
+     * siblings, and on 4 of the 5 routes above the content lives inside
+     * `<main overflow-y-auto>` (DesktopShell, AdminShell), outside this
+     * scrollport. Kept because it costs one declaration and does add exactly
+     * that much scroll on a page shorter than the viewport. Resolves to 0px
+     * when no banner is mounted — default in design-tokens.css. */
+    padding-bottom: var(--cookie-banner-height, 0px);
   }
 
   /* MeepleAI Background Texture System - Issue #2905 */

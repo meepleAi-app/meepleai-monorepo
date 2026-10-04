@@ -89,6 +89,19 @@
     --mobile-status-bar-height: 36px;
     --mobile-scorebar-height: 52px;
 
+    /* Cookie consent banner clearance (#4060).
+     * Overwritten at run-time by `CookieConsentBanner`, which measures itself
+     * with a ResizeObserver and writes the result as an inline custom property
+     * on <html>. Consumers: `body { padding-bottom }` (globals.css) and the
+     * bottom-fixed chrome that has to stack above the banner instead of under
+     * it (`BackToSessionFAB`).
+     * Why measured and not a constant: the same banner is 169px tall at 1366px
+     * of viewport width and 281px at 390px (the action row wraps), so a desktop
+     * constant would leave mobile covered and a mobile one would waste 112px of
+     * desktop. Declared here so both consumers resolve to zero clearance while
+     * no banner is on screen — the state after the first visit. */
+    --cookie-banner-height: 0px;
+
     /* ============================================================================
      * TYPOGRAPHY SYSTEM
      * System font stack for optimal performance

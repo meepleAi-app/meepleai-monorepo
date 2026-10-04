@@ -46,16 +46,28 @@ internal class GetGameWizardPreviewQueryHandler : IQueryHandler<GetGameWizardPre
             throw new NotFoundException($"Game with ID {query.GameId} not found in catalog");
         }
 
-        // Fetch PDF documents and library status in parallel
-        var documentsTask = _pdfDocumentRepository
-            .FindByGameIdAsync(query.GameId, cancellationToken);
-        var libraryEntryTask = _userLibraryRepository
-            .GetByUserAndGameAsync(query.UserId, query.GameId, cancellationToken);
-
-        await Task.WhenAll(documentsTask, libraryEntryTask).ConfigureAwait(false);
-
-        var documents = await documentsTask.ConfigureAwait(false);
-        var libraryEntry = await libraryEntryTask.ConfigureAwait(false);
+        // 🔴 Sequenziale, non `Task.WhenAll`. Entrambi i repository derivano da `RepositoryBase`,
+        // che tiene il `MeepleAiDbContext` **scoped** della richiesta
+        // (SharedKernel/Infrastructure/RepositoryBase.cs), e un DbContext non è thread-safe: due
+        // query avviate insieme su quella stessa istanza fanno lanciare `ConcurrencyDetector` con
+        // «A second operation was started on this context instance before a previous operation
+        // completed», e la rotta risponde 500.
+        //
+        // Non è teoria: `GET /api/v1/wizard/game-preview/{gameId}` dava 500 su 6 richieste su 6
+        // (tre giochi reali, due tentativi ciascuno), con `ConcurrencyDetector.EnterCriticalSection`
+        // in testa allo stack. È la stessa causa di #4059 su `/admin/kb/pipeline/health`, trovata
+        // su questa rotta da un esame adversarial di quella correzione — che aveva toccato solo
+        // l'endpoint esploso.
+        //
+        // Il parallelismo qui non ha nulla da guadagnare: sono due letture brevi sulla stessa
+        // connessione, che il pool serializza comunque. Se un giorno servisse davvero, la strada è
+        // un contesto per operazione via `IDbContextFactory`, non `WhenAll` su quello condiviso.
+        var documents = await _pdfDocumentRepository
+            .FindByGameIdAsync(query.GameId, cancellationToken)
+            .ConfigureAwait(false);
+        var libraryEntry = await _userLibraryRepository
+            .GetByUserAndGameAsync(query.UserId, query.GameId, cancellationToken)
+            .ConfigureAwait(false);
 
         var documentSummaries = documents
             .Select(d => new PdfDocumentSummaryDto(

@@ -21,10 +21,12 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 ///         is made — the event still flows through the
 ///         <c>DomainEventLogPersistenceHandler</c> + SSE broadcaster so the
 ///         AlertActivityFeed can render the "DRY RUN" badge.</item>
-///   <item>Each channel is dispatched in isolation. A failure on Slack does
-///         NOT cancel Email, and vice versa. We collect per-channel results
-///         but never propagate exceptions to MediatR — that would prevent
-///         other notification handlers (audit log) from running.</item>
+///   <item>Each channel is dispatched in isolation, one after the other (the
+///         fan-out is sequential because the channel repository shares the
+///         request-scoped DbContext — see the comment in <c>Handle</c>).
+///         A transport failure on Slack does NOT cancel Email, and vice
+///         versa: each branch's try/catch keeps the exception local, so other
+///         notification handlers (audit log) still run.</item>
 ///   <item>The channel transport client returns a structured success/error
 ///         object so we can record the diagnostic on the <c>AlertChannel</c>
 ///         aggregate in a follow-up (auto-update LastTestStatus on real
@@ -65,13 +67,47 @@ internal sealed class ChannelDispatchHandler : INotificationHandler<AlertFiredEv
             return;
         }
 
-        // Dispatch each channel in its own task so a slow Slack webhook doesn't
-        // block the Email send. Each branch swallows exceptions internally.
-        var dispatchTasks = notification.Channels
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Select(channel => DispatchSingleAsync(channel, notification, cancellationToken));
-
-        await Task.WhenAll(dispatchTasks).ConfigureAwait(false);
+        // 🔴 I canali si dispacciano in SEQUENZA, non con `Task.WhenAll` (#4059).
+        //
+        // Il primo await di ogni canale è `_channelRepository.GetByTypeAsync` in
+        // `DispatchSingleAsync`, e `AlertChannelRepository` deriva da `RepositoryBase`: legge dal
+        // `MeepleAiDbContext` **scoped** della richiesta. È registrato `AddScoped`
+        // (`AdministrationServiceExtensions.cs:44`) e iniettato una volta sola in `_channelRepository`
+        // — nessuna factory, nessuno scope creato per canale — quindi tutti i canali condividevano
+        // la stessa istanza di contesto. Il `Select` qui sotto era lazy, ma
+        // `Task.WhenAll(IEnumerable<Task>)` enumera la sequenza per intero costruendo l'array
+        // **prima** di attendere qualunque cosa: ogni `DispatchSingleAsync` partiva fino al suo
+        // primo await, cioè due letture EF sovrapposte. Il meccanismo è quello di #4059.
+        //
+        // Due sintomi distinti, e il commento che stava qui («in its own task … each branch
+        // swallows exceptions internally») li mascherava entrambi:
+        //   - `POST /api/v1/admin/alert-rules/{id}/test?mode=live` rispondeva **500**, misurato su
+        //     3 tentativi su 3 con `ConcurrencyDetector.EnterCriticalSection()` in testa allo
+        //     stack e `RequestPath` su questa rotta. Il controllo che isola la fan-out come causa
+        //     è `?mode=dryRun` sulla **stessa** regola: 200, perché esce a riga ~65 prima del
+        //     fan-out. La lettura EF sta FUORI dal try/catch di `DispatchSingleAsync` (lettura a
+        //     123, `try` a 147), quindi l'eccezione risaliva fino all'endpoint, che non la
+        //     cattura. `TestAlertRuleCommandHandler:50` passa `["slack", "email"]` hardcoded,
+        //     quindi i due task c'erano sempre.
+        //   - su un firing reale (`IsTest=false`) il sintomo è silenzioso: `MarkDispatched` +
+        //     `UpsertAsync` stanno DENTRO quel catch (con CA1031 soppresso), quindi l'alert parte
+        //     ma il marcatore di dedup di #1941 non viene salvato e l'oncall viene ri-pingato al
+        //     retry. La suite unit non vedeva niente: monta un `Mock<IAlertChannelRepository>` che
+        //     torna task già completati, quindi la fan-out non attraversava mai EF.
+        //
+        // Il parallelismo non comprava nulla: le letture EF vanno su una sola connessione, che il
+        // pool serializza comunque, e il tratto lento (webhook Slack + SMTP) è di due canali in
+        // tutto. Nel progetto non è registrato alcun `IDbContextFactory`, quindi la sequenza è
+        // anche l'unica forma corretta disponibile.
+        //
+        // Differenza residua, dichiarata: se la lettura EF di un canale eccepisce, ora i canali
+        // successivi non partono. Prima partivano, ma l'eccezione risaliva ugualmente — l'unica
+        // isolazione mai garantita è quella dentro il try/catch (i fallimenti di trasporto), e
+        // quella è intatta.
+        foreach (var channel in notification.Channels.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            await DispatchSingleAsync(channel, notification, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     private async Task DispatchSingleAsync(
@@ -130,8 +166,9 @@ internal sealed class ChannelDispatchHandler : INotificationHandler<AlertFiredEv
             }
 
             // Issue #1941 / iso-2 Fix 1: only mark dispatched on real (non-dry-run, non-test)
-            // alerts that completed without throwing. Concurrency: parallel sibling channels
-            // each upsert their own row, so xmin contention is bounded per-channel.
+            // alerts that completed without throwing. Concurrency: i canali fratelli sono
+            // dispacciati in sequenza (vedi `Handle`), quindi questo upsert non concorre con
+            // nessun altro sullo stesso contesto EF.
             if (!notification.IsDryRun && !notification.IsTest)
             {
                 channel.MarkDispatched(notification.EventId);

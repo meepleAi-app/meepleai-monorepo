@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Extensions;
+using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -428,6 +429,7 @@ internal static class GameNightEndpoints
         Guid id,
         [FromBody] UpdateGameNightRequest request,
         [FromServices] IMediator mediator,
+        [FromServices] IValidator<UpdateGameNightCommand> validator,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
@@ -442,6 +444,26 @@ internal static class GameNightEndpoints
             Location: request.Location,
             MaxPlayers: request.MaxPlayers,
             GameIds: request.GameIds);
+
+        // 🔴 Validazione a mano, come già fa `HandleRespondToInvitationByToken` poche righe sopra
+        // e per la stessa ragione: `UpdateGameNightCommand` è un `ICommand`, cioè un `IRequest`
+        // **non generico**, e `ValidationBehavior<TRequest,TResponse>` è vincolato
+        // `where TRequest : IRequest<TResponse>` — su un command void il vincolo non si chiude e il
+        // behavior non gira. `UpdateGameNightCommandValidator` **esiste** ed era completamente
+        // inerte: misurato, un PUT con `title: "ab"` (il validator pretende almeno 3 caratteri)
+        // rispondeva 204, e uno con `scheduledAt` nel passato pure.
+        //
+        // Si lancia la stessa `ValidationException` di FluentValidation che il behavior lancerebbe,
+        // così `ApiExceptionHandlerMiddleware` la mappa al **422** con lo stesso corpo del POST:
+        // i due verbi devono rispondere allo stesso modo allo stesso input sbagliato.
+        //
+        // Vale per ogni command void del progetto, non solo per questo: la classe è registrata in
+        // #4063 insieme all'altro difetto emerso da #4055.
+        var validazione = await validator.ValidateAsync(command, cancellationToken).ConfigureAwait(false);
+        if (!validazione.IsValid)
+        {
+            throw new ValidationException(validazione.Errors);
+        }
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.NoContent();

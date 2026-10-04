@@ -103,12 +103,22 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
         var errorCount = await query.CountAsync(e => e.Status == "Error", cancellationToken).ConfigureAwait(false);
         var cacheHitCount = await query.CountAsync(e => e.CacheHit, cancellationToken).ConfigureAwait(false);
         var totalCost = await query.SumAsync(e => e.TotalCost, cancellationToken).ConfigureAwait(false);
-        var avgConfidence = await query
-            .Where(e => e.Confidence != null)
-            .Select(e => e.Confidence!.Value)
-            .DefaultIfEmpty(0)
-            .AverageAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // 🔴 `DefaultIfEmpty(0).AverageAsync()` su una query RADICE non è traducibile da EF e
+        // lanciava in `NavigationExpandingExpressionVisitor`, cioè `/admin/rag-executions/stats`
+        // rispondeva 500 — ma **solo con la tabella non vuota**, perché la guardia
+        // `if (totalCount == 0)` poche righe sopra ritorna prima di arrivare qui. Su un database
+        // locale vuoto l'endpoint dava 200, e quel 200 è lo stesso che il difetto produce: è così
+        // che la prima stesura della correzione di #4059 l'ha dichiarato risolto.
+        // (Nel `GroupBy` di `GetAggregatedMetricsAsync` la stessa forma È traducibile, perché lì è
+        // un'aggregazione su gruppo — da cui l'impressione che il pattern fosse sicuro.)
+        //
+        // `AVG` in SQL ignora i NULL per definizione, quindi proiettare `double?` e lasciare che
+        // il motore aggreghi conserva **esattamente** la semantica precedente — media sui soli
+        // valori presenti — e restituisce NULL quando non ce ne sono, che `?? 0` traduce nello
+        // stesso zero di prima. Una query invece di due, e nessun passaggio lato client.
+        var avgConfidence =
+            await query.Select(e => e.Confidence).AverageAsync(cancellationToken).ConfigureAwait(false)
+            ?? 0;
 
         return new RagExecutionStats(
             TotalExecutions: totalCount,

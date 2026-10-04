@@ -82,11 +82,25 @@ export function newTestRunId(testId: string): string {
   return `e2e-${cleanId}-${Date.now()}`;
 }
 
+/**
+ * Issue #4054 — `ownerEmail` **CREA** un utente host nuovo; non è «l'email di un owner esistente»
+ * e non riusa nulla (`/seed/library-game` sì, questo no). Un indirizzo già presente risponde
+ * **409** con un messaggio che nomina il campo.
+ *
+ * Deriva l'indirizzo dal `testRunId` (`host-${testRunId}@e2e.test`) invece di condividerne uno
+ * fisso fra spec: le tre `cross-asse-journey-*` usano lo stesso `ANNA_PERSONA.email`, e con
+ * `fullyParallel` + `workers: 2` l'ordine fra spec non è garantito — chi passa da
+ * `/seed/library-game` crea quell'utente per primo e fa fallire questa chiamata. Lo stesso accade
+ * se un `afterEach` non arriva a `cleanupTestEntities`: la riga resta per le run successive.
+ *
+ * Contratto completo: `docs/for-developers/testing/e2e-entity-seeding.md`.
+ */
 export async function seedGameNight(
   page: Page,
   opts: {
     testRunId: string;
     status: GameNightStatus;
+    /** CREA questo utente host: deve essere un indirizzo libero (vedi il doc comment sopra). */
     ownerEmail: string;
     scoringType?: ScoringType;
     rosterCount?: number;
@@ -148,6 +162,10 @@ export async function seedPlayer(
  * a UserLibraryEntry owned by `ownerEmail`. Used by Journey #2/#3 to set up the
  * "user has a game in library" precondition. Cascade-cleaned by
  * `cleanupTestEntities` via DEC-B-8 TestRunId scope.
+ *
+ * Issue #4054 — qui `ownerEmail` è **lookup-or-create**: riusa l'utente se esiste, lo crea
+ * altrimenti, e `ownerId` nella risposta dice quale dei due è stato. È l'opposto di
+ * `seedGameNight`, che lo crea sempre e risponde 409 su un indirizzo già preso.
  */
 export async function seedLibraryGame(
   page: Page,

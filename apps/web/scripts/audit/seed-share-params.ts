@@ -181,6 +181,41 @@ export async function seedShareParams(): Promise<{
     // `PARAM_QUERIES.liveSessionCode`, che prende la sessione più recente.
   });
 
+  await step('sessionId', async () => {
+    // L'aggregato di lifecycle `GameSession` non ha un endpoint di creazione proprio: nasce come
+    // **correlato** quando si avvia una live session legata a un gioco del catalogo
+    // (`StartLiveSessionCommandHandler`, #2587). Quindi i tre passi sono necessari in sequenza —
+    // creare con `gameId`, aggiungere un giocatore, avviare — e saltarne uno non produce la riga.
+    //
+    // Sblocca 14 rotte che il crawler saltava: `/sessions/[id]` e i suoi quattro sotto-percorsi,
+    // `/game-nights/[id]` con due, `/play-records/[id]` con uno, per entrambi i ruoli.
+    const gameId = await anySharedGameId(user);
+    if (!gameId) throw new Error('nessun gioco nel catalogo: non posso creare una sessione');
+
+    const liveId = await post<string>(user, '/api/v1/live-sessions', {
+      gameName: `Audit seed ${stamp}`,
+      gameId,
+    });
+    await post(user, `/api/v1/live-sessions/${liveId}/players`, {
+      displayName: 'Audit',
+      color: 0,
+    });
+    await post(user, `/api/v1/live-sessions/${liveId}/start`);
+    // L'id lo legge la query SQL: la risposta di `/start` è 204 e non lo porta.
+  });
+
+  await step('threadId', async () => {
+    // `/chat/[threadId]` saltava perché `public."ChatThreads"` conteneva un solo thread, di un
+    // altro utente: `GET /api/v1/chat-threads/{id}` rispondeva 403, non 404. Un thread
+    // dell'utente che naviga rende la rotta percorribile per il ruolo `user`; per `admin`
+    // risponderà 403, ed è il limite della mappa unica per due ruoli.
+    const gameId = await anySharedGameId(user);
+    await post(user, '/api/v1/chat-threads', {
+      gameId,
+      title: `Audit seed ${stamp}`,
+    });
+  });
+
   // Nessun invito utente. `POST /api/v1/admin/invitations` restituisce il token in chiaro — il
   // database conserva solo `token_hash` — ma nessuna rotta dell'inventario lo consuma come
   // segmento: arriva a `/setup-account?token=…` come query param, e il crawler percorre path

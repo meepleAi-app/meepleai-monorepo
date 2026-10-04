@@ -37,8 +37,19 @@ export type SqlRunner = (sql: string) => string;
 export const PARAM_QUERIES: Record<string, string> = {
   gameId:
     'SELECT COALESCE((SELECT shared_game_id FROM user_library_entries WHERE shared_game_id IS NOT NULL LIMIT 1), (SELECT id FROM shared_games LIMIT 1))',
-  threadId: 'SELECT id FROM chat_sessions LIMIT 1',
-  sessionId: 'SELECT "Id" FROM game_sessions LIMIT 1',
+  // #4056. Era `chat_sessions`, vuota nello stack locale. `/chat/[threadId]` interroga
+  // `/api/v1/chat-threads/{id}`, la cui tabella è `public."ChatThreads"`.
+  // ⚠️ Il thread appartiene a un utente, e la mappa è una sola per entrambi i ruoli che il
+  // crawler percorre: con il thread dell'utente semplice, la stessa rotta risponde 403 al ruolo
+  // admin. È il limite di design della mappa unica, non un difetto del prodotto.
+  threadId: 'SELECT "Id" FROM public."ChatThreads" ORDER BY "CreatedAt" DESC LIMIT 1',
+  // #4056. Due tabelle con nomi quasi identici, e la query puntava a quella sbagliata:
+  // `game_sessions` (snake_case) è lo storico partite di UserLibrary — colonne
+  // `UserLibraryEntryId`, `PlayedAt`, `DidWin` — e nello stack locale ha zero righe.
+  // L'aggregato di lifecycle è `public."GameSessions"` (PascalCase quotata), ed è quello che
+  // `/sessions/[id]` consuma: `GET /api/v1/sessions/{id}` con un suo id risponde 200, mentre
+  // `/api/v1/game-sessions/{id}` risponde 404.
+  sessionId: 'SELECT "Id" FROM public."GameSessions" ORDER BY "StartedAt" DESC NULLS LAST LIMIT 1',
   userId: 'SELECT "Id" FROM users LIMIT 1',
   // #4056. Era `agent_sessions`, che nello stack locale ha zero righe: la query non falliva, non
   // restituiva nulla, e il parametro restava assente in silenzio. La sorgente verificata è

@@ -106,7 +106,13 @@ const GENERIC_PARAM_SOURCES: Record<string, Array<[prefix: string, source: strin
     ['/hub/games', 'gameId'],
   ],
   token: [
-    ['/invites', 'userInviteToken'],
+    // `/invites/[token]` NON è l'invito utente di `POST /api/v1/admin/invitations`: la pagina
+    // importa `@/lib/api/game-night-invitations` e interroga
+    // `/api/v1/game-nights/invitations/{token}`. Verificato dal crawl, che con un token di invito
+    // utente riportava `404 /api/v1/game-nights/invitations/…` — la rotta era risolta, e risolta
+    // male. Il token di invito utente serve a `/setup-account?token=…`, che il crawler non
+    // percorre perché l'inventario elenca path senza query string.
+    ['/invites', 'gameNightInviteToken'],
     ['/game-nights/shared', 'gameNightShareToken'],
     ['/play-records/shared', 'playRecordShareToken'],
     ['/library/shared', 'libraryShareToken'],

@@ -45,13 +45,12 @@ describe('resolveRouteUrl', () => {
 
 /**
  * #4056. `[token]` e `[code]` sono generici esattamente come `[id]`: lo stesso nome di segmento
- * indica un invito utente, la condivisione di un game-night, il join di una live session, la
+ * indica l'invito a una serata, la condivisione di un game-night, il join di una live session, la
  * condivisione di un play-record o quella di una libreria. Prima solo `[id]` aveva una
  * risoluzione per contesto, quindi queste rotte restavano non risolte e il crawler le saltava.
  */
 describe('resolveRouteUrl — parametri generici oltre [id]', () => {
   const params = {
-    userInviteToken: 'INV',
     gameNightShareToken: 'GNS',
     gameNightInviteToken: 'GNI',
     playRecordShareToken: 'PRS',
@@ -61,7 +60,10 @@ describe('resolveRouteUrl — parametri generici oltre [id]', () => {
   };
 
   it('risolve [token] in base al prefisso, non con un valore unico', () => {
-    expect(resolveRouteUrl('/invites/[token]', params)).toBe('/invites/INV');
+    // `/invites/[token]` prende l'invito a una SERATA, non quello di `admin/invitations`: la
+    // pagina interroga `/api/v1/game-nights/invitations/{token}`. Il crawl lo ha dimostrato
+    // riportando un 404 su quell'endpoint quando le si passava un token di invito utente.
+    expect(resolveRouteUrl('/invites/[token]', params)).toBe('/invites/GNI');
     expect(resolveRouteUrl('/game-nights/shared/[token]', params)).toBe('/game-nights/shared/GNS');
     expect(resolveRouteUrl('/play-records/shared/[token]', params)).toBe(
       '/play-records/shared/PRS'

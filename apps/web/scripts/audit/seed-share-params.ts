@@ -12,9 +12,11 @@
  * esercita quei flussi, quindi un endpoint di condivisione rotto si manifesta qui invece di
  * nascondersi dietro un salto.
  *
- * 🔴 `invitation_tokens` memorizza `token_hash`: il token di invito utente NON è ricavabile dal
- * database per costruzione. Esiste solo nella risposta di `POST /api/v1/admin/invitations`, quindi
- * la mappa dei parametri non può essere soltanto il risultato di query SQL.
+ * 🔴 Due valori non vengono dal database. `play_records."ShareToken"` e gli altri token sì, ma i
+ * token di **invito utente** no: `invitation_tokens` conserva solo `token_hash`, e il valore in
+ * chiaro esiste unicamente nella risposta di `POST /api/v1/admin/invitations`. Quel token non si
+ * semina qui — nessuna rotta dell'inventario lo consuma come segmento — ed è il motivo per cui la
+ * mappa, in generale, non può essere soltanto il risultato di query SQL: vedi la nota in fondo.
  *
  * Spec: docs/for-developers/specs/2026-08-26-full-feature-audit-design.md
  */
@@ -103,8 +105,10 @@ export async function seedShareParams(): Promise<{
     .replace(/[^0-9]/g, '')
     .slice(0, 14);
 
+  // Solo l'utente semplice: tutto ciò che si semina qui è roba sua (la sua libreria, le sue
+  // partite, le sue serate). Serviva anche una sessione admin per l'invito utente, che non si
+  // crea più — vedi la nota in fondo.
   const user = await login(requireCreds('USER'));
-  const admin = await login(requireCreds('ADMIN'));
 
   const step = async (name: string, fn: () => Promise<void>) => {
     try {
@@ -177,15 +181,12 @@ export async function seedShareParams(): Promise<{
     // `PARAM_QUERIES.liveSessionCode`, che prende la sessione più recente.
   });
 
-  await step('userInviteToken', async () => {
-    // L'unico valore che il database non può restituire: memorizza `token_hash`.
-    const dto = await post<{ token: string }>(admin, '/api/v1/admin/invitations', {
-      email: `audit-invite-${stamp}@meepleai.test`,
-      displayName: 'Audit Invitee',
-      role: 'user',
-    });
-    params.userInviteToken = dto.token;
-  });
+  // Nessun invito utente. `POST /api/v1/admin/invitations` restituisce il token in chiaro — il
+  // database conserva solo `token_hash` — ma nessuna rotta dell'inventario lo consuma come
+  // segmento: arriva a `/setup-account?token=…` come query param, e il crawler percorre path
+  // senza query string. Crearlo a ogni esecuzione lascerebbe un utente `Pending` nel database
+  // per un valore che non risolve niente. Quando l'inventario coprirà le rotte con query param,
+  // il passo va riaggiunto — è l'unico token che il DB non può restituire.
 
   return { params, failures };
 }

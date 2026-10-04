@@ -1,6 +1,9 @@
 {
   "name": "@meepleai/web",
   "private": true,
+  "engines": {
+    "node": "^22.22.1 || >=24.11.0"
+  },
   "scripts": {
     "dev": "node ./node_modules/next/dist/bin/next dev -p 3000",
     "dev:visual-docs": "cross-env NODE_OPTIONS=\"--max-old-space-size=16384\" node ./node_modules/next/dist/bin/next dev -p 3000",

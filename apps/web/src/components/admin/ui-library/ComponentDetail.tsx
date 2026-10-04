@@ -33,7 +33,15 @@ const LazyComponentMap = dynamic(
         );
       },
     })),
-  { loading: () => <Skeleton className="h-64 w-full" /> }
+  // 🔴 `ssr: false` è load-bearing, non un'ottimizzazione. `dynamic()` da solo NON è un confine
+  // SSR: in `next/dist/shared/lib/dynamic.js` il ramo `noSSR` scatta solo per
+  // `typeof options.ssr === 'boolean' && !options.ssr`; senza il flag il loader viene invocato
+  // dentro il render del componente, anche sul server. Da qui `component-map.ts` raggiunge
+  // `meeple-info-card` → `PdfViewerModal` → `react-pdf` → `pdfjs-dist`, che a module scope esegue
+  // un polyfill di `Iterator.prototype.join` senza guardia su `typeof Iterator`: su Node 20 quel
+  // global non esiste e la rotta risponde 500 (#4058). Il runtime dell'immagine è Node 20.18.3,
+  // mentre `pdfjs-dist@6.2.108` dichiara `engines: node >=22.13`.
+  { ssr: false, loading: () => <Skeleton className="h-64 w-full" /> }
 );
 
 // ─── Interactive preview (uses showcase story) ────────────────────────────────

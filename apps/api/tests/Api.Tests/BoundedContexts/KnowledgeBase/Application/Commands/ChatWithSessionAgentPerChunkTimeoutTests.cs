@@ -26,6 +26,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 
@@ -60,18 +61,21 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
     [Fact(DisplayName = "T3-AC-1: stalled LLM chunk exceeds per-chunk timeout → LLM_TIMEOUT error event, stream completes gracefully")]
     public async Task Handle_StalledChunk_EmitsLlmTimeoutErrorAndCompletesGracefully()
     {
-        // Arrange: tiny per-chunk timeout (50 ms) so the test finishes quickly.
-        // The fake LLM stream stalls 500 ms — guaranteed to exceed the 50 ms deadline.
-        const double perChunkTimeoutSeconds = 0.05; // 50 ms
+        // #3601: la deadline è su un orologio finto, quindi "50 ms" e "500 ms" sono tempo virtuale e
+        // il test non misura niente di reale. Questo caso era già il verso sicuro — VUOLE che la
+        // deadline scatti, e un runner lento non fa che allungare lo stallo — ma tenerlo sull'orologio
+        // finto lo rende immediato invece di mezzo secondo.
+        const double perChunkTimeoutSeconds = 0.05; // 50 ms virtuali
+        var clock = new FakeTimeProvider();
 
         var llmService = new Mock<ILlmService>();
         llmService
             .Setup(l => l.GenerateCompletionStreamAsync(
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(StalledStream(delayMs: 500));
+            .Returns(StalledStream(clock, stall: TimeSpan.FromMilliseconds(500)));
 
-        var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds);
+        var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds, clock);
         var command = BuildCommand();
 
         var events = new List<RagStreamingEvent>();
@@ -122,36 +126,41 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
         // The invariant under test: TOTAL duration exceeds one chunk deadline, while EVERY
         // individual chunk arrives within it — so the disarm-between-chunks logic must re-arm the
         // deadline after each received chunk. Two constraints, both preserved below:
-        //   chunkCount × chunkDelay > perChunkTimeout   (total trips one deadline's worth)
-        //   chunkDelay              < perChunkTimeout   (no single chunk trips it)
+        //   chunkCount × chunkAdvance > perChunkTimeout   (total trips one deadline's worth)
+        //   chunkAdvance              < perChunkTimeout   (no single chunk trips it)
         //
-        // #3601: this is the only test in the class whose margin shrinks under CI load. The other
-        // two run the safe way round — they WANT a deadline to fire, and a loaded runner only makes
-        // the stall longer. Here load works against us: the original 200 ms deadline vs 80 ms chunks
-        // left just 120 ms of headroom, and a single GC pause or thread-pool scheduling delay was
-        // enough to trip a deadline that should never have fired (observed on PR #3591).
+        // 🔴 #3601, chiusa due volte. La prima volta allargando il margine: da 200 ms di deadline
+        // contro 80 ms di chunk (120 ms di margine) a 1000 contro 25 (975 ms, 40× invece di 2,5×).
+        // Il commento che stava qui dichiarava il limite di quella mitigazione — «does not make it
+        // impossible, the deadline is still real wall-clock» — e aveva ragione: il test è tornato
+        // rosso il 2026-10-04, su una suite cresciuta da 21.365 a 23.680 test.
         //
-        // Stalls of that kind cost roughly a fixed amount of wall-clock, not a proportional one, so
-        // the defence is a bigger ABSOLUTE margin rather than a bigger ratio: 975 ms of headroom per
-        // chunk instead of 120 ms (40× the deadline instead of 2.5×), for ~1.1 s of test time.
+        // Ed è lì il punto che il margine non poteva risolvere: **il carico contro cui questo test
+        // gareggiava era la suite stessa**. Un margine assoluto compra tempo in proporzione inversa
+        // alla crescita della suite, quindi ogni PR che aggiunge test unit avvicinava la ricomparsa.
+        // Allargarlo una terza volta avrebbe comprato un intervallo più corto del secondo.
         //
-        // Honest limit: this makes a spurious failure far less likely, it does not make it
-        // impossible — the deadline is still real wall-clock. Eliminating it outright means driving
-        // the handler's CancelAfter through an injected TimeProvider (see #3601), which is a
-        // refactor of a reliability-critical streaming path and is deliberately not done here.
-        const double perChunkTimeoutSeconds = 1.0; // 1000 ms
-        const int chunkDelayMs = 25;               // 975 ms of headroom per chunk
-        const int chunkCount = 45;                 // 45 × 25 ms = 1125 ms total > 1000 ms deadline
+        // Ora il tempo è VIRTUALE: lo stream fa avanzare un FakeTimeProvider, e la deadline del
+        // handler è armata sullo stesso orologio (`CancellationTokenSource(delay, timeProvider)`
+        // più `CancelAfter`, contratto verificato in CancellationTokenSourceTimeProviderContractTests).
+        // Il test non misura più niente di reale: non può fallire per una pausa GC, e gira in
+        // millisecondi invece di ~1,1 s.
+        const double perChunkTimeoutSeconds = 1.0;                          // 1000 ms virtuali
+        var chunkAdvance = TimeSpan.FromMilliseconds(25);                   // < deadline
+        const int chunkCount = 45;                                          // 45 × 25 = 1125 > 1000
         const string expectedToken = "hello";
+
+        var clock = new FakeTimeProvider();
+        var start = clock.GetUtcNow();
 
         var llmService = new Mock<ILlmService>();
         llmService
             .Setup(l => l.GenerateCompletionStreamAsync(
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(SlowButSteadyStream(delayPerChunkMs: chunkDelayMs, content: expectedToken, chunkCount: chunkCount));
+            .Returns(SlowButSteadyStream(clock, chunkAdvance, content: expectedToken, chunkCount: chunkCount));
 
-        var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds);
+        var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds, clock);
         var command = BuildCommand();
 
         var events = new List<RagStreamingEvent>();
@@ -162,6 +171,25 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
         {
             events.Add(ev);
         }
+
+        // 🔴 Questa asserzione viene prima delle altre due perché senza di essa il test passa per
+        // niente. Con l'orologio finto, uno stream troncato al primo chunk produce comunque «nessun
+        // Error» e «c'è Complete»: le due asserzioni sotto sono soddisfatte da un test che non ha
+        // esercitato la ripetizione. Verificato per perturbazione — spostando l'armo della deadline
+        // fuori dal ciclo (cioè togliendo il riarmo per chunk) le altre due restavano verdi.
+        //
+        // Qui si asserisce ciò che rende il caso significativo: il tempo VIRTUALE accumulato ha
+        // superato una deadline intera mentre nessun intervallo singolo la superava.
+        var elapsed = clock.GetUtcNow() - start;
+        elapsed.Should().Be(chunkAdvance * chunkCount,
+            "lo stream deve essere stato consumato per interno: è l'avanzamento totale a superare " +
+            "la deadline, e se i chunk non arrivano tutti il caso sotto test non si verifica");
+        elapsed.Should().BeGreaterThan(TimeSpan.FromSeconds(perChunkTimeoutSeconds),
+            "la durata TOTALE deve superare una deadline, altrimenti il riarmo non è in gioco");
+
+        events.OfType<RagStreamingEvent>()
+            .Count(e => e.Type == StreamingEventType.Token)
+            .Should().Be(chunkCount, "ogni chunk consegnato deve diventare un token");
 
         // No error — each chunk arrived before its deadline.
         events.Should().NotContain(
@@ -181,9 +209,13 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
     [Fact(DisplayName = "T3-AC-3: client disconnect does NOT emit a LLM_TIMEOUT error event")]
     public async Task Handle_ClientDisconnect_StreamStopsWithoutTimeoutErrorEvent()
     {
-        // per-chunk timeout = 5 s (long), but the client disconnects after ~100 ms.
-        // The handler must stop without emitting LLM_TIMEOUT or LLM_ERROR.
+        // #3601: la deadline resta lunga (5 s virtuali) e non viene mai raggiunta, perché l'orologio
+        // finto non avanza. Il disconnect avviene subito dopo il primo chunk, in un istante deciso
+        // dal test: prima era un `Task.Delay(100).ContinueWith(…)` che sperava che 100 ms reali
+        // cadessero dentro una finestra di 5 s reali — vero quasi sempre, ma per un motivo
+        // ambientale, non per costruzione.
         const double perChunkTimeoutSeconds = 5.0;
+        var clock = new FakeTimeProvider();
 
         using var clientCts = new CancellationTokenSource();
 
@@ -192,15 +224,12 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
             .Setup(l => l.GenerateCompletionStreamAsync(
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Returns(StalledStream(delayMs: 2000)); // would stall 2 s
+            .Returns(DisconnectingStream(clientCts, content: "partial"));
 
-        var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds);
+        var handler = BuildHandler(llmService.Object, perChunkTimeoutSeconds, clock);
         var command = BuildCommand();
 
         var events = new List<RagStreamingEvent>();
-
-        // Fire client disconnect ~100 ms after the test starts.
-        _ = Task.Delay(100).ContinueWith(_ => clientCts.Cancel(), TaskScheduler.Default);
 
         var act = async () =>
         {
@@ -280,30 +309,82 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
     /// Propagates OperationCanceledException so the handler's per-chunk catch can
     /// distinguish a timeout (streamCts fired) from a client disconnect (original ct).
     /// </summary>
+    /// <summary>
+    /// Uno stream che si blocca: fa passare <paramref name="stall"/> sull'orologio del handler e poi
+    /// attende la cancellazione che quella scadenza produce.
+    /// </summary>
+    /// <remarks>
+    /// #3601. <c>clock.Advance</c> fa scattare i timer dovuti <b>sincronamente</b>, quindi al ritorno
+    /// la deadline del handler è già scattata e il token linkato è già cancellato: la
+    /// <c>Task.Delay(Infinite, ct)</c> sotto solleva subito, senza attendere tempo reale. Non si
+    /// cattura l'eccezione — deve arrivare a <c>MoveNextAsync()</c>, che è il punto in cui il handler
+    /// distingue scadenza e disconnessione.
+    /// </remarks>
     private static async IAsyncEnumerable<StreamChunk> StalledStream(
-        int delayMs,
+        FakeTimeProvider clock,
+        TimeSpan stall,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // Do NOT catch — let the OperationCanceledException propagate to MoveNextAsync().
-        await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
+        clock.Advance(stall);
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
         yield break;
     }
 
     /// <summary>
-    /// Yields <paramref name="chunkCount"/> content chunks, each after
-    /// <paramref name="delayPerChunkMs"/> ms, then a final usage chunk.
+    /// Uno stream che si disconnette: consegna un chunk, poi cancella il token del client.
     /// </summary>
+    /// <remarks>
+    /// #3601. Sostituisce un <c>Task.Delay(100).ContinueWith(_ =&gt; clientCts.Cancel())</c>, che
+    /// sperava che 100 ms reali cadessero dentro una finestra di 5 s reali. Qui il disconnect avviene
+    /// in un istante deciso dal test — dopo il primo chunk — e non da quando il thread pool pianifica
+    /// una continuazione.
+    /// </remarks>
+    private static async IAsyncEnumerable<StreamChunk> DisconnectingStream(
+        CancellationTokenSource clientCts,
+        string content,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        yield return new StreamChunk(Content: content);
+
+        await clientCts.CancelAsync().ConfigureAwait(false);
+        await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken).ConfigureAwait(false);
+        yield break;
+    }
+
+    /// <summary>
+    /// Consegna <paramref name="chunkCount"/> chunk, facendo passare
+    /// <paramref name="advancePerChunk"/> sull'orologio del handler prima di ognuno, poi il chunk
+    /// finale con l'uso.
+    /// </summary>
+    /// <remarks>
+    /// #3601. 🔴 Il tempo qui è VIRTUALE, e questo è il fix: prima c'era un
+    /// <c>Task.Delay(delayPerChunkMs)</c> reale che gareggiava con una deadline reale, e il margine
+    /// era l'unica difesa. Un margine è una mitigazione con una vita media — il carico contro cui
+    /// questo test gareggiava è la suite stessa, che cresce a ogni PR — e infatti il test è tornato
+    /// rosso su una suite passata da 21.365 a 23.680 test.
+    ///
+    /// <para>
+    /// L'ordine conta: il handler arma la deadline PRIMA di <c>MoveNextAsync</c>, l'avanzamento
+    /// avviene DENTRO, e il disarmo DOPO che il chunk è arrivato. Quindi ogni intervallo si misura
+    /// da un armo fresco, ed è per questo che la somma può superare la deadline mentre nessun
+    /// intervallo singolo la supera.
+    /// </para>
+    /// </remarks>
     private static async IAsyncEnumerable<StreamChunk> SlowButSteadyStream(
-        int delayPerChunkMs,
+        FakeTimeProvider clock,
+        TimeSpan advancePerChunk,
         string content,
         int chunkCount,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         for (int i = 0; i < chunkCount; i++)
         {
-            await Task.Delay(delayPerChunkMs, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            clock.Advance(advancePerChunk);
             yield return new StreamChunk(Content: content);
         }
+
+        await Task.CompletedTask.ConfigureAwait(false);
         yield return new StreamChunk(Content: null, Usage: new LlmUsage(10, 5, 15), IsFinal: true);
     }
 
@@ -334,7 +415,8 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
     /// </summary>
     private static ChatWithSessionAgentCommandHandler BuildHandler(
         ILlmService llmService,
-        double perChunkTimeoutSeconds)
+        double perChunkTimeoutSeconds,
+        TimeProvider? timeProvider = null)
     {
         var playerId = Guid.NewGuid();
         var initialState = GameState.Create(
@@ -473,6 +555,7 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
                 Options.Create(new CopyrightLeakGuardOptions()),
                 NullLogger<GroundedAnswerService>.Instance),
             liveSessionStreamGateway: gateway.Object,
-            sessionAgentOptions: sessionAgentOptions);
+            sessionAgentOptions: sessionAgentOptions,
+            timeProvider: timeProvider);
     }
 }

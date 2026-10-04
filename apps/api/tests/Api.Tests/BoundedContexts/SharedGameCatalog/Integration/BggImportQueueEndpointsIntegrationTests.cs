@@ -24,6 +24,51 @@ using FluentAssertions;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 
 /// <summary>
+/// La fixture di <see cref="BggImportQueueEndpointsIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. L'host spegne il worker di
+/// background, registra le policy del catalogo, uno schema di autenticazione di test e un doppio
+/// dell'API BGG: tutte cose senza stato osservabile, che quindi possono valere per la classe.
+/// </para>
+/// <para>
+/// 🔴 Il client, invece, NON e' quello condiviso della fixture: questa classe scrive
+/// <c>DefaultRequestHeaders</c>, e su un client per classe gli header si accumulerebbero a ogni
+/// test. Il client si crea per test dall'host gia' avviato, dove non costa un host.
+/// </para>
+/// </remarks>
+public sealed class BggImportQueueEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "bggendpoints_test")
+{
+    protected override Dictionary<string, string?>? ExtraConfiguration => new()
+    {
+        ["BggImportQueue:Enabled"] = "false", // il worker di background non deve girare nei test
+    };
+
+    protected override WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory) =>
+        factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSharedGameCatalogPolicies();
+
+                // TestAuthenticationHandler fornisce un'identita' Admin, che soddisfa le
+                // RequireRole("SuperAdmin", "Admin") inline negli endpoint.
+                services.AddAuthentication(TestAuthenticationHandler.SchemeName)
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                        TestAuthenticationHandler.SchemeName, _ => { });
+
+                // Doppio dell'API BGG: nessuna chiamata di rete vera.
+                services.RemoveAll(typeof(Api.Services.IBggApiService));
+                var mockBggApi = new Mock<Api.Services.IBggApiService>();
+                services.AddScoped(_ => mockBggApi.Object);
+            });
+        });
+}
+
+/// <summary>
 /// Integration tests for BGG Import Queue HTTP endpoints.
 /// Issue #3541: BGG Import Queue Service
 /// Tests: Admin auth, CQRS flow, status endpoint, enqueue/batch, cancel, retry, SSE streaming
@@ -31,10 +76,10 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Integration;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
+public sealed class BggImportQueueEndpointsIntegrationTests
+    : IClassFixture<BggImportQueueEndpointsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly BggImportQueueEndpointsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
@@ -50,51 +95,27 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
         Converters = { new JsonStringEnumConverter() }
     };
 
-    public BggImportQueueEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public BggImportQueueEndpointsIntegrationTests(BggImportQueueEndpointsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"bggendpoints_test_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
+    // #4050. Host, configurazione e doppi vengono dalla fixture, pagati una volta per classe; qui
+    // restano un database clonato dal template (gia' migrato), il seeding dell'admin e un client
+    // nuovo per gli header.
+    //
+    // 🔴 BeginTestAsync DEVE precedere lo scope, altrimenti l'admin finisce nel database di avvio
+    // mentre le richieste leggono quello per test: ogni endpoint risponderebbe 401/403 e
+    // sembrerebbe un problema di autorizzazione.
     public async ValueTask InitializeAsync()
     {
-        // Create isolated test database
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
-        // Create WebApplicationFactory with extra config and test-specific mocks
-        _factory = IntegrationWebApplicationFactory.Create(
-            connectionString,
-            extraConfig: new Dictionary<string, string?>
-            {
-                ["BggImportQueue:Enabled"] = "false" // Disable background worker for tests
-            })
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    // Register authorization policies
-                    services.AddSharedGameCatalogPolicies();
-
-                    // Use TestAuthenticationHandler to provide an Admin user identity,
-                    // satisfying inline RequireRole("SuperAdmin", "Admin") policies
-                    services.AddAuthentication(TestAuthenticationHandler.SchemeName)
-                        .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                            TestAuthenticationHandler.SchemeName, _ => { });
-
-                    // Mock BGG API service to avoid real API calls
-                    services.RemoveAll(typeof(Api.Services.IBggApiService));
-                    var mockBggApi = new Mock<Api.Services.IBggApiService>();
-                    services.AddScoped(_ => mockBggApi.Object);
-                });
-            });
-
-        // Initialize database and seed test data
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
 
-            // Seed test admin user
             var adminUser = new UserEntity
             {
                 Id = TestAdminUserId,
@@ -105,21 +126,20 @@ public sealed class BggImportQueueEndpointsIntegrationTests : IAsyncLifetime
             };
             dbContext.Set<UserEntity>().Add(adminUser);
             await dbContext.SaveChangesAsync();
-
         }
 
+        // Client per test, non quello condiviso: gli header di default su un client per classe si
+        // accumulerebbero a ogni test (DefaultRequestHeaders.Add non sostituisce, aggiunge).
         _client = _factory.CreateClient();
-
-        // Set admin auth headers for TestAuthenticationHandler
         _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.UserIdHeader, TestAdminUserId.ToString());
         _client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeader, "Admin");
     }
 
-    public async ValueTask DisposeAsync()
+    // Il client e' di questa istanza e si dispone; host e database sono della fixture.
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     #region GET /status Endpoint Tests

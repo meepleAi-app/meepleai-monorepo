@@ -13,43 +13,48 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>
+/// La fixture di <see cref="RunMechanicCardAutoSuppressionHandlerTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class RunMechanicCardAutoSuppressionHandlerTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "me534_handler");
+
+/// <summary>
 /// Integration tests for the #534 auto-suppression batch command, sent through the real MediatR pipeline:
 /// threshold breach → suppress + audit + counters; AND-condition; count-floor; kill-switch; config override.
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class RunMechanicCardAutoSuppressionHandlerTests : IAsyncLifetime
+public sealed class RunMechanicCardAutoSuppressionHandlerTests
+    : IClassFixture<RunMechanicCardAutoSuppressionHandlerTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly RunMechanicCardAutoSuppressionHandlerTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private Guid _userId;
 
-    public RunMechanicCardAutoSuppressionHandlerTests(SharedTestcontainersFixture fixture)
+    public RunMechanicCardAutoSuppressionHandlerTests(RunMechanicCardAutoSuppressionHandlerTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"me534_handler_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var conn = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(conn);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
         (_userId, _) = await TestSessionHelper.CreateUserSessionAsync(db, Guid.NewGuid());
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory is not null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     private async Task<AutoSuppressionResult> RunAsync()
     {

@@ -22,39 +22,47 @@ namespace Api.Tests.Integration.Agents;
 /// Verifies <c>GET /api/v1/agents</c> wraps the existing <c>GetAllAgentsQueryHandler</c>
 /// MediatR handler over HTTP with proper authentication and filter support.
 /// </summary>
+/// <summary>
+/// La fixture di <see cref="AgentsEndpointsIntegrationTests"/>: host una volta, database per test.
+/// </summary>
+/// <remarks>
+/// #4050 — questa classe NON può usare <c>IntegrationHostFixture</c>, che condivide anche il
+/// database: <c>GET /api/v1/agents</c> è una lista <b>globale</b> di agent definition, e due dei suoi
+/// test asseriscono <c>BeEmpty()</c> e <c>HaveCount(2)</c> dopo averne seminati due. Con un database
+/// condiviso vedrebbero le righe degli altri test. Resta però il guadagno grosso: l'host.
+/// </remarks>
+public sealed class AgentsEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "agents_endpoints");
+
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "KnowledgeBase")]
-public sealed class AgentsEndpointsIntegrationTests : IAsyncLifetime
+public sealed class AgentsEndpointsIntegrationTests
+    : IClassFixture<AgentsEndpointsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly AgentsEndpointsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public AgentsEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public AgentsEndpointsIntegrationTests(AgentsEndpointsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"agents_endpoints_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
+    // #4050. Prima questo metodo costruiva un host per test: xUnit istanzia la classe una volta per
+    // METODO, quindi i ~19,2s di costruzione si pagavano 35 volte — 20,5 dei 70,6 minuti della
+    // collection Integration-GroupC, la più grossa dello shard Core e quindi il suo wall-clock.
+    // Ora l'host viene dalla fixture (una volta) e qui resta solo un database clonato dal template.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-        _client = _factory.CreateClient();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe ai test
+    // successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public async Task GetAgents_WithoutAuth_ReturnsUnauthorized()

@@ -29,6 +29,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 /// <see cref="GetSharedGameByIdQueryHandlerTests"/> (same fixture/mock/seed pattern).
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Collection("SharedGameDetailMetrics")]
 public class GetSharedGameByIdQueryHandlerCoverFocalTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;

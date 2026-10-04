@@ -18,6 +18,22 @@ using Xunit;
 namespace Api.Tests.Integration.ToolkitMarketplace;
 
 /// <summary>
+/// La fixture di <see cref="ToolkitMarketplaceEndpointsIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// I test interrogano il marketplace per identificatori che seminano loro stessi, senza asserire su
+/// conteggi globali, quindi un solo database per la classe basta.
+/// </para>
+/// <para>
+/// #4050. Il verdetto di isolamento e' stato stabilito leggendo gli ENDPOINT, non i nomi dei
+/// test, e confermato da una refutazione ostile che cercava il falso negativo.
+/// </para>
+/// </remarks>
+public sealed class ToolkitMarketplaceEndpointsIntegrationTestsHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "toolkit_marketplace");
+
+/// <summary>
 /// Integration tests for the Wave 3 Phase 2 toolkit marketplace endpoints
 /// (Issue #805 / PR #732 §5.3.1, §5.3.2, §5.3.5):
 ///
@@ -44,36 +60,31 @@ namespace Api.Tests.Integration.ToolkitMarketplace;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameToolkit")]
 [Trait("Wave", "3-Phase-2")]
-public sealed class ToolkitMarketplaceEndpointsIntegrationTests : IAsyncLifetime
+public sealed class ToolkitMarketplaceEndpointsIntegrationTests
+    : IClassFixture<ToolkitMarketplaceEndpointsIntegrationTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly ToolkitMarketplaceEndpointsIntegrationTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public ToolkitMarketplaceEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public ToolkitMarketplaceEndpointsIntegrationTests(ToolkitMarketplaceEndpointsIntegrationTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"toolkit_marketplace_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
-    public async ValueTask InitializeAsync()
+    // #4050. Host E database vengono dalla fixture, pagati una volta per classe. Prima
+    // questo metodo li costruiva per OGNI test, perche' xUnit istanzia la classe di test
+    // una volta per METODO: ~24,4s moltiplicati per il numero di test.
+    public ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-        _client = _factory.CreateClient();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
+        return ValueTask.CompletedTask;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe
+    // ai test successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────
     //  GET /api/v1/toolkits/{toolkitId}  (PR #732 §5.3.1)

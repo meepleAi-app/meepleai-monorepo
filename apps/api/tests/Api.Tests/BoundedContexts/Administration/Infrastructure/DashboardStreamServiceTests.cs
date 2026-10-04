@@ -21,6 +21,51 @@ public class DashboardStreamServiceTests
         _service = new DashboardStreamService(NullLogger<DashboardStreamService>.Instance);
     }
 
+    /// <summary>
+    /// Attende che <paramref name="expected"/> subscriber di <paramref name="userId"/> si siano
+    /// REGISTRATI, invece di indovinare quando succederà.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 🔴 Sostituisce un <c>await Task.Delay(50)</c>. <c>SubscribeToDashboardEvents</c> è un
+    /// <c>async IAsyncEnumerable</c>: il corpo che inserisce il writer nei pool non gira
+    /// all'invocazione ma alla prima <c>MoveNextAsync</c> del consumer — un istante deciso dal thread
+    /// pool. Con 22.683 test in un processo il pool è saturo, 50 ms non bastano, il publish parte
+    /// prima della registrazione e il test fallisce per un difetto che non esiste.
+    /// </para>
+    /// <para>
+    /// Un <c>TaskCompletionSource</c> segnalato all'ingresso del <c>Task.Run</c> non basta, ed era
+    /// già presente in uno di questi test: segnala che il task è partito, non che la registrazione è
+    /// avvenuta, perché la <c>SetResult</c> precede l'<c>await foreach</c>.
+    /// </para>
+    /// <para>
+    /// La forma è quella di #3711: sincronizzare sullo stato osservabile, non allargare l'attesa.
+    /// Il budget serve a non appendere la suite se la registrazione non arriva MAI; il messaggio
+    /// distingue le due cose, perché un timeout muto farebbe sembrare un bug del publish ciò che è
+    /// un subscriber che non si è registrato.
+    /// </para>
+    /// </remarks>
+    private async Task WaitForSubscriberCountAsync(Guid userId, int expected)
+    {
+        var budget = TimeSpan.FromSeconds(10);
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+
+        int actual;
+        while ((actual = _service.GetSubscriberCount(userId)) < expected)
+        {
+            if (elapsed.Elapsed > budget)
+            {
+                throw new TimeoutException(
+                    $"L'utente {userId} non ha raggiunto {expected} subscriber entro " +
+                    $"{budget.TotalSeconds:0}s (osservati: {actual}). Il subscriber non si è " +
+                    "registrato: il corpo dell'IAsyncEnumerable non è mai partito, oppure il task " +
+                    "della sottoscrizione è morto prima della prima MoveNextAsync.");
+            }
+
+            await Task.Yield();
+        }
+    }
+
     [Fact]
     public async Task SubscribeToDashboardEvents_CreatesChannel_ReturnsAsyncEnumerable()
     {
@@ -82,7 +127,7 @@ public class DashboardStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForSubscriberCountAsync(userId, 1);
 
         // Act
         var publishedEvent = new DashboardStatsUpdatedEvent
@@ -137,7 +182,8 @@ public class DashboardStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForSubscriberCountAsync(user1Id, 1);
+        await WaitForSubscriberCountAsync(user2Id, 1);
 
         // Act
         var publishedEvent = new DashboardStatsUpdatedEvent
@@ -182,10 +228,10 @@ public class DashboardStreamServiceTests
         }, cts.Token);
 
         // Second user subscription - should NOT receive the event
-        var otherSubscriptionStarted = new TaskCompletionSource<bool>();
+        // #3711: il TaskCompletionSource che stava qui segnalava l'ingresso nel Task.Run, non la
+        // registrazione del subscriber, quindi non sincronizzava niente. Rimosso.
         var otherSubscriptionTask = Task.Run(async () =>
         {
-            otherSubscriptionStarted.SetResult(true);
             await foreach (var evt in _service.SubscribeToDashboardEvents(otherUserId, cts.Token))
             {
                 if (evt is DashboardNotificationEvent notification)
@@ -196,7 +242,8 @@ public class DashboardStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForSubscriberCountAsync(targetUserId, 1);
+        await WaitForSubscriberCountAsync(otherUserId, 1);
 
         // Act - publish to target user only
         var notification = new DashboardNotificationEvent
@@ -237,7 +284,7 @@ public class DashboardStreamServiceTests
         }, cts.Token);
 
         // Act
-        await Task.Delay(50);
+        await WaitForSubscriberCountAsync(userId, 1);
         await cts.CancelAsync();
 
         // Assert
@@ -266,7 +313,7 @@ public class DashboardStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForSubscriberCountAsync(userId, 1);
 
         // Act
         var activity = new DashboardActivityEvent
@@ -306,7 +353,7 @@ public class DashboardStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(50);
+        await WaitForSubscriberCountAsync(userId, 1);
 
         // Act
         var sessionUpdate = new DashboardSessionUpdatedEvent

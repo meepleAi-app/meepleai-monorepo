@@ -9,6 +9,19 @@ using Xunit;
 namespace Api.Tests.Integration.Routing;
 
 /// <summary>
+/// La fixture di <see cref="NoDuplicateRouteTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class NoDuplicateRouteTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "dup_routes");
+
+/// <summary>
 /// Regression guard for duplicate route registrations.
 ///
 /// Two endpoints registered on the same (method, template) do not fail at startup:
@@ -25,30 +38,26 @@ namespace Api.Tests.Integration.Routing;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
-public sealed class NoDuplicateRouteTests : IAsyncLifetime
+public sealed class NoDuplicateRouteTests
+    : IClassFixture<NoDuplicateRouteTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly NoDuplicateRouteTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public NoDuplicateRouteTests(SharedTestcontainersFixture fixture)
+    public NoDuplicateRouteTests(NoDuplicateRouteTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"dup_routes_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
         _ = _factory.Services; // force host build so the EndpointDataSource is populated
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     [Fact]
     public void NoRouteTemplate_IsRegisteredTwiceForTheSameHttpMethod()

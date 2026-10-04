@@ -84,6 +84,11 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
     protected IntegrationHostFixture(SharedTestcontainersFixture shared, string databasePrefix)
     {
         _shared = shared;
+        // Qui non c'è suffisso: il nome è prefisso + GUID. Il budget è quindi più generoso che in
+        // SharedHostPerTestDatabaseFixture, ma il limite dei 63 byte è lo stesso e vale controllarlo
+        // dove il nome nasce — vedi TestDatabaseName per cosa rompe un troncamento.
+        TestDatabaseName.ValidatePrefix(databasePrefix, longestSuffixLength: 0, nameof(databasePrefix));
+
         _databaseName = $"{databasePrefix}_{Guid.NewGuid():N}";
     }
 

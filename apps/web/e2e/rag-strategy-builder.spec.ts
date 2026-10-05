@@ -20,7 +20,11 @@ import { isBackendReachable, NO_BACKEND_SKIP_REASON } from './_helpers/backendGu
 
 // Test configuration
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// #4059: `NEXT_PUBLIC_API_URL` non e' definita per il runner Playwright — i quattro
+// workflow E2E la scrivono in `infra/env/web.env.dev`, che e' l'env del CONTAINER, non
+// quello del processo che esegue questo spec. Funzionava solo per il fallback. Il nome
+// canonico e' quello usato dagli altri spec (182 occorrenze contro 2).
+const API_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 // Helper: Login as admin
 async function loginAsAdmin(page: Page): Promise<void> {

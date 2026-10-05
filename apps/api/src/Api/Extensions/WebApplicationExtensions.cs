@@ -267,6 +267,18 @@ internal static class WebApplicationExtensions
         });
     }
 
+    /// <summary>
+    /// ⚠️ NON REGISTRATA — questo metodo non e' chiamato da nessuno.
+    /// <c>grep -rn "AddCorsServices" --include=*.cs .</c> trova solo questa definizione, e la
+    /// policy <c>"web"</c> che <c>app.UseCors("web")</c> applica e' quella dichiarata in
+    /// <c>Program.cs</c>. Le due copie sono anche DIVERGENTI: questa ha <c>X-API-Key</c> e
+    /// quella viva no, quella viva ha <c>X-Requested-With</c> (#4059) e questa no.
+    ///
+    /// Scritto esplicitamente perche' la copia morta e' una trappola: correggere CORS qui non ha
+    /// alcun effetto osservabile, ed e' il giro che #4059 ha fatto prima di accorgersene. Se
+    /// questo metodo serve, va collegato e Program.cs va svuotato; fino a quel momento la
+    /// sorgente di verita' e' Program.cs.
+    /// </summary>
     public static IServiceCollection AddCorsServices(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -307,7 +319,8 @@ internal static class WebApplicationExtensions
                         "X-Correlation-ID",
                         "X-API-Key",
                         "traceparent",  // W3C Trace Context propagation
-                        "tracestate"    // W3C Trace Context state
+                        "tracestate",   // W3C Trace Context state
+                        "X-Requested-With" // #4059: SignalR negotiate (hub cross-origin)
                     )
                     .AllowAnyMethod()
                     .AllowCredentials()

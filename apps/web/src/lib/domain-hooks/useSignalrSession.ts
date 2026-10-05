@@ -7,7 +7,7 @@
  * Populates the live-session-store on incoming events.
  * Exposes methods to send score proposals and session signals.
  *
- * Hub: /hubs/game-state
+ * Hub: /hubs/gamestate (senza trattino — e' il path che il backend mappa, vedi sotto)
  * Requires: @microsoft/signalr
  */
 
@@ -21,6 +21,7 @@ import {
 } from '@microsoft/signalr';
 
 import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
+import { getHubBase } from '@/lib/api/core/httpClient';
 import { logger } from '@/lib/logger';
 import {
   useLiveSessionStore,
@@ -85,8 +86,29 @@ export function useSignalRSession(sessionId: string | null): UseSignalRSessionRe
   useEffect(() => {
     if (!sessionId) return;
 
+    // 🔴 Due difetti indipendenti in una riga, ciascuno sufficiente da solo a rendere la
+    // sessione live priva di eventi in tempo reale. Qui c'era `.withUrl('/hubs/game-state')`.
+    //
+    //   1. **Il path non esiste.** Il backend mappa un solo hub, `/hubs/gamestate` SENZA
+    //      trattino (`Program.cs`: `app.MapHub<GameStateHub>("/hubs/gamestate")`).
+    //   2. **L'URL era relativo**, quindi risolveva sull'origine del frontend, dove non c'e'
+    //      ne' proxy ne' rewrite per `/hubs` — a differenza di `/api/v1/*`. Vedi `getHubBase`.
+    //
+    // Misurato con tre richieste che triangolano le due cause:
+    //   :3000/hubs/game-state/negotiate -> 404 (origine sbagliata E path sbagliato)
+    //   :8080/hubs/game-state/negotiate -> 404 (origine giusta, path sbagliato)
+    //   :8080/hubs/gamestate/negotiate  -> 200 con connectionToken
+    //
+    // Il sintomo non era un errore visibile: il `.catch` in fondo a questo effetto registra
+    // `setConnected(false)` e logga, quindi la sessione live risultava solo «non connessa» e
+    // DisputeResolved / SessionPaused / SessionResumed non arrivavano mai.
+    //
+    // Perche' nessun test lo vedeva: `__tests__/useSignalrSession.test.ts` sostituisce
+    // `HubConnectionBuilder` per intero con un mock il cui `withUrl` e' una spia di cui non si
+    // asserisce mai l'argomento. Il test esercita la logica del hook e NON PUO' osservare un
+    // URL sbagliato. L'asserzione ora c'e'.
     const conn = new HubConnectionBuilder()
-      .withUrl('/hubs/game-state')
+      .withUrl(`${getHubBase()}/hubs/gamestate`, { withCredentials: true })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Warning)
       .build();

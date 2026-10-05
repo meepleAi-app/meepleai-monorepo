@@ -24,15 +24,25 @@ internal interface IGameSessionRepository : IRepository<GameSession, Guid>
     Task<IReadOnlyList<GameSession>> FindByPlayerNameAsync(string playerName, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Finds all active sessions (Setup, InProgress, Paused) with pagination.
+    /// Finds the OWNER'S active sessions (Setup, InProgress, Paused) with pagination.
+    ///
+    /// <para>🔴 Issue #4080: <paramref name="ownerUserId"/> is required and has no default.
+    /// This method used to take only pagination, so <c>GET /api/v1/sessions/active</c> handed
+    /// every user's active sessions to anyone authenticated. An optional owner would restore
+    /// that fail-open path for any caller that omits it.</para>
+    ///
+    /// <para>Ownership is <c>CreatedByUserId</c> — the only user link on this aggregate; see
+    /// <c>GetActiveSessionsQuery</c> for why participation lives on <c>LiveGameSession</c>.
+    /// Sessions whose <c>CreatedByUserId</c> is NULL (the column is nullable) belong to nobody
+    /// and are therefore returned to nobody.</para>
     /// </summary>
-    Task<IReadOnlyList<GameSession>> FindActiveAsync(int? limit = null, int? offset = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GameSession>> FindActiveAsync(Guid ownerUserId, int? limit = null, int? offset = null, CancellationToken cancellationToken = default);
 
-    /// <summary>
-    /// Counts all active sessions.
-    /// Issue #2755: Required for paginated response.
-    /// </summary>
-    Task<int> CountActiveAsync(CancellationToken cancellationToken = default);
+    // #4080: the unscoped `CountActiveAsync()` was removed rather than given an owner
+    // parameter. Its only caller was the paginated endpoint fixed in that issue, and an
+    // unscoped count left in this interface is a fail-open waiting for its next caller —
+    // it would both advertise unreachable pages and leak how many sessions exist overall.
+    // Callers that need a per-user count use CountActiveByUserIdAsync below (#3070).
 
     /// <summary>
     /// Finds session history (Completed, Abandoned) with filters and pagination.

@@ -258,8 +258,12 @@ internal static class GameEndpoints
         .Produces<PaginatedSessionsResponseDto>(200)
         .Produces(401)
         .WithTags("Sessions")
-        .WithSummary("Get all active sessions")
-        .WithDescription("Returns paginated list of all currently active game sessions across all games. Supports limit and offset query parameters. Requires authentication.");
+        .WithSummary("Get the caller's active sessions")
+        // #4080: this used to say "all currently active game sessions across all games", and
+        // the handler honoured it — any authenticated account, including one created seconds
+        // earlier, received every user's sessions with their playerName, notes and scoreData.
+        // Admins who need the cross-user view already have GET /api/v1/admin/sessions.
+        .WithDescription("Returns a paginated list of the authenticated caller's currently active game sessions (Setup, InProgress, Paused), across the games they created sessions for. Supports limit and offset query parameters. Requires authentication.");
 
         // Get session history (with filters and pagination)
         group.MapGet("/sessions/history", HandleGetSessionHistory)
@@ -570,10 +574,18 @@ internal static class GameEndpoints
     private static async Task<IResult> HandleGetActiveSessions(
         [FromQuery] int? limit,
         [FromQuery] int? offset,
+        HttpContext httpContext,
         IMediator mediator,
                 CancellationToken ct)
     {
-        var query = new GetActiveSessionsQuery(Limit: limit, Offset: offset);
+        // #4080: scope to the caller. Without this the query carried no identity at all.
+        var userId = httpContext.User.GetUserId();
+        if (userId == Guid.Empty)
+        {
+            return Results.Unauthorized();
+        }
+
+        var query = new GetActiveSessionsQuery(OwnerUserId: userId, Limit: limit, Offset: offset);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         return Results.Ok(result);

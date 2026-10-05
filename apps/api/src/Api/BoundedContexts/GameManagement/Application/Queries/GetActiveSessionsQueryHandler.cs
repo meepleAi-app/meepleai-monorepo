@@ -29,7 +29,13 @@ internal class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQu
         if (query.Offset.HasValue && query.Offset.Value < 0)
             throw new ArgumentException("Offset must be non-negative", nameof(query));
 
+        // #4080: an empty owner would mean "no filter" downstream, which is exactly the
+        // fail-open the issue is about. Reject it here rather than querying unscoped.
+        if (query.OwnerUserId == Guid.Empty)
+            throw new ArgumentException("OwnerUserId is required", nameof(query));
+
         var sessions = await _sessionRepository.FindActiveAsync(
+            ownerUserId: query.OwnerUserId,
             limit: query.Limit,
             offset: query.Offset,
             cancellationToken: cancellationToken
@@ -37,8 +43,13 @@ internal class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQu
 
         var sessionDtos = sessions.Select(s => s.ToDto()).ToList();
 
-        // Get total count for pagination
-        var totalCount = await _sessionRepository.CountActiveAsync(cancellationToken).ConfigureAwait(false);
+        // #4080: the count must be scoped too. An unscoped total would advertise pages the
+        // caller cannot reach, and would still leak how many sessions exist overall.
+        // Reuses the per-user count introduced for quota enforcement (#3070): same
+        // CreatedByUserId + active-status filter, so count and page cannot disagree.
+        var totalCount = await _sessionRepository
+            .CountActiveByUserIdAsync(query.OwnerUserId, cancellationToken)
+            .ConfigureAwait(false);
 
         var limit = query.Limit ?? 20;
         var offset = query.Offset ?? 0;

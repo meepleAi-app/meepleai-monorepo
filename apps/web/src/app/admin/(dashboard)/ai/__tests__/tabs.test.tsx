@@ -144,6 +144,62 @@ describe('ModelsTab', () => {
     render(<ModelsTab />);
     expect(await screen.findByText('No AI models configured')).toBeInTheDocument();
   });
+
+  // 🔴 #4059 — un errore di caricamento deve essere DISTINGUIBILE da «non ci sono modelli».
+  //
+  // Il difetto: `.catch(() => {})` cancellava l'errore e il tab mostrava lo stesso schermo
+  // dello stato vuoto. Il backend mandava `models`/`totalCount` dove lo schema del client
+  // attende `items`/`total`, quindi la validazione falliva — mentre la rotta rispondeva 200
+  // con 6 modelli. Misurato in Chromium su quattro pagine admin: errore di schema in console
+  // su tutte e quattro, nessun errore a schermo su nessuna.
+  //
+  // L'asserzione che conta e' la SECONDA: senza di essa il test passerebbe anche se il ramo
+  // d'errore venisse reso oltre lo stato vuoto, cioe' senza distinguere i due casi.
+  it('mostra un errore a schermo quando il caricamento fallisce, e NON lo stato vuoto', async () => {
+    mocks.getAiModels.mockRejectedValueOnce(
+      new Error('Schema validation failed: Response validation failed for /api/v1/admin/ai-models')
+    );
+
+    render(<ModelsTab />);
+
+    const alert = await screen.findByTestId('models-tab-error');
+    expect(alert).toHaveTextContent(/Impossibile caricare i modelli AI/);
+    expect(alert).toHaveTextContent(/Schema validation failed/);
+    expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
+  });
+
+  it('legge `items`, cioe` la forma che lo schema del client garantisce', async () => {
+    // Il controllo al rovescio del test sopra: con una risposta VALIDA il tab deve mostrare i
+    // modelli, non l'errore. Senza questo, un componente che rendesse sempre il ramo d'errore
+    // passerebbe il test precedente.
+    //
+    // ⚠️ `items` e` la forma che `PagedAiModelsSchema` attende, NON quella che il backend
+    // manda oggi: sul filo arrivano `models`/`totalCount`, e dentro l'array la divergenza e`
+    // strutturale (6 campi obbligatori dello schema non esistono affatto). Quel disallineamento
+    // resta aperto in #4059 voce 4, perche` scegliere quale forma sia quella giusta e` una
+    // decisione di contratto — questo test non la anticipa, usa il contratto dichiarato.
+    mocks.getAiModels.mockResolvedValueOnce({
+      items: [
+        {
+          id: 'm-1',
+          name: 'gpt-test',
+          provider: 'openai',
+          status: 'active',
+          isPrimary: false,
+          usage: { totalRequests: 0, totalTokens: 0, totalCost: 0 },
+        },
+      ],
+      total: 1,
+      page: 1,
+      pageSize: 20,
+    });
+
+    render(<ModelsTab />);
+
+    expect(await screen.findByText('gpt-test')).toBeInTheDocument();
+    expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('models-tab-error')).not.toBeInTheDocument();
+  });
 });
 
 describe('RequestsTab', () => {

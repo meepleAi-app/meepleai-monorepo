@@ -12,15 +12,31 @@ import type { AiModelDto } from '@/lib/api/schemas';
 export function ModelsTab() {
   const [models, setModels] = useState<AiModelDto[]>([]);
   const [loading, setLoading] = useState(true);
+  // 🔴 #4059 — l'errore deve arrivare a schermo, non solo in console.
+  //
+  // Qui c'era `.catch(() => {})`: lo schema del client rifiutava la risposta (il backend
+  // mandava `models`/`totalCount` dove `PagedAiModelsSchema` attende `items`/`total`) e questo
+  // catch cancellava l'eccezione. Risultato: un elenco vuoto identico a «non ci sono modelli»,
+  // mentre la rotta rispondeva **200 con 6 modelli**. Misurato in Chromium su quattro pagine
+  // admin: errore di schema in console su tutte e quattro, nessun errore a schermo su nessuna.
+  //
+  // Il `(data as Record<string, unknown>)?.items` con controllo `Array.isArray` era la stessa
+  // storia dall'altro lato: una difesa aggiunta perche' la forma non combaciava, che rendeva il
+  // disallineamento indistinguibile da un elenco legittimamente vuoto. Ora il tipo e' quello
+  // che lo schema garantisce, quindi il cast non serve: se la forma cambia, a protestare e' la
+  // validazione — che e' il punto in cui ha senso accorgersene.
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     api.admin
       .getAiModels()
       .then(data => {
-        const items = (data as Record<string, unknown>)?.items;
-        setModels(Array.isArray(items) ? (items as AiModelDto[]) : []);
+        setModels(data.items);
+        setError(null);
       })
-      .catch(() => {})
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : 'Errore nel caricamento dei modelli');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -28,10 +44,12 @@ export function ModelsTab() {
     try {
       await api.admin.setPrimaryModel({ modelId });
       const data = await api.admin.getAiModels();
-      const items = (data as Record<string, unknown>)?.items;
-      setModels(Array.isArray(items) ? (items as AiModelDto[]) : []);
-    } catch {
-      // toast error
+      setModels(data.items);
+      setError(null);
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'Errore durante impostazione del modello primario'
+      );
     }
   };
 
@@ -51,6 +69,21 @@ export function ModelsTab() {
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="h-28 rounded-xl bg-card/40 animate-pulse" />
           ))}
+        </div>
+      ) : error ? (
+        /*
+          #4059 — il ramo che mancava. Senza questo, un errore di caricamento e un elenco
+          legittimamente vuoto sono lo STESSO schermo, ed e' il motivo per cui il
+          disallineamento di schema e' sopravvissuto: la console lo diceva, la pagina no.
+          Token semantici e non `bg-red-*`: `local/no-hardcoded-color-utility` e' a `error`.
+        */
+        <div
+          role="alert"
+          className="rounded-xl border border-destructive/30 bg-destructive/10 p-4"
+          data-testid="models-tab-error"
+        >
+          <p className="text-sm font-medium text-destructive">Impossibile caricare i modelli AI.</p>
+          <p className="mt-1 text-xs text-muted-foreground">{error}</p>
         </div>
       ) : models.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">

@@ -133,6 +133,19 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # Issue #4058 — react-pdf/pdfjs-dist fuori dal grafo valutato dal render server.
+      #
+      # Qui e NON solo in ci.yml, e la ragione e' che il gate altrimenti sarebbe tardivo:
+      # `ci.yml` gira su `pull_request` verso `main`/`main-staging`, mentre le PR che portano
+      # il frontend hanno base `main-dev`. Un confine rimosso verrebbe visto solo alla release.
+      #
+      # Il confine e' SOLO `dynamic(() => import('X'), { ssr: false })`: nell'App Router un
+      # `dynamic()` col default `ssr: true` viene valutato anche dal server, e `'use client'`
+      # non e' un confine. Lo script cammina il grafo all'indietro e stampa la CATENA, perche'
+      # l'anello da correggere e' quasi sempre intermedio.
+      - name: SSR/PDF boundary gate (#4058)
+        run: pnpm lint:ssr-pdf
+
       - name: Typecheck
         run: pnpm typecheck
 

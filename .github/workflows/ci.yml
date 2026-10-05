@@ -396,6 +396,15 @@ jobs:
       - name: BGG ToS compliance gate (#2123)
         run: pnpm lint:bgg
 
+      # Issue #4058 — react-pdf/pdfjs-dist fuori dal grafo valutato dal render server.
+      # Il confine e' SOLO `dynamic(() => import('X'), { ssr: false })`: nell'App Router un
+      # `dynamic()` col default `ssr: true` viene valutato anche sul server, e `'use client'`
+      # non e' un confine. Lo script cammina il grafo degli import all'indietro e stampa la
+      # CATENA, perche' l'anello da correggere e' quasi sempre intermedio (due delle cinque
+      # catene di #4058 passavano da un barrel che ri-esporta un consumatore).
+      - name: SSR/PDF boundary gate (#4058)
+        run: pnpm lint:ssr-pdf
+
       # Issue #3498 — impedisce che gli assert R2-strict sulle cover tornino `test.fixme`.
       # Lo script esisteva dal #3536 ma non era agganciato ad alcun job: il gate che il commento
       # in cover-l4.spec.ts prometteva non è mai girato.

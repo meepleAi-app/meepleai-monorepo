@@ -242,12 +242,64 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
                 + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
         }
 
+        // 🔴 #4076 — il prerequisito si ACCERTA prima di costruire il container.
+        //
+        // Questo test NON falliva per latenza nonostante il nome: falliva in 287 ms perche'
+        // l'immagine non c'era e Testcontainers provava a scaricarla —
+        // «pull access denied for infra-unstructured-service, repository does not exist».
+        // Un fallimento del genere non dice niente sulla P95: dice che il test non e' partito.
+        //
+        // Perche' e' comparso il 2026-10-03 e non prima: il commit 7af960511 (#4045) ha
+        // introdotto in questo file la `Assert.Skip` sul PDF mancante. Prima di quella
+        // correzione il test saltava sul prerequisito del PDF; risolto quello, e' arrivato al
+        // prerequisito successivo. E' la famiglia di #3978/#4016 — risolvere un salto scopre il
+        // fallimento che stava dietro.
+        //
+        // La sonda accetta i DUE tag che convivono nel repo (vedi `DockerImageProbe`): quello
+        // che Compose produce e quello che le costanti dei test dichiarano. Cosi' il test GIRA
+        // dove un'immagine esiste, invece di saltare per un nome.
+        //
+        // ⚠️ ATTENZIONE: la sonda risolve il fallimento su CI, NON fa passare il test dove
+        // l'immagine c'e'. Eseguito in locale con `meepleai-unstructured-service:latest`
+        // presente, il test arriva a misurare e poi fallisce sull'asserzione vera:
+        //
+        //     Expected (p95Latency < RealServiceTargetP95LatencyMs) to be True because
+        //     P95 latency (52730ms) should be < 35000ms (CPU-only Testcontainers)
+        //
+        // 6 m 11 s di durata, 1,5x oltre il target. Ma quella misura NON e' confrontabile col
+        // target: e' stata presa su una macchina che eseguiva contemporaneamente l'intero stack
+        // di sviluppo (postgres, redis, api, web), mentre `RealServiceTargetP95LatencyMs` e'
+        // tarato su «CPU-only Testcontainers» su un nodo scarico. Non si puo' concludere ne' che
+        // il prodotto sia lento ne' che la soglia sia giusta.
+        //
+        // 🔴 Per questo la soglia NON e' stata allargata: CLAUDE.md dice di stabilire PERCHE' la
+        // misura scende prima di rilassarla, e qui il perche' non e' stabilito — serve una misura
+        // su macchina scarica. La questione resta in #4076, e la raggiunge solo chi costruisce
+        // l'immagine: su CI questo test salta.
+        var unstructuredImage = DockerImageProbe.FindFirstPresent(
+            "meepleai-unstructured-service:latest",
+            TestcontainersConfiguration.UnstructuredImage);
+
+        if (unstructuredImage is null)
+        {
+            Assert.Skip(
+                "PREVISTO: il servizio `unstructured` e' opzionale per questo progetto e la sua "
+                + "immagine non e' presente in locale. Per abilitare questo test, una delle due: "
+                + "`cd infra && docker compose build unstructured-service` (produce "
+                + "`meepleai-unstructured-service:latest`), oppure `cd apps/unstructured-service && "
+                + "docker build -t "
+                + TestcontainersConfiguration.UnstructuredImage
+                + " .`. Se invece `docker` non e' nel PATH il problema e' Docker, non l'immagine. "
+                + "Contesto: #4076.");
+        }
+
         _output("Test 6: Performance P95 latency with real Docker services");
+        _output($"Immagine trovata: {unstructuredImage}");
         _output("Starting Testcontainers (this may take 2-3 minutes)...");
 
         // Start Unstructured service
         _unstructuredContainer = new ContainerBuilder()
-            .WithImage("infra-unstructured-service:latest")
+            .WithImage(unstructuredImage)
             .WithPortBinding(8001, true)
             .WithWaitStrategy(Wait.ForUnixContainer()
                 .UntilHttpRequestIsSucceeded(r => r

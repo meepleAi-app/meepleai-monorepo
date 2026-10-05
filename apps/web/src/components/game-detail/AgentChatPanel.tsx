@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
+import { getApiBase } from '@/lib/api/core/httpClient';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
@@ -123,7 +124,14 @@ export function AgentChatPanel({
       // FUTURE: Implement full SSE streaming (Issue #3152)
       // For now, use simple fetch for Q&A endpoint
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/agents/qa/stream`,
+        // 🔴 #4059: qui il fallback era `'http://localhost:8080'`, non `''`, e questo rende il
+        // caso diverso dai due fratelli. `NEXT_PUBLIC_API_URL` non e' definita in nessun build
+        // deployabile, quindi in staging e in produzione questa fetch puntava il browser
+        // dell'utente alla SUA macchina sulla 8080. In sviluppo funzionava per coincidenza.
+        // `chatClient.ts` chiama lo stesso endpoint passando da `getApiBase()`, ed e' la
+        // versione che si vede nel bundle: questo era un percorso duplicato che bypassava
+        // l'helper.
+        `${getApiBase()}/api/v1/agents/qa/stream`,
         {
           method: 'POST',
           credentials: 'include',

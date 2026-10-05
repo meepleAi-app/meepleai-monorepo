@@ -33,6 +33,8 @@ import noStoreScoresDirect from "./eslint-rules/no-store-scores-direct.js";
 import noStandaloneCardRenderer from "./eslint-rules/no-standalone-card-renderer.js";
 // Issue #2339 sub-PR 2/3 — encourage useGameTitle() adoption (warn-only).
 import preferUseGameTitle from "./eslint-rules/prefer-use-game-title.js";
+// Issue #4059 — un valore, tre nomi di variabile, due dei quali definiti in nessun build.
+import useCanonicalApiBase from "./eslint-rules/use-canonical-api-base.js";
 
 export default [
   {
@@ -126,6 +128,8 @@ export default [
           "prefer-use-game-title": preferUseGameTitle,
           // Issue #2858 (C1) — no value-import of meeple-card internals outside the canonical dir.
           "no-standalone-card-renderer": noStandaloneCardRenderer,
+          // Issue #4059 — base di API/hub solo via getApiBase()/getHubBase().
+          "use-canonical-api-base": useCanonicalApiBase,
         },
       },
     },
@@ -290,6 +294,13 @@ export default [
       // ADR-061 — /games/[id]/{reviews,strategies,chat} were removed; restoration
       // requires a follow-up ADR superseding ADR-061 (not gap-fix scaffolding).
       "local/no-game-detail-orphan-routes": "error",
+      // Issue #4059 — la base di API e hub si risolve SOLO da `getApiBase()` /
+      // `getHubBase()`. `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_API_BASE_URL` e
+      // `BACKEND_URL` non sono definite in nessun compose ne' `.env`: dove mancano,
+      // `next build` inlinea la stringa letterale "undefined". La regola blocca anche
+      // un URL di hub SignalR relativo, che risolve sull'origine del frontend dove
+      // non esiste proxy per `/hubs` (misurato: 404).
+      "local/use-canonical-api-base": "error",
       // Issue #2389 Block A.7 — `useLiveSessionStore(s => s.scores)` is the legacy
       // store-level read; new consumers must use `useSessionScores()` from
       // @/lib/domain-hooks/useSessionScores. Severity is `warn` so the legacy

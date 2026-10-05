@@ -534,13 +534,49 @@ builder.Services.AddCors(options =>
 
         // Issue #1448: Whitelist specific headers instead of AllowAnyHeader() for security
         // Issue #2755: Add W3C Trace Context headers (traceparent, tracestate) for OpenTelemetry
+        //
+        // 🔴 Issue #4059 — i DUE header del client SignalR sono load-bearing.
+        //
+        // Il client JS di SignalR aggiunge alla richiesta di negotiate `X-Requested-With:
+        // XMLHttpRequest` e `X-SignalR-User-Agent`. Senza quei nomi nell'allowlist il preflight
+        // falliva e Chrome rifiutava la richiesta prima di inviarla, quindi
+        // `/sessions/{id}/live` non riceveva un solo evento:
+        //
+        //   Access to fetch at 'http://localhost:8080/hubs/gamestate/negotiate?...' from origin
+        //   'http://localhost:3000' has been blocked by CORS policy: Request header field
+        //   x-requested-with is not allowed by Access-Control-Allow-Headers
+        //
+        // ⚠️ Due note di metodo, e sono il punto che conta piu' dei due nomi.
+        //
+        // (1) `curl` e un `fetch` scritto a mano NON mandano quegli header, quindi entrambi
+        //     rispondevano **200 sullo stesso negotiate** e facevano sembrare il percorso
+        //     funzionante. La differenza e' comparsa solo iniettando `@microsoft/signalr` in una
+        //     pagina reale e chiamando `conn.start()`. Una sonda che non e' il client vero non
+        //     misura il client vero.
+        //
+        // (2) Il browser riporta **un header bloccato per volta**: aggiunto `X-Requested-With`,
+        //     il messaggio e' diventato identico ma su `x-signalr-user-agent`. Scoprirli a
+        //     tentativi avrebbe speso un rebuild per header e non avrebbe mai detto quando
+        //     fermarsi; l'elenco e' stato invece enumerato dal pacchetto —
+        //     `grep -rhoE '"[Xx]-[A-Za-z-]+"' node_modules/@microsoft/signalr/dist/cjs/*.js`
+        //     da' esattamente questi due, e nient'altro.
+        //
+        // Resta un'allowlist: si aggiungono due header, non si passa a `AllowAnyHeader()`. E'
+        // quello che la documentazione SignalR prescrive per il cross-origin.
+        //
+        // ⚠️ Questa e' la policy VIVA. `WebApplicationExtensions.AddCorsServices` ne contiene una
+        // copia omonima con un'allowlist divergente (ha `X-API-Key`, questa no) che non viene
+        // registrata da nessuno: `grep -rn AddCorsServices --include=*.cs .` trova solo la
+        // definizione. Modificare quella non ha effetto.
         policy
             .WithHeaders(
                 "Content-Type",
                 "Authorization",
                 "X-Correlation-ID",
                 "traceparent",  // W3C Trace Context propagation
-                "tracestate"    // W3C Trace Context state
+                "tracestate",   // W3C Trace Context state
+                "X-Requested-With",      // #4059: SignalR negotiate (hub cross-origin)
+                "X-SignalR-User-Agent"   // #4059: idem — il client manda entrambi
             )
             .AllowAnyMethod()
             .AllowCredentials()

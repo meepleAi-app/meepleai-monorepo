@@ -266,10 +266,28 @@ function getSecurityHeaders(requestOrigin?: string) {
 
   // Build connect-src with all API origins that differ from request origin
   // This ensures both server-side (Docker) and client-side origins are allowed
+  //
+  // 🔴 #4059 — accanto a ogni origine HTTP va la sua controparte `ws:`/`wss:`. Per la CSP
+  // `ws:` e `http:` sono schemi DISTINTI: con solo `http://localhost:8080` elencato, il
+  // trasporto WebSockets di SignalR veniva bloccato DOPO un negotiate riuscito, e il browser
+  // lo diceva per esteso:
+  //
+  //   Connecting to 'ws://localhost:8080/hubs/gamestate?id=...' violates the following
+  //   Content Security Policy directive: "connect-src 'self' http://api:8080 ..."
+  //
+  // Nessun fallback silenzioso: SignalR puo' ripiegare su SSE/long-polling, ma quelle vanno
+  // sulla stessa origine e sarebbero bloccate dalla stessa direttiva, quindi la connessione
+  // non si stabiliva affatto. La gemella e' `lib/security/csp.js`, allargata nello stesso
+  // commit — vedi la nota sull'INTERSEZIONE qui sotto.
   const connectSrcParts = ["'self'"];
   for (const apiOrigin of apiOrigins) {
     if (!requestOrigin || apiOrigin !== requestOrigin) {
       connectSrcParts.push(apiOrigin);
+      if (apiOrigin.startsWith('https://')) {
+        connectSrcParts.push(`wss://${apiOrigin.slice('https://'.length)}`);
+      } else if (apiOrigin.startsWith('http://')) {
+        connectSrcParts.push(`ws://${apiOrigin.slice('http://'.length)}`);
+      }
     }
   }
 

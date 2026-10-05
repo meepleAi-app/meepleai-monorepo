@@ -75,6 +75,45 @@ export function getApiBase(): string {
 }
 
 /**
+ * Base URL for SignalR hubs — **always absolute**, never the empty string.
+ *
+ * 🔴 Questa funzione esiste perché `getApiBase()` sopra NON e' usabile per gli hub, e la
+ * differenza non e' deducibile dal nome: nel browser `getApiBase()` ritorna `''` di proposito
+ * (#2366), perche' ogni chiamata `/api/v1/*` passa dal proxy Next
+ * (`src/app/api/v1/[...path]/route.ts`) — niente CORS, cookie `SameSite=Lax` inviati come
+ * same-origin.
+ *
+ * **Per `/hubs/*` quel proxy non esiste**, e nemmeno un rewrite: `grep -n rewrites
+ * next.config.js` non da' nulla. Un URL relativo finisce quindi sull'origine del frontend, dove
+ * nessuno serve quel path. Misurato: `POST :3000/hubs/...` risponde 404 con 25 KB di HTML (la
+ * pagina 404 di Next), mentre `POST :8080/hubs/gamestate/negotiate` risponde 200 con un
+ * `connectionToken`.
+ *
+ * Il cookie attraversa le due porte, e questo e' stato misurato in Chromium reale, non dedotto:
+ * da una pagina `:3000`, `fetch('http://localhost:8080/api/v1/auth/me', {credentials:'include'})`
+ * risponde 200 e lo stesso fetch con `credentials:'omit'` risponde 401. Il controllo e'
+ * necessario perche' `/hubs/gamestate/negotiate` risponde 200 **anche senza cookie** — non e'
+ * autenticato — quindi un 200 sul negotiate non prova niente sul cookie. `SameSite=Lax` non
+ * blocca questa richiesta perche' «site» ignora la porta, e in staging frontend e API stanno
+ * sotto lo stesso dominio registrabile.
+ *
+ * Chi aggiunge un hub deve passare da qui: lo impone `local/no-raw-signalr-hub-url`.
+ */
+export function getHubBase(): string {
+  // Browser-facing value: e' l'indirizzo che il browser deve poter raggiungere, quindi
+  // NEXT_PUBLIC_API_BASE (http://localhost:8080 in dev) e non API_BASE_URL, che e' l'hostname
+  // della rete Docker e non esiste per il browser.
+  const envBase = process.env.NEXT_PUBLIC_API_BASE?.trim();
+  if (envBase && envBase !== 'undefined' && envBase !== 'null') {
+    return envBase.replace(/\/+$/, '');
+  }
+
+  // NEXT_PUBLIC_API_BASE e' definita in tutti i compose (dev, test, integration, staging, prod)
+  // come build arg, quindi questo ramo e' per lo sviluppo fuori da Docker e per i test.
+  return 'http://localhost:8080';
+}
+
+/**
  * Base HTTP client with centralized error handling and validation
  */
 export class HttpClient {

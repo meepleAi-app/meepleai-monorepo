@@ -94,6 +94,10 @@ function itemRating(item: HybridHubItem): number | undefined {
  * Non-game variants render nothing.
  */
 function itemMetadata(item: HybridHubItem): MeepleCardMetadata[] | undefined {
+  // #4081: un agente di sistema va distinto da uno dell'utente. Il chip passa da
+  // `metadata`, che e' il punto di estensione che `MeepleCard` espone gia' (lo usa il
+  // `📄 KB` dei giochi), quindi non serve toccare il contratto della card.
+  if (item.entity === 'agent' && item.isSystemDefined) return [{ label: '⚙️ Sistema' }];
   if (item.entity !== 'game' || !item.hasKb) return undefined;
   return [{ label: '📄 KB' }];
 }

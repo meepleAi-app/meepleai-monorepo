@@ -25,6 +25,14 @@ export const AgentDtoSchema = z.object({
   invocationCount: z.number().int().nonnegative(),
   isRecentlyUsed: z.boolean(),
   isIdle: z.boolean(),
+  /**
+   * #4081 — agente definito dal sistema, non dall'utente.
+   *
+   * Obbligatorio, non `.optional()`: un campo assente leggerebbe `undefined`, cioe' falsy, cioe'
+   * «non di sistema» — che e' esattamente il difetto da chiudere, in silenzio. Meglio che la
+   * validazione fallisca rumorosamente se il backend smettesse di mandarlo.
+   */
+  isSystemDefined: z.boolean(),
   // Issue #4914: user-owned agent fields
   gameId: GameIdString.nullable().optional(),
   gameName: z.string().nullable().optional(),

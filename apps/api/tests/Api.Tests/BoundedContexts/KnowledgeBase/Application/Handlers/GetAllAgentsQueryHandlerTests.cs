@@ -226,7 +226,12 @@ public sealed class GetAllAgentsQueryHandlerTests
         var a2Azul = CreateAgent("Azul Helper");
         a2Azul.SetGameId(azulId);
 
-        var a3System = CreateAgent("Global Rules Agent"); // GameId = null (system agent)
+        // 🔴 #4081: questa riga diceva `// GameId = null (system agent)`, cioe' trattava
+        // «senza gioco» come sinonimo di «di sistema» — la stessa confusione che il filtro
+        // dell'handler aveva nel codice. Ora l'agente di sistema e' creato con la factory che
+        // imposta davvero `IsSystemDefined`, e la distinzione fra i due concetti e' coperta dal
+        // test `Handle_ScopeMyLibrary_ExcludesGamelessAgentThatIsNotSystemDefined` sotto.
+        var a3System = CreateSystemAgent("Global Rules Agent");
 
         _mockRepository
             .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -259,12 +264,73 @@ public sealed class GetAllAgentsQueryHandlerTests
         result.First(a => a.GameId == catanId).GameName.Should().Be("Catan");
         result.First(a => a.GameId == null).GameName.Should().BeNull();
 
+        // #4081: il flag arriva fino al DTO, altrimenti il client non puo' distinguerlo.
+        result.First(a => a.GameId == null).IsSystemDefined.Should().BeTrue();
+        result.First(a => a.GameId == catanId).IsSystemDefined.Should().BeFalse();
+
         _mockLibraryRepository.Verify(
             r => r.GetUserGamesAsync(
                 userId,
                 It.IsAny<GameStateType?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #4081 — il caso che il commento dell'handler dichiarava di escludere e che il
+    // codice invece ammetteva.
+    // ──────────────────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task Handle_ScopeMyLibrary_ExcludesGamelessAgentThatIsNotSystemDefined()
+    {
+        // Il filtro era `!a.GameId.HasValue || libraryGameIds.Contains(...)`, cioe' «qualunque
+        // agente senza gioco», mentre il commento sopra promette «agenti di sistema». Un agente
+        // senza gioco e NON di sistema comparirebbe quindi nella libreria personale di OGNI
+        // utente. Oggi non e' creabile da un utente (`CreateUserAgentCommand` prende un
+        // `Guid GameId` non nullable), ma per via amministrativa si', e il codice deve dire
+        // cio' che il commento promette.
+        var userId = Guid.NewGuid();
+
+        var gameless = CreateAgent("Orphan Agent");           // GameId null, NON di sistema
+        var system = CreateSystemAgent("Global Rules Agent");  // GameId null, di sistema
+
+        _mockRepository
+            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<AgentDefinitionEntity> { gameless, system });
+
+        _mockLibraryRepository
+            .Setup(r => r.GetUserGamesAsync(userId, It.IsAny<GameStateType?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserLibraryEntry>());
+
+        _mockSharedGameRepository
+            .Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string>());
+
+        var result = await _handler.Handle(
+            new GetAllAgentsQuery(Scope: "my-library", ScopeUserId: userId),
+            CancellationToken.None);
+
+        // L'agente di sistema DEVE comparire: senza questa asserzione un filtro che escludesse
+        // tutto passerebbe quella sotto, e un account nuovo resterebbe senza nulla da usare.
+        result.Select(a => a.Name).Should().Contain("Global Rules Agent");
+
+        result.Select(a => a.Name).Should().NotContain("Orphan Agent",
+            because: "#4081 — un agente senza gioco e non di sistema non appartiene alla " +
+                     "libreria personale di nessuno");
+
+        result.Should().HaveCount(1);
+    }
+
+    private static AgentDefinitionEntity CreateSystemAgent(string name)
+    {
+        // #4081: `CreateSystem` usa il costruttore interno che imposta davvero IsSystemDefined,
+        // a differenza di `Create` + GameId null, che e' solo «senza gioco».
+        return AgentDefinitionEntity.CreateSystem(
+            name,
+            $"Description for {name}",
+            AgentType.RagAgent,
+            AgentDefinitionConfig.Default(),
+            typologySlug: "rules");
     }
 
     private static AgentDefinitionEntity CreateAgent(string name)

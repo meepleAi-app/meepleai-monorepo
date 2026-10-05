@@ -160,6 +160,8 @@ internal sealed class CreateUserAgentCommandHandler
             InvocationCount: agent.InvocationCount,
             IsRecentlyUsed: agent.LastInvokedAt.HasValue && agent.LastInvokedAt.Value > recentThreshold,
             IsIdle: !agent.LastInvokedAt.HasValue || agent.LastInvokedAt.Value < idleThreshold,
+            // #4081: il flag viene dall'entita', non dedotto dal sito di mapping.
+            IsSystemDefined: agent.IsSystemDefined,
             GameId: agent.GameId,
             GameName: gameName,
             CreatedByUserId: request.UserId

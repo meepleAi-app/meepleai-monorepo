@@ -83,6 +83,7 @@ export function agentToHubItem(agent: AgentDto): AgentHubItem {
     gameName: agent.gameName ?? undefined,
     agentType: agent.type,
     isActive: agent.isActive,
+    isSystemDefined: agent.isSystemDefined,
   };
 }
 

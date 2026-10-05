@@ -128,6 +128,26 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     /// Creates an ad-hoc game night that skips the scheduling/RSVP flow.
     /// Used when a user spontaneously starts playing and later adds more games during the same evening.
     /// Status is set directly to InProgress.
+    ///
+    /// <para>🔴 <b>Non è il percorso ad-hoc di produzione, e lo Status qui è l'opposto di quello</b>
+    /// (#4074). Questa factory è usata <b>solo dai test</b>: <c>grep -rn "CreateAdHoc"
+    /// apps/api/src</c> trova soltanto questa definizione. Il percorso reale è
+    /// <c>CreateSessionCommandHandler.ResolveGameNightAsync</c>, che costruisce la entity EF
+    /// direttamente e la fa nascere <c>Published</c> — «born Published (a valid draft-holding
+    /// envelope), NOT InProgress» — per decisione di <b>Epic #3188 Slice 3 (D1)</b>, che ha
+    /// disaccoppiato la creazione dal go-live.</para>
+    ///
+    /// <para>⚠️ <b>Non "correggere" l'handler per usare questa factory</b>, e non allineare questa
+    /// factory al <c>Published</c> dell'handler senza leggere #3188: le due cose servono scopi
+    /// diversi. Qui <c>InProgress</c> è legittimo perché i test del dominio la usano per
+    /// costruire direttamente lo stato «serata già in corso» (p.es.
+    /// <c>GameNightEventInvariant15Tests.HandleFirstSessionStarted_OnInProgress_IsIdempotent</c>),
+    /// dove passare da Publish + go-live sarebbe solo cerimonia.</para>
+    ///
+    /// <para>La divergenza è costata un test rosso per due anni: la spec diceva che una serata
+    /// nasce in-progress «(draft or live)», questa factory lo faceva, l'handler no, e
+    /// <c>Handle_NoGameNightProvided_CreatesAdHocNightImplicitly</c> seguiva la spec. Vedi la nota
+    /// sull'invariante #15 in <c>2026-06-04-gamenight-session-domain-model.md</c>.</para>
     /// </summary>
     public static GameNightEvent CreateAdHoc(Guid organizerId, string title, Guid firstGameId)
     {

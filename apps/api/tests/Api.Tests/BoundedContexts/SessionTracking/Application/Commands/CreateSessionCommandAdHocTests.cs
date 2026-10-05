@@ -134,21 +134,30 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// ⚠️ Questo test FALLISCE, da prima del 2026-10-03, ed e' una delle quattro voci della
-    /// baseline <c>Core</c> di <c>dev-async</c>. Tracciato in <b>#4074</b> — non e' un flaky e
-    /// non e' da correggere qui.
+    /// Invariante #15 — la serata ad-hoc nasce <c>Published</c>, NON <c>InProgress</c>.
     ///
-    /// <para>Misurato: l'asserzione su <c>Status</c> trova <c>"Published"</c> dove attende
-    /// <c>"InProgress"</c>. La causa non e' «il prodotto sbaglia» ne' «il test sbaglia»: la spec
-    /// del dominio si contraddice. Il testo dell'invariante #15 dice «triggered by first Session
-    /// creation (draft or live)», la sua riga nella tabella di mappatura dice
-    /// «<c>HandleFirstSessionStarted</c> on <c>SessionStartedDomainEvent</c>» — e quell'evento e'
-    /// alzato solo da <c>Session.OpenLiveMode()</c>, cioe' solo al go-live. L'implementazione
-    /// segue la mappatura, questo test segue il testo, e ciascuno e' fedele a una meta'.</para>
+    /// <para>🔴 Questo test asseriva <c>InProgress</c> e falliva da prima del 2026-10-03. La causa
+    /// non era il prodotto: era una riga di spec non aggiornata. Il testo dell'invariante #15 in
+    /// <c>docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md</c> diceva
+    /// «triggered by first Session creation <b>(draft or live)</b>», e quella parentesi è stata
+    /// <b>superata da Epic #3188 Slice 3 (D1 / #19)</b> — «session-live model canonicalization:
+    /// decouple create from go-live on the direct-create path» — senza che la spec venisse
+    /// aggiornata. La decisione è citata in sei punti del codice, fra cui
+    /// <c>CreateSessionCommandHandler.ResolveGameNightAsync</c>: «born Published (a valid
+    /// draft-holding envelope), NOT InProgress».</para>
     ///
-    /// <para>#4074 chiede di scegliere quale meta' vale e di correggere la spec nella stessa PR
-    /// del codice. Non viene messo in <c>Skip</c> di proposito: un salto farebbe salire il
-    /// conteggio dei salti della baseline, che il gate tratta come regressione.</para>
+    /// <para>Risolto in #4074: corretta la spec (due punti) e allineato questo test. La riga della
+    /// <i>tabella di mappatura</i> della spec era invece già giusta — diceva
+    /// <c>SessionStartedDomainEvent</c>, cioè go-live — quindi la spec si contraddiceva al proprio
+    /// interno e ciascuna metà aveva un seguace: l'implementazione la tabella, questo test il
+    /// testo.</para>
+    ///
+    /// <para><b>L'altra metà dell'invariante</b> — che al go-live la serata passi a
+    /// <c>InProgress</c> — è coperta dove vive e non va duplicata qui:
+    /// <c>GameNightEventInvariant15Tests</c> (file dedicato),
+    /// <c>GameNightEventSessionsTests</c> (5 asserzioni),
+    /// <c>StartGameNightSessionCommandHandlerTests</c>,
+    /// <c>AttachGamebookCampaignToGameNightCommandHandlerTests</c>.</para>
     /// </summary>
     [Fact]
     public async Task Handle_NoGameNightProvided_CreatesAdHocNightImplicitly()
@@ -184,7 +193,9 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             .FirstOrDefaultAsync(e => e.Id == result.GameNightEventId, TestCancellationToken);
 
         persistedNight.Should().NotBeNull();
-        persistedNight!.Status.Should().Be("InProgress");
+        // #3188 D1: una creazione diretta produce un DRAFT, e la serata che lo contiene resta
+        // Published. Passa a InProgress solo quando una sessione va live (#15).
+        persistedNight!.Status.Should().Be("Published");
         persistedNight.OrganizerId.Should().Be(userId);
         persistedNight.GameIdsJson.Should().Contain(gameId.ToString());
 

@@ -45,6 +45,13 @@ public sealed class SessionHistoryVisibilityAfterStartTestsHostFixture(SharedTes
 ///      longer appears in GetActiveSessionsQuery + appears in GetSessionHistoryQuery.
 /// T3 — Free-form not in active list: free-form (GameId==null) start → no correlated
 ///      GameSession → GetActiveSessionsQuery.Sessions stays empty.
+///
+/// <para>⚠️ #4080: le chiamate qui passano ora l'id dell'utente seminato, perche'
+/// <c>GetActiveSessionsQuery</c> richiede il proprietario. Vale notare perche' questa classe
+/// NON colse il difetto di #4080 nonostante eserciti esattamente la query colpevole: ogni test
+/// semina un solo utente, quindi «tutte le sessioni» e «le sessioni di questo utente»
+/// coincidevano. Un difetto di ambito e' invisibile a un test con un solo soggetto — il
+/// secondo utente e' il reagente, e sta in <c>ActiveSessionsOwnerScopeTests</c>.</para>
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
@@ -90,7 +97,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests
         var gameId = await SeedSharedGameAsync(db);
 
         // Confirm baseline: no active sessions before the wizard flow
-        var before = await mediator.Send(new GetActiveSessionsQuery());
+        var before = await mediator.Send(new GetActiveSessionsQuery(userId));
         before.Sessions.Should().BeEmpty("no sessions exist before the wizard flow");
 
         // Full wizard flow (mirrors what the FE wizard does)
@@ -120,7 +127,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests
 
         // Assert — GetActiveSessionsQuery (= api.sessions.getActive FE call) returns the correlated session
         var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
-        var result = await verifyMediator.Send(new GetActiveSessionsQuery());
+        var result = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
 
         result.Sessions.Should().NotBeEmpty(
             "GetActiveSessionsQuery must return at least the newly correlated GameSession " +
@@ -168,7 +175,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests
         // Confirm the correlated session is active
         await using var preScope = _factory.Services.CreateAsyncScope();
         var preMediator = preScope.ServiceProvider.GetRequiredService<IMediator>();
-        var activeBeforeComplete = await preMediator.Send(new GetActiveSessionsQuery());
+        var activeBeforeComplete = await preMediator.Send(new GetActiveSessionsQuery(userId));
         activeBeforeComplete.Sessions.Should().NotBeEmpty(
             "pre-condition: session must be active before completion");
 
@@ -188,7 +195,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests
         await using var verifyScope = _factory.Services.CreateAsyncScope();
         var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var activeAfterComplete = await verifyMediator.Send(new GetActiveSessionsQuery());
+        var activeAfterComplete = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
         activeAfterComplete.Sessions.Should().NotContain(
             s => s.Id == correlatedId,
             because: "a Completed GameSession must not be returned by FindActiveAsync " +
@@ -243,7 +250,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests
 
         // Assert — GetActiveSessionsQuery returns nothing for this user's session
         var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
-        var result = await verifyMediator.Send(new GetActiveSessionsQuery());
+        var result = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
 
         result.Sessions.Should().BeEmpty(
             "a free-form LiveGameSession creates no correlated GameSession; " +

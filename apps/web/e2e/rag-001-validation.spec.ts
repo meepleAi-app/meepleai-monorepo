@@ -17,7 +17,11 @@ import path from 'path';
 
 import { test, expect } from '@playwright/test';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// #4059: `NEXT_PUBLIC_API_URL` non e' definita per il runner Playwright — i quattro
+// workflow E2E la scrivono in `infra/env/web.env.dev`, che e' l'env del CONTAINER, non
+// quello del processo che esegue questo spec. Funzionava solo per il fallback. Il nome
+// canonico e' quello usato dagli altri spec (182 occorrenze contro 2).
+const API_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 const QDRANT_URL = 'http://localhost:6333';
 const PDF_PATH = path.join(process.cwd(), '../../data/rulebook/scacchi-fide_2017_rulebook.pdf');
 
@@ -31,7 +35,9 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
   test.beforeEach(async ({ page }) => {
     // Step 0: Auto-detect Chess ID if not set
     if (chessSharedGameId === CHESS_SHARED_GAME_ID_PLACEHOLDER) {
-      const gamesResponse = await page.request.get(`${API_URL}/api/v1/shared-games?search=Chess&limit=1`);
+      const gamesResponse = await page.request.get(
+        `${API_URL}/api/v1/shared-games?search=Chess&limit=1`
+      );
       if (gamesResponse.ok()) {
         const gamesData = await gamesResponse.json();
         if (gamesData.items && gamesData.items.length > 0) {
@@ -79,7 +85,11 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
 
     const pdfBuffer = fs.readFileSync(PDF_PATH);
     const formData = new FormData();
-    formData.append('file', new Blob([pdfBuffer], { type: 'application/pdf' }), 'scacchi-fide_2017_rulebook.pdf');
+    formData.append(
+      'file',
+      new Blob([pdfBuffer], { type: 'application/pdf' }),
+      'scacchi-fide_2017_rulebook.pdf'
+    );
     formData.append('gameId', chessSharedGameId); // Use SharedGameId (fix enables this!)
     formData.append('language', 'it');
 

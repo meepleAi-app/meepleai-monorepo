@@ -17,7 +17,8 @@ import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+// #4059: nome canonico — `NEXT_PUBLIC_API_URL` non e' definita per il runner Playwright.
+const API_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 const PDF_PATH = path.join(process.cwd(), '../../data/rulebook/scacchi-fide_2017_rulebook.pdf');
 
 test.describe('RAG-001: PDF Processing E2E Pipeline', () => {

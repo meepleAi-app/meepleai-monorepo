@@ -47,7 +47,20 @@ export function MobileBottomBar({ className }: MobileBottomBarProps) {
       data-testid="mobile-bottom-bar"
       aria-label="Navigazione principale"
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 flex border-t px-2 pb-3 pt-2 md:hidden',
+        // 🔴 #4060 — `bottom` consuma `--cookie-banner-height`, non e' `bottom-0`.
+        //
+        // Misurato a 390x844 con `document.elementFromPoint` sul centro della barra: con
+        // `bottom-0` il banner cookie (`fixed bottom-0 z-50`, 281px a questa larghezza
+        // perche' la riga dei pulsanti va a capo) la copriva su TUTTE e sei le rotte
+        // provate — dashboard, library, games, play-records, settings, game-nights/new.
+        // Non e' un controllo secondario nascosto: e' la navigazione primaria mobile, e
+        // finche' il consenso non e' dato l'utente non puo' cambiare sezione.
+        //
+        // Il banner e' a `z-50` e questa barra a `z-40`, quindi nessun ordine di DOM la
+        // salva: va spostata, non sovrapposta. La variabile vale `0px` quando il banner
+        // non e' montato (default in design-tokens.css), quindi a consenso dato la barra
+        // torna esattamente dov'era.
+        'fixed inset-x-0 bottom-[var(--cookie-banner-height,0px)] z-40 flex border-t px-2 pb-3 pt-2 md:hidden',
         className
       )}
       style={{

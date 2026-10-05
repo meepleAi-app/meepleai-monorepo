@@ -55,6 +55,12 @@ export interface AgentHubItem extends HybridHubItemBase {
   /** Maps from `AgentDto.type` (renamed to avoid the reserved-word feel of `type`). */
   readonly agentType: string;
   readonly isActive: boolean;
+  /**
+   * #4081 — agente di sistema, non dell'utente. La libreria personale include deliberatamente
+   * gli agenti di sistema (`scope=my-library`, #1589), ma prima non aveva modo di distinguerli:
+   * li mostrava come risorse dell'utente anche a un account appena registrato.
+   */
+  readonly isSystemDefined: boolean;
 }
 
 export interface KbHubItem extends HybridHubItemBase {

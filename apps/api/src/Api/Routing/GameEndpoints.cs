@@ -424,6 +424,11 @@ internal static class GameEndpoints
                     InvocationCount: 0,
                     IsRecentlyUsed: false,
                     IsIdle: false,
+                    // #4081: questi agenti sono costruiti da una configurazione per-gioco
+                    // (`agentConfig`), non da un AgentDefinition: non sono di sistema per
+                    // definizione, e il `false` qui e' una proprieta' della sorgente, non un
+                    // valore di comodo per far compilare.
+                    IsSystemDefined: false,
                     GameId: id,
                     CreatedByUserId: sessionForAgents.Principal!.Subject.Id));
             }

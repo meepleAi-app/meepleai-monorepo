@@ -36,6 +36,9 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
     imageUrl?: string;
     rating?: number;
     ratingMax?: number;
+    // #4081: il mock deve esporre `metadata`, altrimenti il chip di sistema non e'
+    // osservabile e un test che lo cercasse passerebbe o fallirebbe per il motivo sbagliato.
+    metadata?: { label: string }[];
   }) => (
     <div
       data-slot="meeple-card-mock"
@@ -46,6 +49,7 @@ vi.mock('@/components/ui/data-display/meeple-card', () => ({
       data-image-url={props.imageUrl ?? ''}
       data-rating={props.rating ?? ''}
       data-rating-max={props.ratingMax ?? ''}
+      data-metadata={(props.metadata ?? []).map(m => m.label).join('|')}
     >
       {props.title}
     </div>
@@ -88,6 +92,28 @@ const items: HybridHubItem[] = [
     href: '/chats/c1',
     messageCount: 3,
   },
+  // #4081: due agenti che differiscono SOLO per isSystemDefined, cosi' il chip non puo'
+  // dipendere da nient'altro (nome, gioco, stato).
+  {
+    id: 'a-sys',
+    entity: 'agent',
+    title: 'Rules Expert',
+    updatedAt: '2026-02-15T00:00:00Z',
+    href: '/agents/a-sys',
+    agentType: 'RAG',
+    isActive: true,
+    isSystemDefined: true,
+  },
+  {
+    id: 'a-mine',
+    entity: 'agent',
+    title: 'Il mio agente',
+    updatedAt: '2026-02-16T00:00:00Z',
+    href: '/agents/a-mine',
+    agentType: 'RAG',
+    isActive: true,
+    isSystemDefined: false,
+  },
 ];
 
 function renderGrid(overrides: Partial<LibraryHybridGridProps> = {}) {
@@ -101,10 +127,32 @@ function renderGrid(overrides: Partial<LibraryHybridGridProps> = {}) {
 // ---------- Tests -------------------------------------------------------------
 describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
   describe('rendering basics', () => {
-    it('renders one card per item (game/session/chat)', () => {
+    it('renders one card per item (game/session/chat/agent)', () => {
       const { container } = renderGrid();
       const cards = container.querySelectorAll('[data-slot="library-grid-card"]');
-      expect(cards).toHaveLength(3);
+      // #4081: due item agente aggiunti in coda, dopo game/session/chat — i test che
+      // indicizzano per posizione continuano a leggere cards[0..2].
+      expect(cards).toHaveLength(5);
+    });
+
+    // ── #4081 ────────────────────────────────────────────────────────────────
+    it('marks a system agent with a Sistema chip', () => {
+      const { container } = renderGrid();
+      const cards = container.querySelectorAll('[data-slot="meeple-card-mock"]');
+      const system = cards[3];
+      expect(system).toHaveAttribute('data-title', 'Rules Expert');
+      expect(system.getAttribute('data-metadata')).toContain('Sistema');
+    });
+
+    it('does NOT mark a user agent, so the chip means something', () => {
+      // L'asserzione negativa e' quella che da' significato alla positiva: senza di essa un
+      // `itemMetadata` che restituisse sempre il chip passerebbe il test precedente, e la
+      // libreria tornerebbe a non distinguere nulla.
+      const { container } = renderGrid();
+      const cards = container.querySelectorAll('[data-slot="meeple-card-mock"]');
+      const mine = cards[4];
+      expect(mine).toHaveAttribute('data-title', 'Il mio agente');
+      expect(mine.getAttribute('data-metadata')).not.toContain('Sistema');
     });
 
     it('exposes data-slot="library-hybrid-grid-container" on container', () => {

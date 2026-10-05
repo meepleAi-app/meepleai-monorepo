@@ -52,6 +52,8 @@ const baseAgent = (
   invocationCount: 0,
   isRecentlyUsed: false,
   isIdle: false,
+  // #4081: le fixture rappresentano agenti dell'utente, non di sistema.
+  isSystemDefined: false,
   gameId: null,
   gameName: null,
   createdByUserId: null,

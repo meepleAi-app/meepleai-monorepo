@@ -83,6 +83,8 @@ const FIXTURE_DEFAULT: AgentDto = {
   invocationCount: 142,
   isRecentlyUsed: true,
   isIdle: false,
+  // #4081: questa fixture rappresenta un agente dell'utente.
+  isSystemDefined: false,
   gameId: GAME_ID,
   gameName: 'Catan',
   createdByUserId: '00000000-0000-4000-8000-000000000aaa',

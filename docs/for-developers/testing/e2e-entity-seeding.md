@@ -58,7 +58,60 @@ test.describe('My data-driven flow', () => {
 | `POST /api/v1/admin/test/seed/game-night` | `SeedTestGameNightCommand` | `{ gameNightId, ownerId, testRunId }` |
 | `POST /api/v1/admin/test/seed/session` | `SeedTestSessionCommand` | `{ sessionId, gameNightId, isLive, testRunId }` |
 | `POST /api/v1/admin/test/seed/player` | `SeedTestPlayerCommand` | `{ playerId, gameNightId, role, isGuest, testRunId }` |
-| `POST /api/v1/admin/test/seed/cleanup` | `CleanupTestEntitiesCommand` | `{ testRunId, deletedGameNights, deletedSessions, deletedInvitations, deletedRsvps, deletedUsers, durationMs }` |
+| `POST /api/v1/admin/test/seed/library-game` | `SeedTestLibraryGameCommand` | `{ gameId, libraryEntryId, ownerId, testRunId }` |
+| `POST /api/v1/admin/test/seed/user-game-session` | `SeedTestUserGameSessionCommand` | `{ sessionId, userLibraryEntryId, testRunId }` |
+| `POST /api/v1/admin/test/seed/cleanup` | `CleanupTestEntitiesCommand` | `{ testRunId, deletedGameNights, deletedSessions, deletedInvitations, deletedRsvps, deletedUsers, deletedLibraryEntries, deletedSharedGames, deletedUserGameSessions, durationMs }` |
+
+### 🔴 Chi CREA un utente e chi lo RIUSA (#4054)
+
+I due endpoint che accettano `ownerEmail` lo trattano in modo **opposto**, e il nome del campo non
+lo dice: letto dall'esterno suggerisce «l'email di un owner esistente», e per uno dei due è falso.
+
+| Endpoint | Semantica di `ownerEmail` | Email già presente |
+|---|---|---|
+| `/seed/game-night` | **CREA** un utente host nuovo (stampato col `testRunId` della chiamata) | **409** `conflict`, messaggio che nomina `ownerEmail` |
+| `/seed/library-game` | **lookup-or-create**: riusa l'utente se esiste, altrimenti lo crea | 200, `ownerId` è quello preesistente |
+
+Conseguenza pratica, perché non è un caso di laboratorio: le tre spec `cross-asse-journey-*`
+seminano lo stesso `ANNA_PERSONA.email` (`anna.host@meepleai.test`). Journey #1 passa da
+`/seed/game-night` (crea), journey #2 e #3 da `/seed/library-game` (riusa e quindi crea per primo
+chi arriva prima). In locale `playwright.config.ts` ha `fullyParallel: true` e `workers: 2`, quindi
+l'ordine fra spec non è garantito; e un `afterEach` che non arriva a chiamare `/seed/cleanup`
+lascia quella riga nel database per **tutte** le run successive. In entrambi i casi la chiamata a
+`/seed/game-night` fallisce. Prima di #4054 con un `internal_server_error` e `message: "An
+unexpected error occurred"`: `ApiExceptionHandlerMiddleware` non riconosce `DbUpdateException`
+(tratta a parte solo la sottoclasse `DbUpdateConcurrencyException`) e la manda nel fallback, dove
+il corpo porta al massimo `ex.StackTrace` — e solo in Development. Il nome del vincolo vive in
+`InnerException.Message`, quindi **non arrivava al chiamante per nessuna via**: non era solo il
+DETAIL di Postgres («Key (email)=(…) already exists») a mancare. Oggi: un 409 che nomina il campo.
+
+**Regola per chi scrive una spec nuova**: se ti serve un host, derivalo dal `testRunId`
+(`host-${testRunId}@e2e.test`) invece di usare un indirizzo fisso condiviso. Se ti serve
+*quell'utente* perché un'altra chiamata lo ha già creato, usa `/seed/library-game` (che riusa) o
+l'`ownerId` che ti ha restituito.
+
+### Violazioni di vincolo: un 4xx che nomina il vincolo, non un 500 (#4054)
+
+Oltre alle due guardie che nominano il campo (`ownerEmail` su `/seed/game-night`, `userId` su
+`/seed/player`, dove `(event_id, user_id)` è unico), **tutti** i seeder persistono via
+`TestSeedPersistence.SaveSeedAsync`, che traduce gli SQLSTATE Postgres attribuibili al chiamante:
+
+| SQLSTATE | Esito HTTP | Messaggio |
+|---|---|---|
+| `23505` unique_violation | 409 `conflict` | nomina vincolo e tabella (es. `IX_users_Email` su `users`) |
+| `23503` foreign_key_violation | 400 `bad_request` | nomina la FK, invita a seminare prima il padre |
+
+Ogni altro guasto resta un 500, com'è giusto.
+
+⚠️ **Un 409 non è sempre colpa di chi chiama**, e il messaggio non lo afferma: su
+`/seed/session` con `isLive: true` il `session_code` sono 6 cifre esadecimali prese da un Guid
+dentro l'handler (16^6 valori, collisione di compleanno attesa intorno alle 4.800 righe vive), e
+nessun campo della richiesta lo controlla. Leggi il **nome del vincolo** prima di cercare l'errore
+nel tuo payload: è l'unica parte che Postgres non redige.
+
+Il gate `TestSeedPersistenceArchitectureTests` (`Category=Unit`) blocca una `SaveChangesAsync`
+diretta nel bounded context `Testing`: è la differenza di sette caratteri che riapre la classe
+senza che nessun test del nuovo seeder se ne accorga.
 
 ## 2. Opt A Architectural Rationale
 

@@ -244,4 +244,45 @@ public sealed class CreateGameNightCommandHandlerTests
 
         result.Should().Be(expectedId);
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // #4055 — l'offset del client non deve arrivare alla colonna timestamptz
+    // ────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// #4055. Il command porta <c>DateTimeOffset ScheduledAt</c>, quindi l'offset del client
+    /// arriva fino a qui; <c>scheduled_at</c> e' <c>timestamptz</c> e Npgsql rifiuta un offset
+    /// diverso da zero, con un'eccezione che esplode a <c>SaveChangesAsync</c> — dopo i validator
+    /// — e che il chiamante vede come 500 (misurato sullo stack locale il 2026-10-04:
+    /// <c>+01:00</c> e <c>-05:00</c> → 500, <c>Z</c> → 201).
+    /// </summary>
+    /// <remarks>
+    /// L'asserzione e' sull'aggregato consegnato al repository, cioe' su cio' che viene scritto:
+    /// un test sul solo command non direbbe nulla, e il mock di <c>IUnitOfWork</c> non puo'
+    /// riprodurre il rifiuto di Npgsql (quello sta in
+    /// <c>Integration/GameManagement/GameNightScheduledAtTimezoneTests</c>).
+    /// </remarks>
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(-5)]
+    public async Task Handle_WithNonUtcScheduledAt_PersistsTheSameInstantInUtc(int offsetHours)
+    {
+        var scheduledAt = new DateTimeOffset(2026, 12, 20, 20, 0, 0, TimeSpan.FromHours(offsetHours));
+        var command = new CreateGameNightCommand(
+            UserId: Guid.NewGuid(),
+            Title: "Serata con offset",
+            ScheduledAt: scheduledAt);
+        GameNightEvent? captured = null;
+        _gameNightRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightEvent, CancellationToken>((gn, _) => captured = gn)
+            .Returns(Task.CompletedTask);
+
+        await _sut.Handle(command, CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.ScheduledAt.Offset.Should().Be(TimeSpan.Zero);
+        captured.ScheduledAt.Should().Be(scheduledAt, "la normalizzazione non deve spostare l'istante");
+    }
 }

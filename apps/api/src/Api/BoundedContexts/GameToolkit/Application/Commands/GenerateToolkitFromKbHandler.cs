@@ -124,19 +124,58 @@ internal class GenerateToolkitFromKbHandler
             throw new ConflictException(
                 $"No documents found in knowledge base for game {command.GameId}. Upload and index PDF rulebooks first.");
 
-        // 3. Fan-out hybrid search across extraction query categories
-        var searchTasks = ExtractionQueries.Select(q =>
-            _hybridSearchService.SearchAsync(
-                q, command.GameId, SearchMode.Hybrid, MaxChunksPerQuery,
-                accessibleCardIds, vectorWeight: 0.7f, keywordWeight: 0.3f,
-                keywordMinScore: 0.01,
-                cancellationToken: cancellationToken));
+        // 3. 🔴 Una ricerca ibrida per categoria di estrazione, IN SEQUENZA — non `Task.WhenAll`.
+        //
+        // `IHybridSearchService` è `AddScoped` (`Extensions/ApplicationServiceExtensions.cs:87`) e
+        // iniettato qui una volta sola, quindi le cinque ricerche giravano sulla STESSA istanza, e
+        // i suoi due bracci raggiungono entrambi il `MeepleAiDbContext` scoped della richiesta:
+        // il lessicale via `SqlQueryRaw` in `KeywordSearchService` (che inietta il contesto),
+        // il vettoriale via `GetDbConnection()` in `PgVectorStoreAdapter` (idem). Un DbContext non
+        // è thread-safe — il meccanismo è quello di #4059.
+        //
+        // La prova sta nel codice, non nell'ipotesi: `HybridSearchService.SearchHybridAsync` porta
+        // il commento di #3786, che ha reso SEQUENZIALI quei due bracci per questa identica causa,
+        // misurata su staging (267 `InvalidOperationException`, 428 ricerche per-gioco senza
+        // braccio vettoriale su 1759). Questo handler reintroduceva la sovrapposizione un livello
+        // SOPRA, con 5 ricerche invece di 2, vanificando quella correzione.
+        //
+        // E la collisione era quasi certa, non probabilistica: `SearchHybridAsync` apre con due
+        // round-trip al DB (`ResolveFtsConfigAsync`, `ResolveGameTitleAsync`) PRIMA di qualunque
+        // HTTP, quindi i cinque task arrivavano al contesto a microsecondi l'uno dall'altro, prima
+        // che l'embedding della query (~1,4 s) potesse sfasarli.
+        //
+        // I due sintomi dipendevano da quale braccio perdeva la corsa:
+        //   - vettoriale: l'eccezione è catturata dentro `HybridSearchService` («Vector search
+        //     failed, falling back to keyword-only»), quindi 200 con meno dati del dovuto —
+        //     suggerimento costruito su meno chunk e peggiori, `ConfidenceScore`/`ChunksAnalyzed`/
+        //     `KbCoveragePercent` più bassi e `RequiresHumanReview` che scattava per una causa che
+        //     non ha nulla a che vedere col contenuto della KB. È la forma di #3843.
+        //   - lessicale: `KeywordSearchService` rilancia, `HybridSearchService` fa `LogAndRethrow`,
+        //     qui nessuno cattura → 500 su `POST /api/v1/game-toolkits/{id}/generate-from-kb`.
+        //
+        // Terzo effetto, chiuso dalla stessa correzione: `SetCommandTimeout(5)` e il suo ripristino
+        // in `KeywordSearchService` sono stato mutabile di quel singolo contesto, e con cinque
+        // bracci concorrenti un task che ripristinava il timeout toglieva il cap a un altro.
+        //
+        // Il parallelismo non comprava niente: le query vanno su una connessione sola, che il pool
+        // serializza comunque. Nel progetto non è registrato alcun `IDbContextFactory`, quindi un
+        // contesto per ricerca non è nemmeno un'opzione disponibile.
+        var allResults = new List<HybridSearchResult>(ExtractionQueries.Length * MaxChunksPerQuery);
+        foreach (var extractionQuery in ExtractionQueries)
+        {
+            var queryResults = await _hybridSearchService
+                .SearchAsync(
+                    extractionQuery, command.GameId, SearchMode.Hybrid, MaxChunksPerQuery,
+                    accessibleCardIds, vectorWeight: 0.7f, keywordWeight: 0.3f,
+                    keywordMinScore: 0.01,
+                    cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
 
-        var allResults = await Task.WhenAll(searchTasks).ConfigureAwait(false);
+            allResults.AddRange(queryResults);
+        }
 
         // 4. Deduplicate by ChunkId, keep top N by score
         var uniqueChunks = allResults
-            .SelectMany(r => r)
             .GroupBy(r => r.ChunkId, StringComparer.Ordinal)
             .Select(g => g.OrderByDescending(r => r.HybridScore).First())
             .OrderByDescending(r => r.HybridScore)

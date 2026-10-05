@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Testing.Application.DTOs;
+using Api.BoundedContexts.Testing.Infrastructure;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.SessionTracking;
@@ -115,7 +116,7 @@ internal sealed class SeedTestSessionCommandHandler
         };
 
         _db.Set<GameNightSessionEntity>().Add(session);
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _db.SaveSeedAsync(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
 
         _logger.LogInformation(

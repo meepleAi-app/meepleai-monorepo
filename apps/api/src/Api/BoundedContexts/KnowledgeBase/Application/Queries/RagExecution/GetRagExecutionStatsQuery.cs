@@ -33,7 +33,12 @@ internal sealed class GetRagExecutionStatsQueryHandler
     public async Task<RagExecutionStatsDto> Handle(
         GetRagExecutionStatsQuery request, CancellationToken cancellationToken)
     {
-        var stats = await _repository.GetStatsAsync(request.From, request.To, cancellationToken)
+        // Same normalization as GetRagExecutionsQueryHandler: /stats took the identical query-string
+        // window and answered the identical 400 (measured 2026-10-04), so both read it the same way.
+        var stats = await _repository.GetStatsAsync(
+                RagExecutionDateWindow.StartInclusive(request.From),
+                RagExecutionDateWindow.EndInclusive(request.To),
+                cancellationToken)
             .ConfigureAwait(false);
 
         return new RagExecutionStatsDto(

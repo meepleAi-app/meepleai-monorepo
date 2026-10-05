@@ -43,6 +43,26 @@ internal sealed class SeedTestGameNightCommandHandler
             }
         }
 
+        // Issue #4054: questo endpoint CREA l'utente host — `ownerEmail` non è «l'email di un owner
+        // esistente» — e `users.Email` porta un indice UNICO (IX_users_Email). Senza questa guardia
+        // una email già presente arriva al chiamante come 500 il cui corpo non nomina nulla: il nome
+        // del vincolo sta in InnerException.Message, che il fallback del middleware non scrive.
+        // La collisione è raggiungibile, non teorica: tre spec cross-asse seminano lo stesso
+        // ANNA_PERSONA.email ('anna.host@meepleai.test') e `/seed/library-game` quell'utente lo crea
+        // lookup-or-create, quindi basta che journey-2 o journey-3 parta prima (in locale
+        // `fullyParallel` con `workers: 2`), oppure che un afterEach salti il cleanup e la riga resti
+        // per tutte le run successive.
+        var ownerEmailTaken = await _db.Users
+            .AnyAsync(u => u.Email == request.OwnerEmail, cancellationToken)
+            .ConfigureAwait(false);
+        if (ownerEmailTaken)
+        {
+            throw new ConflictException(
+                $"ownerEmail '{request.OwnerEmail}' is already in use. POST /api/v1/admin/test/seed/game-night " +
+                "CREATES a new host user; it does not reuse an existing one. Pass an address unique to this " +
+                "test run, or POST /api/v1/admin/test/seed/cleanup for the leftover testRunId first.");
+        }
+
         var ownerId = Guid.NewGuid();
         var ownerEntity = new UserEntity
         {
@@ -121,7 +141,7 @@ internal sealed class SeedTestGameNightCommandHandler
         gameNightEntity.TestRunId = request.TestRunId;
         _db.GameNightEvents.Add(gameNightEntity);
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _db.SaveSeedAsync(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
 
         _logger.LogInformation(

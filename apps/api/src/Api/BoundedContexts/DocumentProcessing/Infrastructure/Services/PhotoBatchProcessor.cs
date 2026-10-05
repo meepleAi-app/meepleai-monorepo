@@ -15,11 +15,12 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 /// Libro Game AI Assistant MVP Phase 1 — Task 1.6 / Phase 2 — Task 2.3.
 /// </summary>
 /// <remarks>
-/// Thread-safety: IO operations (blob retrieve + preprocess + chunk + KB index) run in
-/// parallel up to <c>PhotoBatch:MaxParallelism</c>. Aggregate state mutations
-/// (<see cref="PhotoBatchUpload.AttachPage"/> and <see cref="PhotoBatchUpload.RecordPageIndexed"/>)
-/// are serialized via <see cref="_aggregateMutex"/> to avoid race conditions on the
-/// <see cref="PhotoBatchUpload"/> entity collections.
+/// Thread-safety: only the EF-free part of a page (blob retrieve + OCR preprocess + paragraph
+/// extraction) runs in parallel, up to <c>PhotoBatch:MaxParallelism</c>. KB indexing and the
+/// aggregate state mutations (<see cref="PhotoBatchUpload.AttachPage"/> and
+/// <see cref="PhotoBatchUpload.RecordPageIndexed"/>) are serialized together via
+/// <see cref="_persistenceMutex"/> — see the comment in <c>ProcessSinglePageAsync</c> for why the
+/// two cannot be separated.
 ///
 /// KB indexing failure is treated as a non-fatal degradation: if <see cref="IKnowledgeBaseIndexer"/>
 /// throws, the error is logged and page state is still recorded normally (batch completes).
@@ -37,8 +38,9 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
     private readonly int _maxParallelism;
     private readonly ILogger<PhotoBatchProcessor> _logger;
 
-    // Serializes aggregate state mutations across parallel page tasks.
-    private readonly SemaphoreSlim _aggregateMutex = new(1, 1);
+    // Serializes KB indexing + aggregate state mutations across parallel page tasks: entrambi
+    // passano dal MeepleAiDbContext scoped del batch, che non è thread-safe (#4059).
+    private readonly SemaphoreSlim _persistenceMutex = new(1, 1);
 
     public PhotoBatchProcessor(
         IPhotoBatchUploadRepository repo,
@@ -62,7 +64,7 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
         _logger = logger;
     }
 
-    public void Dispose() => _aggregateMutex.Dispose();
+    public void Dispose() => _persistenceMutex.Dispose();
 
     /// <inheritdoc/>
     public async Task ProcessAsync(Guid batchId, CancellationToken ct = default)
@@ -186,46 +188,78 @@ internal sealed class PhotoBatchProcessor : IPhotoBatchProcessor, IDisposable
             extractedText: preprocessed.ExtractedText,
             paragraphNumbers: paragraphNumbers);
 
-        // 6. Chunk + index extracted text into KB (outside mutex — parallel-safe IO).
-        //    Skip blank pages and pages with no extracted text.
-        //    KB indexing failure is non-fatal: log and continue so page state is still recorded.
-        if (!preprocessed.IsBlankPage && !string.IsNullOrWhiteSpace(preprocessed.ExtractedText))
-        {
-            try
-            {
-                var chunks = _chunker.ChunkPage(
-                    batch.Id, page.Id, page.PageNumber,
-                    preprocessed.ExtractedText, batch.SourceLanguage, (float)preprocessed.ConfidenceScore);
-
-                if (chunks.Count > 0)
-                {
-                    var indexed = await _kbIndexer.IndexBatchAsync(
-                        batch.Id, batch.GameId, chunks, progress: null, ct).ConfigureAwait(false);
-
-                    _logger.LogDebug(
-                        "[PhotoBatchProcessor] Page {PageNumber} of batch {BatchId}: {ChunkCount} chunks, {IndexedCount} indexed",
-                        page.PageNumber, batch.Id, chunks.Count, indexed);
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // KB indexing failure must NOT abort the batch — page state still recorded below.
-                _logger.LogError(ex,
-                    "[PhotoBatchProcessor] KB indexing failed for page {PageNumber} of batch {BatchId} — continuing",
-                    page.PageNumber, batch.Id);
-            }
-        }
-
-        // 7. Serialize aggregate state mutations to avoid concurrent list/counter corruption.
-        await _aggregateMutex.WaitAsync(ct).ConfigureAwait(false);
+        // 🔴 Passi 6 e 7 sotto UN SOLO mutex: l'indicizzazione KB tocca EF, e il commento che
+        // stava sul passo 6 («outside mutex — parallel-safe IO») era falso.
+        //
+        // `_kbIndexer.IndexBatchAsync` arriva a `KnowledgeBaseIngestService.IngestChunksAsync`, che
+        // fa tre operazioni EF — `GetByGameAndSourceAsync`, `AddBatchAsync`, `SaveChangesAsync` —
+        // e tutte passano dal `MeepleAiDbContext` del batch: `VectorDocumentRepository` e
+        // `EmbeddingRepository` derivano da `RepositoryBase`, `UnitOfWork` tiene lo stesso contesto
+        // iniettato. `EnqueuePhotoBatchProcessingCommandHandler` crea UNO scope per batch, non per
+        // pagina, quindi fino a `PhotoBatch:MaxParallelism` pagine avviate insieme condividevano
+        // quell'unica istanza — e un DbContext non è thread-safe (#4059).
+        //
+        // Sintomo: nessun 500 possibile, questo gira in background. L'eccezione veniva ingoiata dal
+        // catch qui sotto e di nuovo in `ProcessAsync`, mentre `RecordPageIndexed` registrava la
+        // pagina come indicizzata comunque: `GET /api/v1/photo-batches/{id}` riportava `IndexedPages`
+        // completo mentre la KB non aveva gli embedding di quelle pagine. È la forma di #3843 —
+        // un'eccezione ingoiata che si presenta come assenza. A differenza del caso wizard-preview
+        // la collisione era probabilistica, non certa: la finestra EF di ogni pagina è breve rispetto
+        // a blob + OCR + embedding che la precedono, quindi le finestre si sovrapponevano per caso.
+        //
+        // Secondo difetto chiuso dallo stesso mutex: `IngestChunksAsync` chiama `SaveChangesAsync`
+        // sul contesto condiviso, e prima stava FUORI dal lock che proteggeva le mutazioni
+        // dell'aggregato — un salvataggio di una pagina poteva flushare `batch` a metà
+        // dell'`AttachPage`/`RecordPageIndexed` di un'altra. Perché funzioni, salvataggio e mutazioni
+        // devono stare sotto lo stesso lock: è il motivo per cui i due passi sono ora uno.
+        //
+        // Il parallelismo utile resta: blob retrieve, OCR e estrazione paragrafi — il tratto
+        // dominante e privo di EF — girano ancora fino a `_maxParallelism` pagine insieme. Si perde
+        // la sovrapposizione degli embedding, perché l'ACL `IKnowledgeBaseIndexer` fa embedding e
+        // persistenza in una chiamata sola; separarli è un cambio di contratto cross-BC, non di
+        // questo file. Non c'è `IDbContextFactory` registrato nel progetto, quindi un contesto per
+        // pagina non è un'opzione disponibile.
+        await _persistenceMutex.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            // 6. Chunk + index extracted text into KB.
+            //    Skip blank pages and pages with no extracted text.
+            //    KB indexing failure is non-fatal: log and continue so page state is still recorded.
+            if (!preprocessed.IsBlankPage && !string.IsNullOrWhiteSpace(preprocessed.ExtractedText))
+            {
+                try
+                {
+                    var chunks = _chunker.ChunkPage(
+                        batch.Id, page.Id, page.PageNumber,
+                        preprocessed.ExtractedText, batch.SourceLanguage, (float)preprocessed.ConfidenceScore);
+
+                    if (chunks.Count > 0)
+                    {
+                        var indexed = await _kbIndexer.IndexBatchAsync(
+                            batch.Id, batch.GameId, chunks, progress: null, ct).ConfigureAwait(false);
+
+                        _logger.LogDebug(
+                            "[PhotoBatchProcessor] Page {PageNumber} of batch {BatchId}: {ChunkCount} chunks, {IndexedCount} indexed",
+                            page.PageNumber, batch.Id, chunks.Count, indexed);
+                    }
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // KB indexing failure must NOT abort the batch — page state still recorded below.
+                    _logger.LogError(ex,
+                        "[PhotoBatchProcessor] KB indexing failed for page {PageNumber} of batch {BatchId} — continuing",
+                        page.PageNumber, batch.Id);
+                }
+            }
+
+            // 7. Aggregate state mutations: same lock as the KB write above, so no SaveChangesAsync
+            //    can flush the aggregate half-mutated.
             batch.AttachPage(page);
             batch.RecordPageIndexed(page.PageNumber, preprocessed.ConfidenceScore, preprocessed.Warnings);
         }
         finally
         {
-            _aggregateMutex.Release();
+            _persistenceMutex.Release();
         }
 
         _logger.LogDebug(

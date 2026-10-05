@@ -35,34 +35,61 @@ internal static class AdminPipelineEndpoints
         return group;
     }
 
-    private static async Task<IResult> GetPipelineHealth(
+    // internal (not private) so SendsOneQueryAtATime can invoke it with a recording IMediator:
+    // the invariant below is about the ORDER of the four sends, which only the caller can observe.
+    internal static async Task<IResult> GetPipelineHealth(
         IHttpClientFactory httpClientFactory,
         IMediator mediator,
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        // Run independent queries in parallel. CQRS #3176: infrastructure health and step metrics
-        // are fetched via IMediator (pass-through queries) instead of injecting the services.
-        var healthTask = mediator.Send(new GetServiceHealthStatusesQuery(), ct);
-        var metricsTask = mediator.Send(new GetStepDurationStatsQuery(), ct);
-        var storageTask = mediator.Send(new GetPdfStorageHealthQuery(), ct);
-        var queueTask = mediator.Send(new GetProcessingQueueQuery(
+        // CQRS #3176: infrastructure health and step metrics are fetched via IMediator
+        // (pass-through queries) instead of injecting the services.
+        //
+        // 🔴 One send at a time (#4059). These four queries used to be started together and awaited
+        // with Task.WhenAll, and this endpoint then answered 500 on EVERY call. Measured 2026-10-04
+        // on the local stack, three consecutive requests, all 500:
+        //     System.InvalidOperationException: A second operation was started on this context
+        //     instance before a previous operation completed.
+        //       at GetPdfStorageHealthQueryHandler.Handle(GetPdfStorageHealthQuery, ...)
+        //       at AdminPipelineEndpoints.GetPipelineHealth(...)
+        // GetStepDurationStats, GetPdfStorageHealth and GetProcessingQueue all read through the
+        // SAME request-scoped MeepleAiDbContext, which EF Core forbids using concurrently.
+        //
+        // The queries are serialized rather than given a context each, and ALL FOUR are serialized
+        // rather than only the three that read EF today, because "this send does not touch the
+        // DbContext" is a property of the whole MediatR pipeline, not of the handler: every send
+        // also runs AuditLoggingBehavior, which holds the request-scoped context and uses it on the
+        // [AuditableAction] path. A behaviour added later, or an attribute added to one of these
+        // queries, would silently re-open the defect. One send at a time has no such precondition.
+        //
+        // Same defect and same resolution as #3843 (GetDashboardQueryHandler), where the parallel
+        // version answered 200 with EMPTY sections instead of 500 — quieter, not better. As there:
+        // if the sequential reads ever breach a latency target, the fix is one DbContext per query
+        // (IDbContextFactory), not shared-context parallelism.
+        //
+        // The embedding /metrics scrape stays concurrent: it is plain HTTP over IHttpClientFactory
+        // and goes nowhere near the DbContext or MediatR.
+        //
+        // ⚠️ #4059 was first attributed to the health checks, on the reasoning that
+        // DefaultHealthCheckService runs them in parallel and three of them inject the scoped
+        // MeepleAiDbContext. That is NOT the cause: the service opens a DI scope per check, so each
+        // gets a context of its own — measured in HealthCheckScopePerCheckContractTests, and visible
+        // in the log of the request that answered 500, where every health check completed normally.
+        // Do not "fix" those three checks on the strength of this endpoint's 500.
+        var embeddingMetricsTask = GetEmbeddingMetricsSafe(httpClientFactory, logger, ct);
+
+        var allHealth = await mediator.Send(new GetServiceHealthStatusesQuery(), ct).ConfigureAwait(false);
+        var stepMetrics = await mediator.Send(new GetStepDurationStatsQuery(), ct).ConfigureAwait(false);
+        var storageHealth = await mediator.Send(new GetPdfStorageHealthQuery(), ct).ConfigureAwait(false);
+        var queueResult = await mediator.Send(new GetProcessingQueueQuery(
             StatusFilter: null,
             SearchText: null,
             FromDate: null,
             ToDate: null,
             Page: 1,
-            PageSize: 10), ct);
+            PageSize: 10), ct).ConfigureAwait(false);
 
-        // Embedding service metrics (fire and forget on failure)
-        var embeddingMetricsTask = GetEmbeddingMetricsSafe(httpClientFactory, logger, ct);
-
-        await Task.WhenAll(healthTask, metricsTask, storageTask, queueTask, embeddingMetricsTask).ConfigureAwait(false);
-
-        var allHealth = await healthTask.ConfigureAwait(false);
-        var stepMetrics = await metricsTask.ConfigureAwait(false);
-        var storageHealth = await storageTask.ConfigureAwait(false);
-        var queueResult = await queueTask.ConfigureAwait(false);
         var embeddingMetrics = await embeddingMetricsTask.ConfigureAwait(false);
 
         // Map service health by name for easy lookup

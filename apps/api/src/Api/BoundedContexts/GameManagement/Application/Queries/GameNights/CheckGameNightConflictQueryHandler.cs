@@ -43,8 +43,18 @@ internal sealed class CheckGameNightConflictQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var windowStart = query.ProposedAt.Subtract(WindowRadius);
-        var windowEnd = query.ProposedAt.Add(WindowRadius);
+        // Issue #4055: `at` arrives from the query string as a DateTimeOffset, so it carries
+        // whatever offset the client sent, and the window bounds below become Npgsql parameters
+        // compared against a `timestamptz` column — which Npgsql refuses unless the offset is 0
+        // ("Cannot write DateTimeOffset with Offset=01:00:00 ..."). Measured against the local
+        // stack on 2026-10-04: GET /api/v1/game-nights/check-conflict?at=…Z → 200, the same
+        // instant as …+01:00 or …-05:00 → 400 `bad_request`, with
+        // DateTimeOffsetConverter.WriteCore → this handler in the stack trace. (It surfaces as 400
+        // rather than the 500 of the write path only because the middleware maps ArgumentException
+        // to 400 — same root cause, same user input: the wizard's date field.)
+        var proposedAt = query.ProposedAt.ToUniversalTime();
+        var windowStart = proposedAt.Subtract(WindowRadius);
+        var windowEnd = proposedAt.Add(WindowRadius);
 
         // Pull active candidate events in the window organized by the user.
         var organizerHits = await _context.GameNightEvents

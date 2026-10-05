@@ -101,7 +101,7 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         OrganizerId = organizerId;
         Title = title.Trim();
         Description = description?.Trim();
-        ScheduledAt = scheduledAt;
+        ScheduledAt = ToUtcInstant(scheduledAt);
         Location = location?.Trim();
         MaxPlayers = maxPlayers;
         GameIds = gameIds ?? [];
@@ -205,12 +205,41 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
         Title = title.Trim();
         Description = description?.Trim();
-        ScheduledAt = scheduledAt;
+        ScheduledAt = ToUtcInstant(scheduledAt);
         Location = location?.Trim();
         MaxPlayers = maxPlayers;
         GameIds = gameIds ?? GameIds;
         UpdatedAt = DateTimeOffset.UtcNow;
     }
+
+    /// <summary>
+    /// Canonicalizes a scheduling instant to UTC before it becomes aggregate state.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Issue #4055. <c>scheduled_at</c> is a PostgreSQL <c>timestamptz</c> and Npgsql refuses to
+    /// write a <see cref="DateTimeOffset"/> whose offset is not zero:
+    /// <c>Cannot write DateTimeOffset with Offset=01:00:00 to PostgreSQL type "timestamp with time
+    /// zone", only offset 0 (UTC) is supported</c>. The public contract, however, accepts any
+    /// offset by type (<c>DateTimeOffset ScheduledAt</c> on both the routing DTOs and the
+    /// commands), so the mismatch surfaced at <c>SaveChangesAsync</c> — i.e. <em>after</em> the
+    /// validators — as an opaque 500. Measured against the local stack on 2026-10-04:
+    /// <c>POST /api/v1/game-nights</c> with <c>+01:00</c> and <c>-05:00</c> → 500,
+    /// with <c>Z</c> and <c>+00:00</c> → 201; <c>PUT</c> behaved identically.
+    /// </para>
+    /// <para>
+    /// Normalizing rather than rejecting loses nothing: a <see cref="DateTimeOffset"/> denotes an
+    /// instant, and <c>20:00+01:00</c> is the same instant as <c>19:00Z</c>. The originating offset
+    /// is not part of this aggregate's state — the organizer picks a moment in time, not a local
+    /// wall-clock reading — so there is no information to preserve.
+    /// </para>
+    /// <para>
+    /// This sits in the aggregate because the constructor and <see cref="Update"/> are the only two
+    /// writers of <see cref="ScheduledAt"/>, which makes it the single point every write path
+    /// (create, ad-hoc create, update) must pass through.
+    /// </para>
+    /// </remarks>
+    private static DateTimeOffset ToUtcInstant(DateTimeOffset scheduledAt) => scheduledAt.ToUniversalTime();
 
     /// <summary>
     /// Publishes the game night and creates RSVP entries for invited users.

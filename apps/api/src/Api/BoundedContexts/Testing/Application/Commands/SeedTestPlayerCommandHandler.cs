@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Testing.Application.DTOs;
+using Api.BoundedContexts.Testing.Infrastructure;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
@@ -57,6 +58,28 @@ internal sealed class SeedTestPlayerCommandHandler
         {
             // User-linked RSVP. Create User if UserId not provided.
             var userId = request.UserId ?? Guid.NewGuid();
+
+            // Issue #4054: (event_id, user_id) porta un indice UNICO
+            // (IX_game_night_rsvps_event_user) e `userId` è l'unico dei due che il chiamante
+            // fornisce, quindi due `seedPlayer` con lo stesso userId sulla stessa serata sono
+            // l'unica collisione che può produrre qui. SaveSeedAsync la intercetterebbe comunque,
+            // ma risponderebbe «unique constraint IX_game_night_rsvps_event_user»: vero e inutile,
+            // perché non dice che quel giocatore è GIÀ nel roster né quale campo cambiare.
+            if (request.UserId is not null)
+            {
+                var alreadyOnRoster = await _db.Set<GameNightRsvpEntity>()
+                    .AnyAsync(
+                        r => r.EventId == request.GameNightId && r.UserId == request.UserId.Value,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+                if (alreadyOnRoster)
+                {
+                    throw new ConflictException(
+                        $"userId {request.UserId.Value} already has an RSVP on GameNight {request.GameNightId}. " +
+                        "Omit userId to seed a fresh player, or pass a different one.");
+                }
+            }
+
             if (request.UserId is null)
             {
                 var displayName = request.DisplayName ?? $"E2E Player {request.TestRunId[..16]}";
@@ -116,7 +139,7 @@ internal sealed class SeedTestPlayerCommandHandler
             isGuest = true;
         }
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _db.SaveSeedAsync(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
 
         _logger.LogInformation(

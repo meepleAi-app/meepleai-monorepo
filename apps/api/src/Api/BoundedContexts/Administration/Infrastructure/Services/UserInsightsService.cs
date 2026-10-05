@@ -43,20 +43,37 @@ internal sealed class UserInsightsService : IUserInsightsService
 
         var startTime = DateTime.UtcNow;
 
-        // Execute all analyzers in parallel for performance
-        var backlogTask = _backlogAnalyzer.AnalyzeBacklogAsync(userId, cancellationToken);
-        var rulesTask = _rulesAnalyzer.AnalyzeRulebooksAsync(userId, cancellationToken);
-        var ragTask = _ragRecommender.RecommendSimilarGamesAsync(userId, cancellationToken);
-        var streakTask = _streakAnalyzer.AnalyzeStreakAsync(userId, cancellationToken);
-
-        await Task.WhenAll(backlogTask, rulesTask, ragTask, streakTask)
+        // 🔴 Sequenziale, non `Task.WhenAll`, e qui la ragione è più insidiosa che un 500.
+        // Tutti e quattro gli analyzer iniettano il `MeepleAiDbContext` **scoped** della richiesta
+        // (BacklogAnalyzer:15, RulesAnalyzer:15, RAGRecommender:20, StreakAnalyzer:15), e un
+        // DbContext non è thread-safe: avviarli insieme fa lanciare `ConcurrencyDetector`.
+        //
+        // Ma ciascun analyzer ha il proprio `try/catch` che torna una lista vuota, e
+        // `AiInsightsService` ri-cattura in nome della «graceful degradation». Quindi il difetto
+        // NON produce un 500 che qualcuno noterebbe: produce **insight mancanti in silenzio**, e
+        // `/api/v1/dashboard/insights` risponde 200 con meno dati di quelli che avrebbe. È la
+        // forma di #3843 — un'eccezione ingoiata che si presenta come assenza.
+        //
+        // Trovato come fratello latente mentre si verificava la correzione di #4059 su
+        // `/admin/kb/pipeline/health`: lì la stessa causa dà 500 perché nulla la cattura. Non
+        // riprodotto su questa rotta proprio perché i catch lo nascondono — e questo è l'argomento
+        // per correggerlo, non per rinviarlo.
+        //
+        // Il parallelismo non era un guadagno: le quattro query vanno sulla stessa connessione e
+        // il pool le serializza comunque. Se servisse davvero, un contesto per analyzer via
+        // `IDbContextFactory`, non `WhenAll` su quello condiviso.
+        var backlogInsights = await _backlogAnalyzer
+            .AnalyzeBacklogAsync(userId, cancellationToken)
             .ConfigureAwait(false);
-
-        // ARCH-03: Use await instead of .Result to preserve exception fidelity
-        var backlogInsights = await backlogTask.ConfigureAwait(false);
-        var rulesInsights = await rulesTask.ConfigureAwait(false);
-        var ragInsights = await ragTask.ConfigureAwait(false);
-        var streakInsights = await streakTask.ConfigureAwait(false);
+        var rulesInsights = await _rulesAnalyzer
+            .AnalyzeRulebooksAsync(userId, cancellationToken)
+            .ConfigureAwait(false);
+        var ragInsights = await _ragRecommender
+            .RecommendSimilarGamesAsync(userId, cancellationToken)
+            .ConfigureAwait(false);
+        var streakInsights = await _streakAnalyzer
+            .AnalyzeStreakAsync(userId, cancellationToken)
+            .ConfigureAwait(false);
 
         var allInsights = new List<AIInsight>();
         allInsights.AddRange(backlogInsights);

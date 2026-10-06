@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -49,6 +50,10 @@ public sealed class GetGameDetailQueryHandlerDesignersTests
             labelRepo.Object,
             agentRepo.Object,
             chatThreadRepo.Object,
+            // #4085: cover resolution now needs the EF SharedGameEntity + storage service;
+            // these tests don't exercise it — empty in-memory context, unused mock.
+            TestDbContextFactory.CreateInMemoryDbContext(),
+            new Mock<IBlobStorageService>().Object,
             cache,
             NullLogger<GetGameDetailQueryHandler>.Instance);
     }

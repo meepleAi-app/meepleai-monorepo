@@ -1,8 +1,11 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
+using Api.Services.Pdf;
+using Api.SharedKernel.Domain.Covers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -26,15 +29,18 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
 
     private readonly MeepleAiDbContext _context;
     private readonly IHybridCacheService _cache;
+    private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<GetCatalogTrendingQueryHandler> _logger;
 
     public GetCatalogTrendingQueryHandler(
         MeepleAiDbContext context,
         IHybridCacheService cache,
+        IBlobStorageService blobStorage,
         ILogger<GetCatalogTrendingQueryHandler> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -55,9 +61,35 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
         // Trim to requested limit and re-rank
         var trending = allTrending.Take(query.Limit).ToList();
 
-        _logger.LogInformation("Retrieved {Count} trending games from cache/compute", trending.Count);
+        // #4085: resolve CoverUrl HERE, after the 12h cache boundary, never inside
+        // ComputeTrendingAsync — see TrendingGameDto.CoverUrl for why baking a 4h-expiring
+        // presign into a 12h-cached DTO would be worse than no cover at all. Fresh entity
+        // fetch + fresh presign on every call; the (score/rank/counts) part stays cached.
+        var gameIds = trending.Select(t => t.GameId).ToList();
+        var entities = await _context.Set<SharedGameEntity>()
+            .AsNoTracking()
+            .Where(g => gameIds.Contains(g.Id))
+            .Include(g => g.CoverAssignments)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var entityMap = entities.ToDictionary(e => e.Id);
 
-        return trending;
+        var withCovers = new List<TrendingGameDto>(trending.Count);
+        foreach (var t in trending)
+        {
+            string? coverUrl = null;
+            if (entityMap.TryGetValue(t.GameId, out var entity))
+            {
+                coverUrl = await CoverUrlResolver
+                    .ResolveForContextAsync(entity, CoverContext.Card, _blobStorage)
+                    .ConfigureAwait(false);
+            }
+            withCovers.Add(t with { CoverUrl = coverUrl });
+        }
+
+        _logger.LogInformation("Retrieved {Count} trending games from cache/compute", withCovers.Count);
+
+        return withCovers;
     }
 
     private async Task<List<TrendingGameDto>> ComputeTrendingAsync(int limit, CancellationToken cancellationToken)

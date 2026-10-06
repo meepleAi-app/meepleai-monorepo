@@ -57,9 +57,12 @@ internal sealed class BggCoverUploadPipeline : IBggCoverUploadPipeline
             InputStream = stream,
             ContentType = contentType,
             AutoCloseStream = false,
-            // Required for S3-compatible providers (R2/MinIO) that don't support
-            // STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER (mirrors CoverR2UploadPipeline).
-            DisablePayloadSigning = true,
+            // #4085/#4016 causa A: era hardcoded a `true`. Required for S3-compatible
+            // providers (R2/MinIO) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-
+            // TRAILER, ma SOLO su HTTPS — su un endpoint in chiaro AWS SDK rifiuta la
+            // richiesta. Stessa logica condizionale di
+            // S3BlobStorageService.DisablePayloadSigningForEndpoint (#3846).
+            DisablePayloadSigning = !BlobStorageServiceFactory.UsesPlainHttp(_options.Endpoint),
         };
         request.Headers.CacheControl = ImmutableCacheControl;
 

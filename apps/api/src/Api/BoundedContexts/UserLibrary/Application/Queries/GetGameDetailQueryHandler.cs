@@ -1,10 +1,16 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
+using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Covers;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
@@ -21,6 +27,13 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     private readonly IGameLabelRepository _labelRepository;
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
+    // #4085: injected alongside the repository abstractions, not instead of them — same
+    // mixed pattern already used by GetUserLibraryQueryHandler in this bounded context.
+    // CoverUrlResolver needs the EF SharedGameEntity (raw cover-key columns +
+    // CoverAssignments nav) and IBlobStorageService for the presign; neither is reachable
+    // through ISharedGameRepository, which returns the domain SharedGame aggregate.
+    private readonly MeepleAiDbContext _db;
+    private readonly IBlobStorageService _blobStorage;
     private readonly HybridCache _cache;
     private readonly ILogger<GetGameDetailQueryHandler> _logger;
 
@@ -36,6 +49,8 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         IGameLabelRepository labelRepository,
         IAgentDefinitionRepository agentDefinitionRepository,
         IChatThreadRepository chatThreadRepository,
+        MeepleAiDbContext db,
+        IBlobStorageService blobStorage,
         HybridCache cache,
         ILogger<GetGameDetailQueryHandler> logger)
     {
@@ -44,6 +59,8 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
+        _db = db ?? throw new ArgumentNullException(nameof(db));
+        _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -156,6 +173,25 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     .ConfigureAwait(false);
                 var chatThreadCount = userThreads.Count;
 
+                // #4085: GameImageUrl used to be sharedGame.ImageUrl — the #2123 tombstone
+                // column, always empty since the BGG user-side asset ban. Resolve the real
+                // cover (admin override → PDF → BGG → Wikidata → null) the same way the
+                // catalog list and detail pages already do. Cache TTL here is 5 minutes
+                // (CacheOptions above), well under the resolver's 4h presign lifetime
+                // (CoverUrlResolver.CoverPresignExpirySeconds) — safe to resolve inside this
+                // cached factory, unlike GetCatalogTrendingQueryHandler's 12h cache (#4085).
+                // L3 user-custom-cover is intentionally NOT wired here (would need an
+                // additional UserLibraryEntryEntity fetch); ResolveForContextAsync still
+                // honors the admin per-context override and the implicit L4→L2 chain.
+                var sharedGameEntity = await _db.Set<SharedGameEntity>()
+                    .AsNoTracking()
+                    .Include(g => g.CoverAssignments)
+                    .FirstOrDefaultAsync(g => g.Id == query.GameId, cancel)
+                    .ConfigureAwait(false);
+                var coverUrl = sharedGameEntity is not null
+                    ? await CoverUrlResolver.ResolveForContextAsync(sharedGameEntity, CoverContext.Hero, _blobStorage).ConfigureAwait(false)
+                    : null;
+
                 _logger.LogInformation("Retrieved game detail for {GameId} for user {UserId}", query.GameId, query.UserId);
 
                 return new GameDetailDto(
@@ -169,7 +205,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     GameYearPublished: sharedGame.YearPublished,
                     GameDescription: sharedGame.Description,
                     GameIconUrl: sharedGame.ThumbnailUrl,
-                    GameImageUrl: sharedGame.ImageUrl,
+                    GameImageUrl: coverUrl,
                     MinPlayers: sharedGame.MinPlayers,
                     MaxPlayers: sharedGame.MaxPlayers,
                     PlayTimeMinutes: sharedGame.PlayingTimeMinutes,

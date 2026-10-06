@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -28,6 +29,10 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
 {
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IHybridCacheService> _cacheMock;
+    // #4085: cover resolution reads the blob storage AFTER the cache boundary (see
+    // TrendingGameDto.CoverUrl). Loose mock — the seeded games here carry no raw cover
+    // key, so the resolver short-circuits to the placeholder path without calling it.
+    private readonly Mock<IBlobStorageService> _blobStorageMock;
     private readonly Mock<ILogger<GetCatalogTrendingQueryHandler>> _loggerMock;
     private readonly GetCatalogTrendingQueryHandler _handler;
 
@@ -35,6 +40,7 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
     {
         _db = TestDbContextFactory.CreateInMemoryDbContext();
         _cacheMock = new Mock<IHybridCacheService>();
+        _blobStorageMock = new Mock<IBlobStorageService>();
         _loggerMock = new Mock<ILogger<GetCatalogTrendingQueryHandler>>();
 
         // Cache pass-through: invoke factory directly so we test handler logic, not cache.
@@ -52,7 +58,7 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
                 TimeSpan? ___,
                 CancellationToken ct) => factory(ct));
 
-        _handler = new GetCatalogTrendingQueryHandler(_db, _cacheMock.Object, _loggerMock.Object);
+        _handler = new GetCatalogTrendingQueryHandler(_db, _cacheMock.Object, _blobStorageMock.Object, _loggerMock.Object);
     }
 
     public void Dispose() => _db.Dispose();
@@ -110,6 +116,88 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
         result[0].Title.Should().Be("Unknown Game", "the existing fallback path is preserved");
         result[0].HasKnowledgeBase.Should().BeFalse(
             "missing SharedGameEntity rows must default HasKnowledgeBase to false");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // #4085 — CoverUrl resolution. Resolved per-request, AFTER the cache read: see
+    // TrendingGameDto.CoverUrl for why baking a 4h-expiring presign into this 12h cache
+    // would be worse than no cover.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_ResolvesCoverUrl_FromSeededPdfCoverKey()
+    {
+        var game = SeedGame(hasKnowledgeBase: false, title: "Wingspan");
+        game.PdfCoverR2Key = "pdf-cover-db-key";
+        SeedEvent(game.Id, GameEventType.View);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        const string resolvedUrl = "https://r2.example.test/covers/pdf/wingspan-preview.webp";
+        _blobStorageMock
+            .Setup(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync(resolvedUrl);
+
+        var result = await _handler.Handle(
+            new GetCatalogTrendingQuery { Limit = 10 },
+            TestContext.Current.CancellationToken);
+
+        result.Should().ContainSingle();
+        result[0].CoverUrl.Should().Be(resolvedUrl);
+    }
+
+    [Fact]
+    public async Task Handle_ResolvesCoverUrl_FreshOnEachCall_EvenOnAGenuineCacheHit()
+    {
+        // #4085 — the whole point of resolving post-cache: a 12h cache HIT must still
+        // produce a FRESH presigned URL, because the 4h-lived URL from 8+ hours ago would
+        // already be dead. This re-points the cache mock (set up in the ctor to always
+        // invoke the factory) so the SECOND call returns the first call's result WITHOUT
+        // invoking the factory again — a genuine cache hit, where ComputeTrendingAsync
+        // (and anything resolved inside it) does NOT run a second time. If CoverUrl were
+        // resolved inside that cached factory instead of in Handle() after it, this second
+        // call would never touch the blob-storage mock again and would still carry the
+        // FIRST presign — failing the assertion below.
+        var game = SeedGame(hasKnowledgeBase: false, title: "Wingspan");
+        game.PdfCoverR2Key = "pdf-cover-db-key";
+        SeedEvent(game.Id, GameEventType.View);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        _blobStorageMock
+            .SetupSequence(b => b.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
+            .ReturnsAsync("https://r2.example.test/covers/pdf/first-presign.webp")
+            .ReturnsAsync("https://r2.example.test/covers/pdf/second-presign-after-first-expired.webp");
+
+        List<TrendingGameDto>? cachedValue = null;
+        _cacheMock
+            .Setup(c => c.GetOrCreateAsync(
+                It.IsAny<string>(),
+                It.IsAny<Func<CancellationToken, Task<List<TrendingGameDto>>>>(),
+                It.IsAny<string[]?>(),
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(async (
+                string _,
+                Func<CancellationToken, Task<List<TrendingGameDto>>> factory,
+                string[]? __,
+                TimeSpan? ___,
+                CancellationToken ct) =>
+            {
+                if (cachedValue is null)
+                {
+                    cachedValue = await factory(ct).ConfigureAwait(false); // miss: compute + store
+                }
+                return cachedValue; // hit: factory NOT invoked again
+            });
+
+        var query = new GetCatalogTrendingQuery { Limit = 10 };
+        var first = await _handler.Handle(query, TestContext.Current.CancellationToken);
+        var second = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        first[0].CoverUrl.Should().Be("https://r2.example.test/covers/pdf/first-presign.webp");
+        second[0].CoverUrl.Should().Be(
+            "https://r2.example.test/covers/pdf/second-presign-after-first-expired.webp",
+            "#4085: the second call hit the cache (factory not re-invoked) — CoverUrl must " +
+            "still be resolved fresh in Handle(), not inherited from the cached DTO");
     }
 
     private SharedGameEntity SeedGame(bool hasKnowledgeBase, string title)

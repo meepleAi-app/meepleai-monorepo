@@ -5,6 +5,12 @@ export interface TrendingGame {
   gameId: string;
   title: string;
   thumbnailUrl: string | null;
+  /**
+   * Issue #4085 — resolved cover (admin override → PDF → BGG → Wikidata → null), via
+   * CoverUrlResolver. `thumbnailUrl` above is the #2123 tombstone column (always empty
+   * in practice since the BGG user-side asset ban); consumers should prefer this field.
+   */
+  coverUrl: string | null;
   score: number;
   searchCount: number;
   viewCount: number;

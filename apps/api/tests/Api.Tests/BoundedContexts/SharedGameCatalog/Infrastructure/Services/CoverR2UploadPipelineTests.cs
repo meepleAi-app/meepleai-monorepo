@@ -47,6 +47,60 @@ public sealed class CoverR2UploadPipelineTests : IDisposable
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // #4085/#4016 causa A — DisablePayloadSigning was hardcoded `true`, which AWS SDK
+    // rejects against a plain-HTTP endpoint ("the request must be sent over HTTPS").
+    // Must now follow S3BlobStorageService.DisablePayloadSigningForEndpoint: false on
+    // HTTP (MinIO locale), true on HTTPS (R2/AWS in staging/prod — unchanged there).
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task UploadAsync_PlainHttpEndpoint_DisablesPayloadSigningIsFalse()
+    {
+        var options = new S3StorageOptions
+        {
+            Endpoint = "http://minio:9000",
+            AccessKey = "test-access-key",
+            SecretKey = "test-secret-key",
+            BucketName = "test-bucket",
+            Region = "auto",
+            PresignedUrlExpirySeconds = 3600,
+            EnableEncryption = true,
+            ForcePathStyle = false,
+        };
+        var sut = new CoverR2UploadPipeline(_mockS3Client.Object, options, _mockLogger.Object);
+        PutObjectRequest? captured = null;
+        _mockS3Client
+            .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((req, _) => captured = req)
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        await sut.UploadAsync(Guid.NewGuid(), new byte[] { 0x52, 0x49, 0x46, 0x46 }, CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.DisablePayloadSigning.Should().Be(
+            false,
+            "AWS SDK rejects DisablePayloadSigning=true over plain HTTP — this was the measured #4016 failure");
+    }
+
+    [Fact]
+    public async Task UploadAsync_HttpsEndpoint_DisablesPayloadSigningIsTrue()
+    {
+        // _sut (ctor) is already built against the HTTPS test endpoint.
+        PutObjectRequest? captured = null;
+        _mockS3Client
+            .Setup(x => x.PutObjectAsync(It.IsAny<PutObjectRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<PutObjectRequest, CancellationToken>((req, _) => captured = req)
+            .ReturnsAsync(new PutObjectResponse { HttpStatusCode = HttpStatusCode.OK });
+
+        await _sut.UploadAsync(Guid.NewGuid(), new byte[] { 0x52, 0x49, 0x46, 0x46 }, CancellationToken.None);
+
+        captured.Should().NotBeNull();
+        captured!.DisablePayloadSigning.Should().Be(
+            true,
+            "R2/AWS over HTTPS keeps the pre-existing behaviour — staging/prod must not change");
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Happy path — physical R2 object key has `.webp`, returned DB key does NOT
     // (matches CoverUrlResolver contract, prevents double-suffix bug).
     // ──────────────────────────────────────────────────────────────────────────

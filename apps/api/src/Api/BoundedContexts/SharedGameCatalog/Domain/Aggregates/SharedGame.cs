@@ -1789,10 +1789,13 @@ public sealed class SharedGame : AggregateRoot<Guid>
             throw new ArgumentException("AverageRating must be between 1.0 and 10.0", nameof(rating));
     }
 
+    // #4090: empty is the normal state since the #2123 nullify migration — these columns are a
+    // deprecation tombstone and MapToDomain coerces a null row value to "". Requiring a value here
+    // forced every admin save to invent one. Covers come from CoverUrlResolver, not from these.
     private static void ValidateImageUrl(string imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))
-            throw new ArgumentException("ImageUrl is required", nameof(imageUrl));
+            return;
 
         if (!Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
             throw new ArgumentException("ImageUrl must be a valid URL", nameof(imageUrl));
@@ -1801,7 +1804,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
     private static void ValidateThumbnailUrl(string thumbnailUrl)
     {
         if (string.IsNullOrWhiteSpace(thumbnailUrl))
-            throw new ArgumentException("ThumbnailUrl is required", nameof(thumbnailUrl));
+            return;
 
         if (!Uri.TryCreate(thumbnailUrl, UriKind.Absolute, out _))
             throw new ArgumentException("ThumbnailUrl must be a valid URL", nameof(thumbnailUrl));

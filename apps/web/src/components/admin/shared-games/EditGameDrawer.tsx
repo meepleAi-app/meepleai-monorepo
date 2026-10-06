@@ -120,8 +120,9 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
 
   const updateMutation = useMutation({
     mutationFn: async (data: EditGameFormData) => {
-      // Backend requires non-null URL fields; coerce '' to existing or placeholder.
-      // Schema upstream enforces .url() so empty string would fail server-side validation.
+      // #4090: these two columns are the #2123 deprecation tombstone and the backend now accepts
+      // them empty, so an absent value is sent as '' instead of a fabricated placeholder URL.
+      // The rendered cover comes from CoverUrlResolver, never from here.
       const payload = {
         title: data.title,
         description: data.description,
@@ -130,13 +131,8 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
         maxPlayers: data.maxPlayers,
         playingTimeMinutes: data.playingTimeMinutes,
         minAge: data.minAge,
-        imageUrl: data.imageUrl || game.imageUrl || 'https://placeholder.example/cover.png',
-        thumbnailUrl:
-          data.thumbnailUrl ||
-          game.thumbnailUrl ||
-          data.imageUrl ||
-          game.imageUrl ||
-          'https://placeholder.example/thumb.png',
+        imageUrl: data.imageUrl || game.imageUrl || '',
+        thumbnailUrl: data.thumbnailUrl || game.thumbnailUrl || '',
       };
       await api.sharedGames.update(game.id, payload);
     },
@@ -164,8 +160,8 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
         <SheetHeader>
           <SheetTitle>Modifica gioco</SheetTitle>
           <SheetDescription>
-            Aggiorna metadati di {game.title}. Le modifiche sono visibili immediatamente
-            agli utenti del catalogo.
+            Aggiorna metadati di {game.title}. Le modifiche sono visibili immediatamente agli utenti
+            del catalogo.
           </SheetDescription>
         </SheetHeader>
 
@@ -173,9 +169,7 @@ export function EditGameDrawer({ open, onOpenChange, game }: EditGameDrawerProps
           <div className="space-y-1.5">
             <Label htmlFor="edit-title">Titolo *</Label>
             <Input id="edit-title" {...register('title')} aria-invalid={!!errors.title} />
-            {errors.title && (
-              <p className="text-xs text-destructive">{errors.title.message}</p>
-            )}
+            {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
           </div>
 
           <div className="space-y-1.5">

@@ -60,16 +60,19 @@ export function GameDetailRulesAccordion(props: GameDetailRulesAccordionProps): 
           </h3>
           <p className="mt-0.5 text-[12px] text-muted-foreground">{labels.subtitle}</p>
         </div>
-        {!isEmpty ? (
-          <Link
-            href={viewAllHref}
-            aria-label={labels.viewAllAriaLabel}
-            data-slot="game-detail-rules-view-all"
-            className="rounded-md border border-border px-3 py-1 font-display text-[11px] font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {labels.viewAll}
-          </Link>
-        ) : null}
+        {/* #4084: always rendered, even when sections is empty. `viewAllHref` points at
+            /games/[id]/rules, which is a valid destination regardless — it shows its own
+            honest empty state when there's nothing published. Hiding this link when empty
+            used to be the ONLY way to reach that page from the tab, so an empty preview
+            meant the full rulebook page was undiscoverable. */}
+        <Link
+          href={viewAllHref}
+          aria-label={labels.viewAllAriaLabel}
+          data-slot="game-detail-rules-view-all"
+          className="rounded-md border border-border px-3 py-1 font-display text-[11px] font-bold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {labels.viewAll}
+        </Link>
       </header>
 
       {isEmpty ? (

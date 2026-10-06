@@ -67,6 +67,7 @@ import {
   useRemoveHouseRule,
   useUpdateHouseRule,
 } from '@/lib/domain-hooks/useGameMemory';
+import { useGameRules, mapRuleSpecsToSections } from '@/lib/domain-hooks/useGameRules';
 import { deriveGameDetailUiState } from '@/lib/games/game-detail-state';
 import {
   IS_VISUAL_TEST_BUILD,
@@ -442,6 +443,13 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     enabled: !!gameId && tab === 'documents',
   });
 
+  // #4084: Rules tab preview, lazy-gated the same way as Documents above. Before this
+  // the tab passed a hardcoded `sections={[]}` literal — no hook, no query — so the tab
+  // rendered identically whether `rule_specs` held zero rows or a thousand.
+  const rulesQuery = useGameRules(gameId ?? '', {
+    enabled: !!gameId && tab === 'rules',
+  });
+
   // Leaderboard hook (Issue #1466 — lazy, gated by parent + tab + own variant).
   // Only fetches on the Stats tab AND when the game is in the user's library
   // (libraryEntryId present). Community variant locks the tab → no fetch.
@@ -707,6 +715,12 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     () => router.push('/agents/new')
   );
 
+  // #4084: real data, honest empty state. `rulesQuery.data` is `undefined` while the
+  // tab-gated query hasn't fired or hasn't resolved yet — `mapRuleSpecsToSections`
+  // treats that the same as an empty array, which is correct: an empty accordion is
+  // what a never-fetched or genuinely-empty rule spec both look like here.
+  const ruleSections = mapRuleSpecsToSections(rulesQuery.data, rulesLabels.title);
+
   // Sessions from recent sessions fixture/data
   const recentSessions = (safeDetail.recentSessions ?? []).map(s => ({
     id: s.id,
@@ -786,7 +800,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           data-slot="game-detail-panel-rules"
         >
           <GameDetailRulesAccordion
-            sections={[]}
+            sections={ruleSections}
             viewAllHref={`/games/${gameId}/rules`}
             labels={rulesLabels}
           />

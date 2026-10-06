@@ -51,9 +51,11 @@ test.describe('Custom Strategy Builder', () => {
     await page.waitForLoadState('networkidle');
 
     // Find collapse/expand buttons
-    const panelToggles = page.locator('button[aria-label*="collapse"], button[aria-label*="expand"]');
+    const panelToggles = page.locator(
+      'button[aria-label*="collapse"], button[aria-label*="expand"]'
+    );
 
-    if (await panelToggles.count() > 0) {
+    if ((await panelToggles.count()) > 0) {
       const firstToggle = panelToggles.first();
       await firstToggle.click();
 
@@ -67,13 +69,13 @@ test.describe('Custom Strategy Builder', () => {
 
     // Look for save button
     const saveButton = page.locator('button:has-text("Save"), button[aria-label*="Save"]');
-    if (await saveButton.count() > 0) {
+    if ((await saveButton.count()) > 0) {
       await expect(saveButton.first()).toBeVisible();
     }
 
     // Look for test button
     const testButton = page.locator('button:has-text("Test"), button[aria-label*="Test"]');
-    if (await testButton.count() > 0) {
+    if ((await testButton.count()) > 0) {
       await expect(testButton.first()).toBeVisible();
     }
   });
@@ -82,8 +84,10 @@ test.describe('Custom Strategy Builder', () => {
     await page.waitForLoadState('networkidle');
 
     // Validation panel should exist
-    const validationPanel = page.locator('[data-testid="validation-panel"], text=/Validation|Errors|Warnings/i');
-    if (await validationPanel.count() > 0) {
+    const validationPanel = page.locator(
+      '[data-testid="validation-panel"], text=/Validation|Errors|Warnings/i'
+    );
+    if ((await validationPanel.count()) > 0) {
       await expect(validationPanel.first()).toBeVisible({ timeout: 5000 });
     }
   });
@@ -95,9 +99,11 @@ test.describe('Strategy Builder - Templates', () => {
     await page.waitForLoadState('networkidle');
 
     // Look for template selector
-    const templateSelector = page.locator('[data-testid="template-selector"], text=/Template|Preset/i');
+    const templateSelector = page.locator(
+      '[data-testid="template-selector"], text=/Template|Preset/i'
+    );
 
-    if (await templateSelector.count() > 0) {
+    if ((await templateSelector.count()) > 0) {
       const firstTemplate = templateSelector.first();
       await firstTemplate.click({ timeout: 5000 });
     }

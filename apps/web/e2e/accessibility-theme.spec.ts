@@ -10,8 +10,8 @@
  * - Screen reader compatibility
  */
 
-import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { test, expect } from '@playwright/test';
 
 test.describe('Accessibility - Dual-Theme System', () => {
   test('should have no accessibility violations in light mode', async ({ page }) => {
@@ -69,7 +69,7 @@ test.describe('Accessibility - Dual-Theme System', () => {
     await expect(focused).toBeVisible();
 
     // Verify focus ring exists (primary color in light mode)
-    const focusedElement = await focused.evaluate((el) => {
+    const focusedElement = await focused.evaluate(el => {
       const styles = window.getComputedStyle(el);
       return {
         outline: styles.outline,
@@ -103,7 +103,7 @@ test.describe('Accessibility - Dual-Theme System', () => {
     await expect(focused).toBeVisible();
 
     // In dark mode, focus rings should use amber (--accent) for better visibility
-    const focusedElement = await focused.evaluate((el) => {
+    const focusedElement = await focused.evaluate(el => {
       const styles = window.getComputedStyle(el);
       return {
         outline: styles.outline,
@@ -114,9 +114,7 @@ test.describe('Accessibility - Dual-Theme System', () => {
 
     // Should have amber-ish focus indicator in dark mode
     // (Can't easily test exact color, but verify SOME focus exists)
-    expect(
-      focusedElement.outline !== 'none' || focusedElement.boxShadow !== 'none'
-    ).toBeTruthy();
+    expect(focusedElement.outline !== 'none' || focusedElement.boxShadow !== 'none').toBeTruthy();
   });
 
   test('should support keyboard navigation of theme toggle', async ({ page }) => {

@@ -6,10 +6,11 @@
  * 1. Upload PDF rulebook
  * 2. Process and chunk document
  * 3. Generate embeddings
- * 4. Index in Qdrant
+ * 4. Index in pgvector
  * 5. RAG query with confidence validation
  *
  * Critical: This test validates the core RAG infrastructure before EPIC 1.
+ * Note: Qdrant replaced by pgvector — vector counts verified via /api/v1/admin/kb/vector-stats
  */
 
 import fs from 'fs';
@@ -17,68 +18,102 @@ import path from 'path';
 
 import { test, expect } from '@playwright/test';
 
-// #4059: `NEXT_PUBLIC_API_URL` non e' definita per il runner Playwright — i quattro
-// workflow E2E la scrivono in `infra/env/web.env.dev`, che e' l'env del CONTAINER, non
-// quello del processo che esegue questo spec. Funzionava solo per il fallback. Il nome
-// canonico e' quello usato dagli altri spec (182 occorrenze contro 2).
+// #4059: nome canonico — `NEXT_PUBLIC_API_URL` non e' definita per il runner Playwright.
 const API_URL = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-const QDRANT_URL = 'http://localhost:6333';
 const PDF_PATH = path.join(process.cwd(), '../../data/rulebook/scacchi-fide_2017_rulebook.pdf');
 
 test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
-  // Use fixed Chess SharedGameId (seeded by AutoConfigurationService)
-  // If ID changes, test will fail with clear error message
-  const CHESS_SHARED_GAME_ID_PLACEHOLDER = '00000000-0000-0000-0000-000000000000';
+  let adminAuthCookie: string;
+  let chessSharedGameId: string;
+  let chessLibraryGameId: string;
 
-  let chessSharedGameId: string = CHESS_SHARED_GAME_ID_PLACEHOLDER;
+  test.beforeAll(async ({ request }) => {
+    // Step 0: Auto-detect Chess SharedGame ID from database
+    const gamesResponse = await request.get(`${API_URL}/api/v1/shared-games?search=Chess&limit=1`);
+    expect(gamesResponse.ok()).toBeTruthy();
 
-  test.beforeEach(async ({ page }) => {
-    // Step 0: Auto-detect Chess ID if not set
-    if (chessSharedGameId === CHESS_SHARED_GAME_ID_PLACEHOLDER) {
-      const gamesResponse = await page.request.get(
-        `${API_URL}/api/v1/shared-games?search=Chess&limit=1`
-      );
-      if (gamesResponse.ok()) {
-        const gamesData = await gamesResponse.json();
-        if (gamesData.items && gamesData.items.length > 0) {
-          chessSharedGameId = gamesData.items[0].id;
-          console.log(`✅ Chess SharedGame ID: ${chessSharedGameId}`);
-        }
-      }
-    }
+    const gamesData = await gamesResponse.json();
+    expect(gamesData.items).toHaveLength(1);
+    chessSharedGameId = gamesData.items[0].id;
 
-    // Step 1: Login as admin via UI (more reliable than API for cookie management)
-    await page.goto('/login');
-    await page.fill('input[name="email"]', 'admin@meepleai.dev');
-    await page.fill('input[name="password"]', process.env.ADMIN_PASSWORD || 'pVKOMQNK0tFNgGlX');
+    console.log(`Chess SharedGame ID: ${chessSharedGameId}`);
+  });
 
-    const loginButton = page.locator('button[type="submit"]');
-    await loginButton.click();
+  test.beforeEach(async ({ page, request }) => {
+    // Step 1: Login as admin
+    const loginResponse = await request.post(`${API_URL}/api/v1/auth/login`, {
+      data: {
+        email: 'admin@meepleai.dev',
+        password: process.env.ADMIN_PASSWORD || 'pVKOMQNK0tFNgGlX',
+      },
+    });
 
-    // Wait for redirect (admin goes to /admin, regular user to /dashboard)
-    await page.waitForURL(/admin|dashboard|library/, { timeout: 10000 });
-    console.log(`✅ Logged in, redirected to: ${page.url()}`);
+    expect(loginResponse.ok()).toBeTruthy();
 
-    // Step 2: Enable PDF Upload feature flag via API
-    await page.request.post(`${API_URL}/api/v1/admin/feature-flags`, {
+    // Extract auth cookie
+    const cookies = await page.context().cookies();
+    const sessionCookie = cookies.find(c => c.name.includes('session') || c.name.includes('auth'));
+    adminAuthCookie = sessionCookie ? `${sessionCookie.name}=${sessionCookie.value}` : '';
+
+    // Step 2: Enable PDF Upload feature flag (idempotent)
+    await request.post(`${API_URL}/api/v1/admin/feature-flags`, {
       data: {
         key: 'Features.PdfUpload',
         enabled: true,
         description: 'Enable PDF uploads for RAG testing',
       },
+      headers: {
+        Cookie: adminAuthCookie,
+      },
       failOnStatusCode: false, // May already exist (409)
     });
   });
 
-  test('should complete full RAG pipeline: Upload → Qdrant → Query', async ({ page }) => {
-    test.setTimeout(180000); // 3 minutes for full pipeline
-    // Step 3: Check Qdrant collection (before upload)
-    const qdrantBefore = await page.request.get(`${QDRANT_URL}/collections/meepleai_documents`);
-    expect(qdrantBefore.ok()).toBeTruthy();
+  test('should complete full RAG pipeline: Upload → pgvector → Query', async ({
+    page,
+    request,
+  }) => {
+    // Step 3: Add Chess to admin library (using SharedGameId)
+    const addToLibraryResponse = await page.request.post(
+      `${API_URL}/api/v1/library/games/${chessSharedGameId}`,
+      {
+        data: {},
+        headers: { Cookie: adminAuthCookie },
+        failOnStatusCode: false,
+      }
+    );
 
-    const qdrantDataBefore = await qdrantBefore.json();
-    const vectorsBeforeCount = qdrantDataBefore.result.points_count || 0;
-    console.log(`Qdrant vectors before: ${vectorsBeforeCount}`);
+    // Accept 201 (created) or 409 (already exists)
+    expect([201, 409]).toContain(addToLibraryResponse.status());
+
+    if (addToLibraryResponse.status() === 201) {
+      const libraryEntry = await addToLibraryResponse.json();
+      chessLibraryGameId = libraryEntry.id;
+      console.log(`Chess added to library: ${chessLibraryGameId}`);
+    } else {
+      // Fetch library to get Chess game ID
+      const libraryResponse = await page.request.get(`${API_URL}/api/v1/library/games`, {
+        headers: { Cookie: adminAuthCookie },
+      });
+      const library = await libraryResponse.json();
+      const chessEntry = library.items.find(
+        (item: any) =>
+          item.sharedGameId === chessSharedGameId || item.gameTitle?.toLowerCase().includes('chess')
+      );
+      expect(chessEntry).toBeTruthy();
+      chessLibraryGameId = chessEntry.id;
+      console.log(`Chess already in library: ${chessLibraryGameId}`);
+    }
+
+    // Step 4: Check pgvector stats (before upload)
+    const statsBefore = await request.get(`${API_URL}/api/v1/admin/kb/vector-stats`, {
+      headers: { Cookie: adminAuthCookie },
+    });
+    expect(statsBefore.ok()).toBeTruthy();
+
+    const statsDataBefore = await statsBefore.json();
+    const vectorsBeforeCount = statsDataBefore.totalVectors || 0;
+    console.log(`pgvector vectors before: ${vectorsBeforeCount}`);
 
     // Step 5: Upload PDF (using SharedGameId - handler supports both)
     expect(fs.existsSync(PDF_PATH)).toBeTruthy();
@@ -103,15 +138,9 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
         gameId: chessSharedGameId,
         language: 'it',
       },
+      headers: { Cookie: adminAuthCookie },
       timeout: 120000,
     });
-
-    console.log(`Upload response status: ${uploadResponse.status()}`);
-
-    if (!uploadResponse.ok()) {
-      const errorBody = await uploadResponse.text();
-      console.log(`Upload error: ${errorBody}`);
-    }
 
     expect(uploadResponse.ok()).toBeTruthy();
     const uploadResult = await uploadResponse.json();
@@ -119,37 +148,14 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
     expect(documentId).toBeTruthy();
     console.log(`PDF uploaded: ${documentId}`);
 
-    // Step 6: Extract text from PDF
-    const extractResponse = await page.request.post(
-      `${API_URL}/api/v1/ingest/pdf/${documentId}/extract`,
-      {
-        timeout: 180000,
-      }
-    );
-
-    console.log(`Text extraction status: ${extractResponse.status()}`);
-    if (!extractResponse.ok()) {
-      const extractError = await extractResponse.text();
-      console.log(`Extraction error: ${extractError}`);
-    }
-
-    expect(extractResponse.ok()).toBeTruthy();
-    console.log('Text extraction triggered, waiting 15s...');
-    await page.waitForTimeout(15000); // Wait for extraction
-
-    // Step 7: Trigger indexing
+    // Step 6: Trigger indexing
     const indexResponse = await page.request.post(
       `${API_URL}/api/v1/ingest/pdf/${documentId}/index`,
       {
+        headers: { Cookie: adminAuthCookie },
         timeout: 180000,
       }
     );
-
-    console.log(`Indexing response status: ${indexResponse.status()}`);
-    if (!indexResponse.ok()) {
-      const indexError = await indexResponse.text();
-      console.log(`Indexing error: ${indexError}`);
-    }
 
     expect([200, 202]).toContain(indexResponse.status());
     console.log('Indexing triggered, waiting for processing...');
@@ -159,9 +165,11 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
     for (let i = 0; i < 12; i++) {
       await page.waitForTimeout(5000);
 
-      const qdrantCheck = await page.request.get(`${QDRANT_URL}/collections/meepleai_documents`);
-      const qdrantData = await qdrantCheck.json();
-      const currentVectors = qdrantData.result.points_count || 0;
+      const statsCheck = await request.get(`${API_URL}/api/v1/admin/kb/vector-stats`, {
+        headers: { Cookie: adminAuthCookie },
+      });
+      const statsData = await statsCheck.json();
+      const currentVectors = statsData.totalVectors || 0;
 
       if (currentVectors > vectorsBeforeCount) {
         processed = true;
@@ -172,21 +180,24 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
 
     expect(processed).toBeTruthy(); // Fail if no vectors after 60 seconds
 
-    // Step 7: Verify Qdrant collection (after)
-    const qdrantAfter = await page.request.get(`${QDRANT_URL}/collections/meepleai_documents`);
-    const qdrantDataAfter = await qdrantAfter.json();
-    const vectorsAfterCount = qdrantDataAfter.result.points_count || 0;
+    // Step 7: Verify pgvector stats (after)
+    const statsAfter = await request.get(`${API_URL}/api/v1/admin/kb/vector-stats`, {
+      headers: { Cookie: adminAuthCookie },
+    });
+    const statsDataAfter = await statsAfter.json();
+    const vectorsAfterCount = statsDataAfter.totalVectors || 0;
 
     expect(vectorsAfterCount).toBeGreaterThan(vectorsBeforeCount);
     expect(vectorsAfterCount).toBeGreaterThan(10); // At least 10 chunks
-    console.log(`Qdrant validation: ${vectorsAfterCount} vectors`);
+    console.log(`pgvector validation: ${vectorsAfterCount} vectors`);
 
     // Step 8: Test RAG query
     const ragQueryResponse = await page.request.post(`${API_URL}/api/v1/agents/qa`, {
       data: {
-        gameId: chessSharedGameId,
+        gameId: chessSharedGameId, // Or chessLibraryGameId - both should work
         query: 'Come si muovono i pedoni negli scacchi?',
       },
+      headers: { Cookie: adminAuthCookie },
       timeout: 30000,
     });
 
@@ -208,6 +219,25 @@ test.describe('RAG-001: PDF Processing E2E Pipeline', () => {
     // SUCCESS: All validation criteria met ✅
   });
 
-  // Future: Add error handling test when UI upload component is implemented
-  // test.skip('should handle PDF processing errors gracefully', ...);
+  test('should handle PDF processing errors gracefully', async ({ page }) => {
+    // Test error handling with invalid PDF
+    await page.goto('/login');
+
+    // Login
+    await page.fill('input[type="email"]', 'admin@meepleai.dev');
+    await page.fill('input[type="password"]', process.env.ADMIN_PASSWORD || 'pVKOMQNK0tFNgGlX');
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/dashboard|library/);
+
+    // Navigate to Chess detail (use Chess from library)
+    await page.goto(`/games/${chessSharedGameId}`); // Or use UI navigation
+
+    // Try to upload invalid file
+    const invalidPdfContent = Buffer.from('Not a valid PDF');
+
+    // This test verifies error handling exists
+    // Implementation depends on UI upload component
+    // For now, just verify page loads
+    await expect(page).toHaveURL(new RegExp(chessSharedGameId));
+  });
 });

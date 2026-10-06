@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Gaming Hub Dashboard', () => {
   test.beforeEach(async ({ page, context }) => {
     // Mock API responses at context level (CRITICAL for Next.js)
-    await context.route('**/api/v1/users/me/stats', async (route) => {
+    await context.route('**/api/v1/users/me/stats', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -22,7 +22,7 @@ test.describe('Gaming Hub Dashboard', () => {
       });
     });
 
-    await context.route('**/api/v1/sessions/recent*', async (route) => {
+    await context.route('**/api/v1/sessions/recent*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -41,7 +41,7 @@ test.describe('Gaming Hub Dashboard', () => {
       });
     });
 
-    await context.route('**/api/v1/users/me/games*', async (route) => {
+    await context.route('**/api/v1/users/me/games*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -93,7 +93,7 @@ test.describe('Gaming Hub Dashboard', () => {
 
   test('empty states render when no data', async ({ page, context }) => {
     // Mock empty responses
-    await context.route('**/api/v1/sessions/recent*', async (route) => {
+    await context.route('**/api/v1/sessions/recent*', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

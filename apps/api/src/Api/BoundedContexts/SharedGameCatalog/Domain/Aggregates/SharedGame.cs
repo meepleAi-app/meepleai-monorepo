@@ -1070,8 +1070,9 @@ public sealed class SharedGame : AggregateRoot<Guid>
         ValidateMinAge(minAge);
         ValidateComplexityRating(complexityRating);
         ValidateAverageRating(averageRating);
-        ValidateImageUrl(imageUrl);
-        ValidateThumbnailUrl(thumbnailUrl);
+        // #4090: optional on update, required on create — see ValidateOptionalImageUrl.
+        ValidateOptionalImageUrl(imageUrl);
+        ValidateOptionalThumbnailUrl(thumbnailUrl);
 
         if (modifiedBy == Guid.Empty)
             throw new ArgumentException("ModifiedBy cannot be empty", nameof(modifiedBy));
@@ -1789,10 +1790,30 @@ public sealed class SharedGame : AggregateRoot<Guid>
             throw new ArgumentException("AverageRating must be between 1.0 and 10.0", nameof(rating));
     }
 
-    // #4090: empty is the normal state since the #2123 nullify migration — these columns are a
-    // deprecation tombstone and MapToDomain coerces a null row value to "". Requiring a value here
-    // forced every admin save to invent one. Covers come from CoverUrlResolver, not from these.
+    // Creation keeps requiring a value: Create_WithInvalidImageUrl_ThrowsArgumentException (both
+    // SharedGameTests and SharedGameDomainTests) and the create validator all assert it, and #4090
+    // left that product question alone.
     private static void ValidateImageUrl(string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            throw new ArgumentException("ImageUrl is required", nameof(imageUrl));
+
+        ValidateOptionalImageUrl(imageUrl);
+    }
+
+    private static void ValidateThumbnailUrl(string thumbnailUrl)
+    {
+        if (string.IsNullOrWhiteSpace(thumbnailUrl))
+            throw new ArgumentException("ThumbnailUrl is required", nameof(thumbnailUrl));
+
+        ValidateOptionalThumbnailUrl(thumbnailUrl);
+    }
+
+    // #4090: on UPDATE empty is the normal state since the #2123 nullify migration — these columns
+    // are a deprecation tombstone and MapToDomain coerces a null row value to "", so a game loaded
+    // from a nullified row could not be saved at all and every admin save had to invent a URL.
+    // Covers come from CoverUrlResolver, never from these columns.
+    private static void ValidateOptionalImageUrl(string imageUrl)
     {
         if (string.IsNullOrWhiteSpace(imageUrl))
             return;
@@ -1801,7 +1822,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
             throw new ArgumentException("ImageUrl must be a valid URL", nameof(imageUrl));
     }
 
-    private static void ValidateThumbnailUrl(string thumbnailUrl)
+    private static void ValidateOptionalThumbnailUrl(string thumbnailUrl)
     {
         if (string.IsNullOrWhiteSpace(thumbnailUrl))
             return;

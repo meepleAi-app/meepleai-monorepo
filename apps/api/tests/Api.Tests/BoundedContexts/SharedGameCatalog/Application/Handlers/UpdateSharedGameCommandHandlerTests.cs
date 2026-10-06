@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
@@ -245,6 +246,104 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         reloaded.BggId.Should().Be(42);
     }
 
+    /// <summary>
+    /// Issue #4088: the admin edit drawer sends only the core fields, so these three arrive null.
+    /// UpdateInfo is a total setter, so without the handler coalescing them against the stored
+    /// aggregate every save wiped a rating that no job recomputes.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNullRatingsAndRules_PreservesStoredValues()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var storedRules = GameRules.Create("Place a bird, gain food.", "en");
+        var domainAggregate = BuildAggregate(
+            gameId, userId, complexityRating: 2.4m, averageRating: 8.1m, rules: storedRules);
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        // Exactly the shape EditGameDrawer produces: core fields only.
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: "Wingspan ITA",
+            YearPublished: 2019,
+            Description: "Bird-themed engine builder",
+            MinPlayers: 1,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://cdn/old.webp",
+            ThumbnailUrl: "https://cdn/old-thumb.webp",
+            Rules: null,
+            ModifiedBy: userId);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — the edited field landed, the omitted ones survived.
+        domainAggregate.Title.Should().Be("Wingspan ITA");
+        domainAggregate.ComplexityRating.Should().Be(2.4m);
+        domainAggregate.AverageRating.Should().Be(8.1m);
+        domainAggregate.Rules.Should().NotBeNull();
+        domainAggregate.Rules!.Content.Should().Be("Place a bird, gain food.");
+    }
+
+    /// <summary>
+    /// Issue #4088: preserving on null must not make the fields read-only — a caller that does
+    /// send values still overwrites.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNonNullRatingsAndRules_OverwritesStoredValues()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var domainAggregate = BuildAggregate(
+            gameId,
+            userId,
+            complexityRating: 2.4m,
+            averageRating: 8.1m,
+            rules: GameRules.Create("Old rules.", "en"));
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: "Wingspan",
+            YearPublished: 2019,
+            Description: "Bird-themed engine builder",
+            MinPlayers: 1,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: 3.5m,
+            AverageRating: 9.2m,
+            ImageUrl: "https://cdn/old.webp",
+            ThumbnailUrl: "https://cdn/old-thumb.webp",
+            Rules: new GameRulesDto("New rules.", "it"),
+            ModifiedBy: userId);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        domainAggregate.ComplexityRating.Should().Be(3.5m);
+        domainAggregate.AverageRating.Should().Be(9.2m);
+        domainAggregate.Rules!.Content.Should().Be("New rules.");
+        domainAggregate.Rules!.Language.Should().Be("it");
+    }
+
     private static SharedGameEntity SeedGameEntity(Guid gameId, Guid createdBy)
     {
         return new SharedGameEntity
@@ -264,7 +363,12 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         };
     }
 
-    private static SharedGame BuildAggregate(Guid gameId, Guid createdBy)
+    private static SharedGame BuildAggregate(
+        Guid gameId,
+        Guid createdBy,
+        decimal? complexityRating = null,
+        decimal? averageRating = null,
+        GameRules? rules = null)
     {
         // Use the public Create factory; Id is generated internally.
         // We only need a valid domain object for the repository mock to return.
@@ -276,11 +380,11 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             maxPlayers: 5,
             playingTimeMinutes: 60,
             minAge: 10,
-            complexityRating: null,
-            averageRating: null,
+            complexityRating: complexityRating,
+            averageRating: averageRating,
             imageUrl: "https://cdn/old.webp",
             thumbnailUrl: "https://cdn/old-thumb.webp",
-            rules: null,
+            rules: rules,
             createdBy: createdBy,
             bggId: null);
     }

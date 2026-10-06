@@ -56,16 +56,19 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
             throw new NotFoundException("SharedGame", command.GameId.ToString());
         }
 
-        GameRules? rules = null;
-        if (command.Rules is not null)
-        {
-            rules = GameRules.Create(command.Rules.Content, command.Rules.Language);
-        }
+        // #4088: null means "do not change" here, the same convention this command already
+        // documents for its taxonomy collections. UpdateInfo is a total setter, so an omitted
+        // field must be read back off the aggregate or the save writes it away.
+        var rules = command.Rules is not null
+            ? GameRules.Create(command.Rules.Content, command.Rules.Language)
+            : game.Rules;
 
         game.UpdateInfo(
             command.Title, command.YearPublished, command.Description,
             command.MinPlayers, command.MaxPlayers, command.PlayingTimeMinutes,
-            command.MinAge, command.ComplexityRating, command.AverageRating,
+            command.MinAge,
+            command.ComplexityRating ?? game.ComplexityRating,
+            command.AverageRating ?? game.AverageRating,
             command.ImageUrl, command.ThumbnailUrl, rules, command.ModifiedBy);
 
         _repository.Update(game);

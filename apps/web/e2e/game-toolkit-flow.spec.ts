@@ -25,7 +25,10 @@ test.describe('Game-Specific Toolkit', () => {
 
   test('should navigate to game toolkit landing from card', async ({ page }) => {
     // Click Toolkit button on first game card
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
 
     // Verify navigation to game toolkit landing
     await page.waitForURL(/\/library\/games\/[a-f0-9-]+\/toolkit$/);
@@ -48,7 +51,10 @@ test.describe('Game-Specific Toolkit', () => {
 
   test('should start game session with template', async ({ page }) => {
     // Navigate to game toolkit
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
     await page.waitForURL(/\/library\/games\/[a-f0-9-]+\/toolkit$/);
 
     // Fill participants
@@ -69,7 +75,10 @@ test.describe('Game-Specific Toolkit', () => {
 
   test('should pre-fill categories from template', async ({ page }) => {
     // Start a session (following previous test flow)
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
     await page.waitForURL(/\/library\/games\/[a-f0-9-]+\/toolkit$/);
 
     await page.getByPlaceholder('Player 1').fill('Player1');
@@ -84,9 +93,7 @@ test.describe('Game-Specific Toolkit', () => {
 
       // Verify template categories are available
       // This depends on the specific game template loaded
-      await expect(
-        page.getByRole('option').first()
-      ).toBeVisible();
+      await expect(page.getByRole('option').first()).toBeVisible();
     }
   });
 
@@ -104,7 +111,10 @@ test.describe('Game-Specific Toolkit', () => {
 
   test('should display scoring rules in sidebar', async ({ page }) => {
     // Start session
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
     await page.waitForURL(/\/library\/games\/[a-f0-9-]+\/toolkit$/);
 
     await page.getByPlaceholder('Player 1').fill('Test');
@@ -117,7 +127,10 @@ test.describe('Game-Specific Toolkit', () => {
 
   test('should finalize and return to game detail page', async ({ page }) => {
     // Start session
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
     await page.waitForURL(/\/library\/games\/[a-f0-9-]+\/toolkit$/);
 
     await page.getByPlaceholder('Player 1').fill('Winner');
@@ -139,7 +152,10 @@ test.describe('Game-Specific Toolkit', () => {
 
     // Navigate to game toolkit
     await page.goto('/library');
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
 
     // Verify layout adapts
     await expect(page.getByRole('heading', { name: /toolkit/i })).toBeVisible();
@@ -151,7 +167,10 @@ test.describe('Game-Specific Toolkit', () => {
 
     // Navigate to game toolkit
     await page.goto('/library');
-    await page.getByRole('link', { name: /toolkit/i }).first().click();
+    await page
+      .getByRole('link', { name: /toolkit/i })
+      .first()
+      .click();
 
     // Verify renders correctly
     await expect(page.getByRole('heading', { name: /toolkit/i })).toBeVisible();

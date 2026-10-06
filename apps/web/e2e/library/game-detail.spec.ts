@@ -78,7 +78,9 @@ test.describe('Library Game Detail Page', () => {
     await favoriteButton.click();
 
     // Verify toast appears
-    await expect(page.getByText(/aggiunto ai preferiti|rimosso dai preferiti/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/aggiunto ai preferiti|rimosso dai preferiti/i)).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test('opens and closes notes modal', async ({ page }) => {
@@ -195,7 +197,7 @@ test.describe('Game Detail Page - Error States', () => {
 
   test('displays loading state', async ({ page }) => {
     // Intercept API to delay response
-    await page.route('**/api/v1/library/games/*', async (route) => {
+    await page.route('**/api/v1/library/games/*', async route => {
       await new Promise(resolve => setTimeout(resolve, 1000));
       await route.continue();
     });

@@ -8,9 +8,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Toolkit - Real-Time Sync', () => {
-  test('should sync score updates between two browser contexts via SSE', async ({
-    browser,
-  }) => {
+  test('should sync score updates between two browser contexts via SSE', async ({ browser }) => {
     // Create two separate browser contexts (simulating two users)
     const context1 = await browser.newContext();
     const context2 = await browser.newContext();

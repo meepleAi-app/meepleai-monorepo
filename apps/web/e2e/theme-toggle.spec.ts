@@ -104,7 +104,7 @@ test.describe('Theme Toggle - Dual-Theme System', () => {
     const card = page.locator('[class*="backdrop-blur"]').first();
 
     // On desktop (viewport ≥768px), blur should be present
-    const computedStyle = await card.evaluate((el) => {
+    const computedStyle = await card.evaluate(el => {
       const style = window.getComputedStyle(el);
       return style.backdropFilter || style.webkitBackdropFilter;
     });

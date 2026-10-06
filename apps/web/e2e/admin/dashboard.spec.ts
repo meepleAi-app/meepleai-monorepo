@@ -52,8 +52,14 @@ test.describe('Admin Dashboard', () => {
   });
 
   test('toggles between grid and list view in Approval Queue', async ({ page }) => {
-    const gridButton = page.locator('button').filter({ has: page.locator('svg') }).first();
-    const listButton = page.locator('button').filter({ has: page.locator('svg') }).nth(1);
+    const gridButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg') })
+      .first();
+    const listButton = page
+      .locator('button')
+      .filter({ has: page.locator('svg') })
+      .nth(1);
 
     // Should start in grid view (default)
     await expect(gridButton).toBeVisible();
@@ -124,7 +130,10 @@ test.describe('Admin Dashboard', () => {
   });
 
   test('navigates to collection overview detail page', async ({ page }) => {
-    await page.getByRole('link', { name: /view details/i }).first().click();
+    await page
+      .getByRole('link', { name: /view details/i })
+      .first()
+      .click();
 
     await expect(page).toHaveURL('/admin/collection/overview');
     await expect(page.getByRole('heading', { name: /collection overview/i })).toBeVisible();
@@ -148,7 +157,7 @@ test.describe('Admin Dashboard', () => {
 test.describe('Admin Dashboard - With Mock Data', () => {
   test.beforeEach(async ({ page }) => {
     // Intercept API calls and return mock data
-    await page.route('**/api/v1/admin/dashboard/stats*', (route) => {
+    await page.route('**/api/v1/admin/dashboard/stats*', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -163,7 +172,7 @@ test.describe('Admin Dashboard - With Mock Data', () => {
       });
     });
 
-    await page.route('**/api/v1/admin/shared-games/approval-queue*', (route) => {
+    await page.route('**/api/v1/admin/shared-games/approval-queue*', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -186,7 +195,7 @@ test.describe('Admin Dashboard - With Mock Data', () => {
       });
     });
 
-    await page.route('**/api/v1/admin/users*', (route) => {
+    await page.route('**/api/v1/admin/users*', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -233,7 +242,7 @@ test.describe('Admin Dashboard - With Mock Data', () => {
   });
 
   test('opens user detail panel on click', async ({ page }) => {
-    await page.route('**/api/v1/admin/users/1', (route) => {
+    await page.route('**/api/v1/admin/users/1', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -253,7 +262,7 @@ test.describe('Admin Dashboard - With Mock Data', () => {
       });
     });
 
-    await page.route('**/api/v1/admin/users/1/library/stats', (route) => {
+    await page.route('**/api/v1/admin/users/1/library/stats', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -267,7 +276,7 @@ test.describe('Admin Dashboard - With Mock Data', () => {
       });
     });
 
-    await page.route('**/api/v1/admin/users/1/badges', (route) => {
+    await page.route('**/api/v1/admin/users/1/badges', route => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',

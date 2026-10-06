@@ -146,6 +146,15 @@ jobs:
       - name: SSR/PDF boundary gate (#4058)
         run: pnpm lint:ssr-pdf
 
+      # Ventuno spec Playwright vivevano fuori da ogni `testDir` dichiarato: non skippate, non
+      # rosse, ASSENTI — e nessun conteggio lo rivelava, perche' «N file raccolti» non dice quanti
+      # file esistono. Dieci erano sotto `tests/e2e/` dal 2025-11-30; le altre undici le ha trovate
+      # questo gate la prima volta che e' girato, in una seconda radice che l'indagine manuale non
+      # aveva guardato. Il controllo e' statico e legge i `testDir` dalle config, quindi si aggiorna
+      # da se'; verifica la RADICE, non il `testMatch`.
+      - name: Orphan Playwright specs gate (#4092)
+        run: pnpm lint:orphan-specs
+
       - name: Typecheck
         run: pnpm typecheck
 

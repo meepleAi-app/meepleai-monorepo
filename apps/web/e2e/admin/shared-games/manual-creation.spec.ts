@@ -135,7 +135,9 @@ test.describe('SharedGame Manual Creation Flow', () => {
     // Assert: Verify game details displayed
     await expect(page.getByRole('heading', { name: testGame.title })).toBeVisible();
     await expect(page.getByText(testGame.description)).toBeVisible();
-    await expect(page.getByText(`${testGame.minPlayers}-${testGame.maxPlayers} giocatori`)).toBeVisible();
+    await expect(
+      page.getByText(`${testGame.minPlayers}-${testGame.maxPlayers} giocatori`)
+    ).toBeVisible();
     await expect(page.getByText(`${testGame.playingTimeMinutes} min`)).toBeVisible();
     await expect(page.getByText(`${testGame.minAge}+`)).toBeVisible();
 
@@ -229,7 +231,9 @@ test.describe('SharedGame Manual Creation Flow', () => {
     await expect(page).toHaveURL(/\/admin\/shared-games\/[a-f0-9-]{36}/);
 
     // Act: Click edit button
-    const editButton = page.getByRole('button', { name: /modifica|edit/i }).or(page.getByRole('link', { name: /modifica|edit/i }));
+    const editButton = page
+      .getByRole('button', { name: /modifica|edit/i })
+      .or(page.getByRole('link', { name: /modifica|edit/i }));
     await editButton.click();
 
     // Wait for navigation to edit page (might be same URL or /edit route)

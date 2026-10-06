@@ -139,7 +139,10 @@ test.describe('SharedGame Agent Workflow E2E', () => {
     expect(suggestedName).toContain('Arbitro'); // "{GameTitle} Arbitro" pattern
 
     // Fill agent configuration
-    await page.getByLabel(/description/i).first().fill('AI agent for test game');
+    await page
+      .getByLabel(/description/i)
+      .first()
+      .fill('AI agent for test game');
 
     // Select model (if not pre-filled)
     const modelSelect = page.getByLabel(/model/i).first();
@@ -148,13 +151,18 @@ test.describe('SharedGame Agent Workflow E2E', () => {
     }
 
     // Submit agent creation
-    await page.getByRole('button', { name: /create|save/i }).first().click();
+    await page
+      .getByRole('button', { name: /create|save/i })
+      .first()
+      .click();
 
     // Wait for modal to close and agent to be linked
     await page.waitForTimeout(2000); // Wait for API calls to complete
 
     // Step 4: Verify linked agent card appears
-    await expect(page.getByTestId('linked-agent-card').or(page.getByText(/manage agent/i))).toBeVisible({
+    await expect(
+      page.getByTestId('linked-agent-card').or(page.getByText(/manage agent/i))
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -183,7 +191,9 @@ test.describe('SharedGame Agent Workflow E2E', () => {
     await page.waitForTimeout(2000);
 
     // Assert: Create/Link buttons should reappear
-    await expect(page.getByRole('button', { name: /create agent/i })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: /create agent/i })).toBeVisible({
+      timeout: 5000,
+    });
     await expect(page.getByRole('button', { name: /link existing agent/i })).toBeVisible();
 
     // Cleanup: Delete test game (optional - handled by global teardown)
@@ -252,7 +262,10 @@ test.describe('SharedGame Agent Workflow E2E', () => {
 
     const agentNameInput = page.getByLabel(/name/i).first();
     if (await agentNameInput.isVisible()) {
-      await page.getByRole('button', { name: /create|save/i }).first().click();
+      await page
+        .getByRole('button', { name: /create|save/i })
+        .first()
+        .click();
       await page.waitForTimeout(2000);
     }
 

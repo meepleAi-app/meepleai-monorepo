@@ -58,4 +58,17 @@ public sealed record TrendingGameDto
     /// without an N+1 lookup on <see cref="SharedGameDto"/>.
     /// </summary>
     public bool HasKnowledgeBase { get; init; }
+
+    /// <summary>
+    /// Issue #4085: resolved cover (admin override → PDF → BGG → Wikidata → null),
+    /// via <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Services.CoverUrlResolver"/>.
+    /// Deliberately NOT computed inside the cached <c>ComputeTrendingAsync</c> factory
+    /// (12h TTL): the resolver's presigned URLs expire after 4h
+    /// (<c>CoverUrlResolver.CoverPresignExpirySeconds</c>), so baking one into a 12h cache
+    /// entry would serve a broken image for up to 8 of every 12 hours — worse than the
+    /// placeholder it replaces.
+    /// <see cref="Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTrending.GetCatalogTrendingQueryHandler"/>
+    /// resolves this fresh, per request, AFTER reading the cached (score/rank/counts) part.
+    /// </summary>
+    public string? CoverUrl { get; init; }
 }

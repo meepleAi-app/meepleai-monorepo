@@ -273,6 +273,42 @@ describe('HorizontalRow', () => {
     expect(card).toHaveAttribute('data-variant', 'featured');
   });
 
+  // ---- #4085 — featured variant must render item.imageUrl, not just the 🎲 fallback ----
+  //
+  // Before this fix NO variant read `imageUrl` at all: the gradient+emoji div was
+  // unconditional, so fixing the backend's cover resolution alone would have changed
+  // nothing visible on /games — this is the component the user actually looked at.
+
+  it('#4085: renders a real <img> when imageUrl is present', () => {
+    const { container } = render(
+      <HorizontalRow
+        rowId="games"
+        title="Giochi"
+        variant="featured"
+        items={[{ id: 'x', name: 'Wingspan', imageUrl: 'https://r2.example.test/wingspan.webp' }]}
+      />
+    );
+    const card = container.querySelector('[data-slot="row-card"]');
+    const img = card?.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute('src', 'https://r2.example.test/wingspan.webp');
+    expect(card?.textContent).not.toContain('🎲');
+  });
+
+  it('#4085: falls back to the 🎲 placeholder when imageUrl is absent', () => {
+    const { container } = render(
+      <HorizontalRow
+        rowId="games"
+        title="Giochi"
+        variant="featured"
+        items={[makeItem('x', 'Senza cover')]}
+      />
+    );
+    const card = container.querySelector('[data-slot="row-card"]');
+    expect(card?.querySelector('img')).toBeNull();
+    expect(card?.textContent).toContain('🎲');
+  });
+
   it('compact variant cards have data-variant="compact"', () => {
     const { container } = render(
       <HorizontalRow rowId="agents" title="Agenti" variant="compact" items={[makeItem('x', 'X')]} />

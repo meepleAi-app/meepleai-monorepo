@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
+using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -33,6 +34,14 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
         Mock<IChatThreadRepository> chatThreadRepo)
     {
         HybridCache cache = TestDbContextFactory.CreateInMemoryHybridCache();
+        // #4085: GetGameDetailQueryHandler now also resolves the cover via the EF
+        // SharedGameEntity + IBlobStorageService. These tests don't exercise cover
+        // resolution — an EMPTY in-memory DbContext means the EF lookup misses
+        // (sharedGameEntity is null) and CoverUrl resolves to null, same as before #4085
+        // for games whose entity isn't present. MockBehavior default (Loose) means the
+        // unused blob-storage mock never needs a Setup.
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var blobStorage = new Mock<IBlobStorageService>();
 
         return new GetGameDetailQueryHandler(
             libraryRepo.Object,
@@ -40,6 +49,8 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
             labelRepo.Object,
             agentRepo.Object,
             chatThreadRepo.Object,
+            db,
+            blobStorage.Object,
             cache,
             NullLogger<GetGameDetailQueryHandler>.Instance);
     }

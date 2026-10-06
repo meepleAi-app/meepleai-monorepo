@@ -1,5 +1,6 @@
 using Amazon.S3;
 using Amazon.S3.Model;
+using Api.Services.Pdf;
 
 namespace Api.BoundedContexts.Administration.Application.Services;
 
@@ -12,6 +13,10 @@ internal sealed class RagBackupStorageService : IRagBackupStorageService
     private readonly IAmazonS3? _s3Client;
     private readonly string _localBasePath;
     private readonly string? _s3BucketName;
+    // #4085/#4016 causa A: read alongside _s3BucketName (same IConfiguration, same style
+    // as every other S3 setup site in this repo — see S3_ENDPOINT in
+    // DocumentProcessingServiceExtensions.cs), needed to decide DisablePayloadSigning below.
+    private readonly string? _s3Endpoint;
     private readonly ILogger<RagBackupStorageService> _logger;
 
     public RagBackupStorageService(
@@ -26,6 +31,7 @@ internal sealed class RagBackupStorageService : IRagBackupStorageService
             ?? Path.Combine(Directory.GetCurrentDirectory(), "data", "rag-exports");
 
         _s3BucketName = configuration["S3_BACKUP_BUCKET_NAME"];
+        _s3Endpoint = configuration["S3_ENDPOINT"];
     }
 
     /// <inheritdoc />
@@ -204,7 +210,11 @@ internal sealed class RagBackupStorageService : IRagBackupStorageService
                 Key = key,
                 InputStream = ms,
                 AutoCloseStream = false,
-                DisablePayloadSigning = true, // Required for R2 and other S3-compatible providers
+                // #4085/#4016 causa A: era hardcoded a `true` — required for R2 and other
+                // S3-compatible providers, ma solo su HTTPS; AWS SDK rifiuta un payload non
+                // firmato contro un endpoint in chiaro. Stessa logica condizionale di
+                // S3BlobStorageService.DisablePayloadSigningForEndpoint (#3846).
+                DisablePayloadSigning = !BlobStorageServiceFactory.UsesPlainHttp(_s3Endpoint),
                 ServerSideEncryptionMethod = ServerSideEncryptionMethod.AES256
             };
 

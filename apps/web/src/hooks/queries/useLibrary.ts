@@ -966,7 +966,12 @@ export function useLibraryGameDetail(
           gamePublisher: sharedGame.publishers?.[0]?.name ?? null,
           gameYearPublished: sharedGame.yearPublished ?? null,
           gameIconUrl: sharedGame.thumbnailUrl ?? null,
-          gameImageUrl: sharedGame.imageUrl ?? null,
+          // #4085: `sharedGame.imageUrl` is the tombstone column (#2123), always empty since
+          // the BGG user-side asset ban — always null/empty in practice. `coverUrl` is what
+          // the backend actually resolves (CoverUrlResolver, L3→L4→L2 priority) and what
+          // SharedGameDto already carries; this branch (game NOT in the user's library —
+          // the "community" hero variant) was reading the wrong field.
+          gameImageUrl: sharedGame.coverUrl ?? sharedGame.imageUrl ?? null,
           description: sharedGame.description ?? null,
           minPlayers: sharedGame.minPlayers ?? null,
           maxPlayers: sharedGame.maxPlayers ?? null,

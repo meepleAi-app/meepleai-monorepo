@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { SendIcon } from 'lucide-react';
 
 import { DebugTimeline, StrategySelectorBar } from '@/components/admin/debug-chat';
+import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import type { DebugChatConfigOverride } from '@/hooks/useDebugChatStream';
 import { useDebugChatStream } from '@/hooks/useDebugChatStream';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -51,7 +52,13 @@ function ChatDebugTab() {
     return createAdminClient({ httpClient });
   }, []);
 
-  const { data: aiModels, isLoading: modelsLoading } = useQuery({
+  // #4093: `error` era scartato, quindi un fallimento di questa query era indistinguibile da
+  // «non ci sono modelli» — lo stesso difetto che #4059 aveva corretto in ModelsTab ma non qui.
+  const {
+    data: aiModels,
+    isLoading: modelsLoading,
+    error: modelsError,
+  } = useQuery({
     queryKey: ['admin', 'ai-models', 'active'],
     queryFn: () => adminClient.getAiModels({ status: 'active' }),
     staleTime: 300_000,
@@ -184,6 +191,15 @@ function ChatDebugTab() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
+      {modelsError && (
+        <Alert variant="destructive" className="mb-3" data-testid="playground-models-error">
+          <AlertDescription>
+            Impossibile caricare i modelli AI:{' '}
+            {modelsError instanceof Error ? modelsError.message : 'errore sconosciuto'}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Strategy selector bar */}
       <StrategySelectorBar
         selectedGameId={selectedGameId}
@@ -196,11 +212,12 @@ function ChatDebugTab() {
         onTemperatureChange={setTemperature}
         topK={topK}
         onTopKChange={setTopK}
-        availableModels={(aiModels?.items ?? []).map(
-          (m: { id: string; displayName: string; modelIdentifier: string }) => ({
+        availableModels={(aiModels?.models ?? []).map(
+          (m: { id: string; displayName: string; modelId: string }) => ({
             id: m.id,
             displayName: m.displayName,
-            modelIdentifier: m.modelIdentifier,
+            // #4093: il prop a valle si chiama ancora modelIdentifier; la sorgente è `modelId`.
+            modelIdentifier: m.modelId,
           })
         )}
         modelsLoading={modelsLoading}

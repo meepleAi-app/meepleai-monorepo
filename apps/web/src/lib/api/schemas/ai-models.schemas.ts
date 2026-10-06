@@ -8,16 +8,14 @@
 import { z } from 'zod';
 
 /**
- * AI Model Provider
+ * AI Model Provider.
+ *
+ * #4093: il backend dichiara `public required string Provider` (AiModelDto.cs:16) e manda
+ * etichette in PascalCase — osservate `"OpenRouter"` e `"Ollama"`. Un enum chiuso qui farebbe
+ * fallire la lettura dell'intera lista al primo provider nuovo, che è il modo in cui questo
+ * contratto si è rotto la prima volta. Resta una stringa; chi deve mostrarla normalizza.
  */
-export const AiProviderSchema = z.enum([
-  'meta',
-  'google',
-  'anthropic',
-  'deepseek',
-  'openai',
-  'openrouter',
-]);
+export const AiProviderSchema = z.string();
 
 export type AiProvider = z.infer<typeof AiProviderSchema>;
 
@@ -29,56 +27,79 @@ export const ModelStatusSchema = z.enum(['active', 'inactive', 'deprecated']);
 export type ModelStatus = z.infer<typeof ModelStatusSchema>;
 
 /**
- * Cost Information
+ * Prezzi del modello — `ModelPricing` lato backend.
+ *
+ * #4093: le unità sono **per milione** di token. Lo schema precedente dichiarava
+ * `inputCostPer1kTokens`, cioè per mille: un consumatore che l'avesse mostrato sarebbe stato
+ * sbagliato di un fattore 1000. Non era un difetto osservabile solo perché la lista era sempre
+ * vuota e quei campi non venivano mai valutati.
  */
-export const ModelCostSchema = z.object({
-  inputCostPer1kTokens: z.number().min(0),
-  outputCostPer1kTokens: z.number().min(0),
-  currency: z.string().default('USD'),
+export const ModelPricingSchema = z.object({
+  inputPricePerMillion: z.number().min(0),
+  outputPricePerMillion: z.number().min(0),
+  currency: z.string(),
 });
 
-export type ModelCost = z.infer<typeof ModelCostSchema>;
+export type ModelPricing = z.infer<typeof ModelPricingSchema>;
 
 /**
- * Model Usage Statistics
+ * Impostazioni del modello — `ModelSettings` lato backend (ModelSettings.cs:9-11).
+ * `temperature` e `maxTokens` sono annidati qui, non in radice.
  */
-export const ModelUsageStatsSchema = z.object({
+export const ModelSettingsSchema = z.object({
+  maxTokens: z.number().int().min(0),
+  temperature: z.number().min(0),
+  pricing: ModelPricingSchema,
+});
+
+export type ModelSettings = z.infer<typeof ModelSettingsSchema>;
+
+/**
+ * Statistiche d'uso — `UsageStats` lato backend, campo `usage` (non `usageStats`).
+ */
+export const ModelUsageSchema = z.object({
   totalRequests: z.number().int().min(0),
   totalInputTokens: z.number().int().min(0),
   totalOutputTokens: z.number().int().min(0),
-  estimatedCost: z.number().min(0),
+  totalTokensUsed: z.number().int().min(0),
+  totalCostUsd: z.number().min(0),
   lastUsedAt: z.string().datetime({ offset: true }).nullable().optional(),
 });
 
-export type ModelUsageStats = z.infer<typeof ModelUsageStatsSchema>;
+export type ModelUsage = z.infer<typeof ModelUsageSchema>;
 
 /**
- * AI Model DTO
+ * AI Model DTO — allineato a `AiModelDto.cs:13-31`.
+ *
+ * #4093: la versione precedente descriveva un'API mai implementata (nata in #2521 «Phase 1 — AI
+ * models API foundation»): dichiarava `name`, `modelIdentifier`, `status`, `cost`, `temperature`,
+ * `maxTokens`, `usageStats`, di cui il backend non manda nessuno. Coincidevano solo `id`,
+ * `displayName`, `isPrimary`, `createdAt`, `updatedAt`, quindi la validazione respingeva ogni
+ * risposta e la lista arrivava sempre vuota.
  */
 export const AiModelDtoSchema = z.object({
   id: z.string().uuid(),
-  name: z.string(),
+  modelId: z.string(),
   displayName: z.string(),
   provider: AiProviderSchema,
-  modelIdentifier: z.string(), // e.g., "google/gemini-pro"
+  priority: z.number().int(),
+  isActive: z.boolean(),
   isPrimary: z.boolean(),
-  status: ModelStatusSchema,
-  cost: ModelCostSchema,
-  temperature: z.number().min(0).max(2),
-  maxTokens: z.number().int().min(512).max(8192),
-  usageStats: ModelUsageStatsSchema.optional(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }).nullable().optional(),
+  settings: ModelSettingsSchema,
+  usage: ModelUsageSchema,
 });
 
 export type AiModelDto = z.infer<typeof AiModelDtoSchema>;
 
 /**
- * Paginated AI Models Response
+ * Risposta paginata — chiavi `models`/`totalCount`, non `items`/`total`
+ * (GetAllAiModelsQueryHandler.cs:54-57).
  */
 export const PagedAiModelsSchema = z.object({
-  items: z.array(AiModelDtoSchema),
-  total: z.number().int().min(0),
+  models: z.array(AiModelDtoSchema),
+  totalCount: z.number().int().min(0),
   page: z.number().int().min(1),
   pageSize: z.number().int().min(1),
 });

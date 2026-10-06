@@ -25,52 +25,97 @@ vi.mock('@/lib/api', () => ({
 import { ModelSelector } from '../ModelSelector';
 import { api } from '@/lib/api';
 
+// #4093: fixture allineati al contratto reale del backend — `models`/`totalCount`, `modelId`,
+// `isActive`, prezzi annidati in `settings.pricing` e per MILIONE di token. I provider usano
+// la capitalizzazione che il backend manda davvero: la ricerca lato componente normalizza.
 const mockModelsResponse = {
-  items: [
+  models: [
     {
       id: 'model-1',
-      name: 'gpt-4o-mini',
+      modelId: 'openai/gpt-4o-mini',
       displayName: 'GPT-4o Mini',
-      provider: 'openai',
-      modelIdentifier: 'openai/gpt-4o-mini',
+      provider: 'OpenAI',
+      priority: 1,
+      isActive: true,
       isPrimary: true,
-      status: 'active',
-      cost: { inputCostPer1kTokens: 0.00015, outputCostPer1kTokens: 0.0006, currency: 'USD' },
-      temperature: 0.7,
-      maxTokens: 4096,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: null,
+      settings: {
+        maxTokens: 4096,
+        temperature: 0.7,
+        pricing: {
+          inputPricePerMillion: 0.15,
+          outputPricePerMillion: 0.6,
+          currency: 'USD',
+        },
+      },
+      usage: {
+        totalRequests: 0,
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        totalTokensUsed: 0,
+        totalCostUsd: 0,
+        lastUsedAt: null,
+      },
     },
     {
       id: 'model-2',
-      name: 'claude-3-haiku',
+      modelId: 'anthropic/claude-3-haiku',
       displayName: 'Claude 3 Haiku',
-      provider: 'anthropic',
-      modelIdentifier: 'anthropic/claude-3-haiku',
+      provider: 'Anthropic',
+      priority: 1,
+      isActive: true,
       isPrimary: false,
-      status: 'active',
-      cost: { inputCostPer1kTokens: 0.00025, outputCostPer1kTokens: 0.00125, currency: 'USD' },
-      temperature: 0.7,
-      maxTokens: 4096,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: null,
+      settings: {
+        maxTokens: 4096,
+        temperature: 0.7,
+        pricing: {
+          inputPricePerMillion: 0.25,
+          outputPricePerMillion: 1.25,
+          currency: 'USD',
+        },
+      },
+      usage: {
+        totalRequests: 0,
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        totalTokensUsed: 0,
+        totalCostUsd: 0,
+        lastUsedAt: null,
+      },
     },
     {
       id: 'model-3',
-      name: 'llama-3.3-70b',
+      modelId: 'meta-llama/llama-3.3-70b',
       displayName: 'Llama 3.3 70B',
-      provider: 'meta',
-      modelIdentifier: 'meta-llama/llama-3.3-70b',
+      provider: 'Meta',
+      priority: 1,
+      isActive: true,
       isPrimary: false,
-      status: 'active',
-      cost: { inputCostPer1kTokens: 0.0, outputCostPer1kTokens: 0.0, currency: 'USD' },
-      temperature: 0.7,
-      maxTokens: 4096,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: null,
+      settings: {
+        maxTokens: 4096,
+        temperature: 0.7,
+        pricing: {
+          inputPricePerMillion: 0.0,
+          outputPricePerMillion: 0.0,
+          currency: 'USD',
+        },
+      },
+      usage: {
+        totalRequests: 0,
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        totalTokensUsed: 0,
+        totalCostUsd: 0,
+        lastUsedAt: null,
+      },
     },
   ],
-  total: 3,
+  totalCount: 3,
   page: 1,
   pageSize: 50,
 };
@@ -176,8 +221,8 @@ describe('ModelSelector', () => {
 
       fireEvent.click(screen.getByRole('combobox'));
 
-      // Llama is free - shown as "Free/1K" in the cost column
-      expect(screen.getAllByText('Free/1K').length).toBeGreaterThanOrEqual(1);
+      // Llama is free - shown as "Free/1M" in the cost column
+      expect(screen.getAllByText('Free/1M').length).toBeGreaterThanOrEqual(1);
     });
 
     it('calls onChange with modelId and model object when selected', async () => {
@@ -190,10 +235,13 @@ describe('ModelSelector', () => {
       fireEvent.click(screen.getByRole('combobox'));
       fireEvent.click(screen.getByText('Claude 3 Haiku'));
 
-      expect(mockOnChange).toHaveBeenCalledWith('model-2', expect.objectContaining({
-        id: 'model-2',
-        displayName: 'Claude 3 Haiku',
-      }));
+      expect(mockOnChange).toHaveBeenCalledWith(
+        'model-2',
+        expect.objectContaining({
+          id: 'model-2',
+          displayName: 'Claude 3 Haiku',
+        })
+      );
     });
 
     it('shows selected model in trigger when value provided', async () => {

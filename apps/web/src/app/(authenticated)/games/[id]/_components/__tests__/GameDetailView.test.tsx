@@ -19,6 +19,7 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { ReactElement } from 'react';
+import type { RuleSpec } from '@/lib/api/schemas';
 
 // ─── next/navigation mocks ────────────────────────────────────────────────
 
@@ -125,6 +126,35 @@ vi.mock('@/hooks/useSharedGameDetail', () => ({
     };
   },
 }));
+
+// #4084 — Rules tab uses lazy useGameRules. Default: no rule specs (the table is empty
+// on real data today — see #4084). Tests focused on Rules-tab behaviour override via
+// `gameRulesState.ruleSpecs = [...]` below. `mapRuleSpecsToSections` is re-exported from
+// the REAL module (vi.importActual): mocking only the hook, not the pure mapper, keeps
+// the mapping logic under its own dedicated unit tests instead of duplicated here.
+const gameRulesState: { ruleSpecs: RuleSpec[] } = { ruleSpecs: [] };
+
+const useGameRulesSpy = vi.fn();
+vi.mock('@/lib/domain-hooks/useGameRules', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/domain-hooks/useGameRules')>(
+    '@/lib/domain-hooks/useGameRules'
+  );
+  return {
+    ...actual,
+    useGameRules: (gameId: string, opts?: { enabled?: boolean }) => {
+      useGameRulesSpy(gameId, opts);
+      if (opts?.enabled === false) {
+        return { data: undefined, isLoading: false, isFetching: false, isError: false };
+      }
+      return {
+        data: gameRulesState.ruleSpecs,
+        isLoading: false,
+        isFetching: false,
+        isError: false,
+      };
+    },
+  };
+});
 
 const trackEventSpy = vi.fn();
 vi.mock('@/lib/analytics/track-event', () => ({
@@ -426,6 +456,10 @@ function resetAll() {
   sharedGameDetailState.kbs = [];
   useSharedGameDetailSpy.mockClear();
   trackEventSpy.mockClear();
+
+  // #4084 — Reset rules mock state + spy
+  gameRulesState.ruleSpecs = [];
+  useGameRulesSpy.mockClear();
 }
 
 describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => {
@@ -1070,6 +1104,98 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
       'documents_tab_empty_when_kb_ready',
       expect.anything()
     );
+  });
+
+  // ─── #4084 — Rules tab wiring (lazy useGameRules, real data not a literal) ───
+  //
+  // Before this fix GameDetailView passed `sections={[]}` straight to
+  // GameDetailRulesAccordion — no hook, no query, no gate. These tests guard the
+  // fix the same way #2309's DEC-B tests guard the Documents tab: gating on open,
+  // AND that opening it actually surfaces real data, not a dead literal.
+
+  it('#4084: does NOT fetch rules when default tab=info', () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    expect(useGameRulesSpy).toHaveBeenCalledWith(
+      VALID_GAME_ID,
+      expect.objectContaining({ enabled: false })
+    );
+  });
+
+  it('#4084: fetches rules when user clicks the Rules tab', () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+
+    const rulesTabButton = document.getElementById('game-detail-tab-rules');
+    expect(rulesTabButton).not.toBeNull();
+    act(() => {
+      fireEvent.click(rulesTabButton as HTMLElement);
+    });
+
+    expect(useGameRulesSpy).toHaveBeenCalledWith(
+      VALID_GAME_ID,
+      expect.objectContaining({ enabled: true })
+    );
+  });
+
+  it('#4084: renders a real rule section on the Rules tab instead of the dead literal', () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+    gameRulesState.ruleSpecs = [
+      {
+        id: 'spec-1',
+        gameId: VALID_GAME_ID,
+        version: 'v1',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        createdByUserId: null,
+        parentVersionId: null,
+        atoms: [
+          {
+            id: 'a1',
+            text: 'Mescola il mazzo prima di iniziare.',
+            section: 'Setup',
+            page: null,
+            line: null,
+          },
+        ],
+      },
+    ];
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+    const rulesTabButton = document.getElementById('game-detail-tab-rules');
+    act(() => {
+      fireEvent.click(rulesTabButton as HTMLElement);
+    });
+
+    // Regression guard: `sections={[]}` can never render this, since [] has no section
+    // to group into — this text can ONLY appear if real data reached the component.
+    expect(document.body.textContent).toContain('Setup');
+  });
+
+  it('#4084: the "view all rules" link survives a genuinely empty rule-spec list', () => {
+    detailMockState.data = makeDetail();
+    detailMockState.isSuccess = true;
+    useLibraryGameDetailSpy.mockReturnValue(detailMockState);
+    gameRulesState.ruleSpecs = []; // real backend "no rules published" — not the old literal
+
+    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+    const rulesTabButton = document.getElementById('game-detail-tab-rules');
+    act(() => {
+      fireEvent.click(rulesTabButton as HTMLElement);
+    });
+
+    const rulesPanel = document.querySelector('[data-slot="game-detail-panel-rules"]');
+    expect(
+      rulesPanel?.querySelector('[data-slot="game-detail-rules-view-all"]')
+    ).toBeInTheDocument();
   });
 
   // ─── Issue #1471 — Chat preview in Agents panel regression guard ─────────

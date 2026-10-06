@@ -397,13 +397,25 @@ internal static class PdfProcessingEndpoints
         return Results.Ok(new { message = result.Message });
     }
 
+    /// <summary>
+    /// #4084: `Admin`/`Editor` literal-compared against the session role, excluding
+    /// `SuperAdmin` — measured as a real 403 on a superadmin account calling this exact
+    /// endpoint. Same anti-pattern as #3994 (<c>AgentTierLimits</c>). Scoped to the three
+    /// handlers in THIS file that reject outright (generate/index/extract); the five
+    /// `isAdmin`-bypass-bool sites elsewhere in this file are a different ownership-bypass
+    /// feature, not measured here, and are left for a separate issue.
+    /// </summary>
+    internal static bool IsAdminEditorOrSuperAdmin(string? role) =>
+        string.Equals(role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(role, UserRole.SuperAdmin.ToString(), StringComparison.OrdinalIgnoreCase);
+
     private static async Task<IResult> HandleGenerateRuleSpec(Guid pdfId, HttpContext context, IMediator mediator, ILogger<Program> logger, CancellationToken ct)
     {
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        if (!string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!IsAdminEditorOrSuperAdmin(session!.Principal!.EffectiveActor.Role))
         {
             return Results.StatusCode(StatusCodes.Status403Forbidden);
         }
@@ -428,8 +440,7 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        if (!string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!IsAdminEditorOrSuperAdmin(session!.Principal!.EffectiveActor.Role))
         {
             logger.LogWarning("User {UserId} with role {Role} attempted to index PDF without permission", session!.Principal!.Subject.Id, session!.Principal!.EffectiveActor.Role);
             return Results.StatusCode(StatusCodes.Status403Forbidden);
@@ -467,8 +478,7 @@ internal static class PdfProcessingEndpoints
         var (authenticated, session, error) = context.TryGetActiveSession();
         if (!authenticated) return error!;
 
-        if (!string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Admin.ToString(), StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(session!.Principal!.EffectiveActor.Role, UserRole.Editor.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (!IsAdminEditorOrSuperAdmin(session!.Principal!.EffectiveActor.Role))
         {
             logger.LogWarning("User {UserId} with role {Role} attempted to extract PDF text without permission", session!.Principal!.Subject.Id, session!.Principal!.EffectiveActor.Role);
             return Results.StatusCode(StatusCodes.Status403Forbidden);

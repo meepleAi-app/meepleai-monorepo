@@ -653,7 +653,12 @@ internal static class SharedGameCatalogAdminEndpoints
             request.ImageUrl,
             request.ThumbnailUrl,
             request.Rules,
-            session!.Principal!.Subject.Id);
+            session!.Principal!.Subject.Id,
+            request.BggId,
+            request.Categories,
+            request.Mechanics,
+            request.Designers,
+            request.Publishers);
 
         try
         {

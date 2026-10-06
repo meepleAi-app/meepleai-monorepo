@@ -235,6 +235,112 @@ public sealed class GameEndpointsIntegrationTests : IClassFixture<GameEndpointsH
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    /// <summary>
+    /// Issue #4090: the command, its validator and the handler's Replace*Async methods all supported
+    /// taxonomy, but UpdateSharedGameRequest did not declare the fields, so no HTTP caller could reach
+    /// them. This covers the omission: the five arguments are optional, so dropping them from the
+    /// mapping compiles cleanly and every handler-level test stays green while no taxonomy ever
+    /// arrives. Swapping two of them is a different matter and needs no test — SonarAnalyzer S2234
+    /// is a build error here and rejects it (verified: it caught exactly that mistake in this PR).
+    /// </summary>
+    [Fact]
+    public async Task UpdateGame_WithCategories_ReplacesThem_AndOmittingThemLeavesThemAlone()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+
+        var gameId = Guid.NewGuid();
+        dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Taxonomy Mapping Probe",
+            Description = "Seeded by #4090",
+            YearPublished = 2019,
+            MinPlayers = 1,
+            MaxPlayers = 5,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            CreatedAt = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var body = new
+        {
+            title = "Taxonomy Mapping Probe",
+            yearPublished = 2019,
+            description = "Seeded by #4090",
+            minPlayers = 1,
+            maxPlayers = 5,
+            playingTimeMinutes = 60,
+            minAge = 10,
+            imageUrl = "",
+            thumbnailUrl = "",
+            categories = new[] { "Strategy", "Negotiation" },
+            mechanics = new[] { "Dice Rolling" }
+        };
+
+        // Act — a PUT that carries taxonomy
+        var withTaxonomy = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put, $"/api/v1/admin/shared-games/{gameId}", sessionToken, body));
+
+        // Assert — it landed, and in the right collections
+        withTaxonomy.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var reloaded = await verifyDb.SharedGames
+                .AsNoTracking()
+                .Include(g => g.Categories)
+                .Include(g => g.Mechanics)
+                .FirstAsync(g => g.Id == gameId);
+
+            reloaded.Categories.Select(c => c.Name)
+                .Should().BeEquivalentTo(new[] { "Strategy", "Negotiation" });
+            reloaded.Mechanics.Select(m => m.Name)
+                .Should().BeEquivalentTo(new[] { "Dice Rolling" });
+        }
+
+        // Act — a PUT that omits taxonomy entirely (the shape EditGameDrawer sends)
+        var withoutTaxonomy = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/admin/shared-games/{gameId}",
+            sessionToken,
+            new
+            {
+                title = "Taxonomy Mapping Probe Renamed",
+                yearPublished = 2019,
+                description = "Seeded by #4090",
+                minPlayers = 1,
+                maxPlayers = 5,
+                playingTimeMinutes = 60,
+                minAge = 10,
+                imageUrl = "",
+                thumbnailUrl = ""
+            }));
+
+        // Assert — "null means do not change" holds across HTTP, not just in the handler
+        withoutTaxonomy.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var reloaded = await verifyDb.SharedGames
+                .AsNoTracking()
+                .Include(g => g.Categories)
+                .Include(g => g.Mechanics)
+                .FirstAsync(g => g.Id == gameId);
+
+            reloaded.Title.Should().Be("Taxonomy Mapping Probe Renamed");
+            reloaded.Categories.Select(c => c.Name)
+                .Should().BeEquivalentTo(new[] { "Strategy", "Negotiation" });
+            reloaded.Mechanics.Select(m => m.Name)
+                .Should().BeEquivalentTo(new[] { "Dice Rolling" });
+        }
+    }
+
     // ========================================
     // GET GAME RULES ENDPOINT TESTS
     // ========================================

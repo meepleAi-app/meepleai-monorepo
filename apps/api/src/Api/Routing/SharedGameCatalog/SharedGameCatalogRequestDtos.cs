@@ -88,7 +88,14 @@ internal record UpdateSharedGameRequest(
     decimal? AverageRating,
     string ImageUrl,
     string ThumbnailUrl,
-    GameRulesDto? Rules);
+    GameRulesDto? Rules,
+    // #4090: mirrors CreateSharedGameRequest. Without these the command's taxonomy support
+    // and the handler's Replace*Async methods were unreachable over HTTP.
+    int? BggId = null,
+    List<string>? Categories = null,
+    List<string>? Mechanics = null,
+    List<string>? Designers = null,
+    List<string>? Publishers = null);
 
 /// <summary>
 /// Request DTO for importing a game from BoardGameGeek.

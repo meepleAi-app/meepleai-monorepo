@@ -390,6 +390,49 @@ public sealed class SharedGameTests
         evt.ModifiedBy.Should().Be(modifiedBy);
     }
 
+    /// <summary>
+    /// Issue #4090: the #2123 nullify migration made these columns nullable and MapToDomain coerces
+    /// a null row value to "". The aggregate rejecting empty meant a game loaded from a nullified
+    /// row could not be saved at all, so every admin save had to invent a URL.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateInfo_WithEmptyImageUrls_Succeeds(string url)
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        var action = () => game.UpdateInfo(
+            "Updated Title", 2022, "Updated description", 2, 6, 120, 12,
+            2.5m, 7.5m, url, url, null, Guid.NewGuid());
+
+        // Assert
+        action.Should().NotThrow();
+        game.ImageUrl.Should().Be(url);
+        game.ThumbnailUrl.Should().Be(url);
+    }
+
+    /// <summary>
+    /// Issue #4090: accepting empty must not accept garbage — a value that is present still has to
+    /// be an absolute URL.
+    /// </summary>
+    [Fact]
+    public void UpdateInfo_WithNonEmptyInvalidImageUrl_ThrowsArgumentException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        var action = () => game.UpdateInfo(
+            "Updated Title", 2022, "Updated description", 2, 6, 120, 12,
+            2.5m, 7.5m, "not-a-url", "https://example.com/thumb.jpg", null, Guid.NewGuid());
+
+        // Assert
+        action.Should().Throw<ArgumentException>();
+    }
+
     [Fact]
     public void UpdateInfo_WithEmptyModifiedBy_ThrowsArgumentException()
     {

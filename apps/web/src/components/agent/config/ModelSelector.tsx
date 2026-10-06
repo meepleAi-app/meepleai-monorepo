@@ -40,16 +40,28 @@ export interface ModelSelectorProps {
   className?: string;
 }
 
-/** Provider display configuration */
-const PROVIDER_CONFIG: Record<AiProvider, { label: string; icon: string; color: string }> = {
+/**
+ * Provider display configuration.
+ *
+ * #4093: il backend manda l'etichetta in PascalCase (`"OpenRouter"`, `"Ollama"`) e `provider` e'
+ * una stringa libera, non un enum. Le chiavi restano minuscole e la ricerca normalizza, cosi' un
+ * provider nuovo degrada all'icona generica invece di far sparire la riga.
+ */
+const PROVIDER_CONFIG: Record<string, { label: string; icon: string; color: string }> = {
   openai: { label: 'OpenAI', icon: '🟢', color: 'text-green-600 dark:text-green-400' },
   anthropic: { label: 'Anthropic', icon: '🟤', color: 'text-amber-700 dark:text-amber-400' },
   google: { label: 'Google', icon: '🔵', color: 'text-blue-600 dark:text-blue-400' },
   meta: { label: 'Meta', icon: '🔷', color: 'text-blue-500 dark:text-blue-300' },
   deepseek: { label: 'DeepSeek', icon: '🟣', color: 'text-purple-600 dark:text-purple-400' },
   openrouter: { label: 'OpenRouter', icon: '🔀', color: 'text-indigo-600 dark:text-indigo-400' },
+  ollama: { label: 'Ollama', icon: '🦙', color: 'text-slate-600 dark:text-slate-300' },
 };
 
+function providerConfig(provider: AiProvider) {
+  return PROVIDER_CONFIG[provider.toLowerCase()];
+}
+
+/** #4093: i prezzi del backend sono per MILIONE di token, non per mille. */
 function formatCost(cost: number): string {
   if (cost === 0) return 'Free';
   if (cost < 0.001) return `$${cost.toFixed(4)}`;
@@ -70,7 +82,7 @@ export function ModelSelector({
     error,
   } = useAiModels({ status: 'active', page: 1, pageSize: 50 });
 
-  const models = useMemo(() => modelsData?.items ?? [], [modelsData]);
+  const models = useMemo(() => modelsData?.models ?? [], [modelsData]);
 
   // Find selected model for display
   const selectedModel = models.find(m => m.id === value);
@@ -109,10 +121,10 @@ export function ModelSelector({
             </div>
           ) : selectedModel ? (
             <div className="flex items-center gap-2">
-              <span>{PROVIDER_CONFIG[selectedModel.provider]?.icon ?? '🤖'}</span>
+              <span>{providerConfig(selectedModel.provider)?.icon ?? '🤖'}</span>
               <span>{selectedModel.displayName}</span>
               <span className="text-xs text-muted-foreground">
-                {formatCost(selectedModel.cost.inputCostPer1kTokens)}/1K
+                {formatCost(selectedModel.settings.pricing.inputPricePerMillion)}/1M
               </span>
             </div>
           ) : (
@@ -123,7 +135,7 @@ export function ModelSelector({
         <SelectContent>
           {models.length > 0 ? (
             models.map(model => {
-              const provider = PROVIDER_CONFIG[model.provider];
+              const provider = providerConfig(model.provider);
               return (
                 <SelectItem key={model.id} value={model.id} className="cursor-pointer">
                   <div className="flex items-center justify-between gap-3 w-full">
@@ -144,7 +156,7 @@ export function ModelSelector({
                         </span>
                       )}
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatCost(model.cost.inputCostPer1kTokens)}/1K
+                        {formatCost(model.settings.pricing.inputPricePerMillion)}/1M
                       </span>
                     </div>
                   </div>
@@ -164,8 +176,12 @@ export function ModelSelector({
 
       {selectedModel && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span>Input: {formatCost(selectedModel.cost.inputCostPer1kTokens)}/1K tokens</span>
-          <span>Output: {formatCost(selectedModel.cost.outputCostPer1kTokens)}/1K tokens</span>
+          <span>
+            Input: {formatCost(selectedModel.settings.pricing.inputPricePerMillion)}/1M tokens
+          </span>
+          <span>
+            Output: {formatCost(selectedModel.settings.pricing.outputPricePerMillion)}/1M tokens
+          </span>
         </div>
       )}
 

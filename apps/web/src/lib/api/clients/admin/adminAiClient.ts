@@ -279,7 +279,9 @@ export function createAdminAiClient(http: HttpClient) {
         : '/api/v1/admin/ai-models';
 
       const result = await http.get(url, PagedAiModelsSchema);
-      return result ?? { items: [], total: 0, page: 1, pageSize: 20 };
+      // #4093: un fallimento di validazione LANCIA (vedi il commento in ModelsTab.tsx su #4059);
+      // questo fallback copre solo un corpo assente, e ora usa le chiavi del contratto reale.
+      return result ?? { models: [], totalCount: 0, page: 1, pageSize: 20 };
     },
 
     async getAiModelById(modelId: string): Promise<AiModelDto> {
@@ -784,9 +786,12 @@ export function createAdminAiClient(http: HttpClient) {
       if (params?.take !== undefined) searchParams.set('take', params.take.toString());
       if (params?.strategy) searchParams.set('strategy', params.strategy);
       if (params?.status) searchParams.set('status', params.status);
-      if (params?.minLatencyMs !== undefined) searchParams.set('minLatencyMs', params.minLatencyMs.toString());
-      if (params?.maxLatencyMs !== undefined) searchParams.set('maxLatencyMs', params.maxLatencyMs.toString());
-      if (params?.minConfidence !== undefined) searchParams.set('minConfidence', params.minConfidence.toString());
+      if (params?.minLatencyMs !== undefined)
+        searchParams.set('minLatencyMs', params.minLatencyMs.toString());
+      if (params?.maxLatencyMs !== undefined)
+        searchParams.set('maxLatencyMs', params.maxLatencyMs.toString());
+      if (params?.minConfidence !== undefined)
+        searchParams.set('minConfidence', params.minConfidence.toString());
       if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
       if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
       const qs = searchParams.toString();
@@ -851,8 +856,7 @@ export function createAdminAiClient(http: HttpClient) {
       const tokenUsage = res.tokenUsage as Record<string, number> | undefined;
       const costBreakdown = res.costBreakdown as Record<string, number> | undefined;
       const retrievedChunks = res.retrievedChunks as
-        | { id?: string; text?: string; score?: number }[]
-        | undefined;
+        { id?: string; text?: string; score?: number }[] | undefined;
       return {
         answer: (res.answer as string) ?? '[Nessuna risposta]',
         strategy: (res.strategy as string) ?? params.strategy ?? 'HybridRAG',

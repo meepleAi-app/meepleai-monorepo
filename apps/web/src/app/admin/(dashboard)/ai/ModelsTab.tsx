@@ -31,7 +31,7 @@ export function ModelsTab() {
     api.admin
       .getAiModels()
       .then(data => {
-        setModels(data.items);
+        setModels(data.models);
         setError(null);
       })
       .catch((err: unknown) => {
@@ -44,7 +44,7 @@ export function ModelsTab() {
     try {
       await api.admin.setPrimaryModel({ modelId });
       const data = await api.admin.getAiModels();
-      setModels(data.items);
+      setModels(data.models);
       setError(null);
     } catch (err: unknown) {
       setError(
@@ -103,20 +103,23 @@ export function ModelsTab() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-foreground truncate pr-16 sm:pr-20">
-                    {m.name}
+                    {m.displayName}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5 truncate">
-                    {m.provider} · {m.modelIdentifier}
+                    {m.provider} · {m.modelId}
                   </p>
                   <div className="mt-2 flex items-center gap-2">
+                    {/* #4093: il backend manda `isActive` booleano, non un enum a tre valori.
+                        Lo stato "deprecated" che questo badge sapeva mostrare non esiste nel
+                        contratto reale: due stati, non tre. */}
                     <span
                       className={`inline-block h-1.5 w-1.5 rounded-full ${
-                        m.status === 'active'
-                          ? 'bg-[hsl(var(--c-success))]'
-                          : 'bg-muted-foreground/40'
+                        m.isActive ? 'bg-[hsl(var(--c-success))]' : 'bg-muted-foreground/40'
                       }`}
                     />
-                    <span className="text-[10px] text-muted-foreground capitalize">{m.status}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {m.isActive ? 'attivo' : 'inattivo'}
+                    </span>
                   </div>
                 </div>
               </div>

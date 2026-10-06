@@ -60,8 +60,9 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
   // Load current model config when modal opens
   useEffect(() => {
     if (isOpen && model) {
-      setTemperature(model.temperature);
-      setMaxTokens(model.maxTokens);
+      // #4093: temperature e maxTokens sono annidati in `settings`, non in radice.
+      setTemperature(model.settings.temperature);
+      setMaxTokens(model.settings.maxTokens);
       setMaxTokensError(null);
       setTestResult(null);
     }
@@ -92,9 +93,7 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
       toast.success(`Configuration for "${model.displayName}" saved successfully!`);
       onClose();
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Failed to save model configuration'
-      );
+      toast.error(error instanceof Error ? error.message : 'Failed to save model configuration');
     }
   };
 
@@ -135,7 +134,7 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
         <DialogHeader>
           <DialogTitle>Configure: {model.displayName}</DialogTitle>
           <DialogDescription>
-            Adjust model parameters for <span className="font-mono">{model.modelIdentifier}</span>
+            Adjust model parameters for <span className="font-mono">{model.modelId}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -201,7 +200,7 @@ export function ModelConfigModal({ isOpen, onClose, modelId, model }: ModelConfi
               id="testPrompt"
               placeholder="Enter a test prompt..."
               value={testPrompt}
-              onChange={(e) => setTestPrompt(e.target.value)}
+              onChange={e => setTestPrompt(e.target.value)}
               rows={3}
               maxLength={500}
             />

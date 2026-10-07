@@ -155,6 +155,23 @@ jobs:
       - name: Orphan Playwright specs gate (#4092)
         run: pnpm lint:orphan-specs
 
+      # Fratello del gate sopra, e chiude il difetto gemello: una spec che vive nella radice
+      # giusta ma cerca un `data-testid` che il codice di produzione non dichiara. Non e'
+      # «da aggiustare»: non e' eseguibile per costruzione. Non rompe il build, non rompe il
+      # lint, e il gate E2E non gira sulle PR verso `main-dev` — quindi resta invisibile. Tre
+      # istanze sono emerse A MANO in due giorni per vie indipendenti (#4106, #4105, #4110): la
+      # misura dice che erano campioni, non casi. Il piu' grosso, `game-card`, e' una vittima
+      # della migrazione GameCard -> MeepleCard dichiarata in CLAUDE.md.
+      #
+      # E' un CRICCHETTO, non un gate a zero: la baseline all'introduzione e' troppo ampia
+      # perche' un bloccante a zero sia introducibile. Blocca il peggioramento — una spec nuova
+      # deve essere a zero, una esistente non deve crescere — e il percorso verso zero sta
+      # nella baseline committata, file per file. Accusa solo cio' che puo' dimostrare: un id
+      # coperto da una dichiarazione dinamica (`data-testid={`${x}-apply`}`) e' classificato
+      # indimostrabile, non orfano.
+      - name: Orphan data-testid gate (#4120)
+        run: pnpm lint:orphan-testids
+
       - name: Typecheck
         run: pnpm typecheck
 

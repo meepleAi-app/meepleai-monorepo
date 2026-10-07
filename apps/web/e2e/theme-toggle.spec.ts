@@ -13,8 +13,21 @@
 
 import { test, expect } from '@playwright/test';
 
+import {
+  hasRealAdminCredentials,
+  loginAsRealAdmin,
+  MISSING_CREDENTIALS_REASON,
+} from './_helpers/realAdminAuth';
+
 test.describe('Theme Toggle - Dual-Theme System', () => {
   test.beforeEach(async ({ page }) => {
+    // #4106: questa spec non autenticava. La rotta e' protetta, quindi ogni asserzione
+    // cadeva sulla pagina di login e il sintomo (`toBeVisible` che non trova nulla) somigliava
+    // a una deriva di selettori. Causa stabilita guardando l'istantanea di pagina, non il
+    // messaggio d'errore.
+    test.skip(!hasRealAdminCredentials, MISSING_CREDENTIALS_REASON);
+    await loginAsRealAdmin(page);
+
     // Start on dashboard (requires auth - adjust if needed)
     await page.goto('/dashboard');
 

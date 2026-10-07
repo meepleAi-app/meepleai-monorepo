@@ -1,211 +1,171 @@
 /**
- * Game Detail Page E2E Tests (Issue #3511)
+ * Scheda di un gioco della libreria personale — `/library/[gameId]`.
  *
- * Test Coverage:
- * - Page loading and navigation
- * - Game card flip interaction
- * - State change (Owned → Wishlist → etc)
- * - Favorite toggle
- * - Labels management
- * - Notes editing
- * - Tab switching (Knowledge Base / Social Links)
- * - Remove game flow
- * - Responsive behavior
+ * #4106 — riscritta da zero. La versione precedente non era mai stata eseguita (viveva sotto
+ * `__tests__/e2e/`, che nessuna config Playwright raccoglieva — #4092) e aveva **tre** difetti
+ * indipendenti, in ordine di quanto impedivano l'esecuzione:
  *
- * Target: Main user journeys covered
+ *   1. **Non autenticava.** `/library/**` è protetta: 13 fallimenti su 13 cadevano sulla pagina
+ *      di login. Il sintomo (`toBeVisible` che non trova nulla) è indistinguibile da una deriva
+ *      di selettori, ed è il motivo per cui si stabilisce la causa guardando l'`# Page snapshot`
+ *      di `error-context.md`, non la riga `Error:` — lezione di #4098.
+ *   2. **La rotta non esiste.** Puntava a `/library/games/<id>`, che risponde **404**: la rotta
+ *      reale è `/library/[gameId]`. `next.config.js` ha dieci redirect per i *figli* di
+ *      `/library/games/:id` e nessuno per la forma nuda — difetto di prodotto, #4105.
+ *   3. **L'id era inventato.** `game-123`, col commento «assuming game-123 exists in test DB».
+ *      Non esiste. Qui il gioco si semina col pattern di casa (`seedEntities`), e `afterEach` lo
+ *      rimuove.
+ *
+ * ## Cosa è stato eliminato, e perché
+ *
+ * La pagina che quella spec descriveva **non esiste più**. L'intestazione di
+ * `src/app/(authenticated)/library/[gameId]/page.tsx` lo dichiara: *«S4 (library-to-game epic):
+ * migrated desktop path from GameTableLayout to GameDetailDesktop with 5 tabs»*. Misurato in
+ * `src`, escludendo `__tests__`:
+ *
+ *   - `[aria-label*="Carta del gioco"]` (flip della carta: 2 test + 1 responsive) → **0 occorrenze**
+ *   - tab `Knowledge Base` / `Social Links` (1 test + 1 responsive) → sostituiti dai cinque tab
+ *     di S4: `Info · Agente · Toolkit · House Rules · Partite`
+ *   - toast `aggiunto ai preferiti` → **0 occorrenze**
+ *   - `Stato aggiornato`, `Modifica note` → esistono, ma in `components/library/game-table/`,
+ *     cioè il `GameTableLayout` che S4 ha smesso di rendere su questa pagina
+ *   - modale upload PDF, dialogo di rimozione → non in `GameDetailDesktop`, che rende
+ *     `GameHero` + `GameTabsPanel` + `SessionContributorsStrip`
+ *
+ * Eliminato anche `displays play statistics when available`: il corpo era
+ * `if (await statsSection.isVisible()) { … }`, quindi non poteva fallire per un difetto del
+ * prodotto.
+ *
+ * ## Verità a terra usata qui
+ *
+ *   desktop    → `data-testid="game-detail-desktop"`, titolo in un `<h1>` di `GameHero`
+ *   mobile     → `data-testid="game-detail-mobile"`; i due layout coesistono nel DOM e si
+ *                alternano via CSS (`lg:hidden` / `hidden lg:block`), non per ramo di render
+ *   non trovato→ `data-testid="not-found-state"`, `Gioco non trovato`, CTA `Torna alla Libreria`
+ *   errore     → `data-testid="error-state"`, `Errore di caricamento`, CTA `Riprova`
+ *   tab        → cinque id in `components/game-detail/tabs/types.ts`, deep-link via `?tab=`
+ *
+ * @see docs/for-developers/audits/2026-10-06-orphan-e2e-specs-classification.md
+ * @see docs/for-developers/testing/e2e-entity-seeding.md
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
-test.describe('Library Game Detail Page', () => {
+import {
+  hasRealAdminCredentials,
+  loginAsRealAdmin,
+  MISSING_CREDENTIALS_REASON,
+  REAL_ADMIN_EMAIL,
+} from '../_helpers/realAdminAuth';
+import { cleanupTestEntities, newTestRunId, seedLibraryGame } from '../_helpers/seedEntities';
+
+/** Un id valido per forma ma assente dalla libreria: esercita il ramo «non trovato». */
+const ABSENT_GAME_ID = '00000000-0000-4000-8000-0000000040ff';
+
+interface SeededGame {
+  gameId: string;
+  title: string;
+  testRunId: string;
+}
+
+/**
+ * Semina un gioco nella libreria dell'utente con cui si fa login.
+ *
+ * `ownerEmail` qui è **lookup-or-create**: passando l'admin reale, l'handler riusa quella riga
+ * invece di crearne una nuova, e — verificato nel sorgente — stampa il `TestRunId` **solo** se
+ * l'utente va creato. Per questo `cleanupTestEntities`, che cancella gli utenti filtrando su
+ * `TestRunId`, non può toccare l'account con cui stiamo guidando il browser.
+ */
+async function seedGameInOwnLibrary(page: Page, testId: string): Promise<SeededGame> {
+  const testRunId = newTestRunId(testId);
+  const title = `E2E Library Detail ${testRunId.slice(-8)}`;
+  const seeded = await seedLibraryGame(page, {
+    testRunId,
+    ownerEmail: REAL_ADMIN_EMAIL as string,
+    title,
+    minPlayers: 2,
+    maxPlayers: 4,
+  });
+  return { gameId: seeded.gameId, title, testRunId };
+}
+
+test.describe('Scheda gioco della libreria', () => {
+  const seededRuns: string[] = [];
+
   test.beforeEach(async ({ page }) => {
-    // Navigate to game detail page (assuming game-123 exists in test DB)
-    await page.goto('/library/games/game-123');
+    test.skip(!hasRealAdminCredentials, MISSING_CREDENTIALS_REASON);
+    await loginAsRealAdmin(page);
   });
 
-  test('loads and displays game information', async ({ page }) => {
-    // Wait for page to load
-    await expect(page.locator('h1')).toBeVisible();
-
-    // Check game title is present
-    const title = await page.locator('h1').textContent();
-    expect(title).toBeTruthy();
-
-    // Check main sections render
-    await expect(page.getByText(/Posseduto|Wishlist|Nuovo/)).toBeVisible();
-  });
-
-  test('flips game card on click', async ({ page }) => {
-    const card = page.locator('[role="button"][aria-label*="Carta del gioco"]');
-
-    // Initial state - front side
-    await expect(card).toHaveAttribute('aria-label', /vedere i dettagli sul retro/);
-
-    // Click to flip
-    await card.click();
-
-    // After flip - back side
-    await expect(card).toHaveAttribute('aria-label', /vedere il fronte/);
-
-    // Verify categories/mechanics visible on back
-    await expect(page.locator('text=/Categorie|Meccaniche/')).toBeVisible();
-  });
-
-  test('flips game card with keyboard (Enter)', async ({ page }) => {
-    const card = page.locator('[role="button"][aria-label*="Carta del gioco"]');
-
-    await card.focus();
-    await page.keyboard.press('Enter');
-
-    await expect(card).toHaveAttribute('aria-label', /vedere il fronte/);
-  });
-
-  test('changes game state via dropdown', async ({ page }) => {
-    // Open state dropdown
-    await page.getByText('Posseduto').click();
-
-    // Select Wishlist
-    await page.getByText('Wishlist').click();
-
-    // Verify toast notification
-    await expect(page.getByText(/Stato aggiornato/i)).toBeVisible({ timeout: 5000 });
-  });
-
-  test('toggles favorite status', async ({ page }) => {
-    const favoriteButton = page.getByLabel(/favorites/i);
-
-    // Click to add to favorites
-    await favoriteButton.click();
-
-    // Verify toast appears
-    await expect(page.getByText(/aggiunto ai preferiti|rimosso dai preferiti/i)).toBeVisible({
-      timeout: 5000,
-    });
-  });
-
-  test('opens and closes notes modal', async ({ page }) => {
-    // Click edit notes button
-    await page.getByLabel(/Modifica note/i).click();
-
-    // Modal should open
-    await expect(page.getByRole('dialog')).toBeVisible();
-
-    // Close modal
-    await page.getByRole('button', { name: /close|chiudi|annulla/i }).click();
-
-    // Modal should close
-    await expect(page.getByRole('dialog')).not.toBeVisible();
-  });
-
-  test('switches between Knowledge Base and Social Links tabs', async ({ page }) => {
-    // Initially on Knowledge Base
-    await expect(page.getByText(/Carica PDF|Knowledge Base/)).toBeVisible();
-
-    // Switch to Social Links
-    await page.getByText('Social Links').click();
-
-    // Social links content visible
-    await expect(page.getByText(/BoardGameGeek|Nessun link/)).toBeVisible();
-
-    // Switch back to Knowledge Base
-    await page.getByText('Knowledge Base').click();
-
-    await expect(page.getByText(/Carica PDF|Nessun documento/)).toBeVisible();
-  });
-
-  test('opens PDF upload modal', async ({ page }) => {
-    // Click upload button
-    await page.getByText(/Carica PDF/i).click();
-
-    // Modal should open
-    await expect(page.getByRole('dialog')).toBeVisible();
-
-    // Should have file upload UI elements
-    await expect(page.getByText(/Upload|Carica|PDF/i)).toBeVisible();
-  });
-
-  test('displays play statistics when available', async ({ page }) => {
-    // Check for stats section
-    const statsSection = page.locator('text=/Partite giocate|Ultima partita|Vittorie/');
-
-    if (await statsSection.isVisible()) {
-      // Verify stats are rendered
-      await expect(page.locator('text=/\\d+/')).toBeVisible();
+  test.afterEach(async ({ page }) => {
+    // Senza questo, ogni esecuzione lascia un SharedGame e una voce di libreria: la pulizia è
+    // parte del contratto di `seedEntities`, non un'accortezza.
+    for (const testRunId of seededRuns.splice(0)) {
+      await cleanupTestEntities(page, { testRunId });
     }
   });
 
-  test('opens remove game dialog', async ({ page }) => {
-    // Click remove button
-    await page.getByText(/Rimuovi/i).click();
+  test('carica la scheda e mostra il titolo del gioco', async ({ page }, testInfo) => {
+    const game = await seedGameInOwnLibrary(page, testInfo.testId);
+    seededRuns.push(game.testRunId);
 
-    // Confirmation dialog should open
-    await expect(page.getByRole('dialog')).toBeVisible();
-    await expect(page.getByText(/conferma|sicuro/i)).toBeVisible();
+    await page.goto(`/library/${game.gameId}`);
+
+    await expect(page.getByTestId('game-detail-desktop')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(game.title);
   });
 
-  test('navigates back to library', async ({ page }) => {
-    // Click back button
-    await page.getByLabel(/Torna|Back/i).click();
+  test('i cinque tab di S4 sono presenti e il deep link ?tab= ne apre uno', async ({
+    page,
+  }, testInfo) => {
+    const game = await seedGameInOwnLibrary(page, testInfo.testId);
+    seededRuns.push(game.testRunId);
 
-    // Should navigate to library
-    await expect(page).toHaveURL(/\/library/);
+    await page.goto(`/library/${game.gameId}`);
+    await expect(page.getByTestId('game-detail-desktop')).toBeVisible({ timeout: 30_000 });
+
+    // Le etichette, non gli id: sono ciò che l'utente vede, e sono il contratto che la vecchia
+    // spec aveva perso (cercava `Knowledge Base` e `Social Links`).
+    for (const label of ['Info', 'Agente', 'Toolkit', 'House Rules', 'Partite']) {
+      await expect(page.getByRole('tab', { name: new RegExp(label) })).toBeVisible();
+    }
+
+    // Deep link: `?tab=toolbox` deve aprire Toolkit, non Info.
+    await page.goto(`/library/${game.gameId}?tab=toolbox`);
+    await expect(page.getByRole('tab', { name: /Toolkit/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
   });
-});
 
-test.describe('Game Detail Page - Responsive', () => {
-  test('renders correctly on mobile viewport', async ({ page }) => {
+  test('un gioco assente dalla libreria mostra lo stato «non trovato»', async ({ page }) => {
+    await page.goto(`/library/${ABSENT_GAME_ID}`);
+
+    await expect(page.getByTestId('not-found-state')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText('Gioco non trovato')).toBeVisible();
+  });
+
+  test('dallo stato «non trovato» si torna alla libreria', async ({ page }) => {
+    await page.goto(`/library/${ABSENT_GAME_ID}`);
+    await expect(page.getByTestId('not-found-state')).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole('button', { name: /Torna alla Libreria/ }).click();
+
+    await expect(page).toHaveURL(/\/library$/, { timeout: 30_000 });
+  });
+
+  test('a larghezza mobile rende il layout mobile, non quello desktop', async ({
+    page,
+  }, testInfo) => {
+    const game = await seedGameInOwnLibrary(page, testInfo.testId);
+    seededRuns.push(game.testRunId);
+
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/library/games/game-123');
+    await page.goto(`/library/${game.gameId}`);
 
-    // Page should render without layout issues
-    await expect(page.locator('h1')).toBeVisible();
-    await expect(page.getByText(/Posseduto|Wishlist/)).toBeVisible();
-  });
-
-  test('renders correctly on tablet viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto('/library/games/game-123');
-
-    await expect(page.locator('h1')).toBeVisible();
-  });
-
-  test('renders correctly on desktop viewport', async ({ page }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto('/library/games/game-123');
-
-    await expect(page.locator('h1')).toBeVisible();
-
-    // Check side-by-side layout on desktop
-    const hero = page.locator('[role="button"][aria-label*="Carta del gioco"]');
-    const sideCard = page.locator('text=/Knowledge Base|Social Links/');
-
-    await expect(hero).toBeVisible();
-    await expect(sideCard).toBeVisible();
-  });
-});
-
-test.describe('Game Detail Page - Error States', () => {
-  test('handles missing game gracefully', async ({ page }) => {
-    await page.goto('/library/games/nonexistent-game-id');
-
-    // Should show error message
-    await expect(page.getByText(/non trovato|errore/i)).toBeVisible();
-
-    // Should have back button
-    await expect(page.getByText(/Torna alla Libreria/i)).toBeVisible();
-  });
-
-  test('displays loading state', async ({ page }) => {
-    // Intercept API to delay response
-    await page.route('**/api/v1/library/games/*', async route => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await route.continue();
-    });
-
-    page.goto('/library/games/game-123');
-
-    // Loading state should be visible briefly
-    // (Handled by loading.tsx file)
-    await page.waitForLoadState('networkidle');
+    // I due layout coesistono nel DOM: l'asserzione utile è quale dei due è VISIBILE. Asserire
+    // solo la presenza del mobile passerebbe anche a 1920px.
+    await expect(page.getByTestId('game-detail-mobile')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('game-detail-desktop')).toBeHidden();
   });
 });

@@ -63,7 +63,6 @@
     "e2e/badges.spec.ts": 2,
     "e2e/carte-in-mano/admin-toggle.spec.ts": 10,
     "e2e/carte-in-mano/card-navigation.spec.ts": 7,
-    "e2e/chat-citations.spec.ts": 6,
     "e2e/chat-visual.chromatic.spec.ts": 1,
     "e2e/chat/copy-response.spec.ts": 1,
     "e2e/chat/message-regeneration.spec.ts": 1,

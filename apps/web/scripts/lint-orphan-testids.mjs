@@ -164,6 +164,27 @@ export function slotsFromSource(source) {
   return slots;
 }
 
+/**
+ * Gli `id` dichiarati dalla produzione — la TERZA convenzione di indirizzamento del repository.
+ *
+ * `RegisterForm.tsx` porta `id="register-email"` e `id="register-password"`, cioè esattamente i
+ * nomi che `e2e/auth-email-registration-flow.spec.ts` cerca come `data-testid`. Per un campo di
+ * form l'`id` è anche il selettore migliore, perché è quello a cui punta `<label for>`.
+ *
+ * ⚠️ Ma un suggerimento non è un permesso. Convertire un selettore su una spec che **non può
+ * passare comunque** fa scendere il conteggio del gate senza riparare niente: è truccare la
+ * metrica. Quella stessa spec asserisce `toBeVisible()` su un campo di conferma password che il
+ * form non ha, e non accetta mai i termini che il form richiede — ripuntare due selettori
+ * sposterebbe il fallimento di una riga. Prima si stabilisce che la spec possa passare, poi si
+ * ripuntano i selettori.
+ */
+export function idsFromSource(source) {
+  const ids = new Set();
+  for (const m of source.matchAll(/\sid=["']([^"'$]+)["']/g)) ids.add(m[1]);
+  for (const m of source.matchAll(/\sid=\{\s*["']([^"']+)["']\s*\}/g)) ids.add(m[1]);
+  return ids;
+}
+
 /** Un id coperto da un pattern dinamico non è dimostrabile orfano (limite 1). */
 export function isUnprovable(id, { suffixes, prefixes }) {
   for (const s of suffixes) if (id.endsWith(s)) return true;
@@ -229,6 +250,7 @@ export function scan(webRoot) {
   const suffixes = new Set();
   const prefixes = new Set();
   const slots = new Set();
+  const htmlIds = new Set();
   for (const file of srcFiles) {
     const source = readFileSync(file, 'utf8');
     const d = declaredFromSource(source, { isConstantsModule: isConstantsModule(file) });
@@ -236,6 +258,7 @@ export function scan(webRoot) {
     for (const v of d.suffixes) suffixes.add(v);
     for (const v of d.prefixes) prefixes.add(v);
     for (const v of slotsFromSource(source)) slots.add(v);
+    for (const v of idsFromSource(source)) htmlIds.add(v);
   }
 
   const { orphans, unprovable, declared } = classify([...sought.keys()], {
@@ -263,6 +286,7 @@ export function scan(webRoot) {
     dynamicSites,
     slots,
     patterns: { suffixes, prefixes },
+    htmlIds,
   };
 }
 
@@ -328,6 +352,21 @@ function main() {
         console.log(`  ${String(where.length).padStart(4)}x  ${id.padEnd(38)} assolto da: ${by}`);
       }
       if (r.unprovable.length > 30) console.log(`  … e altri ${r.unprovable.length - 30}`);
+    }
+
+    const withId = r.orphans.filter(id => r.htmlIds.has(id) && !r.slots.has(id));
+    if (withId.length > 0) {
+      const sites = withId.reduce((n, id) => n + r.sought.get(id).length, 0);
+      console.log(
+        `\n${withId.length} orfani (${sites} sedi) hanno un \`id\` omonimo in produzione:\n` +
+          `  ${withId.join(' · ')}\n` +
+          'Per un campo di form l`id e` anche il selettore migliore: e` quello a cui punta\n' +
+          '`<label for>`. Si punta con `locator("#<id>")`.\n' +
+          '⚠️ Ma prima stabilisci che la spec POSSA passare. `auth-email-registration-flow.spec.ts`\n' +
+          'ha `register-email` e `register-password` come id, e resta comunque rotta: asserisce\n' +
+          'un campo di conferma password che il form non ha. Ripuntare i selettori su una spec\n' +
+          'che non passa fa scendere questo conteggio senza riparare niente.\n'
+      );
     }
 
     if (withSlot.length > 0) {

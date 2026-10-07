@@ -177,6 +177,41 @@ L'assoluzione è **letteralmente corretta**: `message-${x}` *può* produrre `mes
 
 > **Lezione di metodo, la terza di questo audit**: avevo blindato il gate contro le false *accuse* (la soppressione dei pattern dinamici) e non avevo guardato il lato opposto. Una misura conservativa non è neutra: sposta l'errore, non lo elimina. Chi la progetta deve rendere visibile anche ciò che assolve.
 
+## 3-sexies. Tre convenzioni di indirizzamento, non una
+
+Dopo `data-slot` (§3-bis) è emersa la terza: **`id`**. `RegisterForm.tsx` porta `id="register-email"` e `id="register-password"`, cioè esattamente i nomi che `e2e/auth-email-registration-flow.spec.ts` cerca come `data-testid`.
+
+| convenzione | dichiarazioni letterali in produzione | orfani con un omonimo | sedi |
+|---|---|---|---|
+| `data-testid` | — (è quella che il gate verifica) | — | — |
+| `data-slot` | 965 | 5 | 22 → **chiuse** |
+| `id` | 355 | 12 | 29 |
+
+`--list` segnala entrambe. Per un campo di form l'`id` è anche il selettore *migliore*: è quello a cui punta `<label for>`, quindi è legato all'accessibilità e non a una convenzione di test.
+
+### ⚠️ Un suggerimento non è un permesso: la trappola della metrica
+
+Gli `id` del grappolo auth **non** sono stati convertiti, e il motivo è il reperto più utile di questa sezione.
+
+`auth-email-registration-flow.spec.ts` riempie email e password — che hanno un `id` omonimo — e poi fa:
+
+```ts
+const confirmPasswordInput = page.locator('[data-testid="register-confirm-password"]');
+await expect(confirmPasswordInput).toBeVisible();
+```
+
+**`RegisterForm` non ha un campo di conferma password.** I suoi campi sono `email`, `password`, `honeypot`, `termsAccepted` (`grep -nE 'name="' RegisterForm.tsx`), e la spec non accetta mai i termini che il form richiede.
+
+Quindi convertire `register-email` e `register-password` a `#id` avrebbe fatto **scendere 14 sedi dal gate lasciando la spec rotta**: il fallimento si sarebbe spostato di una riga, e il conteggio avrebbe detto che le cose vanno meglio. È truccare la metrica.
+
+**Regola che ne segue**: prima si stabilisce che la spec *possa* passare, poi si ripuntano i selettori. L'ordine inverso compra un numero e perde l'informazione.
+
+Il messaggio di `--list` porta questa avvertenza accanto al suggerimento, con questo caso come esempio.
+
+### Nota su `auth-email-registration-flow.spec.ts`: non eliminata
+
+Ha due test. Il primo (712 righe di flusso completo) non può passare per quanto sopra; **il secondo è indipendente** — va su `/dashboard` e verifica la trasmissione degli header, senza selettori orfani. Eliminare il file perderebbe un test funzionante, e il primo descrive una funzione che **esiste**: la registrazione c'è, è il modello di form della spec a essere sbagliato. Va riscritto contro il form reale, e quella è una decisione su come riscriverlo — non un'eliminazione.
+
 ## 4. Cosa serve decidere, prima di continuare
 
 - [ ] **Per la categoria B**: skip classificato o eliminazione? Esiste il precedente dell'eliminazione (#4068 → #4106) e quello dello skip con `DIFETTO:` (#4114). La scelta cambia cosa resta leggibile: un file eliminato lascia solo l'issue, uno skippato lascia la struttura

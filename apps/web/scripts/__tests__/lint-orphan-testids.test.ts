@@ -15,6 +15,7 @@ import {
   classify,
   compareToBaseline,
   declaredFromSource,
+  idsFromSource,
   isConstantsModule,
   isE2EConsumer,
   isProductionSource,
@@ -157,6 +158,25 @@ describe('slotsFromSource', () => {
     // omonimo — fra cui `offline-banner` con 12 sedi — e per quelli basta ripuntare la spec.
     const slots = slotsFromSource('<div data-slot="offline-banner" />');
     expect(slots.has('offline-banner')).toBe(true);
+  });
+});
+
+describe('idsFromSource', () => {
+  it('raccoglie gli `id` letterali, la terza convenzione del repository', () => {
+    const ids = idsFromSource(
+      ['<input id="register-email" type="email" />', '<input id={"login-password"} />'].join('\n')
+    );
+    expect([...ids].sort()).toEqual(['login-password', 'register-email']);
+  });
+
+  it('non confonde `id` con altri attributi che finiscono per id', () => {
+    // Senza lo spazio richiesto prima di `id=`, un `data-testid=` verrebbe letto come un id.
+    const ids = idsFromSource('<div data-testid="chat-bubble" aria-describedby="x" />');
+    expect(ids.has('chat-bubble')).toBe(false);
+  });
+
+  it('ignora gli id interpolati', () => {
+    expect([...idsFromSource('<input id={`field-${name}`} />')]).toEqual([]);
   });
 });
 

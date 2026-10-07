@@ -118,8 +118,9 @@ sono diventati **visibili e contati**, e che il gate impedisce che il caso si ri
 1. ~~Riscrivere i selettori dei 92~~ — fatto in #4098, con l'esito in fondo a questo documento.
    Attenzione: «riscrivere i selettori» si è rivelata la diagnosi sbagliata, vedi la correzione
    qui sopra.
-2. Classificare le **undici** spec trovate dal gate nella seconda radice: adottate ma non ancora
-   eseguite, quindi il loro stato è ignoto.
+2. ~~Classificare le undici spec trovate dal gate nella seconda radice~~ — fatto in #4106, con
+   l'esito in fondo a questo documento. Erano **dieci**, non undici: vedi la nota in quella
+   sezione.
 3. I 181 errori di tipo nelle spec e2e preesistenti.
 4. Il motivo per cui `test-e2e.yml` non è mai verde: finché resta tale, qualunque investimento in
    E2E è invisibile.
@@ -177,3 +178,109 @@ Nessuno era noto, e nessun gate li copriva.
 | [#4102](https://github.com/meepleAi-app/meepleai-monorepo/issues/4102) | Creare un agent definition dalla UI è **impossibile**: lo schema FE non invia `type`, che il backend impone, e 4 dei 5 modelli cablati nella tendina non sono instradabili. Ogni submit riceve 422 |
 | [#4103](https://github.com/meepleAi-app/meepleai-monorepo/issues/4103) | La tab **Agent** della scheda gioco chiama tre endpoint che non esistono sotto `/admin/shared-games`. Il 404 della query è indistinguibile da «nessun agente collegato», quindi la tab sembra funzionante e vuota, per sempre |
 | [#4104](https://github.com/meepleAi-app/meepleai-monorepo/issues/4104) | `color-contrast` AA fallito (2.77 contro 4.5:1) sul CTA «+ Nuova» della dashboard in tema scuro, scritto `text-[#fff]` — un valore arbitrario che la regola ESLint sui colori cablati non vede; più i tre landmark a11y che la spec di design della restyle prescrive e che non sono stati implementati |
+
+---
+
+## Esito di #4106 — le dieci spec della seconda radice
+
+> ⚠️ Questo documento diceva «undici». Sono **dieci**: l'undicesima era
+> `rag-001-validation.spec.ts`, che esisteva in *entrambe* le radici e fu risolta già in #4092
+> adottando la copia orfana (vedi la sezione in testa).
+
+### La causa era di nuovo una sola: 60 fallimenti su 63 erano la pagina di login
+
+Applicando il metodo che #4098 ha reso obbligatorio — **leggere l'`# Page snapshot` di
+`error-context.md`, non la riga `Error:`** — l'attribuzione è netta:
+
+| file | test | falliti | sulla pagina di login | su una pagina reale |
+|---|---|---|---|---|
+| `library/game-detail.spec.ts` | 16 | 13 | 13 | 0 |
+| `game-toolkit-flow.spec.ts` | 10 | 10 | 10 | 0 |
+| `toolkit-create-session.spec.ts` | 9 | 9 | 9 | 0 |
+| `session-history.spec.ts` | 7 | 7 | 7 | 0 |
+| `toolkit-realtime-sync.spec.ts` | 6 | 6 | 5 | 1 |
+| `theme-toggle.spec.ts` | 8 | 5 | 5 | 0 |
+| `epic-4068-permission-flows.spec.ts` | 13 | 5 | 5 | 0 |
+| `admin/strategy-builder.spec.ts` | 8 | 4 | 4 | 0 |
+| `accessibility-theme.spec.ts` | 7 | 2 | 2 | 0 |
+| `gaming-hub.spec.ts` | 2 | 2 | 0 | 2 |
+| **totale** | **86** | **63** | **60** | **3** |
+
+Due di quelle spec *avevano* del codice di autenticazione, e non funzionava comunque:
+`admin/strategy-builder.spec.ts` lo aveva **commentato** (quattro righe sotto «assuming admin
+auth is set up») e `epic-4068-permission-flows.spec.ts` ne aveva **sette** blocchi, tutti
+commentati con `// TODO: Login as Free tier user`.
+
+### Esito: `63 falliti → 0`
+
+```bash
+cd apps/web
+E2E_ADMIN_EMAIL=<admin> E2E_ADMIN_PASSWORD=<password> \
+PLAYWRIGHT_SKIP_WEB_SERVER=1 npx playwright test \
+  e2e/library/game-detail.spec.ts e2e/session-history.spec.ts e2e/theme-toggle.spec.ts \
+  e2e/accessibility-theme.spec.ts e2e/game-toolkit-flow.spec.ts e2e/admin/strategy-builder.spec.ts \
+  --project=desktop-chrome --workers=1
+# → 38 passati · 3 saltati (dichiarati) · 0 falliti
+```
+
+**Riscritte** (sei file): `library/game-detail`, `session-history`, `theme-toggle`,
+`accessibility-theme`, `game-toolkit-flow`, `admin/strategy-builder`.
+
+**Eliminate** (quattro file, 30 test), ciascuna col motivo:
+
+| file | test | perché |
+|---|---|---|
+| `toolkit-create-session` | 9 | atterraggio «crea/unisciti» su `/toolkit`, rotta che rende «Toolkit in arrivo»; `Game Session Toolkit`, `Create New Session`, `Join Existing Session` hanno 0 occorrenze in `src` |
+| `toolkit-realtime-sync` | 6 | stesso atterraggio; la sincronizzazione multi-utente è coperta da `sessions/multi-device-session.spec.ts` (due contesti, SignalR, proposta punteggio) |
+| `epic-4068-permission-flows` | 13 | scaffold non eseguibile per costruzione: 7 login commentati, `[data-testid="meeple-card"]` con 0 occorrenze, nessuna fixture per i tier. Buco tracciato in #4110 |
+| `gaming-hub` | 2 | asseriva una dashboard su `/`, che reindirizza a `/admin` o `/library`; `Giochi Collezione` ha 0 occorrenze, le altre stringhe vivono su pagine diverse |
+
+### Quattro trappole che valgono per chiunque scriva spec qui
+
+1. **Un `308` può portarti su una superficie diversa da quella sotto test.**
+   `/library/:id/toolkit` (pagina autonoma, coi campi dei giocatori) e
+   `/library/:id?tab=toolkit` (tab nella scheda) sono **due** superfici, e il redirect da
+   `/library/games/:id/toolkit` manda alla seconda. Seguire il redirect senza guardare dove si
+   atterra fa fallire selettori corretti.
+2. **La locale sotto Playwright è inglese, non `DEFAULT_LOCALE`.** `IntlProvider` rende con
+   `it` in SSR e **dopo il mount** adotta `navigator.language`; la config non imposta `locale`,
+   quindi il browser manda `en-US`. Asserire l'italiano significa asserire lo stato
+   pre-idratazione.
+3. **Un test dentro `if (await x.count() > 0)` non misura nulla.** Ne sono stati eliminati
+   quattro, fra `strategy-builder` e `library/game-detail`: passano sia con la funzione sia
+   senza.
+4. **Lo stesso nome può essere due elementi.** `Date` su `/toolkit/history` è il filtro **e**
+   l'intestazione di colonna ordinabile; `Validation` nel builder è uno `<span>` **e** un
+   `<h3>`. Si distinguono per attributo o per ruolo, non per testo.
+
+### Verifica per perturbazione (DoD)
+
+Rotto, per ogni file, il selettore che **corrisponde davvero** (la lezione di #4098: una
+perturbazione che non fa fallire va sospettata prima del test):
+
+| file | fallimenti indotti |
+|---|---|
+| `session-history` | 7 |
+| `admin/strategy-builder` | 6 |
+| `library/game-detail` | 2 |
+| `accessibility-theme` | 1 |
+| `game-toolkit-flow` | 1 |
+| `theme-toggle` | 1 |
+
+18 fallimenti dove prima erano 0.
+
+### Sei difetti del prodotto, trovati dalle spec riscritte
+
+| issue | difetto |
+|---|---|
+| [#4105](https://github.com/meepleAi-app/meepleai-monorepo/issues/4105) | `/library/games/<id>` dà **404** mentre tutti i suoi dieci sotto-percorsi reindirizzano |
+| [#4107](https://github.com/meepleAi-app/meepleai-monorepo/issues/4107) | avviare una sessione toolkit con 2+ giocatori è **impossibile**: nessun colore assegnato, il secondo riceve «Color Red is already taken» |
+| [#4108](https://github.com/meepleAi-app/meepleai-monorepo/issues/4108) | il log delle richieste dice `responded 500` per risposte **4xx** — Serilog sta dentro il gestore delle eccezioni |
+| [#4109](https://github.com/meepleAi-app/meepleai-monorepo/issues/4109) | `seed/cleanup` risponde **500** quando il test ha creato una sessione: `session_tracking_sessions` resta fuori dallo scope del `TestRunId` |
+| [#4110](https://github.com/meepleAi-app/meepleai-monorepo/issues/4110) | nessuna spec verifica **cosa vede** un utente secondo il suo tier |
+| [#4104](https://github.com/meepleAi-app/meepleai-monorepo/issues/4104) | confermato da una **seconda** spec indipendente: `accessibility-theme` coglie lo stesso `color-contrast` 2.77 del CTA «+ Nuova» |
+
+🔴 **#4108 ha dirottato questa indagine due volte**, e vale come avvertimento: leggendo
+`ERR … responded 500` ho attribuito al backend un errore su `GET /private-games/<id>` (che
+risponde **404**) e uno sull'aggiunta giocatori (che risponde **400**). Lo status che il client
+riceve si stabilisce con una sonda HTTP, non leggendo il log delle richieste.

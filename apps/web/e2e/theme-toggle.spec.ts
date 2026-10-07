@@ -13,8 +13,21 @@
 
 import { test, expect } from '@playwright/test';
 
+import {
+  hasRealAdminCredentials,
+  loginAsRealAdmin,
+  MISSING_CREDENTIALS_REASON,
+} from './_helpers/realAdminAuth';
+
 test.describe('Theme Toggle - Dual-Theme System', () => {
   test.beforeEach(async ({ page }) => {
+    // #4106: questa spec non autenticava. La rotta e' protetta, quindi ogni asserzione
+    // cadeva sulla pagina di login e il sintomo (`toBeVisible` che non trova nulla) somigliava
+    // a una deriva di selettori. Causa stabilita guardando l'istantanea di pagina, non il
+    // messaggio d'errore.
+    test.skip(!hasRealAdminCredentials, MISSING_CREDENTIALS_REASON);
+    await loginAsRealAdmin(page);
+
     // Start on dashboard (requires auth - adjust if needed)
     await page.goto('/dashboard');
 
@@ -113,21 +126,36 @@ test.describe('Theme Toggle - Dual-Theme System', () => {
     expect(computedStyle).toMatch(/blur\(/);
   });
 
-  test('should use solid backgrounds in dark mode', async ({ page }) => {
-    // Set dark mode
+  test('in tema scuro il fondo della pagina usa il token scuro', async ({ page }) => {
+    // #4106: la versione precedente cercava `locator('[class*="dark:bg-card"]')`. Quel
+    // selettore asserisce un MECCANISMO, non un comportamento — e il meccanismo e' stato
+    // sostituito: il design system e' passato ai token semantici (`bg-card` risolve per tema
+    // via variabili CSS sotto `[data-theme]`), quindi le varianti `dark:` non servono piu'.
+    // `grep -rl "dark:bg-card" src` le trova solo in `(auth)/welcome` e in uno step del
+    // wizard admin: su `/dashboard` non ce n'e' nessuna, e il test andava in timeout.
+    //
+    // Qui si verifica il contratto vero: cambiando tema, il colore **calcolato** del fondo
+    // cambia. Non dipende da quali classi lo producano.
     await page.evaluate(() => {
-      localStorage.setItem('theme', 'dark');
-      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'light');
     });
     await page.reload();
+    await page.waitForLoadState('networkidle');
+    const lightBg = await page.locator('body').evaluate(el => getComputedStyle(el).backgroundColor);
 
-    // Check that dark mode uses solid backgrounds
-    const htmlClass = await page.locator('html').getAttribute('class');
-    expect(htmlClass).toContain('dark');
+    await page.evaluate(() => {
+      localStorage.setItem('theme', 'dark');
+    });
+    await page.reload();
+    await page.waitForLoadState('networkidle');
 
-    // Verify dark class is applied
-    const card = page.locator('[class*="dark:bg-card"]').first();
-    await expect(card).toBeVisible();
+    await expect(page.locator('html')).toHaveClass(/dark/);
+    const darkBg = await page.locator('body').evaluate(el => getComputedStyle(el).backgroundColor);
+
+    // Il confronto fra i due e' l'asserzione: un valore atteso cablato (`rgb(...)`) sarebbe
+    // una soglia che invecchia a ogni ritocco della palette.
+    expect(darkBg).not.toBe(lightBg);
+    expect(darkBg).not.toBe('rgba(0, 0, 0, 0)');
   });
 
   test('should not cause layout shifts when switching themes', async ({ page }) => {

@@ -1,127 +1,104 @@
 /**
- * Custom Strategy Builder E2E Tests (Issue #3412)
+ * Custom Strategy Builder (Issue #3412) — il pannello che si apre da
+ * `/admin/agents/definitions`.
  *
- * Test Coverage:
- * - Page access (admin only)
- * - Canvas interaction
- * - Block configuration
- * - Save/load strategy
- * - Template selection
- * - Validation feedback
+ * #4106 — riscritta. La versione precedente non era mai stata eseguita (viveva sotto
+ * `__tests__/e2e/`, che nessuna config Playwright raccoglieva — #4092) e aveva tre difetti:
  *
- * Target: Main workflows covered
+ *   1. **L'autenticazione era commentata.** Letteralmente: quattro righe `// await page.goto
+ *      ('/login') … // await page.click('[type="submit"]')` sotto il commento «assuming admin
+ *      auth is set up». Anonima su `/admin/**`, quindi ogni asserzione cadeva su `/login`.
+ *   2. **La rotta non esiste.** `/admin/rag/strategy-builder` risponde **404** (sonda con
+ *      sessione admin). Il builder non è una pagina: è una `Sheet` che si apre dal pulsante
+ *      `Strategy Builder` su `/admin/agents/definitions` (`definitions/page.tsx:80,107`).
+ *   3. **Due test non potevano fallire.** `can toggle panels` e `can select template` avevano
+ *      il corpo dentro `if ((await x.count()) > 0) { … }`: nessuna `expect`, e un ramo vuoto
+ *      quando l'elemento non c'è. Eliminati — un test che passa sia con la funzione sia senza
+ *      non misura la funzione.
+ *
+ * Verità a terra (`src/components/rag-dashboard/builder/`):
+ *   apertura   → pulsante `Strategy Builder` su `/admin/agents/definitions`, poi una `Sheet`
+ *                con `SheetTitle` «Strategy Builder» (sr-only) che monta `BuilderClient`
+ *   canvas     → `data-testid="pipeline-canvas"` (`PipelineCanvas.tsx`)
+ *   palette    → `data-testid="block-palette"` (`BlockPalette.tsx`)
+ *   azioni     → `data-testid` `save-button`, `test-button`, `reset-button`
+ *                (`StrategyBuilder.tsx:338,356,380`)
+ *   validazione→ `<h3>Validation</h3>` (`StrategyBuilder.tsx:409`), reso quando
+ *                `showValidation` (default `true`)
+ *
+ * @see docs/for-developers/audits/2026-10-06-orphan-e2e-specs-classification.md
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+import {
+  hasRealAdminCredentials,
+  loginAsRealAdmin,
+  MISSING_CREDENTIALS_REASON,
+} from '../_helpers/realAdminAuth';
+
+/** Apre la Sheet del builder dalla lista delle definizioni. */
+async function openStrategyBuilder(page: Page) {
+  await page.goto('/admin/agents/definitions');
+  await expect(page.getByRole('heading', { name: 'Agent Definitions' })).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await page.getByRole('button', { name: 'Strategy Builder' }).click();
+
+  // Il canvas è la prova che `BuilderClient` è montato: il titolo della Sheet è `sr-only` e
+  // non direbbe nulla sul fatto che il contenuto sia arrivato.
+  await expect(page.getByTestId('pipeline-canvas')).toBeVisible({ timeout: 30_000 });
+}
 
 test.describe('Custom Strategy Builder', () => {
   test.beforeEach(async ({ page }) => {
-    // Login as admin (assuming admin auth is set up)
-    // await page.goto('/login');
-    // await page.fill('[name="email"]', 'admin@test.com');
-    // await page.fill('[name="password"]', 'password');
-    // await page.click('[type="submit"]');
-
-    // Navigate to strategy builder
-    await page.goto('/admin/rag/strategy-builder');
+    test.skip(!hasRealAdminCredentials, MISSING_CREDENTIALS_REASON);
+    await loginAsRealAdmin(page);
+    await openStrategyBuilder(page);
   });
 
   test('loads strategy builder page', async ({ page }) => {
-    // Page should load without errors
-    await expect(page).toHaveURL(/strategy-builder/);
-
-    // Main elements should be visible
-    await expect(page.locator('text=/Strategy Builder|Pipeline/')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByTestId('pipeline-canvas')).toBeVisible();
   });
 
   test('displays canvas and palette', async ({ page }) => {
-    // Wait for page load
-    await page.waitForLoadState('networkidle');
-
-    // Canvas should be visible
-    const canvas = page.locator('[data-testid="pipeline-canvas"], [class*="react-flow"]');
-    await expect(canvas.first()).toBeVisible({ timeout: 5000 });
-
-    // Palette should be visible
-    const palette = page.locator('[data-testid="block-palette"], text=/Blocks|Palette/i');
-    await expect(palette.first()).toBeVisible({ timeout: 5000 });
-  });
-
-  test('can toggle panels', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Find collapse/expand buttons
-    const panelToggles = page.locator(
-      'button[aria-label*="collapse"], button[aria-label*="expand"]'
-    );
-
-    if ((await panelToggles.count()) > 0) {
-      const firstToggle = panelToggles.first();
-      await firstToggle.click();
-
-      // Panel state should change
-      await page.waitForTimeout(500);
-    }
+    await expect(page.getByTestId('pipeline-canvas')).toBeVisible();
+    await expect(page.getByTestId('block-palette')).toBeVisible();
   });
 
   test('displays save and test buttons', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Look for save button
-    const saveButton = page.locator('button:has-text("Save"), button[aria-label*="Save"]');
-    if ((await saveButton.count()) > 0) {
-      await expect(saveButton.first()).toBeVisible();
-    }
-
-    // Look for test button
-    const testButton = page.locator('button:has-text("Test"), button[aria-label*="Test"]');
-    if ((await testButton.count()) > 0) {
-      await expect(testButton.first()).toBeVisible();
-    }
+    await expect(page.getByTestId('save-button')).toBeVisible();
+    await expect(page.getByTestId('test-button')).toBeVisible();
+    await expect(page.getByTestId('reset-button')).toBeVisible();
   });
 
   test('shows validation panel', async ({ page }) => {
-    await page.waitForLoadState('networkidle');
-
-    // Validation panel should exist
-    const validationPanel = page.locator(
-      '[data-testid="validation-panel"], text=/Validation|Errors|Warnings/i'
-    );
-    if ((await validationPanel.count()) > 0) {
-      await expect(validationPanel.first()).toBeVisible({ timeout: 5000 });
-    }
-  });
-});
-
-test.describe('Strategy Builder - Templates', () => {
-  test('can select template', async ({ page }) => {
-    await page.goto('/admin/rag/strategy-builder');
-    await page.waitForLoadState('networkidle');
-
-    // Look for template selector
-    const templateSelector = page.locator(
-      '[data-testid="template-selector"], text=/Template|Preset/i'
-    );
-
-    if ((await templateSelector.count()) > 0) {
-      const firstTemplate = templateSelector.first();
-      await firstTemplate.click({ timeout: 5000 });
-    }
+    // `getByText('Validation')` viola la strict mode: ci sono uno `<span>` (con un proprio
+    // testid) e l'`<h3>` del pannello. Il ruolo distingue senza inventare un selettore.
+    await expect(page.getByRole('heading', { name: 'Validation' })).toBeVisible();
   });
 });
 
 test.describe('Strategy Builder - Responsive', () => {
-  test('renders on desktop', async ({ page }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto('/admin/rag/strategy-builder');
-
-    await expect(page).toHaveURL(/strategy-builder/);
+  test.beforeEach(async ({ page }) => {
+    test.skip(!hasRealAdminCredentials, MISSING_CREDENTIALS_REASON);
+    await loginAsRealAdmin(page);
   });
 
-  test('renders on tablet', async ({ page }) => {
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto('/admin/rag/strategy-builder');
+  // La Sheet è larga 800px fissi (`w-[800px] sm:max-w-[800px]`): sotto quella larghezza
+  // occupa lo schermo. Le due misure verificano che il canvas resti raggiungibile, non che
+  // il layout cambi.
+  for (const [label, width, height] of [
+    ['desktop', 1920, 1080],
+    ['tablet', 768, 1024],
+  ] as const) {
+    test(`renders on ${label}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await openStrategyBuilder(page);
 
-    await expect(page).toHaveURL(/strategy-builder/);
-  });
+      await expect(page.getByTestId('block-palette')).toBeVisible();
+    });
+  }
 });

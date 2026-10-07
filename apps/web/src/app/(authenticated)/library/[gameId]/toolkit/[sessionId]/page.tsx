@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-d
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
 import { useSessionSync } from '@/lib/domain-hooks/useSessionSync';
+import { liveSessionToUiSession } from '@/lib/sessions/live-session-to-ui';
 import { useSessionStore } from '@/lib/stores/session-store';
 
 /**
@@ -220,7 +221,11 @@ export default function GameSpecificSessionPage() {
     <div className="min-h-screen bg-muted">
       {/* Session Header */}
       <SessionHeader
-        session={activeSession as unknown as import('@/components/session/types').Session}
+        // #4113: qui c'era `activeSession as unknown as Session`. Il doppio cast faceva
+        // accettare al compilatore due forme che differiscono in quattro campi, e a runtime
+        // `sessionDate` era `undefined`: `SessionHeader` lanciava e la pagina mostrava
+        // l'error boundary per QUALUNQUE sessione.
+        session={liveSessionToUiSession(activeSession)}
         onPause={activeSession.status === 'InProgress' ? handlePause : undefined}
         onFinalize={handleFinalize}
       />
@@ -242,9 +247,7 @@ export default function GameSpecificSessionPage() {
                   <CardTitle className="text-sm">Scoring Rules</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {template.scoringRules}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{template.scoringRules}</p>
                 </CardContent>
               </Card>
             )}

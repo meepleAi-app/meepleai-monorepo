@@ -34,7 +34,7 @@
  * ## Cosa è stato eliminato
  *
  *   - `should show Toolkit button on game cards` e `should navigate to game toolkit landing
- *     from card`: cercavano `[data-testid="game-card"]`, che ha **0 occorrenze** in `src`, e
+ *     from card`: cercavano `[data-testid="meeple-card"][data-entity="game"]`, che ha **0 occorrenze** in `src`, e
  *     un link `Toolkit` sulle schede di `/library` — che rende `LibraryHub`, non la
  *     `game-table` dove quel link esiste. L'ingresso al toolkit oggi è dalla scheda del gioco.
  *

@@ -35,6 +35,11 @@
  * 3. **Solo letterali dal lato E2E.** `getByTestId(variabile)` e i template nei file E2E non sono
  *    verificabili e vengono contati a parte. Esclusi anche i test unit degli helper — qualunque
  *    `__tests__/` sotto `e2e/`, e i file `*.test.*` — perché non guidano un browser.
+ * 5. **Solo l'uguaglianza esatta `data-testid="x"`.** Gli operatori CSS di sottostringa e di
+ *    prefisso — `data-testid*="x"`, `^=`, `$=` — non sono controllati: dire se combacino
+ *    richiederebbe confrontarli con l'insieme dei dichiarati invece che cercarli per nome.
+ *    `e2e/admin-first-time-setup/04-bounded-contexts-access.spec.ts` ne porta due, e sono morti
+ *    quanto gli altri. Chi li incontra li converta all'uguaglianza, così il gate li vede.
  * 4. Le dichiarazioni si leggono dal codice di produzione: `__tests__/`, `*.test.*`, `*.spec.*` e
  *    `*.story/stories.*` sono esclusi di proposito. L'unica occorrenza di `meeple-card` nel repo è
  *    un mock Vitest, e contarla come dichiarazione avrebbe mascherato il difetto di #4110.

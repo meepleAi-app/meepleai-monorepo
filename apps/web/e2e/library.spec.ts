@@ -40,12 +40,16 @@ test.describe('User Library Management', () => {
     await page.goto('/library');
 
     // Verify game appears
-    await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible();
+    await expect(
+      page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible();
   });
 
   test('should filter library by favorites', async ({ page }) => {
     // Assume library has games
-    await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="meeple-card"][data-entity="game"]', {
+      timeout: 5000,
+    });
 
     // Toggle favorites filter
     const favoritesToggle = page.locator('label:has-text("Solo Preferiti")');
@@ -64,7 +68,7 @@ test.describe('User Library Management', () => {
     await page.waitForTimeout(400);
 
     // Verify only matching games shown
-    const gameCards = page.locator('[data-testid="game-card"]');
+    const gameCards = page.locator('[data-testid="meeple-card"][data-entity="game"]');
     const count = await gameCards.count();
 
     if (count > 0) {
@@ -79,7 +83,9 @@ test.describe('User Library Management', () => {
 
   test('should open edit notes modal', async ({ page }) => {
     // Wait for game cards
-    await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="meeple-card"][data-entity="game"]', {
+      timeout: 5000,
+    });
 
     // Click edit notes button
     const editButton = page.locator('button:has-text("Modifica Note")').first();
@@ -92,7 +98,9 @@ test.describe('User Library Management', () => {
 
   test('should save notes in edit modal', async ({ page }) => {
     // Wait for game cards
-    await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="meeple-card"][data-entity="game"]', {
+      timeout: 5000,
+    });
 
     // Open edit notes
     await page.locator('button:has-text("Modifica Note")').first().click();
@@ -112,7 +120,9 @@ test.describe('User Library Management', () => {
 
   test('should open remove confirmation dialog', async ({ page }) => {
     // Wait for game cards
-    await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="meeple-card"][data-entity="game"]', {
+      timeout: 5000,
+    });
 
     // Click remove button (trash icon)
     const removeButton = page
@@ -128,9 +138,13 @@ test.describe('User Library Management', () => {
 
   test('should remove game when confirmed', async ({ page }) => {
     // Wait for game cards
-    await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="meeple-card"][data-entity="game"]', {
+      timeout: 5000,
+    });
 
-    const initialCount = await page.locator('[data-testid="game-card"]').count();
+    const initialCount = await page
+      .locator('[data-testid="meeple-card"][data-entity="game"]')
+      .count();
 
     // Click remove
     const removeButton = page
@@ -148,7 +162,7 @@ test.describe('User Library Management', () => {
     });
 
     // Verify game count decreased or empty state shown
-    const newCount = await page.locator('[data-testid="game-card"]').count();
+    const newCount = await page.locator('[data-testid="meeple-card"][data-entity="game"]').count();
     if (initialCount > 1) {
       expect(newCount).toBe(initialCount - 1);
     } else {
@@ -158,7 +172,9 @@ test.describe('User Library Management', () => {
 
   test('should toggle favorite status', async ({ page }) => {
     // Wait for game cards
-    await page.waitForSelector('[data-testid="game-card"]', { timeout: 5000 });
+    await page.waitForSelector('[data-testid="meeple-card"][data-entity="game"]', {
+      timeout: 5000,
+    });
 
     // Click favorite toggle (heart icon)
     const favoriteButton = page.locator('button[aria-label*="favorite"]').first();

@@ -52,7 +52,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.assertGameListVisible();
 
       // Should show at least some games
-      const gameCount = await page.locator('[data-testid="game-card"]').count();
+      const gameCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
       expect(gameCount).toBeGreaterThan(0);
       expect(gameCount).toBeLessThanOrEqual(10); // Default page size
     });
@@ -66,7 +68,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for games to load first
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -74,7 +78,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.searchGames('cat');
 
       // Should find games containing "cat" (real backend results)
-      const gameCount = await page.locator('[data-testid="game-card"]').count();
+      const gameCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
       expect(gameCount).toBeGreaterThan(0);
     });
 
@@ -100,7 +106,8 @@ test.describe('Game Search & Browse', () => {
       const noResultsVisible = await page
         .locator('text=/no games found|nessun gioco/i')
         .isVisible();
-      const hasResults = (await page.locator('[data-testid="game-card"]').count()) > 0;
+      const hasResults =
+        (await page.locator('[data-testid="meeple-card"][data-entity="game"]').count()) > 0;
 
       // Either shows no results or handles the search
       expect(noResultsVisible || hasResults).toBe(true);
@@ -110,7 +117,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for initial load
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -118,12 +127,16 @@ test.describe('Game Search & Browse', () => {
       await gamePage.searchGames('CHESS');
 
       // Verify search executed (results may vary based on backend data)
-      const upperCaseCount = await page.locator('[data-testid="game-card"]').count();
+      const upperCaseCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
 
       await gamePage.clearSearch();
       await gamePage.searchGames('chess');
 
-      const lowerCaseCount = await page.locator('[data-testid="game-card"]').count();
+      const lowerCaseCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
 
       // Case insensitivity means same results
       expect(upperCaseCount).toBe(lowerCaseCount);
@@ -133,7 +146,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for initial load
-      const initialCount = await page.locator('[data-testid="game-card"]').count();
+      const initialCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
       expect(initialCount).toBeGreaterThan(0);
 
       // Search for specific term
@@ -143,7 +158,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.clearSearch();
 
       // Should show similar count to initial (real backend data)
-      const afterClearCount = await page.locator('[data-testid="game-card"]').count();
+      const afterClearCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
       expect(afterClearCount).toBeGreaterThan(0);
     });
   });
@@ -156,7 +173,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for games to load
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -168,7 +187,9 @@ test.describe('Game Search & Browse', () => {
         await gamePage.filterByCategory('strategy');
 
         // Verify filtering executed (real backend determines results)
-        const gameCount = await page.locator('[data-testid="game-card"]').count();
+        const gameCount = await page
+          .locator('[data-testid="meeple-card"][data-entity="game"]')
+          .count();
         expect(gameCount).toBeGreaterThan(0);
       }
       // Note: Test passes whether filter exists or not (graceful degradation)
@@ -183,7 +204,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for initial load
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -197,7 +220,9 @@ test.describe('Game Search & Browse', () => {
     test('sort by name (Z-A)', async ({ page }) => {
       await gamePage.goto();
 
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -211,7 +236,9 @@ test.describe('Game Search & Browse', () => {
     test('sort by date added (newest)', async ({ page }) => {
       await gamePage.goto();
 
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -225,7 +252,9 @@ test.describe('Game Search & Browse', () => {
     test('sort by date added (oldest)', async ({ page }) => {
       await gamePage.goto();
 
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -245,14 +274,18 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for initial load
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
       await gamePage.setGamesPerPage(10);
 
       // Get initial count
-      const firstPageCount = await page.locator('[data-testid="game-card"]').count();
+      const firstPageCount = await page
+        .locator('[data-testid="meeple-card"][data-entity="game"]')
+        .count();
       expect(firstPageCount).toBeGreaterThan(0);
 
       // Check if next page button exists and is enabled
@@ -262,14 +295,18 @@ test.describe('Game Search & Browse', () => {
         await gamePage.goToNextPage();
 
         // Verify page changed (real backend pagination)
-        const secondPageCount = await page.locator('[data-testid="game-card"]').count();
+        const secondPageCount = await page
+          .locator('[data-testid="meeple-card"][data-entity="game"]')
+          .count();
         expect(secondPageCount).toBeGreaterThan(0);
 
         // Go back to previous page
         await gamePage.goToPreviousPage();
 
         // Verify returned to first page
-        const backToFirstCount = await page.locator('[data-testid="game-card"]').count();
+        const backToFirstCount = await page
+          .locator('[data-testid="meeple-card"][data-entity="game"]')
+          .count();
         expect(backToFirstCount).toBeGreaterThan(0);
       }
     });
@@ -277,7 +314,9 @@ test.describe('Game Search & Browse', () => {
     test('pagination (page numbers)', async ({ page }) => {
       await gamePage.goto();
 
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -292,12 +331,16 @@ test.describe('Game Search & Browse', () => {
         await gamePage.goToPage(2);
 
         // Verify page changed
-        const page2Count = await page.locator('[data-testid="game-card"]').count();
+        const page2Count = await page
+          .locator('[data-testid="meeple-card"][data-entity="game"]')
+          .count();
         expect(page2Count).toBeGreaterThan(0);
 
         // Go back to page 1
         await gamePage.goToPage(1);
-        const page1Count = await page.locator('[data-testid="game-card"]').count();
+        const page1Count = await page
+          .locator('[data-testid="meeple-card"][data-entity="game"]')
+          .count();
         expect(page1Count).toBeGreaterThan(0);
       }
       // Note: Test passes whether numbered pagination exists or not (graceful degradation)
@@ -306,24 +349,26 @@ test.describe('Game Search & Browse', () => {
     test('games per page selection (10, 25, 50)', async ({ page }) => {
       await gamePage.goto();
 
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
       // Set to 10 per page
       await gamePage.setGamesPerPage(10);
-      let gameCount = await page.locator('[data-testid="game-card"]').count();
+      let gameCount = await page.locator('[data-testid="meeple-card"][data-entity="game"]').count();
       expect(gameCount).toBeLessThanOrEqual(10);
 
       // Set to 25 per page (real backend determines count)
       await gamePage.setGamesPerPage(25);
-      gameCount = await page.locator('[data-testid="game-card"]').count();
+      gameCount = await page.locator('[data-testid="meeple-card"][data-entity="game"]').count();
       expect(gameCount).toBeGreaterThan(0);
       expect(gameCount).toBeLessThanOrEqual(25);
 
       // Set to 50 per page
       await gamePage.setGamesPerPage(50);
-      gameCount = await page.locator('[data-testid="game-card"]').count();
+      gameCount = await page.locator('[data-testid="meeple-card"][data-entity="game"]').count();
       expect(gameCount).toBeGreaterThan(0);
       expect(gameCount).toBeLessThanOrEqual(50);
     });
@@ -337,7 +382,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for games to load
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 
@@ -358,7 +405,9 @@ test.describe('Game Search & Browse', () => {
       await gamePage.goto();
 
       // Wait for games to load
-      await expect(page.locator('[data-testid="game-card"]').first()).toBeVisible({
+      await expect(
+        page.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+      ).toBeVisible({
         timeout: 10000,
       });
 

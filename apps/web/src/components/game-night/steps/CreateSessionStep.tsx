@@ -16,6 +16,7 @@ import { Loader2, Plus, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
+import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -33,16 +34,11 @@ interface PlayerSlot {
   name: string;
 }
 
-const PLAYER_COLORS = [
-  'Red',
-  'Blue',
-  'Green',
-  'Yellow',
-  'Purple',
-  'Orange',
-  'Pink',
-  'Teal',
-] as const;
+// #4107: qui c'era una copia locale di otto nomi. Il vocabolario dell'API ne ha dieci, e
+// tenerne una copia parziale significava che questo flusso non poteva assegnare White e Black
+// — con l'aggravante che la divergenza era invisibile, perche' nulla confrontava le due liste.
+// Ora la fonte e' una, e `player-colors.test.ts` la verifica contro l'enum del dominio.
+const PLAYER_COLORS = API_PLAYER_COLORS;
 
 // ============================================================================
 // Helpers
@@ -120,9 +116,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
   return (
     <div className="space-y-4" data-testid="create-session-step">
       <div>
-        <h3 className="font-quicksand font-bold text-lg text-foreground">
-          Giocatori
-        </h3>
+        <h3 className="font-quicksand font-bold text-lg text-foreground">Giocatori</h3>
         <p className="text-sm text-muted-foreground mt-1">
           Aggiungi i giocatori per <strong>{gameTitle}</strong> (min 2, max 8).
         </p>

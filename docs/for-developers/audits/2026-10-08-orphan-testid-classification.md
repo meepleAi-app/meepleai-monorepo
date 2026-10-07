@@ -22,10 +22,10 @@ Esempi verificati come esistenti:
 
 | cluster | componente | testid dichiarati |
 |---|---|---|
-| citazioni in chat (`citation-card` 12 sedi, `citation` 8) | `src/components/features/game-chat/CitationChip.tsx` esiste | **nessuno** in produzione: le sole occorrenze sono mock sotto `__tests__/` |
+| citazioni in chat (`citation-card` 12 sedi, `citation` 8) | `features/game-chat/CitationChip.tsx` esiste | nessun `data-testid`; porta `data-slot="citation-chip"`, che NON e` omonimo — serve un giudizio semantico, vedi §3-bis |
 | preview PDF (`current-page` 11, `zoom-in`/`zoom-out`/`zoom-level` 7+6+7) | i componenti esistono | nessuno fra quelli cercati |
 | slot agente (`slot-card` 10) | i componenti esistono | nessuno fra quelli cercati |
-| banner offline (`offline-banner` 12) | i componenti esistono | nessuno fra quelli cercati |
+| banner offline (`offline-banner` 12) | `features/gamebook/OfflineBanner.tsx` | nessun `data-testid`, ma **`data-slot="offline-banner"`** — risolto senza toccare la produzione, vedi §3-bis |
 
 **Trattamento ammesso**: aggiungere un `data-testid` a un elemento **già renderizzato**, come fatto per `MeepleCard`. Mai introdurre UI per far passare un'asserzione.
 
@@ -82,6 +82,40 @@ Due ragioni, e la seconda è dimostrata:
 2. **Una rotta che risolve non garantisce che la funzione ci sia.** `shared-games-bulk-import` ha rotta valida (via redirect) e funzione inesistente: il classificatore la segna `0 assenti`, e sbaglia. Il controllo sulle rotte non sostituisce il controllo sui componenti.
 
 Nota a margine: `e2e/epic-2-agent-system.spec.ts` visita `/library/games/azul`, cioè la **forma nuda** di #4105 — quella che risponde 404 di proposito. È una delle sedi che la decisione di #4105 lascia da correggere.
+
+## 3-bis. Una terza via: il repository ha DUE convenzioni di selettore
+
+Scoperto il 2026-10-08 mentre si strumentavano le citazioni: `CitationChip.tsx` non ha `data-testid` ma porta `data-slot="citation-chip"`.
+
+| convenzione | file di produzione | valori distinti |
+|---|---|---|
+| `data-testid` | 696 | — |
+| `data-slot` | 368 | **965** |
+
+Alcune spec usano già la seconda (`e2e/a11y/*`). Quindi per un orfano `data-testid` con un `data-slot` omonimo **la correzione non tocca il codice di produzione**: basta puntare la spec all'attributo che c'è già.
+
+**L'ipotesi è stata in gran parte smentita**: solo **5 dei 682** id orfani hanno un `data-slot` esattamente omonimo. Ma quei cinque valevano **22 sedi** e sono stati chiusi senza una riga di produzione:
+
+`offline-banner` · `typing-indicator` · `achievement-card` · `chat-info-panel` · `game-detail-kb-doc-list`
+
+Una trappola trovata convertendo: due asserzioni componevano `achievement-card` con `data-status`, che **non esiste** — l'attributo vero è `data-unlocked={unlocked || undefined}` (`AchievementsCarousel.tsx:132`). Convertire il solo nome avrebbe lasciato due selettori comunque morti.
+
+`--list` ora segnala quando un orfano ha un `data-slot` omonimo, con l'avvertenza che `getByTestId()` non può puntarlo: serve `locator()`.
+
+### Il buco speculare, misurato e non chiuso
+
+Un `[data-slot="x"]` inesistente **non** è controllato dal gate. Misurato: 11 sedi, di cui solo 6 reali.
+
+| id | sedi | stato |
+|---|---|---|
+| `mobile-body-tab` | 4 | slot **legacy rimosso**: due test unit asseriscono che sia assente (`MobileBody.test.tsx:92`, `SessionLiveView.test.tsx:769`), e `e2e/a11y/session-live.spec.ts` lo interroga ancora |
+| `game-detail-tabs` | 2 | assente; gli slot reali sono `agent-detail-tabs`, `player-detail-tabs`, `shared-game-detail-tabs`, `toolkit-detail-tabs` |
+| `...` | 3 | **falso positivo**: `data-slot="..."` citato dentro un commento |
+| `test-banner-reconnecting`, `test-banner-failed` | 2 | **falsi positivi**: la spec se li inietta con `document.createElement` + `setAttribute` |
+
+Allargare il gate costerebbe due esclusioni (commenti, DOM iniettato dalla spec) per sei sedi reali: per ora non le vale, ed è il limite 6 dichiarato nell'intestazione dello script.
+
+> ⚠️ Nota di metodo: verificando `mobile-body-tab` ho prima concluso che lo script sbagliasse, perché un `grep` mostrava lo slot presente. Era il **grep** a sbagliare — includeva `__tests__/`. Le due occorrenze sono asserzioni di assenza in test unit. Una sonda di verifica va ristretta con gli stessi filtri dello strumento che verifica.
 
 ## 4. Cosa serve decidere, prima di continuare
 

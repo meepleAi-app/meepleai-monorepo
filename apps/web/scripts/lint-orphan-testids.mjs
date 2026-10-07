@@ -35,14 +35,23 @@
  * 3. **Solo letterali dal lato E2E.** `getByTestId(variabile)` e i template nei file E2E non sono
  *    verificabili e vengono contati a parte. Esclusi anche i test unit degli helper — qualunque
  *    `__tests__/` sotto `e2e/`, e i file `*.test.*` — perché non guidano un browser.
+ * 4. Le dichiarazioni si leggono dal codice di produzione: `__tests__/`, `*.test.*`, `*.spec.*` e
+ *    `*.story/stories.*` sono esclusi di proposito. L'unica occorrenza di `meeple-card` nel repo è
+ *    un mock Vitest, e contarla come dichiarazione avrebbe mascherato il difetto di #4110.
  * 5. **Solo l'uguaglianza esatta `data-testid="x"`.** Gli operatori CSS di sottostringa e di
  *    prefisso — `data-testid*="x"`, `^=`, `$=` — non sono controllati: dire se combacino
  *    richiederebbe confrontarli con l'insieme dei dichiarati invece che cercarli per nome.
  *    `e2e/admin-first-time-setup/04-bounded-contexts-access.spec.ts` ne porta due, e sono morti
  *    quanto gli altri. Chi li incontra li converta all'uguaglianza, così il gate li vede.
- * 4. Le dichiarazioni si leggono dal codice di produzione: `__tests__/`, `*.test.*`, `*.spec.*` e
- *    `*.story/stories.*` sono esclusi di proposito. L'unica occorrenza di `meeple-card` nel repo è
- *    un mock Vitest, e contarla come dichiarazione avrebbe mascherato il difetto di #4110.
+ * 6. **Il gate copre `data-testid`, non `data-slot`.** Il repository ha due convenzioni, e la
+ *    seconda ha quasi mille valori distinti in produzione. Un `[data-slot="x"]` inesistente NON è
+ *    controllato: misurato il 2026-10-08, sono 11 sedi, di cui solo 6 reali — `mobile-body-tab`
+ *    (uno slot legacy che due test unit asseriscono assente, e che `e2e/a11y/session-live.spec.ts`
+ *    interroga ancora) e `game-detail-tabs`. Le altre sono falsi positivi che un gate dovrebbe
+ *    saper escludere: un `data-slot` citato dentro un commento, e due banner che la spec stessa
+ *    inietta con `document.createElement`. Allargare il gate costa quelle due esclusioni per sei
+ *    sedi, e per ora non le vale. `--list` segnala però quando un orfano ha un `data-slot`
+ *    omonimo, perché in quel caso la correzione non tocca la produzione.
  *
  * Uso:
  *   node scripts/lint-orphan-testids.mjs             verifica contro la baseline
@@ -140,6 +149,21 @@ export function isConstantsModule(path) {
   return /test-ids?\.[tj]sx?$/i.test(path.split(sep).join('/'));
 }
 
+/**
+ * I `data-slot` dichiarati dalla produzione. Il repository ha DUE convenzioni di selettore —
+ * `data-testid` e `data-slot`, quest'ultima con quasi mille valori distinti — e un `data-testid`
+ * orfano ha a volte un `data-slot` omonimo: in quel caso la correzione non tocca la produzione,
+ * basta puntare la spec all'attributo che c'e` gia`. Il gate non li confonde (un selettore
+ * `[data-testid="x"]` non combacia con `data-slot="x"`), ma con `--list` lo SEGNALA.
+ */
+export function slotsFromSource(source) {
+  const slots = new Set();
+  for (const m of source.matchAll(/data-slot=["']([^"'$]+)["']/g)) slots.add(m[1]);
+  for (const m of source.matchAll(/data-slot=\{\s*["']([^"']+)["']\s*\}/g)) slots.add(m[1]);
+  for (const m of source.matchAll(/data-slot=\{`([^`$]+)`\}/g)) slots.add(m[1]);
+  return slots;
+}
+
 /** Un id coperto da un pattern dinamico non è dimostrabile orfano (limite 1). */
 export function isUnprovable(id, { suffixes, prefixes }) {
   for (const s of suffixes) if (id.endsWith(s)) return true;
@@ -188,13 +212,14 @@ export function scan(webRoot) {
   const literals = new Set();
   const suffixes = new Set();
   const prefixes = new Set();
+  const slots = new Set();
   for (const file of srcFiles) {
-    const d = declaredFromSource(readFileSync(file, 'utf8'), {
-      isConstantsModule: isConstantsModule(file),
-    });
+    const source = readFileSync(file, 'utf8');
+    const d = declaredFromSource(source, { isConstantsModule: isConstantsModule(file) });
     for (const v of d.literals) literals.add(v);
     for (const v of d.suffixes) suffixes.add(v);
     for (const v of d.prefixes) prefixes.add(v);
+    for (const v of slotsFromSource(source)) slots.add(v);
   }
 
   const { orphans, unprovable, declared } = classify([...sought.keys()], {
@@ -211,7 +236,17 @@ export function scan(webRoot) {
     }
   }
 
-  return { e2eFiles, srcFiles, sought, orphans, unprovable, declared, perFile, dynamicSites };
+  return {
+    e2eFiles,
+    srcFiles,
+    sought,
+    orphans,
+    unprovable,
+    declared,
+    perFile,
+    dynamicSites,
+    slots,
+  };
 }
 
 /** Confronta la misura con la baseline. Nessun I/O: è la regola del cricchetto, testabile. */
@@ -255,11 +290,23 @@ function main() {
   );
 
   if (list) {
+    const withSlot = r.orphans.filter(id => r.slots.has(id));
     console.log('\nOrfani per numero di sedi:');
     for (const [id, where] of r.orphans
       .map(id => [id, r.sought.get(id)])
       .sort((a, b) => b[1].length - a[1].length)) {
-      console.log(`  ${String(where.length).padStart(4)}x  ${id.padEnd(38)} ${where[0]}`);
+      const hint = r.slots.has(id) ? '  ← esiste data-slot omonimo' : '';
+      console.log(`  ${String(where.length).padStart(4)}x  ${id.padEnd(38)} ${where[0]}${hint}`);
+    }
+    if (withSlot.length > 0) {
+      const sites = withSlot.reduce((n, id) => n + r.sought.get(id).length, 0);
+      console.log(
+        `\n${withSlot.length} orfani (${sites} sedi) hanno un \`data-slot\` omonimo in produzione:\n` +
+          `  ${withSlot.join(' · ')}\n` +
+          'Per questi la correzione NON tocca la produzione: punta la spec a\n' +
+          '  [data-slot="<id>"]   invece di   [data-testid="<id>"]\n' +
+          'e ricorda che `getByTestId()` non puo` puntare a `data-slot`: serve `locator()`.\n'
+      );
     }
   }
 

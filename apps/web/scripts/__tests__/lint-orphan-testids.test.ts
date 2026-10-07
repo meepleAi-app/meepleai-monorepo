@@ -18,6 +18,7 @@ import {
   isE2EConsumer,
   isProductionSource,
   isUnprovable,
+  slotsFromSource,
   soughtFromSource,
 } from '../lint-orphan-testids.mjs';
 
@@ -131,6 +132,30 @@ describe('declaredFromSource', () => {
       'drawer-close',
       'drawer-root',
     ]);
+  });
+});
+
+describe('slotsFromSource', () => {
+  it('raccoglie i data-slot letterali, anche in forma di espressione', () => {
+    const slots = slotsFromSource(
+      [
+        '<button data-slot="citation-chip" />',
+        `<div data-slot={'chat-citations'} />`,
+        '<div data-slot={`typing-indicator`} />',
+      ].join('\n')
+    );
+    expect([...slots].sort()).toEqual(['chat-citations', 'citation-chip', 'typing-indicator']);
+  });
+
+  it('ignora i template interpolati, che non danno un nome risolvibile', () => {
+    expect([...slotsFromSource('<div data-slot={`tab-${id}`} />')]).toEqual([]);
+  });
+
+  it('serve a dire quando la correzione NON tocca la produzione', () => {
+    // Il repository ha due convenzioni. Cinque orfani `data-testid` avevano un `data-slot`
+    // omonimo — fra cui `offline-banner` con 12 sedi — e per quelli basta ripuntare la spec.
+    const slots = slotsFromSource('<div data-slot="offline-banner" />');
+    expect(slots.has('offline-banner')).toBe(true);
   });
 });
 

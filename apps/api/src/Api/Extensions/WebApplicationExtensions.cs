@@ -78,9 +78,26 @@ internal static class WebApplicationExtensions
             await next().ConfigureAwait(false);
         });
 
-        // API-01: API exception handler middleware (must be early in pipeline)
-        app.UseApiExceptionHandler();
-
+        // #4108 — Serilog va registrato PRIMA del gestore delle eccezioni, non dopo.
+        //
+        // L'ordine precedente (gestore, poi Serilog) rendeva il gestore il middleware
+        // ESTERNO: un'eccezione risaliva attraverso Serilog, che registrava la richiesta come
+        // `500`, e solo DOPO il gestore la mappava sul suo status reale. Il log diceva
+        // `responded 500` per risposte che al client arrivavano `404` o `400`, con la riga
+        // `Handled 404 client error` subito sotto a contraddirlo.
+        //
+        // Non era cosmesi: ogni `NotFoundException` — cioe' ogni 404 di dominio, che e'
+        // traffico normale — compariva come errore server, inquinando qualunque allarme
+        // costruito sui log. E ha dirottato tre diagnosi nella stessa sessione (#4106): si
+        // leggeva «responded 500» e si cercava un guasto del server dove il client riceveva
+        // un 4xx corretto.
+        //
+        // Invertito, Serilog e' esterno e registra lo status che il gestore ha deciso. Il
+        // gestore resta comunque «early»: e' il primo middleware dopo il logging, quindi
+        // avvolge auth, endpoint e tutto il resto. Le METRICHE non avevano il problema
+        // (`MeepleAiMetrics.RecordApiError` usa lo status mappato), quindi questa modifica
+        // allinea i log alle metriche invece di cambiare entrambi.
+        //
         // Request logging with correlation ID
         app.UseSerilogRequestLogging(options =>
         {
@@ -101,6 +118,10 @@ internal static class WebApplicationExtensions
                 }
             };
         });
+
+        // API-01: API exception handler middleware (must be early in pipeline — subito dopo
+        // il logging, cosi' avvolge auth ed endpoint; vedi la nota #4108 sopra).
+        app.UseApiExceptionHandler();
 
         // Add correlation ID to response headers
         app.Use(async (context, next) =>

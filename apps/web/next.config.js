@@ -168,33 +168,33 @@ const nextConfig = {
       // Library sub-routes → query-param tabs (more specific first)
       {
         source: '/library/games/:id/agent',
-        destination: '/library/:id?tab=agent',
+        destination: '/library/:id?tab=aiChat',
         permanent: true,
       },
       {
         source: '/library/games/:id/toolkit',
-        destination: '/library/:id?tab=toolkit',
+        destination: '/library/:id?tab=toolbox',
         permanent: true,
       },
-      { source: '/library/games/:id/faqs', destination: '/library/:id?tab=faq', permanent: true },
+      { source: '/library/games/:id/faqs', destination: '/library/:id', permanent: true },
       {
         source: '/library/games/:id/reviews',
-        destination: '/library/:id?tab=reviews',
+        destination: '/library/:id',
         permanent: true,
       },
       {
         source: '/library/games/:id/rules',
-        destination: '/library/:id?tab=rules',
+        destination: '/library/:id',
         permanent: true,
       },
       {
         source: '/library/games/:id/sessions',
-        destination: '/library/:id?tab=sessions',
+        destination: '/library/:id?tab=partite',
         permanent: true,
       },
       {
         source: '/library/games/:id/strategies',
-        destination: '/library/:id?tab=strategies',
+        destination: '/library/:id',
         permanent: true,
       },
       // ── Issue #871 (closed): SP6 libro-game play routes consolidation ────
@@ -217,15 +217,24 @@ const nextConfig = {
         destination: '/library/:id/play',
         permanent: true,
       },
-      // Issue #1004: removed `/library/games/:id` → `/library/:id` redirect.
-      // The legacy `/library/[gameId]/layout.tsx` only knows 4 tabs
-      // (Dettagli/Agente/Toolkit/FAQ) and silently falls back to a CTA when an
-      // unknown `?tab=aiChat` arrives. After #871 the canonical 5-tab surface
-      // (incl. aiChat) lives at `/library/[gameId]/page.tsx` directly; the
-      // intermediate `/library/games/[gameId]/page.tsx` path is gone. Keep
-      // sub-route redirects above (they map specific tab paths) but do not
-      // add a catch-all here — rely on the explicit list to avoid the
-      // aiChat regression that motivated #1004.
+      // Issue #1004 / #4105: no catch-all for the bare `/library/games/:id`.
+      // The original rationale is stale: `/library/[gameId]/layout.tsx` is no
+      // longer a 4-tab layout (#2158 gave it the canonical 5-tab nav) and
+      // `/library/games/[gameId]/page.tsx` is gone since PR #1037. The
+      // conclusion survives for a different reason — nothing needs the
+      // redirect. No production code links to the bare page form (every
+      // `library/games/` hit under `apps/web/src` is the
+      // `/api/v1/library/games/{id}` API namespace), and there is no
+      // production environment, so no user bookmark can exist. Measured
+      // 2026-10-07 while closing #4105.
+      //
+      // The sub-route redirects above are kept, but NOT because "they map
+      // specific tab paths" — that earlier claim was false. Until 2026-10-07
+      // they mapped to `?tab=` ids that `isGameTabId`
+      // (`src/components/game-detail/tabs/types.ts`) rejects, so every legacy
+      // deep-link silently opened Info: the very fallback #1004 was about.
+      // `src/__tests__/next-config-tab-redirects.test.ts` now binds each
+      // destination to that validator — keep it green when editing the list.
       // Happy-path testing (2026-07-11): removed the legacy `/library/wishlist`
       // → `?tab=wishlist` and `/library/private` → `?tab=private` redirects. Those
       // hub tabs were retired (see `library/_content.tsx`) but the redirects
@@ -319,10 +328,10 @@ const nextConfig = {
       // ── Issue #5055: Game detail sub-routes (KB, agents, chats) ────────────
       {
         source: '/games/:id/knowledge-base',
-        destination: '/library/:id?tab=agent',
+        destination: '/library/:id?tab=aiChat',
         permanent: true,
       },
-      { source: '/games/:id/agents', destination: '/library/:id?tab=agent', permanent: true },
+      { source: '/games/:id/agents', destination: '/library/:id?tab=aiChat', permanent: true },
       { source: '/games/:id/chats', destination: '/chat', permanent: true },
       // NOTE (Wave B.1, Issue #633): Removed legacy redirects for /games, /games/catalog, /games/add
       // — superseded by the V2 GamesLibraryView at apps/web/src/app/(authenticated)/games/page.tsx

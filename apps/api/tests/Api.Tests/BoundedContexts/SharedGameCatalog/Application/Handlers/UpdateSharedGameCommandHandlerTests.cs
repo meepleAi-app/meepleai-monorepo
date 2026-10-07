@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
@@ -34,6 +35,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns((CancellationToken ct) => _dbContext.SaveChangesAsync(ct));
     private readonly Mock<ILogger<UpdateSharedGameCommandHandler>> _loggerMock = new();
+    private readonly Mock<IHybridCacheService> _cacheMock = new();
+    private readonly Mock<ICacheInvalidationRetryPolicy> _retryPolicyMock = new();
     private readonly MeepleAiDbContext _dbContext;
 
     public UpdateSharedGameCommandHandlerTests()
@@ -45,6 +48,18 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             options,
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
+
+        _cacheMock
+            .Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        // #4100: la retry policy ESEGUE il delegato, altrimenti il mock della cache non viene
+        // esercitato e un test sull'invalidazione passerebbe senza che nulla venga invalidato.
+        _retryPolicyMock
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) => op(ct).AsTask());
     }
 
     public void Dispose()
@@ -80,7 +95,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId);
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -133,7 +149,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         MakeUnitOfWorkPersist();
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -183,7 +200,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         MakeUnitOfWorkPersist();
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -230,7 +248,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         MakeUnitOfWorkPersist();
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -282,7 +301,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId);
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -332,7 +352,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId);
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -342,6 +363,57 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         domainAggregate.AverageRating.Should().Be(9.2m);
         domainAggregate.Rules!.Content.Should().Be("New rules.");
         domainAggregate.Rules!.Language.Should().Be("it");
+    }
+
+    /// <summary>
+    /// Issue #4100: senza l'evizione del read-model la scheda serviva i valori PRECEDENTI per 30
+    /// minuti (L1) o 2 ore (L2), perche' GetSharedGameByIdQueryHandler cachea sotto
+    /// `shared-game:{id}`. Misurato end-to-end: il database riportava il titolo nuovo e
+    /// `GET /api/v1/shared-games/{id}` quello vecchio, quindi l'admin vedeva il salvataggio come
+    /// non avvenuto. Cinque altri percorsi di scrittura di questo bounded context invalidavano
+    /// gia'; questo, il piu' centrale, no.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AfterSave_EvictsListAndDetailReadModelCaches()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var domainAggregate = BuildAggregate(gameId, userId);
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: "Wingspan ITA",
+            YearPublished: 2019,
+            Description: "Bird-themed engine builder",
+            MinPlayers: 1,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://cdn/old.webp",
+            ThumbnailUrl: "https://cdn/old-thumb.webp",
+            Rules: null,
+            ModifiedBy: userId);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — entrambi i tag: la lista e il dettaglio di QUESTO gioco.
+        _cacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _cacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{gameId}", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static SharedGameEntity SeedGameEntity(Guid gameId, Guid createdBy)

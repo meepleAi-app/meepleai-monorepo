@@ -159,7 +159,12 @@ function _getDateString(daysOffset: number): string {
 // Test Suite: Complete Report Flow with Email Delivery
 // ============================================================================
 
-test.describe('Admin Reports - Email Delivery Flow (Issue #922)', () => {
+/**
+ * 🔴 #4098 — questo describe è SALTATO: dipende dalla UI dei report, che non è implementata.
+ * Vedi il commento esteso in `admin-reports.spec.ts`. Il describe «Mailpit Service Health» più
+ * sotto NON è saltato: verifica solo il servizio Mailpit su :8025 e passa.
+ */
+test.describe.skip('Admin Reports - Email Delivery Flow (Issue #922)', () => {
   test.beforeEach(async ({ page, request }) => {
     // Clear Mailpit before each test
     await clearMailpitMessages(request);

@@ -11,6 +11,28 @@
 
 import { test, expect, type Page } from '@playwright/test';
 
+/**
+ * 🔴 #4098 — TUTTI I DESCRIBE DI QUESTO FILE SONO SALTATI: la funzionalità non è implementata.
+ *
+ * Questi test attendono una UI di generazione e schedulazione report sotto `/admin/reports`. Quel
+ * path oggi è un redirect **308** verso `/admin/analytics?tab=reports` (`next.config.js:494-497`),
+ * e quella tab rende un `EmptyFeatureState` col testo «La generazione di report non è ancora
+ * disponibile» (`analytics/ReportsTab.tsx`). Non c'è nessun selettore da riscrivere: non c'è la UI.
+ *
+ * Il backend invece **esiste e risponde**: `ReportingEndpoints.cs` espone `MapGroup("/admin/reports")`
+ * con `/generate` e `/schedule`, è registrato in `Program.cs:1105`, e
+ * `GET /api/v1/admin/reports/scheduled` risponde 200. È il frontend a mancare.
+ *
+ * ⚠️ Non cito il numero che la UI dichiara. `ReportsTab.tsx` passa `issueNumber={920}`, ma la #920
+ * di questo repo è chiusa e parla di link rotti nella documentazione; `ReportingEndpoints.cs` cita
+ * `ISSUE-916`, che corrisponde a una PR su Qdrant. Sembrano numeri di una numerazione precedente
+ * che ora collidono con quella di GitHub: citarli manderebbe chi legge su issue estranee.
+ *
+ * Questi test restano come **specifica eseguibile** del giorno in cui la UI verrà costruita: il
+ * contratto che descrivono (template, formati, schedulazione, storico) è quello che il backend
+ * già implementa.
+ */
+
 // Test data
 const TEST_USER_ADMIN = {
   email: 'admin@test.com',
@@ -27,7 +49,7 @@ const _REPORT_TEMPLATES = [
 
 const _REPORT_FORMATS = ['CSV', 'JSON', 'PDF'];
 
-test.describe('Admin Reports - Report Generation', () => {
+test.describe.skip('Admin Reports - Report Generation', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/admin/reports');
@@ -139,7 +161,7 @@ test.describe('Admin Reports - Report Generation', () => {
   });
 });
 
-test.describe('Admin Reports - Report Scheduling', () => {
+test.describe.skip('Admin Reports - Report Scheduling', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/admin/reports');
@@ -240,7 +262,7 @@ test.describe('Admin Reports - Report Scheduling', () => {
   });
 });
 
-test.describe('Admin Reports - Execution History', () => {
+test.describe.skip('Admin Reports - Execution History', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/admin/reports');
@@ -293,7 +315,7 @@ test.describe('Admin Reports - Execution History', () => {
   });
 });
 
-test.describe('Admin Reports - Email Validation', () => {
+test.describe.skip('Admin Reports - Email Validation', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/admin/reports');
@@ -380,7 +402,7 @@ test.describe('Admin Reports - Email Validation', () => {
   });
 });
 
-test.describe('Admin Reports - Accessibility', () => {
+test.describe.skip('Admin Reports - Accessibility', () => {
   test('should be keyboard navigable', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/admin/reports');

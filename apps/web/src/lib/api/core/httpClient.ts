@@ -483,6 +483,22 @@ export class HttpClient {
                 await this.handleError(path, response, options);
               }
 
+              // #4099: Handle 204 No Content (no body to parse). PUT era l'unico verbo senza
+              // questa guardia — POST, PATCH e DELETE la hanno — e quindici endpoint `MapPut` del
+              // backend rispondono 204. Il `response.json()` su corpo vuoto lanciava
+              // «Unexpected end of JSON input», quindi un salvataggio RIUSCITO si presentava alla
+              // UI come un errore: l'edit admin del catalogo mostrava l'alert e non chiudeva il
+              // drawer mentre il dato era gia' persistito.
+              if (response.status === 204) {
+                if (retryCount > 0) {
+                  recordRetrySuccess();
+                }
+                if (!options?.skipCircuitBreaker) {
+                  recordCircuitSuccess(path);
+                }
+                return undefined as T;
+              }
+
               const data = await response.json();
 
               // Validate response with Zod if schema provided

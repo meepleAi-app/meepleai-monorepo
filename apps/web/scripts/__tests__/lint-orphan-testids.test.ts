@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  absolvedBy,
   classify,
   compareToBaseline,
   declaredFromSource,
@@ -182,6 +183,33 @@ describe('isUnprovable', () => {
 
   it('un id che nessun pattern copre è dimostrabile', () => {
     expect(isUnprovable('game-card', patterns)).toBe(false);
+  });
+});
+
+describe('absolvedBy', () => {
+  const patterns = {
+    suffixes: new Set(['-input', '-title']),
+    prefixes: new Set(['message-', 'filter-chip-', 'filter-']),
+  };
+
+  it('nomina il pattern che assolve un id, per poterlo contestare', () => {
+    // `message-citations` e` assolto da `message-*`, che nasce da
+    // `data-testid={`message-${x}`}`. L'assoluzione e` letteralmente corretta — quel sito
+    // POTREBBE produrre quel nome — ma e` implausibile: rende i messaggi di chat, non i
+    // contenitori di citazioni. Senza vedere il pattern, l'assoluzione non e` contestabile.
+    expect(absolvedBy('message-citations', patterns)).toEqual(['message-*']);
+  });
+
+  it('elenca tutti i pattern quando piu` di uno copre lo stesso id', () => {
+    expect(absolvedBy('filter-chip-all', patterns).sort()).toEqual(['filter-*', 'filter-chip-*']);
+  });
+
+  it('distingue i suffissi dai prefissi nella notazione', () => {
+    expect(absolvedBy('chess-message-input', patterns)).toContain('*-input');
+  });
+
+  it('non assolve un id che nessun pattern copre', () => {
+    expect(absolvedBy('game-card', patterns)).toEqual([]);
   });
 });
 

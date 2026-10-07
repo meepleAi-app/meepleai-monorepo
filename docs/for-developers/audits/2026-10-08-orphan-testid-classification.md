@@ -8,11 +8,11 @@
 
 ## 1. Perché questo documento esiste
 
-Dopo la prima fetta di bonifica (le schede, −137 sedi) il passo ovvio sarebbe continuare a rinominare selettori. **Non lo è**, e il motivo è il reperto di questo audit: gli orfani residui appartengono a **due categorie che vogliono trattamenti opposti**, e trattarli allo stesso modo trasformerebbe test morti in test sottilmente sbagliati.
+Dopo la prima fetta di bonifica (le schede, −137 sedi) il passo ovvio sarebbe continuare a rinominare selettori. **Non lo è**, e il motivo è il reperto di questo audit: gli orfani residui appartengono a categorie che vogliono trattamenti opposti — due all apertura di questo audit, cinque alla fine, e trattarli allo stesso modo trasformerebbe test morti in test sottilmente sbagliati.
 
 Far risolvere un selettore non rende significativo un test scritto contro una UI immaginata. Lo rende eseguibile — e quindi rosso, o peggio verde per il motivo sbagliato.
 
-## 2. Le due categorie
+## 2. Le categorie (due all apertura, cinque alla fine — vedi §3-ter e seguenti)
 
 ### A — Deriva di strumentazione: la funzione esiste, l'hook no
 
@@ -22,7 +22,7 @@ Esempi verificati come esistenti:
 
 | cluster | componente | testid dichiarati |
 |---|---|---|
-| citazioni in chat (`citation-card` 12 sedi, `citation` 8) | `features/game-chat/CitationChip.tsx` esiste | nessun `data-testid`; porta `data-slot="citation-chip"`, che NON e` omonimo — serve un giudizio semantico, vedi §3-bis |
+| ~~citazioni in chat~~ | ~~`features/game-chat/CitationChip.tsx`~~ | ❌ **componente sbagliato, e non e` categoria A**: vedi §3-ter |
 | preview PDF (`current-page` 11, `zoom-in`/`zoom-out`/`zoom-level` 7+6+7) | i componenti esistono | nessuno fra quelli cercati |
 | slot agente (`slot-card` 10) | i componenti esistono | nessuno fra quelli cercati |
 | banner offline (`offline-banner` 12) | `features/gamebook/OfflineBanner.tsx` | nessun `data-testid`, ma **`data-slot="offline-banner"`** — risolto senza toccare la produzione, vedi §3-bis |
@@ -116,6 +116,66 @@ Un `[data-slot="x"]` inesistente **non** è controllato dal gate. Misurato: 11 s
 Allargare il gate costerebbe due esclusioni (commenti, DOM iniettato dalla spec) per sei sedi reali: per ora non le vale, ed è il limite 6 dichiarato nell'intestazione dello script.
 
 > ⚠️ Nota di metodo: verificando `mobile-body-tab` ho prima concluso che lo script sbagliasse, perché un `grep` mostrava lo slot presente. Era il **grep** a sbagliare — includeva `__tests__/`. Le due occorrenze sono asserzioni di assenza in test unit. Una sonda di verifica va ristretta con gli stessi filtri dello strumento che verifica.
+
+## 3-ter. ⚠️ Correzione a §2: le citazioni NON sono categoria A
+
+Nella prima stesura di questo audit le citazioni erano l'esempio principale di categoria A, sulla base di «`features/game-chat/CitationChip.tsx` esiste». **Era il componente sbagliato.**
+
+`e2e/chat-citations.spec.ts` guida `/chat`, cioè la chat **unificata**, dove le citazioni le rende `src/components/chat-unified/CitationBlock.tsx`. E quel componente implementa un design **diverso** da quello che la spec descrive:
+
+| la spec assume | la realtà (`CitationBlock.tsx`) |
+|---|---|
+| `message-citations` > `citation-list` > `citation-card[]` (tre livelli) | un solo contenitore `citation-block` con chip indicizzate `citation-chip-${i}` |
+| un header `📚 Fonti (2)` col conteggio | nessun header, nessun conteggio — `grep -rn "Fonti" src/components/chat-unified/` → nulla |
+| card con testo `Pag. 10` | chip con testo **`Pagina {page}`** (`:56`) |
+| un collassabile globale: `citations-header` apre/chiude `citations-content` | espansione **per singola chip** (`setExpanded(...)`, `citation-expanded-${i}`) |
+
+Non è deriva di strumentazione: è un **design sostituito**. Far risolvere i selettori lascerebbe comunque rosse le asserzioni sul testo (`Pag. 10` vs `Pagina 10`) e il secondo test resterebbe intraducibile.
+
+**Conseguenza sulla stima**: la categoria A è **più piccola di come sembrava**, e ogni cluster va verificato sul componente che la spec guida davvero — non sul primo componente dal nome simile. Era la stessa lezione del classificatore per rotte, ripetuta su un altro asse.
+
+## 3-quater. 🔴 La categoria peggiore: verde e cieco
+
+In `chat-citations.spec.ts` **due test su quattro passano per il motivo sbagliato**:
+
+```ts
+// e2e/chat-citations.spec.ts:111 e :127
+await expect(userMessage.getByTestId('message-citations')).not.toBeVisible();
+await expect(page.getByTestId('message-citations')).not.toBeVisible();
+```
+
+`message-citations` non esiste in produzione, quindi «non è visibile» è vero **per costruzione**. Quei due test passerebbero anche se i messaggi utente mostrassero citazioni: non misurano nulla, e sono **verdi**.
+
+È peggio di un test rosso. Un rosso si vede; questo si conta fra i passati.
+
+### Misura
+
+Sedi orfane dentro un'asserzione negativa sulla stessa riga (`.not.`, `toHaveCount(0)`, `toBeNull()`): **11, in 7 file**.
+
+| sedi | file |
+|---|---|
+| 5 | `e2e/editor/dashboard.spec.ts` |
+| 1 ciascuno | `admin/admin-workflow-actions.spec.ts` · `agent/agent-rag-flow.spec.ts` · `auth/auth-complete.spec.ts` · `auth-registration-dashboard.spec.ts` · `chat-citations.spec.ts` · `pdf-indexing-flow.spec.ts` |
+
+⚠️ **È una sottostima**, e il motivo è il paragrafo seguente: `message-citations` non compare in questa misura perché il gate lo classifica *indimostrabile*, non orfano.
+
+## 3-quinquies. 🔴 Le false assoluzioni: 144 id invisibili
+
+Il gate non accusa un id coperto da un pattern dinamico (limite 1). Ma quei pattern nascono dalla **testa** e dalla **coda** di un template, e alcuni sono genericissimi:
+
+| id cercato | sedi | assolto da | il pattern nasce da |
+|---|---|---|---|
+| `message-citations` | 3 | `message-*` | un `data-testid={`message-${…}`}` che rende i **messaggi di chat**, non contenitori di citazioni |
+| `chess-message-input` | 7 | `*-input` | qualunque template che finisca in `-input` |
+| `game-title` | 6 | `*-title` | idem per `-title` |
+| `quota-warning` | 5 | `quota-*` | — |
+| `filter-chip-favorites` | 5 | `filter-chip-*`, `filter-*` | — |
+
+L'assoluzione è **letteralmente corretta**: `message-${x}` *può* produrre `message-citations`. Ma è spesso implausibile, e finora era **silenziosa** — l'id non veniva né accusato né mostrato. Totale in quello stato: **144**.
+
+`--list` ora stampa la sezione *Indimostrabili* con il pattern che assolve ciascun id, perché un'assoluzione che non si vede non si può contestare. Il verdetto del gate non cambia: resta non accusatorio, come deve essere per non venire disattivato.
+
+> **Lezione di metodo, la terza di questo audit**: avevo blindato il gate contro le false *accuse* (la soppressione dei pattern dinamici) e non avevo guardato il lato opposto. Una misura conservativa non è neutra: sposta l'errore, non lo elimina. Chi la progetta deve rendere visibile anche ciò che assolve.
 
 ## 4. Cosa serve decidere, prima di continuare
 

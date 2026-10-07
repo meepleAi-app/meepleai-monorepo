@@ -171,6 +171,22 @@ export function isUnprovable(id, { suffixes, prefixes }) {
   return false;
 }
 
+/**
+ * I pattern che assolvono un id, per poterli far verificare a mano.
+ *
+ * L'assoluzione è letteralmente corretta — `data-testid={`message-${x}`}` *può* produrre
+ * `message-citations` — ma può anche essere implausibile: quel sito rende i messaggi di chat, non
+ * i contenitori di citazioni, e `message-citations` è un orfano vero che solo un occhio umano
+ * distingue. Un id assolto in silenzio è invisibile: né accusato né mostrato. `--list` lo stampa
+ * col pattern che lo copre, così l'assoluzione si può contestare.
+ */
+export function absolvedBy(id, { suffixes, prefixes }) {
+  return [
+    ...[...suffixes].filter(s => id.endsWith(s)).map(s => `*${s}`),
+    ...[...prefixes].filter(p => id.startsWith(p)).map(p => `${p}*`),
+  ];
+}
+
 export function classify(soughtIds, { literals, suffixes, prefixes }) {
   const orphans = [];
   const unprovable = [];
@@ -246,6 +262,7 @@ export function scan(webRoot) {
     perFile,
     dynamicSites,
     slots,
+    patterns: { suffixes, prefixes },
   };
 }
 
@@ -298,6 +315,21 @@ function main() {
       const hint = r.slots.has(id) ? '  ← esiste data-slot omonimo' : '';
       console.log(`  ${String(where.length).padStart(4)}x  ${id.padEnd(38)} ${where[0]}${hint}`);
     }
+    if (r.unprovable.length > 0) {
+      console.log(
+        `\nIndimostrabili (${r.unprovable.length}): un pattern dinamico li assolve, e l'assoluzione`
+      );
+      console.log('puo` essere implausibile — contestala guardando COSA rende quel sito.\n');
+      for (const [id, where] of r.unprovable
+        .map(id => [id, r.sought.get(id)])
+        .sort((a, b) => b[1].length - a[1].length)
+        .slice(0, 30)) {
+        const by = absolvedBy(id, r.patterns).join(' ');
+        console.log(`  ${String(where.length).padStart(4)}x  ${id.padEnd(38)} assolto da: ${by}`);
+      }
+      if (r.unprovable.length > 30) console.log(`  … e altri ${r.unprovable.length - 30}`);
+    }
+
     if (withSlot.length > 0) {
       const sites = withSlot.reduce((n, id) => n + r.sought.get(id).length, 0);
       console.log(

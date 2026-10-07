@@ -15,10 +15,34 @@ import {
   compareToBaseline,
   declaredFromSource,
   isConstantsModule,
+  isE2EConsumer,
   isProductionSource,
   isUnprovable,
   soughtFromSource,
 } from '../lint-orphan-testids.mjs';
+
+describe('isE2EConsumer', () => {
+  it('include le spec e anche i page object, gli helper e le fixture', () => {
+    // La prima stesura del gate guardava solo `*.spec.ts` e lasciava fuori diciannove file con un
+    // centinaio di sedi. I page object sono dove i selettori si concentrano: `GamePage.ts` da solo
+    // porta game-list, game-card, loading-spinner, game-name e game-description, quindi una spec
+    // apparentemente pulita puo` cercare un selettore morto attraverso il proprio page object.
+    expect(isE2EConsumer('e2e/library.spec.ts')).toBe(true);
+    expect(isE2EConsumer('e2e/pages/game/GamePage.ts')).toBe(true);
+    expect(isE2EConsumer('e2e/helpers/WaitHelper.ts')).toBe(true);
+    expect(isE2EConsumer('e2e/fixtures/robust-selectors.ts')).toBe(true);
+  });
+
+  it('esclude i test unit degli helper, che non guidano un browser', () => {
+    expect(isE2EConsumer('e2e/_helpers/__tests__/dataAssertionUtils.test.ts')).toBe(false);
+    expect(isE2EConsumer('e2e/_helpers/seedEntities.test.ts')).toBe(false);
+  });
+
+  it('esclude i file non sorgente', () => {
+    expect(isE2EConsumer('e2e/README.md')).toBe(false);
+    expect(isE2EConsumer('e2e/fixtures/sample.pdf')).toBe(false);
+  });
+});
 
 describe('isProductionSource', () => {
   it('accetta un componente', () => {

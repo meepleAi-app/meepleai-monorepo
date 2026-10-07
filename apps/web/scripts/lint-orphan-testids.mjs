@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 /**
- * Gate #4120 — nessuna spec Playwright cerca un `data-testid` che il codice di produzione non
- * dichiara.
+ * Gate #4120 — nessun file E2E cerca un `data-testid` che il codice di produzione non dichiara.
+ *
+ * L'ambito sono le spec **e** i page object, gli helper e le fixture sotto `e2e/`: i page object
+ * sono il posto dove i selettori si concentrano, e una spec apparentemente pulita puo` cercare un
+ * selettore morto attraverso il proprio. `e2e/pages/game/GamePage.ts` da solo porta `game-list`,
+ * `game-card`, `loading-spinner`, `game-name` e `game-description`. Una prima stesura di questo
+ * gate guardava solo `*.spec.ts` e lasciava fuori diciannove file con un centinaio di sedi.
  *
  * Il difetto che chiude: una spec che cerca un selettore inesistente non è un test da aggiustare,
  * è non eseguibile per costruzione. Non rompe la compilazione, non rompe il lint, e il gate E2E
@@ -27,8 +32,9 @@
  *    gate che segnala falsi positivi viene disattivato, e porta via con sé anche i veri.
  * 2. **Verifica l'esistenza, non la raggiungibilità.** Un testid dichiarato dietro un ramo che la
  *    spec non percorre conta come dichiarato. Coprire anche quello richiederebbe eseguire la UI.
- * 3. **Solo letterali dal lato spec.** `getByTestId(variabile)` e i template nelle spec non sono
- *    verificabili e vengono contati a parte.
+ * 3. **Solo letterali dal lato E2E.** `getByTestId(variabile)` e i template nei file E2E non sono
+ *    verificabili e vengono contati a parte. Esclusi anche i test unit degli helper — qualunque
+ *    `__tests__/` sotto `e2e/`, e i file `*.test.*` — perché non guidano un browser.
  * 4. Le dichiarazioni si leggono dal codice di produzione: `__tests__/`, `*.test.*`, `*.spec.*` e
  *    `*.story/stories.*` sono esclusi di proposito. L'unica occorrenza di `meeple-card` nel repo è
  *    un mock Vitest, e contarla come dichiarazione avrebbe mascherato il difetto di #4110.
@@ -111,6 +117,20 @@ export function declaredFromSource(source, { isConstantsModule = false } = {}) {
   return { literals, suffixes, prefixes };
 }
 
+/**
+ * Un file E2E che CONSUMA selettori: le spec, ma anche i page object, gli helper e le fixture.
+ * I page object sono il posto dove i selettori si concentrano — `e2e/pages/game/GamePage.ts` da
+ * solo porta `game-list`, `game-card`, `loading-spinner`, `game-name` e `game-description` — e una
+ * spec apparentemente pulita puo` cercare un selettore morto attraverso il proprio page object.
+ * Esclusi i test unit degli helper (`__tests__/`, `*.test.*`): non guidano un browser.
+ */
+export function isE2EConsumer(path) {
+  const unix = path.split(sep).join('/');
+  if (/\/__tests__\//.test(unix)) return false;
+  if (/\.test\.[tj]sx?$/.test(unix)) return false;
+  return /\.[tj]sx?$/.test(unix);
+}
+
 export function isConstantsModule(path) {
   return /test-ids?\.[tj]sx?$/i.test(path.split(sep).join('/'));
 }
@@ -146,12 +166,12 @@ function walk(dir, matches, acc = []) {
 
 export function scan(webRoot) {
   const rel = f => relative(webRoot, f).split(sep).join('/');
-  const specFiles = walk(join(webRoot, 'e2e'), f => /\.spec\.tsx?$/.test(f));
+  const e2eFiles = walk(join(webRoot, 'e2e'), isE2EConsumer);
   const srcFiles = walk(join(webRoot, 'src'), isProductionSource);
 
   const sought = new Map();
   let dynamicSites = 0;
-  for (const file of specFiles) {
+  for (const file of e2eFiles) {
     const { ids, dynamicSites: dyn } = soughtFromSource(readFileSync(file, 'utf8'));
     dynamicSites += dyn;
     for (const { id, line } of ids) {
@@ -186,7 +206,7 @@ export function scan(webRoot) {
     }
   }
 
-  return { specFiles, srcFiles, sought, orphans, unprovable, declared, perFile, dynamicSites };
+  return { e2eFiles, srcFiles, sought, orphans, unprovable, declared, perFile, dynamicSites };
 }
 
 /** Confronta la misura con la baseline. Nessun I/O: è la regola del cricchetto, testabile. */
@@ -209,22 +229,24 @@ function main() {
   const baselinePath = join(WEB_ROOT, BASELINE_FILE);
 
   const r = scan(WEB_ROOT);
-  if (r.specFiles.length === 0 || r.srcFiles.length === 0) {
+  if (r.e2eFiles.length === 0 || r.srcFiles.length === 0) {
     console.error(
-      `❌ la scansione non ha trovato nulla (spec: ${r.specFiles.length}, src: ${r.srcFiles.length}).\n` +
+      `❌ la scansione non ha trovato nulla (e2e: ${r.e2eFiles.length}, src: ${r.srcFiles.length}).\n` +
         '   Il gate non puo` verificare niente: controlla le radici `e2e/` e `src/`.'
     );
     process.exit(1);
   }
 
   const sites = [...r.perFile.values()].reduce((a, b) => a + b, 0);
-  console.log(`Spec analizzate: ${r.specFiles.length} · file di produzione: ${r.srcFiles.length}`);
+  console.log(
+    `File E2E analizzati: ${r.e2eFiles.length} · file di produzione: ${r.srcFiles.length}`
+  );
   console.log(
     `Id cercati: ${r.sought.size} · dichiarati: ${r.declared.length}` +
       ` · orfani dimostrabili: ${r.orphans.length} · indimostrabili: ${r.unprovable.length}`
   );
   console.log(
-    `Sedi orfane: ${sites} in ${r.perFile.size} spec · sedi dinamiche non verificabili: ${r.dynamicSites}`
+    `Sedi orfane: ${sites} in ${r.perFile.size} file · sedi dinamiche non verificabili: ${r.dynamicSites}`
   );
 
   if (list) {

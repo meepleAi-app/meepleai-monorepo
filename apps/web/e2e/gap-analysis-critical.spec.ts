@@ -291,17 +291,17 @@ test.describe('Gap Analysis: Critical Features', () => {
       await expect(achievementGrid).toBeVisible();
 
       // Verify achievements displayed
-      const cards = page.locator('[data-testid="achievement-card"]');
+      const cards = page.locator('[data-slot="achievement-card"]');
       await expect(cards.count()).toBeGreaterThan(0);
 
       // Filter: Earned only
       await page.click('[data-testid="filter-earned"]');
-      const earnedCards = page.locator('[data-testid="achievement-card"][data-status="earned"]');
+      const earnedCards = page.locator('[data-slot="achievement-card"][data-unlocked="true"]');
       await expect(earnedCards.count()).toBeGreaterThan(0);
 
       // Filter: Locked only
       await page.click('[data-testid="filter-locked"]');
-      const lockedCards = page.locator('[data-testid="achievement-card"][data-status="locked"]');
+      const lockedCards = page.locator('[data-slot="achievement-card"]:not([data-unlocked])');
 
       // TODO: Verify locked achievements show requirements
     });
@@ -313,7 +313,7 @@ test.describe('Gap Analysis: Critical Features', () => {
       await expect(widget).toBeVisible();
 
       // Verify last 3 achievements
-      const achievements = widget.locator('[data-testid="achievement-card"]');
+      const achievements = widget.locator('[data-slot="achievement-card"]');
       await expect(achievements).toHaveCount(3);
 
       // Click achievement → detail modal

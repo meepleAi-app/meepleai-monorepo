@@ -64,10 +64,10 @@ test.describe('Agent Chat - User Flow', () => {
     await page.click('button:has-text("Send")');
 
     // Typing indicator should appear
-    await expect(page.locator('[data-testid="typing-indicator"]')).toBeVisible();
+    await expect(page.locator('[data-slot="typing-indicator"]')).toBeVisible();
 
     // Should disappear after response completes
-    await expect(page.locator('[data-testid="typing-indicator"]')).not.toBeVisible({
+    await expect(page.locator('[data-slot="typing-indicator"]')).not.toBeVisible({
       timeout: 10000,
     });
   });

@@ -450,7 +450,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
 
         // Verify the info panel shows token count (evidence of real LLM response)
         const infoPanel = page
-          .locator('[data-testid="chat-info-panel"]')
+          .locator('[data-slot="chat-info-panel"]')
           .or(page.locator('[data-testid="response-metadata"]'));
         const infoPanelVisible = await infoPanel.isVisible({ timeout: 5_000 }).catch(() => false);
         if (infoPanelVisible) {

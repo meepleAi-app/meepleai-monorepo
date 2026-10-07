@@ -25,6 +25,7 @@ import type {
   AddPlayerRequest,
   RecordScoreRequest,
 } from '@/lib/api/schemas/live-sessions.schemas';
+import { nextFreePlayerColor } from '@/lib/sessions/player-colors';
 
 /**
  * Active tool identifier. Base tools have fixed IDs; custom toolkit tools use their name.
@@ -250,8 +251,33 @@ export const useSessionStore = create<SessionStore>()(
         const { activeSession } = get();
         if (!activeSession) throw new Error('No active session');
 
+        // #4107: `color` è `.optional()` nello schema, ma ometterlo NON significa «scegline
+        // uno» — il binder del backend lega `0`, cioè `Red`, a ogni giocatore. La pagina
+        // toolkit lo ometteva, e dal secondo giocatore il dominio rifiutava con «Color Red is
+        // already taken by another player»: il flusso non aveva un solo caso che riuscisse.
+        //
+        // Assegnare qui, e non nei chiamanti, chiude la CLASSE del difetto: tre dei quattro
+        // chiamanti passavano un colore corretto, il quarto l'aveva dimenticato, e nulla
+        // impediva al quinto di fare lo stesso.
+        const resolved: AddPlayerRequest =
+          request.color != null
+            ? request
+            : {
+                ...request,
+                color: nextFreePlayerColor(activeSession.players?.map(p => p.color) ?? []),
+              };
+
+        if (resolved.color == null) {
+          // Tutti i colori sono occupati. Dirlo esplicitamente: mandare la richiesta senza
+          // colore riporterebbe il 400 «Color Red is already taken», che parla di colori e non
+          // di «sessione piena».
+          const msg = 'Tutti i colori giocatore sono già assegnati in questa sessione';
+          set({ error: msg }, false, 'addPlayer/error');
+          throw new Error(msg);
+        }
+
         try {
-          const playerId = await api.liveSessions.addPlayer(activeSession.id, request);
+          const playerId = await api.liveSessions.addPlayer(activeSession.id, resolved);
           // Reload session to get updated player list
           const updated = await api.liveSessions.getSession(activeSession.id);
           set({ activeSession: updated }, false, 'addPlayer/success');

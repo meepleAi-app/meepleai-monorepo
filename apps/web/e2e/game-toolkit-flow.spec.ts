@@ -133,26 +133,18 @@ test.describe('Game-Specific Toolkit', () => {
   });
 
   /**
-   * SALTATO per un difetto del PRODOTTO, non del test — e il test lo ha trovato.
+   * Era saltato per #4107 + #4109, chiusi insieme — come la nota precedente prevedeva.
    *
-   * `handleStartSession` aggiunge i giocatori in ciclo **senza colore**, e
-   * `LiveGameSession.AddPlayer` impone l'unicità del colore: dal secondo giocatore in poi
-   * l'API risponde `400 domain_error` con «Color Red is already taken by another player».
-   * Riprodotto anche via API, senza browser. Con `minPlayers: 3` il flusso non ha un solo
-   * caso che riesca, quindi la navigazione a `/toolkit/<sessionId>` non avviene mai.
+   * #4107: `handleStartSession` aggiungeva i giocatori **senza colore**, e
+   * `LiveGameSession.AddPlayer` impone l'unicità del colore: dal secondo in poi l'API
+   * rispondeva `400` con «Color Red is already taken». Ora il colore lo assegna
+   * `session-store.addPlayer` (primo libero), così nessun chiamante può più ometterlo.
    *
-   * ⚠️ Quando #4107 chiude, togliere la riga `test.skip` **non basta**: appena questi test
-   * creeranno davvero una sessione, l'`afterEach` incontrerà #4109 — `seed/cleanup` risponde
-   * 500 perché la riga in `session_tracking_sessions` nata dal percorso toolkit resta fuori
-   * dallo scope del `TestRunId` e il suo FK blocca la cancellazione dello `shared_games`.
-   * Le due issue vanno chiuse insieme perché questo test torni verde.
+   * #4109: senza quella correzione questo test passava e poi falliva nell'`afterEach`, perché
+   * la tracking session nata dal percorso toolkit restava fuori dallo scope del `TestRunId` e
+   * il suo FK bloccava la cancellazione dello `shared_games`.
    */
   test('should start game session with template', async ({ page }) => {
-    test.skip(
-      true,
-      'DIFETTO: #4107 — `handleStartSession` non assegna un colore: dal secondo giocatore l API risponde 400 «Color Red is already taken», e la sessione non parte mai'
-    );
-
     await page.getByPlaceholder('Player 1').fill('Alice');
     await page.getByRole('button', { name: /Add Player/i }).click();
     await page.getByPlaceholder('Player 2').fill('Bob');
@@ -164,28 +156,43 @@ test.describe('Game-Specific Toolkit', () => {
     await expect(page).toHaveURL(new RegExp(`/library/${game.gameId}/toolkit/[0-9a-f-]{36}$`), {
       timeout: 30_000,
     });
-    await expect(page.getByText('Participants')).toBeVisible();
+    // Nessuna asserzione sul CONTENUTO della pagina della sessione: #4114 fa sì che
+    // «SSE connection failed» lo sostituisca, e non deterministicamente — questa riga era
+    // `getByText('Participants')` e alternava verde e rosso fra due run sullo stesso codice.
+    // Il soggetto del test è che la sessione PARTE e la URL avanza, cioè ciò che #4107,
+    // #4112 e #4113 hanno sbloccato; il resto appartiene al test saltato qui sotto.
   });
 
   /**
-   * SALTATO per un difetto del PRODOTTO, non del test — e il test lo ha trovato.
+   * Era saltato per #4107 + #4109, chiusi insieme — come la nota precedente prevedeva.
    *
-   * `handleStartSession` aggiunge i giocatori in ciclo **senza colore**, e
-   * `LiveGameSession.AddPlayer` impone l'unicità del colore: dal secondo giocatore in poi
-   * l'API risponde `400 domain_error` con «Color Red is already taken by another player».
-   * Riprodotto anche via API, senza browser. Con `minPlayers: 3` il flusso non ha un solo
-   * caso che riesca, quindi la navigazione a `/toolkit/<sessionId>` non avviene mai.
+   * #4107: `handleStartSession` aggiungeva i giocatori **senza colore**, e
+   * `LiveGameSession.AddPlayer` impone l'unicità del colore: dal secondo in poi l'API
+   * rispondeva `400` con «Color Red is already taken». Ora il colore lo assegna
+   * `session-store.addPlayer` (primo libero), così nessun chiamante può più ometterlo.
    *
-   * ⚠️ Quando #4107 chiude, togliere la riga `test.skip` **non basta**: appena questi test
-   * creeranno davvero una sessione, l'`afterEach` incontrerà #4109 — `seed/cleanup` risponde
-   * 500 perché la riga in `session_tracking_sessions` nata dal percorso toolkit resta fuori
-   * dallo scope del `TestRunId` e il suo FK blocca la cancellazione dello `shared_games`.
-   * Le due issue vanno chiuse insieme perché questo test torni verde.
+   * #4109: senza quella correzione questo test passava e poi falliva nell'`afterEach`, perché
+   * la tracking session nata dal percorso toolkit restava fuori dallo scope del `TestRunId` e
+   * il suo FK bloccava la cancellazione dello `shared_games`.
+   */
+  /**
+   * SALTATO per #4114, trovato da questo stesso test.
+   *
+   * La pagina della sessione sostituisce il proprio contenuto con «SSE connection failed»:
+   * `useSessionSync` apre `GET /api/v1/game-sessions/<id>/stream` passandogli l'id di una
+   * **live session**, e quell'endpoint appartiene a un altro aggregato — 404 misurato, mentre
+   * `/live-sessions/<id>/stream` risponde 200.
+   *
+   * Non corretto qui perché quale dei due stream serva a questa pagina è una decisione di
+   * progetto (ADR-089: «scegli l'SSOT per contesto, non riconciliare i modelli»), e cambiare
+   * la URL farebbe aprire la connessione anche se poi nessun evento venisse riconosciuto.
+   *
+   * Il `Finalize` esiste e funziona: è la pagina che non arriva a renderlo.
    */
   test('should finalize and return to game detail page', async ({ page }) => {
     test.skip(
       true,
-      'DIFETTO: #4107 — `handleStartSession` non assegna un colore: dal secondo giocatore l API risponde 400 «Color Red is already taken», e la sessione non parte mai'
+      'DIFETTO: #4114 — la pagina della sessione mostra «SSE connection failed» e non rende il contenuto: useSessionSync chiama /game-sessions con un id di live session (404)'
     );
 
     await page.getByPlaceholder('Player 1').fill('Winner');

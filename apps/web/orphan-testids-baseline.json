@@ -76,7 +76,6 @@
     "e2e/dashboard-user-journey.spec.ts": 20,
     "e2e/demo-runthrough/nanolith-flow.spec.ts": 1,
     "e2e/demo/alpha-happy-path.spec.ts": 2,
-    "e2e/document-source-filtering.spec.ts": 2,
     "e2e/e2e-citation-journey-fast.spec.ts": 2,
     "e2e/e2e-citation-journey-real.spec.ts": 2,
     "e2e/editor/dashboard.spec.ts": 61,
@@ -121,7 +120,7 @@
     "e2e/pages/admin/QueueDashboardPage.ts": 6,
     "e2e/pages/agent/AgentCreationPage.ts": 2,
     "e2e/pages/auth/LoginPage.ts": 5,
-    "e2e/pages/chat/ChatPage.ts": 3,
+    "e2e/pages/chat/ChatPage.ts": 1,
     "e2e/pages/game/GamePage.ts": 4,
     "e2e/pages/home/HomePage.ts": 7,
     "e2e/pages/library/LibraryPage.ts": 1,
@@ -140,7 +139,7 @@
     "e2e/settings/notification-settings.spec.ts": 2,
     "e2e/share-game-flow.spec.ts": 11,
     "e2e/smoke.spec.ts": 1,
-    "e2e/user-journey-upload-chat.spec.ts": 3,
+    "e2e/user-journey-upload-chat.spec.ts": 2,
     "e2e/visual-debug-demo.spec.ts": 1,
     "e2e/visual-docs/admin-flows/approval-workflow.visual.spec.ts": 10,
     "e2e/visual-docs/admin-flows/monitoring.visual.spec.ts": 10,
@@ -148,11 +147,10 @@
     "e2e/visual-docs/admin-flows/user-management.visual.spec.ts": 16,
     "e2e/visual-docs/editor-flows/game-management.visual.spec.ts": 5,
     "e2e/visual-docs/editor-flows/publication-workflow.visual.spec.ts": 7,
-    "e2e/visual-docs/user-flows/ai-chat.visual.spec.ts": 16,
+    "e2e/visual-docs/user-flows/ai-chat.visual.spec.ts": 14,
     "e2e/visual-docs/user-flows/auth-flow.visual.spec.ts": 6,
     "e2e/visual-docs/user-flows/game-sessions.visual.spec.ts": 17,
     "e2e/visual-docs/user-flows/library-management.visual.spec.ts": 9,
-    "e2e/week3-critical-paths.spec.ts": 1,
     "e2e/week3-game-admin-paths.spec.ts": 4
   }
 }

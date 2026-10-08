@@ -14,6 +14,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// first citation of the game's active card, refuses when an analysis for the current prompt version is
 /// already in progress or published, and otherwise enqueues a fresh generation.
 /// </summary>
+/// <remarks>
+/// <see cref="GenerateMechanicAnalysisCommandHandler"/> short-circuits on any existing non-Rejected analysis for
+/// the same (game, pdf, prompt). A <c>PartiallyExtracted</c> analysis would therefore just be returned again,
+/// so only in that case the command is sent with <c>ForceRegenerate</c>; Rejected or absent analyses need no force.
+/// </remarks>
 internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
     : IRequestHandler<RequeueMechanicAnalysisForPromptVersionCommand, MechanicAnalysisGenerationResponseDto>
 {
@@ -58,7 +63,7 @@ internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
 
         if (content is null)
         {
-            throw new ConflictException("card content unreadable");
+            throw new ConflictException("Contenuto della card illeggibile.");
         }
 
         // Every citation shares the origin analysis' PdfDocumentId (same derivation as the card query).
@@ -69,7 +74,7 @@ internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
 
         if (pdfDocumentId == Guid.Empty)
         {
-            throw new ConflictException("card has no citation identifying the source PDF");
+            throw new ConflictException("La card non ha citazioni che identifichino il PDF sorgente.");
         }
 
         var promptVersion = _promptProvider.PromptVersion;
@@ -101,7 +106,8 @@ internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
                 request.SharedGameId,
                 pdfDocumentId,
                 request.ActorId,
-                request.CostCapUsd),
+                request.CostCapUsd,
+                ForceRegenerate: existing is { Status: MechanicAnalysisStatus.PartiallyExtracted }),
             cancellationToken).ConfigureAwait(false);
     }
 }

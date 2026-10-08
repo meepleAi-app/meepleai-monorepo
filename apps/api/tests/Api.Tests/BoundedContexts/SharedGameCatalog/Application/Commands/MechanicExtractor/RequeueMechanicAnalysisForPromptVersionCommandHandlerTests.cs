@@ -146,6 +146,82 @@ public class RequeueMechanicAnalysisForPromptVersionCommandHandlerTests
         _mediator.Verify(m => m.Send(It.IsAny<GenerateMechanicAnalysisCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    private static MechanicAnalysis NewDraft(Guid gameId, Guid pdfId, bool withClaim)
+    {
+        var analysis = MechanicAnalysis.Create(
+            gameId, pdfId, CurrentPrompt, Guid.NewGuid(), DateTime.UtcNow, "m", "p", 1.0m);
+        if (withClaim)
+        {
+            var citation = MechanicCitation.Create(pdfId, 1, "q", null, 0);
+            analysis.AddClaim(MechanicClaim.Create(analysis.Id, MechanicSection.Mechanics, "c", 0, new[] { citation }));
+        }
+
+        return analysis;
+    }
+
+    [Fact]
+    public async Task Handle_PublishedAnalysisForCurrentPrompt_ThrowsConflict_AndDoesNotSend()
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var published = NewDraft(gameId, pdfId, withClaim: true);
+        published.SubmitForReview(Guid.NewGuid(), DateTime.UtcNow);
+        foreach (var claim in published.Claims)
+        {
+            published.ApproveClaim(claim.Id, Guid.NewGuid(), DateTime.UtcNow);
+        }
+
+        published.Approve(Guid.NewGuid(), DateTime.UtcNow);
+        published.Status.Should().Be(MechanicAnalysisStatus.Published);
+        _cards.Setup(r => r.GetActiveByGameAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildCard(gameId, ContentWithPdf(gameId, pdfId)));
+        _analyses.Setup(r => r.FindByPromptVersionAsync(gameId, pdfId, CurrentPrompt, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(published);
+
+        var act = () => _handler.Handle(
+            new RequeueMechanicAnalysisForPromptVersionCommand(gameId, Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        _mediator.Verify(m => m.Send(It.IsAny<GenerateMechanicAnalysisCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(MechanicAnalysisStatus.Rejected, false)]
+    [InlineData(MechanicAnalysisStatus.PartiallyExtracted, true)]
+    public async Task Handle_ExistingAnalysisInTerminalState_StillSends(
+        MechanicAnalysisStatus status, bool expectedForceRegenerate)
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        var existing = NewDraft(gameId, pdfId, withClaim: status == MechanicAnalysisStatus.Rejected);
+        if (status == MechanicAnalysisStatus.Rejected)
+        {
+            existing.SubmitForReview(Guid.NewGuid(), DateTime.UtcNow);
+            existing.Reject(Guid.NewGuid(), "bad", DateTime.UtcNow);
+        }
+        else
+        {
+            existing.MarkAsPartiallyExtracted("partial", Guid.NewGuid(), DateTime.UtcNow);
+        }
+
+        existing.Status.Should().Be(status);
+        _cards.Setup(r => r.GetActiveByGameAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildCard(gameId, ContentWithPdf(gameId, pdfId)));
+        _analyses.Setup(r => r.FindByPromptVersionAsync(gameId, pdfId, CurrentPrompt, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        _mediator.Setup(m => m.Send(
+                It.Is<GenerateMechanicAnalysisCommand>(c => c.ForceRegenerate == expectedForceRegenerate),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Response(Guid.NewGuid()));
+
+        await _handler.Handle(
+            new RequeueMechanicAnalysisForPromptVersionCommand(gameId, Guid.NewGuid()), CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<GenerateMechanicAnalysisCommand>(c => c.ForceRegenerate == expectedForceRegenerate),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task Handle_WithMalformedCardContent_Throws409()
     {
@@ -156,6 +232,6 @@ public class RequeueMechanicAnalysisForPromptVersionCommandHandlerTests
         var act = () => _handler.Handle(
             new RequeueMechanicAnalysisForPromptVersionCommand(gameId, Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().ThrowAsync<ConflictException>().WithMessage("*unreadable*");
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*illeggibile*");
     }
 }

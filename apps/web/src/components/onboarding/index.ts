@@ -19,7 +19,7 @@ export type { InterestsStepProps } from './InterestsStep';
 export { FirstGameStep } from './FirstGameStep';
 export type { FirstGameStepProps } from './FirstGameStep';
 
-export { FirstAgentStep } from './FirstAgentStep';
-export type { FirstAgentStepProps } from './FirstAgentStep';
+export { FirstRulebookStep } from './FirstRulebookStep';
+export type { FirstRulebookStepProps } from './FirstRulebookStep';
 
 export { OnboardingReminderBanner } from './OnboardingReminderBanner';

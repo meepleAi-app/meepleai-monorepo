@@ -4,7 +4,6 @@
  * Phase 0.5 contract enforced (docs/frontend/contracts/games-id-hooks.md):
  *   - gameId normalized to string|null at page boundary (NEVER undefined)
  *   - useLibraryGameDetail (parent hook) gated by !!gameId
- *   - useGameAgents (lazy sub-hook) gated by !!gameId && detailQuery.isSuccess && tab === 'agents'
  *   - 5-state FSM via deriveGameDetailUiState (gameId null check FIRST per Cell 1 contract)
  *   - Visual fixture short-circuit for CI prod build (IS_VISUAL_TEST_BUILD)
  *   - ?state= URL override (dev + visual-test only)
@@ -15,7 +14,6 @@
  *   ❌ enabled: !!id && (fixture == null ? detailQuery.data != null : true)  // fixture bypass
  *
  * Tab state lives here (useState) — pure presentation in child components.
- * AgentsState discriminated union prevents data + loading co-occurrence (sez. 4.3).
  *
  * Refs #581.
  */
@@ -28,7 +26,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
-  GameDetailAgentsList,
   GameDetailChatTab,
   GameDetailCommunityGate,
   GameDetailFaqList,
@@ -44,14 +41,11 @@ import {
   buildSpecsItems,
   panelIdFor,
   tabIdFor,
-  type AgentsState,
-  type GameDetailAgentEntry,
   type GameDetailHeroMeta,
   type TabKey,
 } from '@/components/features/game-detail';
 import { DetailPageContainer } from '@/components/layout/PageContainer';
 import { toast } from '@/components/layout/Toast';
-import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import {
   useAddGameToLibrary,
   useLibraryGameDetail,
@@ -130,7 +124,7 @@ function buildTabsConfig(
       label: t('pages.gameDetail.tabs.stats'),
       locked: lockedInCommunity,
     },
-    { key: 'agents' as TabKey, label: t('pages.gameDetail.tabs.agents') },
+    { key: 'chat' as TabKey, label: t('pages.gameDetail.tabs.chat') },
     { key: 'documents' as TabKey, label: t('pages.gameDetail.tabs.documents') },
   ];
 }
@@ -196,29 +190,6 @@ function buildStatsKpiCards(
       icon: '📅',
     },
   ];
-}
-
-// ─── AgentsQuery → AgentsState mapping ─────────────────────────────────────
-
-function deriveAgentsState(
-  agentsQuery: ReturnType<typeof useGameAgents>,
-  onRetry: () => void,
-  onCreateAgent: () => void
-): AgentsState {
-  if (agentsQuery.isLoading) return { kind: 'loading' };
-  if (agentsQuery.isError) return { kind: 'error', retry: onRetry };
-  if (!agentsQuery.data || agentsQuery.data.length === 0) {
-    return { kind: 'empty', ctaCreate: onCreateAgent };
-  }
-  const agents: GameDetailAgentEntry[] = agentsQuery.data.map(a => ({
-    id: a.id,
-    name: a.name,
-    model: a.type ?? null,
-    kbCount: 0,
-    invocations: a.invocationCount,
-    isActive: a.isActive,
-  }));
-  return { kind: 'success', agents };
 }
 
 // ─── Shells ────────────────────────────────────────────────────────────────
@@ -418,20 +389,9 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
   const addToLibrary = useAddGameToLibrary();
 
   // ── Sub-hook (Phase 0.5 sez. 2.2 — lazy, gated by parent + tab) ─────────
-  // ⚠️ CRITICAL: enabled MUST be: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents'
-  // Cell 4 guard: even if isSuccess=true and tab='agents', do NOT fetch agents
-  // when detail=null (game not found in library). Without this, the agents
-  // sub-hook would fire a real network request for a non-existent game.
-  // NOTE: data != null check is NOT the PR #697 fixture-bypass anti-pattern —
-  // that anti-pattern concerned bypassing real queries with fixture data. This
-  // is a legitimate guard against Cell 4 race (isSuccess=true, data=null).
-  const agentsQuery = useGameAgents({
-    gameId,
-    // Cell 4 guard: even if isSuccess=true and tab='agents', do NOT fetch agents
-    // when detail=null (game not found in library). Without this, the agents
-    // sub-hook would fire a real network request for a non-existent game.
-    enabled: !!gameId && detailQuery.isSuccess && detailQuery.data != null && tab === 'agents',
-  });
+  // Issue #4138: la sub-query useGameAgents e il suo lazy-gating su tab==='agents'
+  // escono con la lista agenti. La tab e' ora 'chat' e porta solo l'anteprima
+  // della conversazione, che non ha bisogno di sapere quali agenti esistono.
 
   // Documents tab KB list (#2309 DEC-A + DEC-B).
   // `LibraryGameDetail` does not carry the published KB list; `SharedGameDetail`
@@ -590,25 +550,6 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     favoriteAriaLabel: t('pages.gameDetail.hero.favoriteAriaLabel'),
   };
 
-  // Note: openAriaLabel / indexedLabel / invocationsLabel are used by GameDetailAgentsList
-  // via .replace('{name}', ...) / .replace('{count}', ...). We pass raw template strings
-  // rather than passing through t() which would try to ICU-format missing variables.
-  const agentsLabels = {
-    title: t('pages.gameDetail.agents.title'),
-    subtitle: t('pages.gameDetail.agents.subtitle'),
-    loadingLabel: t('pages.gameDetail.states.loading.ariaLabel'),
-    errorLabel: t('pages.gameDetail.states.error.title'),
-    errorSubtitle: t('pages.gameDetail.states.error.subtitle'),
-    retryLabel: t('pages.gameDetail.states.error.cta'),
-    empty: t('pages.gameDetail.agents.empty'),
-    emptySubtitle: t('pages.gameDetail.agents.emptySubtitle'),
-    createCta: t('pages.gameDetail.agents.createCta'),
-    // Template strings: component calls .replace('{name}', agentName) / .replace('{count}', n)
-    openAriaLabel: 'Apri agente {name}',
-    indexedLabel: '{count} KB indicizzati',
-    invocationsLabel: '{count} invocazioni',
-  };
-
   const faqLabels = {
     title: t('pages.gameDetail.faqs.title'),
     subtitle: t('pages.gameDetail.faqs.subtitle'),
@@ -708,12 +649,6 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
       }
     );
   };
-
-  const agentsState: AgentsState = deriveAgentsState(
-    agentsQuery,
-    () => agentsQuery.refetch(),
-    () => router.push('/agents/new')
-  );
 
   // #4084: real data, honest empty state. `rulesQuery.data` is `undefined` while the
   // tab-gated query hasn't fired or hasn't resolved yet — `mapRuleSpecsToSections`
@@ -884,16 +819,17 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
           )}
         </div>
 
-        {/* Agents tab — FSM cells 5-9 */}
+        {/* Chat tab — Issue #4138: era la tab Agents. La lista agenti e' uscita
+            con il concetto di agente per gioco; resta l'anteprima della chat,
+            che era il suo valore. */}
         <div
           role="tabpanel"
-          id={panelIdFor('agents')}
-          aria-labelledby={tabIdFor('agents')}
-          hidden={tab !== 'agents'}
-          data-slot="game-detail-panel-agents"
+          id={panelIdFor('chat')}
+          aria-labelledby={tabIdFor('chat')}
+          hidden={tab !== 'chat'}
+          data-slot="game-detail-panel-chat"
         >
           <div className="flex flex-col gap-6">
-            <GameDetailAgentsList state={agentsState} labels={agentsLabels} />
             {/* Inline chat preview (#1471) — `messages={[]}` stays empty for now: this
                 is the catalogue preview, not a live thread; full chat lives at
                 /library/{id}/agent. Block A of #2289 / #2247 wires the

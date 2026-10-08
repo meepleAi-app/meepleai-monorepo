@@ -10,9 +10,8 @@
  *   - react-intl IntlProvider with minimal MESSAGES subset
  *   - searchParamsState mutable object for URL override simulation
  *
- * CRITICAL assertion (contract sez. 5.2):
- *   Every test verifies that useGameAgents was called with a non-empty, non-'undefined'
- *   gameId whenever it was called at all. This is enforced via the spy on the mock.
+ * Issue #4138: le celle FSM 6-9 verificavano il lazy-gating della sub-query
+ * useGameAgents, uscita con la lista agenti. La tab e' ora 'chat'.
  */
 
 import { render, screen, fireEvent, act } from '@testing-library/react';
@@ -70,33 +69,6 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
     data: undefined,
     reset: vi.fn(),
   }),
-}));
-
-// ─── useGameAgents mock ───────────────────────────────────────────────────
-
-type MockAgentsReturn = {
-  data?: import('@/lib/api/schemas').AgentDto[];
-  isLoading: boolean;
-  isError: boolean;
-  isSuccess: boolean;
-  fetchStatus: string;
-  refetch: Mock;
-};
-
-const agentsMockState: MockAgentsReturn = {
-  data: undefined,
-  isLoading: false,
-  isError: false,
-  isSuccess: false,
-  fetchStatus: 'idle',
-  refetch: vi.fn(),
-};
-
-// Spy captures ALL calls — we assert gameId is never 'undefined' or ''
-const useGameAgentsSpy = vi.fn<[{ gameId: string | null; enabled?: boolean }], MockAgentsReturn>();
-
-vi.mock('@/hooks/queries/useGameAgents', () => ({
-  useGameAgents: (opts: { gameId: string | null; enabled?: boolean }) => useGameAgentsSpy(opts),
 }));
 
 // #2309 — Documents tab uses lazy useSharedGameDetail. Default: empty kbs list,
@@ -211,7 +183,7 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.tabs.faqs': 'FAQ',
   'pages.gameDetail.tabs.sessions': 'Sessioni',
   'pages.gameDetail.tabs.stats': 'Statistiche',
-  'pages.gameDetail.tabs.agents': 'Agenti',
+  'pages.gameDetail.tabs.chat': 'Chat AI',
   'pages.gameDetail.tabs.documents': 'Documenti',
   'pages.gameDetail.states.loading.ariaLabel': 'Caricamento gioco',
   'pages.gameDetail.states.notFound.title': 'Gioco non trovato',
@@ -402,27 +374,6 @@ function makeAgent(
 
 // ─── CRITICAL: assert agents mock never received bad gameId ──────────────
 
-/**
- * Asserts that in ALL calls to useGameAgents where enabled===true,
- * the gameId was never 'undefined' (string) or '' (empty string).
- *
- * This is the contract-enforcing assertion from Phase 0.5 sez. 5.2.
- */
-function assertAgentsNeverCalledWithBadGameId() {
-  for (const call of useGameAgentsSpy.mock.calls) {
-    const opts = call[0];
-    if (opts.enabled) {
-      expect(opts.gameId, 'useGameAgents called with enabled=true but gameId is bad').not.toBe(
-        'undefined'
-      );
-      expect(opts.gameId, 'useGameAgents called with enabled=true but gameId is empty').not.toBe(
-        ''
-      );
-      expect(opts.gameId).not.toBeNull();
-    }
-  }
-}
-
 // ─── Setup & teardown ─────────────────────────────────────────────────────
 
 import { GameDetailView } from '../GameDetailView';
@@ -438,15 +389,6 @@ function resetAll() {
   detailMockState.isSuccess = false;
   detailMockState.refetch = vi.fn();
   useLibraryGameDetailSpy.mockImplementation(() => ({ ...detailMockState }));
-
-  // Reset agents mock to default (disabled/idle)
-  agentsMockState.data = undefined;
-  agentsMockState.isLoading = false;
-  agentsMockState.isError = false;
-  agentsMockState.isSuccess = false;
-  agentsMockState.fetchStatus = 'idle';
-  agentsMockState.refetch = vi.fn();
-  useGameAgentsSpy.mockImplementation(() => ({ ...agentsMockState }));
 
   // Reset fixture flags
   mockIsVisualTestBuild = false;
@@ -472,13 +414,6 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     expect(screen.getByTestId !== undefined, 'RTL available').toBe(true);
     expect(screen.getByRole('heading', { name: /gioco non trovato/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /Wingspan/i })).not.toBeInTheDocument();
-
-    // Agents query must never have been called with enabled=true when gameId is null
-    assertAgentsNeverCalledWithBadGameId();
-
-    // All enabled=false calls must have gameId=null (correct gate)
-    const enabledTrueCalls = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(enabledTrueCalls).toHaveLength(0);
   });
 
   // ─── Cell 2: detail loading → loading shell, agents NOT enabled ─────────
@@ -497,12 +432,6 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     const loadingEl = document.querySelector('[data-slot="game-detail-loading"]');
     expect(loadingEl).toBeInTheDocument();
     expect(loadingEl).toHaveAttribute('aria-busy', 'true');
-
-    // agents query must NOT be enabled (isSuccess=false blocks it)
-    const enabledCalls = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(enabledCalls).toHaveLength(0);
-
-    assertAgentsNeverCalledWithBadGameId();
   });
 
   // ─── Cell 3: detail error → error shell, retry CTA wired ──────────────
@@ -525,12 +454,6 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     // Click retry → refetch called
     fireEvent.click(retryCta!);
     expect(refetch).toHaveBeenCalledTimes(1);
-
-    // Agents query must NOT be enabled
-    const enabledCalls = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(enabledCalls).toHaveLength(0);
-
-    assertAgentsNeverCalledWithBadGameId();
   });
 
   // ─── Cell 4: detail success(null) → not-found shell ──────────────────
@@ -549,45 +472,9 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     expect(screen.getByRole('heading', { name: /gioco non trovato/i })).toBeInTheDocument();
     const notFoundEl = document.querySelector('[data-slot="game-detail-not-found"]');
     expect(notFoundEl).toBeInTheDocument();
-
-    // Agents still NOT enabled (isSuccess=true but hasData=false → 'not-found' FSM → no default render)
-    const enabledCalls = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(enabledCalls).toHaveLength(0);
-
-    assertAgentsNeverCalledWithBadGameId();
   });
 
-  // ─── Cell 4 + tab=agents: success(null) must NOT enable agents fetch ────────
-  it('Cell 4 + tab=agents: success(null) + tab=agents does NOT fetch agents (data guard)', async () => {
-    // Setup: detailQuery returns success(null) — game not found in library (Cell 4)
-    useLibraryGameDetailSpy.mockImplementation(() => ({
-      data: null,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    }));
-    useGameAgentsSpy.mockImplementation(() => ({ ...agentsMockState }));
-
-    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
-
-    // FSM derives 'not-found' from data=null → not-found shell rendered
-    expect(document.querySelector('[data-slot="game-detail-not-found"]')).toBeInTheDocument();
-
-    // CRITICAL: enabled MUST be false for ALL calls to useGameAgents.
-    // isSuccess=true but data=null → data != null guard prevents agents fetch.
-    // The not-found shell never renders tabs, so tab can never change to 'agents',
-    // but the gate must also hold at the hook level (data != null check).
-    const enabledCalls = useGameAgentsSpy.mock.calls.filter(([opts]) => opts.enabled === true);
-    expect(enabledCalls).toHaveLength(0);
-
-    // Contract: agents must never be called with enabled=true and valid gameId
-    // when detail data is null (Cell 4 — game not found).
-    assertAgentsNeverCalledWithBadGameId();
-  });
-
-  // ─── Cell 5: detail success + tab='info' → default render, agents NOT enabled ─
-  it('Cell 5: detail success + tab=info → default render, agents NOT enabled', () => {
+  it('Cell 5: detail success + tab=info → default render, chat panel hidden', () => {
     useLibraryGameDetailSpy.mockImplementation(() => ({
       data: makeDetail(),
       isLoading: false,
@@ -614,183 +501,13 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     const specsCard = document.querySelector('[data-slot="game-detail-specs-card"]');
     expect(specsCard).toBeInTheDocument();
 
-    // Agents panel hidden (tab=info)
-    const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');
-    expect(agentsPanel).toBeInTheDocument();
-    expect(agentsPanel).toHaveAttribute('hidden');
-
-    // useGameAgents NOT enabled (tab !== 'agents')
-    const enabledCalls = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(enabledCalls).toHaveLength(0);
-
-    assertAgentsNeverCalledWithBadGameId();
+    // Issue #4138: il pannello della tab e' ora 'chat' e non porta piu` la lista
+    // agenti. Resta nascosto con tab=info.
+    const chatPanel = document.querySelector('[data-slot="game-detail-panel-chat"]');
+    expect(chatPanel).toBeInTheDocument();
+    expect(chatPanel).toHaveAttribute('hidden');
   });
 
-  // ─── Cell 5→6 transition: tab change info→agents fires agents fetch ─────
-  it('Cell 5→6: tab change info→agents fires agents query (lazy, NOT eager)', () => {
-    useLibraryGameDetailSpy.mockImplementation(() => ({
-      data: makeDetail(),
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    }));
-    useGameAgentsSpy.mockImplementation(opts => ({
-      ...agentsMockState,
-      isLoading: opts.enabled ? true : false,
-    }));
-
-    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
-
-    // Before tab change: agents NOT enabled
-    const callsBeforeTabChange = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(callsBeforeTabChange).toHaveLength(0);
-
-    // Click agents tab
-    const agentsTab = document.querySelector('[data-tab-key="agents"]');
-    expect(agentsTab).toBeInTheDocument();
-    act(() => {
-      fireEvent.click(agentsTab!);
-    });
-
-    // After tab change: useGameAgents called with enabled=true and valid gameId
-    const callsAfterTabChange = useGameAgentsSpy.mock.calls.filter(c => c[0].enabled === true);
-    expect(callsAfterTabChange.length).toBeGreaterThan(0);
-    expect(callsAfterTabChange[0][0].gameId).toBe(VALID_GAME_ID);
-
-    assertAgentsNeverCalledWithBadGameId();
-  });
-
-  // ─── Cell 6: agents loading → inline skeleton (NOT shell skeleton) ───────
-  it('Cell 6: agents loading → inline skeleton in tab content (NOT full-page shell)', () => {
-    useLibraryGameDetailSpy.mockImplementation(() => ({
-      data: makeDetail(),
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    }));
-    useGameAgentsSpy.mockImplementation(() => ({
-      ...agentsMockState,
-      isLoading: true,
-      fetchStatus: 'fetching',
-    }));
-
-    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
-
-    // Click agents tab to trigger render
-    act(() => {
-      fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
-    });
-
-    // Hero still present (no shell replace)
-    expect(document.querySelector('[data-slot="game-detail-hero"]')).toBeInTheDocument();
-
-    // Agents loading skeleton inside tab (not full page loading shell)
-    expect(document.querySelector('[data-slot="game-detail-loading"]')).not.toBeInTheDocument();
-    expect(document.querySelector('[data-slot="game-detail-agents-loading"]')).toBeInTheDocument();
-
-    assertAgentsNeverCalledWithBadGameId();
-  });
-
-  // ─── Cell 7: agents error → inline banner, NO shell error ──────────────
-  it('Cell 7: agents error → inline error banner, full page still renders', () => {
-    const agentsRefetch = vi.fn();
-    useLibraryGameDetailSpy.mockImplementation(() => ({
-      data: makeDetail(),
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    }));
-    useGameAgentsSpy.mockImplementation(() => ({
-      ...agentsMockState,
-      isError: true,
-      refetch: agentsRefetch,
-    }));
-
-    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
-
-    // Click agents tab
-    act(() => {
-      fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
-    });
-
-    // Hero still present — global error shell NOT triggered
-    expect(document.querySelector('[data-slot="game-detail-hero"]')).toBeInTheDocument();
-    expect(document.querySelector('[data-slot="game-detail-error"]')).not.toBeInTheDocument();
-
-    // Inline agents error banner
-    const agentsError = document.querySelector('[data-slot="game-detail-agents-error"]');
-    expect(agentsError).toBeInTheDocument();
-
-    // Retry button in agents panel calls agents refetch (not detail refetch)
-    const retryBtn = document.querySelector('[data-slot="game-detail-agents-retry"]');
-    expect(retryBtn).toBeInTheDocument();
-    fireEvent.click(retryBtn!);
-    expect(agentsRefetch).toHaveBeenCalledTimes(1);
-
-    assertAgentsNeverCalledWithBadGameId();
-  });
-
-  // ─── Cell 8: agents success([]) → empty state CTA ──────────────────────
-  it('Cell 8: agents success([]) → empty state CTA in agents tab', () => {
-    useLibraryGameDetailSpy.mockImplementation(() => ({
-      data: makeDetail(),
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    }));
-    useGameAgentsSpy.mockImplementation(() => ({
-      ...agentsMockState,
-      data: [],
-      isSuccess: true,
-    }));
-
-    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
-
-    act(() => {
-      fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
-    });
-
-    const agentsEmpty = document.querySelector('[data-slot="game-detail-agents-empty"]');
-    expect(agentsEmpty).toBeInTheDocument();
-    // CTA to create agent (data-slot="game-detail-agents-create")
-    expect(document.querySelector('[data-slot="game-detail-agents-create"]')).toBeInTheDocument();
-
-    assertAgentsNeverCalledWithBadGameId();
-  });
-
-  // ─── Cell 9: agents success([...]) → grid populated ────────────────────
-  it('Cell 9: agents success([agent]) → grid row rendered', () => {
-    useLibraryGameDetailSpy.mockImplementation(() => ({
-      data: makeDetail(),
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    }));
-    useGameAgentsSpy.mockImplementation(() => ({
-      ...agentsMockState,
-      data: [makeAgent({ name: 'Wingspan AI', id: 'ag-test-1' })],
-      isSuccess: true,
-    }));
-
-    renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
-
-    act(() => {
-      fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
-    });
-
-    const agentRows = document.querySelectorAll('[data-slot="game-detail-agent-row"]');
-    expect(agentRows).toHaveLength(1);
-    expect(agentRows[0]).toHaveAttribute('data-agent-id', 'ag-test-1');
-
-    assertAgentsNeverCalledWithBadGameId();
-  });
-
-  // ─── ?state=loading URL override ─────────────────────────────────────────
   it('?state=loading URL override → loading shell regardless of real query state', () => {
     searchParamsState.value = 'loading';
     useLibraryGameDetailSpy.mockImplementation(() => ({
@@ -874,38 +591,6 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     expect(document.querySelector('[data-slot="game-detail-loading"]')).not.toBeInTheDocument();
   });
 
-  // ─── CRITICAL: agents handler NEVER receives 'undefined' or '' ──────────
-  it('CRITICAL: useGameAgents never called with undefined or empty string gameId', () => {
-    // Test with multiple states to ensure the contract is never violated
-    const cases: Array<{ gameId: string | null; detailSuccess: boolean }> = [
-      { gameId: null, detailSuccess: false },
-      { gameId: VALID_GAME_ID, detailSuccess: false },
-      { gameId: VALID_GAME_ID, detailSuccess: true },
-    ];
-
-    for (const { gameId, detailSuccess } of cases) {
-      resetAll();
-      useLibraryGameDetailSpy.mockImplementation(() => ({
-        data: detailSuccess ? makeDetail() : null,
-        isLoading: false,
-        isError: false,
-        isSuccess: detailSuccess,
-        refetch: vi.fn(),
-      }));
-
-      renderWithIntl(<GameDetailView gameId={gameId} />);
-
-      // Never enabled with bad gameId
-      const badCalls = useGameAgentsSpy.mock.calls.filter(
-        c =>
-          c[0].enabled === true &&
-          (c[0].gameId === 'undefined' || c[0].gameId === '' || c[0].gameId === null)
-      );
-      expect(badCalls).toHaveLength(0);
-    }
-  });
-
-  // ─── Tab state preserved across re-renders ───────────────────────────────
   it('Tab state preserved across re-renders (no reset on detail refetch)', () => {
     const detailState = {
       data: makeDetail(),
@@ -915,22 +600,17 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
       refetch: vi.fn(),
     };
     useLibraryGameDetailSpy.mockImplementation(() => ({ ...detailState }));
-    useGameAgentsSpy.mockImplementation(() => ({
-      ...agentsMockState,
-      data: [],
-      isSuccess: true,
-    }));
 
     const { rerender } = renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
-    // Click agents tab
+    // Click the chat tab
     act(() => {
-      fireEvent.click(document.querySelector('[data-tab-key="agents"]')!);
+      fireEvent.click(document.querySelector('[data-tab-key="chat"]')!);
     });
 
-    // Verify agents panel is now visible (not hidden)
-    const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');
-    expect(agentsPanel).not.toHaveAttribute('hidden');
+    // Verify the chat panel is now visible (not hidden)
+    const chatPanel = document.querySelector('[data-slot="game-detail-panel-chat"]');
+    expect(chatPanel).not.toHaveAttribute('hidden');
 
     // Re-render (simulating detail refetch completing)
     rerender(
@@ -939,13 +619,11 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
       </IntlProvider>
     );
 
-    // Tab state still on agents (preserved)
-    const agentsPanelAfterRerender = document.querySelector(
-      '[data-slot="game-detail-panel-agents"]'
-    );
-    expect(agentsPanelAfterRerender).not.toHaveAttribute('hidden');
+    // Tab state still on chat (preserved)
+    const chatPanelAfterRerender = document.querySelector('[data-slot="game-detail-panel-chat"]');
+    expect(chatPanelAfterRerender).not.toHaveAttribute('hidden');
 
-    // Info panel hidden (tab was changed to agents)
+    // Info panel hidden (tab was changed to chat)
     const infoPanelAfterRerender = document.querySelector('[data-slot="game-detail-panel-info"]');
     expect(infoPanelAfterRerender).toHaveAttribute('hidden');
   });
@@ -1198,17 +876,19 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     ).toBeInTheDocument();
   });
 
-  // ─── Issue #1471 — Chat preview in Agents panel regression guard ─────────
+  // ─── Issue #1471 — Chat preview in the chat panel, regression guard ───
 
-  it('Issue #1471: Agents panel contains GameDetailChatTab inline preview', () => {
+  it('Issue #1471: chat panel contains GameDetailChatTab inline preview', () => {
     detailMockState.data = makeDetail(); // own variant
     detailMockState.isSuccess = true;
     useLibraryGameDetailSpy.mockReturnValue(detailMockState);
 
     renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
 
-    const agentsPanel = document.querySelector('[data-slot="game-detail-panel-agents"]');
-    expect(agentsPanel).toBeInTheDocument();
-    expect(agentsPanel?.querySelector('[data-slot="game-detail-chat-tab"]')).toBeInTheDocument();
+    const chatPanel = document.querySelector('[data-slot="game-detail-panel-chat"]');
+    expect(chatPanel).toBeInTheDocument();
+    expect(chatPanel?.querySelector('[data-slot="game-detail-chat-tab"]')).toBeInTheDocument();
+    // Issue #4138: e la lista agenti NON c'e' piu`.
+    expect(document.querySelector('[data-slot="game-detail-agents-list"]')).not.toBeInTheDocument();
   });
 });

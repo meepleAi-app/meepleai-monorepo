@@ -46,15 +46,17 @@ describe('buildGameManaPips', () => {
     const actions: GameManaPipsActions = {
       onCreateSession: () => {},
       onCreateKb: () => {},
-      onCreateAgent: () => {},
     };
     const pips = buildGameManaPips(makeData(), actions);
     expect(pips[0].onCreate).toBe(actions.onCreateSession);
     expect(pips[0].createLabel).toBe('Nuova sessione');
     expect(pips[1].onCreate).toBe(actions.onCreateKb);
     expect(pips[1].createLabel).toBe('Carica PDF');
-    expect(pips[2].onCreate).toBe(actions.onCreateAgent);
-    expect(pips[2].createLabel).toBe('Crea agente');
+    // Issue #4138: the agent pip no longer offers a create action — the agent
+    // is system-wide, so there is nothing per-game to create. The pip itself
+    // stays (it still reports how many agents answer for this game).
+    expect(pips[2].onCreate).toBeUndefined();
+    expect(pips[2].createLabel).toBeUndefined();
   });
 
   // ========== KB Color Override Tests ==========

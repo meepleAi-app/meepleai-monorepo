@@ -201,30 +201,9 @@ function DetailsTab({ data }: { data: SharedGameDetailData }) {
         </div>
       )}
       {data.description && (
-        <p className="font-nunito text-xs text-muted-foreground leading-relaxed">{data.description}</p>
-      )}
-      {data.linkedAgent && (
-        <div className="flex items-center gap-2 rounded-lg bg-amber-50/50 border border-amber-200/40 p-3">
-          <Bot className="h-4 w-4 text-amber-600" />
-          <div className="flex-1 min-w-0">
-            <p className="font-nunito text-[10px] text-amber-500 uppercase tracking-wider">
-              Agente Collegato
-            </p>
-            <p className="font-quicksand text-sm font-bold text-amber-700 truncate">
-              {data.linkedAgent.name}
-            </p>
-          </div>
-          <span
-            className={cn(
-              'rounded-full px-2 py-0.5 text-[9px] font-bold font-nunito',
-              data.linkedAgent.isActive
-                ? 'bg-green-100 text-green-700'
-                : 'bg-muted text-muted-foreground'
-            )}
-          >
-            {data.linkedAgent.isActive ? 'Attivo' : 'Inattivo'}
-          </span>
-        </div>
+        <p className="font-nunito text-xs text-muted-foreground leading-relaxed">
+          {data.description}
+        </p>
       )}
     </div>
   );

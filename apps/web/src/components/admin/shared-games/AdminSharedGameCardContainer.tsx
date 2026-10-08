@@ -70,13 +70,6 @@ export function AdminSharedGameCardContainer({
     refetchInterval: 5000,
   });
 
-  // ── Linked Agent ──────────────────────────────────────────────────────────
-  const { data: agent } = useQuery({
-    queryKey: ['admin-shared-game-card-agent', gameId],
-    queryFn: () => api.sharedGames.getLinkedAgent(gameId),
-    enabled: !!gameId,
-  });
-
   // ── Assemble view model ───────────────────────────────────────────────────
   const detailData: SharedGameDetailData | null = game
     ? {
@@ -114,7 +107,6 @@ export function AdminSharedGameCardContainer({
           version: card.version,
           isActive: card.isActive,
         })),
-        linkedAgent: agent ? { id: agent.id, name: agent.name, isActive: agent.isActive } : null,
       }
     : null;
 
@@ -163,7 +155,7 @@ export function AdminSharedGameCardContainer({
           }}
           onSuccess={() => {
             void queryClient.invalidateQueries({
-              queryKey: ['admin-shared-game-card-agent', gameId],
+              queryKey: ['admin-shared-game-card-kb', gameId],
             });
           }}
         />

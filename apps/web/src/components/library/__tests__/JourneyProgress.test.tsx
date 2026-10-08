@@ -29,15 +29,11 @@ vi.mock('@/hooks/queries/usePdfProcessingStatus', () => ({
   usePdfProcessingStatus: vi.fn(),
 }));
 
-vi.mock('@/hooks/queries/useGameAgents', () => ({
-  useGameAgents: vi.fn(),
-}));
-
 vi.mock('@/hooks/queries/useChatSessions', () => ({
   useRecentChatSessions: vi.fn(),
 }));
 
-vi.mock('@tanstack/react-query', async (importOriginal) => {
+vi.mock('@tanstack/react-query', async importOriginal => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>();
   return {
     ...actual,
@@ -54,13 +50,12 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { usePdfProcessingStatus } = await import('@/hooks/queries/usePdfProcessingStatus') as any;
+const { usePdfProcessingStatus } = (await import('@/hooks/queries/usePdfProcessingStatus')) as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { useGameAgents } = await import('@/hooks/queries/useGameAgents') as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { useRecentChatSessions } = await import('@/hooks/queries/useChatSessions') as any;
+const { useRecentChatSessions } = (await import('@/hooks/queries/useChatSessions')) as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const { useQuery } = await import('@tanstack/react-query') as any;
+const { useQuery } = (await import('@tanstack/react-query')) as any;
 
 // ============================================================================
 // Helpers
@@ -71,7 +66,6 @@ function mockAllHooks({
   pdfStatus = undefined as { status: string; progress?: number | null } | undefined,
   pdfError = false,
   pdfLoading = false,
-  agentsCount = 0,
   chatGameIds = [] as string[],
 } = {}) {
   useQuery.mockReturnValue({
@@ -85,9 +79,7 @@ function mockAllHooks({
     isError: pdfError,
   });
 
-  useGameAgents.mockReturnValue({
-    data: Array.from({ length: agentsCount }, (_, i) => ({ id: `agent-${i}` })),
-  });
+  // Issue #4138: il mock di useGameAgents e' uscito con il passo "crea agente".
 
   useRecentChatSessions.mockReturnValue({
     data: {
@@ -131,7 +123,10 @@ describe('JourneyProgress', () => {
       expect(screen.getByTestId('journey-progress')).toBeInTheDocument();
     });
 
-    it('shows all 5 steps', () => {
+    // Issue #4138: quattro passi, non cinque. Il passo "crea agente" e' uscito —
+    // l'agente e' unico e di sistema — e il percorso va da KB pronta alla chat.
+    // La sua assenza e' asserita, cosi' un ritorno fa rosso.
+    it('shows the four steps, without a create-agent step', () => {
       mockAllHooks();
 
       render(<JourneyProgress />);
@@ -139,8 +134,8 @@ describe('JourneyProgress', () => {
       expect(screen.getByTestId('journey-step-create-game')).toBeInTheDocument();
       expect(screen.getByTestId('journey-step-upload-pdf')).toBeInTheDocument();
       expect(screen.getByTestId('journey-step-kb-ready')).toBeInTheDocument();
-      expect(screen.getByTestId('journey-step-create-agent')).toBeInTheDocument();
       expect(screen.getByTestId('journey-step-chat')).toBeInTheDocument();
+      expect(screen.queryByTestId('journey-step-create-agent')).not.toBeInTheDocument();
     });
 
     it('hides when already dismissed (localStorage=true)', () => {
@@ -303,14 +298,9 @@ describe('JourneyProgress', () => {
 
       render(<JourneyProgress gameId="game-1" />);
 
-      expect(screen.getByTestId('journey-step-kb-ready')).toHaveAttribute(
-        'data-status',
-        'active'
-      );
+      expect(screen.getByTestId('journey-step-kb-ready')).toHaveAttribute('data-status', 'active');
 
-      expect(
-        screen.getByTestId('journey-step-detail-kb-ready')
-      ).toHaveTextContent('68%');
+      expect(screen.getByTestId('journey-step-detail-kb-ready')).toHaveTextContent('68%');
     });
 
     it('step 3 is "active" when processing with null progress', () => {
@@ -344,63 +334,26 @@ describe('JourneyProgress', () => {
 
       render(<JourneyProgress gameId="game-1" />);
 
-      expect(
-        screen.queryByTestId('journey-step-detail-kb-ready')
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('journey-step-detail-kb-ready')).not.toBeInTheDocument();
     });
   });
 
-  describe('Step 4: Crea agente', () => {
-    it('step 4 is "active" when KB is indexed but no agents', () => {
+  describe('Step 4: Chat', () => {
+    it('step 4 is "active" when agent exists but no chats', () => {
       mockAllHooks({
         pdfStatus: { status: 'indexed' },
-        agentsCount: 0,
-      });
-
-      render(<JourneyProgress gameId="game-1" />);
-
-      expect(screen.getByTestId('journey-step-create-agent')).toHaveAttribute(
-        'data-status',
-        'active'
-      );
-    });
-
-    it('step 4 is "completed" when agent exists', () => {
-      mockAllHooks({
-        pdfStatus: { status: 'indexed' },
-        agentsCount: 1,
-      });
-
-      render(<JourneyProgress gameId="game-1" />);
-
-      expect(screen.getByTestId('journey-step-create-agent')).toHaveAttribute(
-        'data-status',
-        'completed'
-      );
-    });
-  });
-
-  describe('Step 5: Chat', () => {
-    it('step 5 is "active" when agent exists but no chats', () => {
-      mockAllHooks({
-        pdfStatus: { status: 'indexed' },
-        agentsCount: 1,
         chatGameIds: [],
       });
 
       render(<JourneyProgress gameId="game-1" />);
 
-      expect(screen.getByTestId('journey-step-chat')).toHaveAttribute(
-        'data-status',
-        'active'
-      );
+      expect(screen.getByTestId('journey-step-chat')).toHaveAttribute('data-status', 'active');
     });
 
-    it('auto-dismisses when step 5 (chat) is also completed (all steps done)', async () => {
-      // When all 5 steps are complete, component auto-dismisses
+    it('auto-dismisses when step 4 (chat) is also completed (all steps done)', async () => {
+      // When all 4 steps are complete, component auto-dismisses
       mockAllHooks({
         pdfStatus: { status: 'indexed' },
-        agentsCount: 1,
         chatGameIds: ['game-1'],
       });
 
@@ -411,20 +364,16 @@ describe('JourneyProgress', () => {
       });
     });
 
-    it('step 5 is not completed by chat sessions for OTHER games', () => {
+    it('step 4 is not completed by chat sessions for OTHER games', () => {
       mockAllHooks({
         pdfStatus: { status: 'indexed' },
-        agentsCount: 1,
         chatGameIds: ['other-game-id'],
       });
 
       render(<JourneyProgress gameId="game-1" />);
 
       // step 5 should be active (agent exists) not completed
-      expect(screen.getByTestId('journey-step-chat')).toHaveAttribute(
-        'data-status',
-        'active'
-      );
+      expect(screen.getByTestId('journey-step-chat')).toHaveAttribute('data-status', 'active');
     });
   });
 
@@ -433,7 +382,6 @@ describe('JourneyProgress', () => {
       mockAllHooks({
         privateGamesCount: 1,
         pdfStatus: { status: 'indexed' },
-        agentsCount: 1,
         chatGameIds: ['game-1'],
       });
 
@@ -448,7 +396,6 @@ describe('JourneyProgress', () => {
       mockAllHooks({
         privateGamesCount: 1,
         pdfStatus: { status: 'indexed' },
-        agentsCount: 1,
         chatGameIds: ['game-1'],
       });
 
@@ -485,9 +432,7 @@ describe('JourneyProgress', () => {
 
       render(<JourneyProgress />);
 
-      expect(
-        screen.getByRole('button', { name: /Chiudi percorso/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Chiudi percorso/i })).toBeInTheDocument();
     });
   });
 });

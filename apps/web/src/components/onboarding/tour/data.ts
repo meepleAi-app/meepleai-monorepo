@@ -143,12 +143,14 @@ export const ACTIONS: readonly TourAction[] = [
     href: '/library',
   },
   {
+    // Issue #4138: pointed at the retired /agents section. The chat itself is
+    // where a question gets asked, so the step now lands there.
     id: 'chat',
     emoji: '💬',
-    title: 'Chatta con un agente',
+    title: 'Chatta con l’AI',
     desc: 'Prova una domanda',
     entity: 'agent',
-    href: '/agents',
+    href: '/chat',
   },
 ] as const;
 

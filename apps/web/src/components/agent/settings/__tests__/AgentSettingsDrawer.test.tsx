@@ -8,7 +8,7 @@
  * - Premium tier shows all models
  * - Cost estimate displays for paid models
  * - Apply calls PATCH /api/v1/agents/{id}/configuration
- * - Name field present and editable
+ * - Name shown read-only (#4138: shared agent, renaming it would rename it for everyone)
  * - Reset restores defaults
  * - Cancel closes drawer
  */
@@ -96,13 +96,10 @@ vi.mock('@/hooks/queries/useModels', () => ({
   useUpdateAgentConfiguration: vi.fn(),
 }));
 
-vi.mock('@/lib/api', () => ({
-  api: {
-    agents: {
-      updateUserAgent: vi.fn().mockResolvedValue({ id: 'agent-123', name: 'Test' }),
-    },
-  },
-}));
+// Issue #4138: no `@/lib/api` mock here any more. The drawer used to call
+// api.agents.updateUserAgent to rename the agent; it no longer touches that
+// client at all, so leaving the module unmocked means any regression that
+// reintroduces the call fails loudly instead of being absorbed by a stub.
 
 // Import mocked modules for dynamic control
 import {
@@ -139,7 +136,6 @@ const defaultProps = {
   agentName: 'Test Agent',
   userTier: 'free',
   onConfigUpdated: vi.fn(),
-  onNameUpdated: vi.fn(),
 };
 
 function setupMocks(options?: {
@@ -230,11 +226,10 @@ describe('AgentSettingsDrawer', () => {
       expect(maxTokensInput).toBeInTheDocument();
     });
 
-    it('should render agent name input', () => {
+    it('should render the agent name read-only', () => {
       render(<AgentSettingsDrawer {...defaultProps} />, { wrapper: createWrapper() });
-      expect(screen.getByText('Nome Agente')).toBeInTheDocument();
-      const nameInput = screen.getByTestId('agent-name-input');
-      expect(nameInput).toHaveValue('Test Agent');
+      expect(screen.getByText('Agente')).toBeInTheDocument();
+      expect(screen.getByTestId('agent-name-readonly')).toHaveTextContent('Test Agent');
     });
 
     it('should render action buttons', () => {
@@ -396,25 +391,34 @@ describe('AgentSettingsDrawer', () => {
     });
   });
 
+  // Issue #4138: the agent is system-wide and admin-managed, so a rename here
+  // would rename it for every user. `should update name field when typing` is
+  // gone with the editable input; the two cases below replace it — the name is
+  // still shown, and it is no longer writable.
   describe('Agent Name', () => {
-    it('should show agent name in input', () => {
+    it('should show the agent name', () => {
       render(<AgentSettingsDrawer {...defaultProps} agentName="My Agent" />, {
         wrapper: createWrapper(),
       });
 
-      const input = screen.getByTestId('agent-name-input');
-      expect(input).toHaveValue('My Agent');
+      expect(screen.getByTestId('agent-name-readonly')).toHaveTextContent('My Agent');
     });
 
-    it('should update name field when typing', async () => {
-      const user = userEvent.setup();
-      render(<AgentSettingsDrawer {...defaultProps} />, { wrapper: createWrapper() });
+    it('should offer no way to edit the name', () => {
+      render(<AgentSettingsDrawer {...defaultProps} agentName="My Agent" />, {
+        wrapper: createWrapper(),
+      });
 
-      const input = screen.getByTestId('agent-name-input');
-      await user.clear(input);
-      await user.type(input, 'New Name');
+      expect(screen.queryByTestId('agent-name-input')).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: /nome/i })).not.toBeInTheDocument();
+    });
 
-      expect(input).toHaveValue('New Name');
+    it('should omit the name block entirely when no name is given', () => {
+      render(<AgentSettingsDrawer {...defaultProps} agentName="" />, {
+        wrapper: createWrapper(),
+      });
+
+      expect(screen.queryByTestId('agent-name-readonly')).not.toBeInTheDocument();
     });
   });
 
@@ -425,7 +429,7 @@ describe('AgentSettingsDrawer', () => {
       expect(screen.getByText('Modello AI')).toBeInTheDocument();
       expect(screen.getByText('Temperatura')).toBeInTheDocument();
       expect(screen.getByText('Max Tokens')).toBeInTheDocument();
-      expect(screen.getByText('Nome Agente')).toBeInTheDocument();
+      expect(screen.getByText('Agente')).toBeInTheDocument();
     });
 
     it('should have proper aria attributes on slider', () => {

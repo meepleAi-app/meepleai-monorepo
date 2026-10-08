@@ -7,11 +7,6 @@ export {
   type PlayerEntry,
 } from './PlayersAvatarList';
 export {
-  AgentsCompactGrid,
-  type AgentsCompactGridProps,
-  type AgentsCompactGridLabels,
-} from './AgentsCompactGrid';
-export {
   SessionsTimeline,
   type SessionsTimelineProps,
   type SessionsTimelineLabels,

@@ -24,7 +24,6 @@ import { matchesRoutePrefix } from './route-matching';
  */
 export const PROTECTED_ROUTES = [
   '/admin',
-  '/agents',
   '/chat',
   '/dashboard',
   '/discover',

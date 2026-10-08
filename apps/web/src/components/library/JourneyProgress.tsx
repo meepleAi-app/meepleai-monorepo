@@ -23,7 +23,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Check, ChevronDown, ChevronUp, Loader2, X } from 'lucide-react';
 
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
-import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { usePdfProcessingStatus } from '@/hooks/queries/usePdfProcessingStatus';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -51,13 +50,6 @@ export interface JourneyProgressProps {
    * When absent, only step 1 is evaluated (no game selected yet).
    */
   gameId?: string;
-  /**
-   * AgentDefinitionId of the private game (from PrivateGameDto).
-   * When explicitly provided (even as null), the agent step is checked via this
-   * field instead of calling useGameAgents (which requires a shared catalog game ID).
-   * Pass `undefined` (default) to keep legacy behaviour for shared catalog games.
-   */
-  agentDefinitionId?: string | null;
   /** Optional CSS class for the container element */
   className?: string;
 }
@@ -72,7 +64,7 @@ const STORAGE_KEY = 'journey-progress-dismissed';
 // Component
 // ============================================================================
 
-export function JourneyProgress({ gameId, agentDefinitionId, className }: JourneyProgressProps) {
+export function JourneyProgress({ gameId, className }: JourneyProgressProps) {
   // ── Dismissal / collapse state ──────────────────────────────────────────
   // Always start as false to avoid SSR hydration mismatch; read from
   // localStorage in useEffect (client-only) after the first render.
@@ -108,15 +100,10 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
     isError: pdfError,
   } = usePdfProcessingStatus(gameId ?? null);
 
-  // Step 4 — agent created
-  // When agentDefinitionId is explicitly provided (private game context), skip the
-  // shared-catalog /games/{id}/agents call (which returns 404 for private game UUIDs)
-  // and derive agent presence directly from the DTO field instead.
-  const useSharedGameAgents = agentDefinitionId === undefined;
-  const { data: agents } = useGameAgents({
-    gameId: gameId ?? null,
-    enabled: !!gameId && useSharedGameAgents,
-  });
+  // Issue #4138: il passo "crea agente" e la query useGameAgents che lo
+  // alimentava sono usciti. L'agente e' unico e di sistema, quindi non c'e'
+  // niente da creare per gioco: il percorso va da KB pronta direttamente alla
+  // chat, come la checklist di attivazione del gioco privato.
 
   // Step 5 — chat threads for this game
   const { data: chatData } = useRecentChatSessions(50);
@@ -134,24 +121,14 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
     const pdfIsIndexed = pdfStatus?.status === 'indexed';
     const pdfIsProcessing = pdfStatus?.status === 'processing' || pdfStatus?.status === 'pending';
 
-    // Step 4: agent configured
-    // For private games: agentDefinitionId prop is explicitly set → use it directly.
-    // For shared catalog games: fall back to agents list from useGameAgents.
-    const hasAgent =
-      !!gameId &&
-      (agentDefinitionId !== undefined
-        ? !!agentDefinitionId // private game: truthy UUID = has agent
-        : (agents?.length ?? 0) > 0); // shared catalog game: check agents list
-
-    // Step 5: at least one chat session exists for this game
+    // Step 4: at least one chat session exists for this game
     const hasChat = !!gameId && (chatData?.sessions ?? []).some(s => s.gameId === gameId);
 
     // --- Build step statuses (completed/active/pending) ---
     const s1 = hasGame;
     const s2 = hasPdf;
     const s3 = pdfIsIndexed;
-    const s4 = hasAgent;
-    const s5 = hasChat;
+    const s4 = hasChat;
 
     // First incomplete step becomes "active"
     function resolveStatus(completed: boolean, prevCompleted: boolean): StepStatus {
@@ -169,7 +146,6 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
       return 'pending';
     })();
     const step4Status = resolveStatus(s4, s3);
-    const step5Status = resolveStatus(s5, s4);
 
     // Inline detail for active KB step
     const kbDetail =
@@ -199,28 +175,13 @@ export function JourneyProgress({ gameId, agentDefinitionId, className }: Journe
         detail: kbDetail,
       },
       {
-        id: 'create-agent',
-        label: 'Crea agente',
-        status: step4Status,
-        href: gameId ? `/library/${gameId}/agent` : undefined,
-      },
-      {
         id: 'chat',
         label: 'Chat',
-        status: step5Status,
-        href: gameId ? `/chat?gameId=${gameId}` : undefined,
+        status: step4Status,
+        href: gameId ? `/library/${gameId}?tab=aiChat` : undefined,
       },
     ];
-  }, [
-    privateGamesData,
-    gameId,
-    agentDefinitionId,
-    pdfStatus,
-    pdfLoading,
-    pdfError,
-    agents,
-    chatData,
-  ]);
+  }, [privateGamesData, gameId, pdfStatus, pdfLoading, pdfError, chatData]);
 
   // ── Journey complete? ──────────────────────────────────────────────────
   const isComplete = steps.every(s => s.status === 'completed');

@@ -47,12 +47,18 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
         string section, JsonElement items, string normalizedSource, List<MechanicValidationViolation> violations)
     {
         var list = items.EnumerateArray().ToList();
-        var kinds = list.Select(i => ReadString(i, "kind")?.Trim().ToLowerInvariant() ?? "rule").ToList();
+        var kinds = list.Select(i => i.ValueKind != JsonValueKind.Object ? "rule" : ReadString(i, "kind")?.Trim().ToLowerInvariant() ?? "rule").ToList();
         var edges = new Dictionary<int, List<int>>();
 
         for (var i = 0; i < list.Count; i++)
         {
             var item = list[i];
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                edges[i] = new List<int>();
+                continue;
+            }
+
             var path = $"$.{section}[{i}]";
             var targets = new List<int>();
             var declaredOverrides = 0;
@@ -62,7 +68,7 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
                 foreach (var el in ov.EnumerateArray())
                 {
                     declaredOverrides++;
-                    if (el.ValueKind != JsonValueKind.Number || !el.TryGetInt32(out var ord) || ord < 0 || ord >= list.Count || ord == i)
+                    if (el.ValueKind != JsonValueKind.Number || !el.TryGetInt32(out var ord) || ord < 0 || ord >= list.Count || ord == i || list[ord].ValueKind != JsonValueKind.Object)
                     {
                         violations.Add(new MechanicValidationViolation("T5_override_missing",
                             $"Override ordinal '{el}' is out of range or refers to the item itself.", path));

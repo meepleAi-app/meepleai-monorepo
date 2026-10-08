@@ -53,7 +53,7 @@ public sealed class RuleStructureGuardrailTests
         ]}
         """;
         var v = await Sut.EvaluateAsync(GuardrailTestContext.Ctx(json), CancellationToken.None);
-        v.Should().ContainSingle(x => x.Rule == "T5_override_cycle");
+        v.Should().ContainSingle(x => x.Rule == "T5_override_cycle" && x.Path == "$.mechanics[1]");
     }
 
     [Fact]
@@ -75,6 +75,22 @@ public sealed class RuleStructureGuardrailTests
         const string json = """{"mechanics":[{"description":"a","kind":"exception","citations":[{"pdf_page":4,"quote":"q"}]}]}""";
         var v = await Sut.EvaluateAsync(GuardrailTestContext.Ctx(json), CancellationToken.None);
         v.Should().ContainSingle(x => x.Rule == "T5_exception_unbound");
+    }
+
+    [Fact]
+    public async Task AllOrdinalsInvalid_ReportsOnlyOverrideMissing()
+    {
+        const string json = """{"mechanics":[{"description":"a","kind":"exception","overrides":[7,9],"citations":[{"pdf_page":4,"quote":"q"}]}]}""";
+        var v = await Sut.EvaluateAsync(GuardrailTestContext.Ctx(json), CancellationToken.None);
+        v.Should().HaveCount(2).And.OnlyContain(x => x.Rule == "T5_override_missing");
+    }
+
+    [Fact]
+    public async Task NonObjectItems_AreIgnoredNotThrown()
+    {
+        const string json = """{"mechanics":["foo",3,null,{"description":"ok","kind":"exception","overrides":[0],"citations":[{"pdf_page":4,"quote":"q"}]}]}""";
+        var v = await Sut.EvaluateAsync(GuardrailTestContext.Ctx(json), CancellationToken.None);
+        v.Should().ContainSingle(x => x.Rule == "T5_override_missing" && x.Path == "$.mechanics[3]");
     }
 
     [Fact]

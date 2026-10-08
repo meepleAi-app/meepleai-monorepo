@@ -34,7 +34,7 @@ Entità `MechanicClaim` (`BoundedContexts/SharedGameCatalog/Domain/Entities/Mech
 - un `Exception` ha almeno un elemento in `Overrides` **oppure** un `Trigger` non nullo;
 - gli id in `Overrides` esistono nella stessa analisi.
 
-**Mutatori**: `MechanicClaim.SetStructure(kind, priority, overrides, trigger, reviewerId)` ammesso negli stati `Pending` e `Approved` (il revisore può correggere dopo l'approvazione: la card cambia solo a una nuova pubblicazione). Rifiutato su `Rejected`.
+**Mutatori**: `MechanicAnalysis.SetClaimStructure(claimId, structure)` ammesso sui claim `Pending` e `Approved` (il revisore può correggere dopo l'approvazione: la card cambia solo a una nuova pubblicazione); rifiutato su `Rejected`. Le stesse invarianti sono verificate in `ApproveClaim`, nel publish dell'analisi (409) e nel bulk approve (claim invalidi saltati).
 
 **Migrazione**: `AddMechanicClaimStructureV3` aggiunge le quattro colonne con default; nessun backfill in migrazione (la riestrazione è la via scelta, §7). Niente modifiche alle chiavi esistenti.
 
@@ -55,7 +55,7 @@ Entità `MechanicClaim` (`BoundedContexts/SharedGameCatalog/Domain/Entities/Mech
 
 - `ClaimsSection.tsx` (`apps/web/src/components/admin/mechanic-extractor/claims/`): badge `Kind`, `Priority`, `Trigger` (fase/azione/componente) e un elenco "sovrascrive #n" con ancora al claim bersaglio; le violazioni T5 compaiono accanto alle altre.
 - `ApproveClaimDialog.tsx`: quattro controlli modificabili (select `Kind`, select `Priority`, multi-select `Overrides` fra i claim della stessa analisi, tre campi testo per `Trigger` con suggerimento dal vocabolario). I valori proposti dall'LLM sono precompilati.
-- `ApproveMechanicClaimCommand(AnalysisId, ClaimId, ReviewerId, Note, Structure?)`: `Structure` opzionale; se presente chiama `SetStructure` prima di `Approve`. Nuovo comando `UpdateMechanicClaimStructureCommand` per correggere un claim già approvato senza riaprirlo.
+- `ApproveMechanicClaimCommand(AnalysisId, ClaimId, ReviewerId, Note, Structure?)`: `Structure` opzionale; `MechanicAnalysis.ApproveClaim(..., structure?)` valida la struttura fornita (o, se assente, quella corrente del claim) contro il grafo prima di approvare: struttura invalida ⇒ 400 e nessun salvataggio. Nuovo comando `UpdateMechanicClaimStructureCommand` (`PUT …/claims/{id}/structure`) per correggere un claim senza riaprirlo, ammesso solo con analisi `InReview`, `Rejected` o `PartiallyExtracted` (altrimenti 409).
 - Bulk approve: conserva i valori proposti; non espone editor.
 - Validatori FluentValidation: enum validi, `Overrides` senza duplicati. Il `Trigger` non è rifiutato dal validatore: è normalizzato a `null` quando tutti i campi sono vuoti (`MechanicTrigger.Create`).
 

@@ -35,6 +35,20 @@ public sealed class MechanicTriggerTests
     }
 
     [Fact]
+    public void Serialize_WithTheJsonbConverterOptions_OmitsIsEmpty_AndRoundTrips()
+    {
+        // MechanicClaimEntityConfiguration serializes the trigger with default options into jsonb:
+        // the computed IsEmpty must not be persisted.
+        var t = MechanicTrigger.Create("fase azione", null, "carta fretta")!;
+
+        var json = System.Text.Json.JsonSerializer.Serialize(t, (System.Text.Json.JsonSerializerOptions?)null);
+
+        json.Should().NotContain("IsEmpty");
+        System.Text.Json.JsonSerializer.Deserialize<MechanicTrigger>(json, (System.Text.Json.JsonSerializerOptions?)null)
+            .Should().Be(t);
+    }
+
+    [Fact]
     public void Structure_Default_IsBaseRuleWithoutOverridesOrTrigger()
     {
         var s = MechanicClaimStructure.Default;

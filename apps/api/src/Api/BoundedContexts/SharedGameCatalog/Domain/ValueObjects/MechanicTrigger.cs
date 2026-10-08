@@ -10,6 +10,8 @@ public sealed record MechanicTrigger(string? Phase, string? Action, string? Comp
 {
     private static readonly Regex Spaces = new(@"\s+", RegexOptions.Compiled, TimeSpan.FromMilliseconds(100));
 
+    /// <summary>True when every field is null. Computed, so it is never serialized (e.g. into the jsonb column).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public bool IsEmpty => Phase is null && Action is null && Component is null;
 
     public static string Normalize(string raw) =>

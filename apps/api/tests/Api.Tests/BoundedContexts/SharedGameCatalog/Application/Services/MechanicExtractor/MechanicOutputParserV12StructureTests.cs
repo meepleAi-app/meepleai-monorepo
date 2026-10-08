@@ -160,6 +160,29 @@ public sealed class MechanicOutputParserV12StructureTests
     }
 
     [Fact]
+    public void Parse_Victory_ReadsKindPriorityTrigger_ButNeverOverrides()
+    {
+        // The primary is the only addressable victory item: ordinal 0 is itself, so `overrides` never resolves.
+        const string json = """
+        {"victory":{"primary":"vince chi ha piu punti","kind":"exception","priority":"scenario",
+          "trigger":{"phase":"Fine Partita"},"overrides":[0],
+          "alternatives":["vittoria immediata con 10 carte"],
+          "citations":[{"pdf_page":9,"quote":"piu punti"}]}}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Victory] = json });
+
+        claims.Should().HaveCount(2);
+        var primary = claims[0];
+        primary.Kind.Should().Be(MechanicClaimKind.Exception);
+        primary.Priority.Should().Be(MechanicRulePriority.Scenario);
+        primary.Trigger!.Phase.Should().Be("fine partita");
+        primary.Overrides.Should().BeEmpty();
+        claims[1].Kind.Should().Be(MechanicClaimKind.Rule, "alternatives keep the default structure");
+        claims[1].Overrides.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Parse_EdgeToExample_IsDropped()
     {
         // item[2] overrides a Rule (0) and an Example (1): only the edge to the Example is dropped.

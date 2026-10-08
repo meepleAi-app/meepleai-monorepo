@@ -5,6 +5,8 @@ using System.Text.Json.Serialization;
 
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -164,6 +166,59 @@ public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime
 
         var second = await SendPublishAsync(analysisId, new { });
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Publish_ClaimWithTriggerAndOverride_RoundTripsThroughJsonbToThePublishedCard()
+    {
+        // The only place the EF ValueConverter lambdas of mechanic_claims.overrides / .trigger run
+        // against PostgreSQL: written by EF, read back by the publish handler, projected into the card.
+        var gameId = await SeedSharedGameAsync();
+        var analysisId = await SeedAnalysisAsync(gameId, status: 2, claimStatuses: new[] { 1, 1 });
+
+        Guid generalId;
+        Guid exceptionId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var claims = await db.Set<MechanicClaimEntity>()
+                .AsTracking() // the context defaults to NoTracking: without this SaveChanges writes nothing
+                .Where(c => c.AnalysisId == analysisId)
+                .OrderBy(c => c.DisplayOrder)
+                .ToListAsync();
+            generalId = claims[0].Id;
+            exceptionId = claims[1].Id;
+            claims[1].Kind = 1;     // Exception
+            claims[1].Priority = 2; // Card
+            claims[1].Overrides = new List<Guid> { generalId };
+            claims[1].Trigger = new MechanicTrigger("fase azione", null, "carta fretta");
+            await db.SaveChangesAsync();
+
+            var storedTrigger = await db.Database
+                .SqlQuery<string>($"SELECT trigger::text AS \"Value\" FROM mechanic_claims WHERE id = {exceptionId}")
+                .SingleAsync();
+            storedTrigger.Should().Contain("fase azione").And.NotContain("IsEmpty", "the computed flag is not persisted");
+        }
+
+        (await SendPublishAsync(analysisId, new { })).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/games/{gameId}/card", _adminSessionToken);
+        var response = await _client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var card = await response.Content.ReadFromJsonAsync<PublishedMechanicCardDto>(JsonOptions);
+
+        var exception = card!.Sections.SelectMany(s => s.Claims).Single(c => c.Id == exceptionId);
+        exception.Kind.Should().Be(MechanicClaimKind.Exception);
+        exception.Priority.Should().Be(MechanicRulePriority.Card);
+        exception.Overrides.Should().Contain(generalId);
+        exception.Trigger.Should().NotBeNull();
+        exception.Trigger!.Phase.Should().Be("fase azione");
+        exception.Trigger.Action.Should().BeNull();
+        exception.Trigger.Component.Should().Be("carta fretta");
+        var general = card.Sections.SelectMany(s => s.Claims).Single(c => c.Id == generalId);
+        general.Trigger.Should().BeNull();
+        general.Overrides.Should().BeNullOrEmpty();
     }
 
     [Fact]

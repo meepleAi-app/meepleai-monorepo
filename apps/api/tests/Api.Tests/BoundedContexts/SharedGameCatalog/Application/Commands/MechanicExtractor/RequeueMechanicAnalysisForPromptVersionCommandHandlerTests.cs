@@ -185,41 +185,28 @@ public class RequeueMechanicAnalysisForPromptVersionCommandHandlerTests
         _mediator.Verify(m => m.Send(It.IsAny<GenerateMechanicAnalysisCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Theory]
-    [InlineData(MechanicAnalysisStatus.Rejected, false)]
-    [InlineData(MechanicAnalysisStatus.PartiallyExtracted, true)]
-    public async Task Handle_ExistingAnalysisInTerminalState_StillSends(
-        MechanicAnalysisStatus status, bool expectedForceRegenerate)
+    [Fact]
+    public async Task Handle_PartiallyExtractedAnalysis_ThrowsConflict_AndDoesNotSend()
     {
+        // ux_mechanic_analyses_shared_game_pdf_prompt is unique with filter `status <> 3`: a
+        // PartiallyExtracted row (status 4) is inside the index, so a second row for the same
+        // (game, pdf, prompt) cannot be inserted. The admin rejects it first, then re-extracts.
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
-        var existing = NewDraft(gameId, pdfId, withClaim: status == MechanicAnalysisStatus.Rejected);
-        if (status == MechanicAnalysisStatus.Rejected)
-        {
-            existing.SubmitForReview(Guid.NewGuid(), DateTime.UtcNow);
-            existing.Reject(Guid.NewGuid(), "bad", DateTime.UtcNow);
-        }
-        else
-        {
-            existing.MarkAsPartiallyExtracted("partial", Guid.NewGuid(), DateTime.UtcNow);
-        }
-
-        existing.Status.Should().Be(status);
+        var partial = NewDraft(gameId, pdfId, withClaim: false);
+        partial.MarkAsPartiallyExtracted("partial", Guid.NewGuid(), DateTime.UtcNow);
+        partial.Status.Should().Be(MechanicAnalysisStatus.PartiallyExtracted);
         _cards.Setup(r => r.GetActiveByGameAsync(gameId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(BuildCard(gameId, ContentWithPdf(gameId, pdfId)));
         _analyses.Setup(r => r.FindByPromptVersionAsync(gameId, pdfId, CurrentPrompt, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existing);
-        _mediator.Setup(m => m.Send(
-                It.Is<GenerateMechanicAnalysisCommand>(c => c.ForceRegenerate == expectedForceRegenerate),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Response(Guid.NewGuid()));
+            .ReturnsAsync(partial);
 
-        await _handler.Handle(
+        var act = () => _handler.Handle(
             new RequeueMechanicAnalysisForPromptVersionCommand(gameId, Guid.NewGuid()), CancellationToken.None);
 
-        _mediator.Verify(m => m.Send(
-            It.Is<GenerateMechanicAnalysisCommand>(c => c.ForceRegenerate == expectedForceRegenerate),
-            It.IsAny<CancellationToken>()), Times.Once);
+        await act.Should().ThrowAsync<ConflictException>().WithMessage(
+            "Esiste un'analisi parzialmente estratta per il prompt corrente: rifiutala prima di riestrarre.");
+        _mediator.Verify(m => m.Send(It.IsAny<GenerateMechanicAnalysisCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -12,12 +12,14 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <summary>
 /// Handler for <see cref="RequeueMechanicAnalysisForPromptVersionCommand"/>. Resolves the PDF from the
 /// first citation of the game's active card, refuses when an analysis for the current prompt version is
-/// already in progress or published, and otherwise enqueues a fresh generation.
+/// already in progress, published or partially extracted, and otherwise enqueues a fresh generation.
 /// </summary>
 /// <remarks>
-/// <see cref="GenerateMechanicAnalysisCommandHandler"/> short-circuits on any existing non-Rejected analysis for
-/// the same (game, pdf, prompt). A <c>PartiallyExtracted</c> analysis would therefore just be returned again,
-/// so only in that case the command is sent with <c>ForceRegenerate</c>; Rejected or absent analyses need no force.
+/// The unique index <c>ux_mechanic_analyses_shared_game_pdf_prompt</c> admits one row per (game, pdf, prompt)
+/// with <c>status &lt;&gt; Rejected</c>, so any non-Rejected analysis for the current prompt blocks a new one:
+/// Draft/InReview/Published/PartiallyExtracted ⇒ 409 (a partial extraction must be rejected first). Only an
+/// absent analysis proceeds (<see cref="IMechanicAnalysisRepository.FindByPromptVersionAsync"/> never returns a
+/// Rejected one), and the command is always sent without <c>ForceRegenerate</c>.
 /// </remarks>
 internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
     : IRequestHandler<RequeueMechanicAnalysisForPromptVersionCommand, MechanicAnalysisGenerationResponseDto>
@@ -95,6 +97,12 @@ internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
                 throw new ConflictException(
                     $"Analisi già pubblicata per il prompt {promptVersion}: niente da rifare.");
             }
+
+            if (existing.Status == MechanicAnalysisStatus.PartiallyExtracted)
+            {
+                throw new ConflictException(
+                    "Esiste un'analisi parzialmente estratta per il prompt corrente: rifiutala prima di riestrarre.");
+            }
         }
 
         _logger.LogInformation(
@@ -107,7 +115,7 @@ internal sealed class RequeueMechanicAnalysisForPromptVersionCommandHandler
                 pdfDocumentId,
                 request.ActorId,
                 request.CostCapUsd,
-                ForceRegenerate: existing is { Status: MechanicAnalysisStatus.PartiallyExtracted }),
+                ForceRegenerate: false),
             cancellationToken).ConfigureAwait(false);
     }
 }

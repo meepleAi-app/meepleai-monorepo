@@ -190,7 +190,8 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithSummary("Re-extract a game's mechanic analysis with the current prompt version")
         .WithDescription(
             "Reuses the PDF of the game's active card and enqueues a new analysis. 404 when the game " +
-            "has no active card; 409 when an analysis for the current prompt is in progress or published.");
+            "has no active card; 409 when an analysis for the current prompt is in progress, published or " +
+            "partially extracted (reject it first).");
 
         // GET /api/v1/admin/mechanic-analyses/{id}/status
         // Returns lifecycle + per-section run telemetry for admin observability.

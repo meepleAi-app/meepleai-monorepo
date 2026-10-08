@@ -212,6 +212,50 @@ Il messaggio di `--list` porta questa avvertenza accanto al suggerimento, con qu
 
 Ha due test. Il primo (712 righe di flusso completo) non può passare per quanto sopra; **il secondo è indipendente** — va su `/dashboard` e verifica la trasmissione degli header, senza selettori orfani. Eliminare il file perderebbe un test funzionante, e il primo descrive una funzione che **esiste**: la registrazione c'è, è il modello di form della spec a essere sbagliato. Va riscritto contro il form reale, e quella è una decisione su come riscriverlo — non un'eliminazione.
 
+## 3-septies. 🔴 La classe più grande, e non sono i selettori: 777 blocchi ciechi
+
+Registrata in **#4127**. Classificando gli orfani per decidere cosa strumentare, `e2e/pdf-viewer-modal.spec.ts` sembrava un caso di «manca il testid `dialog`». Non lo era.
+
+```ts
+const citationList = page.getByTestId('citation-list');
+if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+  … tutte le asserzioni del test …
+} else {
+  console.log('No citations returned from query');   // e il test PASSA
+}
+```
+
+475 righe, 18 test, **36** blocchi di questa forma. Se l'elemento non c'è il corpo non gira, il test passa, e il `console.log` fa sembrare un salto legittimo per mancanza di dati. Il `.catch(() => false)` isola anche gli errori: un selettore malformato e un elemento assente diventano indistinguibili.
+
+| misura (2026-10-08) | valore |
+|---|---|
+| blocchi condizionati sulla presenza di un elemento | **777** |
+| file coinvolti | **121** |
+| con un `.catch()` che ingoia gli errori | **292** |
+
+⚠️ **777 è una superficie, non un conteggio di difetti.** Condizionare su un elemento davvero opzionale è legittimo. Il difetto è più stretto: quando il blocco contiene le **uniche** asserzioni del test, quel test non ha un esito «non applicabile» — ha un **verde**.
+
+### Perché è più grande degli orfani, e li spiega
+
+Il gate misura 952 sedi con selettori inesistenti: è il sottoinsieme **dimostrabile**. I blocchi ciechi non dipendono dalla validità del selettore — e un corpo condizionato non gira nemmeno quando l'elemento **esiste ma non è su quella pagina**.
+
+Gli orfani sono in parte un **sintomo**: una spec il cui corpo non gira mai non ha modo di accorgersi che i suoi selettori sono morti.
+
+## 3-octies. ⚠️ Correzione a §3-ter: `citation-list` esiste, altrove
+
+Nella tabella di §3-ter avevo elencato `message-citations > citation-list > citation-card[]` come «struttura che la spec assume», implicando che nessuno dei tre esistesse. **`citation-list` è dichiarato**:
+
+```
+src/components/features/kb-globale/DrawerCompleted.tsx:67
+  <ol className="space-y-1 mb-3" data-testid="citation-list">
+```
+
+È il drawer di **KB-globale**, non la chat. Quindi una spec che guida `/chat` non lo troverà mai — ma il gate non lo segnala, perché l'id *esiste*. È il **limite 2** dichiarato nell'intestazione dello script («verifica l'esistenza, non la raggiungibilità») con un'istanza concreta, e la prima che ne mostra il costo: è proprio quell'id a tenere sempre falso il condizionale di `pdf-viewer-modal.spec.ts`.
+
+La conclusione di §3-ter **non cambia**: il design delle citazioni della chat è stato sostituito, e lo dicono gli altri quattro confronti (header `📚 Fonti (2)` assente, `Pag. N` contro `Pagina N`, un solo livello di contenitore, espansione per chip invece che globale). Ma il confronto va letto con questa correzione: uno dei tre nomi non era assente, era **in un'altra feature**.
+
+> Lezione, la quarta di questo audit: avevo verificato due dei tre nomi e dedotto il terzo dalla forma della tabella. Una tabella con tre righe invita a trattarle come un blocco; vanno verificate una per una.
+
 ## 4. Cosa serve decidere, prima di continuare
 
 - [ ] **Per la categoria B**: skip classificato o eliminazione? Esiste il precedente dell'eliminazione (#4068 → #4106) e quello dello skip con `DIFETTO:` (#4114). La scelta cambia cosa resta leggibile: un file eliminato lascia solo l'issue, uno skippato lascia la struttura

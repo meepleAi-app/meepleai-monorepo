@@ -9,6 +9,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -160,6 +161,20 @@ public class ApproveMechanicClaimCommandHandlerStructureTests
         result.Status.Should().Be(MechanicClaimStatus.Approved);
         result.Overrides.Should().Equal(general.Id);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ConcurrencyFailure_ThrowsConflict()
+    {
+        var analysis = BuildInReviewAnalysis(2);
+        var (general, exc) = (analysis.Claims[0], analysis.Claims[1]);
+        SetupRepo(analysis, analysis.Id);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new DbUpdateConcurrencyException());
+        var structure = new MechanicClaimStructureDto(MechanicClaimKind.Exception, MechanicRulePriority.Card, new[] { general.Id }, null);
+
+        var act = () => _handler.Handle(new ApproveMechanicClaimCommand(analysis.Id, exc.Id, Guid.NewGuid(), null, structure), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*modified by another operation*");
     }
 
     [Fact]

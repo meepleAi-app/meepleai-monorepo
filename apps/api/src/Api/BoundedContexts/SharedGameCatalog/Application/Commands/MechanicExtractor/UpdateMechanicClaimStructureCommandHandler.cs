@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -12,11 +13,20 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// </summary>
 /// <remarks>
 /// 404: missing analysis or claim. 400: domain <see cref="ArgumentException"/> (override graph invariants).
-/// 409: domain <see cref="InvalidOperationException"/> (e.g. rejected claim) or optimistic concurrency.
+/// 409: analysis not under review (only <c>InReview</c>, <c>Rejected</c> and <c>PartiallyExtracted</c> are
+/// editable — a <c>Draft</c> is still being generated, a <c>Published</c> one is frozen), domain
+/// <see cref="InvalidOperationException"/> (e.g. rejected claim) or optimistic concurrency.
 /// </remarks>
 internal sealed class UpdateMechanicClaimStructureCommandHandler
     : ICommandHandler<UpdateMechanicClaimStructureCommand, MechanicClaimDto>
 {
+    private static readonly HashSet<MechanicAnalysisStatus> EditableStatuses = new()
+    {
+        MechanicAnalysisStatus.InReview,
+        MechanicAnalysisStatus.Rejected,
+        MechanicAnalysisStatus.PartiallyExtracted
+    };
+
     private readonly IMechanicAnalysisRepository _analysisRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateMechanicClaimStructureCommandHandler> _logger;
@@ -53,6 +63,11 @@ internal sealed class UpdateMechanicClaimStructureCommandHandler
             throw new NotFoundException(
                 resourceType: "MechanicClaim",
                 resourceId: request.ClaimId.ToString());
+        }
+
+        if (!EditableStatuses.Contains(analysis.Status))
+        {
+            throw new ConflictException("L'analisi non è in revisione: la struttura non può essere modificata.");
         }
 
         try

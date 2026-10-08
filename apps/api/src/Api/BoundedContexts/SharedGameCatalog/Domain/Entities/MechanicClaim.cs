@@ -52,6 +52,34 @@ public sealed class MechanicClaim : Entity<Guid>
     /// <summary>Optional note captured on approval (#526 AC-6). Distinct from <see cref="RejectionNote"/>.</summary>
     public string? ReviewNote { get; private set; }
 
+    /// <summary>Kind of claim (spec 2026-10-08 §2). Default Rule.</summary>
+    public MechanicClaimKind Kind { get; private set; } = MechanicClaimKind.Rule;
+
+    /// <summary>Precedence level; higher wins. Default Base.</summary>
+    public MechanicRulePriority Priority { get; private set; } = MechanicRulePriority.Base;
+
+    private readonly List<Guid> _overrides = new();
+
+    /// <summary>Ids of claims of the SAME analysis this claim overrides (validated by the aggregate).</summary>
+    public IReadOnlyList<Guid> Overrides => _overrides.AsReadOnly();
+
+    /// <summary>When this claim applies; null = always.</summary>
+    public MechanicTrigger? Trigger { get; private set; }
+
+    /// <summary>
+    /// Applies the four v3 fields WITHOUT cross-claim validation. Only the aggregate
+    /// (<c>MechanicAnalysis.SetClaimStructure</c>) and the parser may call it.
+    /// </summary>
+    internal void ApplyStructure(MechanicClaimStructure structure)
+    {
+        ArgumentNullException.ThrowIfNull(structure);
+        Kind = structure.Kind;
+        Priority = structure.Priority;
+        _overrides.Clear();
+        _overrides.AddRange(structure.Overrides.Distinct());
+        Trigger = structure.Trigger;
+    }
+
     /// <summary>Attribution citations (minimum 1 — ADR-051 T3).</summary>
     public IReadOnlyList<MechanicCitation> Citations => _citations.AsReadOnly();
 
@@ -171,7 +199,8 @@ public sealed class MechanicClaim : Entity<Guid>
         string text,
         int displayOrder,
         IEnumerable<MechanicCitation> citations,
-        string sourceAnchor)
+        string sourceAnchor,
+        MechanicClaimStructure? structure = null)
     {
         if (id == Guid.Empty)
         {
@@ -215,6 +244,11 @@ public sealed class MechanicClaim : Entity<Guid>
         };
 
         claim._citations.AddRange(citationList);
+        if (structure is not null)
+        {
+            claim.ApplyStructure(structure);
+        }
+
         return claim;
     }
 
@@ -235,7 +269,11 @@ public sealed class MechanicClaim : Entity<Guid>
         IEnumerable<MechanicCitation> citations,
         string? reviewNote = null,
         string? sourceAnchor = null,
-        IEnumerable<MechanicClaimValidation>? validations = null)
+        IEnumerable<MechanicClaimValidation>? validations = null,
+        MechanicClaimKind kind = MechanicClaimKind.Rule,
+        MechanicRulePriority priority = MechanicRulePriority.Base,
+        IEnumerable<Guid>? overrides = null,
+        MechanicTrigger? trigger = null)
     {
         ArgumentNullException.ThrowIfNull(citations);
 
@@ -252,10 +290,18 @@ public sealed class MechanicClaim : Entity<Guid>
             RejectionNote = rejectionNote,
             ReviewNote = reviewNote,
             SourceAnchor = sourceAnchor ?? string.Empty,
+            Kind = kind,
+            Priority = priority,
+            Trigger = trigger,
             IsNew = false
         };
 
         claim._citations.AddRange(citations);
+
+        if (overrides is not null)
+        {
+            claim._overrides.AddRange(overrides);
+        }
 
         if (validations is not null)
         {

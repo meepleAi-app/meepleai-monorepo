@@ -629,6 +629,93 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
         claim.Reject(reviewerId, note, utcNow);
     }
 
+    /// <summary>
+    /// Sets Kind/Priority/Overrides/Trigger on one claim (spec 2026-10-08 §2). Allowed while the claim
+    /// is Pending or Approved (the card changes only at the next publish). Validates the override
+    /// graph of the whole analysis: same-analysis targets, no self/Example edges, acyclic.
+    /// </summary>
+    public void SetClaimStructure(Guid claimId, MechanicClaimStructure structure)
+    {
+        ArgumentNullException.ThrowIfNull(structure);
+        var claim = _claims.FirstOrDefault(c => c.Id == claimId)
+            ?? throw new InvalidOperationException($"Claim {claimId} does not belong to analysis {Id}.");
+
+        if (claim.Status == MechanicClaimStatus.Rejected)
+        {
+            throw new InvalidOperationException($"Claim {claimId} is Rejected; structure cannot be changed.");
+        }
+
+        var overrides = structure.Overrides.Distinct().ToList();
+        if (overrides.Contains(claimId))
+        {
+            throw new ArgumentException("A claim cannot override itself.", nameof(structure));
+        }
+
+        foreach (var target in overrides)
+        {
+            var t = _claims.FirstOrDefault(c => c.Id == target)
+                ?? throw new ArgumentException($"Override target {target} is not a claim of the same analysis.", nameof(structure));
+            if (t.Kind == MechanicClaimKind.Example)
+            {
+                throw new ArgumentException("An Example claim cannot be overridden.", nameof(structure));
+            }
+        }
+
+        if (structure.Kind == MechanicClaimKind.Example)
+        {
+            if (overrides.Count > 0)
+            {
+                throw new ArgumentException("An Example claim cannot override other claims.", nameof(structure));
+            }
+            if (_claims.Any(c => c.Id != claimId && c.Overrides.Contains(claimId)))
+            {
+                throw new ArgumentException("An Example claim cannot be the target of an override.", nameof(structure));
+            }
+        }
+
+        if (structure.Kind == MechanicClaimKind.Exception && overrides.Count == 0 && structure.Trigger is null)
+        {
+            throw new ArgumentException("An Exception claim needs at least one Overrides target or a Trigger.", nameof(structure));
+        }
+
+        // Acyclicity on the graph as it WOULD be after this change.
+        var edges = _claims.ToDictionary(c => c.Id, c => c.Id == claimId ? (IReadOnlyList<Guid>)overrides : c.Overrides);
+        if (HasCycle(edges))
+        {
+            throw new ArgumentException("Overrides would create a cycle.", nameof(structure));
+        }
+
+        claim.ApplyStructure(structure with { Overrides = overrides });
+    }
+
+    private static bool HasCycle(IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> edges)
+    {
+        var visiting = new HashSet<Guid>();
+        var done = new HashSet<Guid>();
+        bool Visit(Guid n)
+        {
+            if (done.Contains(n))
+            {
+                return false;
+            }
+            if (!visiting.Add(n))
+            {
+                return true;
+            }
+            if (edges.TryGetValue(n, out var next))
+            {
+                foreach (var m in next)
+                {
+                    if (Visit(m)) { return true; }
+                }
+            }
+            visiting.Remove(n);
+            done.Add(n);
+            return false;
+        }
+        return edges.Keys.Any(Visit);
+    }
+
     // === Suppression (T5 kill-switch) ===
 
     /// <summary>

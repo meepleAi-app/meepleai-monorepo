@@ -3234,7 +3234,7 @@
         "faqs": "FAQ",
         "sessions": "Sessions",
         "stats": "Stats",
-        "agents": "Agents",
+        "chat": "AI Chat",
         "documents": "Documents"
       },
       "kpi": {
@@ -3292,16 +3292,6 @@
         "winLabel": "Win",
         "lossLabel": "Loss",
         "newSession": "+ New session"
-      },
-      "agents": {
-        "title": "AI agents",
-        "subtitle": "Agents linked to this game.",
-        "empty": "No agents available.",
-        "emptySubtitle": "Create an AI agent to chat about this game's rules.",
-        "createCta": "+ Create agent",
-        "openAriaLabel": "Open agent {name}",
-        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
-        "invocationsLabel": "{count} invocations"
       },
       "documents": {
         "title": "Indexed documents",

@@ -12,7 +12,6 @@ export { LibraryFilters, type LibraryFiltersProps } from './LibraryFilters';
 export { EditNotesModal, type EditNotesModalProps } from './EditNotesModal';
 export { RemoveGameDialog, type RemoveGameDialogProps } from './RemoveGameDialog';
 export { MeepleLibraryGameCard, MeepleLibraryGameCardSkeleton } from './MeepleLibraryGameCard';
-export { AgentConfigModal } from './AgentConfigModal';
 
 // Dynamic import to prevent DOMMatrix SSR error with react-pdf (Issue #4133)
 import dynamic from 'next/dynamic';

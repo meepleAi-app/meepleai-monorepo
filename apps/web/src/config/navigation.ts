@@ -248,8 +248,11 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     href: '/editor',
     icon: PenTool,
     iconName: 'pen-tool',
-    label: 'Editor Agenti',
-    ariaLabel: 'Editor di agenti AI',
+    // Issue #4138: l'etichetta diceva 'Editor Agenti' ma /editor e' l'editor
+    // dei RuleSpec; la sotto-sezione delle proposte di tipologia e' uscita con
+    // le tipologie, quindi il nome ora nominava una cosa inesistente.
+    label: 'Editor Regole',
+    ariaLabel: 'Editor delle regole di gioco',
     priority: 15,
     testId: 'nav-editor',
     activePattern: /^\/editor/,

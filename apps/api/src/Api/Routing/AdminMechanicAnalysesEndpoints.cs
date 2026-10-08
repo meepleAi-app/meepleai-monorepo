@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicMetrics;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -289,7 +290,7 @@ internal static class AdminMechanicAnalysesEndpoints
             var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
             var reviewerId = session!.Principal!.Subject.Id;
 
-            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId, request?.Note);
+            var command = new ApproveMechanicClaimCommand(id, claimId, reviewerId, request?.Note, request?.Structure);
             var response = await mediator.Send(command, ct).ConfigureAwait(false);
 
             return Results.Ok(response);
@@ -301,6 +302,31 @@ internal static class AdminMechanicAnalysesEndpoints
             "claims already Approved. An optional review note (#526 AC-6, ≤ 2000 chars) is " +
             "persisted alongside the approval; an empty body still approves. Parent analysis " +
             "must be InReview; otherwise 409.");
+
+        // PUT /api/v1/admin/mechanic-analyses/{id}/claims/{claimId}/structure (spec 2026-10-08)
+        // Reviewer edits Kind/Priority/Overrides/Trigger of a claim.
+        group.MapPut("/{id:guid}/claims/{claimId:guid}/structure", async (
+            Guid id,
+            Guid claimId,
+            MechanicClaimStructureDto request,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var reviewerId = session!.Principal!.Subject.Id;
+
+            var command = new UpdateMechanicClaimStructureCommand(id, claimId, reviewerId, request);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Ok(response);
+        })
+        .WithName("AdminUpdateMechanicClaimStructure")
+        .WithSummary("Set Kind/Priority/Overrides/Trigger on a claim (spec 2026-10-08)")
+        .WithDescription(
+            "Replaces the structure of a Pending or Approved claim. Override targets must belong " +
+            "to the same analysis, cannot be the claim itself or Example claims, and must not form " +
+            "a cycle (400). Rejected claims or non-reviewable analyses answer 409.");
 
         // POST /api/v1/admin/mechanic-analyses/{id}/claims/{claimId}/reject (ISSUE-584)
         // Per-claim reject with mandatory note (1–500 chars).
@@ -458,7 +484,8 @@ internal sealed record RejectClaimRequest(string Note);
 /// sourced from the validated session, never the body.
 /// </summary>
 /// <param name="Note">Optional free-form review note (≤ 2000 chars) persisted with the approval.</param>
-internal sealed record ApproveClaimRequest(string? Note);
+/// <param name="Structure">Optional reviewer-edited Kind/Priority/Overrides/Trigger applied before approval.</param>
+internal sealed record ApproveClaimRequest(string? Note, MechanicClaimStructureDto? Structure);
 
 /// <summary>
 /// Request body for <c>POST /admin/mechanic-analyses/{id}/claims/bulk-reject</c> (#526).

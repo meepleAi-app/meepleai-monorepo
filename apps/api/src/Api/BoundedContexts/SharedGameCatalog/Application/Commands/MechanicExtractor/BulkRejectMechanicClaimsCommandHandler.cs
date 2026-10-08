@@ -133,26 +133,7 @@ internal sealed class BulkRejectMechanicClaimsCommandHandler
         var claims = analysis.Claims
             .OrderBy(c => c.Section)
             .ThenBy(c => c.DisplayOrder)
-            .Select(c => new MechanicClaimDto(
-                Id: c.Id,
-                AnalysisId: analysis.Id,
-                Section: c.Section,
-                Text: c.Text,
-                DisplayOrder: c.DisplayOrder,
-                Status: c.Status,
-                ReviewedBy: c.ReviewedBy,
-                ReviewedAt: c.ReviewedAt,
-                RejectionNote: c.RejectionNote,
-                ReviewNote: c.ReviewNote,
-                Citations: c.Citations
-                    .OrderBy(citation => citation.DisplayOrder)
-                    .Select(citation => new MechanicCitationDto(
-                        Id: citation.Id,
-                        PdfPage: citation.PdfPage,
-                        Quote: citation.Quote,
-                        DisplayOrder: citation.DisplayOrder))
-                    .ToList(),
-                Validations: MechanicClaimValidations.FromDomain(c)))
+            .Select(c => MechanicClaimDtoMapper.FromDomain(c, analysis.Id))
             .ToList();
 
         return new BulkRejectMechanicClaimsResponseDto(

@@ -71,6 +71,22 @@ internal sealed class ApproveMechanicClaimCommandHandler
 
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
+        if (request.Structure is not null)
+        {
+            try
+            {
+                analysis.SetClaimStructure(request.ClaimId, request.Structure.ToDomain());
+            }
+            catch (ArgumentException ex)
+            {
+                throw new BadRequestException(ex.Message, ex);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new ConflictException(ex.Message, ex);
+            }
+        }
+
         try
         {
             analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note);
@@ -107,30 +123,6 @@ internal sealed class ApproveMechanicClaimCommandHandler
             analysis.Id,
             request.ReviewerId);
 
-        return ToDto(claim, analysis.Id);
+        return MechanicClaimDtoMapper.FromDomain(claim, analysis.Id);
     }
-
-    private static MechanicClaimDto ToDto(
-        Domain.Entities.MechanicClaim claim,
-        Guid analysisId) =>
-        new(
-            Id: claim.Id,
-            AnalysisId: analysisId,
-            Section: claim.Section,
-            Text: claim.Text,
-            DisplayOrder: claim.DisplayOrder,
-            Status: claim.Status,
-            ReviewedBy: claim.ReviewedBy,
-            ReviewedAt: claim.ReviewedAt,
-            RejectionNote: claim.RejectionNote,
-            ReviewNote: claim.ReviewNote,
-            Citations: claim.Citations
-                .OrderBy(c => c.DisplayOrder)
-                .Select(c => new MechanicCitationDto(
-                    Id: c.Id,
-                    PdfPage: c.PdfPage,
-                    Quote: c.Quote,
-                    DisplayOrder: c.DisplayOrder))
-                .ToList(),
-            Validations: MechanicClaimValidations.FromDomain(claim));
 }

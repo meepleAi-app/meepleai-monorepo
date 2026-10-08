@@ -1,5 +1,4 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
-using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -9,34 +8,31 @@ using Microsoft.EntityFrameworkCore;
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExtractor;
 
 /// <summary>
-/// Handler for <see cref="RejectMechanicClaimCommand"/> (ISSUE-584).
+/// Handler for <see cref="UpdateMechanicClaimStructureCommand"/>.
 /// </summary>
 /// <remarks>
-/// Mirrors <see cref="ApproveMechanicClaimCommandHandler"/> but calls
-/// <c>analysis.RejectClaim(claimId, reviewerId, note, utcNow)</c>. 404/409 mapping identical.
+/// 404: missing analysis or claim. 400: domain <see cref="ArgumentException"/> (override graph invariants).
+/// 409: domain <see cref="InvalidOperationException"/> (e.g. rejected claim) or optimistic concurrency.
 /// </remarks>
-internal sealed class RejectMechanicClaimCommandHandler
-    : ICommandHandler<RejectMechanicClaimCommand, MechanicClaimDto>
+internal sealed class UpdateMechanicClaimStructureCommandHandler
+    : ICommandHandler<UpdateMechanicClaimStructureCommand, MechanicClaimDto>
 {
     private readonly IMechanicAnalysisRepository _analysisRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly TimeProvider _timeProvider;
-    private readonly ILogger<RejectMechanicClaimCommandHandler> _logger;
+    private readonly ILogger<UpdateMechanicClaimStructureCommandHandler> _logger;
 
-    public RejectMechanicClaimCommandHandler(
+    public UpdateMechanicClaimStructureCommandHandler(
         IMechanicAnalysisRepository analysisRepository,
         IUnitOfWork unitOfWork,
-        TimeProvider timeProvider,
-        ILogger<RejectMechanicClaimCommandHandler> logger)
+        ILogger<UpdateMechanicClaimStructureCommandHandler> logger)
     {
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<MechanicClaimDto> Handle(
-        RejectMechanicClaimCommand request,
+        UpdateMechanicClaimStructureCommand request,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -59,13 +55,15 @@ internal sealed class RejectMechanicClaimCommandHandler
                 resourceId: request.ClaimId.ToString());
         }
 
-        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
-
         try
         {
-            analysis.RejectClaim(request.ClaimId, request.ReviewerId, request.Note, utcNow);
+            analysis.SetClaimStructure(request.ClaimId, request.Structure.ToDomain());
         }
-        catch (InvalidMechanicAnalysisStateException ex)
+        catch (ArgumentException ex)
+        {
+            throw new BadRequestException(ex.Message, ex);
+        }
+        catch (InvalidOperationException ex)
         {
             throw new ConflictException(ex.Message, ex);
         }
@@ -80,7 +78,7 @@ internal sealed class RejectMechanicClaimCommandHandler
         {
             _logger.LogWarning(
                 ex,
-                "Optimistic concurrency failure rejecting MechanicClaim {ClaimId} on MechanicAnalysis {AnalysisId}.",
+                "Optimistic concurrency failure updating structure of MechanicClaim {ClaimId} on MechanicAnalysis {AnalysisId}.",
                 request.ClaimId,
                 request.AnalysisId);
 
@@ -92,7 +90,7 @@ internal sealed class RejectMechanicClaimCommandHandler
         var claim = analysis.Claims.First(c => c.Id == request.ClaimId);
 
         _logger.LogInformation(
-            "MechanicClaim {ClaimId} on MechanicAnalysis {AnalysisId} rejected by admin {ReviewerId}.",
+            "MechanicClaim {ClaimId} on MechanicAnalysis {AnalysisId} structure updated by admin {ReviewerId}.",
             claim.Id,
             analysis.Id,
             request.ReviewerId);

@@ -22,7 +22,7 @@ export class AdminUsersPage extends BasePage {
     const roleSelect = this.page
       .locator('[data-testid="invite-role-select"]')
       .or(this.page.getByLabel(/role/i));
-    if (await roleSelect.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    if (await roleSelect.isVisible({ timeout: 2_000 })) {
       await roleSelect.click();
       await this.page.getByRole('option', { name: new RegExp(role, 'i') }).click();
     }
@@ -56,7 +56,7 @@ export class AdminUsersPage extends BasePage {
 
     // Wait for confirmation dialog "Change Role"
     const confirmDialog = this.page.locator('[role="alertdialog"]');
-    if (await confirmDialog.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (await confirmDialog.isVisible({ timeout: 3_000 })) {
       await this.page.getByRole('button', { name: /confirm/i }).click();
     }
     await this.waitForNetworkIdle();

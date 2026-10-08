@@ -44,11 +44,11 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const resumePanel = page.getByTestId('resume-session-panel').first();
-    const panelVisible = await resumePanel.isVisible({ timeout: 5000 }).catch(() => false);
+    const panelVisible = await resumePanel.isVisible({ timeout: 5000 });
 
     if (panelVisible) {
       const recapText = page.getByText(/quando avete messo in pausa/i).first();
-      const recapVisible = await recapText.isVisible({ timeout: 3000 }).catch(() => false);
+      const recapVisible = await recapText.isVisible({ timeout: 3000 });
       expect(recapVisible).toBe(true);
     }
 
@@ -60,11 +60,11 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const scoresSection = page.getByTestId('resume-scores').first();
-    const scoresVisible = await scoresSection.isVisible({ timeout: 5000 }).catch(() => false);
+    const scoresVisible = await scoresSection.isVisible({ timeout: 5000 });
 
     if (scoresVisible) {
       const marco = page.getByText(/marco/i).first();
-      const marcoVisible = await marco.isVisible({ timeout: 3000 }).catch(() => false);
+      const marcoVisible = await marco.isVisible({ timeout: 3000 });
       expect(marcoVisible).toBe(true);
     }
 
@@ -76,7 +76,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const photosSection = page.getByTestId('resume-photos').first();
-    const photosVisible = await photosSection.isVisible({ timeout: 5000 }).catch(() => false);
+    const photosVisible = await photosSection.isVisible({ timeout: 5000 });
     expect(photosVisible || (await page.title()).length > 0).toBe(true);
   });
 
@@ -85,7 +85,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const resumeBtn = page.getByTestId('resume-session-button').first();
-    const btnVisible = await resumeBtn.isVisible({ timeout: 5000 }).catch(() => false);
+    const btnVisible = await resumeBtn.isVisible({ timeout: 5000 });
 
     if (btnVisible) {
       const btnText = await resumeBtn.textContent();
@@ -103,7 +103,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const resumePanel = page.getByTestId('resume-session-panel').first();
-    const panelVisible = await resumePanel.isVisible({ timeout: 5000 }).catch(() => false);
+    const panelVisible = await resumePanel.isVisible({ timeout: 5000 });
     expect(panelVisible || (await page.title()).length > 0).toBe(true);
   });
 
@@ -115,7 +115,7 @@ test.describe('Session Resume — Recap & Photo Review', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const fallbackText = page.getByText(/sessione ripresa dal turno/i).first();
-    const fallbackVisible = await fallbackText.isVisible({ timeout: 5000 }).catch(() => false);
+    const fallbackVisible = await fallbackText.isVisible({ timeout: 5000 });
     expect(fallbackVisible || (await page.title()).length > 0).toBe(true);
   });
 });

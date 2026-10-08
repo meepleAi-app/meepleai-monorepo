@@ -45,8 +45,8 @@ test.describe('Game Night Journey', () => {
     const searchInput = page.getByPlaceholder(/cerca/i).first();
 
     // At least one of these should be visible on the discover page
-    const headingVisible = await heading.isVisible().catch(() => false);
-    const inputVisible = await searchInput.isVisible().catch(() => false);
+    const headingVisible = await heading.isVisible();
+    const inputVisible = await searchInput.isVisible();
 
     expect(headingVisible || inputVisible).toBe(true);
   });
@@ -86,13 +86,8 @@ test.describe('Game Night Journey', () => {
     const pageLoaded = await page
       .getByText(/session/i)
       .first()
-      .isVisible()
-      .catch(() => false);
-    const azulVisible = await page
-      .getByText('Azul')
-      .first()
-      .isVisible()
-      .catch(() => false);
+      .isVisible();
+    const azulVisible = await page.getByText('Azul').first().isVisible();
 
     // SSR page may not show mocked data; verify at least the page renders
     expect(pageLoaded || azulVisible || (await page.title()).length > 0).toBe(true);
@@ -499,16 +494,11 @@ test.describe('Game Night Journey', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // The scoreboard is a client component so mocks should work
-    const marcoVisible = await page
-      .getByText('Marco')
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const marcoVisible = await page.getByText('Marco').first().isVisible({ timeout: 5000 });
     const loadingVisible = await page
       .getByText(/caricamento/i)
       .first()
-      .isVisible()
-      .catch(() => false);
+      .isVisible();
 
     // Either player data loaded or loading state shown
     expect(marcoVisible || loadingVisible || (await page.title()).length > 0).toBe(true);

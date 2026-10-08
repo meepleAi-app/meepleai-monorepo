@@ -85,14 +85,8 @@ test.describe('Offline Resilience (Issue #2054)', () => {
 
       // Message should be queued (shown with pending indicator or queued message UI)
       // The exact UI depends on implementation - check for either pending indicator or queue notice
-      const hasPendingIndicator = await page
-        .locator('[data-testid="message-pending"]')
-        .isVisible()
-        .catch(() => false);
-      const hasQueueNotice = await page
-        .getByText(/in coda|queued/i)
-        .isVisible()
-        .catch(() => false);
+      const hasPendingIndicator = await page.locator('[data-testid="message-pending"]').isVisible();
+      const hasQueueNotice = await page.getByText(/in coda|queued/i).isVisible();
 
       expect(hasPendingIndicator || hasQueueNotice || true).toBeTruthy(); // Message handling varies
     });
@@ -144,14 +138,8 @@ test.describe('Offline Resilience (Issue #2054)', () => {
       await context.setOffline(true);
 
       // Should show reconnecting state or offline banner
-      const hasReconnecting = await page
-        .getByText(/Riconnessione|Reconnecting/i)
-        .isVisible()
-        .catch(() => false);
-      const hasOffline = await page
-        .locator('[data-testid="offline-banner"]')
-        .isVisible()
-        .catch(() => false);
+      const hasReconnecting = await page.getByText(/Riconnessione|Reconnecting/i).isVisible();
+      const hasOffline = await page.locator('[data-testid="offline-banner"]').isVisible();
 
       expect(hasReconnecting || hasOffline).toBeTruthy();
     });
@@ -171,14 +159,10 @@ test.describe('Offline Resilience (Issue #2054)', () => {
       await page.waitForTimeout(10000); // Allow time for reconnection attempts
 
       // Check for retry button or failure message
-      const hasRetryButton = await page
-        .getByRole('button', { name: /Riprova|Retry/i })
-        .isVisible()
-        .catch(() => false);
+      const hasRetryButton = await page.getByRole('button', { name: /Riprova|Retry/i }).isVisible();
       const hasErrorMessage = await page
         .getByText(/Riconnessione fallita|Connection failed/i)
-        .isVisible()
-        .catch(() => false);
+        .isVisible();
 
       expect(hasRetryButton || hasErrorMessage || true).toBeTruthy(); // Error handling varies
     });

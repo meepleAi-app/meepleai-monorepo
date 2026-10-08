@@ -288,7 +288,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
 
       // If error occurs, click "Try Again" button
       const tryAgainButton = page.getByRole('button', { name: /try again|riprova/i });
-      if (await tryAgainButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await tryAgainButton.isVisible({ timeout: 2000 })) {
         await tryAgainButton.click();
 
         // Verify recovery
@@ -300,7 +300,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
       await page.goto('/');
 
       const homeButton = page.getByRole('button', { name: /go to home|vai alla home/i });
-      if (await homeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await homeButton.isVisible({ timeout: 2000 })) {
         await homeButton.click();
 
         // Verify navigation to home
@@ -315,7 +315,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
 
       // Wait for toast to appear (if any)
       const toast = page.locator('[role="alert"], [role="status"]').first();
-      if (await toast.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await toast.isVisible({ timeout: 2000 })) {
         // Wait for auto-dismiss (default 5 seconds)
         await expect(toast).not.toBeVisible({ timeout: 6000 });
       }
@@ -326,7 +326,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
 
       // Wait for toast to appear
       const toast = page.locator('[role="alert"]').first();
-      if (await toast.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await toast.isVisible({ timeout: 2000 })) {
         // Click dismiss button
         const dismissButton = toast.locator('button').first();
         if (await dismissButton.isVisible()) {
@@ -383,7 +383,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
 
       // Look for error modal (may or may not appear depending on error handling strategy)
       const modal = page.getByRole('dialog');
-      if (await modal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await modal.isVisible({ timeout: 2000 })) {
         // Verify modal contains error information
         await expect(modal).toContainText(/error|errore/i);
       }
@@ -393,7 +393,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
       await page.goto('/');
 
       const modal = page.getByRole('dialog');
-      if (await modal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await modal.isVisible({ timeout: 2000 })) {
         const closeButton = modal
           .locator('button:has-text("Close"), button:has-text("Chiudi")')
           .first();
@@ -431,7 +431,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
       await page.waitForLoadState('networkidle');
 
       const modal = page.getByRole('dialog');
-      if (await modal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await modal.isVisible({ timeout: 2000 })) {
         const retryButton = modal.getByRole('button', { name: /retry|riprova/i });
         if (await retryButton.isVisible()) {
           await retryButton.click();
@@ -492,7 +492,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
 
       // Check error modals have proper ARIA attributes
       const modal = page.getByRole('dialog');
-      if (await modal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await modal.isVisible({ timeout: 2000 })) {
         await expect(modal).toHaveAttribute('aria-modal', 'true');
       }
     });
@@ -502,7 +502,7 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
 
       // Test keyboard navigation on error modal
       const modal = page.getByRole('dialog');
-      if (await modal.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await modal.isVisible({ timeout: 2000 })) {
         // Tab through focusable elements
         await page.keyboard.press('Tab');
 

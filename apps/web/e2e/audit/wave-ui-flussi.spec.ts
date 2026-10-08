@@ -261,8 +261,7 @@ test.describe('Flussi — utente', () => {
           '[data-slot="game-night-create-step-2-container"], [data-slot^="game-night-create-step2"]'
         )
         .first()
-        .isVisible()
-        .catch(() => false);
+        .isVisible();
 
       const indietro = page.locator('[data-slot="game-night-create-nav-back"]').first();
 
@@ -286,8 +285,7 @@ test.describe('Flussi — utente', () => {
         tornato = await page
           .locator('[data-slot="game-night-create-step-1-container"]')
           .first()
-          .isVisible()
-          .catch(() => false);
+          .isVisible();
       }
     }
 

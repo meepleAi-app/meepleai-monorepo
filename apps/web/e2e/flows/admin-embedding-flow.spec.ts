@@ -286,8 +286,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
       // Banner may not appear if gameId/gameName are missing — soft assertion
       const bannerVisible = await page
         .locator('[data-testid="embedding-flow-banner"]')
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
+        .isVisible({ timeout: 10_000 });
 
       if (state.gameName && bannerVisible) {
         await queuePage.expectFlowBannerVisible(state.gameName);
@@ -308,7 +307,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
       const sseIndicator = page
         .locator('[data-testid="sse-connection-indicator"]')
         .or(page.getByText(/Live|Polling/i).first());
-      const sseVisible = await sseIndicator.isVisible({ timeout: 10_000 }).catch(() => false);
+      const sseVisible = await sseIndicator.isVisible({ timeout: 10_000 });
 
       if (sseVisible) {
         console.log('[T2] SSE connection indicator is active');
@@ -331,14 +330,12 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
     await test.step('AC6: Verify queue stats bar reflects completion', async () => {
       // The stats bar should show at least 1 completed job
       const statsBar = page.locator('[data-testid="queue-stats-bar"]');
-      const statsVisible = await statsBar.isVisible({ timeout: 5_000 }).catch(() => false);
+      const statsVisible = await statsBar.isVisible({ timeout: 5_000 });
 
       if (statsVisible) {
         // Check for completed count > 0
         const completedStat = statsBar.locator(':text("Completed"), :text("Completat")').first();
-        const completedVisible = await completedStat
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false);
+        const completedVisible = await completedStat.isVisible({ timeout: 3_000 });
         if (completedVisible) {
           console.log('[T2] Queue stats bar shows completed jobs');
         }
@@ -350,8 +347,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
     await test.step('AC4: Verify chunk preview tab is visible', async () => {
       const chunkTabVisible = await page
         .locator('[data-testid="chunk-preview-tab"]')
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
+        .isVisible({ timeout: 10_000 });
 
       if (chunkTabVisible) {
         await queuePage
@@ -378,7 +374,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
 
     // Check "Testa Agent" button is available before proceeding
     const testAgentLink = page.getByRole('link', { name: /testa agent/i });
-    const testAgentVisible = await testAgentLink.isVisible({ timeout: 5_000 }).catch(() => false);
+    const testAgentVisible = await testAgentLink.isVisible({ timeout: 5_000 });
 
     if (!testAgentVisible) {
       test.skip(true, '"Testa Agent" button not found — embedding may not have completed');
@@ -394,8 +390,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
       // Flow banner should show queue step as done
       const bannerVisible = await page
         .locator('[data-testid="embedding-flow-banner"]')
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false);
+        .isVisible({ timeout: 10_000 });
 
       if (bannerVisible) {
         const queueStep = page.locator('[data-testid="flow-step-queue"]');
@@ -415,7 +410,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
         .locator('[data-testid="message-input"]')
         .or(page.getByPlaceholder(/scrivi un messaggio|write a message|ask/i));
 
-      const inputVisible = await messageInput.isVisible({ timeout: 10_000 }).catch(() => false);
+      const inputVisible = await messageInput.isVisible({ timeout: 10_000 });
 
       if (!inputVisible) {
         console.warn('[T3] Message input not visible — agent chat interface may differ');
@@ -452,7 +447,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
         const infoPanel = page
           .locator('[data-testid="chat-info-panel"]')
           .or(page.locator('[data-testid="response-metadata"]'));
-        const infoPanelVisible = await infoPanel.isVisible({ timeout: 5_000 }).catch(() => false);
+        const infoPanelVisible = await infoPanel.isVisible({ timeout: 5_000 });
         if (infoPanelVisible) {
           console.log('[T3] Response metadata panel visible — real LLM response confirmed');
         }

@@ -61,10 +61,7 @@ test.describe('Bounded Context Access', () => {
     const auditContainer = page.locator('h1:has-text("Audit"), [data-testid="audit-log"], table');
 
     // Audit logs might not exist yet in fresh setup - that's OK
-    const auditExists = await auditContainer
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const auditExists = await auditContainer.first().isVisible({ timeout: 5000 });
 
     if (auditExists) {
       console.log('✅ Audit logs accessible');
@@ -123,10 +120,7 @@ test.describe('Bounded Context Access', () => {
         '.badge:has-text("AI"), .badge:has-text("Agent"), [data-testid="ai-badge"]'
       );
 
-      const badgeVisible = await agentBadge
-        .first()
-        .isVisible({ timeout: 5000 })
-        .catch(() => false);
+      const badgeVisible = await agentBadge.first().isVisible({ timeout: 5000 });
 
       if (badgeVisible) {
         console.log('   AI Agent badge visible in UI');
@@ -235,10 +229,7 @@ test.describe('Bounded Context Access', () => {
       'h1:has-text("Settings"), h1:has-text("Configuration"), [data-testid="settings"]'
     );
 
-    const settingsAvailable = await settingsContainer
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const settingsAvailable = await settingsContainer.first().isVisible({ timeout: 5000 });
 
     if (settingsAvailable) {
       console.log('✅ System configuration accessible');
@@ -246,10 +237,7 @@ test.describe('Bounded Context Access', () => {
       // Try alternative route
       await page.goto('/admin/configuration');
 
-      const altSettingsAvailable = await settingsContainer
-        .first()
-        .isVisible({ timeout: 5000 })
-        .catch(() => false);
+      const altSettingsAvailable = await settingsContainer.first().isVisible({ timeout: 5000 });
 
       if (altSettingsAvailable) {
         console.log('✅ System configuration accessible (alt route)');

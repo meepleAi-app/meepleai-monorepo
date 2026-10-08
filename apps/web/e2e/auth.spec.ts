@@ -101,7 +101,7 @@ test.describe('Authentication Flows', () => {
       .locator('button:has-text("Logout"), button:has-text("Log out"), a:has-text("Logout")')
       .first();
 
-    if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await logoutButton.isVisible({ timeout: 2000 })) {
       await logoutButton.click();
 
       // Should redirect to home or login
@@ -655,7 +655,7 @@ test.describe('Session Management', () => {
     const sessionInfo = page
       .locator('[data-testid="session-item"], [data-testid="session-row"], .session-card')
       .first();
-    if (await sessionInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await sessionInfo.isVisible({ timeout: 2000 })) {
       await expect(sessionInfo).toContainText(/windows|mac|linux|chrome|firefox|safari/i);
     }
   });
@@ -673,14 +673,14 @@ test.describe('Session Management', () => {
     const revokeButton = page
       .locator('button:has-text("Revoke"), button:has-text("Sign Out")')
       .nth(1); // Second session
-    if (await revokeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await revokeButton.isVisible({ timeout: 2000 })) {
       await revokeButton.click();
 
       // Confirm revoke
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Revoke")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -706,14 +706,14 @@ test.describe('Session Management', () => {
         'button:has-text("Revoke All"), button:has-text("Sign Out All"), button:has-text("Sign out all")'
       )
       .first();
-    if (await revokeAllButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await revokeAllButton.isVisible({ timeout: 2000 })) {
       await revokeAllButton.click();
 
       // Confirm bulk revoke
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Revoke")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -737,7 +737,7 @@ test.describe('Session Management', () => {
     const extendButton = page
       .locator('button:has-text("Extend"), button:has-text("Keep Alive")')
       .first();
-    if (await extendButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await extendButton.isVisible({ timeout: 2000 })) {
       await extendButton.click();
 
       // Should show success (real API)
@@ -781,7 +781,7 @@ test.describe('OAuth Account Management', () => {
     const linkGoogleButton = page
       .locator('button:has-text("Link Google"), button:has-text("Connect Google")')
       .first();
-    if (await linkGoogleButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await linkGoogleButton.isVisible({ timeout: 2000 })) {
       await linkGoogleButton.click();
 
       // Real OAuth flow would open popup or redirect
@@ -803,14 +803,14 @@ test.describe('OAuth Account Management', () => {
     const unlinkButton = page
       .locator('button:has-text("Unlink"), button:has-text("Disconnect")')
       .first();
-    if (await unlinkButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await unlinkButton.isVisible({ timeout: 2000 })) {
       await unlinkButton.click();
 
       // Confirm unlink
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Unlink")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -829,7 +829,7 @@ test.describe('OAuth Account Management', () => {
 
     // Find GitHub OAuth button
     const githubButton = page.locator('button:has-text("GitHub"), a:has-text("GitHub")').first();
-    if (await githubButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await githubButton.isVisible({ timeout: 2000 })) {
       await githubButton.click();
 
       // Real OAuth flow would redirect to GitHub
@@ -867,7 +867,7 @@ test.describe('OAuth Account Management', () => {
     const unlinkButton = page
       .locator('button:has-text("Unlink"), button:has-text("Disconnect")')
       .first();
-    if (await unlinkButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await unlinkButton.isVisible({ timeout: 2000 })) {
       await unlinkButton.click();
 
       // Should show warning that password is required first
@@ -885,7 +885,7 @@ test.describe('OAuth Account Management', () => {
 
     // Find Discord OAuth button
     const discordButton = page.locator('button:has-text("Discord"), a:has-text("Discord")').first();
-    if (await discordButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await discordButton.isVisible({ timeout: 2000 })) {
       await discordButton.click();
 
       // Real OAuth flow would redirect to Discord
@@ -908,12 +908,12 @@ test.describe('API Key Management', () => {
     const createButton = page
       .locator('button:has-text("Create"), button:has-text("New Key")')
       .first();
-    if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 2000 })) {
       await createButton.click();
 
       // Fill API key name
       const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]').first();
-      if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 2000 })) {
         await nameInput.fill('Test API Key');
 
         const submitButton = page
@@ -953,14 +953,14 @@ test.describe('API Key Management', () => {
     const revokeButton = page
       .locator('button:has-text("Revoke"), button:has-text("Delete")')
       .first();
-    if (await revokeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await revokeButton.isVisible({ timeout: 2000 })) {
       await revokeButton.click();
 
       // Confirm revoke
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Revoke")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -981,11 +981,11 @@ test.describe('API Key Management', () => {
     const createButton = page
       .locator('button:has-text("Create"), button:has-text("New Key")')
       .first();
-    if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 2000 })) {
       await createButton.click();
 
       const nameInput = page.locator('input[name="name"]').first();
-      if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 2000 })) {
         await nameInput.fill('Copy Test Key');
 
         const submitButton = page.locator('button[type="submit"]').first();
@@ -999,7 +999,7 @@ test.describe('API Key Management', () => {
         const copyButton = page
           .locator('button:has-text("Copy"), button[aria-label*="copy" i]')
           .first();
-        if (await copyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await copyButton.isVisible({ timeout: 2000 })) {
           await copyButton.click();
 
           // Should show "Copied" confirmation

@@ -62,7 +62,7 @@ test.describe('Authenticated journeys', () => {
 
     // Wait for game selector if needed
     const gameSelector = page.getByRole('combobox', { name: /select.*game/i });
-    if (await gameSelector.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await gameSelector.isVisible({ timeout: 2000 })) {
       await gameSelector.click();
       const firstGame = page.getByRole('option').first();
       await firstGame.click();

@@ -107,13 +107,13 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
 
     // If upload section exists on detail page, use it directly
     // Otherwise navigate to RAG setup tab/page
-    const uploadVisible = await uploadSection.isVisible().catch(() => false);
+    const uploadVisible = await uploadSection.isVisible();
     if (!uploadVisible) {
       // Try RAG setup tab
       const ragTab = page.locator(
         'button:has-text("RAG"), a:has-text("RAG"), [data-testid="rag-setup-tab"]'
       );
-      const ragTabVisible = await ragTab.isVisible().catch(() => false);
+      const ragTabVisible = await ragTab.isVisible();
       if (ragTabVisible) {
         await ragTab.click();
         await page.waitForTimeout(1000);
@@ -129,7 +129,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const uploadButton = page.locator(
       'button:has-text("Upload"), button:has-text("Carica"), button:has-text("Upload PDF")'
     );
-    const uploadButtonVisible = await uploadButton.isVisible().catch(() => false);
+    const uploadButtonVisible = await uploadButton.isVisible();
     if (uploadButtonVisible) {
       await uploadButton.click();
     }
@@ -149,7 +149,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const ragTab = page.locator(
       'button:has-text("RAG"), a:has-text("RAG"), [data-testid="rag-setup-tab"]'
     );
-    const ragTabVisible = await ragTab.isVisible().catch(() => false);
+    const ragTabVisible = await ragTab.isVisible();
     if (ragTabVisible) {
       await ragTab.click();
     }
@@ -166,14 +166,12 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
       const statusText = await page
         .locator('text=Ready, text=Completed, text=Pronto, text=Completato, text=Indexed')
         .first()
-        .isVisible()
-        .catch(() => false);
+        .isVisible();
 
       const errorText = await page
         .locator('text=Failed, text=Error, text=Errore')
         .first()
-        .isVisible()
-        .catch(() => false);
+        .isVisible();
 
       // If processing not done, reload and check again
       if (!statusText && !errorText) {
@@ -199,7 +197,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const agentTab = page.locator(
       'button:has-text("Agent"), a:has-text("Agent"), [data-testid="agent-tab"]'
     );
-    const agentTabVisible = await agentTab.isVisible().catch(() => false);
+    const agentTabVisible = await agentTab.isVisible();
     if (agentTabVisible) {
       await agentTab.click();
       await page.waitForTimeout(1000);
@@ -209,7 +207,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const createAgentButton = page.locator(
       'button:has-text("Create Agent"), button:has-text("Crea Agente"), button:has-text("New Agent")'
     );
-    const createAgentVisible = await createAgentButton.isVisible().catch(() => false);
+    const createAgentVisible = await createAgentButton.isVisible();
 
     if (createAgentVisible) {
       await createAgentButton.click();
@@ -218,7 +216,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
       const agentNameInput = page.locator(
         'input[name="agentName"], input[name="name"], input[placeholder*="agent"]'
       );
-      const agentNameVisible = await agentNameInput.isVisible().catch(() => false);
+      const agentNameVisible = await agentNameInput.isVisible();
       if (agentNameVisible) {
         await agentNameInput.fill(`${testGameTitle} Assistant`);
       }
@@ -237,7 +235,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const linkedIndicator = page.locator(
       'text=Linked, text=Collegato, [data-testid="agent-linked"]'
     );
-    const isLinked = await linkedIndicator.isVisible().catch(() => false);
+    const isLinked = await linkedIndicator.isVisible();
     // Agent may be auto-created, just verify the section is accessible
     expect(true).toBeTruthy(); // Step accessible
   });
@@ -256,7 +254,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const chatTab = page.locator(
       'button:has-text("Chat"), button:has-text("Test"), a:has-text("Playground"), [data-testid="chat-tab"]'
     );
-    const chatTabVisible = await chatTab.isVisible().catch(() => false);
+    const chatTabVisible = await chatTab.isVisible();
     if (chatTabVisible) {
       await chatTab.click();
       await page.waitForTimeout(1000);
@@ -266,7 +264,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
     const chatInput = page.locator(
       'textarea[placeholder*="message"], textarea[placeholder*="domanda"], input[placeholder*="ask"], [data-testid="chat-input"]'
     );
-    const chatInputVisible = await chatInput.isVisible().catch(() => false);
+    const chatInputVisible = await chatInput.isVisible();
 
     if (chatInputVisible) {
       // Send a test question about the game rules
@@ -290,8 +288,7 @@ test.describe('Admin Shared Game + RAG Full Flow (#253)', () => {
       const hasResponse = await page
         .locator('.chat-message, [data-testid="assistant-message"], [role="assistant"]')
         .first()
-        .isVisible()
-        .catch(() => false);
+        .isVisible();
 
       // In test environment, LLM may not be available
       // Just verify the chat UI is functional and accepts input
@@ -433,17 +430,11 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
 
     // Verify document info is displayed
     const docInfo = page.locator('text=carcassone_rulebook.pdf, text=Rulebook, text=Ready');
-    const hasDocInfo = await docInfo
-      .first()
-      .isVisible()
-      .catch(() => false);
+    const hasDocInfo = await docInfo.first().isVisible();
 
     // Verify RAG readiness indicator
     const ragReady = page.locator('[data-testid="rag-readiness"], text=RAG Ready, text=Pronto');
-    const hasRagReady = await ragReady
-      .first()
-      .isVisible()
-      .catch(() => false);
+    const hasRagReady = await ragReady.first().isVisible();
 
     // At least game detail should be visible
     expect(true).toBeTruthy();

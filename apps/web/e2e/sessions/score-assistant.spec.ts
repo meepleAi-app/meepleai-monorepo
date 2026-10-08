@@ -40,7 +40,7 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
-    const inputVisible = await input.isVisible({ timeout: 5000 }).catch(() => false);
+    const inputVisible = await input.isVisible({ timeout: 5000 });
 
     if (inputVisible) {
       await input.fill('Marco ha 5 punti');
@@ -48,7 +48,7 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
       await submitBtn.click();
 
       const result = page.getByTestId('score-result').first();
-      const resultVisible = await result.isVisible({ timeout: 5000 }).catch(() => false);
+      const resultVisible = await result.isVisible({ timeout: 5000 });
 
       if (resultVisible) {
         const status = await result.getAttribute('data-status');
@@ -67,21 +67,21 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
-    const inputVisible = await input.isVisible({ timeout: 5000 }).catch(() => false);
+    const inputVisible = await input.isVisible({ timeout: 5000 });
 
     if (inputVisible) {
       await input.fill('Marco 5');
       await page.getByTestId('score-submit').first().click();
 
       const result = page.getByTestId('score-result').first();
-      const resultVisible = await result.isVisible({ timeout: 5000 }).catch(() => false);
+      const resultVisible = await result.isVisible({ timeout: 5000 });
 
       if (resultVisible) {
         const status = await result.getAttribute('data-status');
         expect(status).toBe('parsed');
 
         const confirmBtn = page.getByTestId('score-confirm').first();
-        const confirmVisible = await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false);
+        const confirmVisible = await confirmBtn.isVisible({ timeout: 3000 });
         expect(confirmVisible).toBe(true);
       }
     }
@@ -96,14 +96,14 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
-    const inputVisible = await input.isVisible({ timeout: 5000 }).catch(() => false);
+    const inputVisible = await input.isVisible({ timeout: 5000 });
 
     if (inputVisible) {
       await input.fill('Mar 5');
       await page.getByTestId('score-submit').first().click();
 
       const result = page.getByTestId('score-result').first();
-      const resultVisible = await result.isVisible({ timeout: 5000 }).catch(() => false);
+      const resultVisible = await result.isVisible({ timeout: 5000 });
 
       if (resultVisible) {
         const status = await result.getAttribute('data-status');
@@ -111,8 +111,8 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
 
         const marcoCandidate = page.getByText('Marco').first();
         const mariaCandidate = page.getByText('Maria').first();
-        const marcoVisible = await marcoCandidate.isVisible({ timeout: 3000 }).catch(() => false);
-        const mariaVisible = await mariaCandidate.isVisible({ timeout: 3000 }).catch(() => false);
+        const marcoVisible = await marcoCandidate.isVisible({ timeout: 3000 });
+        const mariaVisible = await mariaCandidate.isVisible({ timeout: 3000 });
         expect(marcoVisible || mariaVisible).toBe(true);
       }
     }
@@ -127,14 +127,14 @@ test.describe('ScoreAssistant — NLP Confidence Flows', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const input = page.getByTestId('score-input').first();
-    const inputVisible = await input.isVisible({ timeout: 5000 }).catch(() => false);
+    const inputVisible = await input.isVisible({ timeout: 5000 });
 
     if (inputVisible) {
       await input.fill('asdfgh');
       await page.getByTestId('score-submit').first().click();
 
       const result = page.getByTestId('score-result').first();
-      const resultVisible = await result.isVisible({ timeout: 5000 }).catch(() => false);
+      const resultVisible = await result.isVisible({ timeout: 5000 });
 
       if (resultVisible) {
         const status = await result.getAttribute('data-status');

@@ -392,7 +392,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
 
         // May show confirmation dialog
         const confirmDialog = page.getByRole('dialog');
-        const confirmVisible = await confirmDialog.isVisible().catch(() => false);
+        const confirmVisible = await confirmDialog.isVisible();
 
         if (confirmVisible) {
           const confirmButton = page.getByRole('button', { name: /confirm|yes|apply/i });
@@ -620,10 +620,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       await page.waitForLoadState('networkidle');
 
       // Some implementations show usage stats
-      const statsVisible = await page
-        .getByText(/usage|users.*affected|evaluation/i)
-        .isVisible()
-        .catch(() => false);
+      const statsVisible = await page.getByText(/usage|users.*affected|evaluation/i).isVisible();
       // Just verify page loaded correctly
       await expect(page.locator('body')).toBeVisible();
     });
@@ -640,9 +637,7 @@ test.describe('ADM-13: Tier Feature Flags UI', () => {
       const deleteButton = page.getByRole('button', { name: /delete|remove/i }).first();
       const menuButton = page.locator('[data-testid="flag-menu"], button:has-text("...")').first();
 
-      const hasDeleteOption =
-        (await deleteButton.isVisible().catch(() => false)) ||
-        (await menuButton.isVisible().catch(() => false));
+      const hasDeleteOption = (await deleteButton.isVisible()) || (await menuButton.isVisible());
 
       expect(hasDeleteOption || true).toBeTruthy(); // Some implementations may have different UI
     });

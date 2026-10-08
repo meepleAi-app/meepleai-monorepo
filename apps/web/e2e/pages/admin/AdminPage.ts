@@ -320,10 +320,7 @@ export class PromptManagementPage extends AdminPage {
 
     for (const row of rows) {
       const versionText = await row.locator('[data-testid="version-number"]').textContent();
-      const isActive = await row
-        .locator('[data-testid="active-badge"]')
-        .isVisible()
-        .catch(() => false);
+      const isActive = await row.locator('[data-testid="active-badge"]').isVisible();
 
       versions.push({
         version: parseInt(versionText || '0'),

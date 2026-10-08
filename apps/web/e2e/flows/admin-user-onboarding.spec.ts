@@ -297,8 +297,7 @@ test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
       console.log(`[DEBUG T5] Session cookies: ${JSON.stringify(sessionCookies.map(c => c.name))}`);
       const toggleVisible = await page
         .locator('[aria-label*="user mode"], [aria-label*="admin mode"]')
-        .isVisible()
-        .catch(() => false);
+        .isVisible();
       console.log(`[DEBUG T5] Admin toggle visible: ${toggleVisible}, URL: ${page.url()}`);
     });
 

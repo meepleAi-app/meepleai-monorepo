@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -20,13 +22,16 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
     private static readonly JsonSerializerOptions _jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IRagAccessService _ragAccessService;
     private readonly ILogger<GetKnowledgeBaseStatusQueryHandler> _logger;
 
     public GetKnowledgeBaseStatusQueryHandler(
         MeepleAiDbContext dbContext,
+        IRagAccessService ragAccessService,
         ILogger<GetKnowledgeBaseStatusQueryHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -35,6 +40,29 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
+
+        // Issue #4137: authorize before reading anything. This covers both shapes with
+        // one rule set — CanAccessRagAsync rules 1-3 for shared games, rule 4 for the
+        // caller's own private game.
+        //
+        // A denial returns null, which both endpoints map to 404 rather than 403. That
+        // is deliberate for a status probe: a 403 would confirm that the id exists and
+        // belongs to someone else, which is the thing the caller must not learn.
+        var role = Enum.TryParse<UserRole>(query.RequestingUserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole
+            : UserRole.User;
+
+        var canAccess = await _ragAccessService
+            .CanAccessRagAsync(query.RequestingUserId, query.GameId, role, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!canAccess)
+        {
+            _logger.LogInformation(
+                "KB status denied for user {UserId} on game {GameId} (isPrivate={IsPrivate})",
+                query.RequestingUserId, query.GameId, query.IsPrivateGame);
+            return null;
+        }
 
         try
         {

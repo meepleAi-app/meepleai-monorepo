@@ -401,10 +401,18 @@ internal static class PrivateGameEndpoints
             var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
 
-            if (!TryGetUserId(context, session, out _))
+            // Issue #4137: the user id used to be discarded here (`out _`), so this
+            // endpoint authenticated and then authorized nothing: any logged-in user
+            // could read the KB status of any private game by id. It is now threaded
+            // into the query, which the handler authorizes.
+            if (!TryGetUserId(context, session, out var userId))
                 return Results.Unauthorized();
 
-            var query = new GetKnowledgeBaseStatusQuery(id, IsPrivateGame: true);
+            var query = new GetKnowledgeBaseStatusQuery(
+                id,
+                userId,
+                session?.Principal?.EffectiveActor.Role ?? "User",
+                IsPrivateGame: true);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return result is null ? Results.NotFound() : Results.Ok(result);
         })

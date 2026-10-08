@@ -229,8 +229,8 @@ if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
 
 | misura (2026-10-08) | valore |
 |---|---|
-| blocchi condizionati sulla presenza di un elemento | **777** |
-| file coinvolti | **121** |
+| blocchi condizionati sulla presenza di un elemento | ~~777~~ -> **902** (vedi §3-nonies) |
+| file coinvolti | ~~121~~ -> **146** |
 | con un `.catch()` che ingoia gli errori | **292** |
 
 ⚠️ **777 è una superficie, non un conteggio di difetti.** Condizionare su un elemento davvero opzionale è legittimo. Il difetto è più stretto: quando il blocco contiene le **uniche** asserzioni del test, quel test non ha un esito «non applicabile» — ha un **verde**.
@@ -255,6 +255,50 @@ src/components/features/kb-globale/DrawerCompleted.tsx:67
 La conclusione di §3-ter **non cambia**: il design delle citazioni della chat è stato sostituito, e lo dicono gli altri quattro confronti (header `📚 Fonti (2)` assente, `Pag. N` contro `Pagina N`, un solo livello di contenitore, espansione per chip invece che globale). Ma il confronto va letto con questa correzione: uno dei tre nomi non era assente, era **in un'altra feature**.
 
 > Lezione, la quarta di questo audit: avevo verificato due dei tre nomi e dedotto il terzo dalla forma della tabella. Una tabella con tre righe invita a trattarle come un blocco; vanno verificate una per una.
+
+## 3-nonies. Il gate per i test ciechi, e una terza correzione di misura
+
+Implementata la voce di DoD di #4127 che non richiede decisioni: un **cricchetto** che impedisce alla classe di crescere, con lo stesso pattern di #4120 — script statico, baseline per file, limiti dichiarati, `pnpm lint:blind-tests`, step in `frontend-static`.
+
+### ⚠️ Scrivendo i test del gate, la misura è salita da 321 a 376
+
+Un test unit sulla regex di riconoscimento ha trovato che la forma più comune **non veniva vista**:
+
+```ts
+if ((await x.count()) > 0) {        // NON riconosciuto
+if (await x.isVisible()) {         // riconosciuto
+```
+
+La prima stesura cercava `\.count\(\)\s*[>!]`, cioè il confronto **subito dopo** `.count()`. Ma `await` impone le parentesi, quindi la forma reale è `(await x.count()) > 0` e fra `.count()` e `>` c'è una parentesi chiusa. Corretto a `\.count\(\)` senza pretendere il confronto: dentro un `if`, una chiamata a `.count()` è sempre un controllo di presenza.
+
+| | prima | dopo |
+|---|---|---|
+| test ciechi | 321 | **376** |
+| file | 72 | **86** |
+| blocchi condizionati (la misura di §3-septies) | 777 | **902** |
+| file con blocchi | 121 | **146** |
+
+**È la terza correzione di misura di questo audit**, e la seconda trovata da un test invece che da un controllo a mano. Vale la pena dire cos'hanno in comune: tutte e tre erano regex che sembravano ovvie — `test(?:\.\w+)?\(` che prendeva `describe`, il `grep` che includeva `__tests__/`, `\.count\(\)\s*[>!]` che pretendeva un confronto adiacente. **Una regex su sintassi reale va provata su esempi reali presi dal codice, non su quelli che si immaginano scrivendola.**
+
+### I file peggiori, aggiornati
+
+| ciechi | file |
+|---|---|
+| 14 | `e2e/pdf-viewer-modal.spec.ts` |
+| 13 | `e2e/errors/slow-response.spec.ts` |
+| 12 · 12 | `e2e/admin/tier-feature-flags.spec.ts` · `e2e/admin-dashboard-epic3685.spec.ts` |
+| 11 | `e2e/chat/response-feedback.spec.ts` |
+| 10 ×3 | `e2e/agent/responsive.spec.ts` · `e2e/auth.spec.ts` · `e2e/chat/copy-response.spec.ts` |
+
+### Verificato per perturbazione, tre direzioni
+
+| perturbazione | esito |
+|---|---|
+| spec nuova con un test cieco | `NUOVO`, exit 1 |
+| **la stessa spec con un `expect` fuori dal blocco** | exit 0 — il limite 1 regge, nessun falso positivo su UI opzionale |
+| `if (await x.isVisible())` → `await expect(x).toBeVisible()` in un file reale | `slow-response.spec.ts: 13 → 12`, miglioramento segnalato |
+
+La seconda è quella che conta: un gate che accusasse chi gestisce legittimamente UI opzionale verrebbe disattivato, e porterebbe via con sé i 376 casi veri.
 
 ## 4. Cosa serve decidere, prima di continuare
 

@@ -91,7 +91,8 @@
     "scraper:qa": "pnpm --dir ../../tools/game-scraper run scraper:qa --",
     "prepare": "cd ../.. && husky || true",
     "lint:orphan-specs": "node scripts/lint-orphan-specs.mjs",
-    "lint:orphan-testids": "node scripts/lint-orphan-testids.mjs"
+    "lint:orphan-testids": "node scripts/lint-orphan-testids.mjs",
+    "lint:blind-tests": "node scripts/lint-blind-tests.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

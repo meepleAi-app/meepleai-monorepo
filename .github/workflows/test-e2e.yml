@@ -505,9 +505,21 @@ jobs:
           pnpm-version: '10'
           working-directory: apps/web
 
+      # Issue #4124 — la scelta del browser va per CONTENUTO, non per uguaglianza.
+      #
+      # Con `matrix.project == 'desktop-safari'` il progetto `mobile-safari` non combaciava e
+      # cadeva nel ramo `chromium`, poi Playwright provava ad avviare WebKit perche` quel
+      # progetto usa `devices['iPhone 13']`. Effetto misurato nel run 37698739719: 2801 test
+      # falliti al primo tentativo, di cui 2794 in MENO DI 50 ms (mediana 2 ms), tutti con
+      # `browserType.launch: Executable doesn't exist at .../webkit-2336/pw_run.sh`.
+      #
+      # Gli step di infrastruttura passavano tutti, quindi il job sembrava arrivare ai test e
+      # fallirli: duemilaottocento fallimenti istantanei somigliano a duemilaottocento test
+      # rotti, e la causa era una riga di YAML. Il job sharded di questo stesso workflow
+      # installa `chromium firefox webkit` tutti e tre e non era affetto.
       - name: Install Playwright Browsers
         working-directory: apps/web
-        run: pnpm exec playwright install --with-deps ${{ matrix.project == 'desktop-safari' && 'webkit' || matrix.project == 'desktop-firefox' && 'firefox' || 'chromium' }}
+        run: pnpm exec playwright install --with-deps ${{ contains(matrix.project, 'safari') && 'webkit' || contains(matrix.project, 'firefox') && 'firefox' || 'chromium' }}
 
       - name: Build Frontend
         working-directory: apps/web

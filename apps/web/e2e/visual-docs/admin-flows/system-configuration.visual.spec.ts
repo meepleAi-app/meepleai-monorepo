@@ -103,22 +103,38 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
       title: 'System Configuration',
       description: 'Central hub for all system settings',
       annotations: [
-        { selector: 'h1, [data-testid="config-heading"]', label: 'Configuration', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'h1, [data-testid="config-heading"]',
+          label: 'Configuration',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Select configuration area',
     });
 
     // Step 2: Configuration sections
     const sections = page.locator('[data-testid="config-section"], .config-section, nav').first();
-    if (await sections.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await sections.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Configuration Areas',
         description: 'Different configuration sections available',
         annotations: [
-          { selector: 'text=/Library|Limits/i', label: 'Library Limits', color: ANNOTATION_COLORS.info },
-          { selector: 'text=/Upload|Quota/i', label: 'Upload Quotas', color: ANNOTATION_COLORS.info },
-          { selector: 'text=/Feature|Flags/i', label: 'Feature Flags', color: ANNOTATION_COLORS.info },
+          {
+            selector: 'text=/Library|Limits/i',
+            label: 'Library Limits',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'text=/Upload|Quota/i',
+            label: 'Upload Quotas',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'text=/Feature|Flags/i',
+            label: 'Feature Flags',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View config',
         nextAction: 'Select section',
@@ -139,16 +155,28 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
       title: 'Library Limits',
       description: 'Configure game library limits per tier',
       annotations: [
-        { selector: 'input[name="free"], [data-tier="free"]', label: 'Free Limit', color: ANNOTATION_COLORS.neutral },
-        { selector: 'input[name="normal"], [data-tier="normal"]', label: 'Normal Limit', color: ANNOTATION_COLORS.info },
-        { selector: 'input[name="premium"], [data-tier="premium"]', label: 'Premium Limit', color: ANNOTATION_COLORS.success },
+        {
+          selector: 'input[name="free"], [data-tier="free"]',
+          label: 'Free Limit',
+          color: ANNOTATION_COLORS.neutral,
+        },
+        {
+          selector: 'input[name="normal"], [data-tier="normal"]',
+          label: 'Normal Limit',
+          color: ANNOTATION_COLORS.info,
+        },
+        {
+          selector: 'input[name="premium"], [data-tier="premium"]',
+          label: 'Premium Limit',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Modify limits',
     });
 
     // Step 2: Edit a limit
     const freeInput = page.locator('input[name="free"], [data-tier="free"] input').first();
-    if (await freeInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await freeInput.isVisible({ timeout: 2000 })) {
       await freeInput.clear();
       await freeInput.fill('10');
       await waitForStableState(page);
@@ -159,7 +187,11 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
         description: 'Changed Free tier limit from 5 to 10',
         annotations: [
           { selector: 'input[name="free"]', label: 'Updated', color: ANNOTATION_COLORS.warning },
-          { selector: 'button[type="submit"], button:has-text("Save")', label: 'Save', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button[type="submit"], button:has-text("Save")',
+            label: 'Save',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'Edit limit',
         nextAction: 'Save changes',
@@ -188,14 +220,22 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
 
     // Step 2: Quota table/form
     const quotaForm = page.locator('form, table, [data-testid="quota-form"]').first();
-    if (await quotaForm.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await quotaForm.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Quota Configuration',
         description: 'Daily and weekly upload limits by tier',
         annotations: [
-          { selector: 'input[name*="daily"], [data-period="daily"]', label: 'Daily', color: ANNOTATION_COLORS.primary },
-          { selector: 'input[name*="weekly"], [data-period="weekly"]', label: 'Weekly', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'input[name*="daily"], [data-period="daily"]',
+            label: 'Daily',
+            color: ANNOTATION_COLORS.primary,
+          },
+          {
+            selector: 'input[name*="weekly"], [data-period="weekly"]',
+            label: 'Weekly',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View quotas',
         nextAction: 'Adjust quotas',
@@ -216,21 +256,33 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
       title: 'Feature Flags',
       description: 'Enable or disable system features',
       annotations: [
-        { selector: '[data-testid="feature-oauth"], text=/OAuth/i', label: 'OAuth', color: ANNOTATION_COLORS.success },
-        { selector: '[data-testid="feature-2fa"], text=/2FA/i', label: '2FA', color: ANNOTATION_COLORS.success },
+        {
+          selector: '[data-testid="feature-oauth"], text=/OAuth/i',
+          label: 'OAuth',
+          color: ANNOTATION_COLORS.success,
+        },
+        {
+          selector: '[data-testid="feature-2fa"], text=/2FA/i',
+          label: '2FA',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Toggle features',
     });
 
     // Step 2: Feature toggle
     const toggle = page.locator('[role="switch"], input[type="checkbox"]').first();
-    if (await toggle.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await toggle.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Feature Toggle',
         description: 'Individual feature toggle control',
         annotations: [
-          { selector: '[role="switch"], input[type="checkbox"]', label: 'Toggle', color: ANNOTATION_COLORS.primary },
+          {
+            selector: '[role="switch"], input[type="checkbox"]',
+            label: 'Toggle',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View flags',
         nextAction: 'Click to toggle',
@@ -239,7 +291,7 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
 
     // Step 3: Maintenance mode (special)
     const maintenanceToggle = page.locator('text=/Maintenance Mode/i').first();
-    if (await maintenanceToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await maintenanceToggle.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Maintenance Mode',
@@ -263,7 +315,7 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
 
     // Make a change
     const input = page.locator('input[name="free"], input[type="number"]').first();
-    if (await input.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await input.isVisible({ timeout: 2000 })) {
       await input.clear();
       await input.fill('15');
 
@@ -272,27 +324,35 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
         title: 'Configuration Changed',
         description: 'Configuration modified, pending save',
         annotations: [
-          { selector: 'button[type="submit"], button:has-text("Save")', label: 'Save', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button[type="submit"], button:has-text("Save")',
+            label: 'Save',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         nextAction: 'Save changes',
       });
 
       // Step 2: Save
       const saveBtn = page.locator('button[type="submit"], button:has-text("Save")').first();
-      if (await saveBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await saveBtn.isVisible({ timeout: 1000 })) {
         await saveBtn.click();
         await page.waitForTimeout(500);
         await waitForStableState(page);
 
         // Step 3: Success message
         const successMsg = page.locator('text=/saved|success|updated/i, [role="alert"]').first();
-        if (await successMsg.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await successMsg.isVisible({ timeout: 2000 })) {
           await helper.capture(page, {
             step: 2,
             title: 'Configuration Saved',
             description: 'Changes saved and logged in audit trail',
             annotations: [
-              { selector: 'text=/saved|success/i, [role="alert"]', label: 'Success', color: ANNOTATION_COLORS.success },
+              {
+                selector: 'text=/saved|success/i, [role="alert"]',
+                label: 'Success',
+                color: ANNOTATION_COLORS.success,
+              },
             ],
             previousAction: 'Save changes',
             nextAction: 'View audit log',

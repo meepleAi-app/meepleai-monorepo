@@ -91,7 +91,12 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           results: [
-            { bggId: 266192, name: 'Wingspan', yearPublished: 2019, thumbnailUrl: 'https://example.com/thumb.jpg' },
+            {
+              bggId: 266192,
+              name: 'Wingspan',
+              yearPublished: 2019,
+              thumbnailUrl: 'https://example.com/thumb.jpg',
+            },
           ],
         }),
       });
@@ -108,27 +113,44 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
       title: 'Games Management',
       description: 'Editor view of shared game catalog',
       annotations: [
-        { selector: 'button:has-text("New Game"), button:has-text("Create"), [data-testid="create-game"]', label: 'Create Game', color: ANNOTATION_COLORS.success },
+        {
+          selector:
+            'button:has-text("New Game"), button:has-text("Create"), [data-testid="create-game"]',
+          label: 'Create Game',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Create new game',
     });
 
     // Step 2: Click create
-    const createBtn = page.locator('button:has-text("New Game"), button:has-text("Create"), [data-testid="create-game"]').first();
-    if (await createBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const createBtn = page
+      .locator(
+        'button:has-text("New Game"), button:has-text("Create"), [data-testid="create-game"]'
+      )
+      .first();
+    if (await createBtn.isVisible({ timeout: 3000 })) {
       await createBtn.click();
       await waitForStableState(page);
 
       // Step 3: Game form
       const gameForm = page.locator('form, [data-testid="game-form"], [role="dialog"]').first();
-      if (await gameForm.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await gameForm.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Game Creation Form',
           description: 'Form to enter new game details',
           annotations: [
-            { selector: 'input[name="title"], [data-testid="game-title"]', label: 'Title', color: ANNOTATION_COLORS.primary },
-            { selector: 'input[name="publisher"]', label: 'Publisher', color: ANNOTATION_COLORS.primary },
+            {
+              selector: 'input[name="title"], [data-testid="game-title"]',
+              label: 'Title',
+              color: ANNOTATION_COLORS.primary,
+            },
+            {
+              selector: 'input[name="publisher"]',
+              label: 'Publisher',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           previousAction: 'Open form',
           nextAction: 'Fill details',
@@ -136,7 +158,7 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
 
         // Fill form
         const titleInput = page.locator('input[name="title"], [data-testid="game-title"]').first();
-        if (await titleInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        if (await titleInput.isVisible({ timeout: 1000 })) {
           await titleInput.fill('Wingspan');
           await waitForStableState(page);
 
@@ -145,8 +167,16 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
             title: 'Form Filled',
             description: 'Game details entered and ready to save',
             annotations: [
-              { selector: 'input[name="title"]', label: 'Title Filled', color: ANNOTATION_COLORS.success },
-              { selector: 'button[type="submit"], button:has-text("Save")', label: 'Save', color: ANNOTATION_COLORS.primary },
+              {
+                selector: 'input[name="title"]',
+                label: 'Title Filled',
+                color: ANNOTATION_COLORS.success,
+              },
+              {
+                selector: 'button[type="submit"], button:has-text("Save")',
+                label: 'Save',
+                color: ANNOTATION_COLORS.primary,
+              },
             ],
             previousAction: 'Fill form',
             nextAction: 'Save game',
@@ -169,14 +199,18 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
       title: 'Edit Game',
       description: 'Edit existing game details',
       annotations: [
-        { selector: 'input[name="title"], [data-testid="game-title"]', label: 'Title', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'input[name="title"], [data-testid="game-title"]',
+          label: 'Title',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Update details',
     });
 
     // Step 2: Make changes
     const titleInput = page.locator('input[name="title"], [data-testid="game-title"]').first();
-    if (await titleInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await titleInput.isVisible({ timeout: 2000 })) {
       await titleInput.clear();
       await titleInput.fill('Ticket to Ride: Europe');
       await waitForStableState(page);
@@ -187,7 +221,11 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
         description: 'Game information modified',
         annotations: [
           { selector: 'input[name="title"]', label: 'Updated', color: ANNOTATION_COLORS.warning },
-          { selector: 'button[type="submit"], button:has-text("Save")', label: 'Save Changes', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button[type="submit"], button:has-text("Save")',
+            label: 'Save Changes',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'Modify title',
         nextAction: 'Save changes',
@@ -208,26 +246,42 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
       title: 'Game to Delete',
       description: 'View game details before deletion',
       annotations: [
-        { selector: 'button:has-text("Delete"), [data-testid="delete-game"]', label: 'Delete', color: ANNOTATION_COLORS.error },
+        {
+          selector: 'button:has-text("Delete"), [data-testid="delete-game"]',
+          label: 'Delete',
+          color: ANNOTATION_COLORS.error,
+        },
       ],
       nextAction: 'Click delete',
     });
 
     // Step 2: Delete confirmation
-    const deleteBtn = page.locator('button:has-text("Delete"), [data-testid="delete-game"]').first();
-    if (await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const deleteBtn = page
+      .locator('button:has-text("Delete"), [data-testid="delete-game"]')
+      .first();
+    if (await deleteBtn.isVisible({ timeout: 3000 })) {
       await deleteBtn.click();
       await waitForStableState(page);
 
-      const confirmDialog = page.locator('[role="alertdialog"], [role="dialog"], .confirm-dialog').first();
-      if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const confirmDialog = page
+        .locator('[role="alertdialog"], [role="dialog"], .confirm-dialog')
+        .first();
+      if (await confirmDialog.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Confirm Deletion',
           description: 'Confirm soft-delete of the game (recoverable)',
           annotations: [
-            { selector: 'button:has-text("Confirm"), button:has-text("Delete")', label: 'Confirm Delete', color: ANNOTATION_COLORS.error },
-            { selector: 'button:has-text("Cancel")', label: 'Cancel', color: ANNOTATION_COLORS.neutral },
+            {
+              selector: 'button:has-text("Confirm"), button:has-text("Delete")',
+              label: 'Confirm Delete',
+              color: ANNOTATION_COLORS.error,
+            },
+            {
+              selector: 'button:has-text("Cancel")',
+              label: 'Cancel',
+              color: ANNOTATION_COLORS.neutral,
+            },
           ],
           previousAction: 'Click delete',
           nextAction: 'Confirm deletion',
@@ -249,19 +303,25 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
       title: 'BGG Import',
       description: 'Import game data from BoardGameGeek',
       annotations: [
-        { selector: 'input[type="search"], input[placeholder*="Search"]', label: 'BGG Search', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'input[type="search"], input[placeholder*="Search"]',
+          label: 'BGG Search',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Search BGG',
     });
 
     // Step 2: Search BGG
-    const searchInput = page.locator('input[type="search"], input[placeholder*="Search"], input[placeholder*="BGG"]').first();
-    if (await searchInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const searchInput = page
+      .locator('input[type="search"], input[placeholder*="Search"], input[placeholder*="BGG"]')
+      .first();
+    if (await searchInput.isVisible({ timeout: 2000 })) {
       await searchInput.fill('Wingspan');
       await waitForStableState(page);
 
       const searchBtn = page.locator('button:has-text("Search"), button[type="submit"]').first();
-      if (await searchBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await searchBtn.isVisible({ timeout: 1000 })) {
         await searchBtn.click();
         await page.waitForTimeout(500);
         await waitForStableState(page);
@@ -272,7 +332,11 @@ test.describe('Game Management Flow - Visual Documentation (Editor)', () => {
           description: 'Select game from BGG search results to import',
           annotations: [
             { selector: 'text=Wingspan', label: 'Result', color: ANNOTATION_COLORS.success },
-            { selector: 'button:has-text("Import"), button:has-text("Add")', label: 'Import', color: ANNOTATION_COLORS.primary },
+            {
+              selector: 'button:has-text("Import"), button:has-text("Add")',
+              label: 'Import',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           previousAction: 'Search BGG',
           nextAction: 'Select to import',

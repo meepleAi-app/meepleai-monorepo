@@ -105,15 +105,11 @@ class NetworkMonitor {
   }
 
   getRequestsTo(endpoint: string): NetworkLog[] {
-    return this.logs.filter(
-      log => log.type === 'request' && log.url.includes(endpoint)
-    );
+    return this.logs.filter(log => log.type === 'request' && log.url.includes(endpoint));
   }
 
   getResponsesFrom(endpoint: string): NetworkLog[] {
-    return this.logs.filter(
-      log => log.type === 'response' && log.url.includes(endpoint)
-    );
+    return this.logs.filter(log => log.type === 'response' && log.url.includes(endpoint));
   }
 
   getAllLogs(): NetworkLog[] {
@@ -150,7 +146,15 @@ class NetworkMonitor {
         lines.push('      Headers:');
 
         // Important headers for auth
-        const importantHeaders = ['content-type', 'accept', 'cookie', 'authorization', 'origin', 'referer', 'x-requested-with'];
+        const importantHeaders = [
+          'content-type',
+          'accept',
+          'cookie',
+          'authorization',
+          'origin',
+          'referer',
+          'x-requested-with',
+        ];
         for (const h of importantHeaders) {
           if (req.headers[h]) {
             const value = h === 'cookie' ? req.headers[h].substring(0, 60) + '...' : req.headers[h];
@@ -160,7 +164,10 @@ class NetworkMonitor {
 
         if (req.requestBody) {
           // Mask password in logs
-          const safeBody = req.requestBody.replace(/"password":"[^"]*"/g, '"password":"[REDACTED]"');
+          const safeBody = req.requestBody.replace(
+            /"password":"[^"]*"/g,
+            '"password":"[REDACTED]"'
+          );
           lines.push(`      Body: ${safeBody}`);
         }
       }
@@ -171,7 +178,13 @@ class NetworkMonitor {
         lines.push('      Headers:');
 
         // Important response headers
-        const importantResHeaders = ['content-type', 'set-cookie', 'access-control-allow-origin', 'access-control-allow-credentials', 'cache-control'];
+        const importantResHeaders = [
+          'content-type',
+          'set-cookie',
+          'access-control-allow-origin',
+          'access-control-allow-credentials',
+          'cache-control',
+        ];
         for (const h of importantResHeaders) {
           if (res.headers[h]) {
             lines.push(`        ${h}: ${res.headers[h]}`);
@@ -184,7 +197,10 @@ class NetworkMonitor {
             // Parse cookie attributes
             const parts = cookie.split(';');
             const [nameValue] = parts;
-            const flags = parts.slice(1).map(p => p.trim()).join(', ');
+            const flags = parts
+              .slice(1)
+              .map(p => p.trim())
+              .join(', ');
             lines.push(`        ${nameValue.split('=')[0]}: [value] ${flags ? `(${flags})` : ''}`);
           }
         }
@@ -235,9 +251,11 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
     // ========================================================================
     await test.step('Click Get Started button to open registration', async () => {
       // Try multiple selectors for the CTA button
-      const ctaButton = page.locator(
-        '[data-testid="get-started-button"], [data-testid="nav-get-started"], a:has-text("Get Started"), button:has-text("Get Started"), a:has-text("Inizia"), button:has-text("Inizia")'
-      ).first();
+      const ctaButton = page
+        .locator(
+          '[data-testid="get-started-button"], [data-testid="nav-get-started"], a:has-text("Get Started"), button:has-text("Get Started"), a:has-text("Inizia"), button:has-text("Inizia")'
+        )
+        .first();
 
       await expect(ctaButton).toBeVisible({ timeout: 10000 });
       await ctaButton.click();
@@ -333,18 +351,22 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
       }
 
       // Option 2: Check for loading text (i18n: English or Italian)
-      const loadingTextVisible = await page.locator(
-        'button:has-text("Creating"), button:has-text("Creazione"), button:has-text("Loading")'
-      ).first().isVisible({ timeout: 2000 }).catch(() => false);
+      const loadingTextVisible = await page
+        .locator(
+          'button:has-text("Creating"), button:has-text("Creazione"), button:has-text("Loading")'
+        )
+        .first()
+        .isVisible({ timeout: 2000 });
 
       if (loadingTextVisible) {
         console.log('   ✅ Loading text visible: "Creating account..."');
       }
 
       // Option 3: Check for spinner animation
-      const spinnerVisible = await page.locator(
-        '[data-testid="register-submit"] svg[class*="animate"], button[disabled] svg'
-      ).first().isVisible({ timeout: 2000 }).catch(() => false);
+      const spinnerVisible = await page
+        .locator('[data-testid="register-submit"] svg[class*="animate"], button[disabled] svg')
+        .first()
+        .isVisible({ timeout: 2000 });
 
       if (spinnerVisible) {
         console.log('   ✅ Spinner animation visible');
@@ -384,7 +406,7 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
 
         // Check if there's an error message visible
         const errorMessage = page.locator('[role="alert"], .text-red-800, .text-destructive');
-        const hasError = await errorMessage.isVisible().catch(() => false);
+        const hasError = await errorMessage.isVisible();
 
         if (hasError) {
           const errorText = await errorMessage.textContent();
@@ -481,9 +503,9 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
       await page.waitForTimeout(2000);
 
       // Verify dashboard content is loaded (user greeting or content)
-      const dashboardContent = page.locator(
-        '[data-testid="dashboard-greeting"], main, [role="main"]'
-      ).first();
+      const dashboardContent = page
+        .locator('[data-testid="dashboard-greeting"], main, [role="main"]')
+        .first();
       await expect(dashboardContent).toBeVisible({ timeout: 10000 });
 
       console.log('✅ Successfully landed on dashboard');
@@ -519,7 +541,9 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
       // Get viewport size to determine if we're on mobile or desktop
       const viewportSize = page.viewportSize();
       const isMobile = viewportSize ? viewportSize.width < 768 : false;
-      console.log(`📱 Viewport: ${viewportSize?.width}x${viewportSize?.height} (${isMobile ? 'mobile' : 'desktop'})`);
+      console.log(
+        `📱 Viewport: ${viewportSize?.width}x${viewportSize?.height} (${isMobile ? 'mobile' : 'desktop'})`
+      );
 
       if (isMobile) {
         // On mobile, the TopNav is hidden and BottomNav is shown
@@ -536,7 +560,7 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
         const response = await page.request.post(`${apiBase}/api/v1/auth/logout`, {
           headers: {
             'Content-Type': 'application/json',
-            'Cookie': cookieHeader,
+            Cookie: cookieHeader,
           },
           data: {},
         });
@@ -555,13 +579,15 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
       } else {
         // On desktop, use the TopNav user menu dropdown
         // Open user menu dropdown (the button with user initial)
-        const userMenuTrigger = page.locator(
-          '[data-testid="user-menu-trigger"], button:has(.rounded-full), .dropdown-trigger'
-        ).first();
+        const userMenuTrigger = page
+          .locator(
+            '[data-testid="user-menu-trigger"], button:has(.rounded-full), .dropdown-trigger'
+          )
+          .first();
 
         // If user menu trigger not found, look for the user initial button
         // TopNav uses a Button with a div containing the user initial
-        const userButton = await userMenuTrigger.isVisible()
+        const userButton = (await userMenuTrigger.isVisible())
           ? userMenuTrigger
           : page.locator('button:has(div.rounded-full)').first();
 
@@ -571,9 +597,11 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
         }
 
         // Click logout menu item
-        const logoutButton = page.locator(
-          '[data-testid="logout-menu-item"], [role="menuitem"]:has-text("Esci"), [role="menuitem"]:has-text("Logout")'
-        ).first();
+        const logoutButton = page
+          .locator(
+            '[data-testid="logout-menu-item"], [role="menuitem"]:has-text("Esci"), [role="menuitem"]:has-text("Logout")'
+          )
+          .first();
 
         await expect(logoutButton).toBeVisible({ timeout: 5000 });
         await logoutButton.click();
@@ -618,9 +646,11 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
       await page.goto('/');
       await page.waitForLoadState('networkidle');
 
-      const loginCta = page.locator(
-        '[data-testid="get-started-button"], [data-testid="nav-get-started"], a:has-text("Get Started"), button:has-text("Login"), a:has-text("Inizia")'
-      ).first();
+      const loginCta = page
+        .locator(
+          '[data-testid="get-started-button"], [data-testid="nav-get-started"], a:has-text("Get Started"), button:has-text("Login"), a:has-text("Inizia")'
+        )
+        .first();
 
       await expect(loginCta).toBeVisible({ timeout: 10000 });
       console.log('✅ Login/Get Started button visible - user is logged out');
@@ -649,7 +679,9 @@ test.describe('Email Registration → Dashboard → Logout Flow', () => {
       console.log(`   Errors (4xx/5xx): ${errorResponses.length}`);
 
       // Check for critical auth cookies
-      const cookiesSet = responses.some(r => r.cookies && r.cookies.some(c => c.includes('meepleai_session')));
+      const cookiesSet = responses.some(
+        r => r.cookies && r.cookies.some(c => c.includes('meepleai_session'))
+      );
       console.log(`   Session Cookie Set: ${cookiesSet ? '✅ YES' : '❌ NO'}`);
 
       // Verify CORS headers present

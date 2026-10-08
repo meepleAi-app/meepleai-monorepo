@@ -94,20 +94,30 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
       title: 'Approval Queue',
       description: 'View all games pending admin approval',
       annotations: [
-        { selector: 'h1, [data-testid="approvals-heading"]', label: 'Approvals', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'h1, [data-testid="approvals-heading"]',
+          label: 'Approvals',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Review submissions',
     });
 
     // Step 2: Queue list
-    const queueList = page.locator('[data-testid="approval-queue"], .approval-list, table, ul').first();
-    if (await queueList.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const queueList = page
+      .locator('[data-testid="approval-queue"], .approval-list, table, ul')
+      .first();
+    if (await queueList.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Pending Items',
         description: 'List of games awaiting review',
         annotations: [
-          { selector: '[data-testid="approval-item"], .approval-item, tr', label: 'Submission', color: ANNOTATION_COLORS.warning },
+          {
+            selector: '[data-testid="approval-item"], .approval-item, tr',
+            label: 'Submission',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'View queue',
         nextAction: 'Select to review',
@@ -115,8 +125,10 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
     }
 
     // Step 3: Queue metrics
-    const metrics = page.locator('text=/\\d+ pending|\\d+ items/i, [data-testid="queue-count"]').first();
-    if (await metrics.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const metrics = page
+      .locator('text=/\\d+ pending|\\d+ items/i, [data-testid="queue-count"]')
+      .first();
+    if (await metrics.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Queue Metrics',
@@ -143,7 +155,11 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
       title: 'Review Submission',
       description: 'Detailed view of submitted game for review',
       annotations: [
-        { selector: 'h1, [data-testid="game-title"]', label: 'Game', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'h1, [data-testid="game-title"]',
+          label: 'Game',
+          color: ANNOTATION_COLORS.primary,
+        },
         { selector: 'text=/submitted by/i', label: 'Submitter', color: ANNOTATION_COLORS.info },
       ],
       nextAction: 'Review content',
@@ -151,7 +167,7 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
 
     // Step 2: Content sections
     const contentSection = page.locator('[data-testid="content-review"], .review-section').first();
-    if (await contentSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await contentSection.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Content Review',
@@ -167,14 +183,22 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
 
     // Step 3: Action buttons
     const actions = page.locator('[data-testid="approval-actions"], .action-buttons').first();
-    if (await actions.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await actions.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Review Actions',
         description: 'Approve or reject the submission',
         annotations: [
-          { selector: 'button:has-text("Approve"), [data-testid="approve"]', label: 'Approve', color: ANNOTATION_COLORS.success },
-          { selector: 'button:has-text("Reject"), [data-testid="reject"]', label: 'Reject', color: ANNOTATION_COLORS.error },
+          {
+            selector: 'button:has-text("Approve"), [data-testid="approve"]',
+            label: 'Approve',
+            color: ANNOTATION_COLORS.success,
+          },
+          {
+            selector: 'button:has-text("Reject"), [data-testid="reject"]',
+            label: 'Reject',
+            color: ANNOTATION_COLORS.error,
+          },
         ],
         previousAction: 'Review complete',
         nextAction: 'Approve or reject',
@@ -187,13 +211,16 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
 
   test('approve publication - success flow', async ({ page }) => {
     // Mock approve endpoint
-    await page.route(`${API_BASE}/api/v1/admin/shared-games/pending-1/approve-publication`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'published' }),
-      });
-    });
+    await page.route(
+      `${API_BASE}/api/v1/admin/shared-games/pending-1/approve-publication`,
+      async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'published' }),
+        });
+      }
+    );
 
     // Step 1: Navigate to submission
     await page.goto('/admin/approvals/pending-1');
@@ -208,19 +235,23 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
 
     // Step 2: Click approve
     const approveBtn = page.locator('button:has-text("Approve"), [data-testid="approve"]').first();
-    if (await approveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await approveBtn.isVisible({ timeout: 3000 })) {
       await approveBtn.click();
       await waitForStableState(page);
 
       // Step 3: Confirmation dialog
       const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]').first();
-      if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmDialog.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Confirm Approval',
           description: 'Confirm game publication to catalog',
           annotations: [
-            { selector: 'button:has-text("Confirm"), button:has-text("Publish")', label: 'Confirm', color: ANNOTATION_COLORS.success },
+            {
+              selector: 'button:has-text("Confirm"), button:has-text("Publish")',
+              label: 'Confirm',
+              color: ANNOTATION_COLORS.success,
+            },
           ],
           previousAction: 'Click approve',
           nextAction: 'Confirm publication',
@@ -255,19 +286,23 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
 
     // Step 2: Click reject
     const rejectBtn = page.locator('button:has-text("Reject"), [data-testid="reject"]').first();
-    if (await rejectBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await rejectBtn.isVisible({ timeout: 3000 })) {
       await rejectBtn.click();
       await waitForStableState(page);
 
       // Step 3: Rejection dialog with reason
       const rejectDialog = page.locator('[role="dialog"]').first();
-      if (await rejectDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await rejectDialog.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Rejection Feedback',
           description: 'Provide reason for rejection to help editor improve',
           annotations: [
-            { selector: 'textarea, [data-testid="rejection-reason"]', label: 'Reason', color: ANNOTATION_COLORS.warning },
+            {
+              selector: 'textarea, [data-testid="rejection-reason"]',
+              label: 'Reason',
+              color: ANNOTATION_COLORS.warning,
+            },
           ],
           previousAction: 'Click reject',
           nextAction: 'Enter reason',
@@ -275,7 +310,7 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
 
         // Fill reason
         const reasonInput = page.locator('textarea, [data-testid="rejection-reason"]').first();
-        if (await reasonInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        if (await reasonInput.isVisible({ timeout: 1000 })) {
           await reasonInput.fill('Missing rulebook PDF. Please upload the official rulebook.');
           await waitForStableState(page);
 
@@ -285,7 +320,11 @@ test.describe('Approval Workflow - Visual Documentation (Admin)', () => {
             description: 'Rejection feedback ready to send',
             annotations: [
               { selector: 'textarea', label: 'Feedback', color: ANNOTATION_COLORS.error },
-              { selector: 'button:has-text("Confirm"), button:has-text("Reject")', label: 'Send', color: ANNOTATION_COLORS.error },
+              {
+                selector: 'button:has-text("Confirm"), button:has-text("Reject")',
+                label: 'Send',
+                color: ANNOTATION_COLORS.error,
+              },
             ],
             previousAction: 'Enter reason',
             nextAction: 'Send rejection',

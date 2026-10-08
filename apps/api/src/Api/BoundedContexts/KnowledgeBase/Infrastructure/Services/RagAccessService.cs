@@ -46,7 +46,26 @@ internal sealed class RagAccessService : IRagAccessService
                 cancellationToken)
             .ConfigureAwait(false);
 
-        return hasOwnership;
+        if (hasOwnership)
+            return true;
+
+        // Rule 4 (Issue #4137): the caller owns the PrivateGame with this id.
+        //
+        // Rules 2 and 3 only ever look at SharedGames and UserLibraryEntry.SharedGameId,
+        // so before this branch existed an id belonging to a PrivateGame fell through
+        // all of them and the method returned false — including for the owner. Yet
+        // IndexPdfCommandHandler scopes a private PDF's vectors under PrivateGameId
+        // ("effectiveGameId = pdf.PrivateGameId ?? pdf.SharedGameId"), so the corpus
+        // existed and was simply unreachable: upload, indexing, agent link and
+        // kb-status all succeeded, and the question answered 403.
+        //
+        // Soft-deleted private games are excluded by the global query filter on
+        // PrivateGameEntity (!IsDeleted) — not repeated here, so that the filter stays
+        // the single place that decides it. A test asserts the soft-deleted case.
+        return await _dbContext.PrivateGames
+            .AsNoTracking()
+            .AnyAsync(pg => pg.Id == gameId && pg.OwnerId == userId, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -91,6 +110,13 @@ internal sealed class RagAccessService : IRagAccessService
         CancellationToken cancellationToken = default)
     {
         // Rule 1: Admin / SuperAdmin → all non-deleted SharedGame IDs.
+        //
+        // Issue #4137: deliberately NOT extended to every user's PrivateGames, even
+        // though CanAccessRagAsync rule 1 lets an admin query a specific private game.
+        // The two are different operations: that one is targeted support, this one is
+        // the corpus of every ordinary question an admin asks. Folding every user's
+        // private PDFs into it would both amplify the privacy surface and degrade
+        // retrieval. An admin who needs a private game asks with that game's id.
         if (role is UserRole.Admin or UserRole.SuperAdmin)
         {
             return await _dbContext.SharedGames
@@ -120,9 +146,19 @@ internal sealed class RagAccessService : IRagAccessService
                 sg => sg.Id,
                 (e, sg) => sg.Id);
 
+        // Rule 3 (Issue #4137): the caller's own PrivateGames. Without this a private
+        // game never appeared in a cross-game ask, for the same reason it was denied
+        // by CanAccessRagAsync: both methods only knew about SharedGames.
+        // Soft-deleted rows are excluded by the global query filter on PrivateGameEntity.
+        var ownPrivateGames = _dbContext.PrivateGames
+            .AsNoTracking()
+            .Where(pg => pg.OwnerId == userId)
+            .Select(pg => pg.Id);
+
         // Union deduplicates at the database level; Distinct is a safety net.
         return await publicGames
             .Union(ownedGames)
+            .Union(ownPrivateGames)
             .Distinct()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

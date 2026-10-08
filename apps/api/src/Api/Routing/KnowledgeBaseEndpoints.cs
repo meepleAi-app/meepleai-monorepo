@@ -394,7 +394,10 @@ internal static class KnowledgeBaseEndpoints
         logger.LogDebug("GetKnowledgeBaseStatus for game {GameId} by user {UserId}",
             gameId, session!.Principal!.Subject.Id);
 
-        var query = new GetKnowledgeBaseStatusQuery(gameId);
+        var query = new GetKnowledgeBaseStatusQuery(
+            gameId,
+            session.Principal!.Subject.Id,
+            session.Principal!.EffectiveActor.Role);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         if (result is null)

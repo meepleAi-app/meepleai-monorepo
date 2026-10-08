@@ -76,10 +76,12 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
 
         var handler = new GetKnowledgeBaseStatusQueryHandler(
             _dbContext,
+            new Api.BoundedContexts.KnowledgeBase.Infrastructure.Services.RagAccessService(_dbContext),
             NullLogger<GetKnowledgeBaseStatusQueryHandler>.Instance);
 
         // Act
-        var query = new GetKnowledgeBaseStatusQuery(privateGameId, IsPrivateGame: true);
+        // Issue #4137: the handler authorizes, so the owner has to ask.
+        var query = new GetKnowledgeBaseStatusQuery(privateGameId, ownerId, "User", IsPrivateGame: true);
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert

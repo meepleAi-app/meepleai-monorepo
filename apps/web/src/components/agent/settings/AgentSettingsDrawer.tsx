@@ -8,7 +8,8 @@
  * - Cost estimate per model
  * - Temperature slider (0-2 range)
  * - Max tokens input
- * - Agent name editing
+ * - Agent name shown read-only (#4138: the agent is shared, so a rename here
+ *   would rename it for everyone)
  * - PATCH config via /api/v1/agents/:id/configuration
  */
 
@@ -42,7 +43,6 @@ import {
   useAgentConfiguration,
   useUpdateAgentConfiguration,
 } from '@/hooks/queries/useModels';
-import { api } from '@/lib/api';
 import type { UpdateAgentConfigurationRequest } from '@/lib/api/schemas/agent-config.schemas';
 
 // ============================================================================
@@ -62,15 +62,12 @@ interface AgentSettingsDrawerProps {
   userTier?: string;
   /** Callback after successful config update */
   onConfigUpdated?: () => void;
-  /** Callback after name update */
-  onNameUpdated?: (newName: string) => void;
 }
 
 interface FormState {
   modelId: string;
   temperature: number;
   maxTokens: number;
-  name: string;
 }
 
 const DEFAULT_FREE_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
@@ -86,7 +83,6 @@ export function AgentSettingsDrawer({
   agentName = '',
   userTier = 'free',
   onConfigUpdated,
-  onNameUpdated,
 }: AgentSettingsDrawerProps): React.JSX.Element {
   // Fetch models filtered by tier
   const { data: models = [], isLoading: modelsLoading } = useAvailableModels(userTier);
@@ -104,7 +100,6 @@ export function AgentSettingsDrawer({
     modelId: DEFAULT_FREE_MODEL,
     temperature: 0.3,
     maxTokens: 2048,
-    name: agentName,
   });
 
   // Sync form when config loads
@@ -118,10 +113,6 @@ export function AgentSettingsDrawer({
       }));
     }
   }, [agentConfig]);
-
-  useEffect(() => {
-    setForm(prev => ({ ...prev, name: agentName }));
-  }, [agentName]);
 
   // Cost estimate for selected model
   const selectedModel = models.find(m => m.id === form.modelId);
@@ -163,33 +154,23 @@ export function AgentSettingsDrawer({
       });
     }
 
-    // Update name separately via existing PUT endpoint
-    if (form.name.trim() && form.name.trim() !== agentName) {
-      api.agents
-        .updateUserAgent(agentId, { name: form.name.trim() })
-        .then(() => {
-          onNameUpdated?.(form.name.trim());
-        })
-        .catch(() => {
-          toast.error('Errore aggiornamento nome agente');
-        });
-    }
+    // Issue #4138: the `updateUserAgent` rename that stood here is gone — the
+    // agent is shared, so renaming it would rename it for everyone.
 
-    // Close if no config changes (name-only)
+    // Close if there was nothing to patch
     if (Object.keys(configPayload).length === 0) {
       onClose();
     }
-  }, [form, agentConfig, agentName, agentId, patchConfig, onConfigUpdated, onNameUpdated, onClose]);
+  }, [form, agentConfig, patchConfig, onConfigUpdated, onClose]);
 
   const handleReset = useCallback(() => {
     setForm({
       modelId: DEFAULT_FREE_MODEL,
       temperature: 0.3,
       maxTokens: 2048,
-      name: agentName,
     });
     toast.info('Configurazione ripristinata ai valori predefiniti');
-  }, [agentName]);
+  }, []);
 
   const isLoading = modelsLoading || configLoading;
 
@@ -214,17 +195,19 @@ export function AgentSettingsDrawer({
             </div>
           ) : (
             <>
-              {/* Agent Name */}
-              <div className="space-y-2">
-                <Label className="text-slate-200">Nome Agente</Label>
-                <Input
-                  value={form.name}
-                  onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-                  maxLength={100}
-                  className="bg-card border-border text-white"
-                  data-testid="agent-name-input"
-                />
-              </div>
+              {/* Agent name — read-only.
+                  Issue #4138: the agent is system-wide and admin-managed, so a
+                  rename here would rename it for every user. The editable input
+                  and its `updateUserAgent` call are gone; the name is shown
+                  because knowing which agent answers is still useful. */}
+              {agentName && (
+                <div className="space-y-2">
+                  <Label className="text-slate-200">Agente</Label>
+                  <p className="text-sm text-slate-300" data-testid="agent-name-readonly">
+                    {agentName}
+                  </p>
+                </div>
+              )}
 
               {/* Model Selector */}
               <div className="space-y-2">

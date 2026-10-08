@@ -541,8 +541,8 @@ importers:
         specifier: ^2.15.0
         version: 2.15.0(@types/node@26.2.0)(typescript@5.9.3)
       msw-storybook-addon:
-        specifier: ^2.0.7
-        version: 2.0.7(msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3))
+        specifier: ^3.0.3
+        version: 3.0.3(msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3))(storybook@10.5.7(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8))
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5
@@ -2297,6 +2297,7 @@ packages:
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@next/swc-linux-x64-gnu@16.3.6':
     resolution: {integrity: sha512-nFncBNGAYouRHjRVaITs9beZRfhX4ssVwpnvPIAbkZVH6LtGoAVlH4bJ8Cnf9SOo9bsXgPFer/GdHtEE3JNOkw==}
@@ -8032,10 +8033,12 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  msw-storybook-addon@2.0.7:
-    resolution: {integrity: sha512-TGmlxXy2TsaB6QcClVKRxqvay5f93xoLguHOihRFQ+gIEIyiyvcoQjkEeuOe7Y9qvddzGB1LyFomzPo9/EpnuQ==}
+  msw-storybook-addon@3.0.3:
+    resolution: {integrity: sha512-4Jh4oKxqdHzqoBwe5mke9eCxfUQud5TaU5PME1476GDfelSXMkZLBTkDFehPvq5hMC8ksOkEjL5fAo4kS8d4pg==}
+    hasBin: true
     peerDependencies:
-      msw: ^2.0.0
+      msw: '>=2'
+      storybook: '>=10.1.10'
 
   msw@2.15.0:
     resolution: {integrity: sha512-2wQAmKkQKxRuXvYJxVhPGG0wZNBQyD06oJvxqw90XqLvptdqxdlHrFUfEteKkpaNORX3Xzc+HtEl/q0nfmN2wQ==}
@@ -18454,10 +18457,10 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw-storybook-addon@2.0.7(msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3)):
+  msw-storybook-addon@3.0.3(msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3))(storybook@10.5.7(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8)):
     dependencies:
-      is-node-process: 1.2.0
       msw: 2.15.0(@types/node@26.2.0)(typescript@5.9.3)
+      storybook: 10.5.7(@types/react@19.2.18)(prettier@3.9.6)(react@19.2.8)
 
   msw@2.15.0(@types/node@26.2.0)(typescript@5.9.3):
     dependencies:

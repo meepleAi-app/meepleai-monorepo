@@ -61,13 +61,11 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
 
             var path = $"$.{section}[{i}]";
             var targets = new List<int>();
-            var declaredOverrides = 0;
 
             if (item.TryGetProperty("overrides", out var ov) && ov.ValueKind == JsonValueKind.Array)
             {
                 foreach (var el in ov.EnumerateArray())
                 {
-                    declaredOverrides++;
                     if (el.ValueKind != JsonValueKind.Number || !el.TryGetInt32(out var ord) || ord < 0 || ord >= list.Count || ord == i || list[ord].ValueKind != JsonValueKind.Object)
                     {
                         violations.Add(new MechanicValidationViolation("T5_override_missing",
@@ -88,8 +86,13 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
 
             edges[i] = targets;
 
-            var hasTrigger = item.TryGetProperty("trigger", out var tr) && tr.ValueKind == JsonValueKind.Object;
-            if (string.Equals(kinds[i], "exception", StringComparison.Ordinal) && declaredOverrides == 0 && !hasTrigger)
+            // Same predicates as the parser: a trigger is one MechanicTrigger.Create keeps (an empty or
+            // blank-only object is none), and an exception is bound only by RESOLVED edges — the ones left
+            // after dropping invalid, self and Example targets — so an exception whose every declared
+            // override is invalid is reported both per ordinal and as unbound.
+            var hasTrigger = item.TryGetProperty("trigger", out var tr) && tr.ValueKind == JsonValueKind.Object
+                && MechanicTrigger.Create(ReadString(tr, "phase"), ReadString(tr, "action"), ReadString(tr, "component")) is not null;
+            if (string.Equals(kinds[i], "exception", StringComparison.Ordinal) && targets.Count == 0 && !hasTrigger)
             {
                 violations.Add(new MechanicValidationViolation("T5_exception_unbound",
                     "An exception item needs 'overrides' or 'trigger'.", path));

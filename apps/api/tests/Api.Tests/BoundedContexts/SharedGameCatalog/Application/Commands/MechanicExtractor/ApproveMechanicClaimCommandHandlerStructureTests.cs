@@ -112,6 +112,56 @@ public class ApproveMechanicClaimCommandHandlerStructureTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // Parser-built claims skip SetClaimStructure: an Exception claim with no override and no trigger.
+    private static (MechanicAnalysis Analysis, MechanicClaim General, MechanicClaim Unbound) BuildInReviewWithUnboundException()
+    {
+        var analysis = MechanicAnalysis.Create(
+            Guid.NewGuid(), Guid.NewGuid(), "v1.2.0", Guid.NewGuid(), DateTime.UtcNow, "m", "p", 1m);
+        MechanicClaim Build(int order, MechanicClaimStructure structure)
+        {
+            var id = Guid.NewGuid();
+            var citation = MechanicCitation.Create(id, pdfPage: 1, quote: "q", chunkId: null, displayOrder: 0);
+            return MechanicClaim.CreateWithId(id, analysis.Id, MechanicSection.Mechanics, $"claim {order}", order,
+                new[] { citation }, sourceAnchor: $"$.mechanics[{order}]", structure: structure);
+        }
+
+        var general = Build(0, MechanicClaimStructure.Default);
+        var unbound = Build(1, new MechanicClaimStructure(MechanicClaimKind.Exception, MechanicRulePriority.Card, Array.Empty<Guid>(), null));
+        analysis.AddClaim(general);
+        analysis.AddClaim(unbound);
+        analysis.SubmitForReview(Guid.NewGuid(), DateTime.UtcNow);
+        return (analysis, general, unbound);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutStructure_InvalidCurrentStructure_ThrowsBadRequest_AndDoesNotSave()
+    {
+        var (analysis, _, unbound) = BuildInReviewWithUnboundException();
+        SetupRepo(analysis, analysis.Id);
+
+        var act = () => _handler.Handle(new ApproveMechanicClaimCommand(analysis.Id, unbound.Id, Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>().WithMessage("*Exception*Overrides*Trigger*");
+        unbound.Status.Should().Be(MechanicClaimStatus.Pending);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithStructureFixingInvalidCurrentStructure_Approves()
+    {
+        // The dialog always sends the (possibly corrected) structure: the corrected one is what is validated.
+        var (analysis, general, unbound) = BuildInReviewWithUnboundException();
+        SetupRepo(analysis, analysis.Id);
+        var fixedStructure = new MechanicClaimStructureDto(MechanicClaimKind.Exception, MechanicRulePriority.Card, new[] { general.Id }, null);
+
+        var result = await _handler.Handle(
+            new ApproveMechanicClaimCommand(analysis.Id, unbound.Id, Guid.NewGuid(), null, fixedStructure), CancellationToken.None);
+
+        result.Status.Should().Be(MechanicClaimStatus.Approved);
+        result.Overrides.Should().Equal(general.Id);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task Handle_WithoutStructure_LeavesProposedValues()
     {

@@ -68,7 +68,8 @@ public sealed class MechanicClaim : Entity<Guid>
 
     /// <summary>
     /// Applies the four v3 fields WITHOUT cross-claim validation. Only the aggregate
-    /// (<c>MechanicAnalysis.SetClaimStructure</c>) and the parser may call it.
+    /// (<c>MechanicAnalysis.SetClaimStructure</c> / <c>ApproveClaim</c>, after validating the graph) and the
+    /// parser may call it.
     /// </summary>
     internal void ApplyStructure(MechanicClaimStructure structure)
     {

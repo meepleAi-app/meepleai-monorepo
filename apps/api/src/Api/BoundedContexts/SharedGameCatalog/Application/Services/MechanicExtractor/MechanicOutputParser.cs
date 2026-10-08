@@ -444,7 +444,7 @@ internal static class MechanicOutputParser
             sequence = sequence.OrderBy(x => x.Order ?? int.MaxValue).ThenBy(x => x.SourceIndex);
         }
 
-        var structures = BreakOverrideCycles(
+        var structures = SanitizeOverrideGraph(
             prepared.OfType<PreparedItem>()
                 .ToDictionary(p => p.SourceIndex, p => ReadStructure(p.Element, sectionClaimIds, p.SourceIndex)),
             sectionClaimIds);
@@ -465,12 +465,14 @@ internal static class MechanicOutputParser
     }
 
     /// <summary>
-    /// Guarantees the persisted override graph of one section is acyclic. Each time a cycle is
-    /// found (DFS in ascending raw-index order), the override edge leaving the cycle member with the
-    /// HIGHEST raw source index is dropped, and the search repeats until no cycle remains. T5 reports
-    /// the cycle on the raw JSON; the parser only guarantees that persisted data is acyclic.
+    /// Makes the persisted override graph of one section respect the spec §2 invariants the parser can
+    /// enforce on its own (precedent: ruling R5). First every edge whose source OR target item is an
+    /// <c>Example</c> is dropped (ruling R10). Then, each time a cycle is found (DFS in ascending raw-index
+    /// order), the override edge leaving the cycle member with the HIGHEST raw source index is dropped, and
+    /// the search repeats until no cycle remains. T5 reports both problems on the raw JSON
+    /// (<c>T5_example_in_override</c>, <c>T5_override_cycle</c>); the parser only guarantees the persisted data.
     /// </summary>
-    private static Dictionary<int, MechanicClaimStructure> BreakOverrideCycles(
+    private static Dictionary<int, MechanicClaimStructure> SanitizeOverrideGraph(
         Dictionary<int, MechanicClaimStructure> structures, IReadOnlyList<Guid> sectionClaimIds)
     {
         var indexOf = new Dictionary<Guid, int>();
@@ -482,10 +484,30 @@ internal static class MechanicOutputParser
             }
         }
 
+        bool IsExample(int index) => structures[index].Kind == MechanicClaimKind.Example;
+
         var edges = structures.ToDictionary(
             kv => kv.Key, kv => kv.Value.Overrides.Select(g => indexOf[g]).ToList());
 
         var changed = new HashSet<int>();
+        foreach (var (from, targets) in edges)
+        {
+            var before = targets.Count;
+            if (IsExample(from))
+            {
+                targets.Clear();
+            }
+            else
+            {
+                targets.RemoveAll(IsExample);
+            }
+
+            if (targets.Count != before)
+            {
+                changed.Add(from);
+            }
+        }
+
         while (FindCycle(edges) is { } cycle)
         {
             var from = cycle.Max();

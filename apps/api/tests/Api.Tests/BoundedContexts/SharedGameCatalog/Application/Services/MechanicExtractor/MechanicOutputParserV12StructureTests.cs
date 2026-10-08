@@ -158,4 +158,42 @@ public sealed class MechanicOutputParserV12StructureTests
             new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json });
         claims.Single().Overrides.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Parse_EdgeToExample_IsDropped()
+    {
+        // item[2] overrides a Rule (0) and an Example (1): only the edge to the Example is dropped.
+        const string json = """
+        {"mechanics":[
+          {"name":"General","description":"d","citations":[{"pdf_page":1,"quote":"q"}]},
+          {"name":"Esempio","description":"d","kind":"example","citations":[{"pdf_page":1,"quote":"q"}]},
+          {"name":"Exc","description":"d","kind":"exception","overrides":[0,1],"citations":[{"pdf_page":1,"quote":"q"}]}
+        ]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json });
+
+        claims.Should().HaveCount(3);
+        claims[1].Kind.Should().Be(MechanicClaimKind.Example);
+        claims[2].Kind.Should().Be(MechanicClaimKind.Exception);
+        claims[2].Overrides.Should().Equal(claims[0].Id);
+    }
+
+    [Fact]
+    public void Parse_ExampleWithOverrides_LosesThem()
+    {
+        const string json = """
+        {"mechanics":[
+          {"name":"General","description":"d","citations":[{"pdf_page":1,"quote":"q"}]},
+          {"name":"Esempio","description":"d","kind":"example","overrides":[0],"citations":[{"pdf_page":1,"quote":"q"}]}
+        ]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json });
+
+        claims.Should().HaveCount(2);
+        claims[1].Kind.Should().Be(MechanicClaimKind.Example);
+        claims[1].Overrides.Should().BeEmpty();
+        claims[0].Overrides.Should().BeEmpty();
+    }
 }

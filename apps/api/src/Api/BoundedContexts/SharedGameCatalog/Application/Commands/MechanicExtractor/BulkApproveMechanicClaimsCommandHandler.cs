@@ -34,6 +34,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// stay <c>Pending</c> and require explicit per-claim approval. The skipped-fail count is
 /// log-only (no response DTO field) to keep the response contract and FE Zod schema unchanged.
 /// </para>
+/// <para>
+/// Same treatment (skip, stay <c>Pending</c>, log-only count) for <c>Pending</c> claims whose
+/// structure violates an override-graph invariant (spec 2026-10-08 §2, ruling R10): the reviewer
+/// corrects the structure through the per-claim approve or <c>PUT …/structure</c>.
+/// </para>
 /// </remarks>
 internal sealed class BulkApproveMechanicClaimsCommandHandler
     : ICommandHandler<BulkApproveMechanicClaimsCommand, BulkApproveMechanicClaimsResponseDto>
@@ -72,11 +77,16 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
                 resourceId: request.AnalysisId.ToString());
         }
 
-        var pendingClaimIds = analysis.Claims
+        var candidateClaimIds = analysis.Claims
             .Where(c => c.Status == MechanicClaimStatus.Pending
                         && !c.Validations.Any(v => string.Equals(v.Outcome, MechanicClaimValidationOutcomes.Fail, StringComparison.Ordinal)))
             .Select(c => c.Id)
             .ToList();
+
+        // R10: a claim whose structure breaks an override-graph invariant would make ApproveClaim
+        // throw; it is skipped (stays Pending) instead of failing the batch.
+        var pendingClaimIds = candidateClaimIds.Where(analysis.HasValidClaimStructure).ToList();
+        var skippedInvalidStructureCount = candidateClaimIds.Count - pendingClaimIds.Count;
 
         var skippedFailFlaggedCount = analysis.Claims
             .Count(c => c.Status == MechanicClaimStatus.Pending
@@ -90,6 +100,14 @@ internal sealed class BulkApproveMechanicClaimsCommandHandler
             _logger.LogInformation(
                 "BulkApprove skipped {Count} fail-flagged claim(s) for analysis {AnalysisId}",
                 skippedFailFlaggedCount,
+                analysis.Id);
+        }
+
+        if (skippedInvalidStructureCount > 0)
+        {
+            _logger.LogInformation(
+                "BulkApprove skipped {Count} claim(s) with an invalid override structure for analysis {AnalysisId}",
+                skippedInvalidStructureCount,
                 analysis.Id);
         }
 

@@ -25,9 +25,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// optimistic concurrency on parent <c>xmin</c> → <see cref="DbUpdateConcurrencyException"/>.
 /// </para>
 /// <para>
-/// When the command carries a <c>Structure</c> it is applied after the claim is approved (so a
-/// Rejected claim can be approved and edited in one call) and before persisting: invalid override
-/// graphs → 400 (<see cref="BadRequestException"/>), state violations → 409, nothing saved.
+/// The structure in effect after the approval — the command's <c>Structure</c> when present, otherwise
+/// the claim's current one (claims built by the parser never went through <c>SetClaimStructure</c>) —
+/// must satisfy the override-graph invariants: a violation → 400 (<see cref="BadRequestException"/>),
+/// nothing saved. A supplied structure is applied with the approval, so a Rejected claim can be
+/// approved and edited in one call.
 /// </para>
 /// </remarks>
 internal sealed class ApproveMechanicClaimCommandHandler
@@ -76,32 +78,21 @@ internal sealed class ApproveMechanicClaimCommandHandler
 
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
+        // The supplied structure (or, without one, the claim's current structure) is validated against
+        // the override graph BEFORE the approval, then applied together with it: a previously Rejected
+        // claim can be approved and corrected in one call, and a reviewer can fix an invalid proposal.
+        // Nothing is persisted until SaveChanges, so a 400/409 here leaves no partial state.
         try
         {
-            analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note);
+            analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note, request.Structure?.ToDomain());
         }
         catch (InvalidMechanicAnalysisStateException ex)
         {
             throw new ConflictException(ex.Message, ex);
         }
-
-        // Structure is applied AFTER approval: a previously Rejected claim becomes Approved first,
-        // and SetClaimStructure refuses Rejected claims. Nothing is persisted until SaveChanges, so
-        // a 400/409 here leaves no partial state.
-        if (request.Structure is not null)
+        catch (ArgumentException ex)
         {
-            try
-            {
-                analysis.SetClaimStructure(request.ClaimId, request.Structure.ToDomain());
-            }
-            catch (ArgumentException ex)
-            {
-                throw new BadRequestException(ex.Message, ex);
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new ConflictException(ex.Message, ex);
-            }
+            throw new BadRequestException(ex.Message, ex);
         }
 
         _analysisRepository.Update(analysis);

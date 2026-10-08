@@ -99,18 +99,12 @@ const baseData: SharedGameDetailData = {
       isActive: false,
     },
   ],
-  linkedAgent: {
-    id: 'agent-1',
-    name: 'Catan Arbitro',
-    isActive: true,
-  },
 };
 
 const emptyData: SharedGameDetailData = {
   ...baseData,
   documents: [],
   kbCards: [],
-  linkedAgent: null,
 };
 
 // ============================================================================
@@ -128,7 +122,7 @@ describe('SharedGameExtraMeepleCard', () => {
 
   it('renders error state', () => {
     render(
-      <SharedGameExtraMeepleCard data={baseData} error="Gioco non trovato" data-testid="sgcard" />,
+      <SharedGameExtraMeepleCard data={baseData} error="Gioco non trovato" data-testid="sgcard" />
     );
 
     expect(screen.getByText('Gioco non trovato')).toBeInTheDocument();
@@ -174,18 +168,12 @@ describe('SharedGameExtraMeepleCard', () => {
     expect(screen.getByText('Trade, build, settle.')).toBeInTheDocument();
   });
 
-  it('shows linked agent on details tab', () => {
-    render(<SharedGameExtraMeepleCard data={baseData} />);
-
-    expect(screen.getByText('Catan Arbitro')).toBeInTheDocument();
-    expect(screen.getByText('Attivo')).toBeInTheDocument();
-  });
-
-  it('does not show linked agent section when no agent', () => {
-    render(<SharedGameExtraMeepleCard data={emptyData} />);
-
-    expect(screen.queryByText('Agente Collegato')).not.toBeInTheDocument();
-  });
+  // Issue #4138: the two linked-agent tests that lived here were deleted with
+  // the badge. They are deliberately NOT replaced by an "it never renders"
+  // assertion: `linkedAgent` is gone from `SharedGameDetailData`, so no fixture
+  // can express it and such a test would pass without exercising anything.
+  // The guard against reintroduction is the type, which makes it a compile
+  // error here — plus the source-level gate tracked in #4138.
 
   // ---------- Documents tab ----------
 
@@ -248,7 +236,7 @@ describe('SharedGameExtraMeepleCard', () => {
 
     expect(screen.getByRole('link', { name: /vedi coda/i })).toHaveAttribute(
       'href',
-      '/admin/knowledge-base/queue',
+      '/admin/knowledge-base/queue'
     );
   });
 
@@ -299,7 +287,7 @@ describe('SharedGameExtraMeepleCard', () => {
     const user = userEvent.setup();
     const dataNoCompleted: SharedGameDetailData = {
       ...baseData,
-      kbCards: baseData.kbCards.filter((c) => c.indexingStatus !== 'completed'),
+      kbCards: baseData.kbCards.filter(c => c.indexingStatus !== 'completed'),
     };
     render(<SharedGameExtraMeepleCard data={dataNoCompleted} />);
 
@@ -332,7 +320,9 @@ describe('SharedGameExtraMeepleCard', () => {
   // ---------- Misc ----------
 
   it('applies custom className', () => {
-    render(<SharedGameExtraMeepleCard data={baseData} className="my-custom" data-testid="sgcard" />);
+    render(
+      <SharedGameExtraMeepleCard data={baseData} className="my-custom" data-testid="sgcard" />
+    );
 
     expect(screen.getByTestId('sgcard')).toHaveClass('my-custom');
   });

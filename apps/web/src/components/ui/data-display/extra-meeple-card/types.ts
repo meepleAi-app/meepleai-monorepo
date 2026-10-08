@@ -522,14 +522,7 @@ export interface TimerActions {
 
 /** Extended event types for timeline filtering */
 export type SessionEventType =
-  | 'system'
-  | 'turn'
-  | 'score'
-  | 'action'
-  | 'media'
-  | 'phase'
-  | 'snapshot'
-  | 'chat';
+  'system' | 'turn' | 'score' | 'action' | 'media' | 'phase' | 'snapshot' | 'chat';
 
 /** Enhanced timeline event with expanded details */
 export interface EnhancedTimelineEvent {
@@ -607,7 +600,8 @@ export interface SharedGameDetailData extends GameDetailData {
   status: string;
   documents: SharedGameDocumentInfo[];
   kbCards: SharedGameKbCardInfo[];
-  linkedAgent: { id: string; name: string; isActive: boolean } | null;
+  // Issue #4138: `linkedAgent` removed — an agent is no longer bound to a game.
+  // The readable linkage still exposed by RAG readiness lives in `rag-setup.schemas.ts`.
 }
 
 /** Toolkit entity detail data (drawer view) */

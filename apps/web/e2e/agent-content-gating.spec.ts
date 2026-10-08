@@ -71,19 +71,9 @@ test.describe('Content Gating — Agent Builder KB Gate', () => {
         }
       );
 
-    // Mock linked-agent endpoint (no agent yet)
-    await page
-      .context()
-      .route(
-        `**/${API_BASE.replace(/https?:\/\//, '')}/**/shared-games/${TEST_GAME_ID}/linked-agent**`,
-        async route => {
-          await route.fulfill({
-            status: 404,
-            contentType: 'application/json',
-            body: JSON.stringify({ message: 'No linked agent found' }),
-          });
-        }
-      );
+    // Issue #4138: the `linked-agent` mock that stood here is gone with the
+    // route it faked. It never existed in the backend (#4103), so the mock was
+    // the only thing that ever answered it.
 
     // Navigate to the shared game detail page
     await page.goto(`/admin/shared-games/${TEST_GAME_ID}`);

@@ -121,24 +121,21 @@ export function AgentBuilderModal({
 
   // Mutation for creating agent
   const createAgentMutation = useMutation({
-    mutationFn: async (data: CreateAgentDefinition) => {
-      // Step 1: Create agent with selected KB card IDs
-      const createdAgent = await agentDefinitionsApi.create({
+    mutationFn: async (data: CreateAgentDefinition) =>
+      // Issue #4138: the agent is no longer bound to a game, so there is no
+      // second "link to SharedGame" step. The call that used to follow hit
+      // POST /admin/shared-games/{id}/link-agent/{agentId}, a route that never
+      // existed (#4103): it always threw, so this modal reported "Failed to
+      // create agent" while leaving the agent it had just created behind.
+      agentDefinitionsApi.create({
         ...data,
         kbCardIds: selectedKbCardIds,
-      });
-
-      // Step 2: Link agent to SharedGame
-      await api.sharedGames.linkAgent(sharedGameContext.gameId, createdAgent.id);
-
-      return createdAgent;
-    },
+      }),
     onSuccess: agent => {
-      toast.success(`Agent "${agent.name}" created and linked to ${sharedGameContext.gameTitle}`);
+      toast.success(`Agent "${agent.name}" created`);
 
-      // Invalidate queries to refetch linked agent
       queryClient.invalidateQueries({
-        queryKey: ['admin', 'shared-games', sharedGameContext.gameId, 'linked-agent'],
+        queryKey: ['admin', 'shared-games', sharedGameContext.gameId, 'kb-cards'],
       });
 
       onSuccess?.(agent);

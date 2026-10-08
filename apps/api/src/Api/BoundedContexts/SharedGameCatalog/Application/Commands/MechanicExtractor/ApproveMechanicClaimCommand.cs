@@ -18,4 +18,4 @@ internal record ApproveMechanicClaimCommand(
     Guid ClaimId,
     Guid ReviewerId,
     string? Note = null,
-    MechanicClaimStructureDto? Structure = null) :ICommand<MechanicClaimDto>;
+    MechanicClaimStructureDto? Structure = null) : ICommand<MechanicClaimDto>;

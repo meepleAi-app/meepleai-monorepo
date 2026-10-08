@@ -24,6 +24,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// 409 mapping: parent not <c>InReview</c> → <see cref="InvalidMechanicAnalysisStateException"/>;
 /// optimistic concurrency on parent <c>xmin</c> → <see cref="DbUpdateConcurrencyException"/>.
 /// </para>
+/// <para>
+/// When the command carries a <c>Structure</c> it is applied after the claim is approved (so a
+/// Rejected claim can be approved and edited in one call) and before persisting: invalid override
+/// graphs → 400 (<see cref="BadRequestException"/>), state violations → 409, nothing saved.
+/// </para>
 /// </remarks>
 internal sealed class ApproveMechanicClaimCommandHandler
     : ICommandHandler<ApproveMechanicClaimCommand, MechanicClaimDto>
@@ -71,6 +76,18 @@ internal sealed class ApproveMechanicClaimCommandHandler
 
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
+        try
+        {
+            analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note);
+        }
+        catch (InvalidMechanicAnalysisStateException ex)
+        {
+            throw new ConflictException(ex.Message, ex);
+        }
+
+        // Structure is applied AFTER approval: a previously Rejected claim becomes Approved first,
+        // and SetClaimStructure refuses Rejected claims. Nothing is persisted until SaveChanges, so
+        // a 400/409 here leaves no partial state.
         if (request.Structure is not null)
         {
             try
@@ -85,15 +102,6 @@ internal sealed class ApproveMechanicClaimCommandHandler
             {
                 throw new ConflictException(ex.Message, ex);
             }
-        }
-
-        try
-        {
-            analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note);
-        }
-        catch (InvalidMechanicAnalysisStateException ex)
-        {
-            throw new ConflictException(ex.Message, ex);
         }
 
         _analysisRepository.Update(analysis);

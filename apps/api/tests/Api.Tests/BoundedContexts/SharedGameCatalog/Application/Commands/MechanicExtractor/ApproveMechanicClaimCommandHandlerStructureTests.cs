@@ -5,6 +5,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -77,6 +78,38 @@ public class ApproveMechanicClaimCommandHandlerStructureTests
         result.Status.Should().Be(MechanicClaimStatus.Approved);
         result.Kind.Should().Be(MechanicClaimKind.Exception);
         result.Overrides.Should().Equal(general.Id);
+    }
+
+    [Fact]
+    public async Task Handle_RejectedClaimWithStructure_ApprovesAndAppliesStructure()
+    {
+        var analysis = BuildInReviewAnalysis(2);
+        var (general, exc) = (analysis.Claims[0], analysis.Claims[1]);
+        analysis.RejectClaim(exc.Id, Guid.NewGuid(), "wrong", DateTime.UtcNow);
+        SetupRepo(analysis, analysis.Id);
+        var structure = new MechanicClaimStructureDto(MechanicClaimKind.Exception, MechanicRulePriority.Card, new[] { general.Id }, null);
+
+        var result = await _handler.Handle(new ApproveMechanicClaimCommand(analysis.Id, exc.Id, Guid.NewGuid(), null, structure), CancellationToken.None);
+
+        result.Status.Should().Be(MechanicClaimStatus.Approved);
+        result.Kind.Should().Be(MechanicClaimKind.Exception);
+        result.Priority.Should().Be(MechanicRulePriority.Card);
+        result.Overrides.Should().Equal(general.Id);
+    }
+
+    [Fact]
+    public async Task Handle_InvalidStructure_ThrowsBadRequest_AndDoesNotSave()
+    {
+        var analysis = BuildInReviewAnalysis(1);
+        var claim = analysis.Claims[0];
+        SetupRepo(analysis, analysis.Id);
+        var selfOverride = new MechanicClaimStructureDto(MechanicClaimKind.Exception, MechanicRulePriority.Base, new[] { claim.Id }, null);
+
+        var act = () => _handler.Handle(new ApproveMechanicClaimCommand(analysis.Id, claim.Id, Guid.NewGuid(), null, selfOverride), CancellationToken.None);
+
+        await act.Should().ThrowAsync<BadRequestException>();
+        _repositoryMock.Verify(r => r.Update(It.IsAny<MechanicAnalysis>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -58,7 +58,7 @@ public sealed class UpdateMechanicClaimStructureCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_InvalidGraph_Maps400NotFoundOr409Appropriately()
+    public async Task Handle_SelfOverride_ThrowsBadRequest()
     {
         var a = InReview(1);
         _repo.Setup(r => r.GetByIdWithClaimsIgnoringFiltersAsync(a.Id, It.IsAny<CancellationToken>())).ReturnsAsync(a);

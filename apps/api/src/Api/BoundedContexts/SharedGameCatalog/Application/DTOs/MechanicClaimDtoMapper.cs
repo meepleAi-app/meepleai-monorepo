@@ -31,6 +31,6 @@ internal static class MechanicClaimDtoMapper
             Validations: MechanicClaimValidations.FromDomain(claim),
             Kind: claim.Kind,
             Priority: claim.Priority,
-            Overrides: claim.Overrides,
+            Overrides: claim.Overrides.ToList(),
             Trigger: MechanicTriggerDto.FromDomain(claim.Trigger));
 }

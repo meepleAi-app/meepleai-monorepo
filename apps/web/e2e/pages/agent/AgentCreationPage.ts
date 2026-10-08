@@ -35,7 +35,7 @@ export class AgentCreationPage extends BasePage {
     await gameSelector.click();
     // Search for the game
     const searchInput = this.page.getByPlaceholder(/search games|cerca/i);
-    if (await searchInput.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    if (await searchInput.isVisible({ timeout: 2_000 })) {
       await this.fill(searchInput, gameTitle);
       await this.page.waitForTimeout(1000);
     }
@@ -47,7 +47,7 @@ export class AgentCreationPage extends BasePage {
     const strategyOption = this.page
       .locator(`[data-testid="strategy-${strategy.toLowerCase()}"]`)
       .or(this.page.getByText(strategy, { exact: false }));
-    if (await strategyOption.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    if (await strategyOption.isVisible({ timeout: 2_000 })) {
       await strategyOption.click();
     }
   }
@@ -56,7 +56,7 @@ export class AgentCreationPage extends BasePage {
     const freeTier = this.page
       .locator('[data-testid="tier-free"]')
       .or(this.page.getByText(/free|gratuito/i).first());
-    if (await freeTier.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    if (await freeTier.isVisible({ timeout: 2_000 })) {
       await freeTier.click();
     }
   }

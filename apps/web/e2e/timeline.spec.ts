@@ -50,7 +50,7 @@ test.describe('Timeline RAG Feature', () => {
       const noEventsMessage = page.locator(`text=${t('timeline.noEvents')}`);
 
       // May be visible immediately or after a short wait
-      const isVisible = await noEventsMessage.isVisible().catch(() => false);
+      const isVisible = await noEventsMessage.isVisible();
 
       if (isVisible) {
         await expect(noEventsMessage).toBeVisible();
@@ -66,8 +66,8 @@ test.describe('Timeline RAG Feature', () => {
       const ragSearchFilter = page.locator(`text=${t('timeline.ragSearch')}`);
 
       // At least one filter should be visible
-      const hasMessageFilter = await messageFilter.isVisible().catch(() => false);
-      const hasRagSearchFilter = await ragSearchFilter.isVisible().catch(() => false);
+      const hasMessageFilter = await messageFilter.isVisible();
+      const hasRagSearchFilter = await ragSearchFilter.isVisible();
 
       expect(hasMessageFilter || hasRagSearchFilter).toBeTruthy();
 
@@ -87,7 +87,7 @@ test.describe('Timeline RAG Feature', () => {
         .first();
 
       // Check if button exists
-      const buttonExists = await filtersButton.isVisible().catch(() => false);
+      const buttonExists = await filtersButton.isVisible();
 
       if (buttonExists) {
         // Click to collapse
@@ -140,7 +140,7 @@ test.describe('Timeline RAG Feature', () => {
       const eventsList = page
         .locator('[class*="event-list"]')
         .or(page.locator('[class*="timeline"]'));
-      const hasEvents = await eventsList.isVisible().catch(() => false);
+      const hasEvents = await eventsList.isVisible();
 
       // Note: Actual events may not appear if backend is mocked or unavailable
       // This test verifies the UI framework is ready to display events
@@ -154,7 +154,7 @@ test.describe('Timeline RAG Feature', () => {
         .filter({ has: page.locator('text=Message') })
         .first();
 
-      const checkboxExists = await messageCheckbox.isVisible().catch(() => false);
+      const checkboxExists = await messageCheckbox.isVisible();
 
       if (checkboxExists) {
         // Get initial state
@@ -198,7 +198,7 @@ test.describe('Timeline RAG Feature', () => {
         .getByRole('button', { name: getTextMatcher('timeline.reset') })
         .or(page.locator('button').filter({ hasText: t('timeline.reset') }));
 
-      const buttonExists = await resetButton.isVisible().catch(() => false);
+      const buttonExists = await resetButton.isVisible();
 
       if (buttonExists) {
         await resetButton.click({ force: true });
@@ -218,7 +218,7 @@ test.describe('Timeline RAG Feature', () => {
         .getByText(getTextMatcher('timeline.eventDetails'))
         .or(page.getByText(getTextMatcher('timeline.details')));
 
-      const headingVisible = await detailsHeading.isVisible().catch(() => false);
+      const headingVisible = await detailsHeading.isVisible();
 
       // Details panel should exist (may be empty if no event selected)
       expect(headingVisible || true).toBeTruthy();
@@ -231,7 +231,7 @@ test.describe('Timeline RAG Feature', () => {
         .filter({ hasText: new RegExp(t('timeline.details'), 'i') })
         .first();
 
-      const buttonExists = await detailsButton.isVisible().catch(() => false);
+      const buttonExists = await detailsButton.isVisible();
 
       if (buttonExists) {
         // Click to collapse
@@ -249,7 +249,7 @@ test.describe('Timeline RAG Feature', () => {
         .or(page.locator('text=/Totale|Eventi|Completati/i'))
         .first();
 
-      const statsVisible = await statsBar.isVisible().catch(() => false);
+      const statsVisible = await statsBar.isVisible();
 
       // Stats bar should exist
       expect(statsVisible || true).toBeTruthy();
@@ -265,7 +265,7 @@ test.describe('Timeline RAG Feature', () => {
         .or(page.getByText('Dettagli Evento').locator('..'))
         .first();
 
-      const panelExists = await detailsPanel.isVisible().catch(() => false);
+      const panelExists = await detailsPanel.isVisible();
 
       // Details panel should exist in the DOM
       expect(panelExists || true).toBeTruthy();
@@ -334,7 +334,7 @@ test.describe('Timeline RAG Feature', () => {
 
       // Component should be rendered (not in permanent loading state)
       const timeline = page.locator('[class*="timeline"]').first();
-      const isVisible = await timeline.isVisible().catch(() => false);
+      const isVisible = await timeline.isVisible();
       expect(isVisible || true).toBeTruthy();
     });
 
@@ -345,12 +345,8 @@ test.describe('Timeline RAG Feature', () => {
         .or(page.locator('text=/No events/i'));
 
       // Empty state may be visible or events may exist
-      const hasEmptyState = await emptyState.isVisible().catch(() => false);
-      const hasEvents = await page
-        .locator('[class*="event"]')
-        .first()
-        .isVisible()
-        .catch(() => false);
+      const hasEmptyState = await emptyState.isVisible();
+      const hasEvents = await page.locator('[class*="event"]').first().isVisible();
 
       // Either empty state or events should be present
       expect(hasEmptyState || hasEvents || true).toBeTruthy();
@@ -373,16 +369,12 @@ test.describe('Timeline RAG Feature', () => {
       await expect(timeline).toBeVisible();
 
       // If events exist, they should have timestamps
-      const hasEvents = await page
-        .locator('[class*="event"]')
-        .first()
-        .isVisible()
-        .catch(() => false);
+      const hasEvents = await page.locator('[class*="event"]').first().isVisible();
 
       if (hasEvents) {
         // Look for time patterns (HH:MM:SS or timestamps)
         const timePattern = page.locator('text=/\\d{2}:\\d{2}/');
-        const hasTime = await timePattern.isVisible().catch(() => false);
+        const hasTime = await timePattern.isVisible();
         expect(hasTime || true).toBeTruthy();
       }
     });

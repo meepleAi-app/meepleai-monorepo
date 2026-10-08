@@ -64,24 +64,15 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     // Then: Progress bar should appear (if backend processes immediately)
     const progressBar = page.locator('[role="progressbar"]');
-    const hasProgress = await progressBar.isVisible({ timeout: 10000 }).catch(() => false);
+    const hasProgress = await progressBar.isVisible({ timeout: 10000 });
 
     if (hasProgress) {
       // Then: Processing steps may be visible (backend determines steps)
       // Generic check for any processing indicator
       const hasSteps =
-        (await page
-          .locator('text=Uploading')
-          .isVisible()
-          .catch(() => false)) ||
-        (await page
-          .locator('text=Extracting')
-          .isVisible()
-          .catch(() => false)) ||
-        (await page
-          .locator('text=Processing')
-          .isVisible()
-          .catch(() => false));
+        (await page.locator('text=Uploading').isVisible()) ||
+        (await page.locator('text=Extracting').isVisible()) ||
+        (await page.locator('text=Processing').isVisible());
 
       expect(hasSteps || hasProgress).toBe(true);
 
@@ -142,7 +133,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     // Then: Cancel button may be visible (if backend supports cancellation)
     const cancelButton = page.locator('button', { hasText: /cancel processing/i });
-    const canCancel = await cancelButton.isVisible({ timeout: 10000 }).catch(() => false);
+    const canCancel = await cancelButton.isVisible({ timeout: 10000 });
 
     if (canCancel) {
       // When: User clicks cancel
@@ -179,13 +170,13 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     // When: User cancels processing (if cancel button available)
     const cancelButton = page.locator('button', { hasText: /cancel processing/i });
-    const canCancel = await cancelButton.isVisible({ timeout: 10000 }).catch(() => false);
+    const canCancel = await cancelButton.isVisible({ timeout: 10000 });
 
     if (canCancel) {
       await cancelButton.click();
 
       const confirmCancelButton = page.locator('button', { hasText: /yes, cancel/i });
-      const hasConfirm = await confirmCancelButton.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasConfirm = await confirmCancelButton.isVisible({ timeout: 3000 });
 
       if (hasConfirm) {
         await confirmCancelButton.click();
@@ -222,13 +213,13 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     // When: User clicks cancel but chooses to continue (if feature available)
     const cancelButton = page.locator('button', { hasText: /cancel processing/i });
-    const canCancel = await cancelButton.isVisible({ timeout: 10000 }).catch(() => false);
+    const canCancel = await cancelButton.isVisible({ timeout: 10000 });
 
     if (canCancel) {
       await cancelButton.click();
 
       const continueButton = page.locator('button', { hasText: /no, continue processing/i });
-      const hasContinue = await continueButton.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasContinue = await continueButton.isVisible({ timeout: 3000 });
 
       if (hasContinue) {
         await continueButton.click();
@@ -291,7 +282,7 @@ test.describe('PDF Processing Progress Tracking (PDF-08)', () => {
 
     // Then: Progress bar may have proper ARIA attributes (generic check)
     const progressBar = page.locator('[role="progressbar"]').first();
-    const hasProgressBar = await progressBar.isVisible({ timeout: 10000 }).catch(() => false);
+    const hasProgressBar = await progressBar.isVisible({ timeout: 10000 });
 
     if (hasProgressBar) {
       // Verify ARIA attributes exist (backend determines values)

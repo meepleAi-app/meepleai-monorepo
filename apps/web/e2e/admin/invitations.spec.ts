@@ -135,10 +135,10 @@ test.describe('Admin Invitations', () => {
     const allTab = page.getByRole('tab', { name: /all/i }).first();
     const pendingTab = page.getByRole('tab', { name: /pending/i }).first();
 
-    if (await allTab.isVisible().catch(() => false)) {
+    if (await allTab.isVisible()) {
       await expect(allTab).toBeVisible();
     }
-    if (await pendingTab.isVisible().catch(() => false)) {
+    if (await pendingTab.isVisible()) {
       await expect(pendingTab).toBeVisible();
     }
   });
@@ -177,12 +177,12 @@ test.describe('Admin Invitations', () => {
       .getByPlaceholder(/email/i)
       .first()
       .or(page.getByLabel(/email/i).first());
-    if (await emailInput.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await emailInput.isVisible({ timeout: 5_000 })) {
       await emailInput.fill('newuser@example.com');
 
       // Submit the form
       const submitButton = page.getByRole('button', { name: /send|invite|submit/i }).first();
-      if (await submitButton.isVisible().catch(() => false)) {
+      if (await submitButton.isVisible()) {
         await submitButton.click();
       }
     }
@@ -205,7 +205,7 @@ test.describe('Admin Invitations', () => {
     // Look for resend button (alice is Pending)
     const resendButton = page.getByRole('button', { name: /resend/i }).first();
 
-    if (await resendButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await resendButton.isVisible({ timeout: 5_000 })) {
       await resendButton.click();
       // Give time for the API call
       await page.waitForTimeout(500);

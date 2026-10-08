@@ -66,10 +66,7 @@ test.describe('Asse D P1 polymorphic ScoreType editor', () => {
     const scoreBoard = page.locator('[data-testid="autosave-indicator"]');
 
     const polyCount = await polymorphic.count();
-    const fallbackVisible = await scoreBoard
-      .first()
-      .isVisible()
-      .catch(() => false);
+    const fallbackVisible = await scoreBoard.first().isVisible();
 
     // At least one branch must be present. `expect.soft` would mask the
     // fall-through; we want a single hard assertion that ORs the branches.

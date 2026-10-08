@@ -232,7 +232,7 @@ export class ScreenshotHelper {
       for (const selector of selectors) {
         try {
           const locator = page.locator(selector).first();
-          const isVisible = await locator.isVisible({ timeout: 500 }).catch(() => false);
+          const isVisible = await locator.isVisible({ timeout: 500 });
           if (isVisible) {
             boundingBox = await locator.boundingBox();
             if (boundingBox) break;

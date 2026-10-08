@@ -164,7 +164,7 @@ test.describe('Mobile Card Browser - Overlay', () => {
         )
       );
     // Allow for different implementations - drawer might use sheet/dialog or custom element
-    const drawerVisible = await deckDrawer.isVisible({ timeout: 2000 }).catch(() => false);
+    const drawerVisible = await deckDrawer.isVisible({ timeout: 2000 });
     if (drawerVisible) {
       await expect(deckDrawer.first()).toBeVisible();
     }

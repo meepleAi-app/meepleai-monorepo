@@ -118,7 +118,7 @@ test.describe('Week 3 Critical Paths - Auth Flows', () => {
       .first();
 
     // If logout button exists, click it
-    const hasLogout = await logoutElement.isVisible({ timeout: 2000 }).catch(() => false);
+    const hasLogout = await logoutElement.isVisible({ timeout: 2000 });
 
     if (hasLogout) {
       await logoutElement.click();
@@ -256,8 +256,7 @@ test.describe('Week 3 Critical Paths - RAG Workflows', () => {
     const hasCitation = await page
       .locator('[data-testid="citation"], a[href*="pdf"], text=/chess rules|fonte|source/i')
       .first()
-      .isVisible()
-      .catch(() => false);
+      .isVisible();
 
     // Pass test if citations are shown or source text exists
     if (!hasCitation) {

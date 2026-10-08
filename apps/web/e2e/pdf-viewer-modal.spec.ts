@@ -38,7 +38,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test('opens PDF viewer when clicking on a citation', async ({ page }) => {
       // Send a message to get citations (real backend)
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('What are the rules for setup?');
 
         const sendButton = page.locator('[data-testid="send-message-button"]');
@@ -49,7 +49,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Look for citation list (may or may not have citations)
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           // Citations exist - test click-to-open
           const citationCard = page.getByTestId('citation-card').first();
           await expect(citationCard).toBeVisible();
@@ -59,7 +59,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
           // VERIFY: PDF viewer modal opens
           const dialog = page.getByTestId('dialog');
-          if (await dialog.isVisible({ timeout: 5000 }).catch(() => false)) {
+          if (await dialog.isVisible({ timeout: 5000 })) {
             await expect(dialog).toHaveAttribute('data-open', 'true');
             await expect(page.getByTestId('dialog-title')).toBeVisible();
           }
@@ -73,7 +73,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test('jumps to the correct page when opening PDF from citation', async ({ page }) => {
       // Send message to get citations
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('How do I score points?');
 
         const sendButton = page.locator('[data-testid="send-message-button"]');
@@ -83,10 +83,10 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Check for citations
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           // Look for page number in citation
           const citationPage = page.getByTestId('citation-page').first();
-          if (await citationPage.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await citationPage.isVisible({ timeout: 2000 })) {
             const pageText = await citationPage.textContent();
 
             // Click citation
@@ -94,7 +94,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
             // VERIFY: Modal opens with page number
             const dialogTitle = page.getByTestId('dialog-title');
-            if (await dialogTitle.isVisible({ timeout: 5000 }).catch(() => false)) {
+            if (await dialogTitle.isVisible({ timeout: 5000 })) {
               const titleText = await dialogTitle.textContent();
               // Title should contain page reference (flexible match)
               expect(titleText).toBeTruthy();
@@ -107,7 +107,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test('displays document name in PDF viewer modal', async ({ page }) => {
       // Send message
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('Explain the game rules');
 
         const sendButton = page.locator('[data-testid="send-message-button"]');
@@ -117,12 +117,12 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Check for citations
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           await page.getByTestId('citation-card').first().click();
 
           // VERIFY: Document name visible in title
           const dialogTitle = page.getByTestId('dialog-title');
-          if (await dialogTitle.isVisible({ timeout: 5000 }).catch(() => false)) {
+          if (await dialogTitle.isVisible({ timeout: 5000 })) {
             await expect(dialogTitle).toBeVisible();
             // Title should be non-empty
             const titleText = await dialogTitle.textContent();
@@ -137,7 +137,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test.beforeEach(async ({ page }) => {
       // Send message and open PDF modal (if possible)
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('What are the rules?');
 
         const sendButton = page.locator('[data-testid="send-message-button"]');
@@ -147,7 +147,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Try to open citation modal
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           await page.getByTestId('citation-card').first().click();
           await page.waitForTimeout(1000);
         }
@@ -181,8 +181,8 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
         const zoomInButton = page.getByTestId('zoom-in');
         const zoomOutButton = page.getByTestId('zoom-out');
 
-        const hasZoomIn = await zoomInButton.isVisible({ timeout: 2000 }).catch(() => false);
-        const hasZoomOut = await zoomOutButton.isVisible({ timeout: 2000 }).catch(() => false);
+        const hasZoomIn = await zoomInButton.isVisible({ timeout: 2000 });
+        const hasZoomOut = await zoomOutButton.isVisible({ timeout: 2000 });
 
         // At least some controls should be present
         expect(hasZoomIn || hasZoomOut).toBeTruthy();
@@ -205,14 +205,14 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test.beforeEach(async ({ page }) => {
       // Setup: Open PDF modal
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('Game rules');
         const sendButton = page.locator('[data-testid="send-message-button"]');
         await sendButton.click();
         await page.waitForLoadState('networkidle');
 
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           await page.getByTestId('citation-card').first().click();
           await page.waitForTimeout(1000);
         }
@@ -221,7 +221,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('defaults to 100% zoom level', async ({ page }) => {
       const zoom100Button = page.getByTestId('zoom-100');
-      if (await zoom100Button.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await zoom100Button.isVisible({ timeout: 2000 })) {
         const isPressed = await zoom100Button.getAttribute('aria-pressed');
         expect(isPressed).toBe('true');
       }
@@ -229,13 +229,13 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('can zoom in using zoom in button', async ({ page }) => {
       const zoomInButton = page.getByTestId('zoom-in');
-      if (await zoomInButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await zoomInButton.isVisible({ timeout: 2000 })) {
         await zoomInButton.click();
         await page.waitForTimeout(300);
 
         // Verify zoom changed (150% should be active)
         const zoom150Button = page.getByTestId('zoom-150');
-        if (await zoom150Button.isVisible().catch(() => false)) {
+        if (await zoom150Button.isVisible()) {
           const isPressed = await zoom150Button.getAttribute('aria-pressed');
           expect(isPressed).toBe('true');
         }
@@ -244,13 +244,13 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('can zoom out using zoom out button', async ({ page }) => {
       const zoomOutButton = page.getByTestId('zoom-out');
-      if (await zoomOutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await zoomOutButton.isVisible({ timeout: 2000 })) {
         await zoomOutButton.click();
         await page.waitForTimeout(300);
 
         // Verify zoom changed (50% should be active)
         const zoom50Button = page.getByTestId('zoom-50');
-        if (await zoom50Button.isVisible().catch(() => false)) {
+        if (await zoom50Button.isVisible()) {
           const isPressed = await zoom50Button.getAttribute('aria-pressed');
           expect(isPressed).toBe('true');
         }
@@ -259,7 +259,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('can set zoom level directly', async ({ page }) => {
       const zoom200Button = page.getByTestId('zoom-200');
-      if (await zoom200Button.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await zoom200Button.isVisible({ timeout: 2000 })) {
         await zoom200Button.click();
         await page.waitForTimeout(300);
 
@@ -271,13 +271,13 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('disables zoom in button at maximum zoom', async ({ page }) => {
       const zoom200Button = page.getByTestId('zoom-200');
-      if (await zoom200Button.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await zoom200Button.isVisible({ timeout: 2000 })) {
         await zoom200Button.click();
         await page.waitForTimeout(300);
 
         // Zoom in should be disabled
         const zoomInButton = page.getByTestId('zoom-in');
-        if (await zoomInButton.isVisible().catch(() => false)) {
+        if (await zoomInButton.isVisible()) {
           await expect(zoomInButton).toBeDisabled();
         }
       }
@@ -285,13 +285,13 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
     test('disables zoom out button at minimum zoom', async ({ page }) => {
       const zoom25Button = page.getByTestId('zoom-25');
-      if (await zoom25Button.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await zoom25Button.isVisible({ timeout: 2000 })) {
         await zoom25Button.click();
         await page.waitForTimeout(300);
 
         // Zoom out should be disabled
         const zoomOutButton = page.getByTestId('zoom-out');
-        if (await zoomOutButton.isVisible().catch(() => false)) {
+        if (await zoomOutButton.isVisible()) {
           await expect(zoomOutButton).toBeDisabled();
         }
       }
@@ -302,14 +302,14 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test.beforeEach(async ({ page }) => {
       // Setup: Open PDF modal
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('Rules');
         const sendButton = page.locator('[data-testid="send-message-button"]');
         await sendButton.click();
         await page.waitForLoadState('networkidle');
 
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           await page.getByTestId('citation-card').first().click();
           await page.waitForTimeout(1000);
         }
@@ -326,7 +326,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Verify zoom changed
         const zoom150Button = page.getByTestId('zoom-150');
-        if (await zoom150Button.isVisible().catch(() => false)) {
+        if (await zoom150Button.isVisible()) {
           const isPressed = await zoom150Button.getAttribute('aria-pressed');
           expect(isPressed).toBe('true');
         }
@@ -343,7 +343,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Verify zoom changed
         const zoom50Button = page.getByTestId('zoom-50');
-        if (await zoom50Button.isVisible().catch(() => false)) {
+        if (await zoom50Button.isVisible()) {
           const isPressed = await zoom50Button.getAttribute('aria-pressed');
           expect(isPressed).toBe('true');
         }
@@ -355,7 +355,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test('can open different PDFs from different citations', async ({ page }) => {
       // Send message that might generate multiple citations
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('Explain setup and scoring');
 
         const sendButton = page.locator('[data-testid="send-message-button"]');
@@ -365,7 +365,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
         // Check for multiple citations
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           const citations = page.getByTestId('citation-card');
           const citationCount = await citations.count();
 
@@ -375,7 +375,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
             await page.waitForTimeout(500);
 
             const dialogTitle = page.getByTestId('dialog-title');
-            if (await dialogTitle.isVisible({ timeout: 3000 }).catch(() => false)) {
+            if (await dialogTitle.isVisible({ timeout: 3000 })) {
               const firstTitle = await dialogTitle.textContent();
 
               // Close modal
@@ -386,7 +386,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
               await citations.nth(1).click();
               await page.waitForTimeout(500);
 
-              if (await dialogTitle.isVisible({ timeout: 3000 }).catch(() => false)) {
+              if (await dialogTitle.isVisible({ timeout: 3000 })) {
                 const secondTitle = await dialogTitle.textContent();
                 // Titles may be different (different pages/docs) or same (same doc different pages)
                 expect(secondTitle?.length).toBeGreaterThan(0);
@@ -404,14 +404,14 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
     test.beforeEach(async ({ page }) => {
       // Setup: Open PDF modal
       const messageInput = page.locator('[data-testid="message-input"]');
-      if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await messageInput.isVisible({ timeout: 5000 })) {
         await messageInput.fill('Rules');
         const sendButton = page.locator('[data-testid="send-message-button"]');
         await sendButton.click();
         await page.waitForLoadState('networkidle');
 
         const citationList = page.getByTestId('citation-list');
-        if (await citationList.isVisible({ timeout: 10000 }).catch(() => false)) {
+        if (await citationList.isVisible({ timeout: 10000 })) {
           await page.getByTestId('citation-card').first().click();
           await page.waitForTimeout(1000);
         }
@@ -424,9 +424,9 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
       const zoom100Label = page.getByLabel('Zoom 100%');
 
       // At least some labels should exist
-      const hasZoomInLabel = await zoomInLabel.isVisible({ timeout: 2000 }).catch(() => false);
-      const hasZoomOutLabel = await zoomOutLabel.isVisible({ timeout: 2000 }).catch(() => false);
-      const hasZoom100Label = await zoom100Label.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasZoomInLabel = await zoomInLabel.isVisible({ timeout: 2000 });
+      const hasZoomOutLabel = await zoomOutLabel.isVisible({ timeout: 2000 });
+      const hasZoom100Label = await zoom100Label.isVisible({ timeout: 2000 });
 
       expect(hasZoomInLabel || hasZoomOutLabel || hasZoom100Label).toBeTruthy();
     });
@@ -443,7 +443,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
       // Check citation card role
       const citationCard = page.getByTestId('citation-card').first();
-      if (await citationCard.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await citationCard.isVisible({ timeout: 2000 })) {
         const role = await citationCard.getAttribute('role');
         expect(role).toBe('button');
       }
@@ -461,7 +461,7 @@ test.describe('PDF Viewer Modal (BGAI-076)', () => {
 
       // Focus and activate citation with Enter
       const citationCard = page.getByTestId('citation-card').first();
-      if (await citationCard.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await citationCard.isVisible({ timeout: 2000 })) {
         await citationCard.focus();
         await page.keyboard.press('Enter');
         await page.waitForTimeout(500);

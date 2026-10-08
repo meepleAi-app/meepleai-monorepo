@@ -18,7 +18,7 @@ export class AgentChatPage extends BasePage {
 
     // If we see "Inizia Conversazione" button, click it
     const startChat = this.page.getByRole('button', { name: /inizia conversazione|start chat/i });
-    if (await startChat.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await startChat.isVisible({ timeout: 5_000 })) {
       await startChat.click();
       await this.waitForLoad();
     }

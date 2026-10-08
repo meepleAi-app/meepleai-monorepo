@@ -151,9 +151,7 @@ test.describe('Invite-Only Registration', () => {
     const registerBtn = page.getByRole('button', { name: /register|create.*account|sign up/i });
 
     // Either the standard form is shown, or we just verify request-access is NOT shown
-    const isRequestAccessVisible = await requestAccessBtn
-      .isVisible({ timeout: 2000 })
-      .catch(() => false);
+    const isRequestAccessVisible = await requestAccessBtn.isVisible({ timeout: 2000 });
 
     if (!isRequestAccessVisible) {
       // Good: public registration mode is rendering the normal form
@@ -192,7 +190,7 @@ test.describe('Invite-Only Registration', () => {
     // Find the first pending request's approve button
     const approveButton = page.getByRole('button', { name: /approve/i }).first();
 
-    if (await approveButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await approveButton.isVisible({ timeout: 2000 })) {
       await approveButton.click();
 
       // Should show success feedback
@@ -211,12 +209,12 @@ test.describe('Invite-Only Registration', () => {
 
     const rejectButton = page.getByRole('button', { name: /reject|decline/i }).first();
 
-    if (await rejectButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await rejectButton.isVisible({ timeout: 2000 })) {
       await rejectButton.click();
 
       // Confirm reject (may require reason input)
       const confirmButton = page.getByRole('button', { name: /confirm|reject/i }).last();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 

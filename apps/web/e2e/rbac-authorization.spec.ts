@@ -220,10 +220,7 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
-        const hasLoadingSpinner = await page
-          .locator('text=/verifica autorizzazioni/i')
-          .isVisible()
-          .catch(() => false);
+        const hasLoadingSpinner = await page.locator('text=/verifica autorizzazioni/i').isVisible();
 
         expect(isLoginRedirect || hasLoadingSpinner).toBe(true);
       }
@@ -248,10 +245,7 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
-        const hasLoadingSpinner = await page
-          .locator('text=/verifica autorizzazioni/i')
-          .isVisible()
-          .catch(() => false);
+        const hasLoadingSpinner = await page.locator('text=/verifica autorizzazioni/i').isVisible();
 
         expect(isLoginRedirect || hasLoadingSpinner).toBe(true);
       }

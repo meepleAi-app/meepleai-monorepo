@@ -429,7 +429,7 @@ test.describe.skip('Setup Guide Page', () => {
       const confidenceText = page.getByText(new RegExp(`${t('setup.aiConfidence')}\\s+\\d+%`));
 
       // May or may not be visible depending on API response
-      const isVisible = await confidenceText.isVisible().catch(() => false);
+      const isVisible = await confidenceText.isVisible();
       console.log(`AI Confidence visible: ${isVisible}`);
     });
   });

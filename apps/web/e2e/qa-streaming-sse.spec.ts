@@ -101,7 +101,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
 
     // Stop button should appear during streaming
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
-    const isVisible = await stopButton.isVisible().catch(() => false);
+    const isVisible = await stopButton.isVisible();
 
     if (isVisible) {
       expect(await stopButton.isEnabled()).toBe(true);
@@ -141,7 +141,7 @@ test.describe('Q&A Interface - SSE Streaming (Issue #1009)', () => {
 
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
 
-    if (await stopButton.isVisible().catch(() => false)) {
+    if (await stopButton.isVisible()) {
       await stopButton.click({ force: true });
 
       // Verify submit button returns to ready state

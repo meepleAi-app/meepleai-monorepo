@@ -207,7 +207,7 @@ test.describe('PDF Upload Negative Scenarios - Issue #1494', () => {
       // Filename should be sanitized (path stripped)
       // Backend must handle this - frontend may show sanitized name
       const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
-      if (await uploadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await uploadButton.isVisible({ timeout: 2000 })) {
         // File accepted with sanitized name
       }
     });
@@ -269,7 +269,7 @@ test.describe('PDF Upload Negative Scenarios - Issue #1494', () => {
       // Should be sanitized and handled safely
       // Backend must use parameterized queries
       const uploadButton = page.locator('button[type="submit"]', { hasText: /Upload/i });
-      if (await uploadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await uploadButton.isVisible({ timeout: 2000 })) {
         // Filename sanitized, upload proceeds
       }
     });

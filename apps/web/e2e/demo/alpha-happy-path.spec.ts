@@ -171,7 +171,7 @@ test('Alpha demo — happy path mobile', async ({ page }) => {
   // The wizard auto-advances to ConfigAgentStep after PDF upload.
   // We skip agent creation in wizard and use API later for cleaner flow.
   const skipAgentBtn = page.getByRole('button', { name: /salta agente/i });
-  if (await skipAgentBtn.isVisible({ timeout: 8_000 }).catch(() => false)) {
+  if (await skipAgentBtn.isVisible({ timeout: 8_000 })) {
     await shot(page, '12-agent-step');
     await skipAgentBtn.click();
   }
@@ -250,7 +250,7 @@ test('Alpha demo — happy path mobile', async ({ page }) => {
   // ─── 16: Open chat ────────────────────────────────────────────────────────
   // Dismiss cookie banner once (covers all subsequent screenshots)
   const cookieBtn = page.getByRole('button', { name: /essential only|accept all/i }).first();
-  if (await cookieBtn.isVisible().catch(() => false)) {
+  if (await cookieBtn.isVisible()) {
     await cookieBtn.click();
     await page.waitForTimeout(500);
   }
@@ -269,7 +269,7 @@ test('Alpha demo — happy path mobile', async ({ page }) => {
   // ─── 17+: Chat 10 query Catan (best-effort) ──────────────────────────────
   // Wait up to 30s for chat textbox to appear; if not, capture state and skip queries.
   const chatInput = page.getByRole('textbox').last();
-  const chatReady = await chatInput.isVisible({ timeout: 30_000 }).catch(() => false);
+  const chatReady = await chatInput.isVisible({ timeout: 30_000 });
   if (!chatReady) {
     console.log('Chat input not ready — skipping queries, capturing state only');
     await shot(page, '17-chat-not-ready');
@@ -280,7 +280,7 @@ test('Alpha demo — happy path mobile', async ({ page }) => {
         await chatInput.click();
         await chatInput.fill(q);
         const sendBtn = page.getByRole('button', { name: /invia|send|chiedi/i }).last();
-        if (await sendBtn.isVisible().catch(() => false)) {
+        if (await sendBtn.isVisible()) {
           await sendBtn.click();
         } else {
           await page.keyboard.press('Enter');

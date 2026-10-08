@@ -133,7 +133,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     const libraryCard = page
       .locator('[data-testid="library-card"], .library-item, article')
       .first();
-    if (await libraryCard.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await libraryCard.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Library Games',
@@ -154,7 +154,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     const quotaDisplay = page
       .locator('[data-testid="quota"], text=/\\d+.*\\/.*\\d+/, .quota-info')
       .first();
-    if (await quotaDisplay.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await quotaDisplay.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Library Quota',
@@ -204,7 +204,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
         'button:has-text("Add to Library"), button:has-text("Aggiungi"), [data-testid="add-to-library"]'
       )
       .first();
-    if (await addButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await addButton.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Add to Library Button',
@@ -241,7 +241,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     const removeButton = page
       .locator('button:has-text("Remove"), button:has-text("Rimuovi"), [data-testid="remove-game"]')
       .first();
-    if (await removeButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await removeButton.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Remove Game Option',
@@ -262,7 +262,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     const confirmDialog = page
       .locator('[role="dialog"], [data-testid="confirm-dialog"], .modal')
       .first();
-    if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmDialog.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Confirm Removal',
@@ -303,7 +303,7 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     const rulesTab = page
       .locator('button:has-text("Rules"), [role="tab"]:has-text("Rules")')
       .first();
-    if (await rulesTab.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await rulesTab.isVisible({ timeout: 2000 })) {
       await rulesTab.click();
       await waitForStableState(page);
 
@@ -326,12 +326,12 @@ test.describe('Library Management Flow - Visual Documentation', () => {
     const uploadButton = page
       .locator('button:has-text("Upload"), [data-testid="upload-pdf"]')
       .first();
-    if (await uploadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await uploadButton.isVisible({ timeout: 2000 })) {
       await uploadButton.click();
       await waitForStableState(page);
 
       const uploadForm = page.locator('[role="dialog"], .upload-form, form').first();
-      if (await uploadForm.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await uploadForm.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'PDF Upload Form',

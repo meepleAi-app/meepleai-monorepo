@@ -94,13 +94,13 @@ test.describe('Content Gating — Agent Builder KB Gate', () => {
     const createAgentButton = page.getByRole('button', { name: /create.*agent/i }).first();
 
     // Click AI Agent tab if it exists
-    if (await aiAgentTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await aiAgentTab.isVisible({ timeout: 3000 })) {
       await aiAgentTab.click();
       await page.waitForLoadState('networkidle');
     }
 
     // Click Create Agent button if visible
-    if (await createAgentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await createAgentButton.isVisible({ timeout: 3000 })) {
       await createAgentButton.click();
 
       // Wait for the modal to appear
@@ -180,7 +180,7 @@ test.describe('Content Gating — FullAccess', () => {
       .or(page.locator('textarea').first())
       .or(page.locator('input[placeholder*="message" i]').first());
 
-    if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await messageInput.isVisible({ timeout: 5000 })) {
       await messageInput.fill('How do I set up the game?');
 
       // Click send button
@@ -268,7 +268,7 @@ test.describe('Content Gating — ReferenceOnly', () => {
       .or(page.locator('textarea').first())
       .or(page.locator('input[placeholder*="message" i]').first());
 
-    if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await messageInput.isVisible({ timeout: 5000 })) {
       await messageInput.fill('How do I set up the game?');
 
       // Click send button
@@ -409,7 +409,7 @@ test.describe('Content Gating — Access Unlock After Adding Game', () => {
       .or(page.locator('textarea').first())
       .or(page.locator('input[placeholder*="message" i]').first());
 
-    if (await messageInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await messageInput.isVisible({ timeout: 5000 })) {
       // --- Step 1: Send first message (ReferenceOnly) ---
       await messageInput.fill('What are the victory conditions?');
 
@@ -428,7 +428,7 @@ test.describe('Content Gating — Access Unlock After Adding Game', () => {
 
       // --- Step 2: Click "Add to collection" if available, or simulate the action ---
       const addToCollectionButton = page.getByText(/add.*collection/i).first();
-      if (await addToCollectionButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await addToCollectionButton.isVisible({ timeout: 3000 })) {
         await addToCollectionButton.click();
         await page.waitForLoadState('networkidle');
       }

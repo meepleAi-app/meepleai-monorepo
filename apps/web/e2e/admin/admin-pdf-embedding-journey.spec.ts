@@ -473,7 +473,7 @@ test.describe('Admin PDF Embedding Journey', () => {
 
     // Start conversation
     const startButton = page.getByRole('button', { name: /Inizia Conversazione/i });
-    if (await startButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await startButton.isVisible({ timeout: 3000 })) {
       await startButton.click();
     }
 
@@ -532,7 +532,7 @@ test.describe('Admin PDF Embedding Journey', () => {
 
     // === Step 3: Upload PDF ===
     const uploadHeading = page.getByText(/Upload Rulebook PDF/i);
-    if (await uploadHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await uploadHeading.isVisible({ timeout: 3000 })) {
       const fileInput = page.locator('input[type="file"]');
       if (await fileInput.isVisible()) {
         await fileInput.setInputFiles({
@@ -542,7 +542,7 @@ test.describe('Admin PDF Embedding Journey', () => {
         });
 
         const uploadBtn = page.getByRole('button', { name: /Upload PDF/i });
-        if (await uploadBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await uploadBtn.isVisible({ timeout: 2000 })) {
           await uploadBtn.click();
           await expect(page.getByText(/PDF uploaded successfully/i)).toBeVisible({ timeout: 5000 });
         }
@@ -569,7 +569,7 @@ test.describe('Admin PDF Embedding Journey', () => {
     }
 
     const startBtn = page.getByRole('button', { name: /Inizia Conversazione/i });
-    if (await startBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await startBtn.isVisible({ timeout: 3000 })) {
       await startBtn.click();
     }
 

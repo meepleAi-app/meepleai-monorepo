@@ -70,7 +70,7 @@ test.describe('Registration → Dashboard Flow', () => {
 
     // Display name is optional, but fill it if present
     const displayNameInput = page.locator('[data-testid="register-display-name"]');
-    if (await displayNameInput.isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await displayNameInput.isVisible({ timeout: 500 })) {
       await displayNameInput.fill('New Test User');
     }
 

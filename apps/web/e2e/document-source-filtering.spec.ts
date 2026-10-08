@@ -30,8 +30,7 @@ test.describe('Document Source Filtering', () => {
     // Skip if feature flag disabled or no test PDFs available
     const gameSelectVisible = await page
       .getByLabel(/seleziona gioco/i)
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .isVisible({ timeout: 5000 });
     if (!gameSelectVisible) {
       test.skip(true, 'Upload page not accessible or no games available');
     }

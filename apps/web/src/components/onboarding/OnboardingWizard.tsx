@@ -9,7 +9,7 @@
  * Step 2: Profile setup (skippable)
  * Step 3: Interests selection (skippable)
  * Step 4: First game search (optional, skippable)
- * Step 5: First agent setup (only if game added in step 4)
+ * Step 5: first rulebook upload (only if game added in step 4) — #4138
  */
 
 import { useCallback, useState } from 'react';
@@ -19,8 +19,8 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-import { FirstAgentStep } from './FirstAgentStep';
 import { FirstGameStep } from './FirstGameStep';
+import { FirstRulebookStep } from './FirstRulebookStep';
 import { InterestsStep } from './InterestsStep';
 import { PasswordStep } from './PasswordStep';
 import { ProfileStep } from './ProfileStep';
@@ -39,7 +39,7 @@ interface WizardState {
   addedGameName: string | null;
 }
 
-const STEP_LABELS = ['Password', 'Profile', 'Interests', 'First Game', 'First Agent'];
+const STEP_LABELS = ['Password', 'Profile', 'Interests', 'First Game', 'Rulebook'];
 
 export function OnboardingWizard({ token, role: _role, startStep = 1 }: OnboardingWizardProps) {
   const router = useRouter();
@@ -117,7 +117,9 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-quicksand text-2xl font-bold text-foreground">Welcome to MeepleAI</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Set up your account in a few quick steps</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Set up your account in a few quick steps
+          </p>
         </div>
         {state.passwordCompleted && (
           <button
@@ -171,7 +173,7 @@ export function OnboardingWizard({ token, role: _role, startStep = 1 }: Onboardi
           <FirstGameStep onComplete={goToNext} onSkip={goToNext} onGameAdded={handleGameAdded} />
         )}
         {state.currentStep === 5 && hasGame && (
-          <FirstAgentStep
+          <FirstRulebookStep
             gameId={state.addedGameId as string}
             gameName={state.addedGameName as string}
             onComplete={handleFinish}

@@ -57,11 +57,12 @@ vi.mock('../FirstGameStep', () => ({
   ),
 }));
 
-vi.mock('../FirstAgentStep', () => ({
-  FirstAgentStep: ({ onComplete, onSkip }: { onComplete: () => void; onSkip: () => void }) => (
-    <div data-testid="first-agent-step">
-      <button onClick={onComplete}>Create Agent</button>
-      <button onClick={onSkip}>Skip Agent</button>
+// Issue #4138: step 5 is the rulebook upload, not agent creation.
+vi.mock('../FirstRulebookStep', () => ({
+  FirstRulebookStep: ({ onComplete, onSkip }: { onComplete: () => void; onSkip: () => void }) => (
+    <div data-testid="first-rulebook-step">
+      <button onClick={onComplete}>Continua</button>
+      <button onClick={onSkip}>Lo faccio dopo</button>
     </div>
   ),
 }));
@@ -172,7 +173,7 @@ describe('OnboardingWizard', () => {
     // Add game in step 4 -> step 5 appears
     await user.click(screen.getByText('Add Game'));
 
-    expect(screen.getByTestId('first-agent-step')).toBeInTheDocument();
+    expect(screen.getByTestId('first-rulebook-step')).toBeInTheDocument();
     expect(screen.getByText(/Step 5 of 5/)).toBeInTheDocument();
     expect(screen.getByTestId('progress-step-5')).toBeInTheDocument();
   });

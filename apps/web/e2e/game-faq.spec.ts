@@ -56,7 +56,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.waitForLoadState('networkidle');
 
     // Click on first available game (if any exist)
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const hasGames = await gameCard.isVisible().catch(() => false);
 
     if (hasGames) {
@@ -83,7 +83,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const hasGames = await gameCard.isVisible().catch(() => false);
 
     if (hasGames) {
@@ -127,7 +127,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const hasGames = await gameCard.isVisible().catch(() => false);
 
     if (hasGames) {
@@ -180,7 +180,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const hasGames = await gameCard.isVisible().catch(() => false);
 
     if (hasGames) {
@@ -220,7 +220,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const hasGames = await gameCard.isVisible().catch(() => false);
 
     if (hasGames) {
@@ -264,7 +264,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.goto('/library');
     await page.waitForLoadState('networkidle');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const hasGames = await gameCard.isVisible().catch(() => false);
 
     if (hasGames) {

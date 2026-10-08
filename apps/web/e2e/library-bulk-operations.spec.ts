@@ -103,7 +103,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -116,7 +118,7 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await expect(userPage.locator('button:has-text("Annulla Selezione")')).toBeVisible();
 
     // Select first 3 game cards by clicking checkboxes
-    const gameCards = userPage.locator('[data-testid="game-card"]');
+    const gameCards = userPage.locator('[data-testid="meeple-card"][data-entity="game"]');
     const cardCount = await gameCards.count();
     expect(cardCount).toBeGreaterThanOrEqual(3);
 
@@ -138,9 +140,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await favoriteButton.first().click();
 
     // Verify success toast appears
-    await expect(
-      userPage.locator('text=/\\d+ giochi segnati come preferiti/')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(userPage.locator('text=/\\d+ giochi segnati come preferiti/')).toBeVisible({
+      timeout: 5000,
+    });
 
     // Verify selection is cleared after bulk action
     await expect(userPage.locator('text=3 selezionati')).not.toBeVisible({ timeout: 3000 });
@@ -154,7 +156,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -163,7 +167,7 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await expect(userPage.locator('button:has-text("Annulla Selezione")')).toBeVisible();
 
     // Select first game to make bulk action bar appear
-    await userPage.locator('[data-testid="game-card"]').first().click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first().click();
 
     // Wait for bulk action bar to appear
     await expect(userPage.locator('text=1 selezionati')).toBeVisible({ timeout: 5000 });
@@ -197,16 +201,14 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     }
 
     // Confirm removal
-    const confirmButton = userPage.locator(
-      `button:has-text("Rimuovi ${mockGames.length} giochi")`
-    );
+    const confirmButton = userPage.locator(`button:has-text("Rimuovi ${mockGames.length} giochi")`);
     await expect(confirmButton).toBeVisible();
     await confirmButton.click();
 
     // Verify success toast appears
-    await expect(
-      userPage.locator('text=/\\d+ giochi rimossi dalla libreria/')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(userPage.locator('text=/\\d+ giochi rimossi dalla libreria/')).toBeVisible({
+      timeout: 5000,
+    });
 
     // Verify dialog is closed and selection is cleared
     await expect(userPage.locator(`text=Rimuovi ${mockGames.length} giochi`)).not.toBeVisible({
@@ -222,7 +224,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -230,7 +234,7 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.locator('button:has-text("Seleziona")').click();
     await expect(userPage.locator('button:has-text("Annulla Selezione")')).toBeVisible();
 
-    const gameCards = userPage.locator('[data-testid="game-card"]');
+    const gameCards = userPage.locator('[data-testid="meeple-card"][data-entity="game"]');
     const cardCount = await gameCards.count();
     expect(cardCount).toBeGreaterThanOrEqual(5);
 
@@ -271,7 +275,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -279,7 +285,7 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.locator('button:has-text("Seleziona")').click();
 
     // Select 2 games
-    const gameCards = userPage.locator('[data-testid="game-card"]');
+    const gameCards = userPage.locator('[data-testid="meeple-card"][data-entity="game"]');
     await gameCards.nth(0).click();
     await gameCards.nth(1).click();
 
@@ -312,7 +318,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -320,7 +328,7 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.locator('button:has-text("Seleziona")').click();
 
     // Select first game
-    await userPage.locator('[data-testid="game-card"]').first().click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first().click();
 
     // Select all games
     await userPage.locator('button:has-text("Seleziona tutti")').click();
@@ -349,14 +357,16 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
     // Enter selection mode and select games
     await userPage.locator('button:has-text("Seleziona")').click();
-    await userPage.locator('[data-testid="game-card"]').first().click();
-    await userPage.locator('[data-testid="game-card"]').nth(1).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first().click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(1).click();
 
     // Verify bulk action bar
     await expect(userPage.locator('text=2 selezionati')).toBeVisible({ timeout: 5000 });
@@ -438,9 +448,9 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
 
     // Enter multi-select and select 3 games
     await userPage.locator('button:has-text("Seleziona")').click();
-    await userPage.locator('[data-testid="game-card"]').nth(0).click();
-    await userPage.locator('[data-testid="game-card"]').nth(1).click();
-    await userPage.locator('[data-testid="game-card"]').nth(2).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(0).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(1).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(2).click();
 
     // Verify MultiSelectBar with count
     await expect(userPage.locator('text=3 selezionati')).toBeVisible();
@@ -463,8 +473,8 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
 
     // Enter multi-select and select 2 games
     await userPage.locator('button:has-text("Seleziona")').click();
-    await userPage.locator('[data-testid="game-card"]').nth(0).click();
-    await userPage.locator('[data-testid="game-card"]').nth(1).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(0).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(1).click();
 
     // Click Remove from collection button (Minus icon)
     await userPage.locator('button[aria-label="Rimuovi dalla collezione"]').click();
@@ -476,7 +486,7 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
 
     // Verify aggregated data items
     await expect(userPage.locator('text=/1 agenti AI personalizzati/')).toBeVisible();
-    await expect(userPage.locator('text=/5 chat con l\'agente/')).toBeVisible();
+    await expect(userPage.locator("text=/5 chat con l'agente/")).toBeVisible();
     await expect(userPage.locator('text=/1 PDF privati caricati/')).toBeVisible();
     await expect(userPage.locator('text=/8 sessioni registrate/')).toBeVisible();
 
@@ -515,7 +525,7 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
     // Select 5 games
     await userPage.locator('button:has-text("Seleziona")').click();
     for (let i = 0; i < 5; i++) {
-      await userPage.locator('[data-testid="game-card"]').nth(i).click();
+      await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(i).click();
     }
 
     // Add to collection
@@ -536,8 +546,8 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
 
     // Select 2 games
     await userPage.locator('button:has-text("Seleziona")').click();
-    await userPage.locator('[data-testid="game-card"]').nth(0).click();
-    await userPage.locator('[data-testid="game-card"]').nth(1).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(0).click();
+    await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').nth(1).click();
 
     // Open removal warning
     await userPage.locator('button[aria-label="Rimuovi dalla collezione"]').click();

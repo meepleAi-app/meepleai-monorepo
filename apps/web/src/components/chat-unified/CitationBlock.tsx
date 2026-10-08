@@ -39,7 +39,12 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
         const isExpanded = expanded === snippet.originalIndex;
 
         return (
-          <div key={snippet.originalIndex} className="flex flex-col">
+          // Issue #4120 — hook stabile per "una citazione". Il bottone sotto porta
+          // `citation-chip-${i}`, che indirizza UNA chip specifica e non serve a contarle; questo
+          // wrapper e` il contenitore per-citazione, quindi e` il selettore giusto per
+          // `[data-testid="citation"]` — la forma che `e2e/document-source-filtering.spec.ts`
+          // cercava da sempre senza trovarla. Additivo: nessun id esistente viene rimosso.
+          <div key={snippet.originalIndex} data-testid="citation" className="flex flex-col">
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setExpanded(isExpanded ? null : snippet.originalIndex)}

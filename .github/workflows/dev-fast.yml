@@ -155,6 +155,39 @@ jobs:
       - name: Orphan Playwright specs gate (#4092)
         run: pnpm lint:orphan-specs
 
+      # Fratello del gate sopra, e chiude il difetto gemello: una spec che vive nella radice
+      # giusta ma cerca un `data-testid` che il codice di produzione non dichiara. Non e'
+      # «da aggiustare»: non e' eseguibile per costruzione. Non rompe il build, non rompe il
+      # lint, e il gate E2E non gira sulle PR verso `main-dev` — quindi resta invisibile. Tre
+      # istanze sono emerse A MANO in due giorni per vie indipendenti (#4106, #4105, #4110): la
+      # misura dice che erano campioni, non casi. Il piu' grosso, `game-card`, e' una vittima
+      # della migrazione GameCard -> MeepleCard dichiarata in CLAUDE.md.
+      #
+      # E' un CRICCHETTO, non un gate a zero: la baseline all'introduzione e' troppo ampia
+      # perche' un bloccante a zero sia introducibile. Blocca il peggioramento — una spec nuova
+      # deve essere a zero, una esistente non deve crescere — e il percorso verso zero sta
+      # nella baseline committata, file per file. Accusa solo cio' che puo' dimostrare: un id
+      # coperto da una dichiarazione dinamica (`data-testid={`${x}-apply`}`) e' classificato
+      # indimostrabile, non orfano.
+      - name: Orphan data-testid gate (#4120)
+        run: pnpm lint:orphan-testids
+
+      # Gate #4127, e chiude il difetto che quello sopra non vede: un test le cui UNICHE
+      # asserzioni stanno dentro un `if (await x.isVisible())` non ha un esito «non
+      # applicabile» — ha un VERDE. Se l'elemento non c'e' il corpo non gira, il test passa, e
+      # un `console.log` nell'else fa sembrare un salto legittimo per mancanza di dati.
+      #
+      # Il caso che l'ha motivato: `e2e/pdf-viewer-modal.spec.ts`, 14 test su 18 in questo
+      # stato, con il condizionale SEMPRE falso perche' cercava un `citation-list` che esiste
+      # in un'altra feature. Nessuna delle sue 18 prove poteva fallire. E' peggio di un rosso:
+      # un rosso si vede, questi si contano fra i passati.
+      #
+      # Non accusa chi condiziona legittimamente: se un solo `expect` sta FUORI dal blocco, il
+      # test non e' contato. E' cio' che evita i falsi positivi su UI davvero opzionale.
+      # Cricchetto come sopra, con baseline per file.
+      - name: Blind E2E tests gate (#4127)
+        run: pnpm lint:blind-tests
+
       - name: Typecheck
         run: pnpm typecheck
 

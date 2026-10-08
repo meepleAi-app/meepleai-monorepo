@@ -21,13 +21,13 @@ test.describe('Offline Resilience (Issue #2054)', () => {
       await waitForAutoSelection(page, gameId, agents[0].id);
 
       // Initially online - banner should not be visible
-      await expect(page.locator('[data-testid="offline-banner"]')).not.toBeVisible();
+      await expect(page.locator('[data-slot="offline-banner"]')).not.toBeVisible();
 
       // Go offline
       await context.setOffline(true);
 
       // Banner should appear with reconnecting state
-      await expect(page.locator('[data-testid="offline-banner"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-slot="offline-banner"]')).toBeVisible({ timeout: 3000 });
       await expect(page.getByText(/Sei offline/i)).toBeVisible();
     });
 
@@ -38,13 +38,13 @@ test.describe('Offline Resilience (Issue #2054)', () => {
 
       // Go offline
       await context.setOffline(true);
-      await expect(page.locator('[data-testid="offline-banner"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-slot="offline-banner"]')).toBeVisible({ timeout: 3000 });
 
       // Come back online
       await context.setOffline(false);
 
       // Banner should disappear
-      await expect(page.locator('[data-testid="offline-banner"]')).not.toBeVisible({
+      await expect(page.locator('[data-slot="offline-banner"]')).not.toBeVisible({
         timeout: 5000,
       });
     });
@@ -56,13 +56,13 @@ test.describe('Offline Resilience (Issue #2054)', () => {
 
       // Go offline then online quickly to trigger reconnecting state
       await context.setOffline(true);
-      await expect(page.locator('[data-testid="offline-banner"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-slot="offline-banner"]')).toBeVisible({ timeout: 3000 });
 
       await context.setOffline(false);
 
       // Should show reconnecting briefly before hiding
       // The banner may show "Reconnecting..." text during transition
-      await expect(page.locator('[data-testid="offline-banner"]')).not.toBeVisible({
+      await expect(page.locator('[data-slot="offline-banner"]')).not.toBeVisible({
         timeout: 5000,
       });
     });
@@ -76,7 +76,7 @@ test.describe('Offline Resilience (Issue #2054)', () => {
 
       // Go offline before sending message
       await context.setOffline(true);
-      await expect(page.locator('[data-testid="offline-banner"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-slot="offline-banner"]')).toBeVisible({ timeout: 3000 });
 
       // Try to send a message while offline
       const input = page.getByPlaceholder('Fai una domanda sul gioco...');
@@ -104,7 +104,7 @@ test.describe('Offline Resilience (Issue #2054)', () => {
 
       // Go offline
       await context.setOffline(true);
-      await expect(page.locator('[data-testid="offline-banner"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-slot="offline-banner"]')).toBeVisible({ timeout: 3000 });
 
       // Queue multiple messages
       const input = page.getByPlaceholder('Fai una domanda sul gioco...');
@@ -120,7 +120,7 @@ test.describe('Offline Resilience (Issue #2054)', () => {
       // Check for queue indicator or banner showing pending count
       // The implementation may show "2 messages queued" or similar
       const queueIndicator = page.locator(
-        '[data-testid="queue-indicator"], [data-testid="offline-banner"]'
+        '[data-testid="queue-indicator"], [data-slot="offline-banner"]'
       );
       await expect(queueIndicator).toBeVisible();
     });
@@ -149,7 +149,7 @@ test.describe('Offline Resilience (Issue #2054)', () => {
         .isVisible()
         .catch(() => false);
       const hasOffline = await page
-        .locator('[data-testid="offline-banner"]')
+        .locator('[data-slot="offline-banner"]')
         .isVisible()
         .catch(() => false);
 
@@ -239,7 +239,7 @@ test.describe('Offline Resilience (Issue #2054)', () => {
 
       // Go offline
       await context.setOffline(true);
-      await expect(page.locator('[data-testid="offline-banner"]')).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('[data-slot="offline-banner"]')).toBeVisible({ timeout: 3000 });
 
       // Draft should still be visible in input
       await expect(input).toHaveValue('This is my draft message');

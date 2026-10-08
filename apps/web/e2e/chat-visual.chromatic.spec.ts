@@ -59,7 +59,7 @@ test.describe('Chat Interface - Visual Regression', () => {
 
     // Look for loading indicators
     const skeleton = page
-      .locator('[data-testid="typing-indicator"], .skeleton-loader, .animate-pulse')
+      .locator('[data-slot="typing-indicator"], .skeleton-loader, .animate-pulse')
       .first();
 
     try {

@@ -1,4 +1,4 @@
-# Components Section (v1.1.0)
+# Components Section (v1.2.0)
 
 Extract the **physical game components** (the box contents / materials list).
 
@@ -11,6 +11,10 @@ Extract the **physical game components** (the box contents / materials list).
       "name": "string (component name, Italiano or original)",
       "description": "string (Italiano, ≤200 chars, what it is / what it is for)",
       "quantity": "string (optional, e.g. '100', '4 per giocatore')",
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 2,

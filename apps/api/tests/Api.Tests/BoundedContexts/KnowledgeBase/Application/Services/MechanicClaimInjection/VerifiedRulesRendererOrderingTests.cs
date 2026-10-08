@@ -55,7 +55,11 @@ public sealed class VerifiedRulesRendererOrderingTests
     public void FlagOn_CapAppliesAfterOrdering()
     {
         var block = VerifiedRulesRenderer.Render(Sample(), new[] { MechanicSection.Phases }, 2, new VerifiedRulesRenderOptions(V3Ordering: true));
-        block.PromptText.Should().Contain("[V1] D scenario").And.Contain("[V2] B eccezione").And.NotContain("A generale");
+        // B's target (A) is cut by the cap, so B carries no "(Eccezione a ...)" suffix.
+        block.PromptText.Should().Be(
+            "[Verified Rules — human-approved]\n## Phases\n" +
+            "[V1] D scenario [Page 1] (Eccezione a [V2])\n" +
+            "[V2] B eccezione [Page 1]");
     }
 
     [Fact]
@@ -75,5 +79,46 @@ public sealed class VerifiedRulesRendererOrderingTests
     {
         var block = VerifiedRulesRenderer.Render(Sample(), new[] { MechanicSection.Phases }, 8, new VerifiedRulesRenderOptions(V3Ordering: true, IncludeExamples: true));
         block.PromptText.Should().EndWith("[V5] E esempio [Page 1]");
+    }
+
+    private static PublishedMechanicCardSectionDto Section(MechanicSection section, params PublishedMechanicCardClaimDto[] claims)
+        => new(section.ToString(), claims);
+
+    private static PublishedMechanicCardDto CardOf(params PublishedMechanicCardSectionDto[] sections) => new(
+        Guid.NewGuid(), Guid.NewGuid(), "T", 1, DateTime.UtcNow, "G", null, "it", sections, Guid.NewGuid(), null, null);
+
+    [Fact]
+    public void FlagOn_SectionWithOnlyExamples_IsSkippedEntirely()
+    {
+        var card = CardOf(Section(MechanicSection.Phases,
+            Claim(A, "A esempio", MechanicClaimKind.Example, MechanicRulePriority.Base),
+            Claim(B, "B esempio", MechanicClaimKind.Example, MechanicRulePriority.Base)));
+        var block = VerifiedRulesRenderer.Render(card, new[] { MechanicSection.Phases }, 8, new VerifiedRulesRenderOptions(V3Ordering: true));
+        block.IsEmpty.Should().BeTrue();
+    }
+
+    [Fact]
+    public void FlagOn_SectionWithOnlyExamples_DoesNotEmitHeaderWhenAnotherSectionHasRules()
+    {
+        var card = CardOf(
+            Section(MechanicSection.Mechanics, Claim(A, "A esempio", MechanicClaimKind.Example, MechanicRulePriority.Base)),
+            Section(MechanicSection.Phases, Claim(B, "B regola", MechanicClaimKind.Rule, MechanicRulePriority.Base)));
+        var block = VerifiedRulesRenderer.Render(card, new[] { MechanicSection.Mechanics, MechanicSection.Phases }, 8, new VerifiedRulesRenderOptions(V3Ordering: true));
+        block.PromptText.Should().Be("[Verified Rules — human-approved]\n## Phases\n[V1] B regola [Page 1]");
+    }
+
+    [Fact]
+    public void FlagOn_TriggerSuffix_UsesItalianLabelsAndSkipsNullFields()
+    {
+        var card = Card(
+            new PublishedMechanicCardClaimDto(A, "A", new[] { new PublishedMechanicCardCitationDto(Pdf, 1, "q") },
+                MechanicClaimKind.Rule, MechanicRulePriority.Base, null, new MechanicTriggerDto("azione", null, "carta fretta")),
+            new PublishedMechanicCardClaimDto(B, "B", new[] { new PublishedMechanicCardCitationDto(Pdf, 1, "q") },
+                MechanicClaimKind.Exception, MechanicRulePriority.Base, new[] { A }, new MechanicTriggerDto("", "  ", "mazzo")));
+        var block = VerifiedRulesRenderer.Render(card, new[] { MechanicSection.Phases }, 8, new VerifiedRulesRenderOptions(V3Ordering: true));
+        block.PromptText.Should().Be(
+            "[Verified Rules — human-approved]\n## Phases\n" +
+            "[V1] B [Page 1] (Eccezione a [V2]) (quando: componente mazzo)\n" +
+            "[V2] A [Page 1] (quando: fase azione / componente carta fretta)");
     }
 }

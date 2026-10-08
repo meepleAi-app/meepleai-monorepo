@@ -203,7 +203,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                     .ConfigureAwait(false);
                 if (card is not null)
                 {
-                    verifiedBlock = VerifiedRulesRenderer.Render(card, claimSections, 8, new VerifiedRulesRenderOptions(v3Ordering));
+                    verifiedBlock = VerifiedRulesRenderer.Render(card, claimSections, options: new VerifiedRulesRenderOptions(v3Ordering));
                 }
             }
         }

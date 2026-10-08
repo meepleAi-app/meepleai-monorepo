@@ -60,15 +60,19 @@ internal static class VerifiedRulesRenderer
                 continue;
             }
 
+            var ordered = options is { V3Ordering: true } ? OrderV3(dto.Claims, options.IncludeExamples) : dto.Claims;
+            var take = Math.Min(maxClaimsPerSection, ordered.Count);
+            if (take == 0)
+            {
+                continue; // e.g. a section of only Examples with examples excluded: no header, no empty block
+            }
+
             if (sb.Length == 0)
             {
                 sb.Append(Header);
             }
 
             sb.Append('\n').Append("## ").Append(name);
-
-            var ordered = options is { V3Ordering: true } ? OrderV3(dto.Claims, options.IncludeExamples) : dto.Claims;
-            var take = Math.Min(maxClaimsPerSection, ordered.Count);
 
             // Assign markers BEFORE writing so "(Eccezione a [Vk])" can reference a marker of the same section.
             var markerOf = new Dictionary<Guid, int>();
@@ -113,15 +117,18 @@ internal static class VerifiedRulesRenderer
             }
         }
 
-        if (claim.Trigger is { } t && (t.Phase ?? t.Action ?? t.Component) is not null)
+        if (claim.Trigger is { } t)
         {
             var parts = new[]
             {
-                t.Phase is null ? null : $"fase {t.Phase}",
-                t.Action is null ? null : $"azione {t.Action}",
-                t.Component is null ? null : $"componente {t.Component}"
-            }.Where(p => p is not null);
-            sb.Append(" (quando: ").Append(string.Join(" / ", parts)).Append(')');
+                string.IsNullOrWhiteSpace(t.Phase) ? null : $"fase {t.Phase}",
+                string.IsNullOrWhiteSpace(t.Action) ? null : $"azione {t.Action}",
+                string.IsNullOrWhiteSpace(t.Component) ? null : $"componente {t.Component}"
+            }.Where(p => p is not null).ToList();
+            if (parts.Count > 0)
+            {
+                sb.Append(" (quando: ").Append(string.Join(" / ", parts)).Append(')');
+            }
         }
     }
 

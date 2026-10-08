@@ -167,6 +167,31 @@ internal static class AdminMechanicAnalysesEndpoints
             "Creates a Draft MechanicAnalysis aggregate and schedules the six-section LLM pipeline " +
             "to run in the background. Returns 202 Accepted with a StatusUrl for polling.");
 
+        // POST /api/v1/admin/mechanic-analyses/requeue/{sharedGameId}
+        // Re-runs the extraction for one game with the current prompt version, on the PDF of its active card.
+        group.MapPost("/requeue/{sharedGameId:guid}", async (
+            Guid sharedGameId,
+            RequeueMechanicAnalysisRequest? body,
+            HttpContext httpContext,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
+            var adminId = session!.Principal!.Subject.Id;
+
+            var command = body?.CostCapUsd is { } cap
+                ? new RequeueMechanicAnalysisForPromptVersionCommand(sharedGameId, adminId, cap)
+                : new RequeueMechanicAnalysisForPromptVersionCommand(sharedGameId, adminId);
+            var response = await mediator.Send(command, ct).ConfigureAwait(false);
+
+            return Results.Accepted(response.StatusUrl, response);
+        })
+        .WithName("AdminRequeueMechanicAnalysis")
+        .WithSummary("Re-extract a game's mechanic analysis with the current prompt version")
+        .WithDescription(
+            "Reuses the PDF of the game's active card and enqueues a new analysis. 404 when the game " +
+            "has no active card; 409 when an analysis for the current prompt is in progress or published.");
+
         // GET /api/v1/admin/mechanic-analyses/{id}/status
         // Returns lifecycle + per-section run telemetry for admin observability.
         group.MapGet("/{id:guid}/status", async (
@@ -448,6 +473,12 @@ internal sealed record GenerateMechanicAnalysisRequest(
     string? Provider = null,
     // #539: force a fresh run (skip the idempotency short-circuit) — used by the "Regenerate" action.
     bool ForceRegenerate = false);
+
+/// <summary>
+/// Optional request body for <c>POST /admin/mechanic-analyses/requeue/{sharedGameId}</c>.
+/// </summary>
+/// <param name="CostCapUsd">Cost cap in USD; when absent the command default (2.00) applies.</param>
+internal sealed record RequeueMechanicAnalysisRequest(decimal? CostCapUsd = null);
 
 /// <summary>
 /// Optional planning-time cost cap override (B3=A). Mirrors

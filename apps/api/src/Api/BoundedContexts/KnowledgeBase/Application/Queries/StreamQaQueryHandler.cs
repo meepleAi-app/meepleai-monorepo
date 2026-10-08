@@ -637,6 +637,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             return VerifiedRulesBlock.Empty;
         }
 
+        var v3Ordering = await _featureFlags.IsEnabledAsync(FeatureFlagConstants.MechanicClaimsV3OrderingKey, flagRole)
+            .ConfigureAwait(false);
         var sections = MechanicSectionRouter.Route(_intentClassifier.ClassifyIntent(query.Query));
         if (sections.Count == 0 || !Guid.TryParse(query.GameId, out var gameGuid))
         {
@@ -644,7 +646,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         }
 
         var card = await _mechanicCardProvider.GetActiveCardAsync(gameGuid, cancellationToken).ConfigureAwait(false);
-        return card is null ? VerifiedRulesBlock.Empty : VerifiedRulesRenderer.Render(card, sections);
+        return card is null ? VerifiedRulesBlock.Empty : VerifiedRulesRenderer.Render(card, sections, 8, new VerifiedRulesRenderOptions(v3Ordering));
     }
 
     /// <summary>R1 (spec §7.4): claim citations as Snippets — verbatim Quote text, no region overlay.</summary>

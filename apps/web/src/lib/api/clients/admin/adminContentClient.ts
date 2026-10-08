@@ -66,6 +66,7 @@ import {
   type MechanicAnalysisListPageDto,
   type MechanicAnalysisStatusDto,
   type MechanicClaimDto,
+  type MechanicClaimStructureDto,
   type RejectMechanicClaimRequest,
   type SuppressMechanicAnalysisRequest,
 } from '../../schemas/mechanic-analyses.schemas';
@@ -577,14 +578,32 @@ export function createAdminContentClient(http: HttpClient) {
     async approveMechanicClaim(
       analysisId: string,
       claimId: string,
-      note?: string
+      note?: string,
+      structure?: MechanicClaimStructureDto
     ): Promise<MechanicClaimDto> {
+      const body: Record<string, unknown> = {};
+      if (note !== undefined) body.note = note;
+      if (structure !== undefined) body.structure = structure;
       const result = await http.post(
         MECHANIC_ANALYSES_ROUTES.approveClaim(analysisId, claimId),
-        note !== undefined ? { note } : {},
+        body,
         MechanicClaimDtoSchema
       );
       if (!result) throw new Error('Failed to approve claim');
+      return result;
+    },
+
+    async updateMechanicClaimStructure(
+      analysisId: string,
+      claimId: string,
+      structure: MechanicClaimStructureDto
+    ): Promise<MechanicClaimDto> {
+      const result = await http.put(
+        MECHANIC_ANALYSES_ROUTES.claimStructure(analysisId, claimId),
+        structure,
+        MechanicClaimDtoSchema
+      );
+      if (!result) throw new Error('Failed to update claim structure');
       return result;
     },
 

@@ -27,6 +27,10 @@ const claim = {
   reviewedAt: null,
   rejectionNote: null,
   reviewNote: null,
+  kind: 'Rule',
+  priority: 'Base',
+  overrides: [],
+  trigger: null,
   validations: [],
   citations: [],
 };
@@ -47,7 +51,14 @@ describe('ClaimsSection approve with note', () => {
       target: { value: 'matches p.4' },
     });
     fireEvent.click(screen.getByTestId('approve-claim-confirm'));
-    await waitFor(() => expect(mockApprove).toHaveBeenCalledWith('a', 'd1', 'matches p.4'));
+    await waitFor(() =>
+      expect(mockApprove).toHaveBeenCalledWith('a', 'd1', 'matches p.4', {
+        kind: 'Rule',
+        priority: 'Base',
+        overrides: [],
+        trigger: null,
+      })
+    );
   });
 
   it('allows confirming with no note (note is optional)', async () => {
@@ -57,7 +68,14 @@ describe('ClaimsSection approve with note', () => {
     fireEvent.click(await screen.findByTestId('claim-approve-d1'));
     expect(screen.getByTestId('approve-claim-confirm')).not.toBeDisabled();
     fireEvent.click(screen.getByTestId('approve-claim-confirm'));
-    await waitFor(() => expect(mockApprove).toHaveBeenCalledWith('a', 'd1', undefined));
+    await waitFor(() =>
+      expect(mockApprove).toHaveBeenCalledWith('a', 'd1', undefined, {
+        kind: 'Rule',
+        priority: 'Base',
+        overrides: [],
+        trigger: null,
+      })
+    );
   });
 
   it('renders the reviewNote in a green block after refetch', async () => {

@@ -16,17 +16,38 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { APPROVE_CLAIM_NOTE_MAX_LENGTH } from '@/lib/api/schemas/mechanic-analyses.schemas';
-import type { MechanicClaimValidationDto } from '@/lib/api/schemas/mechanic-analyses.schemas';
+import type {
+  MechanicClaimDto,
+  MechanicClaimStructureDto,
+  MechanicClaimValidationDto,
+} from '@/lib/api/schemas/mechanic-analyses.schemas';
+
+import { ClaimStructureFields } from './ClaimStructureFields';
+
+import type { ClaimStructureSibling } from './ClaimStructureFields';
 
 interface ApproveClaimDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (note: string) => void;
+  onConfirm: (note: string, structure?: MechanicClaimStructureDto) => void;
   isPending: boolean;
   /** Short claim preview (first ~80 chars) used in the dialog description. */
   claimPreview?: string;
   /** Per-claim guardrail outcomes; a `fail` surfaces an override warning (#2782 FU-1). */
   validations?: MechanicClaimValidationDto[];
+  /** Claim being approved; when present, its proposed structure is editable before approval. */
+  claim?: MechanicClaimDto;
+  /** Other claims of the same analysis, candidates for the overrides list. */
+  siblings?: ClaimStructureSibling[];
+}
+
+function structureOf(claim: MechanicClaimDto): MechanicClaimStructureDto {
+  return {
+    kind: claim.kind,
+    priority: claim.priority,
+    overrides: claim.overrides,
+    trigger: claim.trigger,
+  };
 }
 
 /**
@@ -41,14 +62,24 @@ export function ApproveClaimDialog({
   isPending,
   claimPreview,
   validations,
+  claim,
+  siblings = [],
 }: ApproveClaimDialogProps): React.JSX.Element {
   const [note, setNote] = useState('');
+  const [structure, setStructure] = useState<MechanicClaimStructureDto | null>(
+    claim ? structureOf(claim) : null
+  );
   const hasFail = (validations ?? []).some(v => v.outcome === 'fail');
 
   // Reset note when the dialog closes (Cancel or programmatic close).
   useEffect(() => {
     if (!open) setNote('');
   }, [open]);
+
+  // Initialise the editable structure from the claim whenever a (new) claim is targeted.
+  useEffect(() => {
+    setStructure(claim ? structureOf(claim) : null);
+  }, [claim]);
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -74,6 +105,9 @@ export function ApproveClaimDialog({
             Questo claim ha fallito uno o più guardrail. Approvando confermi un override manuale.
           </div>
         )}
+        {structure && (
+          <ClaimStructureFields value={structure} onChange={setStructure} siblings={siblings} />
+        )}
         <div className="space-y-2">
           <label className="block text-sm font-medium" htmlFor="approve-claim-note">
             Reviewer note (optional, up to {APPROVE_CLAIM_NOTE_MAX_LENGTH} chars)
@@ -96,7 +130,7 @@ export function ApproveClaimDialog({
           <AlertDialogAction
             onClick={e => {
               e.preventDefault();
-              onConfirm(note.trim());
+              onConfirm(note.trim(), structure ?? undefined);
             }}
             disabled={isPending}
             className="bg-green-600 hover:bg-green-700"

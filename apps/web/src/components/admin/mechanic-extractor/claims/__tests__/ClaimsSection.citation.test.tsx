@@ -30,6 +30,10 @@ const claim = {
   reviewedAt: null,
   rejectionNote: null,
   reviewNote: null,
+  kind: 'Rule',
+  priority: 'Base',
+  overrides: [],
+  trigger: null,
   validations: [],
   citations: [{ id: 'c1', pdfPage: 4, quote: 'score one point', displayOrder: 0 }],
 };

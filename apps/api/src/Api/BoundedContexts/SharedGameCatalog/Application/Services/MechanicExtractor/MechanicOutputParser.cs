@@ -125,7 +125,7 @@ internal static class MechanicOutputParser
             displayOrder: 0,
             citations: citations,
             sourceAnchor: "$.summary",
-            structure: ReadStructure(summary, new[] { claimId }, 0));
+            structure: MechanicClaimStructure.Default);
     }
 
     // ============================================================
@@ -444,6 +444,11 @@ internal static class MechanicOutputParser
             sequence = sequence.OrderBy(x => x.Order ?? int.MaxValue).ThenBy(x => x.SourceIndex);
         }
 
+        var structures = BreakOverrideCycles(
+            prepared.OfType<PreparedItem>()
+                .ToDictionary(p => p.SourceIndex, p => ReadStructure(p.Element, sectionClaimIds, p.SourceIndex)),
+            sectionClaimIds);
+
         var displayOrder = 0;
         foreach (var p in sequence)
         {
@@ -455,8 +460,86 @@ internal static class MechanicOutputParser
                 displayOrder: displayOrder++,
                 citations: p.Citations,
                 sourceAnchor: $"$.{jsonProperty}[{p.SourceIndex}]",
-                structure: ReadStructure(p.Element, sectionClaimIds, p.SourceIndex));
+                structure: structures[p.SourceIndex]);
         }
+    }
+
+    /// <summary>
+    /// Guarantees the persisted override graph of one section is acyclic. Each time a cycle is
+    /// found (DFS in ascending raw-index order), the override edge leaving the cycle member with the
+    /// HIGHEST raw source index is dropped, and the search repeats until no cycle remains. T5 reports
+    /// the cycle on the raw JSON; the parser only guarantees that persisted data is acyclic.
+    /// </summary>
+    private static Dictionary<int, MechanicClaimStructure> BreakOverrideCycles(
+        Dictionary<int, MechanicClaimStructure> structures, IReadOnlyList<Guid> sectionClaimIds)
+    {
+        var indexOf = new Dictionary<Guid, int>();
+        for (var i = 0; i < sectionClaimIds.Count; i++)
+        {
+            if (sectionClaimIds[i] != Guid.Empty)
+            {
+                indexOf[sectionClaimIds[i]] = i;
+            }
+        }
+
+        var edges = structures.ToDictionary(
+            kv => kv.Key, kv => kv.Value.Overrides.Select(g => indexOf[g]).ToList());
+
+        var changed = new HashSet<int>();
+        while (FindCycle(edges) is { } cycle)
+        {
+            var from = cycle.Max();
+            var next = cycle[(cycle.IndexOf(from) + 1) % cycle.Count];
+            edges[from].Remove(next);
+            changed.Add(from);
+        }
+
+        foreach (var idx in changed)
+        {
+            structures[idx] = structures[idx] with { Overrides = edges[idx].Select(i => sectionClaimIds[i]).ToList() };
+        }
+
+        return structures;
+    }
+
+    /// <summary>Returns the nodes of one cycle in path order (each overrides the next, last overrides first), or null.</summary>
+    private static List<int>? FindCycle(Dictionary<int, List<int>> edges)
+    {
+        var state = new Dictionary<int, int>(); // 1 = on stack, 2 = done
+        var stack = new List<int>();
+
+        List<int>? Visit(int node)
+        {
+            state[node] = 1;
+            stack.Add(node);
+            foreach (var next in edges[node])
+            {
+                var s = state.GetValueOrDefault(next);
+                if (s == 1)
+                {
+                    return stack.Skip(stack.IndexOf(next)).ToList();
+                }
+
+                if (s == 0 && Visit(next) is { } found)
+                {
+                    return found;
+                }
+            }
+
+            stack.RemoveAt(stack.Count - 1);
+            state[node] = 2;
+            return null;
+        }
+
+        foreach (var node in edges.Keys.OrderBy(x => x))
+        {
+            if (state.GetValueOrDefault(node) == 0 && Visit(node) is { } cycle)
+            {
+                return cycle;
+            }
+        }
+
+        return null;
     }
 
     private static string LabelledText(JsonElement item, string labelProperty, string body)

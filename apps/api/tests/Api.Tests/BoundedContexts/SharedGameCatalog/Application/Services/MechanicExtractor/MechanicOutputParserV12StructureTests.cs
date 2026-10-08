@@ -92,4 +92,70 @@ public sealed class MechanicOutputParserV12StructureTests
         claims[1].Overrides.Should().Equal(claims[0].Id);
         claims[1].SourceAnchor.Should().Be("$.mechanics[2]");
     }
+
+    [Fact]
+    public void Parse_Summary_IgnoresStructureFields()
+    {
+        const string json = """{"summary":{"text":"t","kind":"exception","priority":"card","trigger":{"phase":"x"},"citations":[{"pdf_page":1,"quote":"q"}]}}""";
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Summary] = json });
+        var claim = claims.Single();
+        claim.Kind.Should().Be(MechanicClaimKind.Rule);
+        claim.Priority.Should().Be(MechanicRulePriority.Base);
+        claim.Trigger.Should().BeNull();
+    }
+
+    private static string MechanicItems(params string[] overridesPerItem) =>
+        "{\"mechanics\":[" + string.Join(",", overridesPerItem.Select((o, i) =>
+            $"{{\"name\":\"M{i}\",\"description\":\"d\",\"kind\":\"exception\",\"overrides\":{o},\"citations\":[{{\"pdf_page\":1,\"quote\":\"q\"}}]}}")) + "]}";
+
+    [Fact]
+    public void Parse_TwoNodeCycle_DropsEdgeFromHigherIndexItem()
+    {
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = MechanicItems("[1]", "[0]") });
+        claims[0].Overrides.Should().Equal(claims[1].Id);
+        claims[1].Overrides.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parse_ThreeNodeCycle_IsBrokenDeterministically()
+    {
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = MechanicItems("[1]", "[2]", "[0]") });
+        claims[0].Overrides.Should().Equal(claims[1].Id);
+        claims[1].Overrides.Should().Equal(claims[2].Id);
+        claims[2].Overrides.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parse_Phases_OrdinalsUseRawSourceIndex_WhenOrderResorts()
+    {
+        const string json = """
+        {"phases":[
+          {"name":"General","description":"d","order":2,"citations":[{"pdf_page":1,"quote":"q"}]},
+          {"name":"Exc","description":"d","order":1,"kind":"exception","overrides":[0],"citations":[{"pdf_page":1,"quote":"q"}]}
+        ]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Phases] = json });
+        claims.Should().HaveCount(2);
+        claims[0].SourceAnchor.Should().Be("$.phases[1]");
+        claims[0].DisplayOrder.Should().Be(0);
+        claims[0].Overrides.Should().Equal(claims.Single(c => c.SourceAnchor == "$.phases[0]").Id);
+    }
+
+    [Fact]
+    public void Parse_OrdinalToSkippedItem_IsDropped()
+    {
+        const string json = """
+        {"mechanics":[
+          {"name":"Skipped","description":"no citations"},
+          {"name":"Exc","description":"d","kind":"exception","overrides":[0],"citations":[{"pdf_page":1,"quote":"q"}]}
+        ]}
+        """;
+        var claims = MechanicOutputParser.Parse(Guid.NewGuid(),
+            new Dictionary<MechanicSection, string> { [MechanicSection.Mechanics] = json });
+        claims.Single().Overrides.Should().BeEmpty();
+    }
 }

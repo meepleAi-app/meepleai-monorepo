@@ -47,7 +47,7 @@ Entità `MechanicClaim` (`BoundedContexts/SharedGameCatalog/Domain/Entities/Mech
   - `T5_example_in_override`: `Example` coinvolto in un `Overrides`;
   - `T5_exception_unbound`: `Exception` senza `Overrides` né `Trigger`;
   - `T5_trigger_unknown`: nome del `Trigger` non riconducibile al vocabolario (dopo normalizzazione).
-  Esito a tre stati come ADR-084 §1. Un fallimento T5 **non scarta** il claim: lo porta a `Pending` con la violazione visibile al revisore, che corregge o rifiuta. Le violazioni di ciclo vengono risolte rimuovendo l'arco che chiude il ciclo e registrando la violazione.
+  Esito a tre stati come ADR-084 §1. Un fallimento T5 **non scarta** il claim: lo porta a `Pending` con la violazione visibile al revisore, che corregge o rifiuta. Le violazioni di ciclo vengono risolte rimuovendo l'arco che chiude il ciclo e registrando la violazione. Il parser rimuove anche gli archi da/verso `Example`; T5 li segnala (`T5_example_in_override`). T5 usa lo stesso predicato di trigger del parser (un `trigger` vuoto o di soli spazi non lega) e calcola `T5_exception_unbound` sugli archi risolti.
 - I guardrail esistenti (T1, T2, T3a, T3b, T4) non cambiano.
 - Idempotenza: lo short-circuit di `GenerateMechanicAnalysisCommandHandler` è chiavato su `(SharedGame, Pdf, PromptVersion, Status)`, quindi `v1.2.0` genera una nuova analisi senza collidere con quelle `v1.1.0`.
 
@@ -57,7 +57,7 @@ Entità `MechanicClaim` (`BoundedContexts/SharedGameCatalog/Domain/Entities/Mech
 - `ApproveClaimDialog.tsx`: quattro controlli modificabili (select `Kind`, select `Priority`, multi-select `Overrides` fra i claim della stessa analisi, tre campi testo per `Trigger` con suggerimento dal vocabolario). I valori proposti dall'LLM sono precompilati.
 - `ApproveMechanicClaimCommand(AnalysisId, ClaimId, ReviewerId, Note, Structure?)`: `Structure` opzionale; se presente chiama `SetStructure` prima di `Approve`. Nuovo comando `UpdateMechanicClaimStructureCommand` per correggere un claim già approvato senza riaprirlo.
 - Bulk approve: conserva i valori proposti; non espone editor.
-- Validatori FluentValidation: enum validi, `Overrides` senza duplicati, `Trigger` con almeno un campo se non nullo.
+- Validatori FluentValidation: enum validi, `Overrides` senza duplicati. Il `Trigger` non è rifiutato dal validatore: è normalizzato a `null` quando tutti i campi sono vuoti (`MechanicTrigger.Create`).
 
 ## 5. Card `schema_version` 3 e consumatori
 
@@ -68,7 +68,7 @@ Entità `MechanicClaim` (`BoundedContexts/SharedGameCatalog/Domain/Entities/Mech
 **Renderer** (`KnowledgeBase/Application/Services/MechanicClaimInjection/VerifiedRulesRenderer.cs`), dietro il flag `rag.mechanic-claims.v3-ordering`:
 1. per ogni sezione richiesta, esclude gli `Example` (parametro `includeExamples = false`);
 2. ordina per `Priority` decrescente, poi in ordine topologico su `Overrides` (chi sovrascrive precede chi è sovrascritto), poi per `Ordinal`;
-3. rende un `Exception` come `[n] Eccezione a [m]: <testo>`; un `Trigger` come suffisso `(quando: fase X / azione Y)`;
+3. rende un `Exception` come `[Vn] <testo> … (Eccezione a [Vm])`, dove `[Vm]` sono i marcatori dei claim sovrascritti presenti nella stessa sezione (separati da virgola); un `Trigger` come suffisso `(quando: fase X / azione Y / componente Z)` con le sole parti non vuote;
 4. applica `maxClaimsPerSection` **dopo** l'ordinamento;
 5. con il flag spento il comportamento è identico a oggi (golden test).
 
@@ -110,7 +110,7 @@ La **polarità** (permette/vieta) di un claim è derivata in questa prima versio
 
 ## 7. Riestrazione dei giochi esistenti
 
-- Comando admin `RequeueMechanicAnalysisForPromptVersionCommand(sharedGameId)` che avvia una nuova `MechanicAnalysis` con `v1.2.0` per il PDF della card pubblicata. Un job admin "riestrai tutti" itera i giochi con card pubblicata, con concorrenza limitata e costo registrato via `MechanicAnalysis.RecordUsage` (ADR-051).
+- Comando admin `RequeueMechanicAnalysisForPromptVersionCommand(sharedGameId)` che avvia una nuova `MechanicAnalysis` con `v1.2.0` per il PDF della card pubblicata. Risponde 409 se per il prompt corrente esiste già un'analisi `Draft`, `InReview`, `Published` o `PartiallyExtracted`: l'indice unico `ux_mechanic_analyses_shared_game_pdf_prompt` (filtro `status <> 3`) ammette una sola riga non rifiutata per (gioco, PDF, prompt), quindi un'analisi parzialmente estratta va rifiutata prima di riestrarre. Un job admin "riestrai tutti" itera i giochi con card pubblicata, con concorrenza limitata e costo registrato via `MechanicAnalysis.RecordUsage` (ADR-051).
 - La card pubblicata resta in uso finché il revisore approva i nuovi claim e pubblica (`PublishMechanicCardCommand` incrementa `Version`). Nessun claim approvato viene toccato.
 - Dopo la pubblicazione della v3 il job di auto-suppression e il feedback continuano a valere sulla nuova card.
 

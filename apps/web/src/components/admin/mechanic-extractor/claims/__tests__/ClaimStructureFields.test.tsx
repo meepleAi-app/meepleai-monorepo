@@ -64,4 +64,21 @@ describe('ClaimStructureFields', () => {
     fireEvent.change(screen.getByLabelText('Trigger phase'), { target: { value: '' } });
     expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ trigger: null }));
   });
+
+  it('whitespace-only trigger emits null and padded text is trimmed', () => {
+    const onChange = vi.fn();
+    render(
+      <ClaimStructureFields
+        value={{ kind: 'Rule', priority: 'Base', overrides: [], trigger: null }}
+        onChange={onChange}
+        siblings={siblings}
+      />
+    );
+    fireEvent.change(screen.getByLabelText('Trigger phase'), { target: { value: '   ' } });
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ trigger: null }));
+    fireEvent.change(screen.getByLabelText('Trigger phase'), { target: { value: ' azione ' } });
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ trigger: expect.objectContaining({ phase: 'azione' }) })
+    );
+  });
 });

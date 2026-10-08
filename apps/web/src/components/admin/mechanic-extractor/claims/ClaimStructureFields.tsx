@@ -37,6 +37,21 @@ const TRIGGER_FIELDS: { field: TriggerField; label: string }[] = [
   { field: 'component', label: 'Trigger component' },
 ];
 
+function draftOf(t: MechanicTriggerDto | null): Record<TriggerField, string> {
+  return { phase: t?.phase ?? '', action: t?.action ?? '', component: t?.component ?? '' };
+}
+
+function buildTrigger(d: Record<TriggerField, string>): MechanicTriggerDto | null {
+  const part = (v: string): string | null => (v.trim() === '' ? null : v.trim());
+  const t = { phase: part(d.phase), action: part(d.action), component: part(d.component) };
+  return t.phase === null && t.action === null && t.component === null ? null : t;
+}
+
+function sameTrigger(a: MechanicTriggerDto | null, b: MechanicTriggerDto | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.phase === b.phase && a.action === b.action && a.component === b.component;
+}
+
 /**
  * Editable structure of a mechanic claim (kind, priority, overrides, trigger),
  * pre-filled with the values proposed by the extractor.
@@ -46,15 +61,21 @@ export function ClaimStructureFields({
   onChange,
   siblings,
 }: ClaimStructureFieldsProps): React.JSX.Element {
+  // Raw text is kept locally so typing spaces inside a phrase works; the emitted trigger is trimmed.
+  const [draft, setDraft] = React.useState<Record<TriggerField, string>>(() =>
+    draftOf(value.trigger)
+  );
+
+  React.useEffect(() => {
+    // Re-sync only when the parent value diverges from what the draft would emit (external reset).
+    if (!sameTrigger(buildTrigger(draft), value.trigger)) setDraft(draftOf(value.trigger));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- draft changes are emitted, not re-synced
+  }, [value.trigger]);
+
   const setTrigger = (field: TriggerField, raw: string): void => {
-    const current: MechanicTriggerDto = value.trigger ?? {
-      phase: null,
-      action: null,
-      component: null,
-    };
-    const next: MechanicTriggerDto = { ...current, [field]: raw === '' ? null : raw };
-    const allEmpty = next.phase === null && next.action === null && next.component === null;
-    onChange({ ...value, trigger: allEmpty ? null : next });
+    const nextDraft = { ...draft, [field]: raw };
+    setDraft(nextDraft);
+    onChange({ ...value, trigger: buildTrigger(nextDraft) });
   };
 
   const toggleOverride = (id: string, checked: boolean): void => {
@@ -111,7 +132,7 @@ export function ClaimStructureFields({
               id={`claim-structure-${field}`}
               type="text"
               className={CONTROL_CLASS}
-              value={value.trigger?.[field] ?? ''}
+              value={draft[field]}
               onChange={e => setTrigger(field, e.target.value)}
             />
           </div>

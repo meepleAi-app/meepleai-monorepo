@@ -97,8 +97,8 @@ export const GUARDRAIL_DESCRIPTIONS: Record<string, { label: string; desc: strin
     desc: 'La pagina citata deve esistere nel PDF e la quote deve essere un estratto reale di quella pagina.',
   },
   T5: {
-    label: 'Struttura',
-    desc: 'Kind/Priority/Overrides/Trigger coerenti: ordinali validi, nessun ciclo, eccezioni legate a una regola o a un trigger',
+    label: 'T5 · Struttura',
+    desc: 'Kind/Priority/Overrides/Trigger coerenti: ordinali validi, nessun ciclo, eccezioni legate a una regola o a un trigger.',
   },
 };
 
@@ -634,6 +634,11 @@ function ClaimRow({
   // Approved → no actions (idempotent re-approve adds noise without value).
   const canApprove = isActionable && canActPerStatus && !isPending;
   const canReject = isActionable && status === MechanicClaimStatus.Pending && !isPending;
+  const triggerSummary = claim.trigger
+    ? [claim.trigger.phase, claim.trigger.action, claim.trigger.component]
+        .filter(part => part && part.trim() !== '')
+        .join(' / ')
+    : '';
   const isLongText = claim.text.length > LONG_CLAIM_THRESHOLD;
   const clampClass = isLongText && !textExpanded ? 'line-clamp-3' : '';
 
@@ -650,13 +655,8 @@ function ClaimRow({
           >
             <Badge variant="outline">{claim.kind}</Badge>
             <Badge variant="outline">{claim.priority}</Badge>
-            {claim.trigger && (
-              <span className="text-xs text-muted-foreground">
-                quando:{' '}
-                {[claim.trigger.phase, claim.trigger.action, claim.trigger.component]
-                  .filter(Boolean)
-                  .join(' / ')}
-              </span>
+            {triggerSummary && (
+              <span className="text-xs text-muted-foreground">quando: {triggerSummary}</span>
             )}
             {claim.overrides.length > 0 && (
               <span className="text-xs">sovrascrive {claim.overrides.length} claim</span>

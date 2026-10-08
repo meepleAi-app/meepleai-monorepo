@@ -152,7 +152,10 @@ describe('AgentSelector', () => {
     expect(screen.queryByTestId('create-agent-link')).not.toBeInTheDocument();
   });
 
-  it('shows create-agent link when custom agents exist', async () => {
+  // Issue #4138: the create-agent link is gone — /chat/agents/create was
+  // retired with the creation wizard. Asserted with custom agents PRESENT,
+  // which is the case that used to render it: the absence is the contract now.
+  it('shows no create-agent link even when custom agents exist', async () => {
     mockGetUserAgentsForGame.mockResolvedValue([{ id: 'ca1', name: 'Agent One', type: 'qa' }]);
 
     render(
@@ -166,10 +169,9 @@ describe('AgentSelector', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('create-agent-link')).toBeInTheDocument();
+      expect(screen.getByText('Agent One')).toBeInTheDocument();
     });
 
-    const link = screen.getByTestId('create-agent-link').closest('a');
-    expect(link).toHaveAttribute('href', '/chat/agents/create?gameId=game-456');
+    expect(screen.queryByTestId('create-agent-link')).not.toBeInTheDocument();
   });
 });

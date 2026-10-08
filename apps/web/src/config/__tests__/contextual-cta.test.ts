@@ -43,11 +43,14 @@ describe('getCtaForPathname', () => {
     expect(cta!.href).toBe('/game-nights/new');
   });
 
-  it('returns agents CTA for /agents', () => {
-    const cta = getCtaForPathname('/agents');
-    expect(cta).not.toBeNull();
-    expect(cta!.label).toBe('+ Nuovo agente');
-    expect(cta!.href).toBe('/agents/new');
+  // Issue #4138: the "+ Nuovo agente" CTA is gone with the /agents section, so
+  // its test is deleted rather than skipped — a skipped test for a feature that
+  // no longer exists is dead weight, not a record. The absence is covered by
+  // the null case below and by the static-hrefs gate, which caught that
+  // `/agents/new` had never had a route of its own: it only ever resolved by
+  // being swallowed into `/agents/[id]`.
+  it('returns null for /agents, whose section was retired', () => {
+    expect(getCtaForPathname('/agents')).toBeNull();
   });
 
   it('returns null for /dashboard', () => {

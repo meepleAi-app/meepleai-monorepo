@@ -22,7 +22,7 @@ describe('onboarding tour data', () => {
 
   it('ACTIONS map to existing authenticated routes', () => {
     const hrefs = ACTIONS.map(a => a.href);
-    expect(hrefs).toEqual(['/game-nights', '/library', '/agents']);
+    expect(hrefs).toEqual(['/game-nights', '/library', '/chat']);
   });
 
   it('MIN_SELECTED is 3', () => {

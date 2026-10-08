@@ -36,7 +36,6 @@ export interface GameManaPipsData {
 export interface GameManaPipsActions {
   onCreateSession?: () => void;
   onCreateKb?: () => void;
-  onCreateAgent?: () => void;
   /** Open the chat panel with this game pre-selected (when KB is indexed). */
   onKbClick?: () => void;
 }
@@ -152,10 +151,6 @@ export function buildGameManaPips(
       entityType: 'agent',
       count: data.agents.count,
       items: data.agents.items,
-      ...(actions.onCreateAgent && {
-        onCreate: actions.onCreateAgent,
-        createLabel: 'Crea agente',
-      }),
     },
   ];
 

@@ -6,33 +6,32 @@ import { DashboardStatsRow } from '@/components/dashboard/DashboardStatsRow';
 const baseStats = {
   games: { value: 5, isLoading: false, isError: false, isFetching: false },
   sessions: { value: 2, isLoading: false, isError: false, isFetching: false },
-  agents: { value: 1, isLoading: false, isError: false, isFetching: false },
   events: { value: 3, isLoading: false, isError: false, isFetching: false },
 };
 
 describe('DashboardStatsRow', () => {
-  it('renders 4 stat cards in correct order: game, session, agent, event', () => {
+  // Issue #4138: the agent tile is gone with the /agents section it linked to.
+  // With one system-wide agent the count was 1 for everyone — a tile that
+  // reported nothing.
+  it('renders 3 stat cards in correct order: game, session, event', () => {
     render(<DashboardStatsRow stats={baseStats} onRetry={{}} />);
     const links = screen.getAllByRole('link');
-    expect(links).toHaveLength(4);
+    expect(links).toHaveLength(3);
     expect(links[0]).toHaveAttribute('data-entity', 'game');
     expect(links[1]).toHaveAttribute('data-entity', 'session');
-    expect(links[2]).toHaveAttribute('data-entity', 'agent');
-    expect(links[3]).toHaveAttribute('data-entity', 'event');
+    expect(links[2]).toHaveAttribute('data-entity', 'event');
+    expect(screen.queryByText('Agenti')).not.toBeInTheDocument();
   });
 
   it('wrapper has nav role with aria-label', () => {
     render(<DashboardStatsRow stats={baseStats} onRetry={{}} />);
-    expect(
-      screen.getByRole('navigation', { name: 'Statistiche personali' })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Statistiche personali' })).toBeInTheDocument();
   });
 
   it('renders the Italian labels', () => {
     render(<DashboardStatsRow stats={baseStats} onRetry={{}} />);
     expect(screen.getByText('Giochi')).toBeInTheDocument();
     expect(screen.getByText('Sessioni')).toBeInTheDocument();
-    expect(screen.getByText('Agenti')).toBeInTheDocument();
     expect(screen.getByText('Eventi')).toBeInTheDocument();
   });
 
@@ -84,9 +83,9 @@ describe('DashboardStatsRow', () => {
           ...baseStats,
           games: { value: 0, isLoading: false, isError: true, isFetching: false },
           sessions: { value: 0, isLoading: false, isError: true, isFetching: false },
-          agents: { value: 0, isLoading: false, isError: true, isFetching: false },
+          events: { value: 0, isLoading: false, isError: true, isFetching: false },
         }}
-        onRetry={{ games: vi.fn(), sessions: vi.fn(), agents: vi.fn() }}
+        onRetry={{ games: vi.fn(), sessions: vi.fn(), events: vi.fn() }}
       />
     );
     expect(screen.getByText(/Connessione instabile/i)).toBeInTheDocument();
@@ -96,21 +95,21 @@ describe('DashboardStatsRow', () => {
   it('"Riprova tutto" calls all error onRetry callbacks', () => {
     const gameRetry = vi.fn();
     const sessionRetry = vi.fn();
-    const agentRetry = vi.fn();
+    const eventRetry = vi.fn();
     render(
       <DashboardStatsRow
         stats={{
           ...baseStats,
           games: { value: 0, isLoading: false, isError: true, isFetching: false },
           sessions: { value: 0, isLoading: false, isError: true, isFetching: false },
-          agents: { value: 0, isLoading: false, isError: true, isFetching: false },
+          events: { value: 0, isLoading: false, isError: true, isFetching: false },
         }}
-        onRetry={{ games: gameRetry, sessions: sessionRetry, agents: agentRetry }}
+        onRetry={{ games: gameRetry, sessions: sessionRetry, events: eventRetry }}
       />
     );
     fireEvent.click(screen.getByRole('button', { name: /Riprova tutto/i }));
     expect(gameRetry).toHaveBeenCalledOnce();
     expect(sessionRetry).toHaveBeenCalledOnce();
-    expect(agentRetry).toHaveBeenCalledOnce();
+    expect(eventRetry).toHaveBeenCalledOnce();
   });
 });

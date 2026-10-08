@@ -202,13 +202,12 @@ function buildStatsKpiCards(
 
 function deriveAgentsState(
   agentsQuery: ReturnType<typeof useGameAgents>,
-  onRetry: () => void,
-  onCreateAgent: () => void
+  onRetry: () => void
 ): AgentsState {
   if (agentsQuery.isLoading) return { kind: 'loading' };
   if (agentsQuery.isError) return { kind: 'error', retry: onRetry };
   if (!agentsQuery.data || agentsQuery.data.length === 0) {
-    return { kind: 'empty', ctaCreate: onCreateAgent };
+    return { kind: 'empty' };
   }
   const agents: GameDetailAgentEntry[] = agentsQuery.data.map(a => ({
     id: a.id,
@@ -709,11 +708,7 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     );
   };
 
-  const agentsState: AgentsState = deriveAgentsState(
-    agentsQuery,
-    () => agentsQuery.refetch(),
-    () => router.push('/agents/new')
-  );
+  const agentsState: AgentsState = deriveAgentsState(agentsQuery, () => agentsQuery.refetch());
 
   // #4084: real data, honest empty state. `rulesQuery.data` is `undefined` while the
   // tab-gated query hasn't fired or hasn't resolved yet — `mapRuleSpecsToSections`

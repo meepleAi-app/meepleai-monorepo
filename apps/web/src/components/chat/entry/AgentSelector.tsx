@@ -3,15 +3,17 @@
  *
  * Fetches user-owned agents for the selected game via API.
  * Always shows the 5 system agents (auto, tutor, arbitro, stratega, narratore).
- * Custom agents are displayed above system agents with a "Create new" link.
+ *
+ * Issue #4138: the "Create new" link is gone — /chat/agents/create was retired
+ * with the user-facing creation wizard. The selector itself survives this pass:
+ * replacing it needs a chat-entry design, tracked in #4138.
  */
 
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
 
-import { Bot, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { Bot } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { api } from '@/lib/api';
@@ -66,13 +68,11 @@ function CustomAgentGridSection({
   agents,
   selectedCustomAgentId,
   onSelect,
-  gameId,
   isLoading,
 }: {
   agents: CustomAgent[];
   selectedCustomAgentId: string | null;
   onSelect: (agentId: string) => void;
-  gameId: string;
   isLoading: boolean;
 }) {
   if (isLoading) {
@@ -93,14 +93,6 @@ function CustomAgentGridSection({
         <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400 font-nunito">
           I tuoi agent
         </p>
-        <Link
-          href={`/chat/agents/create?gameId=${gameId}`}
-          className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-nunito transition-colors"
-          data-testid="create-agent-link"
-        >
-          <Plus className="h-3 w-3" />
-          Crea nuovo agent
-        </Link>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {agents.map(agent => (
@@ -235,7 +227,6 @@ export function AgentSelector({
           agents={customAgents}
           selectedCustomAgentId={selectedCustomAgentId}
           onSelect={handleCustomSelect}
-          gameId={gameId}
           isLoading={isLoadingCustom}
         />
       )}

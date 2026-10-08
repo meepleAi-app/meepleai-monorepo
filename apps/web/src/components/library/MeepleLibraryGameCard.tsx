@@ -12,7 +12,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 
-import { AgentCreationSheet } from '@/components/agent/config';
 import { toast } from '@/components/layout/Toast';
 import {
   MeepleCard,
@@ -116,8 +115,6 @@ export function MeepleLibraryGameCard({
   const { navigateWithTransition } = useViewTransition();
   const queryClient = useQueryClient();
   const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
-  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
-  const _handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
 
   const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
@@ -321,14 +318,6 @@ export function MeepleLibraryGameCard({
         onOpenChange={setSessionDrawerOpen}
         gameId={game.gameId}
         gameTitle={game.gameTitle}
-      />
-
-      {/* Agent creation wizard */}
-      <AgentCreationSheet
-        isOpen={agentSheetOpen}
-        onClose={() => setAgentSheetOpen(false)}
-        initialGameId={game.gameId}
-        initialGameTitle={game.gameTitle}
       />
 
       {/* Add to Wishlist dialog */}

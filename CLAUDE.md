@@ -270,7 +270,24 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 **Baseline currently clean** (0 known failures on `main-dev`). Resolved-triage history (#1349 → #1422 → #1887 → #2270 → #2266): [claude-md-history.md](./docs/for-claude/claude-md-history.md#known-flaky-tests--resolved-history).
 
-**Intermittenti noti**: nessuno (#3711 chiusa).
+**Intermittenti noti**: `AdvancedFilterPanel > Reset Button > resets draft filters to defaults when clicked` — un solo fallimento osservato in CI (shard 3/4 di [#4129](https://github.com/meepleAi-app/meepleai-monorepo/pull/4129), `AssertionError` su `mockOnApplyFilters`), verde al rerun sullo stesso SHA e verde in isolamento. Nessuna issue aperta: una sola occorrenza non basta a caratterizzarlo, e il dettaglio dell'asserzione è andato perso perché il rerun **sovrascrive il log del job** — salvalo su file prima di rilanciare. (#3711 chiusa.)
+
+🔴 **Un `ReferenceError: window is not defined` in fondo a uno shard NON è per forza flakiness dell'harness, e per mesi l'abbiamo trattato come tale.** Il sintomo è sempre lo stesso — job rosso, **zero test falliti**, `Errors 1 error`, un blocco `Unhandled Rejection` — ma le cause sono almeno tre, e la terza stava nel codice di produzione:
+
+| stack | causa | esito |
+|---|---|---|
+| `httpClient.ts` / `retryPolicy.ts` (`validateResponse` → `withRetry`) | promise con retry che rejecta dopo il teardown jsdom | flaky dell'harness, rerun |
+| `EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending` | un `console.log` in volo mentre l'rpc del worker si chiude | flaky dell'harness, rerun |
+| `resolveUpdatePriority` → `dispatchSetState` → `onClose` → `handleConfirm` | **difetto vero** ([#4132](https://github.com/meepleAi-app/meepleai-monorepo/issues/4132)): `AdminConfirmationDialog.handleConfirm` chiamava `onClose()` dopo `await onConfirm()` senza guardia di mount, e quel prop è il setter di stato dell'host | corretto |
+
+Lo stack nominava file, riga e componente. La regola «0 assertion rosse ⇒ non è una regressione del tuo diff» resta valida come **classificazione**, ma non autorizza a non leggerlo.
+
+⚠️ Due trappole che questo caso ha messo in chiaro, e che valgono per ogni fix di questa forma:
+
+- **Il sintomo di shard non è riproducibile in isolamento.** Serve che lo smantellamento di jsdom cada nella finestra fra lo smontaggio dell'albero e la risoluzione della promise. Ciò che si dimostra in locale è il **contratto** — un test rosso prima del fix — non il sintomo. E riprodurre in locale il comando esatto della CI (`pnpm exec vitest run --shard 3/4`) **non** riproduce lo shard della CI: produce un suo falso positivo, perché condivide il processo fra i file (osservato: un test diverso da quello rosso in CI, entrambi verdi in isolamento).
+- **Un doppio senza stato non esercita il difetto.** Il test di regressione di PR #2428 ricreava lo scenario corretto e non poteva vederlo: `onClose` era un `vi.fn()` nudo, quindi nessun update React partiva, e le asserzioni erano su `console.error` e `unhandledrejection` — nessuna delle due scatta mentre `window` esiste, perché React 19 non avvisa più su setState dopo unmount. Asserisci il **contratto osservabile sul doppio**, e in **entrambe** le direzioni: che il callback non parta dopo l'unmount, e che parta a componente montato. Senza la seconda, la guardia può rompere in silenzio gli host che contano su quel callback.
+
+La stessa forma — callback prop invocato entro poche righe dopo un `await`, senza guardia di mount — ricorre in parecchi altri componenti: censimento e criterio di intervento in [#4134](https://github.com/meepleAi-app/meepleai-monorepo/issues/4134). Non vanno cambiati preventivamente: si correggono su avvistamento.
 
 **Skippati con tracciamento** ([#4016](https://github.com/meepleAi-app/meepleai-monorepo/issues/4016), dal 2026-10-02): `StoreAsync_ValidFile_ReturnsSuccessWithFileId` e `GetPresignedDownloadUrlAsync_AfterStore_ReturnsValidUrl` (`S3BlobStorageIntegrationTests`), `BggCover_Uploaded_ResolvesViaRawKeyNoSuffix_And200` e `PdfCover_Uploaded_ResolvesViaPreviewSuffix_And200` (`CoverR2ConventionIntegrationTests`). Non sono flaky: non passavano mai, e fino a #3978 **nessuno lo sapeva** perché `minio/minio:latest` era sparita da Docker Hub e il `catch` intorno a `StartAsync` faceva saltare l'intera suite. Riportata l'immagine al mirror GHCR, le due suite girano e il resto dei loro test passa: le tre cause residue (`DisablePayloadSigning` hardcoded nelle pipeline cover — #3846 incompleto · presign SigV2 contro SigV4 atteso · prefisso `pdfs/` contro `pdf_uploads/`) sono in #4016.
 

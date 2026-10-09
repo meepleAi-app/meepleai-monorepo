@@ -89,15 +89,6 @@ public record SaveAgentConfigRequest(
 );
 
 /// <summary>
-/// Request body for creating game agent with custom definition and strategy (Issue #5).
-/// </summary>
-public record CreateGameAgentRequest(
-    Guid AgentDefinitionId,
-    string StrategyName,
-    string? StrategyParameters = null
-);
-
-/// <summary>
 /// Request body for creating a custom label (Epic #3511).
 /// </summary>
 public record CreateCustomLabelRequest(

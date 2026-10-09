@@ -43,7 +43,6 @@ internal static class UserLibraryCoreEndpoints
         MapGetGameAgentConfigEndpoint(group);
         MapUpdateAgentConfigEndpoint(group);
         MapSaveAgentConfigEndpoint(group);
-        MapCreateGameAgentEndpoint(group);
 
         // Library sharing endpoints
         MapCreateLibraryShareLinkEndpoint(group);
@@ -557,60 +556,14 @@ internal static class UserLibraryCoreEndpoints
         .WithOpenApi();
     }
 
-    /// <summary>
-    /// Maps POST endpoint for creating game agent with custom typology and strategy (Issue #5).
-    /// </summary>
-    private static void MapCreateGameAgentEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/library/games/{gameId:guid}/agent", async (
-            Guid gameId,
-            [FromBody] CreateGameAgentRequest request,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new CreateGameAgentCommand(
-                GameId: gameId,
-                AgentDefinitionId: request.AgentDefinitionId,
-                StrategyName: request.StrategyName,
-                StrategyParameters: request.StrategyParameters,
-                UserId: userId,
-                UserTier: session?.Principal?.Subject?.Tier ?? "Free",
-                UserRole: session?.Principal?.Subject?.Role ?? "User"
-            );
-
-            try
-            {
-                var result = await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ConflictException ex)
-            {
-                return Results.Conflict(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces<CreateGameAgentResult>(200)
-        .Produces<ProblemDetails>(400)
-        .Produces<ProblemDetails>(401)
-        .Produces<ProblemDetails>(404)
-        .Produces<ProblemDetails>(409)
-        .WithName("CreateGameAgent")
-        .WithDescription("Create agent for game with custom typology and strategy (Issue #5)")
-        .WithOpenApi();
-    }
+    // Issue #4138: MapCreateGameAgentEndpoint stood here, serving
+    // POST /library/games/{gameId}/agent. It built a CreateGameAgentCommand, which wrote an
+    // AgentConfiguration (model, temperature, personality, notes) onto the user's library entry.
+    // Measured before removing it: NOTHING on the answer path reads that configuration -
+    // Personality / DetailLevel / PersonalNotes have zero references outside UserLibrary, its DTOs
+    // and the /games/{id}/agents projection, and AskQuestionQueryHandler, StreamQaQueryHandler,
+    // RagPromptAssemblyService and PlaygroundChatCommandHandler never touch CustomAgentConfig.
+    // So the endpoint let a user tune an agent that could not change a single answer.
 
     private static void MapCreateLibraryShareLinkEndpoint(RouteGroupBuilder group)
     {

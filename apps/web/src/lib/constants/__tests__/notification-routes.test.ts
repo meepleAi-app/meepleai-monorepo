@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   NotificationRoutes,
-  libraryAgent,
+  libraryGameChat,
   privateToolkit,
   contributionRequest,
   sharedGame,
@@ -57,7 +57,7 @@ describe('NotificationRoutes (ADR-075 #2996)', () => {
 
   it('builders substitute the {id} token', () => {
     const id = '11111111-2222-3333-4444-555555555555';
-    expect(libraryAgent(id)).toBe(`/library/games/${id}/agent`);
+    expect(libraryGameChat(id)).toBe(`/library/${id}?tab=aiChat`);
     expect(privateToolkit(id)).toBe(`/library/private/${id}/toolkit`);
     expect(contributionRequest(id)).toBe(`/contributions/requests/${id}`);
     expect(sharedGame(id)).toBe(`/shared-games/${id}`);

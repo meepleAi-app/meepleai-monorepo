@@ -11,6 +11,14 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Events;
 [Trait("Category", "Unit")]
 public sealed class KnowledgeBaseDomainEventsTests
 {
+    // Issue #4138: #regions for AgentConfigurationCreatedEvent and
+    // AgentConfigurationActivatedEvent stood here. Both events belonged to
+    // KnowledgeBase/Domain/Entities/AgentConfiguration (#2391), an aggregate that was designed
+    // and never connected: no EF mapping, no DbSet, and zero instantiations outside its own
+    // factory. The two /agents/{id}/configuration handlers that look like they use it actually
+    // read and write AgentDefinition.Config - their own docblocks say "no separate
+    // AgentConfiguration aggregate exposed". Entity and events are gone.
+
     // Issue #4138: a #region of AgentCreatedEvent tests stood here. The event was
     // emitted SOLELY from CreateUserAgentCommandHandler (decision H1), retired with the
     // user-facing creation routes, so it had no producer left - and its only raise site,
@@ -212,98 +220,6 @@ public sealed class KnowledgeBaseDomainEventsTests
         evt1.ModelId.Should().Be("gpt-4");
         evt2.Provider.Should().Be("anthropic");
         evt2.ModelId.Should().Be("claude-3");
-    }
-
-    #endregion
-
-    #region AgentConfigurationCreatedEvent Tests
-
-    [Fact]
-    public void AgentConfigurationCreatedEvent_SetsProperties()
-    {
-        // Arrange
-        var configId = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
-
-        // Act
-        var evt = new AgentConfigurationCreatedEvent(configId, agentId, "gpt-4-turbo", 1);
-
-        // Assert
-        evt.ConfigurationId.Should().Be(configId);
-        evt.AgentId.Should().Be(agentId);
-        evt.LlmModel.Should().Be("gpt-4-turbo");
-        evt.AgentMode.Should().Be(1);
-    }
-
-    [Fact]
-    public void AgentConfigurationCreatedEvent_WithDifferentModels_SetsCorrectModel()
-    {
-        // Arrange
-        var configId = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
-
-        // Act
-        var evt1 = new AgentConfigurationCreatedEvent(configId, agentId, "gpt-4", 1);
-        var evt2 = new AgentConfigurationCreatedEvent(configId, agentId, "claude-3", 2);
-
-        // Assert
-        evt1.LlmModel.Should().Be("gpt-4");
-        evt1.AgentMode.Should().Be(1);
-        evt2.LlmModel.Should().Be("claude-3");
-        evt2.AgentMode.Should().Be(2);
-    }
-
-    [Fact]
-    public void AgentConfigurationCreatedEvent_WithZeroMode_SetsMode()
-    {
-        // Arrange
-        var configId = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
-
-        // Act
-        var evt = new AgentConfigurationCreatedEvent(configId, agentId, "gpt-3.5-turbo", 0);
-
-        // Assert
-        evt.AgentMode.Should().Be(0);
-    }
-
-    #endregion
-
-    #region AgentConfigurationActivatedEvent Tests
-
-    [Fact]
-    public void AgentConfigurationActivatedEvent_SetsProperties()
-    {
-        // Arrange
-        var configId = Guid.NewGuid();
-        var agentId = Guid.NewGuid();
-
-        // Act
-        var evt = new AgentConfigurationActivatedEvent(configId, agentId);
-
-        // Assert
-        evt.ConfigurationId.Should().Be(configId);
-        evt.AgentId.Should().Be(agentId);
-    }
-
-    [Fact]
-    public void AgentConfigurationActivatedEvent_WithDifferentIds_SetsCorrectValues()
-    {
-        // Arrange
-        var configId1 = Guid.NewGuid();
-        var agentId1 = Guid.NewGuid();
-        var configId2 = Guid.NewGuid();
-        var agentId2 = Guid.NewGuid();
-
-        // Act
-        var evt1 = new AgentConfigurationActivatedEvent(configId1, agentId1);
-        var evt2 = new AgentConfigurationActivatedEvent(configId2, agentId2);
-
-        // Assert
-        evt1.ConfigurationId.Should().Be(configId1);
-        evt1.AgentId.Should().Be(agentId1);
-        evt2.ConfigurationId.Should().Be(configId2);
-        evt2.AgentId.Should().Be(agentId2);
     }
 
     #endregion

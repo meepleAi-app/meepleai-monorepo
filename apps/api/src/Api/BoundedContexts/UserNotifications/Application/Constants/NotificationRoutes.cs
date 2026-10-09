@@ -17,7 +17,13 @@ namespace Api.BoundedContexts.UserNotifications.Application.Constants;
 internal static class NotificationRoutes
 {
     // ── Parameterized route templates ({id} token substituted by the builders below) ──
-    public const string LibraryAgentTemplate = "/library/games/{id}/agent";
+    // Issue #4138: was "/library/games/{id}/agent". TWO defects in one constant:
+    //   - `/library/games/...` is not a Next route at all (the real one is `/library/[gameId]`),
+    //     so every notification carrying this link sent the user to a 404;
+    //   - and the `/agent` leg named the per-game agent, a concept this issue retires.
+    // The destination is now the game's AI chat tab, which is where asking actually happens
+    // (the legacy `/library/{id}/agent` page is a 307 redirect to exactly this).
+    public const string LibraryGameChatTemplate = "/library/{id}?tab=aiChat";
     public const string PrivateToolkitTemplate = "/library/private/{id}/toolkit";
     public const string ContributionRequestTemplate = "/contributions/requests/{id}";
     public const string SharedGameTemplate = "/shared-games/{id}";
@@ -47,7 +53,7 @@ internal static class NotificationRoutes
     public const string Sessions = "/sessions";
 
     // ── Builders for parameterized routes ──
-    public static string LibraryAgent(Guid id) => LibraryAgentTemplate.Replace("{id}", id.ToString());
+    public static string LibraryGameChat(Guid id) => LibraryGameChatTemplate.Replace("{id}", id.ToString());
     public static string PrivateToolkit(Guid id) => PrivateToolkitTemplate.Replace("{id}", id.ToString());
     public static string ContributionRequest(Guid id) => ContributionRequestTemplate.Replace("{id}", id.ToString());
     public static string SharedGame(Guid id) => SharedGameTemplate.Replace("{id}", id.ToString());

@@ -25,11 +25,12 @@ interface ChatMessage {
 }
 
 interface InlineChatPanelProps {
-  agentId: string | null;
+  /** Issue #4139: was `agentId` - the stream is scoped by game. */
+  gameId: string | null;
   chatThreadId: string | null;
 }
 
-export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps) {
+export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [threadId, setThreadId] = useState(chatThreadId);
@@ -58,7 +59,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
   }, [messages, state.currentAnswer]);
 
   const handleSend = () => {
-    if (!input.trim() || !agentId || state.isStreaming) return;
+    if (!input.trim() || !gameId || state.isStreaming) return;
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -68,7 +69,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
     };
 
     setMessages(prev => [...prev, userMessage]);
-    sendMessage(agentId, input.trim(), threadId ?? undefined);
+    sendMessage(gameId, input.trim(), threadId ?? undefined);
     setInput('');
   };
 
@@ -80,7 +81,7 @@ export function InlineChatPanel({ agentId, chatThreadId }: InlineChatPanelProps)
   };
 
   // Empty state when no agent
-  if (!agentId) {
+  if (!gameId) {
     return (
       <Card>
         <CardHeader>

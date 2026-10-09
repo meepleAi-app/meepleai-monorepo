@@ -216,7 +216,7 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
                 size="sm"
                 variant="ghost"
                 className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
-                onClick={() => drawerOpen({ type: 'chat', agentId: resolvedAgentId })}
+                onClick={() => drawerOpen({ type: 'chat', gameId })}
                 data-testid="open-chat-btn"
               >
                 Apri chat
@@ -230,7 +230,7 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
                 size="sm"
                 variant="ghost"
                 className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
-                onClick={() => drawerOpen({ type: 'chat', agentId: resolvedAgentId })}
+                onClick={() => drawerOpen({ type: 'chat', gameId })}
                 data-testid="open-chat-btn"
               >
                 Inizia chat

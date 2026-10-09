@@ -98,4 +98,26 @@ describe('ActivationChecklist', () => {
 
     expect(screen.getByRole('button', { name: /Inizia Partita/i })).toBeDisabled();
   });
+
+  // Carried over from a stale duplicate of this file that lived in the second
+  // test tree (`apps/web/__tests__/components/library/private-game-detail/`) and
+  // still asserted the retired `step-agent`. These two assertions were the only
+  // thing it covered that this file did not.
+  it('marks the library step as completed', () => {
+    renderChecklist('none');
+
+    expect(screen.getByTestId('step-game-added')).toHaveAttribute('data-completed', 'true');
+  });
+
+  // Load-bearing, not cosmetic: `ActivationStep` renders `{!collapsed && children}`,
+  // so anything placed inside a completed step is invisible. That is exactly how a
+  // first attempt at the try-a-question CTA (#4137) disappeared - it was put inside
+  // this step, which collapses as soon as the document is ready. The CTA therefore
+  // lives at checklist level, and this test pins the collapse that forced it there.
+  it('collapses a completed step, hiding its children', () => {
+    renderChecklist('ready');
+
+    expect(screen.getByTestId('step-pdf')).toHaveAttribute('data-collapsed', 'true');
+    expect(screen.queryByRole('button', { name: /Carica regolamento/i })).not.toBeInTheDocument();
+  });
 });

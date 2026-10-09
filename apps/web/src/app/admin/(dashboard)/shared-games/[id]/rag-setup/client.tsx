@@ -64,8 +64,9 @@ export function RagSetupClient({ params }: RagSetupClientProps) {
     }
   }, [notifications, gameId]);
 
-  // Derive active agent/thread from either new creation or existing linked agent
-  const activeAgentId = agentInfo?.agentId ?? readiness?.linkedAgent?.agentId ?? null;
+  // Issue #4139: `activeAgentId` existed only to feed InlineChatPanel, which now
+  // streams by game. The agent id is still READ from the readiness payload for the
+  // panel above (AgentSetupPanel) - it just no longer decides who answers.
   const activeChatThreadId = agentInfo?.chatThreadId ?? null;
 
   if (isLoading) {
@@ -146,7 +147,7 @@ export function RagSetupClient({ params }: RagSetupClientProps) {
           />
 
           {/* Inline Chat */}
-          <InlineChatPanel agentId={activeAgentId} chatThreadId={activeChatThreadId} />
+          <InlineChatPanel gameId={gameId} chatThreadId={activeChatThreadId} />
         </div>
       </div>
     </div>

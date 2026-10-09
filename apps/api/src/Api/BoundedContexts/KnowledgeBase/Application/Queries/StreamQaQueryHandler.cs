@@ -107,12 +107,15 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         // (mirror AskQuestionQueryHandler). Without this, any authenticated user could stream-QA
         // a non-public game's KB. Enforced only when the endpoint threads the authenticated
         // identity (UserId present) and the game id is a valid Guid.
-        if (query.UserId.HasValue && Guid.TryParse(query.GameId, out var accessGameId))
+        // Issue #4137: the identity is required on the query now, so this is no longer
+        // conditional on its presence - only on the game id being a Guid, which is a
+        // shape question, not an authorization one.
+        if (Guid.TryParse(query.GameId, out var accessGameId))
         {
             var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
             var canAccess = await _ragAccessService.CanAccessRagAsync(
-                query.UserId.Value, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
+                query.UserId, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
             if (!canAccess)
                 throw new ForbiddenException("Accesso RAG non autorizzato");
         }
@@ -229,7 +232,7 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
             new StreamingStateUpdate("Searching knowledge base..."));
 
         var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
-            query.GameId, query.Query, query.DocumentIds, query.UserId ?? Guid.Empty, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, query.DocumentIds, query.UserId, cancellationToken).ConfigureAwait(false);
 
         // R1 (spec §6.1): the NO_RESULTS exit is skipped when an approved-claim block is present — the
         // claims become the answer source in the retrieval-miss case (e.g. Catan/TM "Setup per N").

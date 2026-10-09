@@ -219,7 +219,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Active Agent {i}",
                 description: $"Test active agent #{i}",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             agent.Activate();
 
@@ -237,7 +236,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Inactive Agent {i}",
                 description: $"Test inactive agent #{i}",
-                type: AgentType.RulesInterpreter,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             // Default state from Create() is IsActive=false / Status=Draft
 
@@ -273,7 +271,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Published Agent {i}",
                 description: $"Test published agent #{i}",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             agent.StartTesting();
             agent.Publish();
@@ -286,7 +283,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Draft Agent {i}",
                 description: $"Test draft agent #{i}",
-                type: AgentType.RulesInterpreter,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             // Default state from Create() is IsActive=false / Status=Draft
 

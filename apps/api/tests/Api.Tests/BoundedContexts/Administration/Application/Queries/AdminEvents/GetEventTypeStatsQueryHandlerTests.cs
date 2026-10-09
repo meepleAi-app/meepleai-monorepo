@@ -24,6 +24,12 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Queries.AdminEven
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Administration")]
 [Trait("Issue", "1718")]
+// Issue #4138: these tests seeded rows with the literal event type "agent.created".
+// That alias is unregistered now - its only producer was the user-facing agent creation flow -
+// and GetEventTypeStatsQueryHandler reports one row per alias in EventTypeRegistry.AliasByType,
+// so the seeded rows stopped surfacing. The handler is RIGHT: it reports the types the system can
+// emit. The subject here is the grouping and the last-seen-at, not agents, so the producer moved
+// to chat.session.created rather than the tests being deleted.
 public sealed class GetEventTypeStatsQueryHandlerTests
 {
     // Deterministic reference point — all LoggedAt values are relative to this.
@@ -46,7 +52,7 @@ public sealed class GetEventTypeStatsQueryHandlerTests
     }
 
     private static DomainEventLogEntity MakeEvent(
-        string eventType = "agent.created",
+        string eventType = "chat.session.created",
         DateTime? loggedAt = null)
     {
         var loggedAtValue = loggedAt ?? _now;
@@ -78,17 +84,17 @@ public sealed class GetEventTypeStatsQueryHandlerTests
         // Arrange
         await using var db = CreateDb();
 
-        // Seed: 2 agent.created + 3 kb.doc.indexed + 1 session.created — all within 24h
+        // Seed: 2 chat.session.created + 3 kb.doc.indexed + 1 session.created — all within 24h
         db.DomainEventLogs.AddRange(
-            MakeEvent("agent.created", _now.AddMinutes(-10)),
-            MakeEvent("agent.created", _now.AddMinutes(-20)),
+            MakeEvent("chat.session.created", _now.AddMinutes(-10)),
+            MakeEvent("chat.session.created", _now.AddMinutes(-20)),
             MakeEvent("kb.doc.indexed", _now.AddMinutes(-5)),
             MakeEvent("kb.doc.indexed", _now.AddMinutes(-15)),
             MakeEvent("kb.doc.indexed", _now.AddMinutes(-25)),
             MakeEvent("session.created", _now.AddMinutes(-30)));
 
         // One event OUTSIDE the 24h window — must not be counted
-        db.DomainEventLogs.Add(MakeEvent("agent.created", _now.AddHours(-25)));
+        db.DomainEventLogs.Add(MakeEvent("chat.session.created", _now.AddHours(-25)));
 
         await db.SaveChangesAsync();
 
@@ -102,8 +108,8 @@ public sealed class GetEventTypeStatsQueryHandlerTests
         result.Types.Should().NotBeNull();
 
         // The three active event types within the 24h window must be grouped correctly
-        var agentStat = result.Types.Single(t => t.EventType == "agent.created");
-        agentStat.Count.Should().Be(2);  // the 3rd one is outside 24h
+        var chatStat = result.Types.Single(t => t.EventType == "chat.session.created");
+        chatStat.Count.Should().Be(2);  // the 3rd one is outside 24h
 
         var kbStat = result.Types.Single(t => t.EventType == "kb.doc.indexed");
         kbStat.Count.Should().Be(3);
@@ -127,12 +133,12 @@ public sealed class GetEventTypeStatsQueryHandlerTests
         await using var db = CreateDb();
 
         var t1 = _now.AddMinutes(-30);
-        var t2 = _now.AddMinutes(-10); // most recent for agent.created
+        var t2 = _now.AddMinutes(-10); // most recent for chat.session.created
         var t3 = _now.AddMinutes(-5);  // most recent for kb.doc.indexed
 
         db.DomainEventLogs.AddRange(
-            MakeEvent("agent.created", t1),
-            MakeEvent("agent.created", t2),
+            MakeEvent("chat.session.created", t1),
+            MakeEvent("chat.session.created", t2),
             MakeEvent("kb.doc.indexed", t3));
 
         await db.SaveChangesAsync();
@@ -144,9 +150,9 @@ public sealed class GetEventTypeStatsQueryHandlerTests
         var result = await handler.Handle(query, CancellationToken.None);
 
         // Assert — Count and LastSeenAt reflect aggregate per group
-        var agentStat = result.Types.Single(t => t.EventType == "agent.created");
-        agentStat.Count.Should().Be(2);
-        agentStat.LastSeenAt.Should().Be(t2);  // MAX(LoggedAt) for agent.created
+        var chatStat = result.Types.Single(t => t.EventType == "chat.session.created");
+        chatStat.Count.Should().Be(2);
+        chatStat.LastSeenAt.Should().Be(t2);  // MAX(LoggedAt) for agent.created
 
         var kbStat = result.Types.Single(t => t.EventType == "kb.doc.indexed");
         kbStat.Count.Should().Be(1);

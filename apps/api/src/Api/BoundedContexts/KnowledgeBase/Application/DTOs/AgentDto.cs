@@ -6,7 +6,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 internal record AgentDto(
     Guid Id,
     string Name,
-    string Type,
     string StrategyName,
     IReadOnlyDictionary<string, object> StrategyParameters,
     bool IsActive,

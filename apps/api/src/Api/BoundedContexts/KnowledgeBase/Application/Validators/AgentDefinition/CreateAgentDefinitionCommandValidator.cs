@@ -15,7 +15,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Validators.AgentDefiniti
 internal sealed class CreateAgentDefinitionCommandValidator : AbstractValidator<CreateAgentDefinitionCommand>
 {
     private static readonly string[] s_allowedRoles = { "system", "user", "assistant", "function" };
-    private static readonly string[] s_allowedTypes = { "RAG", "Citation", "Confidence", "RulesInterpreter", "Conversation" };
 
     public CreateAgentDefinitionCommandValidator(IVectorDocumentRepository vectorDocumentRepository)
     {
@@ -26,10 +25,11 @@ internal sealed class CreateAgentDefinitionCommandValidator : AbstractValidator<
         RuleFor(x => x.Description)
             .MaximumLength(1000).WithMessage("Description must not exceed 1000 characters");
 
-        RuleFor(x => x.Type)
-            .NotEmpty().WithMessage("Type is required")
-            .Must(t => AgentType.TryParse(t, out _))
-            .WithMessage($"Type must be one of: {string.Join(", ", s_allowedTypes)}, or a custom value");
+        // Issue #4138: a RuleFor(x => x.Type) stood here, and its message was wrong in
+        // two directions at once: it listed five of the nine values AgentType.TryParse
+        // accepted, and promised "or a custom value" while AgentType.Custom() was
+        // unreachable through the API because Parse threw on unknown values. The field
+        // is gone, so the message goes with it. (This is the validator half of #4102.)
 
         RuleFor(x => x.StrategyName)
             .MaximumLength(100).WithMessage("StrategyName must not exceed 100 characters")

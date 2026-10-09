@@ -42,7 +42,6 @@ public sealed class CreateAgentDefinitionCommandHandlerTests
         var command = new CreateAgentDefinitionCommand(
             Name: "TestAgent",
             Description: "Test description",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f);
@@ -68,7 +67,6 @@ public sealed class CreateAgentDefinitionCommandHandlerTests
         var command = new CreateAgentDefinitionCommand(
             Name: "ExistingAgent",
             Description: "Desc",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f);
@@ -89,7 +87,6 @@ public sealed class CreateAgentDefinitionCommandHandlerTests
         var command = new CreateAgentDefinitionCommand(
             Name: "AgentWithTools",
             Description: "Desc",
-            Type: "RAG",
             Model: "gpt-4",
             MaxTokens: 2048,
             Temperature: 0.7f,

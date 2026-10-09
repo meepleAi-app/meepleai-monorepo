@@ -57,7 +57,6 @@ public sealed class LinkUserAgentDocumentsCommandHandlerTests
         var agentDefinition = AgentDefinitionEntity.Create(
             "Test Agent",
             "Test description",
-            AgentType.Parse("RAG"),
             AgentDefinitionConfig.Default());
 
         _vectorDocRepoMock
@@ -154,7 +153,6 @@ public sealed class LinkUserAgentDocumentsCommandHandlerTests
         var agentDefinition = AgentDefinitionEntity.Create(
             "Single Doc Agent",
             "Description",
-            AgentType.Parse("RAG"),
             AgentDefinitionConfig.Default());
 
         _vectorDocRepoMock

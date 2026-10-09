@@ -250,7 +250,6 @@ public sealed class CreateGameAgentCommandHandlerTests
         var definition = AgentDef.Create(
             "Standard Definition",
             "Test description",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
         definition.Activate();
 

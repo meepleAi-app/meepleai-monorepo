@@ -43,7 +43,6 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
             var agent = AgentDefinitionEntity.Create(
                 name: "MeepleAI Board Game Assistant",
                 description: "A helpful AI assistant specialized in board games. Explains rules, suggests strategies, and answers questions about any board game.",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create(
                     model: "meta-llama/llama-3.3-70b-instruct:free",
                     maxTokens: 4096,
@@ -66,7 +65,6 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
             var ollamaAgent = AgentDefinitionEntity.Create(
                 name: "MeepleAI Local Assistant",
                 description: "Local Ollama-powered board game AI assistant using Llama 3.3. Runs on local hardware for privacy and low-latency responses.",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create(
                     model: "llama3.3:70b",
                     maxTokens: 4096,

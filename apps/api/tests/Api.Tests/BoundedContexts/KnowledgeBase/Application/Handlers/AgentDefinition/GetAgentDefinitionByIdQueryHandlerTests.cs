@@ -33,7 +33,6 @@ public sealed class GetAgentDefinitionByIdQueryHandlerTests
         var agentDefinition = AgentDefinitionEntity.Create(
             "TestAgent",
             "Description",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         _mockRepository

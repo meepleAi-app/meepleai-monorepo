@@ -43,9 +43,6 @@ internal sealed class CreateAgentDefinitionCommandHandler
         if (exists)
             throw new ConflictException($"AgentDefinition with name '{request.Name}' already exists");
 
-        // Parse and validate type
-        var type = AgentType.Parse(request.Type);
-
         // Create config value object
         var config = AgentDefinitionConfig.Create(request.Model, request.MaxTokens, request.Temperature);
 
@@ -66,7 +63,6 @@ internal sealed class CreateAgentDefinitionCommandHandler
         var agentDefinition = Domain.Entities.AgentDefinition.Create(
             request.Name,
             request.Description,
-            type,
             config,
             strategy,
             prompts,
@@ -128,7 +124,6 @@ internal sealed class CreateAgentDefinitionCommandHandler
             Id = agent.Id,
             Name = agent.Name,
             Description = agent.Description,
-            Type = agent.Type.Value,
             StrategyName = agent.Strategy.Name,
             StrategyParameters = agent.Strategy.Parameters as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase),
             Config = new AgentConfigDto

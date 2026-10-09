@@ -111,7 +111,6 @@ public sealed class AskArbiterCommandHandlerTests : IDisposable
         return AgentDef.Create(
             "TestArbitro",
             "Test arbiter definition",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
     }
 

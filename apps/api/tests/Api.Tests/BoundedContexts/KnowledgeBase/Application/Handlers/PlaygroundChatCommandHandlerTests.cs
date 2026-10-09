@@ -637,7 +637,6 @@ public sealed class PlaygroundChatCommandHandlerTests
         var agent = AgentDefinitionEntity.Create(
             name: name,
             description: $"Test agent: {name}",
-            type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
         agent.Activate(); // Create() defaults to inactive; activate for "active" helper
@@ -649,7 +648,6 @@ public sealed class PlaygroundChatCommandHandlerTests
         var agentDef = AgentDefinitionEntity.Create(
             name: name,
             description: $"Inactive test agent: {name}",
-            type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
         // Create() sets IsActive=false by default, so agent is already inactive.

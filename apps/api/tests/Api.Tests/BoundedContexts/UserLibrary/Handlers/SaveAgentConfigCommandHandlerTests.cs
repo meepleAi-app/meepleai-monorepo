@@ -50,7 +50,6 @@ public sealed class SaveAgentConfigCommandHandlerTests
         var def = AgentDef.Create(
             name,
             "Test description",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
         def.Activate();
         return def;
@@ -132,7 +131,6 @@ public sealed class SaveAgentConfigCommandHandlerTests
         var inactiveDef = AgentDef.Create(
             "Inactive Definition",
             "Not active",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
         // not Activate() → IsActive=false
 

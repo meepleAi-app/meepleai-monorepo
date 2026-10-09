@@ -39,10 +39,17 @@ public static class EventTypeRegistry
         [typeof(GameRemovedFromLibraryEvent)] = "library.entry.removed",
         [typeof(GameSessionRecordedEvent)] = "library.session.recorded",
 
-        // BE-3 #1590 — cross-entity activity feed events (user-facing flows only).
-        // H1: agent.created is emitted SOLELY from CreateUserAgentCommand (user flow).
-        //     NOT from CreateAgentDefinitionCommand (admin/AI-Lab path).
-        [typeof(AgentCreatedEvent)] = "agent.created",
+        // Issue #4138: `agent.created` stood here. It was emitted SOLELY from
+        // CreateUserAgentCommandHandler (decision H1), retired with the user-facing creation
+        // routes, so the event had no producer left - and the entry cannot be kept anyway,
+        // because this registry is keyed by CLR type and the type is gone.
+        //
+        // Consequence on the two READ paths, and they differ by their window:
+        //   - GetActivityFeedQueryHandler reads 90 days, so historic rows outlive the
+        //     retirement by up to three months. It KEEPS its `agent.created` arms on purpose.
+        //   - GetEventTypeStatsQueryHandler iterates these aliases and drops DB groups whose
+        //     type is unregistered, so historic rows vanish from that view. Its window is
+        //     `WindowDays = 1`, so the exposure is 24 hours on an admin stats page - accepted.
 
         // H2: chat.session.created matches the real command name (CreateChatSessionCommand).
         //     Alias uses "session" not "thread" — the BE has no CreateChatThreadCommand.

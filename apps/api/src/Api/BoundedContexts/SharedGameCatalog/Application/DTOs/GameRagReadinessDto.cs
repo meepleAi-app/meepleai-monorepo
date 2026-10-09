@@ -35,7 +35,6 @@ public record DocumentStatusDto(
 public record AgentInfoDto(
     Guid AgentId,
     string Name,
-    string Type,
     bool IsActive,
     bool IsReady
 );

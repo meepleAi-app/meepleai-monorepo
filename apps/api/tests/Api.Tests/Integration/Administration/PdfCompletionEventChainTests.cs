@@ -136,7 +136,6 @@ public sealed class PdfCompletionEventChainTests : IAsyncLifetime
         var def = AgentDef.Create(
             "Default",
             "Desc",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
         def.Activate();
         var field = typeof(AgentDef).GetField("_isSystemDefined",

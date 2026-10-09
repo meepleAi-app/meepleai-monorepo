@@ -373,7 +373,6 @@ public class ChatSessionAgentBroadcastTests
         var definition = AgentDefinition.Create(
             name: "tutor",
             description: "Test agent",
-            type: AgentType.Custom("tutor", "Tutor"),
             config: AgentDefinitionConfig.Default());
 
         var definitionRepo = new Mock<IAgentDefinitionRepository>();

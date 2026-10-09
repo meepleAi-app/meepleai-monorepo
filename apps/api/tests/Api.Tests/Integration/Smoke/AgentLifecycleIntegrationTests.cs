@@ -338,7 +338,6 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
         var systemAgent = AgentDefinition.CreateSystem(
             name: "SG3-T5 System Agent Arbitro",
             description: "Test system agent",
-            type: AgentType.Parse("Strategist"),
             config: AgentDefinitionConfig.Default(),
             typologySlug: "strategist");
 
@@ -394,7 +393,6 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
             return AgentDefinition.CreateSystem(
                 name: name,
                 description: "SG3 test system agent",
-                type: AgentType.Parse("Strategist"),
                 config: AgentDefinitionConfig.Default(),
                 typologySlug: "strategist");
         }
@@ -402,7 +400,6 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
         var agent = AgentDefinition.Create(
             name: name,
             description: "SG3 integration test agent",
-            type: AgentType.Parse("RulesInterpreter"),
             config: AgentDefinitionConfig.Default());
 
         return agent;

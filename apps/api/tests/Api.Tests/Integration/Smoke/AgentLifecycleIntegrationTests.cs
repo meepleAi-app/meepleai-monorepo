@@ -377,56 +377,13 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
     /// so we test the handler's quota check by mocking CanPerformAsync to return false
     /// (same pattern as SG2-T2 for RaptorRebuild).
     /// </summary>
-    [Fact]
-    public async Task CreateUserAgent_AtFreeTierQuota_ThrowsTierQuotaExceededException()
-    {
-        // Arrange — build a fresh service scope with a quota-exhausted tier mock
-        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
-        services.AddScoped<IAgentDefinitionRepository, AgentDefinitionRepository>();
-        // ISharedGameRepository mock — needed by CreateUserAgentCommandHandler
-        services.AddScoped(_ => Mock.Of<ISharedGameRepository>());
+    // Issue #4138: CreateUserAgent_AtFreeTierQuota_ThrowsTierQuotaExceededException stood here.
+    // Its subject was CreateUserAgentCommand, retired with the user-facing creation routes.
+    // The MaxAgents / TierAction.CreateAgent quota it exercised is NOT gone - it survives in
+    // GameManagement/AutoCreateAgentOnPdfReadyHandler, and the rejection path is already covered
+    // by its Handle_TierQuotaExceeded_SkipsAgentCreationAndLogsWarning. So no coverage is lost
+    // here; the quota's own redefinition is the remaining #4138 item.
 
-        // Override tier mock: CreateAgent is blocked (quota reached), others allowed
-        var quotaMock = new Mock<ITierEnforcementService>();
-        quotaMock
-            .Setup(t => t.CanPerformAsync(
-                It.IsAny<Guid>(),
-                TierAction.CreateAgent,
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false); // QUOTA EXHAUSTED
-        quotaMock
-            .Setup(t => t.CanPerformAsync(
-                It.IsAny<Guid>(),
-                It.Is<TierAction>(a => a != TierAction.CreateAgent),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        quotaMock
-            .Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(TierLimits.FreeTier); // MaxAgents=1
-
-        services.AddScoped<ITierEnforcementService>(_ => quotaMock.Object);
-
-        var quotaProvider = services.BuildServiceProvider();
-        var mediator = quotaProvider.GetRequiredService<IMediator>();
-
-        // Attempt to create an agent — should be blocked by quota
-        var command = new CreateUserAgentCommand(
-            UserId: TestUserId,
-            GameId: TestGameId,
-            AgentType: "RulesInterpreter",
-            Name: "SG3-T6 Should Fail");
-
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<TierQuotaExceededException>(
-            () => mediator.Send(command, TestCancellationToken));
-
-        ex.Resource.Should().Be("AgentSlots");
-        ex.ErrorCode.Should().Be("AGENT_SLOT_QUOTA_EXCEEDED");
-        ex.StatusCode.Should().Be(StatusCodes.Status402PaymentRequired);
-        ex.MaxAllowed.Should().Be(1, "FreeTier.MaxAgents = 1");
-
-        if (quotaProvider is IDisposable d) d.Dispose();
-    }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
 

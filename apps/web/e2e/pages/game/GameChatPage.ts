@@ -2,18 +2,31 @@ import { type Page, expect } from '@playwright/test';
 
 import { BasePage } from '../base/BasePage';
 
-export class AgentChatPage extends BasePage {
-  constructor(page: Page) {
+/**
+ * Chat scoped to a GAME — issue #4138.
+ *
+ * Was `pages/agent/AgentChatPage`, which navigated to `/agents` and
+ * `/agents/{agentId}`: both deleted with the user-facing agents section (#4141).
+ * There is one system agent now, configured by the admin, so a chat is never
+ * addressed to an agent — it is addressed to a game, and the retrieval scope is
+ * a parameter of the question.
+ *
+ * The surviving surface is the library game detail's AI chat tab:
+ *   `/library/{gameId}?tab=aiChat` → `GameAiChatTab` → `GameChatTab` →
+ *   `components/features/game-chat/ChatInputBar`
+ * which is the component carrying the `message-input` / `send-btn` test ids these
+ * helpers use. The message helpers are unchanged — they were never agent-specific.
+ */
+export class GameChatPage extends BasePage {
+  private readonly gameId: string;
+
+  constructor(page: Page, gameId: string) {
     super(page);
+    this.gameId = gameId;
   }
 
   async goto(): Promise<void> {
-    await this.page.goto('/agents');
-    await this.waitForLoad();
-  }
-
-  async navigateToChat(agentId: string): Promise<void> {
-    await this.page.goto(`/agents/${agentId}`);
+    await this.page.goto(`/library/${this.gameId}?tab=aiChat`);
     await this.waitForLoad();
 
     // If we see "Inizia Conversazione" button, click it

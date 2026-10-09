@@ -42,8 +42,8 @@ import { isBackendReachable, NO_BACKEND_SKIP_REASON } from '../_helpers/backendG
 import { checkFlowPrerequisites, formatHealthResults } from '../helpers/flow-health-gate';
 import { env } from '../helpers/onboarding-environment';
 import { QueueDashboardPage } from '../pages/admin/QueueDashboardPage';
-import { AgentChatPage } from '../pages/agent/AgentChatPage';
 import { LoginPage } from '../pages/auth/LoginPage';
+import { GameChatPage } from '../pages/game/GameChatPage';
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -403,7 +403,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
     });
 
     await test.step('AC5: Send a test question about the game rules', async () => {
-      const chatPage = new AgentChatPage(page);
+      const chatPage = new GameChatPage(page, state.gameId);
 
       // Locate the message input — may already be on a chat page
       const messageInput = page
@@ -427,7 +427,7 @@ test.describe('Admin Embedding Flow @flow @rag @slow', () => {
     });
 
     await test.step('AC5: Verify agent response with RAG context', async () => {
-      const chatPage = new AgentChatPage(page);
+      const chatPage = new GameChatPage(page, state.gameId);
 
       const responseText = await chatPage
         .waitForAgentResponse(envConfig.jobTimeout)

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { createThread } from '@/components/chat/entry/ThreadCreator';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
-import { useGameAgents } from '@/hooks/queries/useGameAgents';
 import { useGames } from '@/hooks/queries/useGames';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useChatPanel } from '@/hooks/useChatPanel';
@@ -85,14 +84,11 @@ export function ChatSlideOverPanel() {
   const { data: recentSessions } = useRecentChatSessions(50);
   const { data: gamesResponse } = useGames(undefined, undefined, 1, 50);
 
-  // Resolve the default agent for the selected game — sendMessage needs a real
-  // agent UUID (the SSE endpoint is /api/v1/agents/{agentId}/chat). Without
-  // this, sending would 404.
-  const { data: gameAgents } = useGameAgents({
-    gameId: gameContext?.id ?? null,
-    enabled: !!gameContext?.id,
-  });
-  const agentId = gameAgents?.[0]?.id ?? null;
+  // Issue #4139: the agent lookup that stood here existed only to feed
+  // /api/v1/agents/{agentId}/chat, a route the backend never mounted — the comment
+  // even said sending "would 404" without it, which was true either way. The stream
+  // now posts to /agents/qa/stream, scoped by game, so the game context is all this
+  // panel needs; #4138 loses one more reader of useGameAgents.
 
   // Live KB status for the selected game
   const { isReady: kbIsReady, data: kbStatusData } = useEmbeddingStatus(gameContext?.id ?? null, {
@@ -182,8 +178,8 @@ export function ChatSlideOverPanel() {
 
   const handleSend = useCallback(
     async (message: string) => {
-      // Need a game + a resolved agent + no in-flight stream to send safely.
-      if (!message.trim() || !gameContext || !agentId || stream.state.isStreaming) return;
+      // Need a game + no in-flight stream to send safely.
+      if (!message.trim() || !gameContext || stream.state.isStreaming) return;
 
       const userMessage: ChatMessage = {
         id: `user-${Date.now()}`,
@@ -202,7 +198,6 @@ export function ChatSlideOverPanel() {
           const result = await createThread({
             gameId: gameContext.id,
             gameName: gameContext.name,
-            agentId,
             initialMessage: message,
           });
           currentThreadId = result.threadId;
@@ -217,12 +212,12 @@ export function ChatSlideOverPanel() {
         }
       }
 
-      stream.sendMessage(agentId, message, currentThreadId ?? undefined, {
+      stream.sendMessage(gameContext.id, message, currentThreadId ?? undefined, {
         gameName: gameContext.name,
         agentTypology: 'default',
       });
     },
-    [gameContext, agentId, stream, threadId, toast]
+    [gameContext, stream, threadId, toast]
   );
 
   const handleNewChat = useCallback(() => {

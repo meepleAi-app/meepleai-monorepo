@@ -7,8 +7,6 @@
 
 import { z } from 'zod';
 
-import { logger } from '@/lib/logger';
-
 import {
   AgentDtoSchema,
   AgentResponseDtoSchema,
@@ -22,7 +20,6 @@ import {
   typologySchema, // Issue #4126
   type AgentDto,
   type AgentResponseDto,
-  type SSEEvent, // Issue #4126
   type InvokeAgentRequest,
   type CreateAgentRequest,
   type ConfigureAgentRequest,
@@ -260,6 +257,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * POST /api/v1/agents/chess
      *
      * Issue #1977: Added ChessAgentResponseSchema validation
+     *
+     * @todo BACKEND MISSING: no route is mounted for POST /api/v1/agents/chess.
+     *   Verified mechanically against the backend (Issue #4139):
+     *     grep -rhoE 'Map(Post|Get|Put|Delete)\("/agents[^"]*"' apps/api/src/Api --include=*.cs
+     *   No consumer in the frontend either.
      */
     async invokeChess(request: {
       question: string;
@@ -324,6 +326,13 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements GetAgentDocumentsQuery from backend
      * Issue #2399: Knowledge Base Document Selection
      * @param id Agent ID (GUID format)
+     *
+     * @todo BACKEND MISSING: no route is mounted for GET or PUT
+     *   /api/v1/agents/{id}/documents. Unlike the other unrouted entries here it
+     *   HAS consumers - `KnowledgeBaseTab` and `useAgentDocuments` - so those
+     *   surfaces list nothing and cannot say why. Found mechanically while fixing
+     *   Issue #4139; the fix belongs with the per-agent -> per-game KB listing
+     *   tracked in #4138, because with one system agent the right key is the game.
      */
     async getDocuments(id: string): Promise<AgentDocumentsDto | null> {
       return httpClient.get(
@@ -553,83 +562,10 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
     // ========== Agent Chat SSE (Issue #4126) ==========
 
-    /**
-     * Chat with agent using SSE streaming
-     * Returns async generator for streaming responses
-     * Issue #4126: API Integration
-     *
-     * @param agentId - Agent UUID
-     * @param message - User message (max 2000 chars)
-     * @param options.chatThreadId - Optional thread ID for multi-turn conversations.
-     *   Pass the threadId from createWithSetup or a previous Complete event to maintain context.
-     * @param options.signal - Optional AbortSignal for cancellation
-     */
-    async *chat(
-      agentId: string,
-      message: string,
-      options?: { chatThreadId?: string; signal?: AbortSignal }
-    ): AsyncGenerator<SSEEvent, void, unknown> {
-      const { chatThreadId, signal } = options ?? {};
-      const response = await fetch(`/api/v1/agents/${encodeURIComponent(agentId)}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message,
-          ...(chatThreadId && { chatThreadId }),
-        }),
-        signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Chat failed: ${response.statusText}`);
-      }
-
-      if (!response.body) {
-        throw new Error('No response body');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      try {
-        while (true) {
-          // Check if aborted before reading
-          if (signal?.aborted) {
-            break;
-          }
-
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              try {
-                const event = JSON.parse(data);
-                yield event as SSEEvent;
-              } catch (e) {
-                logger.error('Failed to parse SSE event:', e);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // Clean exit on abort
-        if (signal?.aborted) {
-          return;
-        }
-        throw e;
-      } finally {
-        reader.releaseLock();
-      }
-    },
+    // Issue #4139: the `chat()` generator that stood here posted to
+    // POST /api/v1/agents/{agentId}/chat, a route the backend never mounted, and
+    // had no consumer left once `useAgentChatStream` moved to /agents/qa/stream.
+    // Removed rather than marked: there is nothing to keep it for.
 
     // ========== Model & Agent Configuration ==========
 

@@ -3,7 +3,8 @@
  * Issue #4364: SSE streaming in ChatThreadView
  *
  * Refactored as a thin wrapper over useSseStreamFsm (#1704 Phase B).
- * Handles SSE connection to POST /api/v1/agents/{agentId}/chat
+ * Handles the SSE connection to POST /api/v1/agents/qa/stream.
+ * Issue #4139: the previous target, /api/v1/agents/{agentId}/chat, was never mounted.
  * Parses RagStreamingEvent format (numeric StreamingEventType enum)
  */
 
@@ -78,12 +79,7 @@ const DEBUG_STEP_NAMES: Record<number, string> = {
 };
 
 export type ConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected'
-  | 'error';
+  'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
 export interface AgentChatStreamState {
   /** Current streaming status text */
@@ -141,7 +137,15 @@ export interface AgentChatStreamCallbacks {
 
 /** Input for a single chat message stream */
 export interface AgentChatInput {
-  agentId: string;
+  /**
+   * Issue #4139: was `agentId`. The stream talks to POST /api/v1/agents/qa/stream,
+   * which scopes retrieval by GAME - there is one system-wide agent, so an agent id
+   * carries no information the endpoint can use. The previous URL,
+   * /api/v1/agents/{agentId}/chat, was never mounted by the backend: enumerating
+   * every route under /agents turns up no such path, so every surface built on this
+   * hook was posting to a 404.
+   */
+  gameId: string;
   message: string;
   chatThreadId?: string;
   proxyGameContext?: ProxyGameContext;
@@ -199,19 +203,21 @@ async function* agentChatTransport(
     url = '/api/chat-proxy';
     body = {
       message: input.message,
-      agentId: input.agentId,
       threadId: input.chatThreadId,
       gameContext: input.proxyGameContext,
     };
   } else {
+    // Issue #4139: the real endpoint. AiEndpoints.cs:146 maps POST /agents/qa/stream
+    // to StreamQaQuery, whose request DTO (QaRequest) takes gameId + query + chatId.
+    // It already emits exactly the wire format this hook parses - `data: {json}`
+    // carrying RagStreamingEvent, with the numeric StreamingEventType this file
+    // switches on - so only the URL and the body were ever wrong, never the event
+    // contract.
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-    url = `${baseUrl}/api/v1/agents/${input.agentId}/chat`;
-    body = { message: input.message };
+    url = `${baseUrl}/api/v1/agents/qa/stream`;
+    body = { gameId: input.gameId, query: input.message };
     if (input.chatThreadId) {
-      body.chatThreadId = input.chatThreadId;
-    }
-    if (input.gameSessionId) {
-      body.gameSessionId = input.gameSessionId;
+      body.chatId = input.chatThreadId;
     }
   }
 
@@ -468,7 +474,7 @@ type AgentChatErrorShape = { kind: 'connection' | 'other'; message: string };
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   state: AgentChatStreamState;
   sendMessage: (
-    agentId: string,
+    gameId: string,
     message: string,
     chatThreadId?: string,
     proxyGameContext?: ProxyGameContext,
@@ -593,14 +599,14 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   // ── Public API ────────────────────────────────────────────────────────────
 
   const sendMessage = (
-    agentId: string,
+    gameId: string,
     message: string,
     chatThreadId?: string,
     proxyGameContext?: ProxyGameContext,
     gameSessionId?: string
   ): void => {
     currentAnswerRef.current = ''; // reset M-4 guard for new stream
-    ask({ agentId, message, chatThreadId, proxyGameContext, gameSessionId });
+    ask({ gameId, message, chatThreadId, proxyGameContext, gameSessionId });
   };
 
   const stopStreaming = (): void => {

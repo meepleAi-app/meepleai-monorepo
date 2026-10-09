@@ -12,6 +12,7 @@ import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgress
 import { ProgressCard } from '@/components/pdf/progress-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
+import { useChatPanel } from '@/hooks/useChatPanel';
 import { api } from '@/lib/api';
 
 import { ActivationChecklist, type PdfStatus } from './ActivationChecklist';
@@ -29,6 +30,14 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
   const [activePdfId, setActivePdfId] = useState<string | null>(null);
   const [activePdfName, setActivePdfName] = useState<string>('');
+
+  // Issue #4137: the surface that was missing. The backend grants a PrivateGame
+  // owner access to their own KB, but nothing in the UI could ask - this hub had
+  // neither a chat panel nor an entry point, so the permission was unreachable.
+  // The global slide-over is scoped by game (#4139 moved the stream from an agent
+  // id to /agents/qa/stream), so opening it with the private game's id is all it
+  // takes.
+  const { open: openChatPanel } = useChatPanel();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [pausedSessions, setPausedSessions] = useState<PausedSession[]>([]);
   const [showPlayerSetup, setShowPlayerSetup] = useState(false);
@@ -144,6 +153,18 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
     },
     [privateGameId]
   );
+
+  // Issue #4137: `onTryQuestion` was already a prop of ActivationChecklist and no
+  // host passed it, so the CTA never rendered. It is gated on the KB being ready,
+  // which is also what decides whether an answer is possible.
+  const handleTryQuestion = useCallback(() => {
+    openChatPanel({
+      id: privateGameId,
+      name: game?.title ?? 'Gioco privato',
+      pdfCount: activePdfId ? 1 : 0,
+      kbStatus: pdfStatus === 'ready' ? 'ready' : pdfStatus === 'failed' ? 'failed' : 'indexing',
+    });
+  }, [openChatPanel, privateGameId, game?.title, activePdfId, pdfStatus]);
 
   const handleStartGame = useCallback(() => {
     setShowPlayerSetup(true);
@@ -264,6 +285,7 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
         pdfStatus={pdfStatus}
         onUploadPdf={handleUploadPdf}
         onStartGame={handleStartGame}
+        onTryQuestion={handleTryQuestion}
       >
         {pdfStatus === 'uploading' && (
           <div className="space-y-2">

@@ -67,7 +67,7 @@ export function CatalogWizard() {
   // Step 4 & 5 state
   const [ragDocuments, setRagDocuments] = useState<DocumentStatus[]>([]);
   const [existingAgent, setExistingAgent] = useState<AgentInfo | null>(null);
-  const [agentId, setAgentId] = useState<string | null>(null);
+  // Issue #4139: the `agentId` state is gone - InlineChatPanel streams by game now.
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
@@ -138,9 +138,6 @@ export function CatalogWizard() {
       if (readiness) {
         setRagDocuments(readiness.documents);
         setExistingAgent(readiness.linkedAgent);
-        if (readiness.linkedAgent) {
-          setAgentId(readiness.linkedAgent.agentId);
-        }
       }
       setStep(4);
     } catch (err) {
@@ -151,7 +148,8 @@ export function CatalogWizard() {
   }, [selectedGame]);
 
   const handleAgentCreated = useCallback((info: { agentId: string; chatThreadId: string }) => {
-    setAgentId(info.agentId);
+    // Issue #4139: `info.agentId` is no longer stored - the test chat in step 5
+    // streams by game, not by agent. The thread id is still what carries context.
     setChatThreadId(info.chatThreadId);
     setStep(5);
   }, []);
@@ -415,7 +413,6 @@ export function CatalogWizard() {
             {existingAgent && (
               <Button
                 onClick={() => {
-                  setAgentId(existingAgent.agentId);
                   setStep(5);
                 }}
               >
@@ -445,7 +442,7 @@ export function CatalogWizard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <InlineChatPanel agentId={agentId} chatThreadId={chatThreadId} />
+              <InlineChatPanel gameId={selectedGame?.id ?? null} chatThreadId={chatThreadId} />
             </CardContent>
           </Card>
           <div className="flex justify-between">

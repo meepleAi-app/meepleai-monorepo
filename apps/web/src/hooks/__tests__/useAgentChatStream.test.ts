@@ -81,6 +81,114 @@ describe('useAgentChatStream', () => {
     vi.restoreAllMocks();
   });
 
+  // ─── Issue #4139: the request target ──────────────────────────────────────
+  //
+  // These are the tests the issue asked for, and they exist because a mocked
+  // `fetch` resolves against ANY string: the hook posted to
+  // /api/v1/agents/{agentId}/chat for its whole life and every test here stayed
+  // green, because none of them looked at the URL. What is asserted is therefore
+  // the requested path itself.
+  //
+  // The list below is the set of paths the backend actually mounts under
+  // /agents. Re-derive it with:
+  //
+  //   grep -rn 'Map\(Post\|Get\|Put\|Delete\)("/agents' apps/api/src/Api --include=*.cs
+  //
+  // If this list and the hook disagree, the hook is wrong — that is the whole
+  // point of keeping it here.
+  describe('request target (#4139)', () => {
+    const MOUNTED_AGENT_POST_ROUTES = [
+      '/api/v1/agents/qa',
+      '/api/v1/agents/qa/stream',
+      '/api/v1/agents/explain',
+      '/api/v1/agents/explain/stream',
+      '/api/v1/agents/setup',
+      '/api/v1/agents/feedback',
+      '/api/v1/agents/player-mode/suggest',
+      '/api/v1/agents/user',
+      '/api/v1/agents/create-with-setup',
+      '/api/v1/agents/quick-create',
+    ];
+
+    function captureRequest() {
+      const stream = createSSEStream([sseEvent(EventType.Complete, { totalTokens: 1 })]);
+      fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+      return () => {
+        expect(fetchMock).toHaveBeenCalled();
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+        return { url, body: JSON.parse(String(init.body)) as Record<string, unknown> };
+      };
+    }
+
+    it('posts to a path the backend actually mounts', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?');
+      });
+
+      const { url } = read();
+      const path = new URL(url, 'http://localhost').pathname;
+      expect(MOUNTED_AGENT_POST_ROUTES).toContain(path);
+    });
+
+    it('posts to /api/v1/agents/qa/stream specifically', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?');
+      });
+
+      expect(new URL(read().url, 'http://localhost').pathname).toBe('/api/v1/agents/qa/stream');
+    });
+
+    // The route that was there before. Asserted as an absence so a revert is red.
+    it('never posts to the unmounted /agents/{id}/chat', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?');
+      });
+
+      expect(read().url).not.toMatch(/\/agents\/[^/]+\/chat$/);
+    });
+
+    // QaRequest (the endpoint's DTO) reads gameId + query + chatId. A body shaped
+    // for the old route would be accepted by a mock and rejected by the server.
+    it('sends the body shape QaRequest expects', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?', 'thread-9');
+      });
+
+      const { body } = read();
+      expect(body).toMatchObject({
+        gameId: 'game-1',
+        query: 'Quante azioni per turno?',
+        chatId: 'thread-9',
+      });
+      expect(body).not.toHaveProperty('message');
+      expect(body).not.toHaveProperty('agentId');
+      expect(body).not.toHaveProperty('chatThreadId');
+    });
+
+    it('omits chatId when no thread is given', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Domanda senza thread');
+      });
+
+      expect(read().body).not.toHaveProperty('chatId');
+    });
+  });
+
   it('initializes with default state', () => {
     const { result } = renderHook(() => useAgentChatStream());
 
@@ -282,20 +390,27 @@ describe('useAgentChatStream', () => {
     expect(result.current.state.isStreaming).toBe(false);
   });
 
-  it('includes chatThreadId in request body when provided', async () => {
+  // Issue #4139: this asserted the body of the unmounted /agents/{id}/chat route
+  // ({ message, chatThreadId }). The target is now /agents/qa/stream, whose DTO
+  // (QaRequest) reads gameId + query + chatId.
+  it('includes chatId in request body when a thread is provided', async () => {
     const stream = createSSEStream([sseEvent(EventType.Complete, { totalTokens: 0 })]);
     fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
 
     const { result } = renderHook(() => useAgentChatStream());
 
     await act(async () => {
-      result.current.sendMessage('agent-1', 'Hello', 'existing-thread');
+      result.current.sendMessage('game-1', 'Hello', 'existing-thread');
       await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     const fetchCall = fetchMock.mock.calls[0];
     const requestBody = JSON.parse(fetchCall[1].body);
-    expect(requestBody).toEqual({ message: 'Hello', chatThreadId: 'existing-thread' });
+    expect(requestBody).toEqual({
+      gameId: 'game-1',
+      query: 'Hello',
+      chatId: 'existing-thread',
+    });
   });
 
   it('ignores heartbeat events silently', async () => {

@@ -39,7 +39,6 @@ function createRequest(body: unknown, headers?: Record<string, string>): NextReq
 function createValidBody(
   overrides?: Partial<{
     message: string;
-    agentId: string;
     threadId: string;
     gameContext: { gameName: string; agentTypology: string; ragContext?: string };
     modelId: string;
@@ -49,7 +48,6 @@ function createValidBody(
 ) {
   return {
     message: 'How do I play Catan?',
-    agentId: 'agent-123',
     gameContext: {
       gameName: 'Catan',
       agentTypology: 'Tutor',
@@ -159,7 +157,6 @@ describe('POST /api/chat-proxy', () => {
   describe('Input Validation', () => {
     it('returns 400 for missing message', async () => {
       const req = createRequest({
-        agentId: 'a',
         gameContext: { gameName: 'X', agentTypology: 'Tutor' },
       });
       const res = await POST(req);
@@ -178,20 +175,16 @@ describe('POST /api/chat-proxy', () => {
       expect(json.error).toContain('2000');
     });
 
-    it('returns 400 for missing agentId', async () => {
-      const req = createRequest({
-        message: 'hi',
-        gameContext: { gameName: 'X', agentTypology: 'Tutor' },
-      });
-      const res = await POST(req);
-
-      expect(res.status).toBe(400);
-      const json = await res.json();
-      expect(json.error).toContain('agentId');
-    });
+    // Issue #4139 removed a test here that asserted `400` for a missing `agentId`.
+    // The field was declared and validated in this route and never read - the system
+    // prompt is built from `gameContext` - so the route rejected valid requests over
+    // a field it ignored. No replacement test is needed: `createValidBody()` no longer
+    // sends `agentId`, so every test below exercises its absence, and the SSE cases
+    // assert a 200 with a full event stream. That the route *works* without the field
+    // is stronger evidence than a dedicated `not.toBe(400)` would be.
 
     it('returns 400 for missing gameContext', async () => {
-      const req = createRequest({ message: 'hi', agentId: 'a' });
+      const req = createRequest({ message: 'hi' });
       const res = await POST(req);
 
       expect(res.status).toBe(400);

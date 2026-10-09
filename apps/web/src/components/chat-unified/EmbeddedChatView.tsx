@@ -26,9 +26,15 @@ interface ChatMessage {
 export interface EmbeddedChatViewProps {
   /** Chat thread ID */
   threadId: string;
-  /** Agent ID for SSE streaming */
-  agentId: string;
-  /** Game ID for context */
+  /**
+   * Game ID — the scope of the stream.
+   *
+   * Issue #4139: this component used to take an `agentId` for SSE streaming and
+   * accept `gameId` only to ignore it (`gameId: _gameId`). The agent id fed
+   * /api/v1/agents/{agentId}/chat, a route the backend never mounted; the stream
+   * now posts to /agents/qa/stream, which is scoped by game — so the prop that was
+   * already here is the one that was needed.
+   */
   gameId: string;
   /** Game name for ProxyGameContext */
   gameName?: string;
@@ -38,12 +44,7 @@ export interface EmbeddedChatViewProps {
 // Component
 // ============================================================================
 
-export function EmbeddedChatView({
-  threadId,
-  agentId,
-  gameId: _gameId,
-  gameName,
-}: EmbeddedChatViewProps) {
+export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -96,14 +97,14 @@ export function EmbeddedChatView({
 
       // Send via SSE
       sendViaSSE(
-        agentId,
+        gameId,
         content,
         threadId,
         { gameName: gameName ?? '', agentTypology: '' },
         undefined
       );
     },
-    [inputValue, agentId, threadId, gameName, sendViaSSE]
+    [inputValue, gameId, threadId, gameName, sendViaSSE]
   );
 
   return (

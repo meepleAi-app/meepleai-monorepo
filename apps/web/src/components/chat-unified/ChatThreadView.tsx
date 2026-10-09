@@ -30,7 +30,7 @@ import {
 } from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
-import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
@@ -162,7 +162,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   }, [voiceState, isSpeaking, stopListening, startListening, stopSpeaking]);
 
   // SSE Streaming (Issue #4364)
-  const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
+  // Issue #4139: `sendMessage` is no longer destructured from this hook. Its only
+  // caller here was the branch that posted to /api/v1/agents/{agentId}/chat, a
+  // route the backend never mounted; this surface's working path streams through
+  // `qaStream` in chatClient instead. `state` is still read for rendering, so the
+  // two implementations are duplicate streaming to consolidate - not a change to
+  // make inside a fix whose subject is the dead URL.
+  const { state: streamState } = useAgentChatStream({
     onComplete: (answer, metadata) => {
       const assistantMessage: ChatMessageItem = {
         id: `assistant-${Date.now()}`,
@@ -480,16 +486,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         return;
       }
 
-      // SSE agent path: for future per-agent chat endpoints (POST /agents/{id}/chat)
-      // Currently no backend route exists — kept as fallback for when it's implemented.
-      if (thread?.agentId && !thread?.gameId) {
-        const proxyCtx: ProxyGameContext | undefined =
-          game && thread.agentTypology
-            ? { gameName: game.title, agentTypology: thread.agentTypology }
-            : undefined;
-        sendViaSSE(thread.agentId, messageContent, threadId, proxyCtx);
-        return;
-      }
+      // Issue #4139: a branch stood here for "future per-agent chat endpoints
+      // (POST /agents/{id}/chat)", kept as a fallback "for when it's implemented" —
+      // so the dead route was known and left in place. It was reached only when a
+      // thread had an agentId and NO gameId, and in that state it could only 404:
+      // with no game there is nothing to scope retrieval by, so /agents/qa/stream
+      // cannot serve it either. A thread without a game now falls through to the
+      // REST fallback below, which is the honest behaviour.
 
       // REST fallback: no game context and no agent — just save message
       try {
@@ -499,14 +502,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         });
 
         if (response?.messages) {
-          const mapped: ChatMessageItem[] = response.messages.map(
-            (m): ChatMessageItem => ({
-              id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-              timestamp: m.timestamp,
-            })
-          );
+          const mapped: ChatMessageItem[] = response.messages.map((m): ChatMessageItem => ({
+            id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: m.timestamp,
+          }));
           replaceMessagesInHook(mapped);
         }
       } catch {
@@ -521,11 +522,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       inputValue,
       isSending,
       threadId,
-      thread?.agentId,
-      thread?.agentTypology,
       thread?.gameId,
-      game,
-      sendViaSSE,
       voicePrefs.ttsEnabled,
       speak,
       replaceMessagesInHook,

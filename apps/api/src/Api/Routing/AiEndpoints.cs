@@ -283,9 +283,18 @@ internal static class AiEndpoints
         // Bug B5: thread the authenticated identity into the streaming query so the handler enforces
         // per-game RAG access (mirror the non-stream AskQuestion path). Subject.Id = the acting user;
         // EffectiveActor.Role = the role used for authorization (admin bypass), per Principal semantics.
+        // Issue #4137: named arguments. The identity moved ahead of the optional
+        // parameters when it became required, and a positional call would have silently
+        // reshuffled every argument past it.
         var query = new StreamQaQuery(
-            req.gameId, req.query, req.chatId, req.documentIds, responseStyle, continuationContext, // Issue #2051
-            session.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role);
+            GameId: req.gameId,
+            Query: req.query,
+            UserId: session.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role,
+            ThreadId: req.chatId,
+            DocumentIds: req.documentIds,
+            ResponseStyle: responseStyle,
+            ContinuationContext: continuationContext); // Issue #2051
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON

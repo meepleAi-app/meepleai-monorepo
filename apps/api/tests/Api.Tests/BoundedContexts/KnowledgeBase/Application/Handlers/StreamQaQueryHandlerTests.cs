@@ -36,6 +36,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 [Trait("Category", TestCategories.Unit)]
 public class StreamQaQueryHandlerTests
 {
+    // Issue #4137: StreamQaQuery porta l'identita' come parametro OBBLIGATORIO,
+    // quindi ogni test deve dichiarare chi chiede. Il mock permissivo di default
+    // concede, cosi' i casi che non parlano di autorizzazione restano leggibili.
+    private static readonly Guid TestUserId = Guid.NewGuid();
+
     private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;
     private readonly Mock<VectorSearchDomainService> _vectorSearchServiceMock;
     private readonly Mock<RrfFusionDomainService> _rrfFusionServiceMock;
@@ -151,9 +156,8 @@ public class StreamQaQueryHandlerTests
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var query = new StreamQaQuery(
-            gameId.ToString(), "How do I win?", ThreadId: null,
-            DocumentIds: null, ResponseStyle: null, ContinuationContext: null,
-            UserId: userId, UserRole: "User");
+            gameId.ToString(), "How do I win?", UserId: userId, UserRole: "User",
+            ThreadId: null, DocumentIds: null, ResponseStyle: null, ContinuationContext: null);
 
         var denyRagAccess = new Mock<IRagAccessService>();
         denyRagAccess
@@ -205,9 +209,8 @@ public class StreamQaQueryHandlerTests
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         var query = new StreamQaQuery(
-            gameId.ToString(), "How do I win?", ThreadId: null,
-            DocumentIds: null, ResponseStyle: null, ContinuationContext: null,
-            UserId: userId, UserRole: "User");
+            gameId.ToString(), "How do I win?", UserId: userId, UserRole: "User",
+            ThreadId: null, DocumentIds: null, ResponseStyle: null, ContinuationContext: null);
 
         var allowRagAccess = new Mock<IRagAccessService>();
         allowRagAccess
@@ -238,7 +241,7 @@ public class StreamQaQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var userQuery = "How do I start the game?";
-        var query = new StreamQaQuery(gameId, userQuery, null);
+        var query = new StreamQaQuery(gameId, userQuery, TestUserId, "User", ThreadId: null);
 
         SetupHappyPathMocks(gameId, userQuery);
 
@@ -282,7 +285,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange: fused result carries a bbox + char offsets; default resolver resolves to Full.
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "how do I score?", null);
+        var query = new StreamQaQuery(gameId, "how do I score?", TestUserId, "User", ThreadId: null);
         SetupHappyPathMocks(gameId, query.Query);
         SetupFusedResultWithRegion();
 
@@ -304,7 +307,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange: same bbox-carrying result, but the resolver resolves to Protected.
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "how do I score?", null);
+        var query = new StreamQaQuery(gameId, "how do I score?", TestUserId, "User", ThreadId: null);
         SetupHappyPathMocks(gameId, query.Query);
         SetupFusedResultWithRegion();
         _copyrightTierResolverMock
@@ -331,7 +334,7 @@ public class StreamQaQueryHandlerTests
         // user's cached regions must NOT be replayed to a later Protected-tier user on a cache hit,
         // so cache-served citations strip regions/char offsets (fallback to the text-quote highlight).
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "cached with regions?", null);
+        var query = new StreamQaQuery(gameId, "cached with regions?", TestUserId, "User", ThreadId: null);
         var cachedResponse = new QaResponse(
             answer: "cached answer",
             snippets: new List<Snippet>
@@ -409,7 +412,7 @@ public class StreamQaQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var userQuery = "How to win?";
-        var query = new StreamQaQuery(gameId, userQuery, null);
+        var query = new StreamQaQuery(gameId, userQuery, TestUserId, "User", ThreadId: null);
 
         SetupSearchMocks(gameId, userQuery);
         SetupPromptMocks(QuestionType.General);
@@ -452,7 +455,7 @@ public class StreamQaQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var userQuery = "Cached question?";
-        var query = new StreamQaQuery(gameId, userQuery, null);
+        var query = new StreamQaQuery(gameId, userQuery, TestUserId, "User", ThreadId: null);
 
         var cachedAnswer = "This is a cached answer from previous request.";
         var cachedResponse = new QaResponse(
@@ -528,7 +531,7 @@ public class StreamQaQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var threadId = Guid.NewGuid();
-        var query = new StreamQaQuery(gameId, "What about the previous rule?", threadId);
+        var query = new StreamQaQuery(gameId, "What about the previous rule?", TestUserId, "User", ThreadId: threadId);
 
         var chatThread = CreateChatThread(threadId, gameId, messageCount: 3);
         _chatThreadRepositoryMock
@@ -582,7 +585,7 @@ public class StreamQaQueryHandlerTests
         var gameId = Guid.NewGuid().ToString();
         var differentGameId = Guid.NewGuid().ToString();
         var threadId = Guid.NewGuid();
-        var query = new StreamQaQuery(gameId, "Test query", threadId);
+        var query = new StreamQaQuery(gameId, "Test query", TestUserId, "User", ThreadId: threadId);
 
         var chatThread = CreateChatThread(threadId, differentGameId, messageCount: 2);
         _chatThreadRepositoryMock
@@ -615,7 +618,7 @@ public class StreamQaQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var threadId = Guid.NewGuid();
-        var query = new StreamQaQuery(gameId, "Test query", threadId);
+        var query = new StreamQaQuery(gameId, "Test query", TestUserId, "User", ThreadId: threadId);
 
         _chatThreadRepositoryMock
             .Setup(x => x.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
@@ -639,7 +642,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_EmptyQuery_ReturnsError()
     {
         // Arrange
-        var query = new StreamQaQuery(Guid.NewGuid().ToString(), "", null);
+        var query = new StreamQaQuery(Guid.NewGuid().ToString(), "", TestUserId, "User", ThreadId: null);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -660,7 +663,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_WhitespaceQuery_ReturnsError()
     {
         // Arrange
-        var query = new StreamQaQuery(Guid.NewGuid().ToString(), "   ", null);
+        var query = new StreamQaQuery(Guid.NewGuid().ToString(), "   ", TestUserId, "User", ThreadId: null);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -678,7 +681,7 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_NullQuery_ReturnsError()
     {
         // Arrange
-        var query = new StreamQaQuery(Guid.NewGuid().ToString(), null!, null);
+        var query = new StreamQaQuery(Guid.NewGuid().ToString(), null!, TestUserId, "User", ThreadId: null);
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -696,7 +699,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "Test query", null);
+        var query = new StreamQaQuery(gameId, "Test query", TestUserId, "User", ThreadId: null);
 
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -740,7 +743,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "Test query", null);
+        var query = new StreamQaQuery(gameId, "Test query", TestUserId, "User", ThreadId: null);
 
         SetupSearchMocks(gameId, query.Query);
         SetupPromptMocks(QuestionType.General);
@@ -787,7 +790,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "Test query", null);
+        var query = new StreamQaQuery(gameId, "Test query", TestUserId, "User", ThreadId: null);
 
         SetupSearchMocks(gameId, query.Query);
         SetupPromptMocks(QuestionType.General);
@@ -832,7 +835,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "Ambiguous question?", null);
+        var query = new StreamQaQuery(gameId, "Ambiguous question?", TestUserId, "User", ThreadId: null);
 
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -941,7 +944,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "Detailed rules question?", null);
+        var query = new StreamQaQuery(gameId, "Detailed rules question?", TestUserId, "User", ThreadId: null);
 
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1061,7 +1064,7 @@ public class StreamQaQueryHandlerTests
         var outOfScopeDocId = Guid.NewGuid();
         var documentIds = new List<Guid> { docId1, docId2 };
 
-        var query = new StreamQaQuery(gameId, "Question for specific documents?", ThreadId: null, DocumentIds: documentIds);
+        var query = new StreamQaQuery(gameId, "Question for specific documents?", TestUserId, "User", ThreadId: null, DocumentIds: documentIds);
 
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1160,7 +1163,7 @@ public class StreamQaQueryHandlerTests
         // Arrange
         var gameId = Guid.NewGuid().ToString();
         var userQuery = "How do I set up the game?";
-        var query = new StreamQaQuery(gameId, userQuery, null);
+        var query = new StreamQaQuery(gameId, userQuery, TestUserId, "User", ThreadId: null);
 
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1216,7 +1219,7 @@ public class StreamQaQueryHandlerTests
     {
         // Arrange
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamQaQuery(gameId, "Test query for error handling", null);
+        var query = new StreamQaQuery(gameId, "Test query for error handling", TestUserId, "User", ThreadId: null);
 
         _cacheMock
             .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))

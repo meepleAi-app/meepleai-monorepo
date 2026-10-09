@@ -12,6 +12,7 @@
 | Start Dev (full) | `make dev` | `infra/` |
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
+| Dev Azure emulators | `make dev-azure-local` | `infra/` — [guide](./docs/for-developers/operations/azure-local-profile.md) |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
 | Deploy Staging | `make staging` | `infra/` (on server) |

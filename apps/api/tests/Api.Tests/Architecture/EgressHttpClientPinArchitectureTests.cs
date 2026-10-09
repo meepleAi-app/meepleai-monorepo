@@ -47,6 +47,7 @@ public sealed class EgressHttpClientPinArchitectureTests
         ["WikimediaCommonsClient"] = "commons.wikimedia.org + upload.wikimedia.org",
         ["SlackWebhookClient"] = "admin-configured Slack webhook URL (#3495 fix 3/N)",
         ["SlackApi"] = "Slack API/webhook URLs stored per connection — caller-supplied absolute URI",
+        ["AzureSdk"] = "Azure SDK (Blob/Key Vault/App Configuration) verso *.windows.net/*.azure.net/*.azconfig.io (spec azure-local §4.5)",
     };
 
     /// <summary>
@@ -58,6 +59,8 @@ public sealed class EgressHttpClientPinArchitectureTests
     {
         ["(default)"] = "IHttpClientFactory default client — no ambient egress of its own; every "
             + "security-relevant sink uses a named/typed registration above",
+        ["AzureSdkLocal"] = "stessi SDK verso gli emulatori sulla rete compose: usato SOLO con MEEPLEAI_PROFILE=azure-local "
+            + "(AzureSdkHttpClients.CreateTransport); il pin bloccherebbe gli indirizzi privati degli emulatori",
         ["Ollama"] = "self-hosted LLM runtime, private/compose address by design",
         ["ai-ollama"] = "health probe for the same self-hosted Ollama runtime",
         ["OpenRouter"] = "SaaS gateway on a hardcoded public endpoint; no user/DB input reaches the URL",

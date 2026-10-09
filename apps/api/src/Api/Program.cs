@@ -2,6 +2,7 @@ using DotNetEnv;
 using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Infrastructure;
+using Api.Infrastructure.AzureSdk;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.Infrastructure.Security;
@@ -348,6 +349,7 @@ builder.Services.AddOptions<AiProviderSettings>().ValidateOnStart(); // Trigger 
 
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
+builder.Services.AddAzureSdkHttpClients(builder.Configuration); // spec azure-local §4.5
 
 // Register TimeProvider for dependency injection (TEST-814: Enables test override)
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.

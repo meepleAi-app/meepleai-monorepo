@@ -6,31 +6,128 @@
 
 **Architecture:** ogni servizio Azure entra dietro un'astrazione già esistente (`IBlobStorageService`, `IConfiguration`, OpenTelemetry) o una nuova e minima (`IIntegrationEventPublisher`); un profilo compose `azure-local` avvia gli emulatori e inietta le variabili; il profilo attuale resta byte-identico quando le variabili `AZURE_*`/`OTEL_*` sono assenti. Gli SDK HTTP passano da due `HttpClient` nominati (uno pinnato per Azure vero, uno esente per la rete compose), scelti a runtime dal profilo.
 
-**Tech Stack:** .NET 9, Azure.Storage.Blobs 12.30.1, Azure.Messaging.ServiceBus 7.21.0, Azure.Identity 1.21.0, Azure.Extensions.AspNetCore.Configuration.Secrets 1.5.2, Microsoft.Azure.AppConfiguration.AspNetCore 8.6.0, OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.3, Serilog.Sinks.OpenTelemetry 4.2.0, Testcontainers.Azurite/ServiceBus 4.14.0, Azure Functions isolated worker 2.52.0 + Extensions.ServiceBus 5.24.0 + Sdk 2.1.0, Bicep CLI.
+**Tech Stack:** .NET 9, Azure.Storage.Blobs 12.30.1, Azure.Messaging.ServiceBus 7.21.0, Azure.Identity 1.21.0, Azure.Extensions.AspNetCore.Configuration.Secrets 1.5.2, Microsoft.Azure.AppConfiguration.AspNetCore 8.6.0, OpenTelemetry.Exporter.OpenTelemetryProtocol 1.15.3, Serilog.Sinks.OpenTelemetry 4.2.0, Testcontainers.Azurite/ServiceBus 4.14.0, Azure Functions isolated worker 2.52.0 + Extensions.ServiceBus 5.24.0 + Sdk 2.1.0, Bicep CLI v0.48.1.
 
-**Spec:** `docs/for-developers/specs/2026-10-09-azure-local-profile-design.md` · note di ricerca (versioni, tag, punti di aggancio verificati): `docs/superpowers/plans/2026-10-09-azure-local-profile-plan-notes.md`
+**Spec:** `docs/for-developers/specs/2026-10-09-azure-local-profile-design.md` · note di ricerca: `docs/superpowers/plans/2026-10-09-azure-local-profile-plan-notes.md` · revisione indipendente del piano v1 (38 rilievi, tutti recepiti o registrati nel ledger): scratchpad `azure-plan-review.md`
 
 ## Global Constraints
 
-- Worktree `D:/Repositories/meepleai-monorepo-azure`, branch `feature/azure-1-local-profile-spec` (parent `azure/main`). Ogni comando `dotnet` dei task gira da `apps/api` salvo diversa indicazione; prima di ogni `dotnet test`: `taskkill //IM testhost.exe //F 2>/dev/null || true`. Mai due `dotnet test` in parallelo.
-- Versioni NuGet **esattamente** quelle della tabella in Tech Stack; `OpenTelemetry.Exporter.OpenTelemetryProtocol` DEVE essere 1.15.3 (allineata a `OpenTelemetry` 1.15.3 già nel csproj).
-- `TreatWarningsAsErrors` è attivo: nessun `// TODO` (SonarAnalyzer S1135 rompe il build — usare `// Follow-up:`), nessun parametro inutilizzato, `ConfigureAwait(false)` nelle librerie come nel codice adiacente, `StringComparison` esplicito.
-- Ogni `AddHttpClient(` nel sorgente dell'API deve comparire in `MustBePinned` (con `ConfigureSsrfPin` nella STESSA statement) o in `Exempt` di `apps/api/tests/Api.Tests/Architecture/EgressHttpClientPinArchitectureTests.cs`; il gate legge la statement sorgente, non il runtime. Usare **stringhe letterali** come nome del client nella registrazione.
-- Variabili d'ambiente assenti o vuote disattivano una funzionalità, mai `GetValue<bool>` su una variabile che può essere vuota: gating sempre con `string.IsNullOrWhiteSpace`.
-- Profilo attuale invariato: con `STORAGE_PROVIDER` diverso da `azureblob` e senza `AZURE_*`/`OTEL_EXPORTER_OTLP_ENDPOINT` nessuna registrazione nuova cambia comportamento (il client `AzureSdk` viene registrato ma non usato).
-- Test: `[Trait("Category", TestCategories.Unit)]` per gli unit; gli emulatori sono servizi L3 ⇒ il salto usa `Assert.Skip("PREVISTO: … cd infra && make dev-azure-local …")`, mai `L1Services.FailBecauseUnavailable`. Nessun test nuovo richiede un conto Azure.
-- Mai invocare `docker compose` a mano: usare i target del Makefile (anche per la validazione `config`).
-- Nessun file `.secret` committato; i valori degli emulatori (chiave Azurite ben nota, `SAS_KEY_VALUE`, password SA dell'emulatore) sono pubblici e vanno in `compose.azure-local.yml` con default `${VAR:-…}`.
-- Commit: `feat|fix|docs|test|chore(scope): descrizione` ≤72 caratteri, corpo libero, trailer `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Un commit per task, dopo i test verdi.
-- Nessun conteggio volatile nella prosa dei documenti (regola di repo): se serve una misura, affiancare il comando.
+- Worktree `D:/Repositories/meepleai-monorepo-azure`, branch `feature/azure-1-local-profile-spec` (parent `azure/main`). Il worktree ha `.git` come **file**: i gate di architettura che cercano la radice con `Directory.Exists(".git")` falliscono finché il Task 0 non li corregge — il Task 0 è prerequisito di ogni «Expected: verde» successivo.
+- Comandi `dotnet` da `apps/api` salvo diversa indicazione; prima di ogni `dotnet test`: `taskkill //IM testhost.exe //F 2>/dev/null || true`. Mai due `dotnet test` in parallelo.
+- Versioni NuGet **esattamente** quelle del Tech Stack; `OpenTelemetry.Exporter.OpenTelemetryProtocol` DEVE essere 1.15.3. Pacchetti di test: le versioni del repo (`Microsoft.NET.Test.Sdk` 18.0.1, `xunit.v3` 3.2.1, `xunit.runner.visualstudio` 3.1.5, `FluentAssertions` 8.8.0).
+- `TreatWarningsAsErrors`: nessun `// TODO` (S1135 — usare `// Follow-up:`), `ConfigureAwait(false)` nel codice di libreria, `StringComparison` esplicito, nessun parametro inutilizzato.
+- Namespace nuovo `Api.Infrastructure.AzureSdk` (NON `Api.Infrastructure.Azure`: ombreggerebbe la radice `Azure` degli SDK dentro `Api.Infrastructure.*`).
+- Layering DDD: Application non importa Infrastructure; i contratti condivisi stanno in `SharedKernel`.
+- Ogni `AddHttpClient(` nel sorgente dell'API va in `MustBePinned` (con `ConfigureSsrfPin` nella STESSA statement) o in `Exempt` di `EgressHttpClientPinArchitectureTests.cs`; nome del client come **stringa letterale**. Ogni nuovo `CryptographicOperations.FixedTimeEquals` va nell'inventario `ConstantTimeSites` di `ConstantTimeComparisonArchitectureTests.cs`.
+- Variabili assenti o vuote disattivano una funzionalità (`string.IsNullOrWhiteSpace`), mai `GetValue<bool>` su una variabile che può essere vuota.
+- Profilo attuale invariato: senza `STORAGE_PROVIDER=azureblob`, `AZURE_*`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `INTERNAL_SERVICE_TOKEN` nessuna registrazione nuova cambia comportamento.
+- Test: `[Trait("Category", TestCategories.Unit)]` per gli unit; gli emulatori sono L3 ⇒ con Docker assente `Assert.Skip("PREVISTO: … cd infra && make dev-azure-local …")`, con Docker presente ma container non avviato `Assert.Skip("GUASTO: <errore osservato>")`; mai `L1Services.FailBecauseUnavailable`. Un container per CLASSE (`IClassFixture`), mai per metodo: `methodTimeout` 180 s copre `InitializeAsync`.
+- Mai `docker compose` a mano: target del Makefile. Nessun `.secret` committato; i valori degli emulatori sono pubblici e stanno nel compose con default `${VAR:-…}`.
+- Commit: `feat|fix|docs|test|chore(scope): descrizione` ≤72 caratteri, trailer `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`, un commit per task con i file elencati uno per uno (mai una cartella intera dei test).
+- Nessun conteggio volatile nella prosa dei documenti.
 
 ## Review Focus
 
-1. `STORAGE_PROVIDER=azureblob` senza `AZURE_STORAGE_CONNECTION_STRING` né `AZURE_STORAGE_ACCOUNT_URL`: la factory deve lanciare `InvalidOperationException` con il nome delle due variabili, non restituire lo storage locale in silenzio — test in Task 2 (`Create_AzureBlobWithoutEndpoint_Throws`).
-2. `resourceKey` o `fileId` con traversal (`../x`): `StoreAsync`/`RetrieveAsync`/`DeleteAsync` rispondono fallimento senza toccare il container — test in Task 2 (`StoreAsync_TraversalResourceKey_FailsWithoutUpload`).
-3. Messaggio Service Bus con `contractVersion` sconosciuta o JSON malformato: la Function lo manda in dead-letter con motivo e NON chiama l'API — test in Task 8 (`Run_UnsupportedContract_DeadLettersWithoutForwarding`).
-4. `INTERNAL_SERVICE_TOKEN` assente o vuoto: l'endpoint interno risponde 404 a chiunque, anche con header presente — test in Task 6 (`InvokeAsync_TokenNotConfigured_Returns404`).
-5. Bus irraggiungibile durante un upload: l'upload DEVE riuscire comunque e il contatore registra `publish_failed` — test in Task 5 (`Handle_PublisherThrows_SwallowsAndCountsFailure`).
+1. `STORAGE_PROVIDER=azureblob` senza `AZURE_STORAGE_CONNECTION_STRING` né `AZURE_STORAGE_ACCOUNT_URL`: `InvalidOperationException` con i due nomi — Task 2 `Create_AzureBlobWithoutEndpoint_Throws`.
+2. `resourceKey`/`fileId` con traversal su `StoreAsync`, `RetrieveAsync`, `DeleteAsync`, `ExistsAsync`: fallimento senza toccare il container — Task 2 `StoreAsync_TraversalResourceKey_FailsWithoutUpload`, `RetrieveAsync_TraversalFileId_ReturnsNullWithoutListing`, `DeleteAsync_TraversalFileId_ReturnsFalseWithoutListing`, `ExistsAsync_TraversalFileId_ReturnsFalse`.
+3. Messaggio Service Bus con `contractVersion` sconosciuta o JSON malformato: dead-letter con motivo, API mai chiamata — Task 8 `Run_UnsupportedContract_DeadLettersWithoutForwarding`, `Run_MalformedBody_DeadLettersAsMalformed`.
+4. `INTERNAL_SERVICE_TOKEN` assente o vuoto: 404 per tutti — Task 6 `InvokeAsync_TokenNotConfigured_Returns404`.
+5. Bus irraggiungibile durante un upload: l'upload riesce e il contatore registra `publish_failed` — Task 5 `Handle_PublisherThrows_SwallowsAndCountsFailure` (asserisce la misura via `MeterListener`).
+
+---
+
+### Task 0: Radice del repo riconosciuta anche nei worktree (gate di architettura)
+
+**Files:**
+- Modify: `apps/api/tests/Api.Tests/Architecture/SourceScanner.cs`
+- Modify (sostituzione meccanica di una riga ciascuno): `apps/api/tests/Api.Tests/Architecture/ConstantTimeComparisonArchitectureTests.cs`, `EgressHttpClientPinArchitectureTests.cs`, `L1NeverSkippedArchitectureTests.cs`, `NonCriticalHealthCheckStatusArchitectureTests.cs`, `PaidAiGuardCoverageArchitectureTests.cs`, `PerClassHostFixtureBreakEvenArchitectureTests.cs`, `SkipReasonClassArchitectureTests.cs`, `TestSeedPersistenceArchitectureTests.cs`, `apps/api/tests/Api.Tests/BoundedContexts/GameToolkit/Architecture/VersionDriftPreventionTests.cs`, `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Domain/OllamaChatModelConfigurationTests.cs`, `apps/api/tests/Api.Tests/E2E/Infrastructure/E2EServiceProbeTests.cs`, `apps/api/tests/Api.Tests/Infrastructure/PdfCorpus.cs`
+- Test: `apps/api/tests/Api.Tests/Architecture/SourceScannerRepoRootTests.cs`
+
+**Interfaces:**
+- Produces: `SourceScanner.IsRepoRoot(string path) : bool` (vero se `path/.git` è una directory O un file).
+
+- [ ] **Step 1: Test**
+
+```csharp
+using Api.Tests.Constants;
+using FluentAssertions;
+using Xunit;
+
+namespace Api.Tests.Architecture;
+
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Architecture")]
+public sealed class SourceScannerRepoRootTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "repo-root-" + Guid.NewGuid().ToString("N"));
+
+    public SourceScannerRepoRootTests() => Directory.CreateDirectory(_root);
+
+    public void Dispose() => Directory.Delete(_root, recursive: true);
+
+    [Fact]
+    public void IsRepoRoot_GitDirectory_IsTrue()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, ".git"));
+
+        SourceScanner.IsRepoRoot(_root).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsRepoRoot_GitFile_IsTrue()
+    {
+        // Un worktree (`git worktree add`) ha `.git` come FILE: "gitdir: <path>".
+        File.WriteAllText(Path.Combine(_root, ".git"), "gitdir: D:/somewhere/.git/worktrees/x\n");
+
+        SourceScanner.IsRepoRoot(_root).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsRepoRoot_NoGit_IsFalse()
+    {
+        SourceScanner.IsRepoRoot(_root).Should().BeFalse();
+    }
+}
+```
+
+- [ ] **Step 2: Eseguire per vedere il fallimento di compilazione**
+
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~SourceScannerRepoRootTests"`
+
+- [ ] **Step 3: Implementare e sostituire i dodici locator**
+
+In `SourceScanner.cs` (classe `internal static class SourceScanner`), aggiungere:
+```csharp
+    /// <summary>
+    /// Vero se <paramref name="path"/> è la radice del repo: contiene <c>.git</c> come directory (checkout
+    /// normale) oppure come file (worktree creato con <c>git worktree add</c>, che scrive "gitdir: …").
+    /// I gate che risalivano con <c>Directory.Exists(".git")</c> non trovavano mai la radice in un worktree.
+    /// </summary>
+    public static bool IsRepoRoot(string path) =>
+        Directory.Exists(Path.Combine(path, ".git")) || File.Exists(Path.Combine(path, ".git"));
+```
+
+Nei dodici file elencati sostituire la riga
+```csharp
+        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+```
+con
+```csharp
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
+```
+(aggiungendo `using Api.Tests.Architecture;` dove il namespace del file è diverso). Verifica: `grep -rn 'Path.Combine(dir.FullName, ".git")' apps/api/tests/Api.Tests` → nessuna occorrenza; `grep -rln "SourceScanner.IsRepoRoot" apps/api/tests/Api.Tests | wc -l` → 13 (12 + SourceScanner stesso) oppure 12 se lo scanner non si auto-usa.
+
+- [ ] **Step 4: Eseguire tutti i gate di architettura NEL worktree**
+
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~Architecture"`
+Expected: tutti verdi (prima del task fallivano con «the test binary must live inside the meepleai-monorepo repo»).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add apps/api/tests/Api.Tests/Architecture/SourceScanner.cs apps/api/tests/Api.Tests/Architecture/SourceScannerRepoRootTests.cs apps/api/tests/Api.Tests/Architecture/ConstantTimeComparisonArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/EgressHttpClientPinArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/L1NeverSkippedArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/NonCriticalHealthCheckStatusArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/PaidAiGuardCoverageArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/PerClassHostFixtureBreakEvenArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/SkipReasonClassArchitectureTests.cs apps/api/tests/Api.Tests/Architecture/TestSeedPersistenceArchitectureTests.cs apps/api/tests/Api.Tests/BoundedContexts/GameToolkit/Architecture/VersionDriftPreventionTests.cs apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Domain/OllamaChatModelConfigurationTests.cs apps/api/tests/Api.Tests/E2E/Infrastructure/E2EServiceProbeTests.cs apps/api/tests/Api.Tests/Infrastructure/PdfCorpus.cs
+git commit -m "test(arch): i gate trovano la radice del repo anche in un worktree" -m ".git è un file nei worktree: dodici locator usavano Directory.Exists e non risalivano mai alla radice." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+```
 
 ---
 
@@ -41,14 +138,15 @@
 - Create: `infra/azure-local/servicebus-config.json`
 - Create: `infra/azure-local/appconfig-seed.json`
 - Create: `infra/azure-local/eventgrid-appsettings.json`
+- Create: `infra/azure-local/wait-and-seed.sh`
 - Create: `docs/for-developers/operations/azure-local-profile.md`
 - Modify: `infra/Makefile` (dopo il target `dev-down`, riga 18)
+- Modify: `infra/.gitignore` (esiste già: pattern relativi a `infra/`)
 
 **Interfaces:**
-- Consumes: nulla.
-- Produces: variabili d'ambiente lette dai task successivi — `MEEPLEAI_PROFILE=azure-local`, `STORAGE_PROVIDER=azureblob`, `AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_CONTAINER`, `AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT`, `AZURE_APPCONFIG_ENDPOINT`, `AZURE_APPCONFIG_ANONYMOUS`, `AZURE_SERVICEBUS_CONNECTION_STRING`, `AZURE_SERVICEBUS_QUEUE`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, `INTERNAL_SERVICE_TOKEN`; nomi di servizio compose `azurite`, `appconfig-emulator`, `servicebus-emulator`, `servicebus-mssql`, `cosmos-emulator`, `aspire-dashboard`, `eventgrid-emulator`, `keyvault-emulator` (profilo `azure-keyvault`).
+- Produces: variabili lette dai task successivi — `MEEPLEAI_PROFILE=azure-local`, `STORAGE_PROVIDER=azureblob`, `AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_CONTAINER`, `AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT`, `AZURE_APPCONFIG_CONNECTION_STRING`, `AZURE_KEYVAULT_URI`, `AZURE_KEYVAULT_ANONYMOUS`, `AZURE_SDK_ALLOW_INSECURE_TLS`, `AZURE_SERVICEBUS_CONNECTION_STRING`, `AZURE_SERVICEBUS_QUEUE`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, `INTERNAL_SERVICE_TOKEN`; servizi compose `azurite`, `appconfig-emulator`, `servicebus-emulator`, `servicebus-mssql`, `azure-local-init`, `cosmos-emulator`, `aspire-dashboard`, `eventgrid-emulator`, `keyvault-emulator` (profilo `azure-keyvault`); credenziali HMAC dell'App Configuration emulator `Id=azure-local-dev`, `Secret=YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm` (base64 di `azure-local-dev-secret-0123456789abcdef`, valore pubblico di sviluppo).
 
-- [ ] **Step 1: Scrivere `infra/azure-local/servicebus-config.json`**
+- [ ] **Step 1: `infra/azure-local/servicebus-config.json`**
 
 ```json
 {
@@ -80,16 +178,15 @@
 }
 ```
 
-- [ ] **Step 2: Scrivere `infra/azure-local/appconfig-seed.json`** (chiavi di esempio lette dal profilo; i nomi seguono le sezioni già usate dall'API)
+- [ ] **Step 2: `infra/azure-local/appconfig-seed.json`** (solo una chiave di prova: le sorgenti Azure vengono aggiunte DOPO le variabili d'ambiente e **vincono** su di esse per le chiavi coincidenti — non seminare chiavi reali dell'API)
 
 ```json
 {
-  "Azure:Profile:Greeting": "hello from app-configuration-emulator",
-  "HybridSearch:Enabled": "true"
+  "Azure:Profile:Greeting": "hello from app-configuration-emulator"
 }
 ```
 
-- [ ] **Step 3: Scrivere `infra/azure-local/eventgrid-appsettings.json`** (solo smoke: pubblicazione su `http://localhost:<base+6>/pdf-events/api/events` consegnata a una sottoscrizione pull)
+- [ ] **Step 3: `infra/azure-local/eventgrid-appsettings.json`**
 
 ```json
 {
@@ -99,22 +196,56 @@
 }
 ```
 
-- [ ] **Step 4: Scrivere `infra/compose.azure-local.yml`**
+- [ ] **Step 4: `infra/azure-local/wait-and-seed.sh`** (gira nel container `azure-local-init`, immagine `curlimages/curl`: le immagini .NET degli emulatori non portano `curl`/`wget`, quindi la readiness si sonda da fuori)
+
+```sh
+#!/bin/sh
+# Attende gli emulatori e semina l'App Configuration emulator. Esce 0 solo quando tutto e' pronto:
+# `api` dipende da questo container con condition: service_completed_successfully.
+set -eu
+
+wait_http() { # $1 url, $2 descrizione, $3 accetta-qualsiasi-status (1) o solo 2xx (0)
+  i=0
+  while [ "$i" -lt 120 ]; do
+    if [ "$3" = "1" ]; then
+      curl -s -o /dev/null "$1" && { echo "ready: $2"; return 0; }
+    else
+      curl -fsS -o /dev/null "$1" && { echo "ready: $2"; return 0; }
+    fi
+    i=$((i + 1)); sleep 2
+  done
+  echo "timeout waiting for $2 ($1)" >&2; return 1
+}
+
+wait_http "http://azurite:10000/" "azurite blob" 1          # risponde 400 senza auth: basta la connessione
+wait_http "http://appconfig-emulator:8483/health" "app configuration emulator" 0
+wait_http "http://servicebus-emulator:5300/health" "service bus emulator" 0
+
+# Seed: un PUT anonimo per chiave (api-version 2023-11-01); il file e' una mappa piatta chiave->valore.
+sed -n 's/^ *"\([^"]*\)": *"\([^"]*\)".*/\1\t\2/p' /seed.json | while IFS="$(printf '\t')" read -r key value; do
+  encoded=$(printf '%s' "$key" | sed 's/:/%3A/g')
+  curl -fsS -o /dev/null -X PUT "http://appconfig-emulator:8483/kv/$encoded?api-version=2023-11-01" \
+    -H "Content-Type: application/vnd.microsoft.appconfig.kv+json" \
+    -d "{\"value\":\"$value\"}"
+  echo "seeded $key"
+done
+```
+
+- [ ] **Step 5: `infra/compose.azure-local.yml`**
 
 ```yaml
 # Profilo `azure-local` (spec docs/for-developers/specs/2026-10-09-azure-local-profile-design.md).
-# Composto SOPRA docker-compose.yml + compose.dev.yml SOLO da `make dev-azure-local`. Avvia gli
-# emulatori Azure sulla rete compose e punta l'API a loro con gli SDK Azure veri. Con questo file
-# assente il profilo attuale e' byte-identico: ogni funzionalita' e' gated sulle variabili AZURE_*.
+# Composto SOPRA docker-compose.yml + compose.dev.yml SOLO dai target `make dev-azure-local*`.
+# Avvia gli emulatori Azure sulla rete compose e punta l'API a loro con gli SDK Azure veri. Senza
+# questo file il profilo attuale e' byte-identico: ogni funzionalita' e' gated sulle variabili AZURE_*.
 #
-# Porte sull'host: base AZURE_LOCAL_PORT_BASE (default 20000) per non collidere con un secondo
-# checkout (memoria port-conflict-multi-checkout). Mappa:
-#   +0 azurite blob · +1 azurite queue · +2 azurite table · +3 appconfig · +4 servicebus amqp
-#   +5 servicebus http · +6 eventgrid · +7 cosmos gateway · +8 cosmos explorer · +9 aspire ui
-#   +10 aspire otlp grpc · +11 keyvault (profilo azure-keyvault)
+# Porte sull'host: AZURE_LOCAL_PORT_BASE (default 20000) e le derivate calcolate dal Makefile, per
+# non collidere con un secondo checkout. +0 azurite blob · +1 queue · +2 table · +3 appconfig ·
+# +4 servicebus amqp · +5 servicebus http · +6 eventgrid · +7 cosmos · +8 cosmos explorer ·
+# +9 aspire ui · +10 aspire otlp grpc · +11 keyvault (profilo azure-keyvault).
 #
-# Le credenziali qui sotto sono quelle PUBBLICHE degli emulatori (chiave ben nota di Azurite,
-# SAS_KEY_VALUE del Service Bus emulator): non sono segreti e non vanno in infra/secrets/.
+# Le credenziali sono quelle PUBBLICHE degli emulatori (chiave ben nota di Azurite, SAS_KEY_VALUE del
+# Service Bus emulator, Id/Secret HMAC di sviluppo): non sono segreti e non vanno in infra/secrets/.
 services:
   api:
     environment:
@@ -122,27 +253,32 @@ services:
       STORAGE_PROVIDER: "azureblob"
       AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
       AZURE_STORAGE_CONTAINER: "meepleai-uploads"
-      # Host di presign raggiungibile dal browser: la firma SAS non copre l'host (#3498 per S3).
+      # Host di presign raggiungibile dal browser: la firma SAS non copre l'host.
       AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT: "http://localhost:${AZURE_LOCAL_PORT_BASE:-20000}"
-      AZURE_APPCONFIG_ENDPOINT: "http://appconfig-emulator:8483"
-      AZURE_APPCONFIG_ANONYMOUS: "true"
+      # HMAC (spec §4.2): il provider .NET rifiuta un bearer su http, la connection string no.
+      AZURE_APPCONFIG_CONNECTION_STRING: "Endpoint=http://appconfig-emulator:8483;Id=azure-local-dev;Secret=YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm"
+      # Key Vault: vuote di default; `make dev-azure-local-keyvault` le valorizza.
+      AZURE_KEYVAULT_URI: "${AZURE_KEYVAULT_URI:-}"
+      AZURE_KEYVAULT_ANONYMOUS: "${AZURE_KEYVAULT_ANONYMOUS:-}"
+      AZURE_SDK_ALLOW_INSECURE_TLS: "${AZURE_SDK_ALLOW_INSECURE_TLS:-false}"
       AZURE_SERVICEBUS_CONNECTION_STRING: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
       AZURE_SERVICEBUS_QUEUE: "pdf-uploaded"
       OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
       OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
       # Token condiviso con la Function locale (apps/functions): valore di sviluppo, non un segreto.
       INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-azure-local-dev-token}"
-      # Solo con il profilo azure-keyvault (certificato self-signed dell'emulatore).
-      AZURE_SDK_ALLOW_INSECURE_TLS: "${AZURE_SDK_ALLOW_INSECURE_TLS:-false}"
     depends_on:
-      azurite:
-        condition: service_healthy
-      appconfig-emulator:
-        condition: service_healthy
-      servicebus-emulator:
-        condition: service_healthy
+      azure-local-init:
+        condition: service_completed_successfully
       aspire-dashboard:
         condition: service_started
+
+  web:
+    build:
+      args:
+        # Gli URL SAS delle cover puntano a http://localhost:2xxxx: senza questo build arg la CSP
+        # (img-src 'self' data: https:) li blocca, come per MinIO (compose.e2e-storage.yml).
+        NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB: "true"
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:3.37.0
@@ -154,53 +290,24 @@ services:
       - "127.0.0.1:${AZURE_LOCAL_PORT_AZURITE_TABLE:-20002}:10002"
     volumes:
       - azurite_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 10000 || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
     networks: [meepleai]
 
   appconfig-emulator:
     image: mcr.microsoft.com/azure-app-configuration/app-configuration-emulator:1.2.0
     container_name: meepleai-appconfig-emulator
-    # Il Dockerfile dell'emulatore non imposta l'ambiente ASP.NET: l'auth anonima vive in
-    # appsettings.Development.json, quindi va dichiarata qui con la convenzione Section__Key.
+    # Il Dockerfile dell'emulatore non imposta l'ambiente ASP.NET: tenant e auth vanno dichiarati qui
+    # con la convenzione Section__Key. Anonimo per il seed via curl, HMAC per il provider .NET.
     environment:
       Tenant__AnonymousAuthEnabled: "true"
-      Tenant__HmacSha256Enabled: "false"
+      Tenant__HmacSha256Enabled: "true"
+      Tenant__AccessKeys__0__Id: "azure-local-dev"
+      Tenant__AccessKeys__0__Name: "primary"
+      Tenant__AccessKeys__0__Secret: "YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm"
+      Tenant__AccessKeys__0__ReadOnly: "false"
       Authentication__Anonymous__AnonymousUserRole: "Owner"
       Hosting__IPAddress: "0.0.0.0"
     ports:
       - "127.0.0.1:${AZURE_LOCAL_PORT_APPCONFIG:-20003}:8483"
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8483/health || exit 1"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
-    networks: [meepleai]
-
-  appconfig-seed:
-    image: curlimages/curl:8.11.1
-    container_name: meepleai-appconfig-seed
-    depends_on:
-      appconfig-emulator:
-        condition: service_healthy
-    volumes:
-      - ./azure-local/appconfig-seed.json:/seed.json:ro
-    # Un PUT per chiave sull'API REST dell'emulatore (api-version 2023-11-01); il file e' una
-    # mappa piatta chiave→valore, letta con sed per non dipendere da jq nell'immagine.
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -eu
-        sed -n 's/^ *"\([^"]*\)": *"\([^"]*\)".*/\1\t\2/p' /seed.json | while IFS="$$(printf '\t')" read -r key value; do
-          encoded=$$(printf '%s' "$$key" | sed 's/:/%3A/g')
-          curl -fsS -X PUT "http://appconfig-emulator:8483/kv/$$encoded?api-version=2023-11-01" \
-            -H "Content-Type: application/vnd.microsoft.appconfig.kv+json" \
-            -d "{\"value\":\"$$value\"}" > /dev/null
-          echo "seeded $$key"
-        done
     networks: [meepleai]
 
   servicebus-mssql:
@@ -226,12 +333,18 @@ services:
     ports:
       - "127.0.0.1:${AZURE_LOCAL_PORT_SB_AMQP:-20004}:5672"
       - "127.0.0.1:${AZURE_LOCAL_PORT_SB_HTTP:-20005}:5300"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5300/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 60s
+    networks: [meepleai]
+
+  azure-local-init:
+    # Readiness + seed: sonda gli emulatori da fuori (le loro immagini non hanno curl/wget) e semina
+    # l'App Configuration emulator; `api` parte solo quando questo container e' uscito 0.
+    image: curlimages/curl:8.11.1
+    container_name: meepleai-azure-local-init
+    depends_on: [azurite, appconfig-emulator, servicebus-emulator]
+    volumes:
+      - ./azure-local/appconfig-seed.json:/seed.json:ro
+      - ./azure-local/wait-and-seed.sh:/wait-and-seed.sh:ro
+    entrypoint: ["/bin/sh", "/wait-and-seed.sh"]
     networks: [meepleai]
 
   eventgrid-emulator:
@@ -270,7 +383,7 @@ services:
 
   keyvault-emulator:
     # OPT-IN (profilo azure-keyvault): richiede emulator.pfx + emulator.crt generati sull'host con
-    # docs/setup.sh del progetto james-gould/azure-keyvault-emulator e messi in
+    # docs/setup.sh del progetto james-gould/azure-keyvault-emulator e copiati in
     # infra/azure-local/keyvault-certs/ (git-ignorata). Vedi docs/for-developers/operations/azure-local-profile.md.
     image: jamesgoulddev/azure-keyvault-emulator:latest
     container_name: meepleai-keyvault-emulator
@@ -288,7 +401,7 @@ volumes:
   cosmos_data:
 ```
 
-- [ ] **Step 5: Aggiungere i target al Makefile** (subito dopo `dev-down`, stesso stile `##`)
+- [ ] **Step 6: Makefile** (subito dopo `dev-down`)
 
 ```makefile
 # === Azure local profile (spec 2026-10-09-azure-local-profile-design.md) ===
@@ -306,13 +419,14 @@ AZURE_LOCAL_PORTS := AZURE_LOCAL_PORT_BASE=$(AZURE_LOCAL_PORT_BASE) \
 	AZURE_LOCAL_PORT_ASPIRE_OTLP=$$(( $(AZURE_LOCAL_PORT_BASE) + 10 )) \
 	AZURE_LOCAL_PORT_KEYVAULT=$$(( $(AZURE_LOCAL_PORT_BASE) + 11 ))
 AZURE_LOCAL_COMPOSE := $(COMPOSE) -f compose.dev.yml -f compose.azure-local.yml
+AZURE_LOCAL_KEYVAULT_ENV := AZURE_KEYVAULT_URI=https://keyvault-emulator:4997 AZURE_KEYVAULT_ANONYMOUS=true AZURE_SDK_ALLOW_INSECURE_TLS=true
 
 dev-azure-local: ## Start core + Azure emulators (azurite, appconfig, servicebus, cosmos, aspire, eventgrid)
 	@bash scripts/seed-status.sh --brief || true
 	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_COMPOSE) up -d
 
 dev-azure-local-keyvault: ## Same as dev-azure-local plus the Key Vault emulator (needs infra/azure-local/keyvault-certs)
-	$(AZURE_LOCAL_PORTS) AZURE_SDK_ALLOW_INSECURE_TLS=true $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault up -d
+	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_KEYVAULT_ENV) $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault up -d
 
 dev-azure-local-down: ## Stop the azure-local profile (emulators included)
 	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault down
@@ -321,22 +435,24 @@ dev-azure-local-config: ## Validate the azure-local compose stack (no containers
 	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault config --quiet && echo "azure-local compose OK"
 ```
 
-- [ ] **Step 6: Aggiungere `infra/azure-local/keyvault-certs/` a `.gitignore`** (riga nuova in fondo a `infra/.gitignore` se esiste, altrimenti nel `.gitignore` di radice): `infra/azure-local/keyvault-certs/`
+- [ ] **Step 7: `.gitignore`**
 
-- [ ] **Step 7: Validare lo stack**
+In `infra/.gitignore` (pattern relativi a `infra/`) aggiungere la riga `azure-local/keyvault-certs/`. Verifica: `git check-ignore -v infra/azure-local/keyvault-certs/emulator.pfx` stampa la regola.
 
-Run (da `infra/`, Git Bash): `make dev-azure-local-config`
-Expected: `azure-local compose OK` senza warning di variabili non impostate. Se compose segnala `The "…" variable is not set`, la porta corrispondente manca da `AZURE_LOCAL_PORTS`.
+- [ ] **Step 8: Validare lo stack e la readiness**
 
-- [ ] **Step 8: Scrivere la doc operativa `docs/for-developers/operations/azure-local-profile.md`**
+Run (da `infra/`, Git Bash): `make dev-azure-local-config` → Expected: `azure-local compose OK`, nessun warning «variable is not set».
+Run: `make dev-azure-local` (primo avvio: pull delle immagini, alcuni minuti) poi `pwsh -c "docker logs meepleai-azure-local-init"` → Expected: tre righe `ready: …` e `seeded Azure:Profile:Greeting`; `curl -fsS http://localhost:8080/api/v1/health` → 200. Poi `make dev-azure-local-down`. Se un emulatore non diventa pronto entro il timeout dello script, il log dice quale: riportare l'errore, non allargare il timeout.
 
-Contenuto minimo, con le sezioni: **Cosa avvia** (tabella servizio → immagine → porta host come funzione di `AZURE_LOCAL_PORT_BASE`), **Comandi** (`make dev-azure-local`, `make dev-azure-local-down`, `make dev-azure-local-config`, `make dev-azure-local-keyvault`), **Key Vault opt-in** (i tre passi: clonare `james-gould/azure-keyvault-emulator`, eseguire `docs/setup.sh`, copiare `emulator.pfx` e `emulator.crt` in `infra/azure-local/keyvault-certs/`; l'API usa TLS insicuro solo con `AZURE_SDK_ALLOW_INSECURE_TLS=true`), **Limiti degli emulatori** (Service Bus: niente entità partizionate né AMQP WebSocket; Cosmos vNext: nessuna autenticazione, solo gateway, DiskANN; App Configuration: auth anonima via env), **Variabili iniettate nell'API** (la lista di Interfaces/Produces con una riga di significato ciascuna). Niente conteggi in prosa.
+- [ ] **Step 9: Doc operativa `docs/for-developers/operations/azure-local-profile.md`**
 
-- [ ] **Step 9: Commit**
+Sezioni, ognuna con i comandi: **Cosa avvia** (tabella servizio → immagine → porta host in funzione di `AZURE_LOCAL_PORT_BASE`), **Comandi** (`make dev-azure-local`, `dev-azure-local-down`, `dev-azure-local-config`, `dev-azure-local-keyvault`), **Readiness** (`azure-local-init`: sonda da fuori perché le immagini .NET non hanno curl/wget; `api` parte dopo), **Credenziali di sviluppo** (chiave ben nota Azurite, `SAS_KEY_VALUE`, HMAC `azure-local-dev`; tutte pubbliche), **Precedenza della configurazione** (App Configuration > variabili d'ambiente > `SecretLoader`, che aggiunge solo le chiavi assenti), **Key Vault opt-in** (clonare `james-gould/azure-keyvault-emulator`, eseguire `docs/setup.sh`, copiare `emulator.pfx` e `emulator.crt` in `infra/azure-local/keyvault-certs/`; `make dev-azure-local-keyvault` abilita TLS insicuro SOLO nel profilo locale), **Limiti degli emulatori** (Service Bus: niente entità partizionate né AMQP WebSocket; Cosmos vNext: nessuna autenticazione, solo gateway, DiskANN; App Configuration: auth via env), **Variabili iniettate nell'API** (la lista di Interfaces con una riga di significato ciascuna), **Verifica manuale** (compilata nel Task 10). Niente conteggi in prosa.
+
+- [ ] **Step 10: Commit**
 
 ```bash
-git add infra/compose.azure-local.yml infra/azure-local infra/Makefile docs/for-developers/operations/azure-local-profile.md .gitignore
-git commit -m "feat(infra): profilo compose azure-local con emulatori Azure" -m "Azurite, App Configuration, Service Bus (+MSSQL), Cosmos vNext, Aspire Dashboard, Event Grid; Key Vault opt-in. Target make dev-azure-local*." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add infra/compose.azure-local.yml infra/azure-local/servicebus-config.json infra/azure-local/appconfig-seed.json infra/azure-local/eventgrid-appsettings.json infra/azure-local/wait-and-seed.sh infra/Makefile infra/.gitignore docs/for-developers/operations/azure-local-profile.md
+git commit -m "feat(infra): profilo compose azure-local con emulatori Azure" -m "Azurite, App Configuration (HMAC+anonimo), Service Bus (+MSSQL), Cosmos vNext, Aspire Dashboard, Event Grid; Key Vault opt-in; readiness e seed da un container curl." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
@@ -344,42 +460,43 @@ git commit -m "feat(infra): profilo compose azure-local con emulatori Azure" -m 
 ### Task 2: Client HTTP `AzureSdk`/`AzureSdkLocal`, provider `azureblob` e `AzureBlobStorageService`
 
 **Files:**
-- Create: `apps/api/src/Api/Infrastructure/Azure/AzureSdkHttpClients.cs`
+- Create: `apps/api/src/Api/Infrastructure/AzureSdk/AzureSdkHttpClients.cs`
 - Create: `apps/api/src/Api/Services/Pdf/AzureBlobStorageOptions.cs`
+- Create: `apps/api/src/Api/Services/Pdf/AzureStorageConnectionString.cs`
 - Create: `apps/api/src/Api/Services/Pdf/AzureBlobStorageService.cs`
-- Modify: `apps/api/src/Api/Services/Pdf/BlobStorageServiceFactory.cs` (switch in `Create`, nuovo metodo privato)
+- Modify: `apps/api/src/Api/Services/Pdf/BlobStorageServiceFactory.cs`
 - Modify: `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Egress.cs` (`EgressSinks`)
 - Modify: `apps/api/src/Api/Program.cs` (dopo `builder.Services.AddInfrastructureServices(...)`, riga 350)
-- Modify: `apps/api/src/Api/Api.csproj` (PackageReference)
+- Modify: `apps/api/src/Api/Api.csproj`
 - Modify: `apps/api/tests/Api.Tests/Architecture/EgressHttpClientPinArchitectureTests.cs` (`MustBePinned`, `Exempt`)
 - Test: `apps/api/tests/Api.Tests/Services/Pdf/AzureBlobStorageServiceTests.cs`
+- Test: `apps/api/tests/Api.Tests/Services/Pdf/AzureStorageConnectionStringTests.cs`
 - Test: `apps/api/tests/Api.Tests/Services/Pdf/BlobStorageServiceFactoryAzureTests.cs`
-- Test: `apps/api/tests/Api.Tests/Infrastructure/Azure/AzureSdkHttpClientsTests.cs`
+- Test: `apps/api/tests/Api.Tests/Infrastructure/AzureSdk/AzureSdkHttpClientsTests.cs`
 
 **Interfaces:**
-- Consumes: `IBlobStorageService` (11 metodi, `Services/Pdf/IBlobStorageService.cs`), `BlobCategory.ToS3Folder()`, `PathSecurity.ValidateIdentifier(string, string)` (`Api.Infrastructure.Security`), `StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file")` (`Api.Helpers`), `SsrfPinnedHttpClientBuilderExtensions.ConfigureSsrfPin(sink, allowAutoRedirect, configureHandler, allowedHostSuffixes)`.
-- Produces: `AzureSdkHttpClients.PinnedName = "AzureSdk"`, `LocalName = "AzureSdkLocal"`, `AzureSdkHttpClients.CreateTransport(IServiceProvider) : HttpClientTransport`, `AzureSdkHttpClients.IsLocalProfile(IConfiguration)`, `AzureSdkHttpClients.ReadAllowedHostSuffixes(IConfiguration)`; `AzureBlobStorageOptions`; `AzureBlobStorageService(BlobServiceClient, BlobContainerClient, AzureBlobStorageOptions, ILogger<AzureBlobStorageService>)`; `MeepleAiMetrics.EgressSinks.AzureSdk = "azure_sdk"`.
+- Consumes: `IBlobStorageService` (11 metodi), `BlobCategory.ToS3Folder()`, `PathSecurity.ValidateIdentifier(string, string)` (`Api.Infrastructure.Security`), `StringHelper.SanitizeFilename(fileName, maxLength: 200, fallbackName: "file")` (`Api.Helpers`; NON sostituisce gli spazi, sostituisce `< > ? * | " :` e i caratteri invalidi del file system), `ConfigureSsrfPin(sink, allowAutoRedirect, configureHandler, allowedHostSuffixes)`.
+- Produces: `AzureSdkHttpClients.PinnedName = "AzureSdk"`, `LocalName = "AzureSdkLocal"`, `CreateTransport(IServiceProvider) : HttpClientTransport`, `IsLocalProfile(IConfiguration)`, `AllowInsecureTls(IConfiguration)`, `ReadAllowedHostSuffixes(IConfiguration)`; `AzureBlobStorageOptions { ConnectionString, AccountUrl, ContainerName, PublicBlobEndpoint, SasExpirySeconds, AccountName, AccountKey }`; `AzureStorageConnectionString.TryParse(string, out string accountName, out string accountKey)`; `AzureBlobStorageService(BlobServiceClient, BlobContainerClient, AzureBlobStorageOptions, ILogger<AzureBlobStorageService>)` con proprietà interna `Options`; `MeepleAiMetrics.EgressSinks.AzureSdk = "azure_sdk"`.
 
-- [ ] **Step 1: Aggiungere i pacchetti**
+- [ ] **Step 1: Pacchetti**
 
 Run (da `apps/api/src/Api`):
 ```bash
 dotnet add package Azure.Storage.Blobs --version 12.30.1
 dotnet add package Azure.Identity --version 1.21.0
 ```
-Expected: le due righe `<PackageReference>` compaiono in `Api.csproj`; `dotnet build` verde.
 
-- [ ] **Step 2: Scrivere i test del selettore di client** `apps/api/tests/Api.Tests/Infrastructure/Azure/AzureSdkHttpClientsTests.cs`
+- [ ] **Step 2: Test del selettore di client** `apps/api/tests/Api.Tests/Infrastructure/AzureSdk/AzureSdkHttpClientsTests.cs`
 
 ```csharp
-using Api.Infrastructure.Azure;
+using Api.Infrastructure.AzureSdk;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace Api.Tests.Infrastructure.Azure;
+namespace Api.Tests.Infrastructure.AzureSdk;
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Infrastructure")]
@@ -408,6 +525,14 @@ public sealed class AzureSdkHttpClientsTests
     }
 
     [Fact]
+    public void AllowInsecureTls_OnlyInLocalProfileWithExplicitTrue()
+    {
+        AzureSdkHttpClients.AllowInsecureTls(Config(("MEEPLEAI_PROFILE", "azure-local"), ("AZURE_SDK_ALLOW_INSECURE_TLS", "true"))).Should().BeTrue();
+        AzureSdkHttpClients.AllowInsecureTls(Config(("MEEPLEAI_PROFILE", "azure-exam"), ("AZURE_SDK_ALLOW_INSECURE_TLS", "true"))).Should().BeFalse();
+        AzureSdkHttpClients.AllowInsecureTls(Config(("MEEPLEAI_PROFILE", "azure-local"), ("AZURE_SDK_ALLOW_INSECURE_TLS", ""))).Should().BeFalse();
+    }
+
+    [Fact]
     public void ReadAllowedHostSuffixes_TrimsAndDropsBlanks()
     {
         var config = Config(
@@ -415,8 +540,7 @@ public sealed class AzureSdkHttpClientsTests
             ("Azure:Sdk:AllowedHostSuffixes:1", ""),
             ("Azure:Sdk:AllowedHostSuffixes:2", ".vault.azure.net"));
 
-        AzureSdkHttpClients.ReadAllowedHostSuffixes(config)
-            .Should().Equal(".blob.core.windows.net", ".vault.azure.net");
+        AzureSdkHttpClients.ReadAllowedHostSuffixes(config).Should().Equal(".blob.core.windows.net", ".vault.azure.net");
     }
 
     [Fact]
@@ -424,9 +548,7 @@ public sealed class AzureSdkHttpClientsTests
     {
         using var sp = Build(Config(("MEEPLEAI_PROFILE", "azure-local")));
 
-        var transport = AzureSdkHttpClients.CreateTransport(sp);
-
-        transport.Should().NotBeNull();
+        AzureSdkHttpClients.CreateTransport(sp).Should().NotBeNull();
     }
 
     [Fact]
@@ -442,51 +564,43 @@ public sealed class AzureSdkHttpClientsTests
     [Fact]
     public void CreateTransport_AzureProfileWithSuffixes_UsesPinnedClient()
     {
-        using var sp = Build(Config(
-            ("MEEPLEAI_PROFILE", "azure-exam"),
-            ("Azure:Sdk:AllowedHostSuffixes:0", ".blob.core.windows.net")));
+        using var sp = Build(Config(("MEEPLEAI_PROFILE", "azure-exam"), ("Azure:Sdk:AllowedHostSuffixes:0", ".blob.core.windows.net")));
 
-        var transport = AzureSdkHttpClients.CreateTransport(sp);
-
-        transport.Should().NotBeNull();
+        AzureSdkHttpClients.CreateTransport(sp).Should().NotBeNull();
     }
 }
 ```
 
-- [ ] **Step 3: Eseguire i test per vederli fallire**
+- [ ] **Step 3: Eseguire per vedere il fallimento di compilazione**
 
-Run (da `apps/api`): `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureSdkHttpClientsTests"`
-Expected: errore di compilazione `AzureSdkHttpClients` non esiste.
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureSdkHttpClientsTests"`
 
-- [ ] **Step 4: Aggiungere il sink e scrivere `AzureSdkHttpClients`**
+- [ ] **Step 4: Sink, `AzureSdkHttpClients`, registrazione, gate**
 
 In `MeepleAiMetrics.Egress.cs`, dentro `EgressSinks`, dopo `Slack`:
 ```csharp
-        /// <summary>SDK Azure (Blob, Key Vault, App Configuration) nel profilo Azure vero — spec 2026-10-09.</summary>
+        /// <summary>SDK Azure (Blob, Key Vault, App Configuration) nel profilo Azure vero — spec azure-local §4.5.</summary>
         public const string AzureSdk = "azure_sdk";
 ```
 
-`apps/api/src/Api/Infrastructure/Azure/AzureSdkHttpClients.cs`:
+`apps/api/src/Api/Infrastructure/AzureSdk/AzureSdkHttpClients.cs`:
 ```csharp
 using Api.Observability;
 using Api.SharedKernel.Infrastructure.Http;
 using Azure.Core.Pipeline;
 
-namespace Api.Infrastructure.Azure;
+namespace Api.Infrastructure.AzureSdk;
 
 /// <summary>
 /// I due <see cref="HttpClient"/> nominati che trasportano gli SDK Azure (spec azure-local §4.5).
 /// <para>
-/// <c>AzureSdk</c> è pinnato con <c>ConfigureSsrfPin</c> e serve il profilo Azure vero: il pin blocca
-/// OGNI indirizzo privato (<c>SsrfPolicy.IsBlocked</c>), quindi non può raggiungere gli emulatori sulla
-/// rete compose. Per questo esiste <c>AzureSdkLocal</c>, esente dal pin e scelto SOLO quando
-/// <c>MEEPLEAI_PROFILE=azure-local</c>. La scelta avviene a runtime in <see cref="CreateTransport"/>:
-/// gli SDK ricevono un <see cref="HttpClientTransport"/> e non sanno quale dei due stanno usando.
+/// <c>AzureSdk</c> è pinnato con <c>ConfigureSsrfPin</c> e serve il profilo Azure vero: il pin blocca OGNI
+/// indirizzo privato (<c>SsrfPolicy.IsBlocked</c>), quindi non può raggiungere gli emulatori sulla rete
+/// compose. Per questo esiste <c>AzureSdkLocal</c>, esente dal pin e scelto SOLO con
+/// <c>MEEPLEAI_PROFILE=azure-local</c>. La scelta avviene a runtime in <see cref="CreateTransport"/>.
 /// </para>
-/// <para>
-/// Il client pinnato senza suffissi ammessi non restringerebbe l'host: <see cref="CreateTransport"/>
-/// rifiuta quel caso invece di lasciare un default permissivo.
-/// </para>
+/// <para>Il client pinnato senza suffissi ammessi non restringerebbe l'host: <see cref="CreateTransport"/>
+/// rifiuta quel caso invece di lasciare un default permissivo.</para>
 /// </summary>
 internal static class AzureSdkHttpClients
 {
@@ -532,7 +646,7 @@ internal static class AzureSdkHttpClients
         return services;
     }
 
-    /// <summary>Il transport da passare nelle <c>ClientOptions</c> di ogni SDK Azure.</summary>
+    /// <summary>Il transport da passare nelle <c>ClientOptions</c> di ogni SDK Azure basato su HTTP.</summary>
     public static HttpClientTransport CreateTransport(IServiceProvider serviceProvider)
     {
         var configuration = serviceProvider.GetRequiredService<IConfiguration>();
@@ -555,30 +669,75 @@ internal static class AzureSdkHttpClients
 }
 ```
 
-In `Program.cs`, dopo la riga `builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);`:
+In `Program.cs`, dopo `builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);`:
 ```csharp
 builder.Services.AddAzureSdkHttpClients(builder.Configuration); // spec azure-local §4.5
 ```
-(aggiungere `using Api.Infrastructure.Azure;` in testa).
+con `using Api.Infrastructure.AzureSdk;` in testa.
 
-Nel gate `EgressHttpClientPinArchitectureTests.cs`, in `MustBePinned`:
+Nel gate `EgressHttpClientPinArchitectureTests.cs`, `MustBePinned`:
 ```csharp
-        ["AzureSdk"] = "Azure SDK (Blob/Key Vault/App Configuration) verso *.windows.net/*.azure.net (spec azure-local §4.5)",
+        ["AzureSdk"] = "Azure SDK (Blob/Key Vault/App Configuration) verso *.windows.net/*.azure.net/*.azconfig.io (spec azure-local §4.5)",
 ```
-e in `Exempt`:
+`Exempt`:
 ```csharp
         ["AzureSdkLocal"] = "stessi SDK verso gli emulatori sulla rete compose: usato SOLO con MEEPLEAI_PROFILE=azure-local "
             + "(AzureSdkHttpClients.CreateTransport); il pin bloccherebbe gli indirizzi privati degli emulatori",
 ```
 
-- [ ] **Step 5: Eseguire i test del selettore e il gate**
+- [ ] **Step 5: Eseguire selettore + gate**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureSdkHttpClientsTests|FullyQualifiedName~EgressHttpClientPinArchitectureTests"`
-Expected: tutti verdi (5 + 3).
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureSdkHttpClientsTests|FullyQualifiedName~EgressHttpClientPinArchitectureTests"` → Expected: verdi.
 
-- [ ] **Step 6: Scrivere i test del servizio blob** `apps/api/tests/Api.Tests/Services/Pdf/AzureBlobStorageServiceTests.cs`
+- [ ] **Step 6: Test del parser della connection string** `apps/api/tests/Api.Tests/Services/Pdf/AzureStorageConnectionStringTests.cs`
 
 ```csharp
+using Api.Services.Pdf;
+using Api.Tests.Constants;
+using FluentAssertions;
+using Xunit;
+
+namespace Api.Tests.Services.Pdf;
+
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "DocumentProcessing")]
+public sealed class AzureStorageConnectionStringTests
+{
+    [Fact]
+    public void TryParse_DevelopmentStorage_ReturnsWellKnownAccount()
+    {
+        AzureStorageConnectionString.TryParse("UseDevelopmentStorage=true", out var name, out var key).Should().BeTrue();
+
+        name.Should().Be("devstoreaccount1");
+        key.Should().Be(AzureStorageConnectionString.DevelopmentStorageKey);
+    }
+
+    [Fact]
+    public void TryParse_ExplicitPairs_ReturnsThem()
+    {
+        var cs = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=a2V5;BlobEndpoint=http://azurite:10000/devstoreaccount1;";
+
+        AzureStorageConnectionString.TryParse(cs, out var name, out var key).Should().BeTrue();
+
+        name.Should().Be("devstoreaccount1");
+        key.Should().Be("a2V5");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("BlobEndpoint=http://x;")]
+    [InlineData("AccountName=only;")]
+    public void TryParse_MissingPairs_IsFalse(string cs)
+    {
+        AzureStorageConnectionString.TryParse(cs, out _, out _).Should().BeFalse();
+    }
+}
+```
+
+- [ ] **Step 7: Test del servizio blob** `apps/api/tests/Api.Tests/Services/Pdf/AzureBlobStorageServiceTests.cs`
+
+```csharp
+using System.Text.RegularExpressions;
 using Api.Services.Pdf;
 using Api.Tests.Constants;
 using Azure;
@@ -596,13 +755,15 @@ namespace Api.Tests.Services.Pdf;
 public sealed class AzureBlobStorageServiceTests
 {
     private const string Container = "meepleai-uploads";
-    private static readonly Uri ContainerUri = new("http://127.0.0.1:10000/devstoreaccount1/meepleai-uploads");
+    private static readonly Uri ContainerUri = new("http://azurite:10000/devstoreaccount1/meepleai-uploads");
+    private static readonly Response<BlobContentInfo> UploadOk =
+        Response.FromValue(BlobsModelFactory.BlobContentInfo(new ETag("e"), DateTimeOffset.UtcNow, null, null, null, null, 1), Mock.Of<Response>());
 
     private readonly Mock<BlobServiceClient> _service = new();
     private readonly Mock<BlobContainerClient> _container = new();
     private readonly Mock<BlobClient> _blob = new();
 
-    private AzureBlobStorageService CreateSut(string? publicEndpoint = null)
+    public AzureBlobStorageServiceTests()
     {
         _container.SetupGet(c => c.Name).Returns(Container);
         _container.SetupGet(c => c.Uri).Returns(ContainerUri);
@@ -610,16 +771,19 @@ public sealed class AzureBlobStorageServiceTests
         _container
             .Setup(c => c.CreateIfNotExistsAsync(It.IsAny<PublicAccessType>(), It.IsAny<IDictionary<string, string>>(), It.IsAny<BlobContainerEncryptionScopeOptions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(BlobsModelFactory.BlobContainerInfo(new ETag("x"), DateTimeOffset.UtcNow), Mock.Of<Response>()));
+        _blob.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<BlobUploadOptions>(), It.IsAny<CancellationToken>())).ReturnsAsync(UploadOk);
+    }
 
-        var options = new AzureBlobStorageOptions
+    private AzureBlobStorageService CreateSut(string? publicEndpoint = null, bool sharedKey = true) =>
+        new(_service.Object, _container.Object, new AzureBlobStorageOptions
         {
             ConnectionString = "UseDevelopmentStorage=true",
             ContainerName = Container,
             PublicBlobEndpoint = publicEndpoint,
             SasExpirySeconds = 600,
-        };
-        return new AzureBlobStorageService(_service.Object, _container.Object, options, Mock.Of<ILogger<AzureBlobStorageService>>());
-    }
+            AccountName = sharedKey ? "devstoreaccount1" : null,
+            AccountKey = sharedKey ? AzureStorageConnectionString.DevelopmentStorageKey : null,
+        }, Mock.Of<ILogger<AzureBlobStorageService>>());
 
     private static Page<BlobItem> PageOf(params string[] names) =>
         Page<BlobItem>.FromValues(names.Select(n => BlobsModelFactory.BlobItem(name: n)).ToList(), null, Mock.Of<Response>());
@@ -629,27 +793,27 @@ public sealed class AzureBlobStorageServiceTests
             .Setup(c => c.GetBlobsAsync(It.IsAny<BlobTraits>(), It.IsAny<BlobStates>(), prefix, It.IsAny<CancellationToken>()))
             .Returns(AsyncPageable<BlobItem>.FromPages([PageOf(names)]));
 
+    private void VerifyNoListing() =>
+        _container.Verify(c => c.GetBlobsAsync(It.IsAny<BlobTraits>(), It.IsAny<BlobStates>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
     [Fact]
     public async Task StoreAsync_WritesCategorizedKeyWithPdfContentType()
     {
-        string? uploadedKey = null;
         BlobUploadOptions? uploadOptions = null;
-        _container.Setup(c => c.GetBlobClient(It.IsAny<string>()))
-            .Callback<string>(k => uploadedKey = k)
-            .Returns(_blob.Object);
         _blob.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<BlobUploadOptions>(), It.IsAny<CancellationToken>()))
             .Callback<Stream, BlobUploadOptions, CancellationToken>((_, o, _) => uploadOptions = o)
-            .ReturnsAsync(Response.FromValue(BlobsModelFactory.BlobContentInfo(new ETag("e"), DateTimeOffset.UtcNow, null, null, null, null, 1), Mock.Of<Response>()));
+            .ReturnsAsync(UploadOk);
         var sut = CreateSut();
         using var content = new MemoryStream(new byte[] { 1, 2, 3 });
 
-        var result = await sut.StoreAsync(content, "Rule Book.pdf", BlobCategory.Pdf, "game-1");
+        var result = await sut.StoreAsync(content, "Rule:Book.pdf", BlobCategory.Pdf, "game-1");
 
-        result.Success.Should().BeTrue();
+        result.Success.Should().BeTrue(result.ErrorMessage);
         result.FileSizeBytes.Should().Be(3);
-        uploadedKey.Should().MatchRegex("^pdfs/game-1/[0-9a-f]{32}_Rule_Book\\.pdf$");
-        result.FilePath.Should().Be(uploadedKey);
         result.FileId.Should().HaveLength(32);
+        // ':' è in AdditionalInvalidChars di StringHelper → '_'; lo spazio NON verrebbe sostituito.
+        result.FilePath.Should().MatchRegex("^pdfs/game-1/[0-9a-f]{32}_Rule_Book\\.pdf$");
+        _container.Verify(c => c.GetBlobClient(It.Is<string>(k => Regex.IsMatch(k, "^pdfs/game-1/[0-9a-f]{32}_Rule_Book\\.pdf$"))), Times.Once);
         uploadOptions!.HttpHeaders!.ContentType.Should().Be("application/pdf");
     }
 
@@ -684,11 +848,15 @@ public sealed class AzureBlobStorageServiceTests
     public async Task RetrieveAsync_NoMatch_ReturnsNull()
     {
         SetupListing("pdfs/game-1/missing_");
-        var sut = CreateSut();
 
-        var stream = await sut.RetrieveAsync("missing", BlobCategory.Pdf, "game-1");
+        (await CreateSut().RetrieveAsync("missing", BlobCategory.Pdf, "game-1")).Should().BeNull();
+    }
 
-        stream.Should().BeNull();
+    [Fact]
+    public async Task RetrieveAsync_TraversalFileId_ReturnsNullWithoutListing()
+    {
+        (await CreateSut().RetrieveAsync("../x", BlobCategory.Pdf, "game-1")).Should().BeNull();
+        VerifyNoListing();
     }
 
     [Fact]
@@ -697,11 +865,9 @@ public sealed class AzureBlobStorageServiceTests
         SetupListing("pdfs/game-1/abc_", "pdfs/game-1/abc_a.pdf", "pdfs/game-1/abc_b.pdf");
         _container.Setup(c => c.DeleteBlobIfExistsAsync(It.IsAny<string>(), It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
-        var sut = CreateSut();
 
-        var deleted = await sut.DeleteAsync("abc", BlobCategory.Pdf, "game-1");
+        (await CreateSut().DeleteAsync("abc", BlobCategory.Pdf, "game-1")).Should().BeTrue();
 
-        deleted.Should().BeTrue();
         _container.Verify(c => c.DeleteBlobIfExistsAsync("pdfs/game-1/abc_a.pdf", It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()), Times.Once);
         _container.Verify(c => c.DeleteBlobIfExistsAsync("pdfs/game-1/abc_b.pdf", It.IsAny<DeleteSnapshotsOption>(), It.IsAny<BlobRequestConditions>(), It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -710,59 +876,66 @@ public sealed class AzureBlobStorageServiceTests
     public async Task DeleteAsync_NoMatch_ReturnsFalse()
     {
         SetupListing("pdfs/game-1/abc_");
-        var sut = CreateSut();
 
-        (await sut.DeleteAsync("abc", BlobCategory.Pdf, "game-1")).Should().BeFalse();
+        (await CreateSut().DeleteAsync("abc", BlobCategory.Pdf, "game-1")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_TraversalFileId_ReturnsFalseWithoutListing()
+    {
+        (await CreateSut().DeleteAsync("../x", BlobCategory.Pdf, "game-1")).Should().BeFalse();
+        VerifyNoListing();
     }
 
     [Fact]
     public async Task ExistsAsync_TraversalFileId_ReturnsFalse()
     {
-        var sut = CreateSut();
-
-        (await sut.ExistsAsync("../x", BlobCategory.Pdf, "game-1")).Should().BeFalse();
-        _container.Verify(c => c.GetBlobsAsync(It.IsAny<BlobTraits>(), It.IsAny<BlobStates>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        (await CreateSut().ExistsAsync("../x", BlobCategory.Pdf, "game-1")).Should().BeFalse();
+        VerifyNoListing();
     }
 
     [Fact]
     public void GetStoragePath_UsesSameLayoutAsS3()
     {
-        var sut = CreateSut();
-
-        sut.GetStoragePath("abc", BlobCategory.GameImage, "game-1", "cover one.png")
+        CreateSut().GetStoragePath("abc", BlobCategory.GameImage, "game-1", "cover|one.png")
             .Should().Be("game-images/game-1/abc_cover_one.png");
     }
 
     [Fact]
     public async Task GetPresignedUrlForRawKeyAsync_MissingBlob_ReturnsNull()
     {
-        _blob.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Response.FromValue(false, Mock.Of<Response>()));
-        var sut = CreateSut();
+        _blob.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Response.FromValue(false, Mock.Of<Response>()));
 
-        (await sut.GetPresignedUrlForRawKeyAsync("covers/x.png")).Should().BeNull();
+        (await CreateSut().GetPresignedUrlForRawKeyAsync("covers/x.png")).Should().BeNull();
     }
 
     [Fact]
-    public async Task GetPresignedUrlForRawKeyAsync_UserDelegationPath_RewritesPublicEndpoint()
+    public async Task GetPresignedUrlForRawKeyAsync_SharedKey_SignsWithoutParsingTheContainerUri()
     {
-        _blob.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
-        _blob.SetupGet(b => b.CanGenerateSasUri).Returns(false);
-        _blob.SetupGet(b => b.Uri).Returns(new Uri("http://azurite:10000/devstoreaccount1/meepleai-uploads/covers/x.png"));
+        _blob.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
+
+        var url = await CreateSut(publicEndpoint: "http://localhost:20000").GetPresignedUrlForRawKeyAsync("covers/game 1/x.png", 120);
+
+        // Host riscritto, path del container preservato, segmento con spazio codificato, firma presente.
+        url.Should().StartWith("http://localhost:20000/devstoreaccount1/meepleai-uploads/covers/game%201/x.png?");
+        url.Should().Contain("sig=").And.Contain("sp=r").And.Contain("sr=b");
+    }
+
+    [Fact]
+    public async Task GetPresignedUrlForRawKeyAsync_UserDelegation_UsesServiceKey()
+    {
+        _blob.Setup(b => b.ExistsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Response.FromValue(true, Mock.Of<Response>()));
         _service.SetupGet(s => s.AccountName).Returns("devstoreaccount1");
         var key = BlobsModelFactory.UserDelegationKey(
             "oid", "tid", DateTimeOffset.UtcNow.AddMinutes(-5), DateTimeOffset.UtcNow.AddHours(1), "b", "2024-11-04",
             Convert.ToBase64String(new byte[32]));
         _service.Setup(s => s.GetUserDelegationKeyAsync(It.IsAny<DateTimeOffset?>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Response.FromValue(key, Mock.Of<Response>()));
-        var sut = CreateSut(publicEndpoint: "http://localhost:20000");
 
-        var url = await sut.GetPresignedUrlForRawKeyAsync("covers/x.png", 120);
+        var url = await CreateSut(sharedKey: false).GetPresignedUrlForRawKeyAsync("covers/x.png", 120);
 
-        url.Should().StartWith("http://localhost:20000/devstoreaccount1/meepleai-uploads/covers/x.png?");
-        url.Should().Contain("sig=");
-        url.Should().Contain("skoid=oid");
+        url.Should().StartWith("http://azurite:10000/devstoreaccount1/meepleai-uploads/covers/x.png?");
+        url.Should().Contain("skoid=oid").And.Contain("sig=");
     }
 
     [Fact]
@@ -771,13 +944,11 @@ public sealed class AzureBlobStorageServiceTests
         BlobUploadOptions? uploadOptions = null;
         _blob.Setup(b => b.UploadAsync(It.IsAny<Stream>(), It.IsAny<BlobUploadOptions>(), It.IsAny<CancellationToken>()))
             .Callback<Stream, BlobUploadOptions, CancellationToken>((_, o, _) => uploadOptions = o)
-            .ReturnsAsync(Response.FromValue(BlobsModelFactory.BlobContentInfo(new ETag("e"), DateTimeOffset.UtcNow, null, null, null, null, 1), Mock.Of<Response>()));
-        var sut = CreateSut();
+            .ReturnsAsync(UploadOk);
         using var content = new MemoryStream(new byte[] { 1 });
 
-        var ok = await sut.StoreRawKeyAsync("covers/game-1/cover.png", content, "image/png");
+        (await CreateSut().StoreRawKeyAsync("covers/game-1/cover.png", content, "image/png")).Should().BeTrue();
 
-        ok.Should().BeTrue();
         _container.Verify(c => c.GetBlobClient("covers/game-1/cover.png"), Times.Once);
         uploadOptions!.HttpHeaders!.ContentType.Should().Be("image/png");
     }
@@ -787,19 +958,17 @@ public sealed class AzureBlobStorageServiceTests
     {
         _blob.Setup(b => b.DownloadStreamingAsync(It.IsAny<BlobDownloadOptions>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new RequestFailedException(404, "BlobNotFound"));
-        var sut = CreateSut();
 
-        (await sut.RetrieveRawKeyAsync("covers/none.png")).Should().BeNull();
+        (await CreateSut().RetrieveRawKeyAsync("covers/none.png")).Should().BeNull();
     }
 }
 ```
 
-- [ ] **Step 7: Eseguire i test per vederli fallire**
+- [ ] **Step 8: Eseguire per vedere il fallimento di compilazione**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureBlobStorageServiceTests"`
-Expected: errore di compilazione (`AzureBlobStorageService`/`AzureBlobStorageOptions` mancanti).
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureBlobStorageServiceTests|FullyQualifiedName~AzureStorageConnectionStringTests"`
 
-- [ ] **Step 8: Scrivere `AzureBlobStorageOptions.cs`**
+- [ ] **Step 9: `AzureBlobStorageOptions.cs` e `AzureStorageConnectionString.cs`**
 
 ```csharp
 namespace Api.Services.Pdf;
@@ -810,28 +979,79 @@ internal sealed class AzureBlobStorageOptions
     /// <summary>Connection string con chiave condivisa (Azurite o account vero). Alternativa a <see cref="AccountUrl"/>.</summary>
     public string? ConnectionString { get; init; }
 
-    /// <summary>URL dell'account (<c>https://&lt;account&gt;.blob.core.windows.net</c>) con <c>DefaultAzureCredential</c>. Alternativa a <see cref="ConnectionString"/>.</summary>
+    /// <summary>URL dell'account (<c>https://&lt;account&gt;.blob.core.windows.net</c>) con <c>DefaultAzureCredential</c>.</summary>
     public string? AccountUrl { get; init; }
 
     public required string ContainerName { get; init; }
 
     /// <summary>
     /// Host pubblico con cui riscrivere scheme/host/porta degli URL SAS (come <c>S3_PUBLIC_ENDPOINT</c>, #3498):
-    /// la firma SAS copre risorsa e parametri, non l'host, quindi la riscrittura resta valida.
+    /// la firma SAS copre risorsa e parametri, non l'host.
     /// </summary>
     public string? PublicBlobEndpoint { get; init; }
 
     public int SasExpirySeconds { get; init; } = 3600;
+
+    /// <summary>Estratti dalla connection string: con entrambi la SAS è firmata con la chiave condivisa, altrimenti con la delega utente.</summary>
+    public string? AccountName { get; init; }
+    public string? AccountKey { get; init; }
 }
 ```
 
-- [ ] **Step 9: Scrivere `AzureBlobStorageService.cs`**
+```csharp
+namespace Api.Services.Pdf;
+
+/// <summary>
+/// Parser minimale della connection string di Azure Storage: serve SOLO per ricavare account e chiave con cui
+/// firmare le SAS senza passare da <c>BlobUriBuilder</c>, che con un host come <c>azurite</c> (né IP né
+/// localhost) scambia l'account nel path per il container e produce una firma invalida.
+/// </summary>
+internal static class AzureStorageConnectionString
+{
+    public const string DevelopmentStorageAccount = "devstoreaccount1";
+    public const string DevelopmentStorageKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
+    public static bool TryParse(string? connectionString, out string accountName, out string accountKey)
+    {
+        accountName = string.Empty;
+        accountKey = string.Empty;
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return false;
+        }
+
+        var pairs = connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => p.Split('=', 2))
+            .Where(kv => kv.Length == 2)
+            .ToDictionary(kv => kv[0], kv => kv[1], StringComparer.OrdinalIgnoreCase);
+
+        if (pairs.TryGetValue("UseDevelopmentStorage", out var dev) && string.Equals(dev, "true", StringComparison.OrdinalIgnoreCase))
+        {
+            accountName = DevelopmentStorageAccount;
+            accountKey = DevelopmentStorageKey;
+            return true;
+        }
+
+        if (pairs.TryGetValue("AccountName", out var name) && pairs.TryGetValue("AccountKey", out var key)
+            && !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(key))
+        {
+            accountName = name;
+            accountKey = key;
+            return true;
+        }
+
+        return false;
+    }
+}
+```
+
+- [ ] **Step 10: `AzureBlobStorageService.cs`**
 
 ```csharp
-using System.Globalization;
 using Api.Helpers;
 using Api.Infrastructure.Security;
 using Azure;
+using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
@@ -839,10 +1059,11 @@ using Azure.Storage.Sas;
 namespace Api.Services.Pdf;
 
 /// <summary>
-/// <see cref="IBlobStorageService"/> su Azure Blob Storage (spec azure-local §4.1). Stesso layout di chiave
-/// di <see cref="S3BlobStorageService"/> — <c>{category}/{resourceKey}/{fileId}_{fileName}</c> — e stesse
-/// semantiche: risoluzione per prefisso, raw-key senza validazione, HEAD prima della firma, mai un'eccezione
-/// oltre il confine del servizio.
+/// <see cref="IBlobStorageService"/> su Azure Blob Storage (spec azure-local §4.1). Stesso layout di chiave di
+/// <see cref="S3BlobStorageService"/> — <c>{category}/{resourceKey}/{fileId}_{fileName}</c> — e stesse semantiche:
+/// risoluzione per prefisso, raw-key senza validazione, HEAD prima della firma, mai un'eccezione oltre il confine.
+/// Il Content-Type di <see cref="StoreAsync"/> è sempre <c>application/pdf</c> come nel ramo S3 (difetto ereditato,
+/// non introdotto: le altre categorie usano <see cref="StoreRawKeyAsync"/> con il tipo esplicito).
 /// </summary>
 internal sealed class AzureBlobStorageService : IBlobStorageService
 {
@@ -1183,35 +1404,38 @@ internal sealed class AzureBlobStorageService : IBlobStorageService
         return (buffer, buffer.Length, buffer);
     }
 
+    /// <summary>
+    /// Firma esplicita con <see cref="BlobSasBuilder"/> su container e chiave NOTI: niente <c>BlobUriBuilder</c>,
+    /// che con un host come <c>azurite</c> (né IP né localhost) scambia l'account nel path per il container e
+    /// produce una firma che Azurite rifiuta. L'URL è <c>{container.Uri}/{segmenti codificati}?{sas}</c>.
+    /// </summary>
     private async Task<string> BuildReadSasAsync(string key, int expirySeconds)
     {
-        var blob = _container.GetBlobClient(key);
+        var startsOn = DateTimeOffset.UtcNow.AddMinutes(-5);
         var expiresOn = DateTimeOffset.UtcNow.AddSeconds(expirySeconds);
-        Uri signed;
+        var sas = new BlobSasBuilder(BlobSasPermissions.Read, expiresOn)
+        {
+            BlobContainerName = _options.ContainerName,
+            BlobName = key,
+            Resource = "b",
+            StartsOn = startsOn,
+        };
 
-        if (blob.CanGenerateSasUri)
+        string query;
+        if (!string.IsNullOrWhiteSpace(_options.AccountName) && !string.IsNullOrWhiteSpace(_options.AccountKey))
         {
             // Chiave condivisa (connection string: Azurite o account con chiave).
-            signed = blob.GenerateSasUri(BlobSasPermissions.Read, expiresOn);
+            query = sas.ToSasQueryParameters(new StorageSharedKeyCredential(_options.AccountName, _options.AccountKey)).ToString();
         }
         else
         {
             // Identità Entra (DefaultAzureCredential): SAS con chiave di delega utente.
-            var delegationKey = await _serviceClient
-                .GetUserDelegationKeyAsync(DateTimeOffset.UtcNow.AddMinutes(-5), expiresOn, CancellationToken.None)
-                .ConfigureAwait(false);
-            var sas = new BlobSasBuilder(BlobSasPermissions.Read, expiresOn)
-            {
-                BlobContainerName = _container.Name,
-                BlobName = key,
-                Resource = "b",
-            };
-            var uriBuilder = new BlobUriBuilder(blob.Uri)
-            {
-                Sas = sas.ToSasQueryParameters(delegationKey.Value, _serviceClient.AccountName),
-            };
-            signed = uriBuilder.ToUri();
+            var delegationKey = await _serviceClient.GetUserDelegationKeyAsync(startsOn, expiresOn, CancellationToken.None).ConfigureAwait(false);
+            query = sas.ToSasQueryParameters(delegationKey.Value, _serviceClient.AccountName).ToString();
         }
+
+        var encodedKey = string.Join('/', key.Split('/').Select(Uri.EscapeDataString));
+        var signed = new Uri($"{_container.Uri.AbsoluteUri.TrimEnd('/')}/{encodedKey}?{query}", UriKind.Absolute);
 
         _logger.LogInformation("Signed read URL for {Key} (expires in {Expiry}s)", key, expirySeconds);
         return AlignWithPublicEndpoint(signed).ToString();
@@ -1230,53 +1454,58 @@ internal sealed class AzureBlobStorageService : IBlobStorageService
 }
 ```
 
-- [ ] **Step 10: Il ramo `azureblob` nella factory**
+- [ ] **Step 11: Il ramo `azureblob` nella factory**
 
 In `BlobStorageServiceFactory.Create`, nello switch, prima di `"s3"`:
 ```csharp
             "azureblob" => CreateAzureBlobStorageService(serviceProvider, config),
 ```
-Nuovo metodo privato (dopo `CreateS3StorageService`):
+Nuovo metodo privato (dopo `CreateS3StorageService`), con `using Azure.Storage.Blobs;`, `using Azure.Identity;`, `using Api.Infrastructure.AzureSdk;` in testa:
 ```csharp
     private static IBlobStorageService CreateAzureBlobStorageService(IServiceProvider serviceProvider, IConfiguration config)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<AzureBlobStorageService>>();
-        var options = new AzureBlobStorageOptions
-        {
-            ConnectionString = config["AZURE_STORAGE_CONNECTION_STRING"],
-            AccountUrl = config["AZURE_STORAGE_ACCOUNT_URL"],
-            ContainerName = config["AZURE_STORAGE_CONTAINER"] is { Length: > 0 } name ? name : "meepleai-uploads",
-            PublicBlobEndpoint = config["AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT"],
-            SasExpirySeconds = int.TryParse(config["AZURE_STORAGE_SAS_EXPIRY"], CultureInfo.InvariantCulture, out var expiry) ? expiry : 3600,
-        };
-
-        var hasConnectionString = !string.IsNullOrWhiteSpace(options.ConnectionString);
-        var hasAccountUrl = !string.IsNullOrWhiteSpace(options.AccountUrl);
+        var connectionString = config["AZURE_STORAGE_CONNECTION_STRING"];
+        var accountUrl = config["AZURE_STORAGE_ACCOUNT_URL"];
+        var hasConnectionString = !string.IsNullOrWhiteSpace(connectionString);
+        var hasAccountUrl = !string.IsNullOrWhiteSpace(accountUrl);
         if (!hasConnectionString && !hasAccountUrl)
         {
             throw new InvalidOperationException(
                 "AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT_URL is required when STORAGE_PROVIDER=azureblob");
         }
 
-        var clientOptions = new BlobClientOptions { Transport = Api.Infrastructure.Azure.AzureSdkHttpClients.CreateTransport(serviceProvider) };
+        AzureStorageConnectionString.TryParse(connectionString, out var accountName, out var accountKey);
+        var options = new AzureBlobStorageOptions
+        {
+            ConnectionString = connectionString,
+            AccountUrl = accountUrl,
+            ContainerName = config["AZURE_STORAGE_CONTAINER"] is { Length: > 0 } name ? name : "meepleai-uploads",
+            PublicBlobEndpoint = config["AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT"],
+            SasExpirySeconds = int.TryParse(config["AZURE_STORAGE_SAS_EXPIRY"], CultureInfo.InvariantCulture, out var expiry) ? expiry : 3600,
+            AccountName = hasConnectionString ? accountName : null,
+            AccountKey = hasConnectionString ? accountKey : null,
+        };
+
+        var clientOptions = new BlobClientOptions { Transport = AzureSdkHttpClients.CreateTransport(serviceProvider) };
         var serviceClient = hasConnectionString
-            ? new BlobServiceClient(options.ConnectionString, clientOptions)
-            : new BlobServiceClient(new Uri(options.AccountUrl!, UriKind.Absolute), new Azure.Identity.DefaultAzureCredential(), clientOptions);
+            ? new BlobServiceClient(connectionString, clientOptions)
+            : new BlobServiceClient(new Uri(accountUrl!, UriKind.Absolute), new DefaultAzureCredential(), clientOptions);
         var container = serviceClient.GetBlobContainerClient(options.ContainerName);
 
         logger.LogInformation(
-            "Initialized Azure Blob storage: endpoint={Endpoint}, container={Container}, publicEndpoint={PublicEndpoint}",
-            serviceClient.Uri, options.ContainerName, options.PublicBlobEndpoint ?? serviceClient.Uri.ToString());
+            "Initialized Azure Blob storage: endpoint={Endpoint}, container={Container}, publicEndpoint={PublicEndpoint}, sharedKey={SharedKey}",
+            serviceClient.Uri, options.ContainerName, options.PublicBlobEndpoint ?? serviceClient.Uri.ToString(), options.AccountKey is not null);
 
         return new AzureBlobStorageService(serviceClient, container, options, logger);
     }
 ```
-Aggiungere `using Azure.Storage.Blobs;` in testa al file.
+Il servizio resta Scoped come il ramo S3 (un client per scope): registrare `BlobServiceClient` singleton è un follow-up, non parte di questo task.
 
-- [ ] **Step 11: Test della factory** `apps/api/tests/Api.Tests/Services/Pdf/BlobStorageServiceFactoryAzureTests.cs`
+- [ ] **Step 12: Test della factory** `apps/api/tests/Api.Tests/Services/Pdf/BlobStorageServiceFactoryAzureTests.cs`
 
 ```csharp
-using Api.Infrastructure.Azure;
+using Api.Infrastructure.AzureSdk;
 using Api.Services.Pdf;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -1309,12 +1538,11 @@ public sealed class BlobStorageServiceFactoryAzureTests
 
         var act = () => BlobStorageServiceFactory.Create(sp);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*AZURE_STORAGE_CONNECTION_STRING*AZURE_STORAGE_ACCOUNT_URL*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*AZURE_STORAGE_CONNECTION_STRING*AZURE_STORAGE_ACCOUNT_URL*");
     }
 
     [Fact]
-    public void Create_AzureBlobWithConnectionString_ReturnsAzureServiceWithOptions()
+    public void Create_AzureBlobWithConnectionString_ReturnsAzureServiceWithParsedKey()
     {
         using var sp = Build(
             ("STORAGE_PROVIDER", "AzureBlob"),
@@ -1324,12 +1552,13 @@ public sealed class BlobStorageServiceFactoryAzureTests
             ("AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT", "http://localhost:20000"),
             ("AZURE_STORAGE_SAS_EXPIRY", "120"));
 
-        var service = BlobStorageServiceFactory.Create(sp);
+        var azure = BlobStorageServiceFactory.Create(sp).Should().BeOfType<AzureBlobStorageService>().Subject;
 
-        var azure = service.Should().BeOfType<AzureBlobStorageService>().Subject;
         azure.Options.ContainerName.Should().Be("uploads-test");
         azure.Options.PublicBlobEndpoint.Should().Be("http://localhost:20000");
         azure.Options.SasExpirySeconds.Should().Be(120);
+        azure.Options.AccountName.Should().Be("devstoreaccount1");
+        azure.Options.AccountKey.Should().Be(AzureStorageConnectionString.DevelopmentStorageKey);
     }
 
     [Fact]
@@ -1342,30 +1571,33 @@ public sealed class BlobStorageServiceFactoryAzureTests
 }
 ```
 
-- [ ] **Step 12: Eseguire tutti i test del task**
+- [ ] **Step 13: Eseguire tutti i test del task**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureBlobStorageServiceTests|FullyQualifiedName~BlobStorageServiceFactoryAzureTests|FullyQualifiedName~AzureSdkHttpClientsTests|FullyQualifiedName~EgressHttpClientPinArchitectureTests"`
-Expected: tutti verdi. Se un `Setup` Moq su un overload dell'SDK non compila, allineare la firma a quella **virtuale** del pacchetto 12.30.1 (`GetBlobsAsync(BlobTraits, BlobStates, string, CancellationToken)`, `DeleteBlobIfExistsAsync(string, DeleteSnapshotsOption, BlobRequestConditions, CancellationToken)`, `UploadAsync(Stream, BlobUploadOptions, CancellationToken)`, `DownloadStreamingAsync(BlobDownloadOptions, CancellationToken)`).
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureBlobStorageServiceTests|FullyQualifiedName~AzureStorageConnectionStringTests|FullyQualifiedName~BlobStorageServiceFactoryAzureTests|FullyQualifiedName~AzureSdkHttpClientsTests|FullyQualifiedName~EgressHttpClientPinArchitectureTests"`
+Expected: tutti verdi. Se un `Setup` Moq su un overload dell'SDK non compila, allineare alla firma **virtuale** della 12.30.1 (`GetBlobsAsync(BlobTraits, BlobStates, string, CancellationToken)`, `DeleteBlobIfExistsAsync(string, DeleteSnapshotsOption, BlobRequestConditions, CancellationToken)`, `UploadAsync(Stream, BlobUploadOptions, CancellationToken)`, `DownloadStreamingAsync(BlobDownloadOptions, CancellationToken)`, `GetUserDelegationKeyAsync(DateTimeOffset?, DateTimeOffset, CancellationToken)`).
 
-- [ ] **Step 13: Commit**
+- [ ] **Step 14: Commit**
 
 ```bash
-git add apps/api/src/Api/Infrastructure/Azure apps/api/src/Api/Services/Pdf apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Egress.cs apps/api/src/Api/Program.cs apps/api/src/Api/Api.csproj apps/api/tests/Api.Tests/Architecture/EgressHttpClientPinArchitectureTests.cs apps/api/tests/Api.Tests/Services/Pdf apps/api/tests/Api.Tests/Infrastructure/Azure
-git commit -m "feat(storage): provider azureblob su Azure.Storage.Blobs" -m "AzureBlobStorageService con lo stesso layout di chiave di S3, SAS con chiave condivisa o delega utente, riscrittura dell'host pubblico. Client AzureSdk pinnato e AzureSdkLocal esente, scelti dal profilo." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add apps/api/src/Api/Infrastructure/AzureSdk/AzureSdkHttpClients.cs apps/api/src/Api/Services/Pdf/AzureBlobStorageOptions.cs apps/api/src/Api/Services/Pdf/AzureStorageConnectionString.cs apps/api/src/Api/Services/Pdf/AzureBlobStorageService.cs apps/api/src/Api/Services/Pdf/BlobStorageServiceFactory.cs apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.Egress.cs apps/api/src/Api/Program.cs apps/api/src/Api/Api.csproj apps/api/tests/Api.Tests/Architecture/EgressHttpClientPinArchitectureTests.cs apps/api/tests/Api.Tests/Services/Pdf/AzureBlobStorageServiceTests.cs apps/api/tests/Api.Tests/Services/Pdf/AzureStorageConnectionStringTests.cs apps/api/tests/Api.Tests/Services/Pdf/BlobStorageServiceFactoryAzureTests.cs apps/api/tests/Api.Tests/Infrastructure/AzureSdk/AzureSdkHttpClientsTests.cs
+git commit -m "feat(storage): provider azureblob su Azure.Storage.Blobs" -m "AzureBlobStorageService con lo stesso layout di chiave di S3, SAS firmata esplicitamente (chiave condivisa o delega utente) senza BlobUriBuilder, riscrittura dell'host pubblico. Client AzureSdk pinnato e AzureSdkLocal esente, scelti dal profilo." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
 
-### Task 3: Test di integrazione su Azurite (Testcontainers)
+### Task 3: Test di integrazione su Azurite con fixture per classe
 
 **Files:**
-- Modify: `apps/api/tests/Api.Tests/Api.Tests.csproj` (PackageReference)
-- Modify: `apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs` (costanti, dopo la regione MinIO)
+- Modify: `apps/api/tests/Api.Tests/Api.Tests.csproj`
+- Modify: `apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs`
+- Create: `apps/api/tests/Api.Tests/Infrastructure/DockerDaemonProbe.cs`
+- Create: `apps/api/tests/Api.Tests/Infrastructure/EmulatorFixtureBase.cs`
+- Create: `apps/api/tests/Api.Tests/Integration/DocumentProcessing/AzuriteFixture.cs`
 - Test: `apps/api/tests/Api.Tests/Integration/DocumentProcessing/AzureBlobStorageIntegrationTests.cs`
 
 **Interfaces:**
-- Consumes: `AzureBlobStorageService`, `AzureBlobStorageOptions` (Task 2).
-- Produces: `TestcontainersConfiguration.AzuriteImage = "mcr.microsoft.com/azure-storage/azurite:3.37.0"`, `AzuriteBlobPort = 10000`.
+- Consumes: `AzureBlobStorageService`, `AzureBlobStorageOptions`, `AzureStorageConnectionString` (Task 2).
+- Produces: `TestcontainersConfiguration.AzuriteImage`, `AzuriteBlobPort = 10000`, `AzuriteTestContainer`; `DockerDaemonProbe.IsAvailable() : bool`; `EmulatorFixtureBase` (`UnavailableReason`, `SkipIfUnavailable()` che sceglie `PREVISTO:` o `GUASTO:`); `AzuriteFixture { ConnectionString, PublicEndpoint }`. I Task 4 e 7 riusano `EmulatorFixtureBase`.
 
 - [ ] **Step 1: Pacchetto e costanti**
 
@@ -1379,7 +1611,142 @@ In `TestcontainersConfiguration.cs`, dopo `MinioTestBucket`:
     public const string AzuriteTestContainer = "meepleai-uploads-test";
 ```
 
-- [ ] **Step 2: Scrivere il test**
+- [ ] **Step 2: `DockerDaemonProbe.cs` e `EmulatorFixtureBase.cs`**
+
+```csharp
+using System.Diagnostics;
+
+namespace Api.Tests.Infrastructure;
+
+/// <summary>
+/// Distingue «Docker assente» (salto PREVISTO) da «Docker presente ma il container non parte» (salto GUASTO):
+/// i due casi si correggono in modi diversi e un motivo generico chiude l'indagine prima che inizi (#3978).
+/// </summary>
+internal static class DockerDaemonProbe
+{
+    private static readonly Lazy<bool> Available = new(Probe);
+
+    public static bool IsAvailable() => Available.Value;
+
+    private static bool Probe()
+    {
+        try
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "docker",
+                    Arguments = "version --format {{.Server.Version}}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                },
+            };
+            process.Start();
+            return process.WaitForExit(15_000) && process.ExitCode == 0;
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+}
+```
+
+```csharp
+using Xunit;
+
+namespace Api.Tests.Infrastructure;
+
+/// <summary>
+/// Base delle fixture per CLASSE degli emulatori Azure (spec azure-local §6): un container per classe, perché
+/// <c>methodTimeout</c> copre <c>InitializeAsync</c> e un emulatore per metodo scadrebbe in timeout. L'avvio
+/// non lancia: registra il motivo e i test saltano con la classe giusta.
+/// </summary>
+public abstract class EmulatorFixtureBase : IAsyncLifetime
+{
+    public string? UnavailableReason { get; private set; }
+
+    protected abstract string EmulatorName { get; }
+
+    protected abstract Task StartAsync();
+
+    protected abstract Task StopAsync();
+
+    public async ValueTask InitializeAsync()
+    {
+        if (!DockerDaemonProbe.IsAvailable())
+        {
+            UnavailableReason = "PREVISTO: Docker non disponibile. In locale: cd infra && make dev-azure-local (avvia anche " + EmulatorName + ")";
+            return;
+        }
+
+        try
+        {
+            await StartAsync();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            UnavailableReason = $"GUASTO: {EmulatorName} non avviato con Docker presente: {ex.GetType().Name}: {ex.Message}";
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (UnavailableReason is null)
+        {
+            await StopAsync();
+        }
+    }
+
+    public void SkipIfUnavailable()
+    {
+        if (UnavailableReason is not null)
+        {
+            Assert.Skip(UnavailableReason);
+        }
+    }
+}
+```
+
+- [ ] **Step 3: `AzuriteFixture.cs`**
+
+```csharp
+using Api.Tests.Infrastructure;
+using Testcontainers.Azurite;
+
+namespace Api.Tests.Integration.DocumentProcessing;
+
+public sealed class AzuriteFixture : EmulatorFixtureBase
+{
+    private AzuriteContainer? _container;
+
+    public string ConnectionString { get; private set; } = string.Empty;
+    public string PublicEndpoint { get; private set; } = string.Empty;
+
+    protected override string EmulatorName => "Azurite";
+
+    protected override async Task StartAsync()
+    {
+        _container = new AzuriteBuilder().WithImage(TestcontainersConfiguration.AzuriteImage).Build();
+        await _container.StartAsync();
+        ConnectionString = _container.GetConnectionString();
+        PublicEndpoint = $"http://127.0.0.1:{_container.GetMappedPublicPort(TestcontainersConfiguration.AzuriteBlobPort)}";
+    }
+
+    protected override async Task StopAsync()
+    {
+        if (_container is not null)
+        {
+            await _container.DisposeAsync();
+        }
+    }
+}
+```
+
+- [ ] **Step 4: Il test**
 
 ```csharp
 using Api.Services.Pdf;
@@ -1389,85 +1756,53 @@ using Azure.Storage.Blobs;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Testcontainers.Azurite;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;
 
-/// <summary>
-/// Ciclo completo Store → Exists → Retrieve → SAS → Delete contro Azurite vero. Gli emulatori sono L3
-/// (spec 2026-10-02 dei livelli di dipendenza): senza Docker il test SALTA con il comando per abilitarlo.
-/// </summary>
+/// <summary>Ciclo completo Store → Exists → Retrieve → SAS → Delete contro Azurite vero (un container per classe).</summary>
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Feature", "AzureBlobStorage")]
-public sealed class AzureBlobStorageIntegrationTests : IAsyncLifetime
+public sealed class AzureBlobStorageIntegrationTests : IClassFixture<AzuriteFixture>
 {
-    private AzuriteContainer? _azurite;
-    private string? _unavailableReason;
-    private AzureBlobStorageService _sut = null!;
-    private string _publicEndpoint = null!;
+    private readonly AzuriteFixture _azurite;
 
-    public async ValueTask InitializeAsync()
+    public AzureBlobStorageIntegrationTests(AzuriteFixture azurite)
     {
-        try
-        {
-            _azurite = new AzuriteBuilder().WithImage(TestcontainersConfiguration.AzuriteImage).Build();
-            await _azurite.StartAsync();
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            _unavailableReason = ex.Message;
-            return;
-        }
+        _azurite = azurite;
+    }
 
-        var connectionString = _azurite.GetConnectionString();
-        var serviceClient = new BlobServiceClient(connectionString);
+    private AzureBlobStorageService CreateSut()
+    {
+        var serviceClient = new BlobServiceClient(_azurite.ConnectionString);
         var container = serviceClient.GetBlobContainerClient(TestcontainersConfiguration.AzuriteTestContainer);
-        _publicEndpoint = $"http://127.0.0.1:{_azurite.GetMappedPublicPort(TestcontainersConfiguration.AzuriteBlobPort)}";
-
-        _sut = new AzureBlobStorageService(
-            serviceClient,
-            container,
-            new AzureBlobStorageOptions
-            {
-                ConnectionString = connectionString,
-                ContainerName = TestcontainersConfiguration.AzuriteTestContainer,
-                PublicBlobEndpoint = _publicEndpoint,
-                SasExpirySeconds = 300,
-            },
-            Mock.Of<ILogger<AzureBlobStorageService>>());
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_azurite is not null)
+        AzureStorageConnectionString.TryParse(_azurite.ConnectionString, out var accountName, out var accountKey);
+        return new AzureBlobStorageService(serviceClient, container, new AzureBlobStorageOptions
         {
-            await _azurite.DisposeAsync();
-        }
-    }
-
-    private void SkipIfUnavailable()
-    {
-        if (_unavailableReason is not null)
-        {
-            Assert.Skip($"PREVISTO: Azurite non avviato ({_unavailableReason}). Serve Docker; in locale: cd infra && make dev-azure-local");
-        }
+            ConnectionString = _azurite.ConnectionString,
+            ContainerName = TestcontainersConfiguration.AzuriteTestContainer,
+            PublicBlobEndpoint = _azurite.PublicEndpoint,
+            SasExpirySeconds = 300,
+            AccountName = accountName,
+            AccountKey = accountKey,
+        }, Mock.Of<ILogger<AzureBlobStorageService>>());
     }
 
     [Fact]
     public async Task StoreExistsRetrieveSignDelete_RoundTrip()
     {
-        SkipIfUnavailable();
+        _azurite.SkipIfUnavailable();
+        var sut = CreateSut();
         var payload = new byte[] { 0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34 }; // "%PDF-1.4"
         using var content = new MemoryStream(payload);
 
-        var stored = await _sut.StoreAsync(content, "rulebook.pdf", BlobCategory.Pdf, "game-rt");
+        var stored = await sut.StoreAsync(content, "rulebook.pdf", BlobCategory.Pdf, "game-rt");
         stored.Success.Should().BeTrue(stored.ErrorMessage);
 
-        (await _sut.ExistsAsync(stored.FileId!, BlobCategory.Pdf, "game-rt")).Should().BeTrue();
+        (await sut.ExistsAsync(stored.FileId!, BlobCategory.Pdf, "game-rt")).Should().BeTrue();
 
-        await using (var retrieved = await _sut.RetrieveAsync(stored.FileId!, BlobCategory.Pdf, "game-rt"))
+        await using (var retrieved = await sut.RetrieveAsync(stored.FileId!, BlobCategory.Pdf, "game-rt"))
         {
             retrieved.Should().NotBeNull();
             using var copy = new MemoryStream();
@@ -1475,71 +1810,76 @@ public sealed class AzureBlobStorageIntegrationTests : IAsyncLifetime
             copy.ToArray().Should().Equal(payload);
         }
 
-        var url = await _sut.GetPresignedDownloadUrlAsync(stored.FileId!, BlobCategory.Pdf, "game-rt");
-        url.Should().NotBeNull().And.StartWith(_publicEndpoint);
+        var url = await sut.GetPresignedDownloadUrlAsync(stored.FileId!, BlobCategory.Pdf, "game-rt");
+        url.Should().NotBeNull().And.StartWith(_azurite.PublicEndpoint);
         using (var http = new HttpClient())
         {
-            var bytes = await http.GetByteArrayAsync(new Uri(url!));
-            bytes.Should().Equal(payload);
+            (await http.GetByteArrayAsync(new Uri(url!))).Should().Equal(payload);
         }
 
-        (await _sut.DeleteAsync(stored.FileId!, BlobCategory.Pdf, "game-rt")).Should().BeTrue();
-        (await _sut.ExistsAsync(stored.FileId!, BlobCategory.Pdf, "game-rt")).Should().BeFalse();
+        (await sut.DeleteAsync(stored.FileId!, BlobCategory.Pdf, "game-rt")).Should().BeTrue();
+        (await sut.ExistsAsync(stored.FileId!, BlobCategory.Pdf, "game-rt")).Should().BeFalse();
     }
 
     [Fact]
     public async Task RawKey_StoreSignRetrieveDelete_RoundTrip()
     {
-        SkipIfUnavailable();
+        _azurite.SkipIfUnavailable();
+        var sut = CreateSut();
         var payload = new byte[] { 1, 2, 3, 4 };
         using var content = new MemoryStream(payload);
 
-        (await _sut.StoreRawKeyAsync("covers/game-rt/cover.png", content, "image/png")).Should().BeTrue();
+        (await sut.StoreRawKeyAsync("covers/game-rt/cover.png", content, "image/png")).Should().BeTrue();
 
-        var url = await _sut.GetPresignedUrlForRawKeyAsync("covers/game-rt/cover.png", 60);
+        var url = await sut.GetPresignedUrlForRawKeyAsync("covers/game-rt/cover.png", 60);
         url.Should().NotBeNull().And.Contain("covers/game-rt/cover.png?");
+        using (var http = new HttpClient())
+        {
+            (await http.GetByteArrayAsync(new Uri(url!))).Should().Equal(payload);
+        }
 
-        await using (var retrieved = await _sut.RetrieveRawKeyAsync("covers/game-rt/cover.png"))
+        await using (var retrieved = await sut.RetrieveRawKeyAsync("covers/game-rt/cover.png"))
         {
             using var copy = new MemoryStream();
             await retrieved!.CopyToAsync(copy);
             copy.ToArray().Should().Equal(payload);
         }
 
-        (await _sut.DeleteRawKeyAsync("covers/game-rt/cover.png")).Should().BeTrue();
-        (await _sut.GetPresignedUrlForRawKeyAsync("covers/game-rt/cover.png")).Should().BeNull();
+        (await sut.DeleteRawKeyAsync("covers/game-rt/cover.png")).Should().BeTrue();
+        (await sut.GetPresignedUrlForRawKeyAsync("covers/game-rt/cover.png")).Should().BeNull();
     }
 }
 ```
 
-- [ ] **Step 3: Eseguire**
+- [ ] **Step 5: Eseguire**
 
 Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AzureBlobStorageIntegrationTests"`
-Expected: 2 superati con Docker attivo (prima esecuzione: pull dell'immagine). Senza Docker: 2 salti con prefisso `PREVISTO:`.
+Expected: 2 superati con Docker. Se Azurite rifiuta la versione API dell'SDK (`InvalidHeaderValue` su `x-ms-version`), aggiungere alla fixture `.WithCommand("azurite", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0", "--skipApiVersionCheck", "--loose")` e riportarlo nel report. Senza Docker: 2 salti `PREVISTO:`.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add apps/api/tests/Api.Tests/Api.Tests.csproj apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs apps/api/tests/Api.Tests/Integration/DocumentProcessing/AzureBlobStorageIntegrationTests.cs
-git commit -m "test(storage): round-trip del provider azureblob su Azurite" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add apps/api/tests/Api.Tests/Api.Tests.csproj apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs apps/api/tests/Api.Tests/Infrastructure/DockerDaemonProbe.cs apps/api/tests/Api.Tests/Infrastructure/EmulatorFixtureBase.cs apps/api/tests/Api.Tests/Integration/DocumentProcessing/AzuriteFixture.cs apps/api/tests/Api.Tests/Integration/DocumentProcessing/AzureBlobStorageIntegrationTests.cs
+git commit -m "test(storage): round-trip del provider azureblob su Azurite" -m "Fixture per classe; salto PREVISTO senza Docker, GUASTO se il container non parte." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
-### Task 4: Sorgenti `IConfiguration` da App Configuration e Key Vault
+### Task 4: Sorgenti `IConfiguration` da App Configuration (HMAC) e Key Vault
 
 **Files:**
-- Create: `apps/api/src/Api/Infrastructure/Azure/StaticTokenCredential.cs`
-- Create: `apps/api/src/Api/Infrastructure/Azure/EnvironmentStyleKeyVaultSecretManager.cs`
-- Create: `apps/api/src/Api/Infrastructure/Azure/AzureConfigurationSources.cs`
+- Create: `apps/api/src/Api/Infrastructure/AzureSdk/StaticTokenCredential.cs`
+- Create: `apps/api/src/Api/Infrastructure/AzureSdk/EnvironmentStyleKeyVaultSecretManager.cs`
+- Create: `apps/api/src/Api/Infrastructure/AzureSdk/AzureConfigurationSources.cs`
 - Modify: `apps/api/src/Api/Program.cs` (subito dopo `var builder = WebApplication.CreateBuilder(args);`, PRIMA del blocco `SecretLoader`)
 - Modify: `apps/api/src/Api/Api.csproj`
-- Test: `apps/api/tests/Api.Tests/Infrastructure/Azure/EnvironmentStyleKeyVaultSecretManagerTests.cs`
-- Test: `apps/api/tests/Api.Tests/Infrastructure/Azure/AzureConfigurationSourcesTests.cs`
+- Create: `apps/api/tests/Api.Tests/Integration/Infrastructure/AppConfigurationEmulatorFixture.cs`
+- Test: `apps/api/tests/Api.Tests/Infrastructure/AzureSdk/EnvironmentStyleKeyVaultSecretManagerTests.cs`
+- Test: `apps/api/tests/Api.Tests/Infrastructure/AzureSdk/AzureConfigurationSourcesTests.cs`
 - Test: `apps/api/tests/Api.Tests/Integration/Infrastructure/AppConfigurationEmulatorIntegrationTests.cs`
 
 **Interfaces:**
-- Consumes: `AzureSdkHttpClients.AllowInsecureTls(IConfiguration)` (Task 2).
-- Produces: `AzureConfigurationSources.AddAzureConfigurationSources(this ConfigurationManager configuration)`; chiavi `AZURE_APPCONFIG_ENDPOINT`, `AZURE_APPCONFIG_ANONYMOUS`, `AZURE_KEYVAULT_URI`, `AZURE_KEYVAULT_ANONYMOUS`; `StaticTokenCredential`; `EnvironmentStyleKeyVaultSecretManager.GetKey`.
+- Consumes: `AzureSdkHttpClients.AllowInsecureTls(IConfiguration)` (Task 2), `EmulatorFixtureBase` (Task 3), credenziali HMAC dell'emulatore (Task 1).
+- Produces: `AzureConfigurationSources.AddAzureConfigurationSources(this IConfigurationBuilder builder, IConfiguration settings)`; chiavi `AZURE_APPCONFIG_CONNECTION_STRING` (HMAC: emulatore o store con chiavi di accesso), `AZURE_APPCONFIG_ENDPOINT` (Azure vero con `DefaultAzureCredential`), `AZURE_KEYVAULT_URI`, `AZURE_KEYVAULT_ANONYMOUS`; `StaticTokenCredential(string token)`; `EnvironmentStyleKeyVaultSecretManager.GetKey`.
 
 - [ ] **Step 1: Pacchetti**
 
@@ -1552,31 +1892,31 @@ dotnet add package Azure.Extensions.AspNetCore.Configuration.Secrets --version 1
 - [ ] **Step 2: Test del mapping dei nomi dei secret**
 
 ```csharp
-using Api.Infrastructure.Azure;
+using Api.Infrastructure.AzureSdk;
 using Api.Tests.Constants;
 using Azure.Security.KeyVault.Secrets;
 using FluentAssertions;
 using Xunit;
 
-namespace Api.Tests.Infrastructure.Azure;
+namespace Api.Tests.Infrastructure.AzureSdk;
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Infrastructure")]
 public sealed class EnvironmentStyleKeyVaultSecretManagerTests
 {
-    private static KeyVaultSecret Secret(string name) =>
-        SecretModelFactory.KeyVaultSecret(SecretModelFactory.SecretProperties(new Uri($"https://vault.local/secrets/{name}"), name: name), "v");
-
     [Theory]
     [InlineData("OPENROUTER-API-KEY", "OPENROUTER_API_KEY")]
     [InlineData("Embedding--Provider", "Embedding:Provider")]
-    [InlineData("Seq--Api-Key", "Seq:Api_Key")]
+    [InlineData("Seq--ApiKey", "Seq:ApiKey")]
     [InlineData("plain", "plain")]
-    public void GetKey_MapsDoubleDashToSectionAndDashToUnderscore(string secretName, string expectedKey)
+    public void GetKey_MapsDoubleDashToSectionAndSingleDashToUnderscore(string secretName, string expectedKey)
     {
+        // Convenzione (spec §4.2): `--` separa le sezioni, `-` sta per `_` nei nomi in stile variabile
+        // d'ambiente. Una chiave CamelCase con trattino interno (es. Api-Key) NON è esprimibile: usare il
+        // nome CamelCase senza trattini (Seq--ApiKey).
         var sut = new EnvironmentStyleKeyVaultSecretManager();
 
-        sut.GetKey(Secret(secretName)).Should().Be(expectedKey);
+        sut.GetKey(new KeyVaultSecret(secretName, "v")).Should().Be(expectedKey);
     }
 }
 ```
@@ -1584,25 +1924,23 @@ public sealed class EnvironmentStyleKeyVaultSecretManagerTests
 - [ ] **Step 3: Test del gating delle sorgenti**
 
 ```csharp
-using Api.Infrastructure.Azure;
+using Api.Infrastructure.AzureSdk;
 using Api.Tests.Constants;
 using Azure.Core;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
-namespace Api.Tests.Infrastructure.Azure;
+namespace Api.Tests.Infrastructure.AzureSdk;
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Infrastructure")]
 public sealed class AzureConfigurationSourcesTests
 {
-    private static ConfigurationManager Manager(params (string Key, string? Value)[] pairs)
-    {
-        var manager = new ConfigurationManager();
-        manager.AddInMemoryCollection(pairs.Select(p => new KeyValuePair<string, string?>(p.Key, p.Value)));
-        return manager;
-    }
+    private static IConfiguration Settings(params (string Key, string? Value)[] pairs) =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(pairs.Select(p => new KeyValuePair<string, string?>(p.Key, p.Value)))
+            .Build();
 
     [Theory]
     [InlineData(null)]
@@ -1610,32 +1948,42 @@ public sealed class AzureConfigurationSourcesTests
     [InlineData("   ")]
     public void AddAzureConfigurationSources_NoEndpoints_AddsNothing(string? value)
     {
-        var manager = Manager(("AZURE_APPCONFIG_ENDPOINT", value), ("AZURE_KEYVAULT_URI", value));
-        var before = manager.Sources.Count;
+        // ConfigurationBuilder (non ConfigurationManager): Add registra la sorgente senza costruirla,
+        // quindi il test ispeziona Sources senza aprire alcuna connessione.
+        var builder = new ConfigurationBuilder();
+        var settings = Settings(("AZURE_APPCONFIG_CONNECTION_STRING", value), ("AZURE_APPCONFIG_ENDPOINT", value), ("AZURE_KEYVAULT_URI", value));
 
-        manager.AddAzureConfigurationSources();
+        builder.AddAzureConfigurationSources(settings);
 
-        manager.Sources.Count.Should().Be(before);
+        builder.Sources.Should().BeEmpty();
     }
 
     [Fact]
-    public void AddAzureConfigurationSources_AppConfigEndpoint_AddsOneSourceWithoutConnecting()
+    public void AddAzureConfigurationSources_AppConfigConnectionString_AddsOneSource()
     {
-        var manager = Manager(("AZURE_APPCONFIG_ENDPOINT", "http://127.0.0.1:9"), ("AZURE_APPCONFIG_ANONYMOUS", "true"));
-        var before = manager.Sources.Count;
+        var builder = new ConfigurationBuilder();
 
-        // Il provider App Configuration si connette solo al Build/Load: aggiungere la sorgente non apre socket.
-        manager.AddAzureConfigurationSources();
+        builder.AddAzureConfigurationSources(Settings(("AZURE_APPCONFIG_CONNECTION_STRING", "Endpoint=http://127.0.0.1:9;Id=i;Secret=c2VjcmV0")));
 
-        manager.Sources.Count.Should().Be(before + 1);
+        builder.Sources.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void AddAzureConfigurationSources_KeyVaultUri_AddsOneSource()
+    {
+        var builder = new ConfigurationBuilder();
+
+        builder.AddAzureConfigurationSources(Settings(("AZURE_KEYVAULT_URI", "https://127.0.0.1:9/"), ("AZURE_KEYVAULT_ANONYMOUS", "true")));
+
+        builder.Sources.Should().HaveCount(1);
     }
 
     [Fact]
     public void AddAzureConfigurationSources_InvalidEndpoint_Throws()
     {
-        var manager = Manager(("AZURE_APPCONFIG_ENDPOINT", "not a url"));
+        var builder = new ConfigurationBuilder();
 
-        var act = () => manager.AddAzureConfigurationSources();
+        var act = () => builder.AddAzureConfigurationSources(Settings(("AZURE_APPCONFIG_ENDPOINT", "not a url")));
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*AZURE_APPCONFIG_ENDPOINT*");
     }
@@ -1656,20 +2004,19 @@ public sealed class AzureConfigurationSourcesTests
 - [ ] **Step 4: Eseguire per vedere il fallimento di compilazione**
 
 Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~EnvironmentStyleKeyVaultSecretManagerTests|FullyQualifiedName~AzureConfigurationSourcesTests"`
-Expected: errori di compilazione sui tre tipi mancanti.
 
-- [ ] **Step 5: Implementare i tre tipi**
+- [ ] **Step 5: Implementare**
 
 `StaticTokenCredential.cs`:
 ```csharp
 using Azure.Core;
 
-namespace Api.Infrastructure.Azure;
+namespace Api.Infrastructure.AzureSdk;
 
 /// <summary>
-/// Credenziale fissa per gli emulatori che accettano l'autenticazione anonima (App Configuration
-/// emulator con <c>Tenant:AnonymousAuthEnabled</c>, Key Vault emulator): gli SDK pretendono un
-/// <see cref="TokenCredential"/>, l'emulatore ignora il bearer. Mai usata nel profilo Azure vero.
+/// Credenziale fissa per il Key Vault emulator (https, bearer ignorato). NON per App Configuration: lì il
+/// bearer su http è rifiutato dall'SDK prima di ogni richiesta, e la via è la connection string HMAC.
+/// Mai usata nel profilo Azure vero.
 /// </summary>
 internal sealed class StaticTokenCredential : TokenCredential
 {
@@ -1694,13 +2041,14 @@ internal sealed class StaticTokenCredential : TokenCredential
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Azure.Security.KeyVault.Secrets;
 
-namespace Api.Infrastructure.Azure;
+namespace Api.Infrastructure.AzureSdk;
 
 /// <summary>
-/// Convenzione dei nomi (spec azure-local §4.2): i secret portano i nomi delle variabili d'ambiente
-/// che il repo già usa, con <c>-</c> al posto di <c>_</c> perché Key Vault non ammette l'underscore;
-/// <c>--</c> resta il separatore di sezione come nel manager di default. Esempi:
-/// <c>OPENROUTER-API-KEY</c> → <c>OPENROUTER_API_KEY</c>, <c>Embedding--Provider</c> → <c>Embedding:Provider</c>.
+/// Convenzione dei nomi (spec azure-local §4.2): i secret portano i nomi delle variabili d'ambiente che il repo
+/// già usa, con <c>-</c> al posto di <c>_</c> (Key Vault non ammette l'underscore); <c>--</c> resta il separatore
+/// di sezione come nel manager di default. <c>OPENROUTER-API-KEY</c> → <c>OPENROUTER_API_KEY</c>,
+/// <c>Embedding--Provider</c> → <c>Embedding:Provider</c>. Le chiavi CamelCase con trattino interno non sono
+/// esprimibili: usare il nome senza trattini (<c>Seq--ApiKey</c>).
 /// </summary>
 internal sealed class EnvironmentStyleKeyVaultSecretManager : KeyVaultSecretManager
 {
@@ -1711,46 +2059,54 @@ internal sealed class EnvironmentStyleKeyVaultSecretManager : KeyVaultSecretMana
 
 `AzureConfigurationSources.cs`:
 ```csharp
-using Azure.Core;
 using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
-namespace Api.Infrastructure.Azure;
+namespace Api.Infrastructure.AzureSdk;
 
 /// <summary>
-/// Sorgenti <see cref="IConfiguration"/> Azure (spec azure-local §4.2). Girano PRIMA del container DI,
-/// quindi non passano dal client <c>AzureSdk</c> pinnato: gli endpoint vengono da configurazione statica
-/// (mai da input utente), la stessa condizione con cui il gate di egress esenta OpenRouter o Resend.
-/// Con le variabili assenti o vuote non viene aggiunta alcuna sorgente.
+/// Sorgenti <see cref="IConfiguration"/> Azure (spec azure-local §4.2). Girano PRIMA del container DI, quindi non
+/// passano dal client <c>AzureSdk</c> pinnato: gli endpoint vengono da configurazione statica (mai da input
+/// utente), la stessa condizione con cui il gate di egress esenta OpenRouter o Resend. Con le variabili assenti o
+/// vuote non viene aggiunta alcuna sorgente. Le chiavi lette da qui VINCONO sulle variabili d'ambiente
+/// (aggiunte dopo); <c>SecretLoader</c> aggiunge solo le chiavi ancora assenti.
 /// </summary>
 internal static class AzureConfigurationSources
 {
+    public const string AppConfigConnectionStringKey = "AZURE_APPCONFIG_CONNECTION_STRING";
     public const string AppConfigEndpointKey = "AZURE_APPCONFIG_ENDPOINT";
-    public const string AppConfigAnonymousKey = "AZURE_APPCONFIG_ANONYMOUS";
     public const string KeyVaultUriKey = "AZURE_KEYVAULT_URI";
     public const string KeyVaultAnonymousKey = "AZURE_KEYVAULT_ANONYMOUS";
     private const string AnonymousToken = "anonymous";
 
-    public static ConfigurationManager AddAzureConfigurationSources(this ConfigurationManager configuration)
+    public static IConfigurationBuilder AddAzureConfigurationSources(this IConfigurationBuilder builder, IConfiguration settings)
     {
-        var appConfigEndpoint = configuration[AppConfigEndpointKey];
-        if (!string.IsNullOrWhiteSpace(appConfigEndpoint))
+        var appConfigConnectionString = settings[AppConfigConnectionStringKey];
+        var appConfigEndpoint = settings[AppConfigEndpointKey];
+        if (!string.IsNullOrWhiteSpace(appConfigConnectionString))
         {
+            // HMAC (emulatore o store con chiavi di accesso): funziona anche su http.
+            builder.AddAzureAppConfiguration(options => options
+                .Connect(appConfigConnectionString.Trim())
+                .Select(KeyFilter.Any, LabelFilter.Null));
+        }
+        else if (!string.IsNullOrWhiteSpace(appConfigEndpoint))
+        {
+            // Azure vero: identità Entra, endpoint https.
             var endpoint = ParseAbsoluteUri(appConfigEndpoint, AppConfigEndpointKey);
-            var credential = CredentialFor(configuration, AppConfigAnonymousKey);
-            configuration.AddAzureAppConfiguration(options => options
-                .Connect(endpoint, credential)
+            builder.AddAzureAppConfiguration(options => options
+                .Connect(endpoint, new DefaultAzureCredential())
                 .Select(KeyFilter.Any, LabelFilter.Null));
         }
 
-        var keyVaultUri = configuration[KeyVaultUriKey];
+        var keyVaultUri = settings[KeyVaultUriKey];
         if (!string.IsNullOrWhiteSpace(keyVaultUri))
         {
             var vault = ParseAbsoluteUri(keyVaultUri, KeyVaultUriKey);
             var clientOptions = new SecretClientOptions { DisableChallengeResourceVerification = true };
-            if (AzureSdkHttpClients.AllowInsecureTls(configuration))
+            if (AzureSdkHttpClients.AllowInsecureTls(settings))
             {
                 // Solo profilo azure-local + opt-in esplicito: certificato self-signed del Key Vault emulator.
                 var handler = new SocketsHttpHandler();
@@ -1758,17 +2114,13 @@ internal static class AzureConfigurationSources
                 clientOptions.Transport = new HttpClientTransport(new HttpClient(handler));
             }
 
-            var client = new SecretClient(vault, CredentialFor(configuration, KeyVaultAnonymousKey), clientOptions);
-            configuration.AddAzureKeyVault(client, new EnvironmentStyleKeyVaultSecretManager());
+            var anonymous = string.Equals(settings[KeyVaultAnonymousKey], "true", StringComparison.OrdinalIgnoreCase);
+            var client = new SecretClient(vault, anonymous ? new StaticTokenCredential(AnonymousToken) : new DefaultAzureCredential(), clientOptions);
+            builder.AddAzureKeyVault(client, new EnvironmentStyleKeyVaultSecretManager());
         }
 
-        return configuration;
+        return builder;
     }
-
-    private static TokenCredential CredentialFor(IConfiguration configuration, string anonymousKey) =>
-        string.Equals(configuration[anonymousKey], "true", StringComparison.OrdinalIgnoreCase)
-            ? new StaticTokenCredential(AnonymousToken)
-            : new DefaultAzureCredential();
 
     private static Uri ParseAbsoluteUri(string value, string key)
     {
@@ -1785,26 +2137,75 @@ internal static class AzureConfigurationSources
 In `Program.cs`, subito dopo `var builder = WebApplication.CreateBuilder(args);`:
 ```csharp
 // Spec azure-local §4.2: App Configuration e Key Vault come sorgenti IConfiguration, attive SOLO con
-// AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI valorizzate. Vanno prima del SecretLoader, che aggiunge
-// soltanto le chiavi ancora assenti.
-builder.Configuration.AddAzureConfigurationSources();
+// AZURE_APPCONFIG_CONNECTION_STRING / AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI valorizzate. Su
+// ConfigurationManager l'Add carica subito la sorgente: qui è voluto. Prima del SecretLoader, che
+// aggiunge soltanto le chiavi ancora assenti.
+builder.Configuration.AddAzureConfigurationSources(builder.Configuration);
 ```
-(`using Api.Infrastructure.Azure;` è già presente da Task 2.)
+(`using Api.Infrastructure.AzureSdk;` già presente da Task 2.)
 
 - [ ] **Step 6: Eseguire i test unit**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~EnvironmentStyleKeyVaultSecretManagerTests|FullyQualifiedName~AzureConfigurationSourcesTests"`
-Expected: tutti verdi. Se `SecretModelFactory.SecretProperties` ha un'altra firma nella 4.x di `Azure.Security.KeyVault.Secrets` (dipendenza transitiva), costruire il secret con `new KeyVaultSecret(name, "v")`: `Name` è letto dal costruttore.
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~EnvironmentStyleKeyVaultSecretManagerTests|FullyQualifiedName~AzureConfigurationSourcesTests"` → Expected: verdi.
 
-- [ ] **Step 7: Test di integrazione contro l'App Configuration emulator**
+- [ ] **Step 7: Fixture e test di integrazione contro l'App Configuration emulator**
 
+`AppConfigurationEmulatorFixture.cs`:
 ```csharp
-using System.Net.Http.Json;
-using System.Text;
-using Api.Infrastructure.Azure;
-using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+
+namespace Api.Tests.Integration.Infrastructure;
+
+public sealed class AppConfigurationEmulatorFixture : EmulatorFixtureBase
+{
+    public const string Image = "mcr.microsoft.com/azure-app-configuration/app-configuration-emulator:1.2.0";
+    public const int Port = 8483;
+    public const string AccessKeyId = "azure-local-dev";
+    public const string AccessKeySecret = "YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm";
+
+    private IContainer? _container;
+
+    public string Endpoint { get; private set; } = string.Empty;
+    public string ConnectionString => $"Endpoint={Endpoint};Id={AccessKeyId};Secret={AccessKeySecret}";
+
+    protected override string EmulatorName => "App Configuration emulator";
+
+    protected override async Task StartAsync()
+    {
+        _container = new ContainerBuilder()
+            .WithImage(Image)
+            .WithEnvironment("Tenant__AnonymousAuthEnabled", "true")
+            .WithEnvironment("Tenant__HmacSha256Enabled", "true")
+            .WithEnvironment("Tenant__AccessKeys__0__Id", AccessKeyId)
+            .WithEnvironment("Tenant__AccessKeys__0__Name", "primary")
+            .WithEnvironment("Tenant__AccessKeys__0__Secret", AccessKeySecret)
+            .WithEnvironment("Tenant__AccessKeys__0__ReadOnly", "false")
+            .WithEnvironment("Authentication__Anonymous__AnonymousUserRole", "Owner")
+            .WithEnvironment("Hosting__IPAddress", "0.0.0.0")
+            .WithPortBinding(Port, true)
+            .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPath("/health").ForPort(Port)))
+            .Build();
+        await _container.StartAsync();
+        Endpoint = $"http://127.0.0.1:{_container.GetMappedPublicPort(Port)}";
+    }
+
+    protected override async Task StopAsync()
+    {
+        if (_container is not null)
+        {
+            await _container.DisposeAsync();
+        }
+    }
+}
+```
+
+`AppConfigurationEmulatorIntegrationTests.cs`:
+```csharp
+using System.Text;
+using Api.Infrastructure.AzureSdk;
+using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
@@ -1814,66 +2215,53 @@ namespace Api.Tests.Integration.Infrastructure;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Infrastructure")]
 [Trait("Feature", "AzureAppConfiguration")]
-public sealed class AppConfigurationEmulatorIntegrationTests : IAsyncLifetime
+public sealed class AppConfigurationEmulatorIntegrationTests : IClassFixture<AppConfigurationEmulatorFixture>
 {
-    private const string Image = "mcr.microsoft.com/azure-app-configuration/app-configuration-emulator:1.2.0";
-    private const int Port = 8483;
-    private IContainer? _emulator;
-    private string? _unavailableReason;
-    private string _endpoint = null!;
+    private readonly AppConfigurationEmulatorFixture _emulator;
 
-    public async ValueTask InitializeAsync()
+    public AppConfigurationEmulatorIntegrationTests(AppConfigurationEmulatorFixture emulator)
     {
-        try
-        {
-            _emulator = new ContainerBuilder()
-                .WithImage(Image)
-                .WithEnvironment("Tenant__AnonymousAuthEnabled", "true")
-                .WithEnvironment("Tenant__HmacSha256Enabled", "false")
-                .WithEnvironment("Authentication__Anonymous__AnonymousUserRole", "Owner")
-                .WithEnvironment("Hosting__IPAddress", "0.0.0.0")
-                .WithPortBinding(Port, true)
-                .WithWaitStrategy(Wait.ForUnixContainer().UntilHttpRequestIsSucceeded(r => r.ForPath("/health").ForPort(Port)))
-                .Build();
-            await _emulator.StartAsync();
-            _endpoint = $"http://127.0.0.1:{_emulator.GetMappedPublicPort(Port)}";
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            _unavailableReason = ex.Message;
-        }
+        _emulator = emulator;
     }
 
-    public async ValueTask DisposeAsync()
+    private async Task SeedAsync(string key, string value)
     {
-        if (_emulator is not null)
-        {
-            await _emulator.DisposeAsync();
-        }
+        using var http = new HttpClient();
+        using var body = new StringContent($"{{\"value\":\"{value}\"}}", Encoding.UTF8, "application/vnd.microsoft.appconfig.kv+json");
+        var put = await http.PutAsync(new Uri($"{_emulator.Endpoint}/kv/{Uri.EscapeDataString(key)}?api-version=2023-11-01"), body);
+        put.EnsureSuccessStatusCode();
     }
 
     [Fact]
-    public async Task ConfigurationManager_ReadsSeededKeyFromEmulator()
+    public async Task HmacConnectionString_ReadsSeededKey()
     {
-        if (_unavailableReason is not null)
-        {
-            Assert.Skip($"PREVISTO: App Configuration emulator non avviato ({_unavailableReason}). Serve Docker; in locale: cd infra && make dev-azure-local");
-        }
+        _emulator.SkipIfUnavailable();
+        await SeedAsync("Azure:Profile:Greeting", "from-emulator");
+        var settings = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [AzureConfigurationSources.AppConfigConnectionStringKey] = _emulator.ConnectionString })
+            .Build();
 
-        using var http = new HttpClient();
-        using var body = new StringContent("{\"value\":\"from-emulator\"}", Encoding.UTF8, "application/vnd.microsoft.appconfig.kv+json");
-        var put = await http.PutAsync(new Uri($"{_endpoint}/kv/{Uri.EscapeDataString("Azure:Profile:Greeting")}?api-version=2023-11-01"), body);
-        put.EnsureSuccessStatusCode();
+        var configuration = new ConfigurationBuilder().AddAzureConfigurationSources(settings).Build();
 
-        var manager = new ConfigurationManager();
-        manager.AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            [AzureConfigurationSources.AppConfigEndpointKey] = _endpoint,
-            [AzureConfigurationSources.AppConfigAnonymousKey] = "true",
-        });
-        manager.AddAzureConfigurationSources();
+        configuration["Azure:Profile:Greeting"].Should().Be("from-emulator");
+    }
 
-        manager["Azure:Profile:Greeting"].Should().Be("from-emulator");
+    [Fact]
+    public async Task HmacConnectionString_WinsOverEnvironmentStyleValue()
+    {
+        _emulator.SkipIfUnavailable();
+        await SeedAsync("Azure:Profile:Precedence", "from-emulator");
+        var settings = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [AzureConfigurationSources.AppConfigConnectionStringKey] = _emulator.ConnectionString })
+            .Build();
+
+        // Stesso ordine di Program.cs: prima le "variabili d'ambiente" (in-memory), poi le sorgenti Azure.
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Azure:Profile:Precedence"] = "from-env" })
+            .AddAzureConfigurationSources(settings)
+            .Build();
+
+        configuration["Azure:Profile:Precedence"].Should().Be("from-emulator");
     }
 }
 ```
@@ -1881,13 +2269,13 @@ public sealed class AppConfigurationEmulatorIntegrationTests : IAsyncLifetime
 - [ ] **Step 8: Eseguire il test di integrazione**
 
 Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~AppConfigurationEmulatorIntegrationTests"`
-Expected: 1 superato. Se il provider risponde 401 contro l'emulatore (il bearer `anonymous` non viene ignorato), riportare BLOCKED con il corpo della risposta: il controller decide tra HMAC e un'altra via; non "aggiustare" il test.
+Expected: 2 superati. Se l'emulatore risponde 401 all'HMAC (il binder non ha letto `Tenant__AccessKeys__0__Secret` come byte[] base64), riportare BLOCKED con il corpo della risposta e il log del container (`docker logs`): il controller decide; non modificare l'asserzione.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add apps/api/src/Api/Infrastructure/Azure apps/api/src/Api/Program.cs apps/api/src/Api/Api.csproj apps/api/tests/Api.Tests/Infrastructure/Azure apps/api/tests/Api.Tests/Integration/Infrastructure/AppConfigurationEmulatorIntegrationTests.cs
-git commit -m "feat(config): App Configuration e Key Vault come sorgenti IConfiguration" -m "Attive solo con AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI; credenziale fissa per gli emulatori anonimi; nomi dei secret in stile variabile d'ambiente." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add apps/api/src/Api/Infrastructure/AzureSdk/StaticTokenCredential.cs apps/api/src/Api/Infrastructure/AzureSdk/EnvironmentStyleKeyVaultSecretManager.cs apps/api/src/Api/Infrastructure/AzureSdk/AzureConfigurationSources.cs apps/api/src/Api/Program.cs apps/api/src/Api/Api.csproj apps/api/tests/Api.Tests/Infrastructure/AzureSdk/EnvironmentStyleKeyVaultSecretManagerTests.cs apps/api/tests/Api.Tests/Infrastructure/AzureSdk/AzureConfigurationSourcesTests.cs apps/api/tests/Api.Tests/Integration/Infrastructure/AppConfigurationEmulatorFixture.cs apps/api/tests/Api.Tests/Integration/Infrastructure/AppConfigurationEmulatorIntegrationTests.cs
+git commit -m "feat(config): App Configuration (HMAC) e Key Vault come sorgenti IConfiguration" -m "Attive solo con AZURE_APPCONFIG_CONNECTION_STRING / AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI; credenziale fissa per il Key Vault emulator; nomi dei secret in stile variabile d'ambiente." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
@@ -1896,21 +2284,24 @@ git commit -m "feat(config): App Configuration e Key Vault come sorgenti IConfig
 
 **Files:**
 - Create: `apps/api/src/Api/SharedKernel/Application/Interfaces/IIntegrationEventPublisher.cs`
+- Create: `apps/api/src/Api/SharedKernel/Application/Interfaces/IVersionedContract.cs`
 - Create: `apps/api/src/Api/Infrastructure/Messaging/NullIntegrationEventPublisher.cs`
 - Create: `apps/api/src/Api/Infrastructure/Messaging/ServiceBusIntegrationEventPublisher.cs`
 - Create: `apps/api/src/Api/Infrastructure/Messaging/MessagingServiceExtensions.cs`
 - Create: `apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/IntegrationEvents/PdfUploadedIntegrationEvent.cs`
 - Create: `apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/EventHandlers/PdfUploadedIntegrationEventRelay.cs`
 - Create: `apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.PdfIntegrationEvents.cs`
+- Modify: `apps/api/src/Api/Observability/MeepleAiMetrics.cs` (elenco dei file partial nel commento)
 - Modify: `apps/api/src/Api/Program.cs` (dopo `AddAzureSdkHttpClients`)
 - Modify: `apps/api/src/Api/Api.csproj`
+- Create: `apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/PdfUploadedEventMetricsCollection.cs`
 - Test: `apps/api/tests/Api.Tests/Infrastructure/Messaging/ServiceBusIntegrationEventPublisherTests.cs`
 - Test: `apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/PdfUploadedIntegrationEventRelayTests.cs`
 - Test: `apps/api/tests/Api.Tests/Infrastructure/Messaging/MessagingServiceExtensionsTests.cs`
 
 **Interfaces:**
-- Consumes: `IntegrationEventBase(string sourceContext)` (`SharedKernel/Domain/Events`), `PdfStateChangedEvent` (`PdfDocumentId`, `PreviousState`, `NewState`), `PdfProcessingState.Pending/Uploading`, `IPdfDocumentRepository.GetByIdAsync(Guid, CancellationToken)`, `PdfDocument.GameId/SharedGameId/FilePath`, `INotificationHandler<T>` (MediatR).
-- Produces: `IIntegrationEventPublisher.PublishAsync<TEvent>(TEvent, CancellationToken) where TEvent : IntegrationEventBase`; `PdfUploadedIntegrationEvent(Guid pdfDocumentId, Guid gameId, Guid? sharedGameId, string filePath)` con `ContractVersion = "v1"`, `CurrentContractVersion`; JSON camelCase con chiavi `eventId, occurredAt, sourceContext, contractVersion, pdfDocumentId, gameId, sharedGameId, filePath`; `ServiceBusIntegrationEventPublisher.JsonOptions` (static, usato dal test di contratto in Task 8); `MeepleAiMetrics.RecordPdfUploadedEvent(string outcome)` con `PdfUploadedEventOutcomes.{Published, PublishFailed, Received, Indexed, Noop, NotFound, Rejected, Failed}`; chiavi `AZURE_SERVICEBUS_CONNECTION_STRING`, `AZURE_SERVICEBUS_QUEUE` (default `pdf-uploaded`).
+- Consumes: `IntegrationEventBase(string sourceContext)`, `PdfStateChangedEvent`, `PdfProcessingState.Pending/Uploading`, `IPdfDocumentRepository.GetByIdAsync(Guid, CancellationToken)`, `PdfDocument.Id/GameId/SharedGameId/FilePath`, `PdfDocumentBuilder` (test helper esistente: `WithId`, `WithFilePath`, `Build`).
+- Produces: `IIntegrationEventPublisher.PublishAsync<TEvent>(TEvent, CancellationToken) where TEvent : IntegrationEventBase`; `IVersionedContract { string ContractVersion }` (SharedKernel); `PdfUploadedIntegrationEvent(Guid pdfDocumentId, Guid gameId, Guid? sharedGameId, string filePath)` con `ContractVersion = "v1"` e `CurrentContractVersion`; JSON camelCase con chiavi `eventId, occurredAt, sourceContext, contractVersion, pdfDocumentId, gameId, sharedGameId, filePath`; `ServiceBusIntegrationEventPublisher.JsonOptions` (static, usato dal test di contratto in Task 8); `MeepleAiMetrics.RecordPdfUploadedEvent(string outcome)`, `PdfUploadedEventOutcomes.{Published, PublishFailed, NotFound, Received, Indexed, Noop, Rejected, Failed}`, strumento `meepleai.pdf.uploaded_events.total` SENZA unit (il nome Prometheus resta `meepleai_pdf_uploaded_events_total`); chiavi `AZURE_SERVICEBUS_CONNECTION_STRING` (emulatore/SAS), `AZURE_SERVICEBUS_NAMESPACE` (Azure vero, `DefaultAzureCredential`), `AZURE_SERVICEBUS_QUEUE` (default `pdf-uploaded`).
 
 - [ ] **Step 1: Pacchetto**
 
@@ -1968,15 +2359,29 @@ public sealed class ServiceBusIntegrationEventPublisherTests
 }
 ```
 
-- [ ] **Step 3: Test del relay**
+- [ ] **Step 3: Collection non parallela e test del relay** (il `MeterListener` è di processo: la classe gira da sola)
 
+`PdfUploadedEventMetricsCollection.cs`:
 ```csharp
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
+
+/// <summary>Il MeterListener è di processo e non filtra per test: questa classe non gira in parallelo con altre.</summary>
+[CollectionDefinition("PdfUploadedEventMetrics", DisableParallelization = true)]
+public sealed class PdfUploadedEventMetricsCollection;
+```
+
+`PdfUploadedIntegrationEventRelayTests.cs`:
+```csharp
+using System.Diagnostics.Metrics;
 using Api.BoundedContexts.DocumentProcessing.Application.EventHandlers;
 using Api.BoundedContexts.DocumentProcessing.Application.IntegrationEvents;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Api.Tests.Constants;
@@ -1987,6 +2392,7 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 
+[Collection("PdfUploadedEventMetrics")]
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
 public sealed class PdfUploadedIntegrationEventRelayTests
@@ -2002,13 +2408,44 @@ public sealed class PdfUploadedIntegrationEventRelayTests
 
     private PdfDocument SeedDocument(Guid id)
     {
-        // Builder di test esistente (tests/.../DocumentProcessing/TestHelpers/PdfDocumentBuilder.cs).
         var document = new PdfDocumentBuilder()
             .WithId(id)
             .WithFilePath($"pdfs/{Guid.NewGuid():N}/{Guid.NewGuid():N}_rulebook.pdf")
             .Build();
         _repository.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(document);
         return document;
+    }
+
+    private static PdfStateChangedEvent PendingToUploading(Guid pdfId) =>
+        new(pdfId, PdfProcessingState.Pending, PdfProcessingState.Uploading, Guid.NewGuid());
+
+    /// <summary>Raccoglie i tag <c>outcome</c> di <c>meepleai.pdf.uploaded_events.total</c> emessi durante <paramref name="action"/>.</summary>
+    private static async Task<List<string?>> CollectOutcomesAsync(Func<Task> action)
+    {
+        var outcomes = new List<string?>();
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Name == "meepleai.pdf.uploaded_events.total")
+                {
+                    l.EnableMeasurementEvents(instrument);
+                }
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+        {
+            foreach (var tag in tags)
+            {
+                if (tag.Key == "outcome")
+                {
+                    outcomes.Add(tag.Value as string);
+                }
+            }
+        });
+        listener.Start();
+        await action();
+        return outcomes;
     }
 
     [Fact]
@@ -2021,13 +2458,14 @@ public sealed class PdfUploadedIntegrationEventRelayTests
             .Callback<PdfUploadedIntegrationEvent, CancellationToken>((e, _) => published = e)
             .Returns(Task.CompletedTask);
 
-        await _sut.Handle(new PdfStateChangedEvent(pdfId, PdfProcessingState.Pending, PdfProcessingState.Uploading, Guid.NewGuid()), CancellationToken.None);
+        var outcomes = await CollectOutcomesAsync(() => _sut.Handle(PendingToUploading(pdfId), CancellationToken.None));
 
         published.Should().NotBeNull();
         published!.PdfDocumentId.Should().Be(pdfId);
         published.GameId.Should().Be(document.GameId);
         published.FilePath.Should().Be(document.FilePath);
         published.ContractVersion.Should().Be("v1");
+        outcomes.Should().Equal(MeepleAiMetrics.PdfUploadedEventOutcomes.Published);
     }
 
     [Fact]
@@ -2040,15 +2478,15 @@ public sealed class PdfUploadedIntegrationEventRelayTests
     }
 
     [Fact]
-    public async Task Handle_DocumentMissing_DoesNotPublishAndDoesNotThrow()
+    public async Task Handle_DocumentMissing_DoesNotPublishAndCountsNotFound()
     {
         var pdfId = Guid.NewGuid();
         _repository.Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync((PdfDocument?)null);
 
-        var act = () => _sut.Handle(new PdfStateChangedEvent(pdfId, PdfProcessingState.Pending, PdfProcessingState.Uploading, Guid.NewGuid()), CancellationToken.None);
+        var outcomes = await CollectOutcomesAsync(() => _sut.Handle(PendingToUploading(pdfId), CancellationToken.None));
 
-        await act.Should().NotThrowAsync();
         _publisher.Verify(p => p.PublishAsync(It.IsAny<PdfUploadedIntegrationEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        outcomes.Should().Equal(MeepleAiMetrics.PdfUploadedEventOutcomes.NotFound);
     }
 
     [Fact]
@@ -2059,10 +2497,11 @@ public sealed class PdfUploadedIntegrationEventRelayTests
         _publisher.Setup(p => p.PublishAsync(It.IsAny<PdfUploadedIntegrationEvent>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("bus down"));
 
-        var act = () => _sut.Handle(new PdfStateChangedEvent(pdfId, PdfProcessingState.Pending, PdfProcessingState.Uploading, Guid.NewGuid()), CancellationToken.None);
-
         // L'upload NON deve fallire perché il bus è giù (Review Focus 5): il relay assorbe e conta.
-        await act.Should().NotThrowAsync();
+        var act = () => CollectOutcomesAsync(() => _sut.Handle(PendingToUploading(pdfId), CancellationToken.None));
+
+        var outcomes = await act.Should().NotThrowAsync();
+        outcomes.Subject.Should().Equal(MeepleAiMetrics.PdfUploadedEventOutcomes.PublishFailed);
     }
 }
 ```
@@ -2084,10 +2523,10 @@ namespace Api.Tests.Infrastructure.Messaging;
 [Trait("BoundedContext", "Infrastructure")]
 public sealed class MessagingServiceExtensionsTests
 {
-    private static ServiceProvider Build(string? connectionString)
+    private static ServiceProvider Build(params (string Key, string? Value)[] pairs)
     {
         var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["AZURE_SERVICEBUS_CONNECTION_STRING"] = connectionString })
+            .AddInMemoryCollection(pairs.Select(p => new KeyValuePair<string, string?>(p.Key, p.Value)))
             .Build();
         var services = new ServiceCollection();
         services.AddLogging();
@@ -2098,9 +2537,9 @@ public sealed class MessagingServiceExtensionsTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void NoConnectionString_RegistersNullPublisher(string? value)
+    public void NoBus_RegistersNullPublisher(string? value)
     {
-        using var sp = Build(value);
+        using var sp = Build(("AZURE_SERVICEBUS_CONNECTION_STRING", value), ("AZURE_SERVICEBUS_NAMESPACE", value));
 
         sp.GetRequiredService<IIntegrationEventPublisher>().Should().BeOfType<NullIntegrationEventPublisher>();
     }
@@ -2108,9 +2547,17 @@ public sealed class MessagingServiceExtensionsTests
     [Fact]
     public void ConnectionString_RegistersServiceBusPublisher()
     {
-        using var sp = Build("Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;");
-
         // La connessione AMQP è lazy: risolvere il publisher non apre socket.
+        using var sp = Build(("AZURE_SERVICEBUS_CONNECTION_STRING", "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"));
+
+        sp.GetRequiredService<IIntegrationEventPublisher>().Should().BeOfType<ServiceBusIntegrationEventPublisher>();
+    }
+
+    [Fact]
+    public void Namespace_RegistersServiceBusPublisherWithIdentity()
+    {
+        using var sp = Build(("AZURE_SERVICEBUS_NAMESPACE", "meepleai-sb.servicebus.windows.net"));
+
         sp.GetRequiredService<IIntegrationEventPublisher>().Should().BeOfType<ServiceBusIntegrationEventPublisher>();
     }
 }
@@ -2129,12 +2576,23 @@ using Api.SharedKernel.Domain.Events;
 namespace Api.SharedKernel.Application.Interfaces;
 
 /// <summary>
-/// Pubblica un integration event verso un sistema esterno al processo (spec azure-local §4.3). I domain
-/// event restano su MediatR/outbox; questa porta serve ai consumer fuori dall'API (Azure Functions).
+/// Pubblica un integration event verso un sistema esterno al processo (spec azure-local §4.3). I domain event
+/// restano su MediatR/outbox; questa porta serve ai consumer fuori dall'API (Azure Functions).
 /// </summary>
 internal interface IIntegrationEventPublisher
 {
     Task PublishAsync<TEvent>(TEvent integrationEvent, CancellationToken cancellationToken) where TEvent : IntegrationEventBase;
+}
+```
+
+`SharedKernel/Application/Interfaces/IVersionedContract.cs`:
+```csharp
+namespace Api.SharedKernel.Application.Interfaces;
+
+/// <summary>Un integration event con versione di contratto esplicita sul filo (proprietà di messaggio e campo JSON).</summary>
+internal interface IVersionedContract
+{
+    string ContractVersion { get; }
 }
 ```
 
@@ -2211,17 +2669,12 @@ internal sealed class ServiceBusIntegrationEventPublisher : IIntegrationEventPub
         _logger.LogInformation("Published {EventType} {EventId} to {Entity}", typeof(TEvent).Name, integrationEvent.EventId, _sender.EntityPath);
     }
 }
-
-/// <summary>Un integration event con versione di contratto esplicita sul filo.</summary>
-internal interface IVersionedContract
-{
-    string ContractVersion { get; }
-}
 ```
 
 `Infrastructure/Messaging/MessagingServiceExtensions.cs`:
 ```csharp
 using Api.SharedKernel.Application.Interfaces;
+using Azure.Identity;
 using Azure.Messaging.ServiceBus;
 
 namespace Api.Infrastructure.Messaging;
@@ -2229,24 +2682,33 @@ namespace Api.Infrastructure.Messaging;
 internal static class MessagingServiceExtensions
 {
     public const string ConnectionStringKey = "AZURE_SERVICEBUS_CONNECTION_STRING";
+    public const string NamespaceKey = "AZURE_SERVICEBUS_NAMESPACE";
     public const string QueueKey = "AZURE_SERVICEBUS_QUEUE";
     public const string DefaultQueue = "pdf-uploaded";
 
     /// <summary>
     /// Service Bus parla AMQP, non HTTP: il client <c>AzureSdk</c> pinnato non si applica. L'endpoint viene da
-    /// configurazione statica (stessa esenzione di OpenRouter/Resend nel gate di egress).
+    /// configurazione statica (stessa esenzione di OpenRouter/Resend nel gate di egress). Con la connection
+    /// string (emulatore o SAS) o il namespace FQDN (Azure vero, identità Entra) registra il publisher Service Bus;
+    /// altrimenti il publisher nullo.
     /// </summary>
     public static IServiceCollection AddIntegrationEventPublishing(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration[ConnectionStringKey];
-        if (string.IsNullOrWhiteSpace(connectionString))
+        var fullyQualifiedNamespace = configuration[NamespaceKey];
+        var hasConnectionString = !string.IsNullOrWhiteSpace(connectionString);
+        var hasNamespace = !string.IsNullOrWhiteSpace(fullyQualifiedNamespace);
+        if (!hasConnectionString && !hasNamespace)
         {
             services.AddSingleton<IIntegrationEventPublisher, NullIntegrationEventPublisher>();
             return services;
         }
 
         var queue = configuration[QueueKey] is { Length: > 0 } q ? q : DefaultQueue;
-        services.AddSingleton(_ => new ServiceBusClient(connectionString, new ServiceBusClientOptions { TransportType = ServiceBusTransportType.AmqpTcp }));
+        var clientOptions = new ServiceBusClientOptions { TransportType = ServiceBusTransportType.AmqpTcp };
+        services.AddSingleton(_ => hasConnectionString
+            ? new ServiceBusClient(connectionString, clientOptions)
+            : new ServiceBusClient(fullyQualifiedNamespace!.Trim(), new DefaultAzureCredential(), clientOptions));
         services.AddSingleton(sp => sp.GetRequiredService<ServiceBusClient>().CreateSender(queue));
         services.AddSingleton<IIntegrationEventPublisher, ServiceBusIntegrationEventPublisher>();
         return services;
@@ -2256,15 +2718,15 @@ internal static class MessagingServiceExtensions
 
 `BoundedContexts/DocumentProcessing/Application/IntegrationEvents/PdfUploadedIntegrationEvent.cs`:
 ```csharp
-using Api.Infrastructure.Messaging;
+using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Events;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.IntegrationEvents;
 
 /// <summary>
-/// Contratto v1 (spec azure-local §4.3): un PDF è stato ricevuto dall'API e la pipeline è partita
-/// (transizione Pending → Uploading). Chiavi sul filo congelate in
-/// <c>tests/fixtures/contracts/pdf-uploaded.v1.json</c>; cambiarle significa una v2.
+/// Contratto v1 (spec azure-local §4.3): un PDF è stato ricevuto dall'API e la pipeline è partita (transizione
+/// Pending → Uploading; a quel punto il blob è già stato scritto e <c>FilePath</c> è valorizzato). Chiavi sul
+/// filo congelate in <c>tests/fixtures/contracts/pdf-uploaded.v1.json</c>; cambiarle significa una v2.
 /// </summary>
 internal sealed class PdfUploadedIntegrationEvent : IntegrationEventBase, IVersionedContract
 {
@@ -2302,8 +2764,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.EventHandlers;
 
 /// <summary>
 /// Traduce la transizione Pending → Uploading di <see cref="PdfStateChangedEvent"/> nell'integration event
-/// <see cref="PdfUploadedIntegrationEvent"/>. Mai un'eccezione verso l'upload: il bus giù non deve far
-/// fallire la richiesta dell'utente (Review Focus 5); l'esito finisce nel contatore.
+/// <see cref="PdfUploadedIntegrationEvent"/>. Mai un'eccezione verso l'upload: il bus giù non deve far fallire
+/// la richiesta dell'utente (Review Focus 5); l'esito finisce nel contatore.
 /// </summary>
 internal sealed class PdfUploadedIntegrationEventRelay : INotificationHandler<PdfStateChangedEvent>
 {
@@ -2380,9 +2842,9 @@ internal static partial class MeepleAiMetrics
         public const string Failed = "failed";
     }
 
+    /// <summary>Senza unit: l'exporter Prometheus mette l'unit nel nome, e la spec fissa `meepleai_pdf_uploaded_events_total`.</summary>
     public static readonly Counter<long> PdfUploadedEventsTotal = Meter.CreateCounter<long>(
         name: "meepleai.pdf.uploaded_events.total",
-        unit: "events",
         description: "PdfUploaded integration events by outcome (publish side and internal consumer side)");
 
     public static void RecordPdfUploadedEvent(string outcome) =>
@@ -2390,40 +2852,45 @@ internal static partial class MeepleAiMetrics
 }
 ```
 
-Aggiornare l'elenco dei file partial nel commento di testa di `Observability/MeepleAiMetrics.cs` con la riga `MeepleAiMetrics.PdfIntegrationEvents.cs — PdfUploaded integration event outcomes (spec azure-local)`.
+Nel commento di testa di `Observability/MeepleAiMetrics.cs` aggiungere la riga `///   - MeepleAiMetrics.PdfIntegrationEvents.cs — PdfUploaded integration event outcomes (spec azure-local)`.
 
 In `Program.cs`, dopo `builder.Services.AddAzureSdkHttpClients(builder.Configuration);`:
 ```csharp
 builder.Services.AddIntegrationEventPublishing(builder.Configuration); // spec azure-local §4.3
 ```
-con `using Api.Infrastructure.Messaging;`. Il relay è un `INotificationHandler` nell'assembly dell'API: la registrazione MediatR via scansione dell'assembly lo prende da sola (verificare con `grep -n "RegisterServicesFromAssembly" apps/api/src/Api -r`).
+con `using Api.Infrastructure.Messaging;`. Il relay è un `INotificationHandler` nell'assembly dell'API: la registrazione MediatR via scansione dell'assembly lo prende (verifica: `grep -rn "RegisterServicesFromAssembly" apps/api/src/Api`).
 
 - [ ] **Step 7: Eseguire i test**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~ServiceBusIntegrationEventPublisherTests|FullyQualifiedName~PdfUploadedIntegrationEventRelayTests|FullyQualifiedName~MessagingServiceExtensionsTests"`
-Expected: tutti verdi.
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~ServiceBusIntegrationEventPublisherTests|FullyQualifiedName~PdfUploadedIntegrationEventRelayTests|FullyQualifiedName~MessagingServiceExtensionsTests"` → Expected: verdi.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add apps/api/src/Api/SharedKernel/Application/Interfaces/IIntegrationEventPublisher.cs apps/api/src/Api/Infrastructure/Messaging apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/IntegrationEvents apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/EventHandlers/PdfUploadedIntegrationEventRelay.cs apps/api/src/Api/Observability apps/api/src/Api/Program.cs apps/api/src/Api/Api.csproj apps/api/tests/Api.Tests
-git commit -m "feat(messaging): PdfUploaded v1 su Service Bus via IIntegrationEventPublisher" -m "Relay sulla transizione Pending→Uploading, publisher Service Bus e Null, contatore degli esiti." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add apps/api/src/Api/SharedKernel/Application/Interfaces/IIntegrationEventPublisher.cs apps/api/src/Api/SharedKernel/Application/Interfaces/IVersionedContract.cs apps/api/src/Api/Infrastructure/Messaging/NullIntegrationEventPublisher.cs apps/api/src/Api/Infrastructure/Messaging/ServiceBusIntegrationEventPublisher.cs apps/api/src/Api/Infrastructure/Messaging/MessagingServiceExtensions.cs apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/IntegrationEvents/PdfUploadedIntegrationEvent.cs apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/EventHandlers/PdfUploadedIntegrationEventRelay.cs apps/api/src/Api/Observability/Metrics/MeepleAiMetrics.PdfIntegrationEvents.cs apps/api/src/Api/Observability/MeepleAiMetrics.cs apps/api/src/Api/Program.cs apps/api/src/Api/Api.csproj apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/PdfUploadedEventMetricsCollection.cs apps/api/tests/Api.Tests/Infrastructure/Messaging/ServiceBusIntegrationEventPublisherTests.cs apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/PdfUploadedIntegrationEventRelayTests.cs apps/api/tests/Api.Tests/Infrastructure/Messaging/MessagingServiceExtensionsTests.cs
+git commit -m "feat(messaging): PdfUploaded v1 su Service Bus via IIntegrationEventPublisher" -m "Relay sulla transizione Pending→Uploading, publisher Service Bus (SAS o identità) e Null, contatore degli esiti." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
 
-### Task 6: Endpoint interno `POST /api/v1/internal/pdf-events/uploaded` con token di servizio
+### Task 6: Endpoint interno `POST /api/v1/internal/pdf-events/uploaded` con token di servizio e indicizzazione «se inattivo»
 
 **Files:**
 - Create: `apps/api/src/Api/Filters/InternalServiceTokenFilter.cs`
+- Create: `apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/IndexPdfIfIdleCommand.cs`
+- Create: `apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/IndexPdfIfIdleCommandHandler.cs`
 - Create: `apps/api/src/Api/Routing/InternalPdfEventsEndpoints.cs`
-- Modify: `apps/api/src/Api/Program.cs` (dopo la riga `v1Api.MapAdminPdfManagementEndpoints();`)
+- Modify: `apps/api/src/Api/Program.cs` (dopo `v1Api.MapAdminPdfManagementEndpoints();`)
+- Modify: `apps/api/tests/Api.Tests/Architecture/ConstantTimeComparisonArchitectureTests.cs` (`ConstantTimeSites`)
 - Test: `apps/api/tests/Api.Tests/Filters/InternalServiceTokenFilterTests.cs`
+- Test: `apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/IndexPdfIfIdleCommandHandlerTests.cs`
 - Test: `apps/api/tests/Api.Tests/Routing/InternalPdfEventsEndpointsTests.cs`
 
 **Interfaces:**
-- Consumes: `IndexPdfCommand(string PdfId)` → `IndexingResultDto { Success, ErrorCode: PdfIndexingErrorCode? }`, `MeepleAiMetrics.RecordPdfUploadedEvent`, `PdfUploadedIntegrationEvent.CurrentContractVersion` (Task 5), fixture `SharedHostPerTestDatabaseFixture`.
-- Produces: header `X-Internal-Service-Token`, chiave `INTERNAL_SERVICE_TOKEN`; richiesta `PdfUploadedEventRequest(Guid EventId, Guid PdfDocumentId, string ContractVersion)`; risposte 200 `{outcome:"indexed"}`, 202 `{outcome:"noop"}`, 404 `{outcome:"not_found"}`, 400 `{outcome:"rejected"}`, 422 `{outcome:"failed"}`; 401/403/404 dal filtro.
+- Consumes: `IndexPdfCommand(string PdfId)` → `IndexingResultDto { Success, ErrorCode, ErrorMessage, ChunkCount }`; `MeepleAiDbContext.PdfDocuments` (`PdfDocumentEntity.Id : Guid`, `ProcessingState : string` con i nomi dell'enum), `ProcessingJobs` (`ProcessingJobEntity.PdfDocumentId`, `Status : string` con valori `Queued`/`Processing`/`Completed`/`Failed`), `VectorDocuments` (`VectorDocumentEntity.PdfDocumentId : Guid`); `TestDbContextFactory.CreateInMemoryDbContext()` e il seeding di `PdfDocumentEntity` come in `IndexPdfCommandHandlerTests` (copiare da lì l'helper che costruisce l'entità); `MeepleAiMetrics.RecordPdfUploadedEvent`, `PdfUploadedIntegrationEvent.CurrentContractVersion` (Task 5); `SharedHostPerTestDatabaseFixture`.
+- Produces: header `X-Internal-Service-Token`, chiave `INTERNAL_SERVICE_TOKEN`; `IndexPdfIfIdleCommand(Guid PdfDocumentId) : ICommand<IndexPdfIfIdleResult>`; `IndexPdfIfIdleResult(IndexPdfIfIdleOutcome Outcome, IndexingResultDto? Indexing)`; `IndexPdfIfIdleOutcome { NotFound, PipelineBusy, AlreadyIndexed, Indexed, Failed }`; richiesta `PdfUploadedEventRequest(Guid EventId, Guid PdfDocumentId, string? ContractVersion)`; risposte 200 `{outcome:"indexed"}`, 200 `{outcome:"noop", reason:"already_indexed"}`, 202 `{outcome:"noop", reason:"pipeline_busy"}`, 404 `{outcome:"not_found"}`, 400 `{outcome:"rejected"}`, 422 `{outcome:"failed"}`; 401/403/404 dal filtro.
+
+Cosa l'evento deve CAUSARE (ruling, recepito nella spec in Task 10): l'upload avvia già la pipeline nell'API, quindi `IndexPdfCommand` chiamato alla cieca ri-indicizzerebbe un documento già indicizzato o in lavorazione. L'endpoint indicizza SOLO un PDF inattivo che ne ha bisogno: stato `Failed`, oppure `Ready` senza `VectorDocument`. Pipeline in corso (stato intermedio o `ProcessingJob` attivo) e `Ready` con vettori sono `noop`.
 
 - [ ] **Step 1: Test del filtro**
 
@@ -2490,7 +2957,7 @@ public sealed class InternalServiceTokenFilterTests
 }
 ```
 
-- [ ] **Step 2: Implementare il filtro**
+- [ ] **Step 2: Implementare il filtro e aggiornare l'inventario**
 
 ```csharp
 using System.Security.Cryptography;
@@ -2499,10 +2966,9 @@ using System.Text;
 namespace Api.Filters;
 
 /// <summary>
-/// Autenticazione servizio-a-servizio per il gruppo <c>/api/v1/internal</c> (spec azure-local §4.3): un
-/// token condiviso in <c>INTERNAL_SERVICE_TOKEN</c>, confrontato a tempo costante. Senza token
-/// configurato il gruppo NON esiste (404 per tutti): un deployment che dimentica la variabile non
-/// espone un endpoint aperto (Review Focus 4).
+/// Autenticazione servizio-a-servizio per il gruppo <c>/api/v1/internal</c> (spec azure-local §4.3): un token
+/// condiviso in <c>INTERNAL_SERVICE_TOKEN</c>, confrontato a tempo costante. Senza token configurato il gruppo NON
+/// esiste (404 per tutti): un deployment che dimentica la variabile non espone un endpoint aperto (Review Focus 4).
 /// </summary>
 internal sealed class InternalServiceTokenFilter : IEndpointFilter
 {
@@ -2541,12 +3007,230 @@ internal sealed class InternalServiceTokenFilter : IEndpointFilter
 }
 ```
 
-- [ ] **Step 3: Eseguire i test del filtro**
+In `ConstantTimeComparisonArchitectureTests.cs`, dentro `ConstantTimeSites`, dopo la riga Slack:
+```csharp
+        ("Filters/InternalServiceTokenFilter.cs", "token di servizio interno X-Internal-Service-Token (spec azure-local)"),
+```
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~InternalServiceTokenFilterTests"`
-Expected: tutti verdi.
+- [ ] **Step 3: Eseguire filtro + gate**
 
-- [ ] **Step 4: Test dell'endpoint con la fixture host condivisa**
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~InternalServiceTokenFilterTests|FullyQualifiedName~ConstantTimeComparisonArchitectureTests"` → Expected: verdi.
+
+- [ ] **Step 4: Test del comando «se inattivo»**
+
+```csharp
+using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities.DocumentProcessing;
+using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
+using FluentAssertions;
+using MediatR;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Xunit;
+
+namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
+
+[Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "DocumentProcessing")]
+public sealed class IndexPdfIfIdleCommandHandlerTests : IDisposable
+{
+    private readonly MeepleAiDbContext _db = TestDbContextFactory.CreateInMemoryDbContext();
+    private readonly Mock<IMediator> _mediator = new();
+    private readonly IndexPdfIfIdleCommandHandler _sut;
+
+    public IndexPdfIfIdleCommandHandlerTests()
+    {
+        _sut = new IndexPdfIfIdleCommandHandler(_db, _mediator.Object, Mock.Of<ILogger<IndexPdfIfIdleCommandHandler>>());
+    }
+
+    public void Dispose() => _db.Dispose();
+
+    // Copiare da IndexPdfCommandHandlerTests l'helper che costruisce una PdfDocumentEntity valida e
+    // parametrizzare qui solo Id e ProcessingState.
+    private async Task<Guid> SeedPdfAsync(string state)
+    {
+        var pdf = IndexPdfCommandHandlerTests.CreateTestPdfEntity(); // rendere `internal static` l'helper esistente se è privato
+        pdf.ProcessingState = state;
+        _db.PdfDocuments.Add(pdf);
+        await _db.SaveChangesAsync();
+        return pdf.Id;
+    }
+
+    [Fact]
+    public async Task Handle_UnknownPdf_NotFound()
+    {
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(Guid.NewGuid()), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.NotFound);
+        _mediator.Verify(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Uploading")]
+    [InlineData("Extracting")]
+    [InlineData("Indexing")]
+    public async Task Handle_PipelineState_PipelineBusyWithoutIndexing(string state)
+    {
+        var id = await SeedPdfAsync(state);
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.PipelineBusy);
+        _mediator.Verify(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ActiveProcessingJob_PipelineBusy()
+    {
+        var id = await SeedPdfAsync("Failed");
+        _db.ProcessingJobs.Add(new ProcessingJobEntity { Id = Guid.NewGuid(), PdfDocumentId = id, Status = "Queued" });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.PipelineBusy);
+    }
+
+    [Fact]
+    public async Task Handle_ReadyWithVectors_AlreadyIndexed()
+    {
+        var id = await SeedPdfAsync("Ready");
+        _db.VectorDocuments.Add(new VectorDocumentEntity { Id = Guid.NewGuid(), PdfDocumentId = id, IndexingStatus = "completed" });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.AlreadyIndexed);
+        _mediator.Verify(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Failed")]
+    [InlineData("Ready")]
+    public async Task Handle_IdleWithoutVectors_SendsIndexPdfCommand(string state)
+    {
+        var id = await SeedPdfAsync(state);
+        _mediator.Setup(m => m.Send(It.Is<IndexPdfCommand>(c => c.PdfId == id.ToString()), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(IndexingResultDto.CreateSuccess("vec-1", 3, DateTime.UtcNow));
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.Indexed);
+        result.Indexing!.ChunkCount.Should().Be(3);
+    }
+
+    [Fact]
+    public async Task Handle_IndexingFails_Failed()
+    {
+        var id = await SeedPdfAsync("Failed");
+        _mediator.Setup(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new IndexingResultDto { Success = false, ErrorCode = PdfIndexingErrorCode.EmbeddingFailed, ErrorMessage = "boom" });
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.Failed);
+        result.Indexing!.ErrorMessage.Should().Be("boom");
+    }
+}
+```
+Le proprietà minime di `ProcessingJobEntity` e `VectorDocumentEntity` usate sopra (`Id`, `PdfDocumentId`, `Status`/`IndexingStatus`) vanno confermate leggendo le due classi in `Infrastructure/Entities/`; se una proprietà `required` manca, aggiungerla nell'inizializzatore con un valore qualunque valido.
+
+- [ ] **Step 5: Implementare comando e handler**
+
+`IndexPdfIfIdleCommand.cs`:
+```csharp
+using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.SharedKernel.Application.Interfaces;
+
+namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
+
+/// <summary>Indicizza un PDF SOLO se è inattivo e ne ha bisogno (Failed, oppure Ready senza vettori). Spec azure-local §4.3.</summary>
+internal sealed record IndexPdfIfIdleCommand(Guid PdfDocumentId) : ICommand<IndexPdfIfIdleResult>;
+
+internal enum IndexPdfIfIdleOutcome
+{
+    NotFound,
+    PipelineBusy,
+    AlreadyIndexed,
+    Indexed,
+    Failed,
+}
+
+internal sealed record IndexPdfIfIdleResult(IndexPdfIfIdleOutcome Outcome, IndexingResultDto? Indexing);
+```
+
+`IndexPdfIfIdleCommandHandler.cs`:
+```csharp
+using Api.Infrastructure;
+using Api.SharedKernel.Application.Interfaces;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
+
+/// <summary>
+/// Le guardie di idempotenza del repo stanno nei handler di coda (<c>ProcessingJob</c>) e nello stato del
+/// documento, NON in <see cref="IndexPdfCommand"/>, che ri-indicizza sempre. Questo handler le applica prima di
+/// delegare: un messaggio riconsegnato o duplicato non deve far ripartire una pipeline già in corso o conclusa.
+/// </summary>
+internal sealed class IndexPdfIfIdleCommandHandler : ICommandHandler<IndexPdfIfIdleCommand, IndexPdfIfIdleResult>
+{
+    private static readonly string[] PipelineStates = ["Pending", "Uploading", "Extracting", "Chunking", "Embedding", "Indexing"];
+    private static readonly string[] ActiveJobStatuses = ["Queued", "Processing"];
+
+    private readonly MeepleAiDbContext _db;
+    private readonly IMediator _mediator;
+    private readonly ILogger<IndexPdfIfIdleCommandHandler> _logger;
+
+    public IndexPdfIfIdleCommandHandler(MeepleAiDbContext db, IMediator mediator, ILogger<IndexPdfIfIdleCommandHandler> logger)
+    {
+        _db = db;
+        _mediator = mediator;
+        _logger = logger;
+    }
+
+    public async Task<IndexPdfIfIdleResult> Handle(IndexPdfIfIdleCommand request, CancellationToken cancellationToken)
+    {
+        var pdf = await _db.PdfDocuments.AsNoTracking()
+            .Where(p => p.Id == request.PdfDocumentId)
+            .Select(p => new { p.Id, p.ProcessingState })
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (pdf is null)
+        {
+            return new IndexPdfIfIdleResult(IndexPdfIfIdleOutcome.NotFound, null);
+        }
+
+        var activeJob = await _db.ProcessingJobs.AsNoTracking()
+            .AnyAsync(j => j.PdfDocumentId == pdf.Id && ActiveJobStatuses.Contains(j.Status), cancellationToken).ConfigureAwait(false);
+        if (activeJob || PipelineStates.Contains(pdf.ProcessingState, StringComparer.Ordinal))
+        {
+            _logger.LogInformation("PDF {PdfId} pipeline busy (state {State}, activeJob {ActiveJob}): no re-index", pdf.Id, pdf.ProcessingState, activeJob);
+            return new IndexPdfIfIdleResult(IndexPdfIfIdleOutcome.PipelineBusy, null);
+        }
+
+        var hasVectors = await _db.VectorDocuments.AsNoTracking()
+            .AnyAsync(v => v.PdfDocumentId == pdf.Id, cancellationToken).ConfigureAwait(false);
+        if (string.Equals(pdf.ProcessingState, "Ready", StringComparison.Ordinal) && hasVectors)
+        {
+            return new IndexPdfIfIdleResult(IndexPdfIfIdleOutcome.AlreadyIndexed, null);
+        }
+
+        _logger.LogInformation("PDF {PdfId} idle (state {State}, vectors {HasVectors}): indexing", pdf.Id, pdf.ProcessingState, hasVectors);
+        var indexing = await _mediator.Send(new IndexPdfCommand(pdf.Id.ToString()), cancellationToken).ConfigureAwait(false);
+        return new IndexPdfIfIdleResult(indexing.Success ? IndexPdfIfIdleOutcome.Indexed : IndexPdfIfIdleOutcome.Failed, indexing);
+    }
+}
+```
+
+- [ ] **Step 6: Eseguire i test del comando**
+
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~IndexPdfIfIdleCommandHandlerTests"` → Expected: verdi.
+
+- [ ] **Step 7: Test dell'endpoint con la fixture host condivisa**
 
 ```csharp
 using System.Net;
@@ -2636,12 +3320,11 @@ public sealed class InternalPdfEventsEndpointsTests : IClassFixture<InternalPdfE
 }
 ```
 
-- [ ] **Step 5: Implementare l'endpoint**
+- [ ] **Step 8: Implementare l'endpoint**
 
 `Routing/InternalPdfEventsEndpoints.cs`:
 ```csharp
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
-using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.IntegrationEvents;
 using Api.Filters;
 using Api.Observability;
@@ -2653,9 +3336,9 @@ namespace Api.Routing;
 internal sealed record PdfUploadedEventRequest(Guid EventId, Guid PdfDocumentId, string? ContractVersion);
 
 /// <summary>
-/// Lato API del ciclo PdfUploaded (spec azure-local §4.3): la Function consuma il messaggio dal bus e
-/// richiama qui. L'indicizzazione è idempotente per le due guardie esistenti (ProcessingState e
-/// ProcessingJob): un duplicato è un <c>noop</c>, non un errore.
+/// Lato API del ciclo PdfUploaded (spec azure-local §4.3): la Function consuma il messaggio dal bus e richiama
+/// qui. L'indicizzazione passa da <see cref="IndexPdfIfIdleCommand"/>: parte SOLO per un PDF inattivo che ne ha
+/// bisogno; pipeline in corso e documenti già indicizzati sono <c>noop</c>.
 /// </summary>
 internal static class InternalPdfEventsEndpoints
 {
@@ -2681,26 +3364,25 @@ internal static class InternalPdfEventsEndpoints
         }
 
         logger.LogInformation("PdfUploaded {EventId} received for {PdfId}", body.EventId, body.PdfDocumentId);
-        var result = await mediator.Send(new IndexPdfCommand(body.PdfDocumentId.ToString()), ct).ConfigureAwait(false);
+        var result = await mediator.Send(new IndexPdfIfIdleCommand(body.PdfDocumentId), ct).ConfigureAwait(false);
 
-        if (result.Success)
+        switch (result.Outcome)
         {
-            MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Indexed);
-            return Results.Ok(new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Indexed, chunkCount = result.ChunkCount });
-        }
-
-        switch (result.ErrorCode)
-        {
-            case PdfIndexingErrorCode.PdfNotFound:
+            case IndexPdfIfIdleOutcome.Indexed:
+                MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Indexed);
+                return Results.Ok(new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Indexed, chunkCount = result.Indexing?.ChunkCount });
+            case IndexPdfIfIdleOutcome.AlreadyIndexed:
+                MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Noop);
+                return Results.Ok(new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Noop, reason = "already_indexed" });
+            case IndexPdfIfIdleOutcome.PipelineBusy:
+                MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Noop);
+                return Results.Accepted(value: new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Noop, reason = "pipeline_busy" });
+            case IndexPdfIfIdleOutcome.NotFound:
                 MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.NotFound);
                 return Results.NotFound(new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.NotFound });
-            case PdfIndexingErrorCode.TextExtractionRequired:
-                // La pipeline di upload sta ancora estraendo: il messaggio è arrivato prima; nulla da fare.
-                MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Noop);
-                return Results.Accepted(value: new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Noop });
             default:
                 MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Failed);
-                return Results.UnprocessableEntity(new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Failed, error = result.ErrorMessage });
+                return Results.UnprocessableEntity(new { outcome = MeepleAiMetrics.PdfUploadedEventOutcomes.Failed, error = result.Indexing?.ErrorMessage });
         }
     }
 }
@@ -2711,43 +3393,85 @@ In `Program.cs`, dopo `v1Api.MapAdminPdfManagementEndpoints();`:
 v1Api.MapInternalPdfEventsEndpoints(); // spec azure-local §4.3: consumer interno del PdfUploaded v1
 ```
 
-- [ ] **Step 6: Eseguire i test dell'endpoint**
+- [ ] **Step 9: Eseguire i test dell'endpoint**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~InternalPdfEventsEndpointsTests"`
-Expected: 4 superati (richiede Docker per Postgres/Redis della fixture condivisa). Se un test di routing esistente enumera gli endpoint pubblici (cercare `grep -rn "internal" apps/api/tests/Api.Tests/Architecture/*Endpoint*`), aggiungere il nuovo gruppo alla sua classificazione come «token di servizio».
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~InternalPdfEventsEndpointsTests"` → Expected: 4 superati (Docker per Postgres/Redis della fixture condivisa). Se un test di architettura esistente enumera gli endpoint per classe di autorizzazione (`grep -rln "internal" apps/api/tests/Api.Tests/Architecture/*Endpoint*`), aggiungere il gruppo con la classe «token di servizio».
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 10: Commit**
 
 ```bash
-git add apps/api/src/Api/Filters/InternalServiceTokenFilter.cs apps/api/src/Api/Routing/InternalPdfEventsEndpoints.cs apps/api/src/Api/Program.cs apps/api/tests/Api.Tests/Filters apps/api/tests/Api.Tests/Routing/InternalPdfEventsEndpointsTests.cs
-git commit -m "feat(api): endpoint interno PdfUploaded con token di servizio" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add apps/api/src/Api/Filters/InternalServiceTokenFilter.cs apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/IndexPdfIfIdleCommand.cs apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/IndexPdfIfIdleCommandHandler.cs apps/api/src/Api/Routing/InternalPdfEventsEndpoints.cs apps/api/src/Api/Program.cs apps/api/tests/Api.Tests/Architecture/ConstantTimeComparisonArchitectureTests.cs apps/api/tests/Api.Tests/Filters/InternalServiceTokenFilterTests.cs apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/IndexPdfIfIdleCommandHandlerTests.cs apps/api/tests/Api.Tests/BoundedContexts/DocumentProcessing/Application/Handlers/IndexPdfCommandHandlerTests.cs apps/api/tests/Api.Tests/Routing/InternalPdfEventsEndpointsTests.cs
+git commit -m "feat(api): endpoint interno PdfUploaded con token e indicizzazione se inattivo" -m "IndexPdfIfIdleCommand applica le guardie (stato, ProcessingJob, vettori) prima di delegare a IndexPdfCommand; filtro a tempo costante nell'inventario." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
-### Task 7: Test di integrazione sul Service Bus emulator (publish → receive → dead-letter)
+### Task 7: Test di integrazione sul Service Bus emulator (publish → receive → dead-letter), fixture per classe
 
 **Files:**
 - Modify: `apps/api/tests/Api.Tests/Api.Tests.csproj`
 - Modify: `apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs`
+- Create: `apps/api/tests/Api.Tests/Integration/Infrastructure/ServiceBusEmulatorFixture.cs`
 - Test: `apps/api/tests/Api.Tests/Integration/Infrastructure/ServiceBusEmulatorIntegrationTests.cs`
 
 **Interfaces:**
-- Consumes: `ServiceBusIntegrationEventPublisher`, `PdfUploadedIntegrationEvent` (Task 5).
-- Produces: `TestcontainersConfiguration.ServiceBusEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1"`.
+- Consumes: `ServiceBusIntegrationEventPublisher`, `PdfUploadedIntegrationEvent` (Task 5), `EmulatorFixtureBase` (Task 3).
+- Produces: `TestcontainersConfiguration.ServiceBusEmulatorImage`, `ServiceBusEmulatorDefaultQueue = "queue.1"`.
 
-- [ ] **Step 1: Pacchetto e costante**
+- [ ] **Step 1: Pacchetto e costanti**
 
 Run (da `apps/api/tests/Api.Tests`): `dotnet add package Testcontainers.ServiceBus --version 4.14.0`
 
 In `TestcontainersConfiguration.cs`, dopo `AzuriteTestContainer`:
 ```csharp
-    /// <summary>Service Bus emulator (spec azure-local): L3; avvia da sé un MSSQL di appoggio (~1 min).</summary>
+    /// <summary>Service Bus emulator (spec azure-local): L3; avvia da sé un MSSQL di appoggio (~1 min, una volta per classe).</summary>
     public const string ServiceBusEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1";
     /// <summary>Coda presente nel Config.json di default dell'emulatore.</summary>
     public const string ServiceBusEmulatorDefaultQueue = "queue.1";
 ```
 
-- [ ] **Step 2: Scrivere il test**
+- [ ] **Step 2: Fixture**
+
+```csharp
+using Api.Tests.Infrastructure;
+using Azure.Messaging.ServiceBus;
+using Testcontainers.ServiceBus;
+
+namespace Api.Tests.Integration.Infrastructure;
+
+public sealed class ServiceBusEmulatorFixture : EmulatorFixtureBase
+{
+    private ServiceBusContainer? _container;
+
+    public ServiceBusClient Client { get; private set; } = null!;
+
+    protected override string EmulatorName => "Service Bus emulator";
+
+    protected override async Task StartAsync()
+    {
+        _container = new ServiceBusBuilder()
+            .WithImage(TestcontainersConfiguration.ServiceBusEmulatorImage)
+            .WithAcceptLicenseAgreement(true)
+            .Build();
+        await _container.StartAsync();
+        Client = new ServiceBusClient(_container.GetConnectionString());
+    }
+
+    protected override async Task StopAsync()
+    {
+        if (Client is not null)
+        {
+            await Client.DisposeAsync();
+        }
+
+        if (_container is not null)
+        {
+            await _container.DisposeAsync();
+        }
+    }
+}
+```
+
+- [ ] **Step 3: Test**
 
 ```csharp
 using System.Text.Json;
@@ -2759,7 +3483,6 @@ using Azure.Messaging.ServiceBus;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Testcontainers.ServiceBus;
 using Xunit;
 
 namespace Api.Tests.Integration.Infrastructure;
@@ -2768,56 +3491,21 @@ namespace Api.Tests.Integration.Infrastructure;
 [Trait("Category", TestCategories.Slow)]
 [Trait("BoundedContext", "Infrastructure")]
 [Trait("Feature", "AzureServiceBus")]
-public sealed class ServiceBusEmulatorIntegrationTests : IAsyncLifetime
+public sealed class ServiceBusEmulatorIntegrationTests : IClassFixture<ServiceBusEmulatorFixture>
 {
-    private ServiceBusContainer? _emulator;
-    private string? _unavailableReason;
-    private ServiceBusClient _client = null!;
+    private readonly ServiceBusEmulatorFixture _emulator;
 
-    public async ValueTask InitializeAsync()
+    public ServiceBusEmulatorIntegrationTests(ServiceBusEmulatorFixture emulator)
     {
-        try
-        {
-            _emulator = new ServiceBusBuilder()
-                .WithImage(TestcontainersConfiguration.ServiceBusEmulatorImage)
-                .WithAcceptLicenseAgreement(true)
-                .Build();
-            await _emulator.StartAsync();
-            _client = new ServiceBusClient(_emulator.GetConnectionString());
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            _unavailableReason = ex.Message;
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_client is not null)
-        {
-            await _client.DisposeAsync();
-        }
-
-        if (_emulator is not null)
-        {
-            await _emulator.DisposeAsync();
-        }
-    }
-
-    private void SkipIfUnavailable()
-    {
-        if (_unavailableReason is not null)
-        {
-            Assert.Skip($"PREVISTO: Service Bus emulator non avviato ({_unavailableReason}). Serve Docker; in locale: cd infra && make dev-azure-local");
-        }
+        _emulator = emulator;
     }
 
     [Fact]
     public async Task Publish_ThenReceive_RoundTripsTheContract()
     {
-        SkipIfUnavailable();
-        await using var sender = _client.CreateSender(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
-        await using var receiver = _client.CreateReceiver(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
+        _emulator.SkipIfUnavailable();
+        await using var sender = _emulator.Client.CreateSender(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
+        await using var receiver = _emulator.Client.CreateReceiver(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
         var publisher = new ServiceBusIntegrationEventPublisher(sender, Mock.Of<ILogger<ServiceBusIntegrationEventPublisher>>());
         var evt = new PdfUploadedIntegrationEvent(Guid.NewGuid(), Guid.NewGuid(), null, "pdfs/g/f_a.pdf");
 
@@ -2835,10 +3523,10 @@ public sealed class ServiceBusEmulatorIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task DeadLetter_LandsInDeadLetterSubQueueWithReason()
     {
-        SkipIfUnavailable();
-        await using var sender = _client.CreateSender(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
-        await using var receiver = _client.CreateReceiver(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
-        await using var deadLetters = _client.CreateReceiver(
+        _emulator.SkipIfUnavailable();
+        await using var sender = _emulator.Client.CreateSender(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
+        await using var receiver = _emulator.Client.CreateReceiver(TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue);
+        await using var deadLetters = _emulator.Client.CreateReceiver(
             TestcontainersConfiguration.ServiceBusEmulatorDefaultQueue,
             new ServiceBusReceiverOptions { SubQueue = SubQueue.DeadLetter });
         var messageId = Guid.NewGuid().ToString();
@@ -2858,15 +3546,15 @@ public sealed class ServiceBusEmulatorIntegrationTests : IAsyncLifetime
 }
 ```
 
-- [ ] **Step 3: Eseguire**
+- [ ] **Step 4: Eseguire**
 
 Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~ServiceBusEmulatorIntegrationTests"`
-Expected: 2 superati; il primo avvio scarica l'emulatore e MSSQL (alcuni minuti). Senza Docker: 2 salti `PREVISTO:`.
+Expected: 2 superati; il primo avvio scarica emulatore e MSSQL (alcuni minuti: il pull non conta nel `methodTimeout` perché avviene nella fixture di classe, ma se supera il timeout della fixture riportarlo). Senza Docker: 2 salti `PREVISTO:`.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add apps/api/tests/Api.Tests/Api.Tests.csproj apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs apps/api/tests/Api.Tests/Integration/Infrastructure/ServiceBusEmulatorIntegrationTests.cs
+git add apps/api/tests/Api.Tests/Api.Tests.csproj apps/api/tests/Api.Tests/Infrastructure/TestcontainersConfiguration.cs apps/api/tests/Api.Tests/Integration/Infrastructure/ServiceBusEmulatorFixture.cs apps/api/tests/Api.Tests/Integration/Infrastructure/ServiceBusEmulatorIntegrationTests.cs
 git commit -m "test(messaging): publish, receive e dead-letter sul Service Bus emulator" -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
@@ -2891,13 +3579,13 @@ git commit -m "test(messaging): publish, receive e dead-letter sul Service Bus e
 - Create: `apps/functions/MeepleAI.Functions.Tests/PdfUploadedForwarderTests.cs`
 - Create: `apps/functions/MeepleAI.Functions.Tests/PdfUploadedConsumerTests.cs`
 - Create: `apps/api/tests/Api.Tests/Contracts/PdfUploadedContractTests.cs`
-- Modify: `.gitignore` (radice): aggiungere `apps/functions/**/local.settings.json`
+- Modify: `.gitignore` (radice): riga `apps/functions/**/local.settings.json`
 
 **Interfaces:**
-- Consumes: formato di filo di `PdfUploadedIntegrationEvent` e `ServiceBusIntegrationEventPublisher.JsonOptions` (Task 5); endpoint `POST /api/v1/internal/pdf-events/uploaded` + header `X-Internal-Service-Token` (Task 6).
-- Produces: fixture `pdf-uploaded.v1.json` (chiavi camelCase congelate); app settings della Function `ServiceBusConnection`, `ServiceBusQueue`, `MeepleAiApiBaseUrl`, `MeepleAiInternalServiceToken`.
+- Consumes: formato di filo di `PdfUploadedIntegrationEvent` e `ServiceBusIntegrationEventPublisher.JsonOptions` (Task 5); endpoint `POST /api/v1/internal/pdf-events/uploaded` + header `X-Internal-Service-Token` + esiti 2xx/400/404/422 (Task 6); porte host 20000–20004 (Task 1).
+- Produces: fixture `pdf-uploaded.v1.json`; app settings della Function `ServiceBusConnection`, `ServiceBusQueue`, `MeepleAiApiBaseUrl`, `MeepleAiInternalServiceToken`.
 
-- [ ] **Step 1: La fixture di contratto** `tests/fixtures/contracts/pdf-uploaded.v1.json`
+- [ ] **Step 1: Fixture di contratto** `tests/fixtures/contracts/pdf-uploaded.v1.json`
 
 ```json
 {
@@ -2918,6 +3606,7 @@ git commit -m "test(messaging): publish, receive e dead-letter sul Service Bus e
 using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Application.IntegrationEvents;
 using Api.Infrastructure.Messaging;
+using Api.Tests.Architecture;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -2932,12 +3621,12 @@ public sealed class PdfUploadedContractTests
     private static string FixturePath()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "tests", "fixtures", "contracts", "pdf-uploaded.v1.json")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }
 
-        dir.Should().NotBeNull("la fixture tests/fixtures/contracts/pdf-uploaded.v1.json deve esistere sopra la cartella di build");
+        dir.Should().NotBeNull("the test binary must live inside the repo (or a worktree)");
         return Path.Combine(dir!.FullName, "tests", "fixtures", "contracts", "pdf-uploaded.v1.json");
     }
 
@@ -2961,7 +3650,7 @@ Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~Api.Tests.Contrac
 
 - [ ] **Step 3: Progetto Functions**
 
-`apps/functions/MeepleAI.Functions/MeepleAI.Functions.csproj`:
+`MeepleAI.Functions.csproj`:
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -2987,6 +3676,7 @@ Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~Api.Tests.Contrac
   </ItemGroup>
 </Project>
 ```
+Se `dotnet restore` rifiuta la coppia `Worker 2.52.0` / `Worker.Sdk 2.1.0`, usare le versioni che il restore propone (`dotnet add package … ` senza `--version`) e riportarle nel report: le due versioni sono state lette dal feed ma non ne è stata verificata la compatibilità.
 
 `host.json`:
 ```json
@@ -2997,12 +3687,12 @@ Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~Api.Tests.Contrac
 }
 ```
 
-`local.settings.json.example` (il file reale è git-ignorato):
+`local.settings.json.example` (il file reale è git-ignorato; porte host del profilo `azure-local` con base 20000):
 ```json
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:20000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:20001/devstoreaccount1;TableEndpoint=http://127.0.0.1:20002/devstoreaccount1;",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "ServiceBusConnection": "Endpoint=sb://localhost:20004;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;",
     "ServiceBusQueue": "pdf-uploaded",
@@ -3114,7 +3804,7 @@ namespace MeepleAI.Functions.Forwarding;
 
 public enum ForwardOutcome
 {
-    /// <summary>L'API ha accettato o rifiutato in modo definitivo (2xx, 400, 404, 422): il messaggio si completa.</summary>
+    /// <summary>L'API ha risposto in modo definitivo (2xx, 400, 404, 422): il messaggio si completa.</summary>
     Settled,
     /// <summary>Errore di rete o 5xx: il messaggio si abbandona e Service Bus lo riconsegna fino a MaxDeliveryCount.</summary>
     TransientFailure,
@@ -3193,9 +3883,9 @@ using Microsoft.Extensions.Logging;
 namespace MeepleAI.Functions;
 
 /// <summary>
-/// Consumer della coda <c>pdf-uploaded</c> (spec azure-local §4.3). Settlement esplicito: un contratto
-/// invalido va in dead-letter con motivo (Review Focus 3), un guasto transitorio si abbandona e Service
-/// Bus riconsegna fino a MaxDeliveryCount, un esito definitivo completa il messaggio.
+/// Consumer della coda <c>pdf-uploaded</c> (spec azure-local §4.3). Settlement esplicito: contratto invalido in
+/// dead-letter con motivo (Review Focus 3), guasto transitorio abbandonato (Service Bus riconsegna fino a
+/// MaxDeliveryCount), esito definitivo completato.
 /// </summary>
 public sealed class PdfUploadedConsumer
 {
@@ -3234,11 +3924,9 @@ public sealed class PdfUploadedConsumer
 }
 ```
 
-`apps/functions/MeepleAI.Functions.sln`: creare con `dotnet new sln -n MeepleAI.Functions` da `apps/functions`, poi `dotnet sln add MeepleAI.Functions/MeepleAI.Functions.csproj MeepleAI.Functions.Tests/MeepleAI.Functions.Tests.csproj` (dopo lo Step 4).
-
 - [ ] **Step 4: Progetto di test**
 
-`apps/functions/MeepleAI.Functions.Tests/MeepleAI.Functions.Tests.csproj`:
+`MeepleAI.Functions.Tests.csproj` (versioni = quelle di `apps/api/tests/Api.Tests/Api.Tests.csproj`):
 ```xml
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
@@ -3249,10 +3937,10 @@ public sealed class PdfUploadedConsumer
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="xunit.v3" Version="2.0.3" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.3" />
-    <PackageReference Include="FluentAssertions" Version="7.2.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="FluentAssertions" Version="8.8.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
   </ItemGroup>
   <ItemGroup>
@@ -3260,7 +3948,6 @@ public sealed class PdfUploadedConsumer
   </ItemGroup>
 </Project>
 ```
-Le versioni di `Microsoft.NET.Test.Sdk`, `xunit.v3`, `xunit.runner.visualstudio` e `FluentAssertions` vanno copiate da `apps/api/tests/Api.Tests/Api.Tests.csproj` (stesse versioni del repo, qualunque esse siano): `grep -n "Microsoft.NET.Test.Sdk\|xunit\|FluentAssertions" apps/api/tests/Api.Tests/Api.Tests.csproj`.
 
 `ContractFixture.cs`:
 ```csharp
@@ -3320,9 +4007,7 @@ public sealed class PdfUploadedContractTests
     [Fact]
     public void TryParse_MalformedJson_IsRejected()
     {
-        var result = PdfUploadedContract.TryParse(BinaryData.FromString("{not json"));
-
-        result.Reason.Should().Be(PdfUploadedContract.ReasonMalformed);
+        PdfUploadedContract.TryParse(BinaryData.FromString("{not json")).Reason.Should().Be(PdfUploadedContract.ReasonMalformed);
     }
 
     [Fact]
@@ -3330,9 +4015,7 @@ public sealed class PdfUploadedContractTests
     {
         var json = ContractFixture.ReadV1().Replace("7b2d9e4a-1c3f-4a5b-9d8e-2f1a3b4c5d6e", Guid.Empty.ToString(), StringComparison.Ordinal);
 
-        var result = PdfUploadedContract.TryParse(BinaryData.FromString(json));
-
-        result.Reason.Should().Be(PdfUploadedContract.ReasonMissingPdfId);
+        PdfUploadedContract.TryParse(BinaryData.FromString(json)).Reason.Should().Be(PdfUploadedContract.ReasonMissingPdfId);
     }
 }
 ```
@@ -3389,7 +4072,7 @@ public sealed class PdfUploadedForwarderTests
 
         outcome.Should().Be(ForwardOutcome.Settled);
         handler.LastRequest!.RequestUri!.AbsolutePath.Should().Be(PdfUploadedForwarder.Route);
-        handler.LastRequest.Headers.GetValues(PdfUploadedForwarder.TokenHeader).Should().ContainSingle("t");
+        handler.LastRequest.Headers.GetValues(PdfUploadedForwarder.TokenHeader).Should().ContainSingle().Which.Should().Be("t");
     }
 
     [Theory]
@@ -3489,7 +4172,7 @@ public sealed class PdfUploadedConsumerTests
     }
 }
 ```
-Se la firma di `DeadLetterMessageAsync`/`AbandonMessageAsync` nella 5.24.0 ha un parametro `propertiesToModify` prima del motivo, passare `propertiesToModify: null` negli `Received(...)` e nel consumer (named arguments: l'ordine non cambia il resto).
+Se nella 5.24.0 `DeadLetterMessageAsync`/`AbandonMessageAsync` hanno `propertiesToModify` prima del motivo, gli argomenti nominati compilano comunque; con l'argomento omesso NSubstitute confronta `null` con `null`.
 
 - [ ] **Step 5: Build e test**
 
@@ -3499,14 +4182,15 @@ dotnet new sln -n MeepleAI.Functions
 dotnet sln add MeepleAI.Functions/MeepleAI.Functions.csproj MeepleAI.Functions.Tests/MeepleAI.Functions.Tests.csproj
 dotnet test
 ```
-Expected: compilazione verde, 11 test superati (4 contratto + 3 forwarder + 4 consumer).
+Expected: compilazione verde; 4 (contratto) + 8 (forwarder: 5 + 2 + 1) + 4 (consumer) = 16 superati.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tests/fixtures/contracts apps/functions apps/api/tests/Api.Tests/Contracts .gitignore
+git add tests/fixtures/contracts/pdf-uploaded.v1.json apps/functions/MeepleAI.Functions.sln apps/functions/MeepleAI.Functions apps/functions/MeepleAI.Functions.Tests apps/api/tests/Api.Tests/Contracts/PdfUploadedContractTests.cs .gitignore
 git commit -m "feat(functions): consumer PdfUploaded su Azure Functions isolated" -m "Contratto v1 congelato in tests/fixtures/contracts e verificato da API e Function; dead-letter sui contratti invalidi, abandon sui guasti transitori." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
+(`git add apps/functions/MeepleAI.Functions` aggiunge una cartella nuova e tutta del task: `git status --short` prima del commit deve mostrare solo file di questo task.)
 
 ---
 
@@ -3521,7 +4205,7 @@ git commit -m "feat(functions): consumer PdfUploaded su Azure Functions isolated
 
 **Interfaces:**
 - Consumes: `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_PROTOCOL`, `MEEPLEAI_PROFILE` (Task 1).
-- Produces: `OtlpExport.IsEnabled(IConfiguration)`, `OtlpExport.Endpoint(IConfiguration)`; attributo risorsa `meepleai.profile`.
+- Produces: `OtlpExport.IsEnabled(IConfiguration)`, `OtlpExport.Endpoint(IConfiguration)`, `OtlpExport.ProfileName(IConfiguration)`; attributo risorsa `meepleai.profile` (`deployment.environment` resta `EnvironmentName`: emendamento di spec in Task 10).
 
 - [ ] **Step 1: Pacchetti**
 
@@ -3546,9 +4230,9 @@ namespace Api.Tests.Observability;
 [Trait("BoundedContext", "Observability")]
 public sealed class OtlpExportTests
 {
-    private static IConfiguration Config(string? endpoint) =>
+    private static IConfiguration Config(string? endpoint, string? profile = null) =>
         new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { ["OTEL_EXPORTER_OTLP_ENDPOINT"] = endpoint })
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["OTEL_EXPORTER_OTLP_ENDPOINT"] = endpoint, ["MEEPLEAI_PROFILE"] = profile })
             .Build();
 
     [Theory]
@@ -3576,6 +4260,13 @@ public sealed class OtlpExportTests
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*OTEL_EXPORTER_OTLP_ENDPOINT*");
     }
+
+    [Fact]
+    public void ProfileName_DefaultsToDefault()
+    {
+        OtlpExport.ProfileName(Config(null)).Should().Be("default");
+        OtlpExport.ProfileName(Config(null, "azure-local")).Should().Be("azure-local");
+    }
 }
 ```
 
@@ -3586,9 +4277,9 @@ public sealed class OtlpExportTests
 namespace Api.Observability;
 
 /// <summary>
-/// Gate unico dell'export OTLP (spec azure-local §4.4): trace e metriche OpenTelemetry e i log Serilog
-/// vanno all'endpoint di <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> quando è valorizzato (Aspire Dashboard in
-/// locale, Azure Monitor via collector in Azure). Prometheus resta sempre attivo.
+/// Gate unico dell'export OTLP (spec azure-local §4.4): trace e metriche OpenTelemetry e i log Serilog vanno
+/// all'endpoint di <c>OTEL_EXPORTER_OTLP_ENDPOINT</c> quando è valorizzato (Aspire Dashboard in locale, Azure
+/// Monitor via collector in Azure). Prometheus e Seq restano sempre attivi.
 /// </summary>
 internal static class OtlpExport
 {
@@ -3613,7 +4304,7 @@ internal static class OtlpExport
 }
 ```
 
-In `ObservabilityServiceExtensions.AddOpenTelemetryServices`: aggiungere `["meepleai.profile"] = OtlpExport.ProfileName(configuration)` nel dizionario degli attributi; cambiare le due chiamate in `.WithTracing(tracing => tracing.ConfigureTracing(OtlpExport.IsEnabled(configuration)))` e `.WithMetrics(metrics => metrics.ConfigureMetrics(OtlpExport.IsEnabled(configuration)))`. Le due firme diventano `ConfigureTracing(this TracerProviderBuilder tracing, bool exportOtlp)` e `ConfigureMetrics(this MeterProviderBuilder metrics, bool exportOtlp)`; in coda a ciascuna catena:
+In `ObservabilityServiceExtensions.AddOpenTelemetryServices`: aggiungere `["meepleai.profile"] = OtlpExport.ProfileName(configuration)` al dizionario degli attributi (`deployment.environment` resta `environment.EnvironmentName`: cambiarlo romperebbe le dashboard esistenti); passare il gate: `.WithTracing(tracing => tracing.ConfigureTracing(OtlpExport.IsEnabled(configuration)))`, `.WithMetrics(metrics => metrics.ConfigureMetrics(OtlpExport.IsEnabled(configuration)))`. Le firme diventano `ConfigureTracing(this TracerProviderBuilder tracing, bool exportOtlp)` e `ConfigureMetrics(this MeterProviderBuilder metrics, bool exportOtlp)`; `ConfigureTracing` oggi è un'unica espressione `return tracing.SetSampler(...)…;`: spezzarla in `tracing.SetSampler(...)...;` + 
 
 ```csharp
         if (exportOtlp)
@@ -3624,9 +4315,9 @@ In `ObservabilityServiceExtensions.AddOpenTelemetryServices`: aggiungere `["meep
 
         return tracing;
 ```
-(e lo stesso per `metrics`, mantenendo `.AddPrometheusExporter()` prima). Attenzione: `ConfigureTracing` oggi è una singola espressione `return tracing.SetSampler(...)...;` — spezzarla in assegnazione + `if` + `return`.
+e lo stesso per `metrics`, mantenendo `.AddPrometheusExporter()` prima dell'`if`.
 
-In `LoggingConfiguration.ConfigureSerilog`, dopo il blocco Seq:
+In `LoggingConfiguration.ConfigureSerilog`, dopo il blocco Seq, con `using Api.Observability;`:
 ```csharp
         // Spec azure-local §4.4: log su OTLP accanto a Seq quando l'endpoint è configurato.
         if (OtlpExport.IsEnabled(configuration))
@@ -3644,12 +4335,10 @@ In `LoggingConfiguration.ConfigureSerilog`, dopo il blocco Seq:
             });
         }
 ```
-con `using Api.Observability;`.
 
 - [ ] **Step 4: Test e build**
 
-Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~OtlpExportTests"` → Expected: 5 superati.
-Run: `dotnet build src/Api` → Expected: verde (nessun warning nuovo).
+Run: `dotnet test tests/Api.Tests --filter "FullyQualifiedName~OtlpExportTests"` → Expected: 6 superati. Run: `dotnet build src/Api` → verde senza warning nuovi.
 
 - [ ] **Step 5: Commit**
 
@@ -3663,21 +4352,20 @@ git commit -m "feat(observability): export OTLP di trace, metriche e log" -m "At
 ### Task 10: Bicep in `infra/azure/`, workflow CI, emendamenti alla spec e checklist manuale
 
 **Files:**
-- Create: `infra/azure/main.bicep`, `infra/azure/main.bicepparam`, `infra/azure/modules/storage.bicep`, `modules/servicebus.bicep`, `modules/keyvault.bicep`, `modules/appconfig.bicep`, `modules/monitoring.bicep`, `modules/postgres.bicep`, `modules/redis.bicep`, `modules/containerapps.bicep`, `modules/functions.bicep`
-- Create: `infra/azure/azure.yaml`
+- Create: `infra/azure/main.bicep`, `infra/azure/main.bicepparam`, `infra/azure/azure.yaml`, `infra/azure/modules/{monitoring,storage,servicebus,keyvault,appconfig,postgres,redis,containerapps,functions}.bicep`
 - Create: `.github/workflows/azure-line.yml`
-- Modify: `docs/for-developers/specs/2026-10-09-azure-local-profile-design.md` (§2 Key Vault, §4.2, §4.5, §7)
+- Modify: `docs/for-developers/specs/2026-10-09-azure-local-profile-design.md`
 - Modify: `docs/for-developers/operations/azure-local-profile.md` (sezione «Verifica manuale»)
-- Modify: `CLAUDE.md` (riga nella tabella Quick Reference)
+- Modify: `docs/superpowers/plans/2026-10-09-azure-local-profile-plan-notes.md` (nota «Eventi»: la transizione segue lo store, non lo precede)
+- Modify: `CLAUDE.md`
 
 **Interfaces:**
-- Consumes: nomi di coda/container dei task precedenti (`pdf-uploaded`, `meepleai-uploads`).
+- Consumes: nomi `pdf-uploaded`, `meepleai-uploads`; chiavi `AZURE_SERVICEBUS_NAMESPACE` (Task 5), `Azure:Sdk:AllowedHostSuffixes` (Task 2), `AZURE_APPCONFIG_ENDPOINT`/`AZURE_KEYVAULT_URI` (Task 4).
 - Produces: workflow `azure-line.yml` (job `bicep`, `functions-tests`).
 
 - [ ] **Step 1: Bicep CLI locale**
 
-Run (Git Bash, nello scratchpad della sessione): `curl -sSL -o bicep.exe https://github.com/Azure/bicep/releases/latest/download/bicep-win-x64.exe && ./bicep.exe --version`
-Expected: stampa la versione. Usare `./bicep.exe` (percorso assoluto dello scratchpad) nei passi seguenti; il binario non entra nel repo.
+Run (Git Bash, nello scratchpad): `curl -sSL -o bicep.exe https://github.com/Azure/bicep/releases/download/v0.48.1/bicep-win-x64.exe && ./bicep.exe --version` → Expected: `0.48.1`. Il binario resta nello scratchpad.
 
 - [ ] **Step 2: Moduli Bicep**
 
@@ -3685,9 +4373,9 @@ Expected: stampa la versione. Usare `./bicep.exe` (percorso assoluto dello scrat
 ```bicep
 targetScope = 'resourceGroup'
 
-@description('Prefisso dei nomi (minuscole, max 10).')
+@description('Prefisso dei nomi (minuscole).')
 @minLength(3)
-@maxLength(10)
+@maxLength(8)
 param namePrefix string = 'meepleai'
 
 @description('Regione.')
@@ -3706,7 +4394,7 @@ param apiImage string
 @description('Immagine del web (registry/repo:tag).')
 param webImage string
 
-var suffix = uniqueString(resourceGroup().id)
+var suffix = take(uniqueString(resourceGroup().id), 10)
 
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
@@ -3751,7 +4439,7 @@ module containerapps 'modules/containerapps.bicep' = {
     profile: profile
     apiImage: apiImage
     webImage: webImage
-    logAnalyticsWorkspaceId: monitoring.outputs.workspaceId
+    logAnalyticsWorkspaceName: monitoring.outputs.workspaceName
     appInsightsConnectionString: monitoring.outputs.appInsightsConnectionString
     storageAccountBlobEndpoint: storage.outputs.blobEndpoint
     serviceBusNamespace: servicebus.outputs.namespaceName
@@ -3797,7 +4485,7 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   properties: { Application_Type: 'web', WorkspaceResourceId: workspace.id }
 }
 
-output workspaceId string = workspace.id
+output workspaceName string = workspace.name
 output appInsightsConnectionString string = appInsights.properties.ConnectionString
 ```
 
@@ -3959,12 +4647,16 @@ param location string
 param profile string
 param apiImage string
 param webImage string
-param logAnalyticsWorkspaceId string
+param logAnalyticsWorkspaceName string
 param appInsightsConnectionString string
 param storageAccountBlobEndpoint string
 param serviceBusNamespace string
 param keyVaultUri string
 param appConfigEndpoint string
+
+resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: logAnalyticsWorkspaceName
+}
 
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${namePrefix}-cae'
@@ -3973,8 +4665,8 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
-        customerId: reference(logAnalyticsWorkspaceId, '2023-09-01').customerId
-        sharedKey: listKeys(logAnalyticsWorkspaceId, '2023-09-01').primarySharedKey
+        customerId: workspace.properties.customerId
+        sharedKey: workspace.listKeys().primarySharedKey
       }
     }
   }
@@ -4129,7 +4821,7 @@ services:
 - [ ] **Step 3: Validare in locale**
 
 Run (da `infra/azure`): `for f in main.bicep modules/*.bicep; do <scratchpad>/bicep.exe build "$f" --stdout > /dev/null && <scratchpad>/bicep.exe lint "$f"; done`
-Expected: nessun errore; i warning `BCP081` (versione API non nota al CLI) sono ammessi, qualsiasi altro warning va risolto. Rimuovere gli eventuali `.json` prodotti accanto ai `.bicep` (`git status` deve mostrare solo i sorgenti).
+Expected: nessun errore; i warning `BCP081` (versione API non nota al CLI) sono ammessi, ogni altro warning va risolto. `git status` deve mostrare solo i sorgenti `.bicep`/`.bicepparam`/`azure.yaml`.
 
 - [ ] **Step 4: Workflow** `.github/workflows/azure-line.yml`
 
@@ -4157,12 +4849,14 @@ jobs:
     name: Bicep build + lint (never deploys)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      BICEP_VERSION: v0.48.1
     steps:
       - uses: actions/checkout@v6
       - name: Install Bicep CLI
         run: |
           set -euo pipefail
-          curl -sSL -o bicep https://github.com/Azure/bicep/releases/latest/download/bicep-linux-x64
+          curl -sSL -o bicep "https://github.com/Azure/bicep/releases/download/${BICEP_VERSION}/bicep-linux-x64"
           chmod +x bicep && sudo mv bicep /usr/local/bin/bicep
           bicep --version
       - name: Build and lint every template
@@ -4183,36 +4877,46 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.0.x'
       - name: Test
         working-directory: apps/functions
         run: dotnet test --configuration Release --logger "trx;LogFileName=functions.trx"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
           name: functions-test-results
           path: apps/functions/**/TestResults/*.trx
 ```
-Verificare la major di `actions/setup-dotnet` usata altrove (`grep -rn "setup-dotnet@" .github/workflows/*.yml | head -1`) e allinearla.
 
 - [ ] **Step 5: Emendamenti alla spec** (`docs/for-developers/specs/2026-10-09-azure-local-profile-design.md`)
 
-- §2, riga Key Vault: sostituire la nota con «**opt-in** (profilo compose `azure-keyvault`, `make dev-azure-local-keyvault`): richiede certificati generati sull'host con `docs/setup.sh` del progetto; non parte con `make dev-azure-local`».
-- §4.2: aggiungere «Le sorgenti girano prima del container DI, quindi non passano dal client pinnato: endpoint da configurazione statica, come le esenzioni OpenRouter/Resend del gate. Per gli emulatori anonimi una `StaticTokenCredential` sostituisce `DefaultAzureCredential` (`AZURE_APPCONFIG_ANONYMOUS`/`AZURE_KEYVAULT_ANONYMOUS`).»
-- §4.5: riscrivere il primo punto: «Due client nominati: `AzureSdk` pinnato (in `MustBePinned`, suffissi da `Azure:Sdk:AllowedHostSuffixes`, rifiuta di partire senza lista) e `AzureSdkLocal` esente (solo `MEEPLEAI_PROFILE=azure-local`, perché `SsrfPinnedConnect` blocca ogni IP privato e gli emulatori stanno sulla rete compose). Service Bus parla AMQP e non passa da nessuno dei due.»
-- §7: la riga Key Vault diventa «Chiavi lette da App Configuration emulator (test di integrazione); Key Vault: sorgente implementata, verificata con il profilo opt-in nella checklist manuale».
+- §2, riga Key Vault: «**opt-in** (profilo compose `azure-keyvault`, `make dev-azure-local-keyvault`): richiede certificati generati sull'host con `docs/setup.sh` del progetto; non parte con `make dev-azure-local`».
+- §2, riga App Configuration: «auth HMAC via env `Tenant__AccessKeys__0__*` (+ anonima per il seed); il provider .NET usa la connection string `Endpoint=…;Id=…;Secret=…` perché rifiuta un bearer su http».
+- §3: aggiungere `AZURE_APPCONFIG_CONNECTION_STRING`, `AZURE_KEYVAULT_ANONYMOUS`, `INTERNAL_SERVICE_TOKEN`; «le sorgenti Azure vincono sulle variabili d'ambiente».
+- §4.2: «Le sorgenti girano prima del container DI e non passano dal client pinnato: endpoint da configurazione statica, come le esenzioni OpenRouter/Resend del gate. Emulatore App Configuration: connection string HMAC; Key Vault emulator: `StaticTokenCredential` (`AZURE_KEYVAULT_ANONYMOUS=true`). Mapping dei secret: `--` → `:`, `-` → `_`; le chiavi CamelCase con trattino interno non sono esprimibili».
+- §4.3: il payload è `{ eventId, occurredAt, sourceContext, contractVersion, pdfDocumentId, gameId, sharedGameId, filePath }` (non `BlobUri`); l'evento parte alla transizione Pending → Uploading, DOPO lo store del blob; «cosa causa l'evento: il consumer interno indicizza SOLO un PDF inattivo che ne ha bisogno (`Failed`, o `Ready` senza vettori) tramite `IndexPdfIfIdleCommand`; pipeline in corso o documento già indicizzato ⇒ `noop`» (le due guardie non stanno in `IndexPdfCommand`, che ri-indicizza sempre); profilo Azure: `AZURE_SERVICEBUS_NAMESPACE` + `DefaultAzureCredential`; metrica `meepleai_pdf_uploaded_events_total{outcome}` senza unit.
+- §4.4: «`deployment.environment` resta l'ambiente ASP.NET (dashboard esistenti); il profilo va nell'attributo `meepleai.profile`».
+- §4.5: «Due client nominati: `AzureSdk` pinnato (`MustBePinned`, suffissi da `Azure:Sdk:AllowedHostSuffixes`, rifiuta di partire senza lista) e `AzureSdkLocal` esente (solo `MEEPLEAI_PROFILE=azure-local`: `SsrfPinnedConnect` blocca ogni IP privato e gli emulatori stanno sulla rete compose). Service Bus parla AMQP e non passa da nessuno dei due. Il namespace C# è `Api.Infrastructure.AzureSdk`».
+- §5: workflow `azure-line.yml` (job `bicep` + `functions-tests`), Bicep CLI pinnato a v0.48.1.
+- §6: riga Integrazione: «App Configuration emulator via HMAC (test di integrazione); Key Vault: sorgente implementata, verificata con il profilo opt-in nella checklist manuale».
+- §7: riga 3 → «Chiavi lette dall'App Configuration emulator con HMAC (test di integrazione); Key Vault opt-in verificato a mano»; riga 4 → «Upload PDF ⇒ messaggio v1 ⇒ Function ⇒ endpoint interno (noop con pipeline in corso; indicizzazione di un PDF Failed)».
 
-- [ ] **Step 6: Checklist manuale** in `docs/for-developers/operations/azure-local-profile.md` (sezione «Verifica manuale», ogni riga con il comando o l'URL)
+Nelle note (`…-plan-notes.md`), voce «Eventi»: sostituire «subito prima dello store sul blob» con «dopo lo store del blob e la scrittura di `FilePath` (`UploadPdfCommandHandler.cs:574,609`), nel `ProcessPdfAsync` in background (`Processing.cs:195`)».
 
-1. `cd infra && make dev-azure-local` → `curl -fsS http://localhost:8080/api/v1/health`.
-2. Login admin, upload di un PDF dalla UI → `docker logs meepleai-api | grep "Stored blob"` mostra la chiave `pdfs/<game>/<fileId>_<nome>.pdf`; `az storage blob list --connection-string "<la connection string di compose.azure-local.yml, con BlobEndpoint=http://localhost:20000/devstoreaccount1>" -c meepleai-uploads -o table` elenca lo stesso blob.
-3. `curl -fsS http://localhost:20003/kv?api-version=2023-11-01` mostra le chiavi di `appconfig-seed.json`; `docker logs meepleai-api | grep -i "AppConfiguration"` non riporta errori.
-4. `cd apps/functions/MeepleAI.Functions && cp local.settings.json.example local.settings.json && func start` (Azure Functions Core Tools v4) → dopo un upload il log della Function stampa `forwarded: 200` oppure `202`; `curl -s http://localhost:8080/metrics | grep meepleai_pdf_uploaded_events_total`.
-5. Messaggio malformato: con il Service Bus Explorer di VS Code (connection string host `Endpoint=sb://localhost:20004;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;`) inviare il corpo `{"contractVersion":"v9"}` sulla coda `pdf-uploaded`; il log della Function stampa `dead-lettered: unsupported_contract` e il messaggio compare nella dead-letter della coda.
-6. `http://localhost:20009` (Aspire Dashboard): la richiesta a `/api/v1/health` appare in Traces, le metriche `meepleai.*` in Metrics, i log in Structured logs.
-7. `make dev-azure-local-down`; `docker ps --filter name=meepleai-` vuoto per i servizi del profilo.
+- [ ] **Step 6: Checklist manuale** in `docs/for-developers/operations/azure-local-profile.md`, sezione «Verifica manuale» (comandi in forma `pwsh -c "docker …"` su Windows)
+
+1. `cd infra && make dev-azure-local`; `pwsh -c "docker logs meepleai-azure-local-init"` mostra tre `ready:` e `seeded Azure:Profile:Greeting`; `curl -fsS http://localhost:8080/api/v1/health` → 200.
+2. Login admin, upload di un PDF dalla UI; `pwsh -c "docker logs meepleai-api"` contiene `Stored blob pdfs/<game>/<fileId>_<nome>.pdf`; `az storage blob list --connection-string "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://localhost:20000/devstoreaccount1;" -c meepleai-uploads -o table` elenca lo stesso blob.
+3. URL firmato dal profilo compose (host `azurite`, non IP): dal dettaglio del gioco copiare l'URL della cover (o chiamare l'endpoint che restituisce `coverUrl`) e `curl -fsS -o /dev/null -w "%{http_code}" "<url>"` → 200.
+4. `curl -fsS "http://localhost:20003/kv?api-version=2023-11-01"` mostra `Azure:Profile:Greeting`; `pwsh -c "docker logs meepleai-api"` non contiene errori `AppConfiguration`.
+5. `cd apps/functions/MeepleAI.Functions && cp local.settings.json.example local.settings.json && func start` (Azure Functions Core Tools v4); dopo un upload il log della Function stampa `forwarded: 202` (pipeline in corso) e, per un PDF che l'admin ha marcato `Failed`, `forwarded: 200`; `curl -s http://localhost:8080/metrics | grep meepleai_pdf_uploaded_events_total`.
+6. Messaggio malformato: con il Service Bus Explorer di VS Code (connection string `Endpoint=sb://localhost:20004;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;`) inviare `{"contractVersion":"v9"}` sulla coda `pdf-uploaded`; il log della Function stampa `dead-lettered: unsupported_contract` e il messaggio compare nella dead-letter della coda.
+7. Event Grid smoke: `curl -fsS -X POST http://localhost:20006/pdf-events/api/events -H "Content-Type: application/json" -d '[{"id":"1","eventType":"Smoke","subject":"s","eventTime":"2026-10-09T10:00:00Z","data":{},"dataVersion":"1"}]'` → 200; `pwsh -c "docker logs meepleai-eventgrid-emulator"` mostra la consegna a `pull://smoke-subscription`.
+8. `http://localhost:20009` (Aspire Dashboard): la richiesta a `/api/v1/health` appare in Traces, le metriche `meepleai.*` in Metrics, i log in Structured logs.
+9. Key Vault opt-in: dopo il setup dei certificati, `make dev-azure-local-keyvault`; `pwsh -c "docker logs meepleai-api"` non contiene errori `KeyVault`; un secret `AZURE-LOCAL-PROBE=ok` creato con `az keyvault secret set --vault-name … ` (o con l'API REST dell'emulatore su `https://localhost:20011`) compare come chiave `AZURE_LOCAL_PROBE` in `GET /api/v1/admin/config` (o nel log di avvio).
+10. `make dev-azure-local-down`; `pwsh -c "docker ps --filter name=meepleai-"` non elenca i servizi del profilo.
 
 - [ ] **Step 7: Riga in CLAUDE.md** (tabella Quick Reference, dopo «Dev from Snapshot»)
 
@@ -4223,12 +4927,12 @@ Verificare la major di `actions/setup-dotnet` usata altrove (`grep -rn "setup-do
 - [ ] **Step 8: Commit**
 
 ```bash
-git add infra/azure .github/workflows/azure-line.yml docs/for-developers/specs/2026-10-09-azure-local-profile-design.md docs/for-developers/operations/azure-local-profile.md CLAUDE.md
-git commit -m "feat(infra): Bicep per il profilo Azure, gate CI azure-line, checklist" -m "bicep build/lint su ogni PR che tocca infra/azure o apps/functions; mai un deploy. Spec emendata: Key Vault opt-in, due client SDK, sorgenti pre-DI." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
+git add infra/azure .github/workflows/azure-line.yml docs/for-developers/specs/2026-10-09-azure-local-profile-design.md docs/for-developers/operations/azure-local-profile.md docs/superpowers/plans/2026-10-09-azure-local-profile-plan-notes.md CLAUDE.md
+git commit -m "feat(infra): Bicep per il profilo Azure, gate CI azure-line, checklist" -m "bicep build/lint pinnato a v0.48.1 e test delle Functions su ogni PR che tocca infra/azure o apps/functions; mai un deploy. Spec emendata: HMAC per App Configuration, Key Vault opt-in, due client SDK, IndexPdfIfIdle, metrica senza unit." -m "Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 ```
 
 ---
 
 ## Chiusura
 
-Dopo il Task 10: suite unit backend completa (`dotnet test tests/Api.Tests --filter "Category=Unit"`), `ArchitectureTests`, `pnpm typecheck && pnpm lint` in `apps/web` (nessun file web toccato: deve restare verde), `make dev-azure-local-config`. Poi `superpowers:finishing-a-development-branch` con base `azure/main`; aprire le issue di follow-up per il debito `IAmazonS3` (spec §4.1) e per la seconda iterazione (Cosmos per ConversationMemory, Redis vettoriale, multi-arch, KEDA/AKS).
+Dopo il Task 10: suite unit backend completa (`dotnet test tests/Api.Tests --filter "Category=Unit"`), gate di architettura (`--filter "FullyQualifiedName~Architecture"`, verdi nel worktree grazie al Task 0), `pnpm typecheck && pnpm lint` in `apps/web` (solo un build arg aggiunto al compose: nessun file web toccato), `make dev-azure-local-config`. Poi `superpowers:finishing-a-development-branch` con base `azure/main`; aprire le issue di follow-up: debito `IAmazonS3` (spec §4.1), `BlobServiceClient` singleton (oggi per scope come S3), Content-Type fisso in `StoreAsync` (ereditato da S3), seconda iterazione (Cosmos per ConversationMemory, Redis vettoriale, multi-arch, KEDA/AKS).

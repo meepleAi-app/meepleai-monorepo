@@ -14,7 +14,7 @@
 
 'use client';
 
-import { use, useEffect, useRef, useState } from 'react';
+import { use, useEffect, useRef } from 'react';
 
 import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
@@ -22,7 +22,6 @@ import { toast } from 'sonner';
 
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
-import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
 import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
 import { RagReadinessIndicator } from '@/components/admin/shared-games/rag-setup/RagReadinessIndicator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
@@ -40,11 +39,6 @@ export function RagSetupClient({ params }: RagSetupClientProps) {
   const { data: readiness, isLoading } = useGameRagReadiness(gameId);
   const notifications = useNotificationStore(s => s.notifications);
   const seenNotificationIds = useRef<Set<string>>(new Set());
-  const [agentInfo, setAgentInfo] = useState<{
-    agentId: string;
-    chatThreadId: string;
-  } | null>(null);
-
   // Toast when a document processing completes for this game
   useEffect(() => {
     for (const n of notifications) {
@@ -63,11 +57,6 @@ export function RagSetupClient({ params }: RagSetupClientProps) {
       }
     }
   }, [notifications, gameId]);
-
-  // Issue #4139: `activeAgentId` existed only to feed InlineChatPanel, which now
-  // streams by game. The agent id is still READ from the readiness payload for the
-  // panel above (AgentSetupPanel) - it just no longer decides who answers.
-  const activeChatThreadId = agentInfo?.chatThreadId ?? null;
 
   if (isLoading) {
     return (
@@ -135,19 +124,13 @@ export function RagSetupClient({ params }: RagSetupClientProps) {
           )}
         </div>
 
-        {/* Right Column: Agent + Chat */}
+        {/* Right Column: Chat */}
         <div className="space-y-6">
-          {/* Agent Setup */}
-          <AgentSetupPanel
-            gameId={gameId}
-            gameTitle={readiness?.gameTitle ?? ''}
-            documents={readiness?.documents ?? []}
-            existingAgent={readiness?.linkedAgent ?? null}
-            onAgentCreated={info => setAgentInfo(info)}
-          />
-
-          {/* Inline Chat */}
-          <InlineChatPanel gameId={gameId} chatThreadId={activeChatThreadId} />
+          {/* Issue #4138: AgentSetupPanel stood here. It created a per-game RAG agent
+              from selected documents via POST /agents/create-with-setup, a route this
+              issue retired - there is one system agent and it is not tied to a game.
+              The chat below needs no agent: it streams by game. */}
+          <InlineChatPanel gameId={gameId} chatThreadId={null} />
         </div>
       </div>
     </div>

@@ -22,7 +22,6 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 // ========================================
 
 const GAME_ID = 'shared-game-catan-123';
-const AGENT_ID = 'agent-catan-456';
 const DOCUMENT_ID = 'doc-catan-pdf-789';
 const BGG_ID = 13;
 
@@ -229,121 +228,10 @@ async function mockQueueEndpoints(page: Page) {
   });
 }
 
-async function mockAgentEndpoints(page: Page) {
-  // Agent status — ready
-  await page.route(`${API_BASE}/api/v1/agents/${AGENT_ID}/status`, async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        agentId: AGENT_ID,
-        name: 'Catan Tutor',
-        isActive: true,
-        isReady: true,
-        hasConfiguration: true,
-        hasDocuments: true,
-        documentCount: 1,
-        ragStatus: 'Ready',
-        blockingReason: null,
-      }),
-    });
-  });
-
-  // Agent details
-  await page.route(`${API_BASE}/api/v1/agents/${AGENT_ID}`, async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: AGENT_ID,
-        name: 'Catan Tutor',
-        type: 'tutor',
-        gameId: GAME_ID,
-        isActive: true,
-        invocationCount: 0,
-      }),
-    });
-  });
-
-  // Create chat thread
-  await page.route(`${API_BASE}/api/v1/chat-threads`, async route => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'thread-catan-test',
-          userId: 'admin-test-id',
-          agentId: AGENT_ID,
-          title: 'Chat con Catan Tutor',
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-          lastMessageAt: new Date().toISOString(),
-          messageCount: 0,
-          messages: [],
-        }),
-      });
-    } else {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([]),
-      });
-    }
-  });
-
-  // Chat SSE with RAG citations
-  await page.route(`${API_BASE}/api/v1/agents/${AGENT_ID}/chat`, async route => {
-    const ts = new Date().toISOString();
-    const threadId = 'thread-catan-test';
-    const sseEvents = [
-      `data: ${JSON.stringify({ type: 0, data: { message: 'Searching knowledge base...', chatThreadId: threadId }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 1, data: [{ documentId: DOCUMENT_ID, pageNumber: 15, score: 0.92, chunk: 'Catan si gioca da 3 a 4 giocatori' }], timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 0, data: { message: 'Generating response...', chatThreadId: threadId }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: 'Secondo' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' il' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' regolamento' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' (p.' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: '15),' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' Catan' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' si' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' gioca' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' da' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' 3' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' a' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' 4' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 7, data: { token: ' giocatori.' }, timestamp: ts })}\n\n`,
-      `data: ${JSON.stringify({ type: 4, data: { totalTokens: 35, chatThreadId: threadId, promptTokens: 20, completionTokens: 15 }, timestamp: ts })}\n\n`,
-    ];
-
-    await route.fulfill({
-      status: 200,
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
-      body: sseEvents.join(''),
-    });
-  });
-
-  // Game agents list (for the agent test page to find the agent)
-  await page.route(`${API_BASE}/api/v1/games/${GAME_ID}/agents`, async route => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify([
-        {
-          id: AGENT_ID,
-          name: 'Catan Tutor',
-          type: 'tutor',
-          isActive: true,
-          isReady: true,
-        },
-      ]),
-    });
-  });
-}
+// Issue #4138: mockAgentEndpoints stood here, routing /agents/{id}, /{id}/status and
+// /{id}/chat. The first two served the retired agent page; the third mocked a route
+// that NEVER existed on the backend - the same non-route #4139 found the chat hook
+// talking to. Nothing in this journey calls agent endpoints any more.
 
 // ========================================
 // Tests
@@ -455,65 +343,19 @@ test.describe('Admin PDF Embedding Journey', () => {
     await expect(page.getByText(/Live|Polling/i).first()).toBeVisible({ timeout: 5000 });
   });
 
-  test('Scenario 4: Test RAG agent with citations', async ({ page }) => {
-    await mockAgentEndpoints(page);
+  // Issue #4138: "Scenario 4: Test RAG agent with citations" stood here. It drove
+  // `/agents/{id}` and the `agent-info-tab-chat` tab, both deleted with the
+  // user-facing agents section (#4141). What it actually asserted - a grounded
+  // answer carrying a page citation - is worth keeping, but it belongs on the
+  // game-scoped chat (`/library/{gameId}?tab=aiChat`); re-pointing the selectors
+  // here would have produced a spec that cannot pass, dressed up as one that can.
 
-    // Navigate to agent page
-    await page.goto(`/agents/${AGENT_ID}`);
-    await page.waitForLoadState('networkidle');
-
-    // Verify agent page loads
-    await expect(page.getByText('Catan Tutor')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to Chat tab
-    const chatTab = page.locator('[data-testid="agent-info-tab-chat"]');
-    if (await chatTab.isVisible()) {
-      await chatTab.click();
-    }
-
-    // Start conversation
-    const startButton = page.getByRole('button', { name: /Inizia Conversazione/i });
-    if (await startButton.isVisible({ timeout: 3000 })) {
-      await startButton.click();
-    }
-
-    // Wait for chat interface — use either data-testid or placeholder
-    const chatInput = page
-      .locator('[data-testid="message-input"]')
-      .or(page.getByPlaceholder(/Ask a question|Chiedi/i));
-    await expect(chatInput.first()).toBeVisible({ timeout: 5000 });
-
-    // Send a question
-    await chatInput.first().fill('Quanti giocatori possono giocare a Catan?');
-
-    const sendButton = page
-      .locator('[data-testid="send-btn"]')
-      .or(page.getByRole('button', { name: /send/i }));
-    await sendButton.first().click();
-
-    // Verify streaming response appears with content from RAG
-    const responseArea = page.locator(
-      '[data-testid="message-assistant"], [data-testid="message-streaming"]'
-    );
-    await expect(responseArea.first()).toBeVisible({ timeout: 5000 });
-
-    // Wait for full response to stream
-    await expect(page.getByText(/regolamento/i)).toBeVisible({ timeout: 8000 });
-
-    // Verify the response mentions page reference (RAG citation)
-    await expect(page.getByText(/p\.15|page 15/i)).toBeVisible({ timeout: 5000 });
-
-    // Verify response contains game-specific content
-    await expect(page.getByText(/3.*4.*giocatori|giocatori/i)).toBeVisible({ timeout: 5000 });
-  });
-
-  test('Full journey: BGG wizard → PDF upload → queue → agent chat', async ({ page }) => {
+  test('Full journey: BGG wizard → PDF upload → queue', async ({ page }) => {
     // Setup all mocks
     await mockBggSearch(page);
     await mockGameCreation(page);
     await mockPdfUpload(page);
     await mockQueueEndpoints(page);
-    await mockAgentEndpoints(page);
 
     // === Step 1: Navigate to wizard and search BGG ===
     await page.goto('/admin/games/new');
@@ -556,37 +398,10 @@ test.describe('Admin PDF Embedding Journey', () => {
     await expect(page.getByText(/Processing Queue/i)).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('catan-regolamento.pdf')).toBeVisible({ timeout: 5000 });
 
-    // === Step 5: Test agent with RAG ===
-    await page.goto(`/agents/${AGENT_ID}`);
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.getByText('Catan Tutor')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to chat
-    const chatTab = page.locator('[data-testid="agent-info-tab-chat"]');
-    if (await chatTab.isVisible()) {
-      await chatTab.click();
-    }
-
-    const startBtn = page.getByRole('button', { name: /Inizia Conversazione/i });
-    if (await startBtn.isVisible({ timeout: 3000 })) {
-      await startBtn.click();
-    }
-
-    // Send question and verify RAG response
-    const chatInput = page
-      .locator('[data-testid="message-input"]')
-      .or(page.getByPlaceholder(/Ask a question|Chiedi/i));
-    await expect(chatInput.first()).toBeVisible({ timeout: 5000 });
-    await chatInput.first().fill('Quanti giocatori possono giocare a Catan?');
-
-    const sendBtn = page
-      .locator('[data-testid="send-btn"]')
-      .or(page.getByRole('button', { name: /send/i }));
-    await sendBtn.first().click();
-
-    // Verify RAG response with citations
-    await expect(page.getByText(/regolamento/i)).toBeVisible({ timeout: 8000 });
-    await expect(page.getByText(/p\.15|page 15/i)).toBeVisible({ timeout: 5000 });
+    // Issue #4138: a "Step 5: Test agent with RAG" stood here, navigating to
+    // `/agents/{AGENT_ID}`. Same deleted page as the retired Scenario 4 above. The
+    // journey this test owns - BGG wizard → PDF upload → queue - is intact and
+    // still asserted; the chat leg moves with the rest of the grounded-answer
+    // coverage to the game-scoped surface.
   });
 });

@@ -2484,16 +2484,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     description: 'Inline chat panel for testing RAG setup on a shared game.',
     tags: ['chat', 'rag', 'test', 'inline'],
   },
-  {
-    id: 'agent-setup-panel',
-    name: 'AgentSetupPanel',
-    importPath: '@/components/admin/shared-games/rag-setup/AgentSetupPanel',
-    category: 'Agent',
-    areas: ['admin'],
-    tier: 'interactive',
-    description: 'Panel guiding admin through linking an agent to a shared game.',
-    tags: ['agent', 'setup', 'panel', 'game'],
-  },
 
   // ─── Admin — Users ────────────────────────────────────────────────────────
 

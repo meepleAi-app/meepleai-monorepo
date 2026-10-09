@@ -5,7 +5,9 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentDefinition;
 
@@ -76,7 +78,24 @@ internal sealed class CreateAgentDefinitionCommandHandler
 
         // Persist (ADR-056: explicit UoW save)
         await _repository.AddAsync(agentDefinition, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            // Issue #4138: this translation came from CreateUserAgentCommandHandler, retired
+            // with the user-facing creation routes. It does NOT belong to that flow — it
+            // belongs to the unique index, which is still here and still unfiltered.
+            //
+            // AgentDefinition.Name carries a global unique index that is NOT filtered by
+            // is_deleted (AgentDefinitionConfiguration: HasIndex(a => a.Name).IsUnique()),
+            // so a colliding name (active OR soft-deleted) trips Postgres 23505. The
+            // ExistsAsync pre-check above cannot cover it: a soft-deleted collider is
+            // invisible through the !IsDeleted query filter, and a concurrent double-submit
+            // races any check. Without this, both cases leak a 500 (#2568).
+            throw new ConflictException($"AgentDefinition with name '{request.Name}' already exists", ex);
+        }
 
         _logger.LogInformation(
             "Created AgentDefinition {Id} with name '{Name}'",
@@ -85,6 +104,14 @@ internal sealed class CreateAgentDefinitionCommandHandler
 
         return MapToDto(agentDefinition);
     }
+
+    // Postgres SQLSTATE 23505 = unique_violation. Mirrors the pattern used by
+    // JoinWaitlistCommandHandler / RegisterCommandHandler.
+    private const string UniqueViolationSqlState = "23505";
+
+    private static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is PostgresException pgEx &&
+        string.Equals(pgEx.SqlState, UniqueViolationSqlState, StringComparison.Ordinal);
 
     private static AgentStrategy ResolveStrategy(string? name) => name switch
     {

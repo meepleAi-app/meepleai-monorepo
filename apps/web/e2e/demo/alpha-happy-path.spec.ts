@@ -236,16 +236,11 @@ test('Alpha demo — happy path mobile', async ({ page }) => {
 
   console.log(`Using agentId for chat: ${agentId}`);
 
-  // ─── 15: Agents list ──────────────────────────────────────────────────────
-  await page.goto('/agents');
-  await page.waitForLoadState('domcontentloaded');
-  // Wait for any agent text to be visible (agent names vary)
-  await page
-    .getByText(new RegExp(firstDef.name.split(' ')[0] ?? 'agent', 'i'))
-    .first()
-    .waitFor({ timeout: 15_000 })
-    .catch(() => {});
-  await shot(page, '15-agents-list');
+  // ─── 15 (ritirato) ────────────────────────────────────────────────────────
+  // Issue #4138: a screenshot of the user-facing `/agents` list stood here. That
+  // page is deleted - one system agent, configured by the admin - so the step
+  // would only have captured a 404. The walkthrough goes straight to the chat,
+  // which is scoped by GAME (step 16) and needs no agent list.
 
   // ─── 16: Open chat ────────────────────────────────────────────────────────
   // Dismiss cookie banner once (covers all subsequent screenshots)

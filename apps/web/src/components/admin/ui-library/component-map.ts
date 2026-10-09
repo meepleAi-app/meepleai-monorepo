@@ -94,7 +94,6 @@ import { GameStatusBadge } from '@/components/admin/shared-games/GameStatusBadge
 import { PdfDocumentList } from '@/components/admin/shared-games/PdfDocumentList';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
-import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
 import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
 import { RagReadinessIndicator } from '@/components/admin/shared-games/rag-setup/RagReadinessIndicator';
 import { StatCard as AdminStatCard } from '@/components/admin/StatCard';
@@ -460,7 +459,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'pdf-upload-section': PdfUploadSection,
   'rag-readiness-indicator': RagReadinessIndicator,
   'inline-chat-panel': InlineChatPanel,
-  'agent-setup-panel': AgentSetupPanel,
 
   // Admin — Users
   'permissions-matrix': PermissionsMatrix,

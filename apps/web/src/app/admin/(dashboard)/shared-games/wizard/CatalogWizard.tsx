@@ -13,18 +13,15 @@ import { useCallback, useRef, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
-  Bot,
   CheckCircle2,
   FileUp,
   Loader2,
   MessageSquare,
   Search,
-  SkipForward,
   XCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
 import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
 import {
   Card,
@@ -41,7 +38,6 @@ import type {
   BulkUploadPdfsResult,
   SharedGameDocumentsResult,
 } from '@/lib/api/clients/adminClient';
-import type { DocumentStatus, AgentInfo } from '@/lib/api/schemas/rag-setup.schemas';
 
 type WizardStep = 1 | 2 | 3 | 4 | 5;
 
@@ -65,10 +61,7 @@ export function CatalogWizard() {
   const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string }>>([]);
 
   // Step 4 & 5 state
-  const [ragDocuments, setRagDocuments] = useState<DocumentStatus[]>([]);
-  const [existingAgent, setExistingAgent] = useState<AgentInfo | null>(null);
   // Issue #4139: the `agentId` state is gone - InlineChatPanel streams by game now.
-  const [chatThreadId, setChatThreadId] = useState<string | null>(null);
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) return;
@@ -129,29 +122,11 @@ export function CatalogWizard() {
     }
   }, [selectedGame, selectedFiles]);
 
-  const handleProceedToAgentSetup = useCallback(async () => {
-    if (!selectedGame) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const readiness = await api.sharedGames.getGameRagReadiness(selectedGame.id);
-      if (readiness) {
-        setRagDocuments(readiness.documents);
-        setExistingAgent(readiness.linkedAgent);
-      }
-      setStep(4);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load RAG status');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedGame]);
-
-  const handleAgentCreated = useCallback((info: { agentId: string; chatThreadId: string }) => {
-    // Issue #4139: `info.agentId` is no longer stored - the test chat in step 5
-    // streams by game, not by agent. The thread id is still what carries context.
-    setChatThreadId(info.chatThreadId);
-    setStep(5);
+  // Issue #4138: this fetched getGameRagReadiness only to feed AgentSetupPanel
+  // (documents + linkedAgent). With the panel retired there is nothing to prime:
+  // the test step streams by game and takes its thread id from the stream itself.
+  const handleProceedToRagTest = useCallback(() => {
+    setStep(4);
   }, []);
 
   const handleFinish = useCallback(() => {
@@ -166,8 +141,7 @@ export function CatalogWizard() {
     { number: 1, label: 'Select Game' },
     { number: 2, label: 'Upload PDFs' },
     { number: 3, label: 'Review' },
-    { number: 4, label: 'Agent Setup' },
-    { number: 5, label: 'RAG Test' },
+    { number: 4, label: 'RAG Test' },
   ] as const;
 
   return (
@@ -379,56 +353,17 @@ export function CatalogWizard() {
               <Button variant="outline" onClick={handleFinish}>
                 <CheckCircle2 className="mr-2 h-4 w-4" /> View Game Details
               </Button>
-              <Button onClick={handleProceedToAgentSetup} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading...
-                  </>
-                ) : (
-                  <>
-                    <Bot className="mr-2 h-4 w-4" /> Setup Agent
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </>
-                )}
+              <Button onClick={handleProceedToRagTest}>
+                <MessageSquare className="mr-2 h-4 w-4" /> Test RAG
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Step 4: Agent Setup */}
-      {step === 4 && selectedGame && (
-        <div className="space-y-4">
-          <AgentSetupPanel
-            gameId={selectedGame.id}
-            gameTitle={selectedGame.title}
-            documents={ragDocuments}
-            existingAgent={existingAgent}
-            onAgentCreated={handleAgentCreated}
-          />
-          <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(3)}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-            {existingAgent && (
-              <Button
-                onClick={() => {
-                  setStep(5);
-                }}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" /> Test Chat
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-            <Button variant="ghost" onClick={handleFinish}>
-              <SkipForward className="mr-2 h-4 w-4" /> Skip & Finish
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 5: RAG Testing */}
-      {step === 5 && (
+      {/* Step 4: RAG Testing */}
+      {step === 4 && (
         <div className="space-y-4">
           <Card className="rounded-xl border bg-card/70 backdrop-blur-md dark:bg-zinc-900/70">
             <CardHeader>
@@ -442,11 +377,11 @@ export function CatalogWizard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <InlineChatPanel gameId={selectedGame?.id ?? null} chatThreadId={chatThreadId} />
+              <InlineChatPanel gameId={selectedGame?.id ?? null} chatThreadId={null} />
             </CardContent>
           </Card>
           <div className="flex justify-between">
-            <Button variant="outline" onClick={() => setStep(4)}>
+            <Button variant="outline" onClick={() => setStep(3)}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
             <Button onClick={handleFinish}>

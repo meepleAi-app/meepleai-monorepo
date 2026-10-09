@@ -111,9 +111,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #657 Phase γ.4
         yield return ["GET", "/api/v1/agents/recent?limit=10"];                                                 // #650 Phase γ.3
         yield return ["GET", "/api/v1/agent-typologies"];                                                       // typology listing
-        yield return ["POST", "/api/v1/agents/user"];                                                            // #654 Phase β.2
-        yield return ["POST", "/api/v1/agents/create-with-setup"];                                               // #655 Phase β.3
-        yield return ["POST", "/api/v1/agents/quick-create"];                                                    // #659 Phase δ.1
         yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #658 Phase γ.4
 
         // Contact (public, no auth)
@@ -133,6 +130,40 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         // PATCH /configuration in Issue #658 — left here to detect if a regression ever
         // re-introduces it under the old path.
         yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure", "configure agent (legacy path)"];
+    }
+
+    // -----------------------------------------------------------------------
+    // Retired routes — REMOVED BY DECISION, not "not yet built".
+    // Expected status: 404 or 405.
+    //
+    // Deliberately a third category rather than rows in PendingBackendRoutes:
+    // "pending" reads as an invitation to implement, and these must not come
+    // back. Issue #4138 — one system agent, configured by the admin and used by
+    // everyone, so there is no user-facing agent creation to serve.
+    // -----------------------------------------------------------------------
+    public static IEnumerable<object[]> RetiredRoutes()
+    {
+        yield return ["POST", "/api/v1/agents/user", "#4138 — user agent creation"];
+        yield return ["POST", "/api/v1/agents/create-with-setup", "#4138 — creation + library add + thread"];
+        yield return ["POST", "/api/v1/agents/quick-create", "#4138 — 1-click Tutor creation"];
+        yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/user", "#4138 — user-owned agent update"];
+    }
+
+    [Theory]
+    [MemberData(nameof(RetiredRoutes))]
+    public async Task RetiredRoute_ShouldStayUnmounted(string method, string url, string reason)
+    {
+        var request = new HttpRequestMessage(new HttpMethod(method), url);
+        if (method is "POST" or "PUT" or "PATCH")
+            request.Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.True(
+            response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed,
+            $"Route {method} {url} answers {(int)response.StatusCode} {response.StatusCode}. " +
+            $"It was retired ({reason}) and must not be re-mounted. If the decision changed, " +
+            "amend the ADR for #4138 first, then move this row to KnownRoutes.");
     }
 
     [Theory]

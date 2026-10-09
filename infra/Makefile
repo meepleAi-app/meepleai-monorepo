@@ -17,6 +17,36 @@ dev-down: ## Stop dev environment
 	$(COMPOSE) -f compose.dev.yml --profile ai --profile monitoring \
 		--profile automation --profile proxy --profile storage down
 
+# === Azure local profile (spec 2026-10-09-azure-local-profile-design.md) ===
+AZURE_LOCAL_PORT_BASE ?= 20000
+AZURE_LOCAL_PORTS := AZURE_LOCAL_PORT_BASE=$(AZURE_LOCAL_PORT_BASE) \
+	AZURE_LOCAL_PORT_AZURITE_QUEUE=$$(( $(AZURE_LOCAL_PORT_BASE) + 1 )) \
+	AZURE_LOCAL_PORT_AZURITE_TABLE=$$(( $(AZURE_LOCAL_PORT_BASE) + 2 )) \
+	AZURE_LOCAL_PORT_APPCONFIG=$$(( $(AZURE_LOCAL_PORT_BASE) + 3 )) \
+	AZURE_LOCAL_PORT_SB_AMQP=$$(( $(AZURE_LOCAL_PORT_BASE) + 4 )) \
+	AZURE_LOCAL_PORT_SB_HTTP=$$(( $(AZURE_LOCAL_PORT_BASE) + 5 )) \
+	AZURE_LOCAL_PORT_EVENTGRID=$$(( $(AZURE_LOCAL_PORT_BASE) + 6 )) \
+	AZURE_LOCAL_PORT_COSMOS=$$(( $(AZURE_LOCAL_PORT_BASE) + 7 )) \
+	AZURE_LOCAL_PORT_COSMOS_EXPLORER=$$(( $(AZURE_LOCAL_PORT_BASE) + 8 )) \
+	AZURE_LOCAL_PORT_ASPIRE_UI=$$(( $(AZURE_LOCAL_PORT_BASE) + 9 )) \
+	AZURE_LOCAL_PORT_ASPIRE_OTLP=$$(( $(AZURE_LOCAL_PORT_BASE) + 10 )) \
+	AZURE_LOCAL_PORT_KEYVAULT=$$(( $(AZURE_LOCAL_PORT_BASE) + 11 ))
+AZURE_LOCAL_COMPOSE := $(COMPOSE) -f compose.dev.yml -f compose.azure-local.yml
+AZURE_LOCAL_KEYVAULT_ENV := AZURE_KEYVAULT_URI=https://keyvault-emulator:4997 AZURE_KEYVAULT_ANONYMOUS=true AZURE_SDK_ALLOW_INSECURE_TLS=true
+
+dev-azure-local: ## Start core + Azure emulators (azurite, appconfig, servicebus, cosmos, aspire, eventgrid)
+	@bash scripts/seed-status.sh --brief || true
+	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_COMPOSE) up -d
+
+dev-azure-local-keyvault: ## Same as dev-azure-local plus the Key Vault emulator (needs infra/azure-local/keyvault-certs)
+	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_KEYVAULT_ENV) $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault up -d
+
+dev-azure-local-down: ## Stop the azure-local profile (emulators included)
+	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault down
+
+dev-azure-local-config: ## Validate the azure-local compose stack (no containers started)
+	$(AZURE_LOCAL_PORTS) $(AZURE_LOCAL_COMPOSE) --profile azure-keyvault config --quiet && echo "azure-local compose OK"
+
 tunnel: ## Open SSH tunnels to staging server
 	bash scripts/integration-tunnel.sh start
 

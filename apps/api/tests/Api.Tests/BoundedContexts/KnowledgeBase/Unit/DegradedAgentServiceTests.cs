@@ -156,7 +156,6 @@ public class DegradedAgentServiceTests
         var agentDef = AgentDefinition.Create(
             "Test Agent",
             "Test description",
-            AgentType.Custom("rag", "RAG agent"),
             AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         // Give it KB cards
@@ -183,7 +182,6 @@ public class DegradedAgentServiceTests
         var agentDef = AgentDefinition.Create(
             "Agent With Rulebook",
             "Test",
-            AgentType.Custom("rag", "RAG agent"),
             AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         agentDef.UpdateKbCardIds(new[] { Guid.NewGuid() });
@@ -235,7 +233,6 @@ public class DegradedAgentServiceTests
         var agentDef = AgentDefinition.Create(
             "Degraded Agent",
             "No KB cards",
-            AgentType.Custom("rag", "RAG agent"),
             AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         // No KB cards — leave KbCardIds empty
@@ -274,7 +271,6 @@ public class DegradedAgentServiceTests
         var agentDef = AgentDefinition.Create(
             "Private Game Agent",
             "No KB cards, private game",
-            AgentType.Custom("rag", "RAG agent"),
             AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         db.AgentDefinitions.Add(agentDef);
@@ -328,7 +324,6 @@ public class DegradedAgentServiceTests
         var agentDef = AgentDefinition.Create(
             "Orphan Agent",
             "No KB cards, no game",
-            AgentType.Custom("rag", "RAG agent"),
             AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         db.AgentDefinitions.Add(agentDef);

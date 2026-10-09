@@ -93,7 +93,6 @@ internal sealed class GetGameRagReadinessQueryHandler
                 agentInfo = new AgentInfoDto(
                     AgentId: agentDef.Id,
                     Name: agentDef.Name,
-                    Type: agentDef.Type.Value,
                     IsActive: agentDef.IsActive,
                     IsReady: agentDef.IsActive
                 );

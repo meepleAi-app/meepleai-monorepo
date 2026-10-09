@@ -57,8 +57,10 @@ public sealed class DomainEventLogMetricsTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// G1: Posting quick-create (which emits agent.created) must increment
-    /// meepleai.domain_event_log.inserted.total with tag event_type="agent.created".
+    /// G1: posting a chat session (which emits chat.session.created) must increment
+    /// meepleai.domain_event_log.inserted.total with tag event_type="chat.session.created".
+    /// Issue #4138: was quick-create / agent.created, both retired. The metric is the subject
+    /// here, not the event, so the producer moved rather than the test being deleted.
     /// </summary>
     [Fact]
     public async Task InsertedCounter_G1_IncrementsWithEventTypeTag_WhenAgentCreatedEmitted()
@@ -86,11 +88,14 @@ public sealed class DomainEventLogMetricsTests : IAsyncLifetime
             measurements.Add((value, tags.ToArray())));
         listener.Start();
 
+        // Issue #4138: was POST /agents/quick-create, emitting `agent.created`. Both are
+        // retired; the subject here is the domain-event-log metric pipeline, so any surviving
+        // producer serves. POST /chat/sessions emits chat.session.created through the same path.
         var createRequest = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
-            "/api/v1/agents/quick-create",
+            "/api/v1/chat/sessions",
             sessionToken,
-            new { gameId });
+            new { gameId, title = "Metrics probe" });
 
         // Act
         var response = await _client.SendAsync(createRequest);
@@ -98,21 +103,21 @@ public sealed class DomainEventLogMetricsTests : IAsyncLifetime
         // Assert — HTTP success first
         response.StatusCode.Should().BeOneOf(
             new[] { HttpStatusCode.OK, HttpStatusCode.Created },
-            "quick-create must succeed to generate the domain event log row");
+            "the chat session must be created to generate the domain event log row");
 
         // Give any async metric emission a moment to land
         await Task.Delay(100);
 
-        // G1: at least one measurement with event_type="agent.created"
+        // G1: at least one measurement with event_type="chat.session.created"
         measurements.Should().Contain(
             m => m.Tags.Any(t =>
                 string.Equals(t.Key, "event_type", StringComparison.Ordinal) &&
-                string.Equals(t.Value as string, "agent.created", StringComparison.Ordinal)),
-            "meepleai.domain_event_log.inserted.total must fire with event_type=agent.created (#1590 G1)");
+                string.Equals(t.Value as string, "chat.session.created", StringComparison.Ordinal)),
+            "meepleai.domain_event_log.inserted.total must fire with event_type=chat.session.created (#1590 G1)");
 
         // Each measurement must carry value=1 (one row at a time)
         measurements
-            .Where(m => m.Tags.Any(t => string.Equals(t.Value as string, "agent.created", StringComparison.Ordinal)))
+            .Where(m => m.Tags.Any(t => string.Equals(t.Value as string, "chat.session.created", StringComparison.Ordinal)))
             .Should().AllSatisfy(m => m.Value.Should().Be(1));
     }
 

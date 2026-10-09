@@ -140,7 +140,6 @@ internal sealed class AutoCreateAgentOnPdfReadyHandler
         var agent = AgentDefinition.Create(
             name: agentName,
             description: agentDescription,
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Default(),
             strategy: AgentStrategy.HybridSearch());
 

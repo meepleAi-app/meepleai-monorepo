@@ -57,7 +57,6 @@ public sealed class LaunchSessionAgentCommandValidatorTests
         var def = AgentDefinition.Create(
             "Test Agent",
             "Description",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         def.Activate();
@@ -158,7 +157,6 @@ public sealed class LaunchSessionAgentCommandValidatorTests
         var inactiveDef = AgentDefinition.Create(
             "Inactive Agent",
             "Description",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
         // NOT activated → IsActive = false
         inactiveDef.SetGameId(_gameId);

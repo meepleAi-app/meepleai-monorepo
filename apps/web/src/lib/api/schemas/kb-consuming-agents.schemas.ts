@@ -10,7 +10,8 @@ import { GameIdString } from './common.schemas';
 export const KbDocConsumingAgentSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  type: z.string(),
+  // Issue #4138: a required `type: z.string()` stood here, mirroring a backend field
+  // that is gone. Left in place it would have failed the parse on every response.
   isActive: z.boolean(),
   status: z.enum(['Draft', 'Testing', 'Published']),
   isSystemDefined: z.boolean(),

@@ -61,7 +61,6 @@ internal sealed class GetAgentByIdQueryHandler
         return new AgentDto(
             Id: agent.Id,
             Name: agent.Name,
-            Type: agent.Type.Value,
             StrategyName: agent.Strategy.Name,
             StrategyParameters: agent.Strategy.Parameters,
             IsActive: agent.IsActive,

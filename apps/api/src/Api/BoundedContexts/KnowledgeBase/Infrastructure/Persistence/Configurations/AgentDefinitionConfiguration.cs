@@ -30,17 +30,8 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasColumnName("description")
             .HasMaxLength(1000);
 
-        // AgentType (Issue #3708) - stored as value + description, computed property ignored
-        builder.Ignore(a => a.Type);
-        builder.Property<string>("_typeValue")
-            .HasColumnName("type_value")
-            .HasMaxLength(50)
-            .IsRequired();
-
-        builder.Property<string>("_typeDescription")
-            .HasColumnName("type_description")
-            .HasMaxLength(200)
-            .IsRequired();
+        // Issue #4138: `type_value` / `type_description` were mapped here, with an index on
+        // `_typeValue`. Both are dropped: AgentDefinition no longer carries a type.
 
         // AgentDefinitionConfig value object (owned)
         builder.OwnsOne(a => a.Config, config =>
@@ -107,7 +98,6 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
         // Indexes for search performance
         builder.HasIndex(a => a.IsActive);
         builder.HasIndex(a => a.CreatedAt);
-        builder.HasIndex("_typeValue").HasDatabaseName("ix_agent_definitions_type_value");
 
         // New columns from agent system simplification
         builder.Property<bool>("_isSystemDefined")

@@ -73,7 +73,6 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         var def = AgentDef.Create(
             "Default Agent",
             "A general-purpose agent",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
         def.Activate();
         // Mark as system-defined via reflection (readonly backing field)
@@ -302,7 +301,6 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests : IDisposable
         var inactiveDef = AgentDef.Create(
             "Inactive",
             "Not active",
-            AgentType.RulesInterpreter,
             AgentDefinitionConfig.Default());
         // not Activate() → IsActive=false, IsSystemDefined=false
         _mockDefinitionRepo

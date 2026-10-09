@@ -104,7 +104,6 @@ public sealed class LinkAgentToPrivateGameIntegrationTests : IAsyncLifetime
         var agent = AgentDefinition.Create(
             name: "PrivateAgent1",
             description: "Test agent for private game",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         _dbContext.Set<AgentDefinition>().Add(agent);
@@ -165,7 +164,6 @@ public sealed class LinkAgentToPrivateGameIntegrationTests : IAsyncLifetime
         var agent = AgentDefinition.Create(
             name: "PrivateAgent2",
             description: "Test agent for unlink test",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
 
         _dbContext.Set<AgentDefinition>().Add(agent);

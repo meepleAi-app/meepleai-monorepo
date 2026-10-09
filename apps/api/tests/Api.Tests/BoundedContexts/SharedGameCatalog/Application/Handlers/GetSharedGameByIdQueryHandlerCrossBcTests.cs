@@ -159,7 +159,6 @@ public sealed class GetSharedGameByIdQueryHandlerCrossBcTests : IAsyncLifetime
         var agent = AgentDefinition.Create(
             name: "Catan RAG",
             description: "RAG agent for Catan rules questions",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Default());
         _dbContext.AgentDefinitions.Add(agent);
 

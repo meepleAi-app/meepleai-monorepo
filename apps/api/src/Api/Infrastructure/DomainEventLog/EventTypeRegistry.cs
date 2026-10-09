@@ -39,10 +39,9 @@ public static class EventTypeRegistry
         [typeof(GameRemovedFromLibraryEvent)] = "library.entry.removed",
         [typeof(GameSessionRecordedEvent)] = "library.session.recorded",
 
-        // BE-3 #1590 — cross-entity activity feed events (user-facing flows only).
-        // H1: agent.created is emitted SOLELY from CreateUserAgentCommand (user flow).
-        //     NOT from CreateAgentDefinitionCommand (admin/AI-Lab path).
-        [typeof(AgentCreatedEvent)] = "agent.created",
+        // Issue #4138: `agent.created` stood here. It was emitted SOLELY from
+        // CreateUserAgentCommandHandler (decision H1), retired with the user-facing
+        // creation routes, so the event had no producer left.
 
         // H2: chat.session.created matches the real command name (CreateChatSessionCommand).
         //     Alias uses "session" not "thread" — the BE has no CreateChatThreadCommand.

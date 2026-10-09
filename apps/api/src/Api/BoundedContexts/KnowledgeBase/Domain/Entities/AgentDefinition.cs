@@ -20,8 +20,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
 {
     private string _name = string.Empty;
     private string _description = string.Empty;
-    private string _typeValue = string.Empty;
-    private string _typeDescription = string.Empty;
     private AgentDefinitionConfig _config;
     private string _strategyJson = "{}";
     private string _promptsJson = "[]";
@@ -49,15 +47,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     /// Gets the agent description.
     /// </summary>
     public string Description => _description;
-
-    /// <summary>
-    /// Gets the agent type (RAG, Citation, Confidence, etc.).
-    /// </summary>
-    /// <remarks>
-    /// Issue #3708: AgentType determines the agent's primary capability and use case.
-    /// Reconstructed from stored type_value and type_description.
-    /// </remarks>
-    public AgentType Type => AgentType.Custom(_typeValue, _typeDescription);
 
     /// <summary>
     /// Gets the agent configuration (model, tokens, temperature).
@@ -213,8 +202,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         Guid id,
         string name,
         string description,
-        string typeValue,
-        string typeDescription,
         AgentDefinitionConfig config,
         string strategyJson,
         string promptsJson,
@@ -231,8 +218,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     {
         _name = name;
         _description = description;
-        _typeValue = typeValue;
-        _typeDescription = typeDescription;
         _config = config;
         _strategyJson = strategyJson;
         _promptsJson = promptsJson;
@@ -255,14 +240,12 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     public static AgentDefinition CreateSystem(
         string name,
         string description,
-        AgentType type,
         AgentDefinitionConfig config,
         string typologySlug,
         AgentStrategy? strategy = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Agent name cannot be empty", nameof(name));
-        ArgumentNullException.ThrowIfNull(type);
         ArgumentNullException.ThrowIfNull(config);
 
         var agentStrategy = strategy ?? AgentStrategy.HybridSearch();
@@ -270,8 +253,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
             id: Guid.NewGuid(),
             name: name.Trim(),
             description: description?.Trim() ?? string.Empty,
-            typeValue: type.Value,
-            typeDescription: type.Description,
             config: config,
             strategyJson: System.Text.Json.JsonSerializer.Serialize(agentStrategy),
             promptsJson: "[]",
@@ -291,12 +272,12 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
     /// Creates a new agent definition with validation.
     /// </summary>
     /// <remarks>
-    /// Issue #3708: Now includes AgentType and AgentStrategy parameters for full template specification.
+    /// Issue #4138: the AgentType parameter is gone - the agent types never had an effect
+    /// on the answer path (measure E1-E4), so the field was one that lied.
     /// </remarks>
     public static AgentDefinition Create(
         string name,
         string description,
-        AgentType type,
         AgentDefinitionConfig config,
         AgentStrategy? strategy = null,
         List<AgentPromptTemplate>? prompts = null,
@@ -311,7 +292,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         if (description?.Length > 1000)
             throw new ArgumentException("Agent description cannot exceed 1000 characters", nameof(description));
 
-        ArgumentNullException.ThrowIfNull(type);
         ArgumentNullException.ThrowIfNull(config);
 
         var promptsList = prompts ?? new List<AgentPromptTemplate>();
@@ -323,8 +303,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
             Id = Guid.NewGuid(),
             _name = name.Trim(),
             _description = description?.Trim() ?? string.Empty,
-            _typeValue = type.Value,
-            _typeDescription = type.Description,
             _config = config,
             _strategyJson = JsonSerializer.Serialize(agentStrategy),
             _promptsJson = JsonSerializer.Serialize(promptsList),
@@ -371,23 +349,6 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         _updatedAt = DateTime.UtcNow;
 
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Name updated to '{name}'"));
-    }
-
-    /// <summary>
-    /// Updates the agent type.
-    /// </summary>
-    /// <remarks>
-    /// Issue #3708: Allow administrators to change agent categorization.
-    /// </remarks>
-    public void UpdateType(AgentType type)
-    {
-        ArgumentNullException.ThrowIfNull(type);
-
-        _typeValue = type.Value;
-        _typeDescription = type.Description;
-        _updatedAt = DateTime.UtcNow;
-
-        AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, $"Type updated to '{type.Value}'"));
     }
 
     /// <summary>
@@ -589,22 +550,4 @@ public sealed class AgentDefinition : AggregateRoot<Guid>
         AddDomainEvent(new AgentDefinitionUpdatedEvent(Id, "Restored from soft-delete"));
     }
 
-    /// <summary>
-    /// Raises <see cref="AgentCreatedEvent"/> for durable activity-log persistence.
-    /// Call ONLY from <c>CreateUserAgentCommandHandler</c> (user-facing flow).
-    /// NOT called from <c>CreateAgentDefinitionCommandHandler</c> (admin/AI-Lab) — see BE-3 #1590 decision H1.
-    /// </summary>
-    /// <param name="userId">The authenticated user who triggered the creation.</param>
-    /// <param name="gameName">Resolved game name; non-null when <see cref="GameId"/> is set.</param>
-    public void RaiseUserCreatedEvent(Guid userId, string? gameName)
-    {
-        AddDomainEvent(new AgentCreatedEvent(
-            aggregateId: Id,
-            userId: userId,
-            agentType: _typeValue,
-            isActive: _isActive,
-            gameId: _gameId,
-            gameName: gameName,
-            agentName: _name));
-    }
 }

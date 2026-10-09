@@ -362,240 +362,6 @@ public sealed class AgentsEndpointsIntegrationTests
         dto.BlockingReason.Should().BeNull();
     }
 
-    // Issue #654: Phase β.2 — POST /api/v1/agents/user user-create route.
-    [Fact]
-    public async Task CreateUserAgent_WithoutAuth_ReturnsUnauthorized()
-    {
-        // Act
-        var response = await _client.PostAsJsonAsync("/api/v1/agents/user", new
-        {
-            gameId = Guid.NewGuid(),
-            agentType = "Strategist"
-        });
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task CreateUserAgent_WithUnknownGame_ReturnsBadRequest()
-    {
-        // Arrange: authenticated user, unseeded gameId.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post,
-            "/api/v1/agents/user",
-            sessionToken,
-            new
-            {
-                gameId = Guid.NewGuid(),  // not seeded
-                agentType = "Strategist"
-            });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert: handler raises InvalidOperationException → endpoint returns 400.
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.UnprocessableEntity,
-            HttpStatusCode.InternalServerError);
-    }
-
-    [Fact]
-    public async Task CreateUserAgent_WithValidGame_ReturnsCreatedAgentDto()
-    {
-        // Arrange: seed SharedGame "Catan", authenticated user.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan");
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post,
-            "/api/v1/agents/user",
-            sessionToken,
-            new
-            {
-                gameId,
-                agentType = "Strategist",
-                name = "Catan Coach"
-            });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert: 201 Created body is AgentDto with GameName resolved + IsActive true.
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
-        var dto = await response.Content.ReadFromJsonAsync<AgentDto>();
-        dto.Should().NotBeNull();
-        dto!.Name.Should().Be("Catan Coach");
-        dto.Type.Should().Be("Strategist");
-        dto.GameId.Should().Be(gameId);
-        dto.GameName.Should().Be("Catan");
-        dto.IsActive.Should().BeTrue();
-    }
-
-    // Issue #655: Phase β.3 — POST /api/v1/agents/create-with-setup orchestration.
-    [Fact]
-    public async Task CreateAgentWithSetup_WithoutAuth_ReturnsUnauthorized()
-    {
-        // Act
-        var response = await _client.PostAsJsonAsync("/api/v1/agents/create-with-setup", new
-        {
-            gameId = Guid.NewGuid(),
-            addToCollection = false,
-            agentType = "Strategist"
-        });
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task CreateAgentWithSetup_WithoutAddToCollection_ReturnsAgentResultGameAddedFalse()
-    {
-        // Arrange: seed SharedGame "Wingspan", authenticated user, addToCollection=false.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Wingspan");
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post,
-            "/api/v1/agents/create-with-setup",
-            sessionToken,
-            new
-            {
-                gameId,
-                addToCollection = false,
-                agentType = "Strategist",
-                agentName = "Wingspan Coach"
-            });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert: 201 Created or 200 OK with orchestration result body.
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<CreateAgentWithSetupResponse>();
-        body.Should().NotBeNull();
-        body!.AgentName.Should().Be("Wingspan Coach");
-        body.GameAddedToCollection.Should().BeFalse();
-        body.SlotUsed.Should().Be(0);
-        body.AgentId.Should().NotBe(Guid.Empty);
-        body.ThreadId.Should().NotBe(Guid.Empty);
-    }
-
-    [Fact]
-    public async Task CreateAgentWithSetup_WithAddToCollection_AddsGameAndReturnsTrue()
-    {
-        // Arrange: seed SharedGame "Azul", authenticated user, addToCollection=true.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Azul");
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post,
-            "/api/v1/agents/create-with-setup",
-            sessionToken,
-            new
-            {
-                gameId,
-                addToCollection = true,
-                agentType = "Narrator"
-            });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert: gameAddedToCollection=true after successful AddGameToLibraryCommand step.
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<CreateAgentWithSetupResponse>();
-        body.Should().NotBeNull();
-        body!.GameAddedToCollection.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task QuickCreateAgent_WithoutAuth_ReturnsUnauthorized()
-    {
-        var response = await _client.PostAsJsonAsync("/api/v1/agents/quick-create", new
-        {
-            gameId = Guid.NewGuid()
-        });
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task QuickCreateAgent_WithUnknownGame_ReturnsBadRequest()
-    {
-        // Arrange: authenticated user, no SharedGame seeded for the supplied id.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post,
-            "/api/v1/agents/quick-create",
-            sessionToken,
-            new
-            {
-                gameId = Guid.NewGuid()
-            });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert: handler throws InvalidOperationException("SharedGame {id} not found")
-        // which the endpoint translates to BadRequest. Allow Unprocessable/InternalServerError
-        // as alternates if validator/error mapping evolves.
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.UnprocessableEntity,
-            HttpStatusCode.InternalServerError);
-    }
-
-    [Fact]
-    public async Task QuickCreateAgent_WithValidGame_ReturnsTutorResult()
-    {
-        // Arrange: seed SharedGame "Splendor", authenticated user.
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Splendor");
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post,
-            "/api/v1/agents/quick-create",
-            sessionToken,
-            new
-            {
-                gameId
-            });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert: 201 Created with Tutor result body. Auto-derived name "Tutor for Splendor",
-        // ChatThreadId placeholder Guid (chat-thread BC integration deferred), KbCardCount=0
-        // (KB query deferred — separate followup if needed).
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
-        var body = await response.Content.ReadFromJsonAsync<QuickCreateAgentResponse>();
-        body.Should().NotBeNull();
-        body!.AgentId.Should().NotBe(Guid.Empty);
-        body.ChatThreadId.Should().NotBe(Guid.Empty);
-        body.AgentName.Should().Be("Tutor for Splendor");
-        body.KbCardCount.Should().Be(0);
-    }
-
     // -------------------------------------------------------------------------
     // GET /api/v1/agents?scope=my-library — Issue #1589 (BE-2)
     // -------------------------------------------------------------------------
@@ -606,6 +372,17 @@ public sealed class AgentsEndpointsIntegrationTests
     /// Assertions are seeded-id-scoped (not exact count) because this class shares one
     /// isolated DB across all tests and other tests may have seeded additional agents.
     /// </summary>
+    // ── Rotte di creazione ritirate (#4138) ───────────────────────────────────
+    // Dodici test guidavano POST /agents/user, /agents/create-with-setup,
+    // /agents/quick-create e PUT /agents/{id}/user. Le quattro rotte sono ritirate:
+    // un solo agente di sistema, configurato dall'admin, quindi non c'e` creazione
+    // lato utente da servire.
+    //
+    // 🔴 Il compilatore NON poteva segnalarli: guidano le rotte per STRINGA, via
+    // PostAsJsonAsync. La fetta che ha rimosso le rotte e` passata con il build verde
+    // mentre questi dodici parlavano con un 404. Che le rotte restino smontate e`
+    // asserito da `RetiredRoutes` in Routing/EndpointContractTests.cs.
+
     [Fact]
     public async Task GetAgents_ScopeMyLibrary_ReturnsLibraryGamesPlusSystemAgents()
     {
@@ -769,67 +546,6 @@ public sealed class AgentsEndpointsIntegrationTests
     // PUT /api/v1/agents/{id}/user — Issue #656
     // -------------------------------------------------------------------------
 
-    [Fact]
-    public async Task UpdateUserAgent_WithoutAuth_ReturnsUnauthorized()
-    {
-        // Act
-        var response = await _client.PutAsJsonAsync(
-            $"/api/v1/agents/{Guid.NewGuid()}/user",
-            new { name = "Updated" });
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task UpdateUserAgent_WithUnknownId_ReturnsNotFound()
-    {
-        // Arrange
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Put,
-            $"/api/v1/agents/{Guid.NewGuid()}/user",
-            sessionToken,
-            new { name = "Updated" });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task UpdateUserAgent_WithValidNameChange_ReturnsUpdatedAgentDto()
-    {
-        // Arrange
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 1, inactiveCount: 0);
-        var seededId = await dbContext.AgentDefinitions.AsNoTracking().Select(a => a.Id).FirstAsync();
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Put,
-            $"/api/v1/agents/{seededId}/user",
-            sessionToken,
-            new { name = "Renamed Agent" });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var dto = await response.Content.ReadFromJsonAsync<AgentDto>();
-        dto.Should().NotBeNull();
-        dto!.Id.Should().Be(seededId);
-        dto.Name.Should().Be("Renamed Agent");
-    }
-
     // -------------------------------------------------------------------------
     // GET /api/v1/agents/{id}/configuration — Issue #657
     // -------------------------------------------------------------------------
@@ -986,7 +702,6 @@ public sealed class AgentsEndpointsIntegrationTests
         var agent = AgentDefinition.Create(
             name: $"BE2-Agent-{Guid.NewGuid():N}",
             description: "BE-2 #1589 test agent",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
         agent.Activate();
         if (gameId.HasValue)
@@ -1005,25 +720,3 @@ public sealed class AgentsEndpointsIntegrationTests
 /// </summary>
 internal record GetAllAgentsResponse(bool Success, List<AgentDto> Agents, int Count);
 
-/// <summary>
-/// HTTP response shape returned by <c>POST /api/v1/agents/create-with-setup</c>.
-/// Mirrors <c>CreateAgentWithSetupResult</c> in
-/// <c>Api.BoundedContexts.KnowledgeBase.Application.Commands</c>. Issue #655 (Phase β.3).
-/// </summary>
-internal record CreateAgentWithSetupResponse(
-    Guid AgentId,
-    string AgentName,
-    Guid ThreadId,
-    int SlotUsed,
-    bool GameAddedToCollection);
-
-/// <summary>
-/// HTTP response shape returned by <c>POST /api/v1/agents/quick-create</c>.
-/// Mirrors <c>QuickCreateAgentResult</c> in
-/// <c>Api.BoundedContexts.KnowledgeBase.Application.Commands</c>. Issue #659 (Phase δ.1).
-/// </summary>
-internal record QuickCreateAgentResponse(
-    Guid AgentId,
-    Guid ChatThreadId,
-    string AgentName,
-    int KbCardCount);

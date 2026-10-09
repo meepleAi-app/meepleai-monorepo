@@ -419,7 +419,6 @@ internal static class GameEndpoints
                 agentList.Add(new AgentDto(
                     Id: new Guid(deterministicBytes),
                     Name: agentConfig.Personality ?? "Custom Agent",
-                    Type: "Custom",
                     StrategyName: "custom",
                     StrategyParameters: new Dictionary<string, object>(StringComparer.Ordinal),
                     IsActive: true,

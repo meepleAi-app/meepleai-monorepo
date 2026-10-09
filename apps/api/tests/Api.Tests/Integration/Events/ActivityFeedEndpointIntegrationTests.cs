@@ -61,7 +61,13 @@ public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime
     [Fact]
     public async Task GetActivity_returns_cross_entity_items_for_caller()
     {
-        // Arrange — create user + seed game + POST quick-create agent (emits agent.created)
+        // Arrange — create user + seed game + POST a chat session (emits chat.session.created).
+        //
+        // Issue #4138: this used POST /api/v1/agents/quick-create to emit `agent.created`.
+        // That route and that event are retired, but the SUBJECT of this test is the activity
+        // feed, not agents — so it needs a surviving producer, not a deletion.
+        // `chat.session.created` is the closest: same shape through domain_event_logs, and the
+        // feed maps it to EntityType "ChatSession" the same way it mapped "Agent".
         using var setupScope = _webFactory.Services.CreateScope();
         var db = setupScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
@@ -70,16 +76,14 @@ public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime
 
         var client = _webFactory.CreateClient();
 
-        // Quick-create agent → emits agent.created event
-        var createAgentRequest = TestSessionHelper.CreateAuthenticatedRequest(
+        // Create a chat session → emits chat.session.created
+        var createSessionRequest = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
-            "/api/v1/agents/quick-create",
+            "/api/v1/chat/sessions",
             token,
-            new { gameId });
+            new { gameId, title = "Activity probe" });
 
-        var createResponse = await client.SendAsync(createAgentRequest);
-        // quick-create succeeds for the standard test user (same precedent as
-        // AgentCreatedIntegrationTests, Task 2) → agent.created lands in domain_event_logs.
+        var createResponse = await client.SendAsync(createSessionRequest);
         createResponse.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
 
         // Act — GET /api/v1/activity?limit=20
@@ -100,15 +104,15 @@ public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime
         body.Items.Should().NotBeNull();
         body.Count.Should().Be(body.Items.Count);
 
-        // Happy-path: the agent.created event MUST surface with the full mapped shape.
-        var agentItems = body.Items
-            .Where(i => string.Equals(i.EventType, "agent.created", StringComparison.Ordinal))
+        // Happy-path: the event MUST surface with the full mapped shape.
+        var chatItems = body.Items
+            .Where(i => string.Equals(i.EventType, "chat.session.created", StringComparison.Ordinal))
             .ToList();
 
-        agentItems.Should().ContainSingle("quick-create emits exactly one agent.created event");
-        var item = agentItems[0];
-        item.EventType.Should().Be("agent.created");
-        item.EntityType.Should().Be("Agent"); // mapped from eventType, not raw AggregateType
+        chatItems.Should().ContainSingle("one POST /chat/sessions emits exactly one event");
+        var item = chatItems[0];
+        item.EventType.Should().Be("chat.session.created");
+        item.EntityType.Should().Be("ChatSession"); // mapped from eventType, not raw AggregateType
         item.EntityId.Should().NotBe(Guid.Empty);
         item.Title.Should().NotBeNullOrEmpty(); // AgentName snapshot in payload
         item.PayloadVersion.Should().Be(1);
@@ -163,12 +167,13 @@ public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime
 
         var client = _webFactory.CreateClient();
 
-        // User A creates an agent (seeds an event attributed to userA)
+        // User A creates a chat session (seeds an event attributed to userA).
+        // Issue #4138: was quick-create; see the note on test 1.
         var createReqA = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
-            "/api/v1/agents/quick-create",
+            "/api/v1/chat/sessions",
             tokenA,
-            new { gameId });
+            new { gameId, title = "Isolation probe" });
         await client.SendAsync(createReqA);
 
         // Act — User B queries the activity feed

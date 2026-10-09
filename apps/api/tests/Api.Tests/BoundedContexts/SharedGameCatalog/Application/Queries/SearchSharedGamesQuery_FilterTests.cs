@@ -104,14 +104,11 @@ public sealed class SearchSharedGamesQuery_FilterTests
     /// </summary>
     private static AgentDefinition CreateAgentForGame(Guid gameId)
     {
-        var type = AgentType.RagAgent;
         var config = AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f);
         return new AgentDefinition(
             id: Guid.NewGuid(),
             name: $"Agent-{gameId:N}",
             description: "Test agent",
-            typeValue: type.Value,
-            typeDescription: type.Description,
             config: config,
             strategyJson: "{}",
             promptsJson: "[]",

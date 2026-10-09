@@ -12,7 +12,6 @@ namespace Api.BoundedContexts.Administration.Application.Queries.ActivityFeed;
 ///
 /// EventType → EntityType mapping (stable contract, not raw AggregateType):
 /// <list type="bullet">
-///   <item>agent.created → Agent</item>
 ///   <item>chat.session.created → ChatSession</item>
 ///   <item>kb.doc.indexed → PdfDocument</item>
 ///   <item>session.created | session.finalized → Session</item>
@@ -101,7 +100,9 @@ internal sealed class GetActivityFeedQueryHandler
     {
         return eventType switch
         {
-            "agent.created" => "Agent",
+            // Issue #4138: `agent.created` mapped to "Agent" here. The event is retired
+            // (its only producer was the user-facing creation flow), so this arm could
+            // never match again - keeping it would claim a shape the system cannot emit.
             "chat.session.created" => "ChatSession",
             "kb.doc.indexed" => "PdfDocument",
             "session.created" or "session.finalized" => "Session",
@@ -123,9 +124,6 @@ internal sealed class GetActivityFeedQueryHandler
 
             switch (eventType)
             {
-                case "agent.created":
-                    return TryGetString(root, "agentName");
-
                 case "chat.session.created":
                     return TryGetString(root, "agentName") ?? TryGetString(root, "gameName");
 

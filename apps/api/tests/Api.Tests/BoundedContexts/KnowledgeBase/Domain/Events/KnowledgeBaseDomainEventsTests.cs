@@ -11,72 +11,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Events;
 [Trait("Category", "Unit")]
 public sealed class KnowledgeBaseDomainEventsTests
 {
-    #region AgentCreatedEvent Tests
-    // BE-3 #1590: AgentCreatedEvent extended with UserId, GameId, GameName, IsActive, AggregateId.
-    // Constructor signature: (aggregateId, userId, agentType, isActive, gameId, gameName, agentName).
-
-    [Fact]
-    public void AgentCreatedEvent_SetsProperties()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        var gameId = Guid.NewGuid();
-
-        // Act
-        var evt = new AgentCreatedEvent(
-            aggregateId: agentId,
-            userId: userId,
-            agentType: "RulesAgent",
-            isActive: true,
-            gameId: gameId,
-            gameName: "Catan",
-            agentName: "Catan Rules Helper");
-
-        // Assert
-        evt.AggregateId.Should().Be(agentId);
-        evt.UserId.Should().Be(userId);
-        evt.AgentType.Should().Be("RulesAgent");
-        evt.IsActive.Should().BeTrue();
-        evt.GameId.Should().Be(gameId);
-        evt.GameName.Should().Be("Catan");
-        evt.AgentName.Should().Be("Catan Rules Helper");
-    }
-
-    [Fact]
-    public void AgentCreatedEvent_WithDifferentTypes_SetsCorrectType()
-    {
-        // Arrange
-        var agentId1 = Guid.NewGuid();
-        var agentId2 = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-
-        // Act
-        var evt1 = new AgentCreatedEvent(agentId1, userId, "RulesAgent", true, null, null, "Rules Helper");
-        var evt2 = new AgentCreatedEvent(agentId2, userId, "StrategyAgent", true, null, null, "Strategy Guide");
-
-        // Assert
-        evt1.AgentType.Should().Be("RulesAgent");
-        evt1.AgentName.Should().Be("Rules Helper");
-        evt2.AgentType.Should().Be("StrategyAgent");
-        evt2.AgentName.Should().Be("Strategy Guide");
-    }
-
-    [Fact]
-    public void AgentCreatedEvent_WithEmptyName_SetsEmptyName()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-
-        // Act
-        var evt = new AgentCreatedEvent(agentId, userId, "TestAgent", false, null, null, "");
-
-        // Assert
-        evt.AgentName.Should().BeEmpty();
-    }
-
-    #endregion
+    // Issue #4138: a #region of AgentCreatedEvent tests stood here. The event was
+    // emitted SOLELY from CreateUserAgentCommandHandler (decision H1), retired with the
+    // user-facing creation routes, so it had no producer left - and its only raise site,
+    // AgentDefinition.RaiseUserCreatedEvent, had no callers either. Event, handler and
+    // the `agent.created` EventTypeRegistry entry are all gone.
 
     #region AgentActivatedEvent Tests
 

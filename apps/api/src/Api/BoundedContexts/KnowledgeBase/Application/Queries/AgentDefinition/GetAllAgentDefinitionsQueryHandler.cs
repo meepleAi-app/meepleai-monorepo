@@ -47,7 +47,6 @@ internal sealed class GetAllAgentDefinitionsQueryHandler
         {
             Id = agent.Id,
             Name = agent.Name,
-            Type = agent.Type.Value,
             StrategyName = agent.Strategy.Name,
             StrategyParameters = agent.Strategy.Parameters as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase),
             Description = agent.Description,

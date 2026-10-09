@@ -228,7 +228,6 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
         var existingAgent = AgentDefinition.Create(
             name: "Agent - Catan",
             description: "Existing agent",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Default());
 
         _agentDefinitionRepository
@@ -274,7 +273,6 @@ public sealed class AutoCreateAgentOnPdfReadyHandlerTests
         var existingAgent = AgentDefinition.Create(
             name: "Agent - Catan",
             description: "Existing agent",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Default());
         // Pre-link the same documentId
         existingAgent.UpdateKbCardIds([_documentId]);

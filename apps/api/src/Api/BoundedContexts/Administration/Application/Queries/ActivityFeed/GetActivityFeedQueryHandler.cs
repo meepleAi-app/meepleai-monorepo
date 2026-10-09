@@ -12,6 +12,7 @@ namespace Api.BoundedContexts.Administration.Application.Queries.ActivityFeed;
 ///
 /// EventType → EntityType mapping (stable contract, not raw AggregateType):
 /// <list type="bullet">
+///   <item>agent.created → Agent (no producer since #4138; historic rows only)</item>
 ///   <item>chat.session.created → ChatSession</item>
 ///   <item>kb.doc.indexed → PdfDocument</item>
 ///   <item>session.created | session.finalized → Session</item>
@@ -100,9 +101,13 @@ internal sealed class GetActivityFeedQueryHandler
     {
         return eventType switch
         {
-            // Issue #4138: `agent.created` mapped to "Agent" here. The event is retired
-            // (its only producer was the user-facing creation flow), so this arm could
-            // never match again - keeping it would claim a shape the system cannot emit.
+            // Issue #4138: `agent.created` has no PRODUCER any more - its only emitter was the
+            // user-facing creation flow, retired with the routes. The READ path keeps handling it:
+            // this handler queries domain_event_logs over a 90-day window (`RetentionDays`), so
+            // historic rows survive the retirement by up to three months, and without this arm
+            // they would fall through to the raw aggregate type and lose their mapped EntityType.
+            // Removable only once that window has passed since the contract deploy.
+            "agent.created" => "Agent",
             "chat.session.created" => "ChatSession",
             "kb.doc.indexed" => "PdfDocument",
             "session.created" or "session.finalized" => "Session",
@@ -124,6 +129,11 @@ internal sealed class GetActivityFeedQueryHandler
 
             switch (eventType)
             {
+                // Issue #4138: same reason as MapEntityType - no producer, but historic rows
+                // inside the 90-day window still carry this type and still have a title.
+                case "agent.created":
+                    return TryGetString(root, "agentName");
+
                 case "chat.session.created":
                     return TryGetString(root, "agentName") ?? TryGetString(root, "gameName");
 

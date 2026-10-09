@@ -2240,6 +2240,16 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("typology_slug");
 
+                    b.Property<string>("type_description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("type_description");
+
+                    b.Property<string>("type_value")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type_value");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt");

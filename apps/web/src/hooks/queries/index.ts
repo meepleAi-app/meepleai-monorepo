@@ -46,6 +46,7 @@ export {
 export {
   useAgentKbDocs,
   useAgentThreads,
+  useGameThreads,
   agentDataKeys,
   mapKbDocs,
   mapThreads,

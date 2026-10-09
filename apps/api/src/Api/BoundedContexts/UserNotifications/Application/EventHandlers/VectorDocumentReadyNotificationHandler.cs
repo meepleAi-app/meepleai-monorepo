@@ -31,7 +31,7 @@ internal sealed class VectorDocumentReadyNotificationHandler
     {
         var userId = evt.UploadedByUserId;
         var fileName = evt.FileName;
-        var agentLink = NotificationRoutes.LibraryAgent(evt.GameId);
+        var agentLink = NotificationRoutes.LibraryGameChat(evt.GameId);
         var chunkCount = evt.ChunkCount;
 
         await _dispatcher.DispatchAsync(new NotificationMessage

@@ -147,6 +147,7 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["POST", "/api/v1/agents/create-with-setup", "#4138 — creation + library add + thread"];
         yield return ["POST", "/api/v1/agents/quick-create", "#4138 — 1-click Tutor creation"];
         yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/user", "#4138 — user-owned agent update"];
+        yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent", "#4138 — per-game agent configuration (nothing on the answer path read it)"];
     }
 
     [Theory]

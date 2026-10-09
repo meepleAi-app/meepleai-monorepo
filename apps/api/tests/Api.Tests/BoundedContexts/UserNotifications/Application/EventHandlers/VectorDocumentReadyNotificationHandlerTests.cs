@@ -57,7 +57,7 @@ public sealed class VectorDocumentReadyNotificationHandlerTests
             It.Is<NotificationMessage>(m =>
                 m.Type == NotificationType.DocumentReady &&
                 m.RecipientUserId == _userId &&
-                m.DeepLinkPath == $"/library/games/{_gameId}/agent" &&
+                m.DeepLinkPath == $"/library/{_gameId}?tab=aiChat" &&
                 m.Payload is PdfProcessingPayload),
             It.IsAny<CancellationToken>()), Times.Once);
     }

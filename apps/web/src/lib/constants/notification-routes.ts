@@ -13,7 +13,10 @@
 
 export const NotificationRoutes = {
   // Parameterized templates ({id} substituted by the builders below)
-  libraryAgentTemplate: '/library/games/{id}/agent',
+  // Issue #4138: was '/library/games/{id}/agent' — a path that is not a Next route
+  // (the real one is /library/[gameId]) and whose /agent leg named the retired
+  // per-game agent. Must stay byte-identical to the C# twin (ADR-075 gate).
+  libraryGameChatTemplate: '/library/{id}?tab=aiChat',
   privateToolkitTemplate: '/library/private/{id}/toolkit',
   contributionRequestTemplate: '/contributions/requests/{id}',
   sharedGameTemplate: '/shared-games/{id}',
@@ -44,8 +47,8 @@ export const NotificationRoutes = {
 
 const withId = (template: string, id: string): string => template.replace('{id}', id);
 
-export const libraryAgent = (id: string): string =>
-  withId(NotificationRoutes.libraryAgentTemplate, id);
+export const libraryGameChat = (id: string): string =>
+  withId(NotificationRoutes.libraryGameChatTemplate, id);
 export const privateToolkit = (id: string): string =>
   withId(NotificationRoutes.privateToolkitTemplate, id);
 export const contributionRequest = (id: string): string =>

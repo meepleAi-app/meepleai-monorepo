@@ -1,5 +1,11 @@
 /**
  * ChatEntryOrchestrator — Composes GameSelector, AgentSelector, QuickStartSuggestions,
+ *
+ * Issue #4138: the per-game "custom agents" leg is gone, and with it three things that existed
+ * only to serve it: the loading state, the auto-start-on-exactly-one-agent branch, and the
+ * OFFSCREEN AgentSelector mount (#923) whose sole job was to let the selector's useEffect fire the
+ * API call so the spinner could resolve. A headless mount to drive a fetch is a strong signal the
+ * fetch did not belong in the component - and here the data it fetched could not change an answer.
  * and ThreadCreator into the full "new chat" flow.
  *
  * Two modes:
@@ -12,7 +18,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { MessageSquarePlus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,7 +33,7 @@ import { GameSelector } from './GameSelector';
 import { QuickStartSuggestions } from './QuickStartSuggestions';
 import { createThreadWithContext } from './ThreadCreator';
 
-import type { CustomAgent, PromptType } from './types';
+import type { PromptType } from './types';
 
 export interface ChatEntryOrchestratorProps {
   className?: string;
@@ -53,21 +59,13 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
   const [selectedAgentType, setSelectedAgentType] = useState<string | null>(
     isDirectGameMode ? null : 'auto'
   );
-  const [selectedCustomAgentId, setSelectedCustomAgentId] = useState<string | null>(null);
 
   // Loaded game list for title resolution
   const [allGames, setAllGames] = useState<Game[]>([]);
 
-  // Custom agents resolved by AgentSelector
-  const [customAgents, setCustomAgents] = useState<CustomAgent[]>([]);
-  const [isLoadingCustomAgents, setIsLoadingCustomAgents] = useState(isDirectGameMode);
-
   // Thread creation state
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Prevent double auto-start in direct game mode
-  const autoStartedRef = useRef(false);
 
   // Pre-select agent from ?agent= param
   useEffect(() => {
@@ -85,71 +83,12 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
     });
   }, []);
 
-  // AgentSelector callback — track custom agents and loading state
-  const handleCustomAgentsResolved = useCallback((agents: CustomAgent[], isLoading: boolean) => {
-    setCustomAgents(agents);
-    setIsLoadingCustomAgents(isLoading);
-  }, []);
-
-  // Direct game mode: auto-start or show agent picker
-  useEffect(() => {
-    if (!isDirectGameMode || autoStartedRef.current) return;
-    if (isLoadingCustomAgents) return;
-    if (!selectedGameId) return;
-
-    if (customAgents.length === 0) {
-      // No custom agents — show system agent selection
-      autoStartedRef.current = true;
-    } else if (customAgents.length === 1) {
-      // Exactly 1 agent → auto-create thread
-      autoStartedRef.current = true;
-      setIsCreating(true);
-
-      const agent = customAgents[0];
-      const gameName = allGames.find(g => g.id === selectedGameId)?.title;
-
-      createThreadWithContext({
-        gameId: selectedGameId,
-        gameName,
-        selectedCustomAgentId: agent.id,
-        customAgents,
-        selectedKbIds,
-      })
-        .then(({ threadId }) => {
-          router.push(`/chat/${threadId}`);
-        })
-        .catch(() => {
-          setError('Errore nella creazione della conversazione');
-          setIsCreating(false);
-        });
-    }
-    // 2+ agents: fall through to show agent selection UI
-  }, [
-    isDirectGameMode,
-    isLoadingCustomAgents,
-    selectedGameId,
-    selectedKbIds,
-    customAgents,
-    allGames,
-    router,
-  ]);
-
-  // Handle game selection — reset agent selection
   const handleGameSelect = useCallback((gameId: string) => {
     setSelectedGameId(gameId);
-    setSelectedCustomAgentId(null);
   }, []);
 
-  // Handle custom agent selection — clear system agent
-  const handleCustomAgentSelect = useCallback((agentId: string) => {
-    setSelectedCustomAgentId(agentId);
-    setSelectedAgentType(null);
-  }, []);
-
-  // Handle system agent selection — clear custom agent
   const handleSystemAgentSelect = useCallback((agentType: string) => {
     setSelectedAgentType(agentType);
-    setSelectedCustomAgentId(null);
   }, []);
 
   // Selected game name for display and thread title
@@ -168,8 +107,6 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
         const { threadId } = await createThreadWithContext({
           gameId: selectedGameId,
           gameName: selectedGame?.title,
-          selectedCustomAgentId,
-          customAgents,
           initialMessage,
           promptType,
           selectedKbIds,
@@ -187,14 +124,7 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
         setIsCreating(false);
       }
     },
-    [
-      selectedGameId,
-      selectedKbIds,
-      selectedGame?.title,
-      selectedCustomAgentId,
-      customAgents,
-      router,
-    ]
+    [selectedGameId, selectedKbIds, selectedGame?.title, router]
   );
 
   const handleQuickStart = useCallback(
@@ -204,49 +134,7 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
     [handleStartChat]
   );
 
-  const hasAgentAvailable = DEFAULT_AGENTS.length > 0 || customAgents.length > 0;
-  const canStart =
-    hasAgentAvailable && (selectedAgentType !== null || selectedCustomAgentId !== null);
-
-  // Direct game mode: loading spinner while resolving agents
-  // Issue #923: AgentSelector must be mounted (offscreen) so its useEffect
-  // fires the API call and resolves `isLoadingCustomAgents` via the
-  // onCustomAgentsResolved callback. Otherwise the page deadlocks on
-  // "Preparazione..." because the callback never runs.
-  if (
-    isDirectGameMode &&
-    (isLoadingCustomAgents || isCreating || (customAgents.length === 1 && !error))
-  ) {
-    return (
-      <div className="min-h-dvh bg-background flex items-center justify-center">
-        {/* Headless agent resolver — drives onCustomAgentsResolved while spinner is visible */}
-        <div aria-hidden="true" className="sr-only">
-          <AgentSelector
-            gameId={selectedGameId}
-            onSelectSystemAgent={handleSystemAgentSelect}
-            onSelectCustomAgent={handleCustomAgentSelect}
-            selectedAgentType={selectedAgentType}
-            selectedCustomAgentId={selectedCustomAgentId}
-            onCustomAgentsResolved={handleCustomAgentsResolved}
-          />
-        </div>
-        <div className="text-center">
-          <div className="h-8 w-8 border-3 border-amber-500/30 border-t-amber-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground font-nunito">
-            {isCreating ? 'Avvio chat in corso...' : 'Preparazione...'}
-          </p>
-          {error && (
-            <div
-              role="alert"
-              className="mt-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-sm border border-red-200 dark:border-red-500/20"
-            >
-              {error}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const canStart = DEFAULT_AGENTS.length > 0 && selectedAgentType !== null;
 
   return (
     <div className={cn('min-h-dvh bg-background', className)}>
@@ -295,12 +183,8 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
 
           {/* Agent Selection */}
           <AgentSelector
-            gameId={selectedGameId}
             onSelectSystemAgent={handleSystemAgentSelect}
-            onSelectCustomAgent={handleCustomAgentSelect}
             selectedAgentType={selectedAgentType}
-            selectedCustomAgentId={selectedCustomAgentId}
-            onCustomAgentsResolved={handleCustomAgentsResolved}
           />
 
           {/* Quick Start */}

@@ -1,3 +1,5 @@
+using Api.Tests.Architecture;
+
 namespace Api.Tests.Infrastructure;
 
 /// <summary>
@@ -70,7 +72,7 @@ internal static class PdfCorpus
     private static string FindRepositoryRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }

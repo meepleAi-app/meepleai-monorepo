@@ -30,6 +30,35 @@ public sealed class InvalidMechanicAnalysisStateException : DomainException
         AllowedStatuses = allowedStatuses;
     }
 
+    private InvalidMechanicAnalysisStateException(
+        Guid analysisId,
+        MechanicAnalysisStatus currentStatus,
+        string attemptedOperation,
+        string message)
+        : base(message)
+    {
+        AnalysisId = analysisId;
+        CurrentStatus = currentStatus;
+        AttemptedOperation = attemptedOperation;
+        AllowedStatuses = new[] { currentStatus };
+    }
+
+    /// <summary>
+    /// The status allows <paramref name="attemptedOperation"/>, but a claim's structure violates an
+    /// override-graph invariant (spec 2026-10-08 §2), so the analysis cannot move on. Names the claim.
+    /// </summary>
+    public static InvalidMechanicAnalysisStateException ForInvalidClaimStructure(
+        Guid analysisId,
+        MechanicAnalysisStatus currentStatus,
+        string attemptedOperation,
+        Guid claimId,
+        string violation) =>
+        new(
+            analysisId,
+            currentStatus,
+            attemptedOperation,
+            $"Cannot {attemptedOperation} MechanicAnalysis {analysisId}: claim {claimId} has an invalid structure ({violation}).");
+
     private static string BuildMessage(
         Guid analysisId,
         MechanicAnalysisStatus currentStatus,

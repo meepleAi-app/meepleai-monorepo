@@ -1,4 +1,4 @@
-# Resources Section (v1.0.0)
+# Resources Section (v1.2.0)
 
 Extract the **resources, currencies, materials, action tokens and cards** the game uses mechanically.
 
@@ -12,6 +12,10 @@ Extract the **resources, currencies, materials, action tokens and cards** the ga
       "type": "string (one of: currency | material | token | card | unit | other)",
       "usage": "string (Italiano, reformulated, ≤240 chars)",
       "isLimited": true,
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 7,

@@ -97,25 +97,6 @@ internal sealed class RejectMechanicClaimCommandHandler
             analysis.Id,
             request.ReviewerId);
 
-        return new MechanicClaimDto(
-            Id: claim.Id,
-            AnalysisId: analysis.Id,
-            Section: claim.Section,
-            Text: claim.Text,
-            DisplayOrder: claim.DisplayOrder,
-            Status: claim.Status,
-            ReviewedBy: claim.ReviewedBy,
-            ReviewedAt: claim.ReviewedAt,
-            RejectionNote: claim.RejectionNote,
-            ReviewNote: claim.ReviewNote,
-            Citations: claim.Citations
-                .OrderBy(c => c.DisplayOrder)
-                .Select(c => new MechanicCitationDto(
-                    Id: c.Id,
-                    PdfPage: c.PdfPage,
-                    Quote: c.Quote,
-                    DisplayOrder: c.DisplayOrder))
-                .ToList(),
-            Validations: MechanicClaimValidations.FromDomain(claim));
+        return MechanicClaimDtoMapper.FromDomain(claim, analysis.Id);
     }
 }

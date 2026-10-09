@@ -1,4 +1,4 @@
-# End of Game & Scoring Section (v1.1.0)
+# End of Game & Scoring Section (v1.2.0)
 
 Extract **when the game ends** and **how final scoring works**.
 
@@ -10,6 +10,10 @@ Extract **when the game ends** and **how final scoring works**.
     {
       "name": "string (short Italiano label, e.g. 'Trigger di fine partita', 'Punteggio maggioranze')",
       "description": "string (Italiano, reformulated, ≤280 chars)",
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 12,

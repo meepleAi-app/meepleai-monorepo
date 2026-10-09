@@ -66,6 +66,8 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 |-----|-------|------|--------|
 | [088](adr-088-mechanic-cards-as-rag-retrieval-source.md) | Mechanic Cards as RAG Retrieval Source | 2026-07-30 | Proposed |
 | [090](adr-090-in-session-grounded-answer-ownership.md) | In-Session Grounded Answer Ownership (KnowledgeBase owner, SessionTracking consumer) | 2026-08-02 | Accepted |
+| [092](adr-092-arbiter-ownership-python-validator.md) | Un solo Arbitro: Python validatore puro, C# proprietario della risposta (numerazione sequenziale, tema KB/AI) | 2026-10-08 | Accepted |
+| [093](adr-093-external-parser-ip-boundary.md) | Confine IP per i parser esterni: file intero solo verso fornitori allowlistati | 2026-10-08 | Accepted |
 
 ### Frontend Routing & Information Architecture (091–099)
 

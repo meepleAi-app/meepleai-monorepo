@@ -194,6 +194,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         if (await _featureFlags.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, flagRole)
                 .ConfigureAwait(false))
         {
+            var v3Ordering = await _featureFlags.IsEnabledAsync(FeatureFlagConstants.MechanicClaimsV3OrderingKey, flagRole)
+                .ConfigureAwait(false);
             var claimSections = MechanicSectionRouter.Route(_intentClassifier.ClassifyIntent(query.Question));
             if (claimSections.Count > 0)
             {
@@ -201,7 +203,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                     .ConfigureAwait(false);
                 if (card is not null)
                 {
-                    verifiedBlock = VerifiedRulesRenderer.Render(card, claimSections);
+                    verifiedBlock = VerifiedRulesRenderer.Render(card, claimSections, options: new VerifiedRulesRenderOptions(v3Ordering));
                 }
             }
         }

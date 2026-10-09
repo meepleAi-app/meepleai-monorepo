@@ -1,4 +1,4 @@
-# Mechanics Section (v1.0.0)
+# Mechanics Section (v1.2.0)
 
 Extract the **core design mechanics** the rulebook describes, using short canonical names (not paragraphs).
 
@@ -10,6 +10,10 @@ Extract the **core design mechanics** the rulebook describes, using short canoni
     {
       "name": "string (short canonical name, e.g. 'Worker Placement')",
       "description": "string (1-2 sentences, Italiano, reformulated, ≤280 chars)",
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 5,

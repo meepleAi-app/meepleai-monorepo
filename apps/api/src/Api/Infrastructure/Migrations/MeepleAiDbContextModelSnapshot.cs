@@ -12743,6 +12743,22 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("display_order");
 
+                    b.Property<int>("Kind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Overrides")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("overrides");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("priority");
+
                     b.Property<string>("RejectionNote")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -12776,6 +12792,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("text");
 
+                    b.Property<string>("Trigger")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("trigger");
+
                     b.Property<string>("Validations")
                         .HasColumnType("jsonb")
                         .HasColumnName("validations");
@@ -12788,12 +12808,19 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_mechanic_claims_status");
 
+                    b.HasIndex("AnalysisId", "Kind")
+                        .HasDatabaseName("ix_mechanic_claims_analysis_kind");
+
                     b.HasIndex("AnalysisId", "Section", "DisplayOrder")
                         .HasDatabaseName("ix_mechanic_claims_analysis_section_order");
 
                     b.ToTable("mechanic_claims", null, t =>
                         {
                             t.HasCheckConstraint("ck_mechanic_claims_display_order_non_negative", "display_order >= 0");
+
+                            t.HasCheckConstraint("ck_mechanic_claims_kind_range", "kind BETWEEN 0 AND 3");
+
+                            t.HasCheckConstraint("ck_mechanic_claims_priority_range", "priority BETWEEN 0 AND 3");
 
                             t.HasCheckConstraint("ck_mechanic_claims_rejection_note_when_rejected", "status <> 2 OR rejection_note IS NOT NULL");
 

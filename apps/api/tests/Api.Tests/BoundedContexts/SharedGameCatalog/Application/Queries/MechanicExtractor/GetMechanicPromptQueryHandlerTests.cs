@@ -28,7 +28,7 @@ public class GetMechanicPromptQueryHandlerTests
         var result = await handler.Handle(new GetMechanicPromptQuery(), CancellationToken.None);
 
         result.Should().NotBeNull();
-        result.PromptVersion.Should().Be("v1.1.0");
+        result.PromptVersion.Should().Be("v1.2.0");
         result.SystemPrompt.Should().NotBeNullOrWhiteSpace();
 
         var expectedCount = Enum.GetValues<MechanicSection>().Length;

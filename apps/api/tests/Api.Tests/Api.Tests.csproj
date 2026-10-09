@@ -66,6 +66,7 @@
          passare il check CI "Dependency Vulnerabilities" (fail su HIGH/CRITICAL).
          Solo test project — Scriban non è nel path di produzione (Api pulito). -->
     <PackageReference Include="Scriban.Signed" Version="7.2.1" />
+    <PackageReference Include="Testcontainers.ServiceBus" Version="4.14.0" />
     <PackageReference Include="WireMock.Net" Version="2.5.0" />
     <PackageReference Include="xunit.abstractions" Version="2.0.3" />
     <PackageReference Include="xunit.v3" Version="3.2.1" />

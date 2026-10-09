@@ -338,6 +338,11 @@ public static class TestcontainersConfiguration
     public const int AzuriteBlobPort = 10000;
     public const string AzuriteTestContainer = "meepleai-uploads-test";
 
+    /// <summary>Service Bus emulator (spec azure-local): L3; avvia da sé un MSSQL di appoggio (~1 min, una volta per classe).</summary>
+    public const string ServiceBusEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1";
+    /// <summary>Coda presente nel Config.json di default dell'emulatore.</summary>
+    public const string ServiceBusEmulatorDefaultQueue = "queue.1";
+
     #endregion
 
     #region Environment Variables

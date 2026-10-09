@@ -47,6 +47,7 @@ public sealed class InternalServiceTokenFilterTests
     [Theory]
     [InlineData("wrong")]
     [InlineData("secret-10")]
+    [InlineData("secret-2")]
     public async Task InvokeAsync_WrongToken_Returns403(string header)
     {
         (await StatusOf(Filter("secret-1"), header)).Should().Be(StatusCodes.Status403Forbidden);

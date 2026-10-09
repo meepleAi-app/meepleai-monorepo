@@ -80,6 +80,51 @@ public sealed class IndexPdfIfIdleCommandHandlerTests : IDisposable
         var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
 
         result.Outcome.Should().Be(IndexPdfIfIdleOutcome.PipelineBusy);
+        _mediator.Verify(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData("Queued")]
+    [InlineData("Processing")]
+    public async Task Handle_ActiveJobStatus_PipelineBusy(string jobStatus)
+    {
+        var id = await SeedPdfAsync("Failed");
+        _db.ProcessingJobs.Add(new ProcessingJobEntity { Id = Guid.NewGuid(), PdfDocumentId = id, Status = jobStatus });
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.PipelineBusy);
+        _mediator.Verify(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_CompletedJob_DoesNotBlockIndexing()
+    {
+        var id = await SeedPdfAsync("Failed");
+        _db.ProcessingJobs.Add(new ProcessingJobEntity { Id = Guid.NewGuid(), PdfDocumentId = id, Status = "Completed" });
+        await _db.SaveChangesAsync();
+        _mediator.Setup(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(IndexingResultDto.CreateSuccess("vec-1", 3, DateTime.UtcNow));
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.Indexed);
+        _mediator.Verify(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FailedWithVectors_IsReindexed()
+    {
+        var id = await SeedPdfAsync("Failed");
+        _db.VectorDocuments.Add(new VectorDocumentEntity { Id = Guid.NewGuid(), PdfDocumentId = id, IndexingStatus = "completed" });
+        await _db.SaveChangesAsync();
+        _mediator.Setup(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(IndexingResultDto.CreateSuccess("vec-1", 3, DateTime.UtcNow));
+
+        var result = await _sut.Handle(new IndexPdfIfIdleCommand(id), CancellationToken.None);
+
+        result.Outcome.Should().Be(IndexPdfIfIdleOutcome.Indexed);
     }
 
     [Fact]

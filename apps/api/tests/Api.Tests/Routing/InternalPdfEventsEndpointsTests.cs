@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Api.Filters;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Microsoft.Extensions.DependencyInjection;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -54,7 +57,7 @@ public sealed class InternalPdfEventsEndpointsTests : IClassFixture<InternalPdfE
     [Fact]
     public async Task Post_WrongToken_Returns403()
     {
-        _client.DefaultRequestHeaders.Add(InternalServiceTokenFilter.HeaderName, "nope");
+        _client.DefaultRequestHeaders.Add(InternalServiceTokenFilter.HeaderName, "test-internal-tokeX");
 
         var response = await _client.PostAsJsonAsync(Route, Body(Guid.NewGuid()));
 
@@ -70,6 +73,37 @@ public sealed class InternalPdfEventsEndpointsTests : IClassFixture<InternalPdfE
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await response.Content.ReadAsStringAsync()).Should().Contain("not_found");
+    }
+
+    [Fact]
+    public async Task Post_PipelineBusy_Returns202WithReason()
+    {
+        var pdfId = Guid.NewGuid();
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var userId = Guid.NewGuid();
+            db.Users.Add(new UserEntity { Id = userId, Email = $"{userId:N}@example.com", PasswordHash = "hash", Role = "user", CreatedAt = DateTime.UtcNow });
+            db.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                FileName = "test.pdf",
+                FilePath = "/uploads/test.pdf",
+                FileSizeBytes = 1024,
+                UploadedByUserId = userId,
+                UploadedAt = DateTime.UtcNow,
+                ProcessingState = "Extracting",
+                ExtractedText = "text",
+            });
+            await db.SaveChangesAsync();
+        }
+
+        _client.DefaultRequestHeaders.Add(InternalServiceTokenFilter.HeaderName, InternalPdfEventsEndpointsHostFixture.Token);
+
+        var response = await _client.PostAsJsonAsync(Route, Body(pdfId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("pipeline_busy");
     }
 
     [Fact]

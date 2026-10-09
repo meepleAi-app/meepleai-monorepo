@@ -3,6 +3,8 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Api.Tests.Infrastructure.AzureSdk;
@@ -23,6 +25,15 @@ public sealed class AzureSdkHttpClientsTests
         services.AddLogging();
         services.AddAzureSdkHttpClients(config);
         return services.BuildServiceProvider();
+    }
+
+    // The egress gate keys registrations by string literal ("AzureSdk"/"AzureSdkLocal"), while
+    // CreateTransport looks clients up by constant: they must stay equal or the pin is silently lost.
+    [Fact]
+    public void Constants_MatchTheRegisteredLiterals()
+    {
+        AzureSdkHttpClients.PinnedName.Should().Be("AzureSdk");
+        AzureSdkHttpClients.LocalName.Should().Be("AzureSdkLocal");
     }
 
     [Fact]
@@ -58,6 +69,8 @@ public sealed class AzureSdkHttpClientsTests
         using var sp = Build(Config(("MEEPLEAI_PROFILE", "azure-local")));
 
         AzureSdkHttpClients.CreateTransport(sp).Should().NotBeNull();
+        sp.GetRequiredService<IOptionsMonitor<HttpClientFactoryOptions>>().Get(AzureSdkHttpClients.LocalName)
+            .HttpMessageHandlerBuilderActions.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -76,5 +89,7 @@ public sealed class AzureSdkHttpClientsTests
         using var sp = Build(Config(("MEEPLEAI_PROFILE", "azure-exam"), ("Azure:Sdk:AllowedHostSuffixes:0", ".blob.core.windows.net")));
 
         AzureSdkHttpClients.CreateTransport(sp).Should().NotBeNull();
+        sp.GetRequiredService<IOptionsMonitor<HttpClientFactoryOptions>>().Get(AzureSdkHttpClients.PinnedName)
+            .HttpMessageHandlerBuilderActions.Should().NotBeEmpty();
     }
 }

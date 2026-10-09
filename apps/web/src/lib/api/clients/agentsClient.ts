@@ -32,7 +32,6 @@ import {
   type PlayerModeSuggestionResponse,
   type Typology, // Added for AGT-012
 } from '../schemas';
-import { QuickCreateResultSchema, type QuickCreateResult } from '../schemas/ownership.schemas';
 import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -401,35 +400,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    // ========== User-Owned Agent CRUD (Issue #4683, #4915) ==========
-
-    /**
-     * Create a user-owned agent with tier-aware configuration
-     * Issue #4683: User Agent CRUD Endpoints
-     * @param request Agent creation params (gameId, agentType, name, etc.)
-     * Resolved by #654 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async createUserAgent(request: {
-      gameId: string;
-      agentType: string;
-      name?: string;
-      strategyName?: string;
-      strategyParameters?: Record<string, unknown>;
-      documentIds?: string[];
-    }): Promise<AgentDto> {
-      const response = await httpClient.post<AgentDto>(
-        '/api/v1/agents/user',
-        request,
-        AgentDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to create user agent: no response from server');
-      }
-
-      return response;
-    },
-
     // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
 
     /**
@@ -469,42 +439,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    /**
-     * Orchestrated agent creation with auto-setup
-     * Issue #4772: Agent Creation Orchestration Flow
-     * Resolved by #655 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async createWithSetup(request: {
-      gameId: string;
-      addToCollection: boolean;
-      agentType: string;
-      agentName?: string;
-      strategyName?: string;
-      strategyParameters?: Record<string, unknown>;
-      /** Pre-selected KB document IDs (from SearchAgentSheet wizard) */
-      documentIds?: string[];
-    }): Promise<{
-      agentId: string;
-      agentName: string;
-      threadId: string;
-      slotUsed: number;
-      gameAddedToCollection: boolean;
-    }> {
-      const response = await httpClient.post<{
-        agentId: string;
-        agentName: string;
-        threadId: string;
-        slotUsed: number;
-        gameAddedToCollection: boolean;
-      }>('/api/v1/agents/create-with-setup', request);
-
-      if (!response) {
-        throw new Error('Failed to create agent: no response from server');
-      }
-
-      return response;
-    },
-
     // ========== Admin Agent Testing (Issue #4962) ==========
 
     /**
@@ -528,33 +462,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       if (!response) {
         throw new Error('Failed to test agent typology: no response from server');
-      }
-
-      return response;
-    },
-
-    /**
-     * Update a user-owned agent (name, strategy)
-     * PUT /api/v1/agents/{id}/user
-     * Issue #4683: User Agent CRUD Endpoints
-     * Resolved by #656 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async updateUserAgent(
-      agentId: string,
-      request: {
-        name?: string;
-        strategyName?: string;
-        strategyParameters?: Record<string, unknown>;
-      }
-    ): Promise<AgentDto> {
-      const response = await httpClient.put<AgentDto>(
-        `/api/v1/agents/${encodeURIComponent(agentId)}/user`,
-        request,
-        AgentDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to update user agent: no response from server');
       }
 
       return response;
@@ -621,35 +528,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         request,
         AgentCostEstimateSchema
       );
-    },
-
-    // ========== Quick Create Tutor (Ownership RAG Access) ==========
-
-    /**
-     * Quick-create a tutor agent for a game after ownership declaration.
-     * Uses pre-existing KB cards to instantly set up a chat-ready agent.
-     * POST /api/v1/agents/quick-create (QuickCreateAgentCommand).
-     * @param gameId - Game UUID
-     * @param sharedGameId - Optional shared game UUID for catalog-linked games
-     * @remarks The response `chatThreadId` is a backend placeholder (chat-thread
-     * BC integration deferred) — do NOT navigate to it. Use `agentId` instead.
-     */
-    async quickCreateTutor(gameId: string, sharedGameId?: string): Promise<QuickCreateResult> {
-      const body: { gameId: string; sharedGameId?: string } = { gameId };
-      if (sharedGameId) {
-        body.sharedGameId = sharedGameId;
-      }
-      const response = await httpClient.post<QuickCreateResult>(
-        '/api/v1/agents/quick-create',
-        body,
-        QuickCreateResultSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to quick-create tutor: no response from server');
-      }
-
-      return response;
     },
   };
 }

@@ -52,25 +52,22 @@ test.describe('AI Lab - Agent Workflow', () => {
   /**
    * SALTATO per un difetto del PRODOTTO, non del test — e il test lo ha trovato.
    *
-   * Il corpo qui sotto è corretto contro la UI reale (ruolo `link` per `Create Agent`,
-   * `combobox` per `Model`, submit `Save Agent`), ma la submit riceve sempre `422`:
-   *   - `createAgentDefinitionSchema` non ha il campo `type`, che
-   *     `CreateAgentDefinitionCommandValidator` (#3708) impone con `NotEmpty` e un elenco
-   *     chiuso di valori; il form non ha alcun controllo per sceglierlo;
-   *   - dei 5 modelli cablati in `AgentBuilderForm.MODELS`, 4 sono id nudi di provider
-   *     cloud che il backend rifiuta come «not routable». Solo `deepseek-chat` passa.
+   * Il corpo è corretto contro la UI reale (ruolo `link` per `Create Agent`, `combobox` per
+   * `Model`, submit `Save Agent`). Restava saltato con `DIFETTO: #4102` perché ogni submit
+   * riceveva `422` per due cause indipendenti, entrambe ora chiuse:
+   *   - `CreateAgentDefinitionCommandValidator` imponeva un campo `type` che il form non
+   *     aveva. #4138 ha ritirato `AgentDefinition.Type`, quindi non c'è più nulla da inviare
+   *     e la regola del validator è uscita con il campo;
+   *   - dei 5 modelli cablati in `AgentBuilderForm`, 4 erano id nudi di provider cloud che il
+   *     backend rifiuta come «not routable». Le opzioni ora arrivano da
+   *     `/api/v1/admin/ai-models`, filtrate da `isRoutableModelId` — lo stesso predicato del
+   *     validator — e `AgentBuilderForm.models.test.tsx` lo asserisce sul form, non solo sul
+   *     predicato.
    *
-   * Provato con POST dirette: `type=Conversation` + `deepseek-chat` crea l'agente, mentre
-   * `type=Conversation` + `gpt-4` (un'opzione della tendina) dà 422. Il backend funziona.
-   *
-   * Quando #4102 chiude, togli la riga `test.skip` e il test deve passare così com'è.
+   * ⚠️ Lo skip è stato togliato senza poter eseguire questa spec contro uno stack vivo: serve
+   * `hasRealAdminCredentials`. Se torna rossa, la causa NON è più una di quelle due.
    */
   test('should create new agent definition', async ({ page }) => {
-    test.skip(
-      true,
-      'DIFETTO: #4102 — il form di creazione non invia `type` (obbligatorio lato backend) e offre 4 modelli su 5 non instradabili: ogni submit riceve 422'
-    );
-
     await page.goto(DEFINITIONS_URL);
     await expect(page.getByRole('heading', { name: 'Agent Definitions' })).toBeVisible();
 

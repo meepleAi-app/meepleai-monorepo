@@ -97,6 +97,12 @@ else if (isCIEnv)
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Spec azure-local §4.2: App Configuration e Key Vault come sorgenti IConfiguration, attive SOLO con
+// AZURE_APPCONFIG_CONNECTION_STRING / AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI valorizzate. Su
+// ConfigurationManager l'Add carica subito la sorgente: qui è voluto. Prima del SecretLoader, che
+// aggiunge soltanto le chiavi ancora assenti.
+builder.Configuration.AddAzureConfigurationSources(builder.Configuration);
+
 // Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
 // Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
 // Defense-in-depth: even if a deployment misconfigures the flag, the app refuses to

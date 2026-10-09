@@ -10,11 +10,16 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.EventHandlers;
 
 /// <summary>
 /// Traduce la transizione Pending → Uploading di <see cref="PdfStateChangedEvent"/> nell'integration event
-/// <see cref="PdfUploadedIntegrationEvent"/>. Mai un'eccezione verso l'upload: il bus giù non deve far fallire
-/// la richiesta dell'utente (Review Focus 5); l'esito finisce nel contatore.
+/// <see cref="PdfUploadedIntegrationEvent"/>. Non rilancia mai (salvo cancellazione dell'host): un'eccezione
+/// farebbe rieseguire all'outbox, al retry, TUTTI gli handler fratelli di <see cref="PdfStateChangedEvent"/>;
+/// la consegna è at-most-once per scelta e l'esito finisce nel contatore. Il publish ha un timeout proprio
+/// perché gira dentro la transazione per-batch dell'outbox.
 /// </summary>
 internal sealed class PdfUploadedIntegrationEventRelay : INotificationHandler<PdfStateChangedEvent>
 {
+    private static readonly TimeSpan DefaultPublishTimeout = TimeSpan.FromSeconds(15);
+
+    private readonly TimeSpan _publishTimeout;
     private readonly IIntegrationEventPublisher _publisher;
     private readonly IPdfDocumentRepository _repository;
     private readonly ILogger<PdfUploadedIntegrationEventRelay> _logger;
@@ -22,8 +27,10 @@ internal sealed class PdfUploadedIntegrationEventRelay : INotificationHandler<Pd
     public PdfUploadedIntegrationEventRelay(
         IIntegrationEventPublisher publisher,
         IPdfDocumentRepository repository,
-        ILogger<PdfUploadedIntegrationEventRelay> logger)
+        ILogger<PdfUploadedIntegrationEventRelay> logger,
+        TimeSpan? publishTimeout = null)
     {
+        _publishTimeout = publishTimeout ?? DefaultPublishTimeout;
         _publisher = publisher;
         _repository = repository;
         _logger = logger;
@@ -47,7 +54,9 @@ internal sealed class PdfUploadedIntegrationEventRelay : INotificationHandler<Pd
             }
 
             var integrationEvent = new PdfUploadedIntegrationEvent(document.Id, document.GameId, document.SharedGameId, document.FilePath);
-            await _publisher.PublishAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(_publishTimeout);
+            await _publisher.PublishAsync(integrationEvent, timeout.Token).ConfigureAwait(false);
             MeepleAiMetrics.RecordPdfUploadedEvent(MeepleAiMetrics.PdfUploadedEventOutcomes.Published);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

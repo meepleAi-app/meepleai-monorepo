@@ -114,6 +114,21 @@ public sealed class PdfUploadedIntegrationEventRelayTests
     }
 
     [Fact]
+    public async Task Handle_PublishExceedsTimeout_CountsPublishFailed()
+    {
+        var pdfId = Guid.NewGuid();
+        SeedDocument(pdfId);
+        _publisher.Setup(p => p.PublishAsync(It.IsAny<PdfUploadedIntegrationEvent>(), It.IsAny<CancellationToken>()))
+            .Returns<PdfUploadedIntegrationEvent, CancellationToken>((_, ct) => Task.Delay(Timeout.Infinite, ct));
+        var sut = new PdfUploadedIntegrationEventRelay(
+            _publisher.Object, _repository.Object, Mock.Of<ILogger<PdfUploadedIntegrationEventRelay>>(), TimeSpan.FromMilliseconds(100));
+
+        var outcomes = await CollectOutcomesAsync(() => sut.Handle(PendingToUploading(pdfId), CancellationToken.None));
+
+        outcomes.Should().Equal(MeepleAiMetrics.PdfUploadedEventOutcomes.PublishFailed);
+    }
+
+    [Fact]
     public async Task Handle_PublisherThrows_SwallowsAndCountsFailure()
     {
         var pdfId = Guid.NewGuid();
@@ -121,7 +136,7 @@ public sealed class PdfUploadedIntegrationEventRelayTests
         _publisher.Setup(p => p.PublishAsync(It.IsAny<PdfUploadedIntegrationEvent>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("bus down"));
 
-        // L'upload NON deve fallire perché il bus è giù (Review Focus 5): il relay assorbe e conta.
+        // Il relay assorbe e conta: un throw farebbe rieseguire all'outbox tutti gli handler fratelli (at-most-once per scelta).
         var act = () => CollectOutcomesAsync(() => _sut.Handle(PendingToUploading(pdfId), CancellationToken.None));
 
         var outcomes = await act.Should().NotThrowAsync();

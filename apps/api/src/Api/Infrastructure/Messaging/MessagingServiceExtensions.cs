@@ -12,6 +12,16 @@ internal static class MessagingServiceExtensions
     public const string DefaultQueue = "pdf-uploaded";
 
     /// <summary>
+    /// Il publish gira dentro la transazione per-batch dell'outbox dei domain event: un bus giù deve costare
+    /// secondi, non minuti (default SDK: 3 retry x 60 s), altrimenti blocca tutti gli altri eventi del batch.
+    /// </summary>
+    public static ServiceBusClientOptions CreateClientOptions() => new()
+    {
+        TransportType = ServiceBusTransportType.AmqpTcp,
+        RetryOptions = new ServiceBusRetryOptions { MaxRetries = 1, TryTimeout = TimeSpan.FromSeconds(5) },
+    };
+
+    /// <summary>
     /// Service Bus parla AMQP, non HTTP: il client <c>AzureSdk</c> pinnato non si applica. L'endpoint viene da
     /// configurazione statica (stessa esenzione di OpenRouter/Resend nel gate di egress). Con la connection
     /// string (emulatore o SAS) o il namespace FQDN (Azure vero, identità Entra) registra il publisher Service Bus;
@@ -30,7 +40,7 @@ internal static class MessagingServiceExtensions
         }
 
         var queue = configuration[QueueKey] is { Length: > 0 } q ? q : DefaultQueue;
-        var clientOptions = new ServiceBusClientOptions { TransportType = ServiceBusTransportType.AmqpTcp };
+        var clientOptions = CreateClientOptions();
         services.AddSingleton(_ => hasConnectionString
             ? new ServiceBusClient(connectionString, clientOptions)
             : new ServiceBusClient(fullyQualifiedNamespace!.Trim(), new DefaultAzureCredential(), clientOptions));

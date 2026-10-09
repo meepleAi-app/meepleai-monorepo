@@ -23,6 +23,16 @@ public sealed class MessagingServiceExtensionsTests
         return services.BuildServiceProvider();
     }
 
+    [Fact]
+    public void CreateClientOptions_BoundsRetryAndTimeoutSoABusOutageCostsSeconds()
+    {
+        var options = MessagingServiceExtensions.CreateClientOptions();
+
+        options.RetryOptions.MaxRetries.Should().Be(1);
+        options.RetryOptions.TryTimeout.Should().Be(TimeSpan.FromSeconds(5));
+        options.TransportType.Should().Be(Azure.Messaging.ServiceBus.ServiceBusTransportType.AmqpTcp);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

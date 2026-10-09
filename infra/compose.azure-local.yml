@@ -21,6 +21,8 @@ services:
       AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT: "http://localhost:${AZURE_LOCAL_PORT_BASE:-20000}"
       # HMAC (spec §4.2): il provider .NET rifiuta un bearer su http, la connection string no.
       AZURE_APPCONFIG_CONNECTION_STRING: "Endpoint=http://appconfig-emulator:8483;Id=azure-local-dev;Secret=YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm"
+      # Un emulatore assente non deve bloccare l'avvio per il timeout di default del provider; l'errore finisce comunque su stderr.
+      AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS: "30"
       # Key Vault: vuote di default; `make dev-azure-local-keyvault` le valorizza.
       AZURE_KEYVAULT_URI: "${AZURE_KEYVAULT_URI:-}"
       AZURE_KEYVAULT_ANONYMOUS: "${AZURE_KEYVAULT_ANONYMOUS:-}"

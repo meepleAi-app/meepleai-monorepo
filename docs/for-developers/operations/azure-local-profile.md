@@ -95,7 +95,7 @@ Il target imposta `AZURE_KEYVAULT_URI`, `AZURE_KEYVAULT_ANONYMOUS=true` e `AZURE
 | `AZURE_STORAGE_CONTAINER` | Container dei file caricati. |
 | `AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT` | Host raggiungibile dal browser per gli URL SAS (la firma non copre l'host). |
 | `AZURE_APPCONFIG_CONNECTION_STRING` | Connection string HMAC dell'App Configuration emulator. |
-| `AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS` | Timeout di avvio del provider App Configuration, accorciato per non bloccare l'API se l'emulatore manca. |
+| `AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS` | Timeout di avvio del provider App Configuration (30 s nel profilo), accorciato per non bloccare l'API se l'emulatore manca. |
 | `AZURE_KEYVAULT_URI` | Endpoint del Key Vault emulator; vuota se non opt-in. |
 | `AZURE_KEYVAULT_ANONYMOUS` | Accesso senza credenziali al Key Vault emulator; vuota se non opt-in. |
 | `AZURE_SDK_ALLOW_INSECURE_TLS` | Accetta il certificato self-signed degli emulatori; `false` salvo opt-in Key Vault. |

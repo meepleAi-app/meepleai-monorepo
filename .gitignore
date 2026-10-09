@@ -326,3 +326,4 @@ apps/web/e2e/audit/.auth/
 apps/web/audit-results/
 apps/web/e2e/audit/route-params.json
 docs/for-developers/audits/*/evidence/
+apps/functions/**/local.settings.json

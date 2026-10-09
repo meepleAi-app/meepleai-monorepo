@@ -42,6 +42,22 @@ public sealed class AzureConfigurationSourcesTests
         builder.Sources.Should().HaveCount(1);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("abc")]
+    [InlineData("0")]
+    [InlineData("-5")]
+    public void AddAzureConfigurationSources_StartupTimeout_InvalidValuesAreIgnored(string value)
+    {
+        var builder = new ConfigurationBuilder();
+
+        builder.AddAzureConfigurationSources(Settings(
+            ("AZURE_APPCONFIG_CONNECTION_STRING", "Endpoint=http://127.0.0.1:9;Id=i;Secret=c2VjcmV0"),
+            ("AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS", value)));
+
+        builder.Sources.Should().HaveCount(1);
+    }
+
     [Fact]
     public void AddAzureConfigurationSources_KeyVaultUri_AddsOneSource()
     {

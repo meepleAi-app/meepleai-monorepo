@@ -1,3 +1,4 @@
+using System.Globalization;
 using Azure.Core.Pipeline;
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
@@ -11,6 +12,9 @@ namespace Api.Infrastructure.AzureSdk;
 /// utente), la stessa condizione con cui il gate di egress esenta OpenRouter o Resend. Con le variabili assenti o
 /// vuote non viene aggiunta alcuna sorgente. Le chiavi lette da qui VINCONO sulle variabili d'ambiente
 /// (aggiunte dopo); <c>SecretLoader</c> aggiunge solo le chiavi ancora assenti.
+/// Con il default (<c>optional: false</c>) un endpoint errato o irraggiungibile blocca l'avvio per il timeout
+/// predefinito del provider e poi fallisce rumorosamente su stderr; <c>AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS</c>
+/// (intero positivo) lo accorcia, valori non validi sono ignorati.
 /// </summary>
 internal static class AzureConfigurationSources
 {
@@ -18,17 +22,20 @@ internal static class AzureConfigurationSources
     public const string AppConfigEndpointKey = "AZURE_APPCONFIG_ENDPOINT";
     public const string KeyVaultUriKey = "AZURE_KEYVAULT_URI";
     public const string KeyVaultAnonymousKey = "AZURE_KEYVAULT_ANONYMOUS";
+    public const string AppConfigStartupTimeoutKey = "AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS";
     private const string AnonymousToken = "anonymous";
 
     public static IConfigurationBuilder AddAzureConfigurationSources(this IConfigurationBuilder builder, IConfiguration settings)
     {
         var appConfigConnectionString = settings[AppConfigConnectionStringKey];
         var appConfigEndpoint = settings[AppConfigEndpointKey];
+        var startupTimeoutSeconds = ParseStartupTimeout(settings[AppConfigStartupTimeoutKey]);
         if (!string.IsNullOrWhiteSpace(appConfigConnectionString))
         {
             // HMAC (emulatore o store con chiavi di accesso): funziona anche su http.
             builder.AddAzureAppConfiguration(options => options
                 .Connect(appConfigConnectionString.Trim())
+                .ApplyStartupTimeout(startupTimeoutSeconds)
                 .Select(KeyFilter.Any, LabelFilter.Null));
         }
         else if (!string.IsNullOrWhiteSpace(appConfigEndpoint))
@@ -37,6 +44,7 @@ internal static class AzureConfigurationSources
             var endpoint = ParseAbsoluteUri(appConfigEndpoint, AppConfigEndpointKey);
             builder.AddAzureAppConfiguration(options => options
                 .Connect(endpoint, new DefaultAzureCredential())
+                .ApplyStartupTimeout(startupTimeoutSeconds)
                 .Select(KeyFilter.Any, LabelFilter.Null));
         }
 
@@ -62,6 +70,12 @@ internal static class AzureConfigurationSources
 
         return builder;
     }
+
+    private static int? ParseStartupTimeout(string? value) =>
+        int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds) && seconds > 0 ? seconds : null;
+
+    private static AzureAppConfigurationOptions ApplyStartupTimeout(this AzureAppConfigurationOptions options, int? seconds) =>
+        seconds is { } s ? options.ConfigureStartupOptions(startup => startup.Timeout = TimeSpan.FromSeconds(s)) : options;
 
     private static Uri ParseAbsoluteUri(string value, string key)
     {

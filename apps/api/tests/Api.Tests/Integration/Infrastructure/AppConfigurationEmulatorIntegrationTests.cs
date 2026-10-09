@@ -49,12 +49,19 @@ public sealed class AppConfigurationEmulatorIntegrationTests : IClassFixture<App
         _emulator.SkipIfUnavailable();
         var wrongConnectionString = $"Endpoint={_emulator.Endpoint};Id={AppConfigurationEmulatorFixture.AccessKeyId};Secret=d3Jvbmctc2VjcmV0LXdyb25nLXNlY3JldC13cm9uZw==";
         var settings = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?> { [AzureConfigurationSources.AppConfigConnectionStringKey] = wrongConnectionString })
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [AzureConfigurationSources.AppConfigConnectionStringKey] = wrongConnectionString,
+                [AzureConfigurationSources.AppConfigStartupTimeoutKey] = "10",
+            })
             .Build();
 
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var act = () => new ConfigurationBuilder().AddAzureConfigurationSources(settings).Build();
 
         act.Should().Throw<Exception>();
+        stopwatch.Stop();
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(60));
     }
 
     [Fact]

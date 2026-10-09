@@ -50,6 +50,7 @@
     <PackageReference Include="ScottPlot" Version="5.1.57" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.Sinks.TestCorrelator" Version="4.0.0" />
+    <PackageReference Include="Testcontainers.Azurite" Version="4.14.0" />
     <!-- Issue #3707 / GHSA-q939-rpr3-3284 (HIGH): Testcontainers <=4.13.0 tira
          transitive SSH.NET 2025.1.0 (path traversal in ScpClient.Download
          ricorsivo, vulnerabile <=2025.1.0). 4.14.0 è la prima release che

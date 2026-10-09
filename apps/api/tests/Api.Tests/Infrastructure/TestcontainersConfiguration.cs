@@ -333,6 +333,11 @@ public static class TestcontainersConfiguration
     /// </summary>
     public const string MinioTestBucket = "meepleai-uploads";
 
+    /// <summary>Azurite (spec azure-local): servizio L3 — la sua assenza è un salto PREVISTO, non un rosso.</summary>
+    public const string AzuriteImage = "mcr.microsoft.com/azure-storage/azurite:3.37.0";
+    public const int AzuriteBlobPort = 10000;
+    public const string AzuriteTestContainer = "meepleai-uploads-test";
+
     #endregion
 
     #region Environment Variables

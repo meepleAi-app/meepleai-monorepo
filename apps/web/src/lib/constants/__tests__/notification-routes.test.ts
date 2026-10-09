@@ -22,8 +22,8 @@ import {
 
 // Golden set — MUST equal the const values in NotificationRoutes.cs (BE).
 const GOLDEN_ROUTE_VALUES = [
-  '/library/games/{id}/agent',
   '/library/private/{id}/toolkit',
+  '/library/{id}?tab=aiChat',
   '/contributions/requests/{id}',
   '/shared-games/{id}',
   '/admin/shared-games/{id}',

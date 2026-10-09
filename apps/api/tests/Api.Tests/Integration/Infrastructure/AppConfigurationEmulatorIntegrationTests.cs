@@ -42,6 +42,22 @@ public sealed class AppConfigurationEmulatorIntegrationTests : IClassFixture<App
     }
 
     [Fact]
+    public void HmacConnectionString_WrongSecret_FailsToLoad()
+    {
+        // Prova che l'HMAC è davvero verificato: l'emulatore ha anche l'accesso anonimo abilitato (per il seed),
+        // quindi senza questo test una firma sbagliata potrebbe passare in silenzio.
+        _emulator.SkipIfUnavailable();
+        var wrongConnectionString = $"Endpoint={_emulator.Endpoint};Id={AppConfigurationEmulatorFixture.AccessKeyId};Secret=d3Jvbmctc2VjcmV0LXdyb25nLXNlY3JldC13cm9uZw==";
+        var settings = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { [AzureConfigurationSources.AppConfigConnectionStringKey] = wrongConnectionString })
+            .Build();
+
+        var act = () => new ConfigurationBuilder().AddAzureConfigurationSources(settings).Build();
+
+        act.Should().Throw<Exception>();
+    }
+
+    [Fact]
     public async Task HmacConnectionString_WinsOverEnvironmentStyleValue()
     {
         _emulator.SkipIfUnavailable();

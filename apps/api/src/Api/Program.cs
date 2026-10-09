@@ -101,7 +101,18 @@ var builder = WebApplication.CreateBuilder(args);
 // AZURE_APPCONFIG_CONNECTION_STRING / AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI valorizzate. Su
 // ConfigurationManager l'Add carica subito la sorgente: qui è voluto. Prima del SecretLoader, che
 // aggiunge soltanto le chiavi ancora assenti.
-builder.Configuration.AddAzureConfigurationSources(builder.Configuration);
+// Resta PRIMA di Serilog (le sue impostazioni devono vedere i valori di Key Vault), quindi prima anche
+// dell'handler UnhandledException: nel container il runtime non stampa il messaggio (#3998), e un endpoint
+// errato o un 401 ucciderebbe il processo senza traccia. Stderr è leggibile: lo si scrive a mano e si rilancia.
+try
+{
+    builder.Configuration.AddAzureConfigurationSources(builder.Configuration);
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine(ex);
+    throw;
+}
 
 // Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
 // Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.

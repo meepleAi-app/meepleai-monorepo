@@ -37,9 +37,15 @@ public abstract class EmulatorFixtureBase : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        if (UnavailableReason is null)
+        // Sempre, anche con UnavailableReason valorizzato: il percorso GUASTO e' proprio quello in cui un
+        // container a meta' avvio e' piu' probabile, e le sottoclassi controllano gia' il proprio null.
+        try
         {
             await StopAsync();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // Un container rotto non deve mascherare l'esito dei test.
         }
     }
 

@@ -1025,6 +1025,7 @@ v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminKbQualityEndpoints();    // Issue #1675: Per-doc KB quality evaluations
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapInternalPdfEventsEndpoints(); // spec azure-local §4.3: consumer interno del PdfUploaded v1
 v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint
 v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
 v1Api.MapAdminEvalEndpoints();          // Issue #3433: RAG evaluation suite (retrieval + labeling-assist)

@@ -44,6 +44,7 @@ public class ConstantTimeComparisonArchitectureTests
         ("BoundedContexts/Authentication/Domain/ValueObjects/PasswordHash.cs", "hash PBKDF2 della password (value object)"),
         ("BoundedContexts/Authentication/Application/Commands/Registration/RegisterCommandHandler.cs", "codice di invito"),
         ("BoundedContexts/UserNotifications/Infrastructure/Slack/SlackSignatureValidator.cs", "firma HMAC del webhook Slack"),
+        ("Filters/InternalServiceTokenFilter.cs", "token di servizio interno X-Internal-Service-Token (spec azure-local)"),
     ];
 
     private const string ConstantTimeCall = "CryptographicOperations.FixedTimeEquals";

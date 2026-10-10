@@ -12,8 +12,9 @@ import type { HttpClient } from '../core/httpClient';
 // ========== Request/Response Schemas ==========
 
 export const LaunchSessionAgentRequestSchema = z.object({
-  agentDefinitionId: z.string().uuid(),
-  agentId: z.string().uuid(),
+  // Issue #4154: opzionale; assente, il backend usa l'agente di sistema (ADR-094). `agentId`, che il
+  // backend ignorava, non c'è più.
+  agentDefinitionId: z.string().uuid().optional(),
   gameId: z.string().uuid(),
   // C1 fix: default to '' so the BE uses GameState.Initial(UserId) instead of
   // GameState.FromJson('{}') which throws (ActivePlayer == Guid.Empty → 422).

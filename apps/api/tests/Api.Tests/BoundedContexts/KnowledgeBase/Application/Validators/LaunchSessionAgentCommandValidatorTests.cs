@@ -173,41 +173,42 @@ public sealed class LaunchSessionAgentCommandValidatorTests
     }
 
     // ──────────────────────────────────────────────────────────────────────────────
-    // V3 — GameId match
+    // #4154 / ADR-094 — l'agente non e` piu` legato a un gioco
+    //
+    // La regola V3 («l'agente deve appartenere al gioco») bocciava l'agente di sistema per
+    // QUALUNQUE gioco, perche' il suo GameId e` nullo: il test che la fissava
+    // («Validate_V3_NullGameIdOnDefinition_ReturnsError») asseriva proprio il difetto.
     // ──────────────────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task Validate_V3_GameIdMismatch_ReturnsError()
+    public async Task Validate_GameAgnosticAgent_NullGameId_IsValid()
     {
-        var otherGameId = Guid.NewGuid();
-        var def = CreateActiveDefinition(gameId: otherGameId); // different game
+        var systemAgent = CreateActiveDefinition(gameId: null);
 
         _repoMock
             .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(def);
+            .ReturnsAsync(systemAgent);
 
-        var command = ValidCommand(); // command.GameId = _gameId
-        var result = await _validator.TestValidateAsync(command);
+        var result = await _validator.TestValidateAsync(ValidCommand());
 
-        result.ShouldHaveValidationErrorFor(x => x.AgentDefinitionId)
-            .WithErrorMessage("AgentDefinition does not belong to the specified game.");
+        result.ShouldNotHaveValidationErrorFor(x => x.AgentDefinitionId);
     }
 
     [Fact]
-    public async Task Validate_V3_NullGameIdOnDefinition_ReturnsError()
+    public async Task Validate_NoAgentDefinitionId_IsValid_AndDoesNotCallRepo()
     {
-        // definition.GameId is null → does not match any Guid → should fail
-        var def = CreateActiveDefinition(gameId: null); // no game set
+        // Assente: l'handler usa l'agente di sistema. Il validator non ha nulla da cercare.
+        var command = new LaunchSessionAgentCommand(
+            GameSessionId: _gameSessionId,
+            AgentDefinitionId: null,
+            UserId: _userId,
+            GameId: _gameId,
+            InitialGameStateJson: string.Empty);
 
-        _repoMock
-            .Setup(r => r.GetByIdAsync(_agentDefinitionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(def);
-
-        var command = ValidCommand();
         var result = await _validator.TestValidateAsync(command);
 
-        result.ShouldHaveValidationErrorFor(x => x.AgentDefinitionId)
-            .WithErrorMessage("AgentDefinition does not belong to the specified game.");
+        result.ShouldNotHaveAnyValidationErrors();
+        _repoMock.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // ──────────────────────────────────────────────────────────────────────────────

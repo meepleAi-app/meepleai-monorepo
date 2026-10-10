@@ -2,6 +2,8 @@
  * useSessionAgentLaunch — unit tests
  * Issue #2500 C1 fix: hook must send initialGameStateJson: '' (not '{}') so the
  * BE can default to GameState.Initial(UserId) instead of failing with 422.
+ * Issue #4154 (ADR-095 fetta 0b): il lancio non scarica piu` un elenco di agenti e non passa un id;
+ * il backend usa l'agente di sistema. «Nessun assistente» arriva come codice d'errore dal backend.
  */
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -20,8 +22,8 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { api } from '@/lib/api';
+import { ApiError } from '@/lib/api/core/errors';
 import { useSessionAgentLaunch } from '../useSessionAgentLaunch';
-import type { AgentDto } from '@/lib/api/schemas';
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -30,23 +32,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const SESSION_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const GAME_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-const AGENT_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const AGENT_SESSION_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
-
-const activeAgent: AgentDto = {
-  id: AGENT_ID,
-  name: 'Test RAG Agent',
-  type: 'RagAgent',
-  strategyName: 'HybridRag',
-  strategyParameters: {},
-  isActive: true,
-  createdAt: '2026-01-01T00:00:00Z',
-  lastInvokedAt: null,
-  invocationCount: 0,
-  isRecentlyUsed: false,
-  isIdle: true,
-  gameId: GAME_ID,
-};
 
 describe('useSessionAgentLaunch', () => {
   beforeEach(() => {
@@ -70,7 +56,20 @@ describe('useSessionAgentLaunch', () => {
       wrapper,
     });
     expect(result.current.status).toBe('idle');
+    expect(api.agentSessions.launch).not.toHaveBeenCalled();
+  });
+
+  it('#4154: non scarica l`elenco degli agenti e lancia senza id dell`agente', async () => {
+    vi.mocked(api.agentSessions.launch).mockResolvedValueOnce({ agentSessionId: AGENT_SESSION_ID });
+
+    const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });
+
+    await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(api.games.getAgents).not.toHaveBeenCalled();
+    const [, request] = vi.mocked(api.agentSessions.launch).mock.calls[0];
+    expect(request).not.toHaveProperty('agentDefinitionId');
+    expect(request).not.toHaveProperty('agentId');
+    expect(request).toMatchObject({ gameId: GAME_ID });
   });
 
   /**
@@ -79,23 +78,18 @@ describe('useSessionAgentLaunch', () => {
    * GameState.Initial(UserId) instead of GameState.FromJson('{}') which throws.
    */
   it('C1 fix: sends initialGameStateJson as empty string (not {}) to the launch API', async () => {
-    vi.mocked(api.games.getAgents).mockResolvedValueOnce([activeAgent]);
     vi.mocked(api.agentSessions.launch).mockResolvedValueOnce({ agentSessionId: AGENT_SESSION_ID });
 
     const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });
 
     await waitFor(() => expect(result.current.status).toBe('ready'));
-
     expect(api.agentSessions.launch).toHaveBeenCalledWith(
       SESSION_ID,
-      expect.objectContaining({
-        initialGameStateJson: '',
-      })
+      expect.objectContaining({ initialGameStateJson: '' })
     );
   });
 
   it('returns ready with agentSessionId when launch succeeds', async () => {
-    vi.mocked(api.games.getAgents).mockResolvedValueOnce([activeAgent]);
     vi.mocked(api.agentSessions.launch).mockResolvedValueOnce({ agentSessionId: AGENT_SESSION_ID });
 
     const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });
@@ -104,25 +98,22 @@ describe('useSessionAgentLaunch', () => {
     expect(result.current.agentSessionId).toBe(AGENT_SESSION_ID);
   });
 
-  it('returns no-agent when getAgents returns empty list', async () => {
-    vi.mocked(api.games.getAgents).mockResolvedValueOnce([]);
+  it('#4154: returns no-agent when the backend reports system_agent_unavailable', async () => {
+    vi.mocked(api.agentSessions.launch).mockRejectedValueOnce(
+      new ApiError({
+        message: "L'assistente non è disponibile: l'agente di sistema non è attivo.",
+        statusCode: 409,
+        code: 'system_agent_unavailable',
+      })
+    );
 
     const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });
 
     await waitFor(() => expect(result.current.status).toBe('no-agent'));
-    expect(api.agentSessions.launch).not.toHaveBeenCalled();
+    expect(result.current.agentSessionId).toBe('');
   });
 
-  it('returns error when getAgents fails', async () => {
-    vi.mocked(api.games.getAgents).mockRejectedValueOnce(new Error('network'));
-
-    const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });
-
-    await waitFor(() => expect(result.current.status).toBe('error'));
-  });
-
-  it('returns error when launch fails', async () => {
-    vi.mocked(api.games.getAgents).mockResolvedValueOnce([activeAgent]);
+  it('returns error when launch fails for any other reason', async () => {
     vi.mocked(api.agentSessions.launch).mockRejectedValueOnce(new Error('422 Unprocessable'));
 
     const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });

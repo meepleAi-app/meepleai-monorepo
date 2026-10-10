@@ -2,19 +2,22 @@
  * useSessionAgentLaunch — resolves the RAG agent session for a live game session.
  *
  * SP1 epic #2501 (Issue #2500): the live chat panel talks to the RAG agent, which
- * requires an `agentSessionId` from `POST /game-sessions/{id}/agent/launch`. The
- * launch needs an `agentDefinitionId`, which is exactly `AgentDto.id` returned by
- * `GET /games/{gameId}/agents` (verified: `AgentDto.id` IS the AgentDefinition id).
+ * requires an `agentSessionId` from `POST /game-sessions/{id}/agent/launch`.
  *
- * Flow (lazy, two dependent TanStack queries — does NOT block the session render):
- *   1. getAgents(gameId) → pick first active agent (`isActive`) else first agent.
- *   2. launch(sessionId, { agentDefinitionId, agentId, gameId }) → { agentSessionId }.
+ * Issue #4154 (ADR-095 fetta 0b): il lancio NON scarica più un elenco di agenti e non passa un id.
+ * Con ADR-094 l'agente è uno solo, di sistema, e lo sceglie il backend. Prima l'hook leggeva
+ * `GET /games/{gameId}/agents`, che dal 2026-04-18 (#470) risponde con un oggetto mentre il client
+ * validava un array; la lista era comunque vuota con l'agente di sistema inattivo, e il validator
+ * del lancio bocciava l'agente di sistema per ogni gioco. L'assistente non partiva mai.
+ *
+ * Flow (lazy, one TanStack query — does NOT block the session render):
+ *   launch(sessionId, { gameId }) → { agentSessionId }.
  *
  * The result is a discriminated status the chat panel maps to its UI:
- *   - 'no-agent'  → getAgents resolved empty (no assistant available for this game)
- *   - 'launching' → getAgents/launch in flight
+ *   - 'no-agent'  → the backend reports `system_agent_unavailable` (no assistant configured/active)
+ *   - 'launching' → launch in flight
  *   - 'ready'     → agentSessionId obtained, chat can send
- *   - 'error'     → getAgents OR launch failed (panel shows error, never crashes)
+ *   - 'error'     → launch failed for any other reason (panel shows error, never crashes)
  *   - 'idle'      → preconditions not met yet (no sessionId/gameId)
  *
  * AC-CHAT-NULL (review FINDING 5): every non-ready state is explicit so the panel
@@ -27,7 +30,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import type { AgentDto } from '@/lib/api/schemas';
+import { ApiError } from '@/lib/api/core/errors';
 
 // ─── Status ─────────────────────────────────────────────────────────────────
 
@@ -40,19 +43,15 @@ export interface SessionAgentLaunchResult {
   readonly agentSessionId: string;
 }
 
+/** Codice che il backend usa quando l'agente di sistema manca o non è attivo (#4154). */
+export const SYSTEM_AGENT_UNAVAILABLE = 'system_agent_unavailable';
+
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
 export const sessionAgentKeys = {
   all: ['sessionAgent'] as const,
-  agents: (gameId: string) => [...sessionAgentKeys.all, 'agents', gameId] as const,
-  launch: (sessionId: string, agentDefinitionId: string) =>
-    [...sessionAgentKeys.all, 'launch', sessionId, agentDefinitionId] as const,
+  launch: (sessionId: string) => [...sessionAgentKeys.all, 'launch', sessionId] as const,
 };
-
-/** Pick the first active agent, falling back to the first agent of any state. */
-function pickAgent(agents: ReadonlyArray<AgentDto>): AgentDto | undefined {
-  return agents.find(a => a.isActive) ?? agents[0];
-}
 
 /**
  * Resolve (and lazily launch) the RAG agent session for a live game session.
@@ -68,38 +67,18 @@ export function useSessionAgentLaunch(
 ): SessionAgentLaunchResult {
   const canResolve = enabled && !!sessionId && !!gameId;
 
-  // ── Step 1: list agents for the game ──────────────────────────────────────
-  const agentsQuery = useQuery<AgentDto[], Error>({
-    queryKey: sessionAgentKeys.agents(gameId ?? ''),
-    queryFn: () => api.games.getAgents(gameId as string),
-    enabled: canResolve,
-    staleTime: 60_000,
-    retry: false,
-  });
-
-  const agent = useMemo(
-    () => (agentsQuery.data ? pickAgent(agentsQuery.data) : undefined),
-    [agentsQuery.data]
-  );
-
-  // ── Step 2: launch the agent session once an agent is resolved ────────────
-  // Dependent query: only runs after agents resolved to a concrete agent. The
-  // key is stable per (session, agentDefinition) so we launch at most once and
-  // reuse the cached agentSessionId on re-render (lazy, non-blocking).
+  // The key is stable per session, so we launch at most once and reuse the cached
+  // agentSessionId on re-render (lazy, non-blocking).
   const launchQuery = useQuery({
-    queryKey: sessionAgentKeys.launch(sessionId ?? '', agent?.id ?? ''),
+    queryKey: sessionAgentKeys.launch(sessionId ?? ''),
     queryFn: () =>
       api.agentSessions.launch(sessionId as string, {
-        agentDefinitionId: agent!.id,
-        // FE schema requires agentId; the BE ignores it. AgentDto.id IS the
-        // AgentDefinition id, so the same value is correct for both fields.
-        agentId: agent!.id,
         gameId: gameId as string,
         // C1 fix: send empty string so BE uses GameState.Initial(UserId) as default.
         // Sending '{}' caused GameState.FromJson('{}') to throw (ActivePlayer == Guid.Empty).
         initialGameStateJson: '',
       }),
-    enabled: canResolve && agent != null,
+    enabled: canResolve,
     staleTime: Infinity,
     retry: false,
   });
@@ -107,20 +86,15 @@ export function useSessionAgentLaunch(
   // ── Derive discriminated status ───────────────────────────────────────────
   const status: SessionAgentStatus = useMemo(() => {
     if (!canResolve) return 'idle';
-    if (agentsQuery.isError) return 'error';
-    if (agentsQuery.isSuccess && agent == null) return 'no-agent';
-    if (launchQuery.isError) return 'error';
+    if (launchQuery.isError) {
+      const error = launchQuery.error;
+      return error instanceof ApiError && error.code === SYSTEM_AGENT_UNAVAILABLE
+        ? 'no-agent'
+        : 'error';
+    }
     if (launchQuery.isSuccess && launchQuery.data?.agentSessionId) return 'ready';
     return 'launching';
-  }, [
-    canResolve,
-    agent,
-    agentsQuery.isError,
-    agentsQuery.isSuccess,
-    launchQuery.isError,
-    launchQuery.isSuccess,
-    launchQuery.data,
-  ]);
+  }, [canResolve, launchQuery.isError, launchQuery.error, launchQuery.isSuccess, launchQuery.data]);
 
   return {
     status,

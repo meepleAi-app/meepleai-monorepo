@@ -316,7 +316,7 @@ internal static class ApplicationServiceExtensions
             includeInternalTypes: true);
 
         // Register validators from UserLibrary bounded context
-        services.AddValidatorsFromAssemblyContaining<BoundedContexts.UserLibrary.Application.Commands.LinkAgentToPrivateGameCommandValidator>(
+        services.AddValidatorsFromAssemblyContaining<BoundedContexts.UserLibrary.Application.Validators.AddGameToLibraryCommandValidator>(
             includeInternalTypes: true);
 
         // Register validators from AgentMemory bounded context

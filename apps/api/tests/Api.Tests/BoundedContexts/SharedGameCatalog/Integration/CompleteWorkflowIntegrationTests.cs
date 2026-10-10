@@ -232,17 +232,13 @@ public sealed class CompleteWorkflowIntegrationTests : IAsyncLifetime
         var game = await dbContext.Set<SharedGame>().FindAsync(gameId);
         game.Should().NotBeNull();
 
-        // Simulated agent linking (actual implementation via LinkAgentToSharedGameCommand)
-        // game!.AgentDefinitionId = agentId;
-        // await dbContext.SaveChangesAsync();
+        // Issue #4138: per-game agent linking is retired (one system agent, ADR-094);
+        // LinkAgentToSharedGameCommand, which never had a handler, is gone.
 
         // Assert: game exists and is ready for agent linking (Issue #4228)
         game.Should().NotBeNull();
         game!.Id.Should().Be(gameId);
         game.Title.Should().Be("Test Game for Agent");
-
-        // Note: Uncomment when LinkAgentToSharedGameCommand is implemented (Issue #4228)
-        // game.AgentDefinitionId.Should().Be(agentId);
     }
 
     /// <summary>

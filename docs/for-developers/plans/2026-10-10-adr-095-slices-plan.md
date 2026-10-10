@@ -21,7 +21,7 @@
 | **1** | Catalogo modelli come unico listino; registro costi attribuito | `AiModelConfiguration`, `SeedAiModelsCommandHandler`, `LlmCostCalculator`, `LlmCostService`, `IAnalysisCostEstimator` | una chiamata a un modello solo nel listino del codice è registrata a $0 | — | #4164 |
 | **2** | Gateway unico: nessuna chiamata HTTP diretta ai provider | `ChunkTranslationService`, `VisionOcrAdapter` | test architetturale sugli host dei provider | — | #4165 |
 | **3** | Tetto unico prima della chiamata, quote per `RequestSource`, degrado, fail closed fuori catalogo | `HybridLlmService` (gateway), `LlmBudgetMonitoringService`, `LlmCostAlertService`, `UserBudgetService`, `TierEnforcementService` | una chiamata oltre il tetto giornaliero oggi parte | 1, 2 | #4166 |
-| **4** | Aggregato `AgentProfile` e versioni immutabili; seed della prima versione dai valori oggi fissi | `KnowledgeBase/Domain` (nuovo) | invarianti di D2 | — | #4167 |
+| **4** | Aggregato `AgentProfile` e versioni immutabili; seed della prima versione dai valori oggi fissi | `KnowledgeBase/Domain` (nuovo) | invarianti di D2 | — | #4167 (PR #4178) |
 | **5** | Pipeline unica, prima fetta: `StreamQa`, `AskQuestion`, cross-game | `KnowledgeBase/Application` | cambiare la temperatura pubblicata cambia quella inviata (oggi resta 0,3) | 2, 3, 4 | #4168 |
 | **6** | Pagine admin: Agente, Modelli e prezzi, Budget e quote; rimozione delle impostazioni morte | `apps/web/src/app/admin` | la pagina Agente pubblica e la risposta lo riflette | 1, 3, 4, 5 | #4169 |
 | **7** | Qualità: domande di riferimento, valutazione, gate di pubblicazione, feedback aggregati | `KnowledgeBase`, admin | una bozza che peggiora non si pubblica | 5, 6 | #4170 |

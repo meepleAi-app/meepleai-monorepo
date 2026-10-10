@@ -21,34 +21,34 @@ public sealed class MechanicExtractorPricingTests
         new LlmCostCalculator(new FakePriceList(catalog), NullLogger<LlmCostCalculator>.Instance);
 
     [Fact]
-    public void Resolve_UsesTheCatalogPrice()
+    public async Task Resolve_UsesTheCatalogPrice()
     {
         var calculator = Calculator(new LlmModelPricing
         {
             ModelId = "deepseek-chat", Provider = "DeepSeek", InputCostPer1M = 0.30m, OutputCostPer1M = 1.20m
         });
 
-        var (input, output) = MechanicExtractorPricing.Resolve(calculator, "DeepSeek", "deepseek-chat");
+        var (input, output) = await MechanicExtractorPricing.ResolveAsync(calculator, "DeepSeek", "deepseek-chat", CancellationToken.None);
 
         input.Should().Be(0.30m);
         output.Should().Be(1.20m);
     }
 
     [Fact]
-    public void Resolve_SelfHostedModel_IsFree()
+    public async Task Resolve_SelfHostedModel_IsFree()
     {
-        var (input, output) = MechanicExtractorPricing.Resolve(Calculator(), "Ollama", "llama3:8b");
+        var (input, output) = await MechanicExtractorPricing.ResolveAsync(Calculator(), "Ollama", "llama3:8b", CancellationToken.None);
 
         input.Should().Be(0m);
         output.Should().Be(0m);
     }
 
     [Fact]
-    public void Resolve_UnpricedModel_RefusesTheAnalysis()
+    public async Task Resolve_UnpricedModel_RefusesTheAnalysis()
     {
-        var act = () => MechanicExtractorPricing.Resolve(Calculator(), "OpenRouter", "anthropic/claude-sonnet-4.5");
+        var act = () => MechanicExtractorPricing.ResolveAsync(Calculator(), "OpenRouter", "anthropic/claude-sonnet-4.5", CancellationToken.None);
 
-        act.Should().Throw<ConflictException>()
+        (await act.Should().ThrowAsync<ConflictException>())
             .Which.Message.Should().Contain("anthropic/claude-sonnet-4.5");
     }
 
@@ -58,5 +58,7 @@ public sealed class MechanicExtractorPricingTests
             prices.ToDictionary(p => p.ModelId, StringComparer.Ordinal);
 
         public LlmModelPricing? Find(string modelId) => _prices.GetValueOrDefault(modelId);
+
+        public Task EnsureLoadedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

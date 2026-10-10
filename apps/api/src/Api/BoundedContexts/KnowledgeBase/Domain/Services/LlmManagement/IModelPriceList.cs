@@ -18,4 +18,11 @@ internal interface IModelPriceList
     /// stato caricato.
     /// </summary>
     LlmModelPricing? Find(string modelId);
+
+    /// <summary>
+    /// Se il listino non è mai stato caricato, lo carica ora. Serve a chi può attendere (una
+    /// stima prima di una spesa): <see cref="Find"/> su un listino freddo risponde <c>null</c>
+    /// mentre il caricamento parte in background, e un modello con prezzo risulterebbe senza.
+    /// </summary>
+    Task EnsureLoadedAsync(CancellationToken cancellationToken);
 }

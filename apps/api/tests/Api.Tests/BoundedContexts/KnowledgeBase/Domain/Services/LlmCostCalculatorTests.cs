@@ -177,17 +177,19 @@ public sealed class LlmCostCalculatorTests
     [Theory]
     [InlineData("deepseek-chat", "DeepSeek", 0.30)]
     [InlineData("llama3:8b", "Ollama", 0.0)]
-    public void ResolvePricing_CatalogOrSelfHosted(string modelId, string provider, double expectedInput)
+    public async Task ResolvePricingAsync_CatalogOrSelfHosted(string modelId, string provider, double expectedInput)
     {
         var calculator = CreateCalculator(Price("deepseek-chat", "DeepSeek", 0.30m, 1.20m));
 
-        calculator.ResolvePricing(modelId, provider)!.InputCostPer1M.Should().Be((decimal)expectedInput);
+        var pricing = await calculator.ResolvePricingAsync(modelId, provider);
+
+        pricing!.InputCostPer1M.Should().Be((decimal)expectedInput);
     }
 
     [Fact]
-    public void ResolvePricing_UnpricedModel_ReturnsNull()
+    public async Task ResolvePricingAsync_UnpricedModel_ReturnsNull()
     {
-        CreateCalculator().ResolvePricing("anthropic/claude-sonnet-4.5", "OpenRouter").Should().BeNull();
+        (await CreateCalculator().ResolvePricingAsync("anthropic/claude-sonnet-4.5", "OpenRouter")).Should().BeNull();
     }
 
     private void VerifyNoErrorLogged() =>
@@ -206,5 +208,7 @@ public sealed class LlmCostCalculatorTests
             prices.ToDictionary(p => p.ModelId, StringComparer.Ordinal);
 
         public LlmModelPricing? Find(string modelId) => _prices.GetValueOrDefault(modelId);
+
+        public Task EnsureLoadedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

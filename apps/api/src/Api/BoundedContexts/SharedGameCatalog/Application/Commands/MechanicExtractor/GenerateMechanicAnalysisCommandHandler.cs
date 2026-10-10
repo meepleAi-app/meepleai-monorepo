@@ -194,7 +194,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         var retrievedPromptTokens = retrievalContext.Length / 4;
         // #4164: prezzi dal catalogo modelli, lo stesso listino del costo reale delle chiamate.
         var (inputCostPerMillion, outputCostPerMillion) =
-            MechanicExtractorPricing.Resolve(_costCalculator, effectiveProvider, effectiveModel);
+            await MechanicExtractorPricing.ResolveAsync(_costCalculator, effectiveProvider, effectiveModel, cancellationToken)
+                .ConfigureAwait(false);
         var estimate = _costEstimator.Estimate(new AnalysisCostEstimateInput(
             PromptVersion: promptVersion,
             Provider: effectiveProvider,

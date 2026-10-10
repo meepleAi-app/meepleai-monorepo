@@ -177,6 +177,7 @@ public sealed class CreditConversionServiceTests
             return _pricing.TryGetValue(modelId, out var pricing) ? pricing : null;
         }
 
-        public LlmModelPricing? ResolvePricing(string modelId, string provider) => GetModelPricing(modelId);
+        public Task<LlmModelPricing?> ResolvePricingAsync(string modelId, string provider, CancellationToken cancellationToken = default) =>
+            Task.FromResult(GetModelPricing(modelId));
     }
 }

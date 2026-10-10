@@ -53,7 +53,7 @@ internal sealed class LlmCostCalculator : ILlmCostCalculator
             return LlmCostCalculation.Empty;
         }
 
-        var pricing = ResolvePricing(modelId, provider);
+        var pricing = ResolveLoadedPricing(modelId, provider);
         LlmPricingStatus status;
         if (pricing is not null)
         {
@@ -99,7 +99,16 @@ internal sealed class LlmCostCalculator : ILlmCostCalculator
     public LlmModelPricing? GetModelPricing(string modelId) => _priceList.Find(modelId);
 
     /// <inheritdoc/>
-    public LlmModelPricing? ResolvePricing(string modelId, string provider)
+    public async Task<LlmModelPricing?> ResolvePricingAsync(
+        string modelId,
+        string provider,
+        CancellationToken cancellationToken = default)
+    {
+        await _priceList.EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
+        return ResolveLoadedPricing(modelId, provider);
+    }
+
+    private LlmModelPricing? ResolveLoadedPricing(string modelId, string provider)
     {
         var pricing = _priceList.Find(modelId);
         if (pricing is not null)

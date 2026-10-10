@@ -169,7 +169,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         // #4164: prezzi dal catalogo modelli. Il pipeline li usa solo quando il risultato della
         // chiamata non porta il proprio costo; quello, a sua volta, viene dallo stesso listino.
         var (inputCostPerMillion, outputCostPerMillion) =
-            MechanicExtractorPricing.Resolve(_costCalculator, analysis.Provider, analysis.ModelUsed);
+            await MechanicExtractorPricing.ResolveAsync(_costCalculator, analysis.Provider, analysis.ModelUsed, cancellationToken)
+                .ConfigureAwait(false);
 
         var request = new MechanicPipelineRequest(
             AnalysisId: analysis.Id,

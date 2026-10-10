@@ -77,6 +77,15 @@ internal sealed class CatalogModelPriceList : IModelPriceList, IHostedService, I
         return prices.TryGetValue(modelId, out var pricing) ? pricing : null;
     }
 
+    /// <inheritdoc/>
+    public async Task EnsureLoadedAsync(CancellationToken cancellationToken)
+    {
+        if (_prices is null)
+        {
+            await RefreshAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     /// <summary>
     /// Ricarica l'istantanea dal catalogo. Non lancia: un fallimento resta nei log e lascia in uso
     /// l'istantanea precedente.

@@ -14,14 +14,15 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExt
 /// </remarks>
 internal static class MechanicExtractorPricing
 {
-    public static (decimal InputCostPerMillion, decimal OutputCostPerMillion) Resolve(
+    public static async Task<(decimal InputCostPerMillion, decimal OutputCostPerMillion)> ResolveAsync(
         ILlmCostCalculator costCalculator,
         string provider,
-        string model)
+        string model,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(costCalculator);
 
-        var pricing = costCalculator.ResolvePricing(model, provider)
+        var pricing = await costCalculator.ResolvePricingAsync(model, provider, cancellationToken).ConfigureAwait(false)
             ?? throw new ConflictException(
                 $"Model '{model}' (provider {provider}) has no price in the AI model catalog, so the cost cap of a mechanic analysis cannot be enforced. Add the model to the catalog first.");
 

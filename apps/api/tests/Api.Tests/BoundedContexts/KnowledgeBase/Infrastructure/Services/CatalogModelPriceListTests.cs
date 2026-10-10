@@ -145,6 +145,20 @@ public sealed class CatalogModelPriceListTests : IDisposable
     }
 
     [Fact]
+    public async Task EnsureLoadedAsync_OnAColdList_LoadsIt_AndOnAWarmOne_DoesNothing()
+    {
+        // Senza hosted service (come nei test di integrazione) il listino è freddo: Find
+        // risponderebbe null, EnsureLoadedAsync invece attende il caricamento.
+        CatalogContains(Model("deepseek-chat", "DeepSeek", 0.30m, 1.20m));
+
+        await _priceList.EnsureLoadedAsync(CancellationToken.None);
+        _priceList.Find("deepseek-chat")!.InputCostPer1M.Should().Be(0.30m);
+
+        await _priceList.EnsureLoadedAsync(CancellationToken.None);
+        _repository.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task StartAsync_WhenTheCatalogIsUnreachable_DoesNotThrow_AndTheFirstFindLoadsIt()
     {
         _repository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))

@@ -66,7 +66,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 |-----|-------|------|--------|
 | [088](adr-088-mechanic-cards-as-rag-retrieval-source.md) | Mechanic Cards as RAG Retrieval Source | 2026-07-30 | Proposed |
 | [090](adr-090-in-session-grounded-answer-ownership.md) | In-Session Grounded Answer Ownership (KnowledgeBase owner, SessionTracking consumer) | 2026-08-02 | Accepted |
-| [095](adr-095-single-answer-pipeline-and-versioned-agent-profile.md) | Una sola pipeline di risposta, profilo dell'agente con versioni, gateway LLM con tetto unico (numerato fuori fascia: 080–090 è piena) | 2026-10-10 | Proposed |
+| [095](adr-095-single-answer-pipeline-and-versioned-agent-profile.md) | Una sola pipeline di risposta, profilo dell'agente con versioni, gateway LLM con tetto unico (numerato fuori fascia: 080–090 è piena) | 2026-10-10 | Accepted |
 
 ### Frontend Routing & Information Architecture (091–099)
 

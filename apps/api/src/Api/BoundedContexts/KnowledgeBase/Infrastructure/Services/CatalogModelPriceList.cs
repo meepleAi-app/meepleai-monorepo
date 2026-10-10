@@ -78,11 +78,22 @@ internal sealed class CatalogModelPriceList : IModelPriceList, IHostedService, I
     }
 
     /// <inheritdoc/>
+    /// <exception cref="InvalidOperationException">
+    /// Il catalogo non si è potuto caricare. Si lancia invece di lasciare il listino vuoto: chi
+    /// chiede un prezzo leggerebbe «il modello non ha prezzo» per un guasto transitorio.
+    /// </exception>
     public async Task EnsureLoadedAsync(CancellationToken cancellationToken)
     {
+        if (_prices is not null)
+        {
+            return;
+        }
+
+        await RefreshAsync(cancellationToken).ConfigureAwait(false);
         if (_prices is null)
         {
-            await RefreshAsync(cancellationToken).ConfigureAwait(false);
+            throw new InvalidOperationException(
+                "The model price list could not be loaded from the AI model catalog; see the previous error for the cause.");
         }
     }
 

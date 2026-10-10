@@ -159,6 +159,20 @@ public sealed class CatalogModelPriceListTests : IDisposable
     }
 
     [Fact]
+    public async Task EnsureLoadedAsync_WhenTheCatalogIsUnreachable_Throws_InsteadOfAnsweringNoPrice()
+    {
+        // Un listino vuoto per guasto farebbe dire all'estrattore «il modello non ha prezzo,
+        // aggiungilo al catalogo» (review di #4164): l'errore deve dire il vero.
+        _repository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database down"));
+
+        var act = () => _priceList.EnsureLoadedAsync(CancellationToken.None);
+
+        (await act.Should().ThrowAsync<InvalidOperationException>())
+            .Which.Message.Should().Contain("could not be loaded");
+    }
+
+    [Fact]
     public async Task StartAsync_WhenTheCatalogIsUnreachable_DoesNotThrow_AndTheFirstFindLoadsIt()
     {
         _repository.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))

@@ -23,6 +23,7 @@ internal interface IModelPriceList
     /// Se il listino non è mai stato caricato, lo carica ora. Serve a chi può attendere (una
     /// stima prima di una spesa): <see cref="Find"/> su un listino freddo risponde <c>null</c>
     /// mentre il caricamento parte in background, e un modello con prezzo risulterebbe senza.
+    /// Se il caricamento fallisce lancia, per non confondere un guasto con un prezzo mancante.
     /// </summary>
     Task EnsureLoadedAsync(CancellationToken cancellationToken);
 }

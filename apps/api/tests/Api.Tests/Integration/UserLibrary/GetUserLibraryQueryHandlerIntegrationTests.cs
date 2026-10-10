@@ -9,7 +9,6 @@ using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -64,8 +63,7 @@ public class GetUserLibraryQueryHandlerIntegrationTests : IAsyncLifetime
 
         var repository = new UserLibraryRepository(
             _dbContext!,
-            Mock.Of<IDomainEventCollector>(),
-            NullLogger<UserLibraryRepository>.Instance);
+            Mock.Of<IDomainEventCollector>());
 
         // Act — Postgres provider translates EF.Functions.ILike to SQL ILIKE.
         // ILike is case-insensitive so "wingspan" matches both "Wingspan" and "Wingspan: Oceania".
@@ -93,8 +91,7 @@ public class GetUserLibraryQueryHandlerIntegrationTests : IAsyncLifetime
 
         var repository = new UserLibraryRepository(
             _dbContext!,
-            Mock.Of<IDomainEventCollector>(),
-            NullLogger<UserLibraryRepository>.Instance);
+            Mock.Of<IDomainEventCollector>());
 
         // Act — partial match "cat" should hit both Catan variants but NOT Pandemic
         var (entries, total) = await repository.GetUserLibraryPaginatedAsync(
@@ -121,8 +118,7 @@ public class GetUserLibraryQueryHandlerIntegrationTests : IAsyncLifetime
 
         var repository = new UserLibraryRepository(
             _dbContext!,
-            Mock.Of<IDomainEventCollector>(),
-            NullLogger<UserLibraryRepository>.Instance);
+            Mock.Of<IDomainEventCollector>());
 
         // Act
         var (entries, total) = await repository.GetUserLibraryPaginatedAsync(
@@ -149,8 +145,7 @@ public class GetUserLibraryQueryHandlerIntegrationTests : IAsyncLifetime
 
         var repository = new UserLibraryRepository(
             _dbContext!,
-            Mock.Of<IDomainEventCollector>(),
-            NullLogger<UserLibraryRepository>.Instance);
+            Mock.Of<IDomainEventCollector>());
 
         // Act — null search => no filter
         var (entries, total) = await repository.GetUserLibraryPaginatedAsync(

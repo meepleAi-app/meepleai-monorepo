@@ -51,7 +51,6 @@ internal class GetGameInLibraryStatusQueryHandler : IQueryHandler<GetGameInLibra
             .ConfigureAwait(false);
 
         var associatedData = new AssociatedDataDto(
-            HasCustomAgent: entry.CustomAgentConfig != null,
             HasPrivatePdf: entry.HasPrivatePdf,
             ChatSessionsCount: chatSessionsCount,
             GameSessionsCount: entry.Sessions.Count,

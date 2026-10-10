@@ -25,7 +25,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IGameLabelRepository _labelRepository;
-    private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
     // #4085: injected alongside the repository abstractions, not instead of them — same
     // mixed pattern already used by GetUserLibraryQueryHandler in this bounded context.
@@ -47,7 +46,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         IUserLibraryRepository libraryRepository,
         ISharedGameRepository sharedGameRepository,
         IGameLabelRepository labelRepository,
-        IAgentDefinitionRepository agentDefinitionRepository,
         IChatThreadRepository chatThreadRepository,
         MeepleAiDbContext db,
         IBlobStorageService blobStorage,
@@ -57,7 +55,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
-        _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
@@ -125,20 +122,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     ))
                     .ToArray();
 
-                // Map custom agent config if present
-                AgentConfigDto? customAgentConfig = null;
-                if (entry.CustomAgentConfig is not null)
-                {
-                    customAgentConfig = new AgentConfigDto(
-                        LlmModel: entry.CustomAgentConfig.LlmModel,
-                        Temperature: entry.CustomAgentConfig.Temperature,
-                        MaxTokens: entry.CustomAgentConfig.MaxTokens,
-                        Personality: entry.CustomAgentConfig.Personality,
-                        DetailLevel: entry.CustomAgentConfig.DetailLevel,
-                        PersonalNotes: entry.CustomAgentConfig.PersonalNotes
-                    );
-                }
-
                 // Map custom PDF if present
                 CustomPdfDto? customPdf = null;
                 if (entry.CustomPdfMetadata is not null)
@@ -161,13 +144,9 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     CreatedAt: l.CreatedAt
                 )).ToArray();
 
-                // Issue #2034 — ConnectionBar pill counts. AgentCount is cross-user
-                // (AgentDefinition.GameId points to the shared catalog game), while
-                // ChatThreadCount is scoped to the requesting user.
-                var agentCount = await _agentDefinitionRepository
-                    .CountActiveByGameIdsAsync(new[] { query.GameId }, cancel)
-                    .ConfigureAwait(false);
-
+                // Issue #2034 — ConnectionBar pill count, scoped to the requesting user.
+                // #4138 removed the cross-user AgentCount (AgentDefinitions linked to the
+                // SharedGame) with the agent pip it fed.
                 var userThreads = await _chatThreadRepository
                     .FindByUserIdAndGameIdAsync(query.UserId, query.GameId, cancel)
                     .ConfigureAwait(false);
@@ -232,7 +211,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     // Collections
                     RecentSessions: recentSessions,
                     Checklist: checklist,
-                    CustomAgentConfig: customAgentConfig,
                     CustomPdf: customPdf,
                     Labels: labelsDto,
 
@@ -247,8 +225,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                         .Where(name => !string.IsNullOrWhiteSpace(name))
                         .ToList(),
 
-                    // Issue #2034: ConnectionBar pill counts.
-                    AgentCount: agentCount,
+                    // Issue #2034: ConnectionBar pill count.
                     ChatThreadCount: chatThreadCount
                 );
             },

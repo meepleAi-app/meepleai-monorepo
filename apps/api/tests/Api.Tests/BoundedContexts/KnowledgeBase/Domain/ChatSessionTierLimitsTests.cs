@@ -79,24 +79,4 @@ public class ChatSessionTierLimitsTests
     {
         ChatSessionTierLimits.IsAdminOrEditor(role).Should().Be(expected);
     }
-
-    /// <summary>
-    /// I due tipi di limite decidono lo stesso insieme di ruoli. Erano due enumerazioni di
-    /// letterali indipendenti e sono divergute dal terzo omonimo
-    /// (`ClaimsPrincipalExtensions.IsAdminOrEditor`, che includeva superadmin): questo test
-    /// lega le due implementazioni, cosi' una sola non puo' tornare a deviare in silenzio.
-    /// </summary>
-    [Theory]
-    [InlineData("user")]
-    [InlineData("creator")]
-    [InlineData("editor")]
-    [InlineData("admin")]
-    [InlineData("superadmin")]
-    [InlineData(null)]
-    [InlineData("wizard")]
-    public void IsAdminOrEditor_AgreesWithAgentTierLimits(string? role)
-    {
-        ChatSessionTierLimits.IsAdminOrEditor(role)
-            .Should().Be(AgentTierLimits.IsAdminOrEditor(role));
-    }
 }

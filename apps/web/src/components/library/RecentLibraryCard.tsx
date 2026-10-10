@@ -27,7 +27,6 @@ export function RecentLibraryCard({ game }: RecentLibraryCardProps) {
       <MeepleLibraryGameCard
         game={game}
         variant="compact"
-        onConfigureAgent={() => {}}
         onUploadPdf={() => {}}
         onEditNotes={() => {}}
         onRemove={() => {}}

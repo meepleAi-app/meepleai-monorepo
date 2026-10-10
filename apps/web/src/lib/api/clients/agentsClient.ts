@@ -92,20 +92,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
-     * Get user-owned agents for a specific game.
-     * Issue #4914: returns custom agents created by the current user for the given game.
-     * @param gameId Game UUID
-     */
-    async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
-      const response = await httpClient.get<{
-        success: boolean;
-        agents: AgentDto[];
-        count: number;
-      }>(`/api/v1/games/${gameId}/agents`, GetAllAgentsResponseSchema);
-      return response?.agents ?? [];
-    },
-
-    /**
      * Get agent by ID
      * Implements GetAgentByIdQuery from backend
      * @param id Agent ID (GUID format)
@@ -395,45 +381,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
 
       if (!response) {
         throw new Error('Failed to submit feedback: no response from server');
-      }
-
-      return response;
-    },
-
-    // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
-
-    /**
-     * Get user's agent slot allocation and usage
-     * Issue #4771: Agent Slots Endpoint + Quota System
-     * Issue #417: Backend route registered in AiEndpoints.cs (GET /api/v1/user/agent-slots)
-     */
-    async getSlots(): Promise<{
-      total: number;
-      used: number;
-      available: number;
-      slots: Array<{
-        slotIndex: number;
-        agentId: string | null;
-        agentName: string | null;
-        gameId: string | null;
-        status: 'active' | 'available' | 'locked';
-      }>;
-    }> {
-      const response = await httpClient.get<{
-        total: number;
-        used: number;
-        available: number;
-        slots: Array<{
-          slotIndex: number;
-          agentId: string | null;
-          agentName: string | null;
-          gameId: string | null;
-          status: 'active' | 'available' | 'locked';
-        }>;
-      }>('/api/v1/user/agent-slots');
-
-      if (!response) {
-        throw new Error('Failed to get agent slots: no response from server');
       }
 
       return response;

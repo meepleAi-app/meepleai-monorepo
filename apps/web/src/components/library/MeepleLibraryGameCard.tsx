@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/data-display/meeple-card';
 import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
-import { useAgentConfig, useToggleLibraryFavorite } from '@/hooks/queries';
+import { useToggleLibraryFavorite } from '@/hooks/queries';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry, GameStateType } from '@/lib/api';
@@ -34,9 +34,6 @@ import { DeclareOwnershipButton } from './DeclareOwnershipButton';
 // into static dependency graphs of consumers like AdminShell. SSR disabled because
 // drawer sheets are interactive client-only surfaces.
 const KbDrawerSheet = dynamic(() => import('./KbDrawerSheet').then(m => m.KbDrawerSheet), {
-  ssr: false,
-});
-const AgentDrawerSheet = dynamic(() => import('./AgentDrawerSheet').then(m => m.AgentDrawerSheet), {
   ssr: false,
 });
 const ChatDrawerSheet = dynamic(() => import('./ChatDrawerSheet').then(m => m.ChatDrawerSheet), {
@@ -56,8 +53,6 @@ export interface MeepleLibraryGameCardProps {
   game: UserLibraryEntry;
   /** Layout variant */
   variant?: MeepleCardVariant;
-  /** Configure agent callback */
-  onConfigureAgent: (gameId: string, gameTitle: string) => void;
   /** Upload PDF callback */
   onUploadPdf: (gameId: string, gameTitle: string) => void;
   /** Edit notes callback */
@@ -100,7 +95,6 @@ function mapGameStateToStatus(state: GameStateType | null | undefined): CardStat
 export function MeepleLibraryGameCard({
   game,
   variant = 'grid',
-  onConfigureAgent: _onConfigureAgent,
   onUploadPdf: _onUploadPdf,
   onEditNotes: _onEditNotes,
   onRemove: _onRemove,
@@ -118,14 +112,8 @@ export function MeepleLibraryGameCard({
 
   const [wishlistDialogOpen, setWishlistDialogOpen] = useState(false);
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
-  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
-
-  // Fetch agent configuration status
-  const { data: agentConfig } = useAgentConfig(game.gameId, true);
-  const agentConfigured = agentConfig !== null;
-  const agentModel = agentConfig?.llmModel || 'default';
 
   const toggleFavoriteMutation = useToggleLibraryFavorite();
 
@@ -136,17 +124,6 @@ export function MeepleLibraryGameCard({
     enabled: !!game.hasKb || game.kbProcessingCount > 0,
     staleTime: 2 * 60 * 1000,
   });
-
-  const modelDisplayName = useMemo<Record<string, string>>(
-    () => ({
-      'llama-3.3-70b-free': 'Llama Free',
-      'google-gemini-pro': 'Gemini Pro',
-      'deepseek-chat': 'DeepSeek',
-      'llama-3.3-70b': 'Llama Pro',
-      default: 'Default',
-    }),
-    []
-  );
 
   const _handleToggleFavorite = useCallback(async () => {
     if (isTogglingFavorite) return;
@@ -180,11 +157,9 @@ export function MeepleLibraryGameCard({
   const metadata: MeepleCardMetadata[] = useMemo(() => {
     // Note: real play count not yet available on UserLibraryEntry — chip omitted
     // until backend exposes it (deferred Task 5/6 in plan).
+    // Issue #4138: an "Agent: <model>" chip used to lead this list. It showed the
+    // model of a per-game agent config that no answer ever read.
     const items: MeepleCardMetadata[] = [];
-
-    if (agentConfigured) {
-      items.push({ label: `Agent: ${modelDisplayName[agentModel]}` });
-    }
 
     if (game.hasKb) {
       items.push({
@@ -195,15 +170,7 @@ export function MeepleLibraryGameCard({
     }
 
     return items;
-  }, [
-    agentConfigured,
-    agentModel,
-    game.hasKb,
-    game.kbCardCount,
-    game.kbIndexedCount,
-    game.kbProcessingCount,
-    modelDisplayName,
-  ]);
+  }, [game.hasKb, game.kbCardCount, game.kbIndexedCount, game.kbProcessingCount]);
 
   // ============================================================================
   // Build Props
@@ -226,22 +193,19 @@ export function MeepleLibraryGameCard({
       buildGameConnections(
         {
           kbCount: game.kbCardCount ?? 0,
-          agentCount: agentConfigured ? 1 : 0,
           chatCount: 0,
           sessionCount: 0,
         },
         {
           onKbClick: () => setKbDrawerOpen(true),
-          onAgentClick: () => setAgentDrawerOpen(true),
           onChatClick: () => setChatDrawerOpen(true),
           onSessionClick: () => setSessionDrawerOpen(true),
           onKbPlus: () => setKbDrawerOpen(true),
-          onAgentPlus: () => setAgentDrawerOpen(true),
           onChatPlus: () => setChatDrawerOpen(true),
           onSessionPlus: () => setSessionDrawerOpen(true),
         }
       ),
-    [game.kbCardCount, agentConfigured]
+    [game.kbCardCount]
   );
 
   // ============================================================================
@@ -292,14 +256,6 @@ export function MeepleLibraryGameCard({
       <KbDrawerSheet
         open={kbDrawerOpen}
         onOpenChange={setKbDrawerOpen}
-        gameId={game.gameId}
-        gameTitle={game.gameTitle}
-      />
-
-      {/* Agent Drawer */}
-      <AgentDrawerSheet
-        open={agentDrawerOpen}
-        onOpenChange={setAgentDrawerOpen}
         gameId={game.gameId}
         gameTitle={game.gameTitle}
       />

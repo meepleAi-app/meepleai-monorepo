@@ -14,7 +14,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20261010212209_AddLlmCostLogPricingStatus")]
+    [Migration("20261010220145_AddLlmCostLogPricingStatus")]
     partial class AddLlmCostLogPricingStatus
     {
         /// <inheritdoc />
@@ -2274,6 +2274,82 @@ namespace Api.Infrastructure.Migrations
                         .HasDatabaseName("ix_agent_definitions_typology_slug");
 
                     b.ToTable("agent_definitions", "knowledge_base");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("agent_profiles", "knowledge_base", t =>
+                        {
+                            t.HasCheckConstraint("ck_agent_profiles_singleton", "id = 'a9e7f5c1-4167-4095-9a1e-000000000001'");
+                        });
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfileVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_profile_id");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentProfileId", "VersionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_agent_profile_versions_profile_version");
+
+                    b.HasIndex(new[] { "AgentProfileId" }, "ux_agent_profile_versions_one_draft")
+                        .IsUnique()
+                        .HasFilter("status = 0");
+
+                    b.ToTable("agent_profile_versions", "knowledge_base");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback", b =>
@@ -16973,6 +17049,15 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfileVersion", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfile", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("AgentProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession", b =>
                 {
                     b.OwnsOne("Api.SharedKernel.Domain.ValueObjects.GameRef", "GameRef", b1 =>
@@ -19085,6 +19170,11 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", b =>
                 {
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfile", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot", b =>

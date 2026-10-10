@@ -20,8 +20,11 @@ internal sealed class AgentProfileRepository : IAgentProfileRepository
         _db = db ?? throw new ArgumentNullException(nameof(db));
     }
 
+    // AsTracking esplicito: MeepleAiDbContext è NoTracking per default (PERF-06, #3866), e senza
+    // tracciamento le versioni aggiunte dall'aggregato non arriverebbero mai al database.
     public Task<AgentProfile?> GetAsync(CancellationToken cancellationToken = default) =>
         _db.Set<AgentProfile>()
+            .AsTracking()
             .Include(p => p.Versions)
             .FirstOrDefaultAsync(p => p.Id == AgentProfile.SingletonId, cancellationToken);
 

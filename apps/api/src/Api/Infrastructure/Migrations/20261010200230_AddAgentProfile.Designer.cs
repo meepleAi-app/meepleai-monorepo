@@ -14,7 +14,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20261010174325_AddAgentProfile")]
+    [Migration("20261010200230_AddAgentProfile")]
     partial class AddAgentProfile
     {
         /// <inheritdoc />
@@ -2348,10 +2348,6 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex(new[] { "AgentProfileId" }, "ux_agent_profile_versions_one_draft")
                         .IsUnique()
                         .HasFilter("status = 0");
-
-                    b.HasIndex(new[] { "AgentProfileId" }, "ux_agent_profile_versions_one_published")
-                        .IsUnique()
-                        .HasFilter("status = 1");
 
                     b.ToTable("agent_profile_versions", "knowledge_base");
                 });

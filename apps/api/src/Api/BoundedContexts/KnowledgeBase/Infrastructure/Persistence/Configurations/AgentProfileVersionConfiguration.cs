@@ -39,14 +39,18 @@ public sealed class AgentProfileVersionConfiguration : IEntityTypeConfiguration<
             .IsUnique()
             .HasDatabaseName("ux_agent_profile_versions_profile_version");
 
-        // Indici con nome nel HasIndex, non con HasDatabaseName: due HasIndex senza nome sulla stessa
-        // colonna sono per EF lo stesso indice, e il secondo sovrascriverebbe il filtro del primo.
+        // Nome nel HasIndex, non con HasDatabaseName: due HasIndex senza nome sulla stessa colonna
+        // sono per EF lo stesso indice, e il secondo sovrascriverebbe il filtro del primo.
         builder.HasIndex(v => v.AgentProfileId, "ux_agent_profile_versions_one_draft")
             .IsUnique()
             .HasFilter($"status = {(int)AgentProfileVersionStatus.Draft}");
 
-        builder.HasIndex(v => v.AgentProfileId, "ux_agent_profile_versions_one_published")
-            .IsUnique()
-            .HasFilter($"status = {(int)AgentProfileVersionStatus.Published}");
+        // «Esattamente una pubblicata» NON è un indice unico, e non sta in questo modello: è il
+        // vincolo di esclusione differito ex_agent_profile_versions_one_published, scritto a mano
+        // nella migration AddAgentProfile. Pubblicare e fare rollback aggiornano due righe nello
+        // stesso batch, in un ordine che EF decide per chiave: un indice unico, controllato riga
+        // per riga, vede per un istante due pubblicate e fa fallire la pubblicazione a caso.
+        // Il vincolo differito si controlla al commit. Per la bozza il problema non esiste:
+        // nessun batch crea due bozze, nemmeno di passaggio.
     }
 }

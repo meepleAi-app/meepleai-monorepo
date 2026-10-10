@@ -102,6 +102,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["UserLibraryEntryEntity"] = (WritePathTechnique.TokenRoundTrip, "UserLibraryRepository:600 — Xmin = domainEntity.Xmin nel mapper; UpdateAsync persiste un grafo detached (#3651 lotto 6)"),
             ["ToolkitVersionEntity"] = (WritePathTechnique.TokenRoundTrip, "ToolkitVersionRepository:173 (#3688 → #3704)"),
 
+            ["AgentProfile"] = (WritePathTechnique.TrackedMutation, "AgentProfileRepository.GetAsync — AsTracking esplicito; l'aggregato si muta e si salva con la UoW, mai Update() su detached. Provato su Postgres in AgentProfilePersistenceIntegrationTests (#4167)"),
             ["BggTosHashEntity"] = (WritePathTechnique.TrackedMutation, "BggTosWatcherJob:129-169 — riga singleton caricata AsTracking e mutata (#3651 lotto 4)"),
             ["DomainEventOutboxEntity"] = (WritePathTechnique.TrackedMutation, "DomainEventOutboxProcessor:118 — righe tracked mutate via MarkSent/MarkRetry/MarkFailed (#1535)"),
             ["CatalogSeedDraftEntity"] = (WritePathTechnique.TrackedMutation, "CatalogSeedDraftRepository — le letture dei percorsi di scrittura usano AsTracking (PERF-06), #3651 lotto 5"),

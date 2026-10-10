@@ -18,16 +18,16 @@
 |---|---|---|---|---|---|
 | **0** | Schemi agente del frontend tolleranti all'assenza dei campi destinati a sparire | `apps/web/src/lib/api/schemas/` | contratto: payload vecchio **e** nuovo validati | — | **#4154** (PR 1) |
 | **0b** | Switch dei due lettori vivi lato utente; lancio in sessione senza id dell'agente | `useSessionAgentLaunch`, `useHybridHubItems`, `LaunchSessionAgentCommandValidator` | lancio senza `AgentDefinitionId` → oggi `422` | 0 | **#4154** (PR 2) |
-| **1** | Catalogo modelli come unico listino; registro costi attribuito | `AiModelConfiguration`, `SeedAiModelsCommandHandler`, `LlmCostCalculator`, `LlmCostService`, `IAnalysisCostEstimator` | una chiamata a un modello solo nel listino del codice è registrata a $0 | — | da aprire |
-| **2** | Gateway unico: nessuna chiamata HTTP diretta ai provider | `ChunkTranslationService`, `VisionOcrAdapter` | test architetturale sugli host dei provider | — | da aprire |
-| **3** | Tetto unico prima della chiamata, quote per `RequestSource`, degrado, fail closed fuori catalogo | `HybridLlmService` (gateway), `LlmBudgetMonitoringService`, `LlmCostAlertService`, `UserBudgetService`, `TierEnforcementService` | una chiamata oltre il tetto giornaliero oggi parte | 1, 2 | da aprire |
-| **4** | Aggregato `AgentProfile` e versioni immutabili; seed della prima versione dai valori oggi fissi | `KnowledgeBase/Domain` (nuovo) | invarianti di D2 | — | da aprire |
-| **5** | Pipeline unica, prima fetta: `StreamQa`, `AskQuestion`, cross-game | `KnowledgeBase/Application` | cambiare la temperatura pubblicata cambia quella inviata (oggi resta 0,3) | 2, 3, 4 | da aprire |
-| **6** | Pagine admin: Agente, Modelli e prezzi, Budget e quote; rimozione delle impostazioni morte | `apps/web/src/app/admin` | la pagina Agente pubblica e la risposta lo riflette | 1, 3, 4, 5 | da aprire |
-| **7** | Qualità: domande di riferimento, valutazione, gate di pubblicazione, feedback aggregati | `KnowledgeBase`, admin | una bozza che peggiora non si pubblica | 5, 6 | da aprire |
-| **8** | Pipeline, seconda fetta (sessione, setup, disputa) e switch dei lettori residui | `ChatWithSessionAgentCommandHandler`, `AskSessionAgentCommandHandler`, `StreamSetupGuideQueryHandler`, disputa | la disputa cita pagine recuperate (oggi nessun recupero) | 5, 0b; #4156 per la sessione | da aprire |
-| **9** | «Nessun lettore»: nessun codice legge né scrive `agent_definitions` | rotte, playground, `AgentSession.AgentDefinitionId`, `AgentDefinitionId` di `PrivateGame`/`SharedGame` | test architetturale «nessun riferimento ad `AgentDefinition`» | 8; #4162 e le fette #4138 sugli `AgentDefinitionId` | da aprire |
-| **10** | Contract: `DROP TABLE agent_definitions` | migration | gate di migration | 9 **deployata** | da aprire |
+| **1** | Catalogo modelli come unico listino; registro costi attribuito | `AiModelConfiguration`, `SeedAiModelsCommandHandler`, `LlmCostCalculator`, `LlmCostService`, `IAnalysisCostEstimator` | una chiamata a un modello solo nel listino del codice è registrata a $0 | — | #4164 |
+| **2** | Gateway unico: nessuna chiamata HTTP diretta ai provider | `ChunkTranslationService`, `VisionOcrAdapter` | test architetturale sugli host dei provider | — | #4165 |
+| **3** | Tetto unico prima della chiamata, quote per `RequestSource`, degrado, fail closed fuori catalogo | `HybridLlmService` (gateway), `LlmBudgetMonitoringService`, `LlmCostAlertService`, `UserBudgetService`, `TierEnforcementService` | una chiamata oltre il tetto giornaliero oggi parte | 1, 2 | #4166 |
+| **4** | Aggregato `AgentProfile` e versioni immutabili; seed della prima versione dai valori oggi fissi | `KnowledgeBase/Domain` (nuovo) | invarianti di D2 | — | #4167 |
+| **5** | Pipeline unica, prima fetta: `StreamQa`, `AskQuestion`, cross-game | `KnowledgeBase/Application` | cambiare la temperatura pubblicata cambia quella inviata (oggi resta 0,3) | 2, 3, 4 | #4168 |
+| **6** | Pagine admin: Agente, Modelli e prezzi, Budget e quote; rimozione delle impostazioni morte | `apps/web/src/app/admin` | la pagina Agente pubblica e la risposta lo riflette | 1, 3, 4, 5 | #4169 |
+| **7** | Qualità: domande di riferimento, valutazione, gate di pubblicazione, feedback aggregati | `KnowledgeBase`, admin | una bozza che peggiora non si pubblica | 5, 6 | #4170 |
+| **8** | Pipeline, seconda fetta (sessione, setup, disputa) e switch dei lettori residui | `ChatWithSessionAgentCommandHandler`, `AskSessionAgentCommandHandler`, `StreamSetupGuideQueryHandler`, disputa | la disputa cita pagine recuperate (oggi nessun recupero) | 5, 0b; #4156 per la sessione | #4171 |
+| **9** | «Nessun lettore»: nessun codice legge né scrive `agent_definitions` | rotte, playground, `AgentSession.AgentDefinitionId`, `AgentDefinitionId` di `PrivateGame`/`SharedGame` | test architetturale «nessun riferimento ad `AgentDefinition`» | 8; #4162 e le fette #4138 sugli `AgentDefinitionId` | #4172 |
+| **10** | Contract: `DROP TABLE agent_definitions` | migration | gate di migration | 9 **deployata** | #4173 |
 
 **Parallelismo**: 0, 1, 2 e 4 non dipendono fra loro e possono partire insieme. La 3 attende 1 e 2; la 5 attende 2, 3 e 4. Dalla 5 in poi la catena è sequenziale.
 
@@ -71,4 +71,4 @@
 
 ## Issue
 
-Le fette da 1 a 10 non hanno ancora una issue. La proposta è un'epic «ADR-095» con una issue per fetta, ognuna con il proprio «rosso prima» e la propria DoD presi da questo piano. Le fette 0 e 0b sono #4154.
+Epic **#4163**. Le fette 0 e 0b sono #4154; le fette da 1 a 10 sono #4164–#4173, una per fetta, con il proprio «rosso prima» e la propria DoD presi da questo piano.

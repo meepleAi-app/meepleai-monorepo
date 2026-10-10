@@ -57,6 +57,8 @@ public sealed class LlmProviderEgressArchitectureTests
                 "auth/key: quota residua, nessuna generazione",
             ["Services/Providers/Quota/DeepSeekQuotaProvider.cs"] =
                 "user/balance: saldo, nessuna generazione",
+            ["BoundedContexts/SystemConfiguration/Application/Commands/SeedAiModelsCommandHandler.cs"] =
+                "OpenRouterPriceSource: l'URL della fonte dei prezzi salvata come provenienza nel catalogo (#4164); nessuna richiesta HTTP",
         };
 
     [Fact]

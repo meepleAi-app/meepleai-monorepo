@@ -31,11 +31,7 @@ namespace Api.Tests.Integration.Smoke;
 ///
 /// Covers:
 /// - SG3-T1: Draft → Testing → Published → Unpublish full lifecycle
-/// - SG3-T2: Soft-delete agent without threads → 204 + agent hidden
-/// - SG3-T3 (MOST IMPORTANT): Soft-delete agent with ChatThreads → cascade CloseThread
-/// - SG3-T4: Restore soft-deleted agent → agent visible, threads remain closed
-/// - SG3-T5: Soft-delete system-defined agent → SystemAgentProtectedException (403)
-/// - SG3-T6: Create agent at free-tier quota → TierQuotaExceededException (402)
+/// - SG3-T2..T6: retired with the user-owned agent routes (#4138), see the note in the body
 /// </summary>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
@@ -171,218 +167,11 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
         afterUnpublish.IsActive.Should().BeFalse("Unpublish should deactivate the agent");
     }
 
-    // ─── SG3-T2 ────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// SG3-T2: Soft-delete an agent without associated ChatThreads.
-    ///
-    /// Verifies the agent is hidden from normal queries after SoftDelete().
-    /// IsDeleted global filter means GetByIdAsync returns null after delete.
-    /// </summary>
-    [Fact]
-    public async Task SoftDelete_AgentWithoutThreads_AgentHiddenFromNormalQuery()
-    {
-        // Arrange
-        var agent = BuildAgent("SG3-T2 Delete Agent (no threads)", systemDefined: false);
-        _dbContext!.AgentDefinitions.Add(agent);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-        var agentId = agent.Id;
-
-        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-
-        // Pre-assert: agent is visible
-        var before = await LoadAgent(agentId);
-        before.Should().NotBeNull("agent should be visible before soft-delete");
-
-        // Act
-        var command = new SoftDeleteUserAgentCommand(UserId: TestUserId, AgentId: agentId);
-        await mediator.Send(command, TestCancellationToken);
-
-        // Assert — agent is now hidden (global EF query filter excludes IsDeleted=true)
-        var afterDomain = await LoadAgent(agentId);
-        afterDomain.Should().BeNull("soft-deleted agent must be filtered out by HasQueryFilter");
-
-        // Assert — raw DB check confirms IsDeleted=true (IgnoreQueryFilters)
-        var rawRow = await _dbContext.AgentDefinitions
-            .IgnoreQueryFilters()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == agentId, TestCancellationToken);
-        rawRow.Should().NotBeNull("row must still exist in DB");
-        rawRow!.IsDeleted.Should().BeTrue();
-        rawRow.DeletedAt.Should().NotBeNull();
-    }
-
-    // ─── SG3-T3 (MOST IMPORTANT) ───────────────────────────────────────────────
-
-    /// <summary>
-    /// SG3-T3 (MOST IMPORTANT): Soft-delete an agent that has active ChatThreads
-    /// cascades CloseThread() on all active threads.
-    ///
-    /// Setup:
-    ///   1. Seed an agent
-    ///   2. Seed 2 active ChatThreads linked to the agent (Status="active")
-    ///   3. Seed 1 already-closed thread (Status="closed") → should NOT be re-closed
-    ///   4. SoftDeleteUserAgentCommand
-    ///   5. Verify the 2 active threads are now "closed"
-    ///   6. Verify the pre-closed thread is still "closed" (unchanged)
-    /// </summary>
-    [Fact]
-    public async Task SoftDelete_AgentWithChatThreads_CascadesCloseThread()
-    {
-        // Arrange
-        var agent = BuildAgent("SG3-T3 Agent With Threads", systemDefined: false);
-        _dbContext!.AgentDefinitions.Add(agent);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        var agentId = agent.Id;
-
-        // Seed 2 active threads + 1 already-closed thread
-        var activeThread1Id = Guid.NewGuid();
-        var activeThread2Id = Guid.NewGuid();
-        var preClosedThreadId = Guid.NewGuid();
-
-        _dbContext.ChatThreads.Add(BuildChatThreadEntity(activeThread1Id, agentId, status: "active", title: "SG3-T3 Active Thread 1"));
-        _dbContext.ChatThreads.Add(BuildChatThreadEntity(activeThread2Id, agentId, status: "active", title: "SG3-T3 Active Thread 2"));
-        _dbContext.ChatThreads.Add(BuildChatThreadEntity(preClosedThreadId, agentId, status: "closed", title: "SG3-T3 Pre-closed Thread"));
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        // Pre-assert: 2 active + 1 closed
-        var activesBefore = await _dbContext.ChatThreads.AsNoTracking()
-            .CountAsync(t => t.AgentId == agentId && t.Status == "active", TestCancellationToken);
-        activesBefore.Should().Be(2, "2 active threads were seeded");
-
-        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-
-        // Act
-        var command = new SoftDeleteUserAgentCommand(UserId: TestUserId, AgentId: agentId);
-        await mediator.Send(command, TestCancellationToken);
-
-        // Assert — both active threads are now closed (cascade)
-        var activesAfter = await _dbContext.ChatThreads.AsNoTracking()
-            .CountAsync(t => t.AgentId == agentId && t.Status == "active", TestCancellationToken);
-        activesAfter.Should().Be(0,
-            "SoftDeleteUserAgentCommand must cascade CloseThread() on all active threads linked to the agent");
-
-        var closedAfter = await _dbContext.ChatThreads.AsNoTracking()
-            .CountAsync(t => t.AgentId == agentId && t.Status == "closed", TestCancellationToken);
-        closedAfter.Should().Be(3, "all 3 threads (2 newly closed + 1 pre-closed) should be closed");
-
-        // Assert — agent is soft-deleted
-        var rawAgent = await _dbContext.AgentDefinitions.IgnoreQueryFilters().AsNoTracking()
-            .FirstOrDefaultAsync(a => a.Id == agentId, TestCancellationToken);
-        rawAgent!.IsDeleted.Should().BeTrue("agent must be soft-deleted");
-    }
-
-    // ─── SG3-T4 ────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// SG3-T4: Restore a soft-deleted agent — agent becomes visible again,
-    /// previously closed threads remain closed (by design).
-    /// </summary>
-    [Fact]
-    public async Task Restore_SoftDeletedAgent_AgentVisibleAgain_ThreadsRemainClosed()
-    {
-        // Arrange — soft-delete an agent with an active thread first
-        var agent = BuildAgent("SG3-T4 Restore Agent", systemDefined: false);
-        _dbContext!.AgentDefinitions.Add(agent);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-        var agentId = agent.Id;
-
-        var threadId = Guid.NewGuid();
-        _dbContext.ChatThreads.Add(BuildChatThreadEntity(threadId, agentId, status: "active", title: "SG3-T4 Thread"));
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-
-        // Soft-delete (cascade closes the thread)
-        await mediator.Send(new SoftDeleteUserAgentCommand(UserId: TestUserId, AgentId: agentId), TestCancellationToken);
-
-        // Verify deleted
-        (await LoadAgent(agentId)).Should().BeNull("agent should be hidden after soft-delete");
-
-        // Act — restore
-        var restoreResult = await mediator.Send(new RestoreUserAgentCommand(UserId: TestUserId, AgentId: agentId), TestCancellationToken);
-
-        // Assert — DTO returned successfully
-        restoreResult.Should().NotBeNull();
-        restoreResult.Id.Should().Be(agentId);
-        restoreResult.Name.Should().Contain("SG3-T4 Restore Agent");
-
-        // Assert — agent is visible again
-        var afterRestore = await LoadAgent(agentId);
-        afterRestore.Should().NotBeNull("restored agent must be visible again");
-        afterRestore!.IsDeleted.Should().BeFalse();
-        afterRestore.DeletedAt.Should().BeNull();
-
-        // Assert — thread remains closed (not auto-reopened on restore)
-        var thread = await _dbContext.ChatThreads.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.Id == threadId, TestCancellationToken);
-        thread.Should().NotBeNull();
-        thread!.Status.Should().Be("closed",
-            "ChatThreads closed during soft-delete must remain closed after restore (per spec)");
-    }
-
-    // ─── SG3-T5 ────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// SG3-T5: Soft-delete a system-defined agent → throws SystemAgentProtectedException.
-    ///
-    /// System agents (IsSystemDefined=true) are seeded by the platform and must not
-    /// be deleted by users. The domain's SoftDelete() throws InvalidOperationException,
-    /// which the handler wraps into SystemAgentProtectedException (403).
-    /// </summary>
-    [Fact]
-    public async Task SoftDelete_SystemDefinedAgent_Throws_SystemAgentProtectedException()
-    {
-        // Arrange — seed a system-defined agent using AgentDefinition.CreateSystem()
-        var systemAgent = AgentDefinition.CreateSystem(
-            name: "SG3-T5 System Agent Arbitro",
-            description: "Test system agent",
-            config: AgentDefinitionConfig.Default(),
-            typologySlug: "strategist");
-
-        _dbContext!.AgentDefinitions.Add(systemAgent);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        var agentId = systemAgent.Id;
-        var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-
-        // Verify it's system-defined
-        var loaded = await LoadAgent(agentId);
-        loaded.Should().NotBeNull();
-        loaded!.IsSystemDefined.Should().BeTrue("seeded via CreateSystem()");
-
-        // Act & Assert — handler throws SystemAgentProtectedException (maps to 403 at endpoint)
-        var ex = await Assert.ThrowsAsync<SystemAgentProtectedException>(
-            () => mediator.Send(new SoftDeleteUserAgentCommand(UserId: TestUserId, AgentId: agentId), TestCancellationToken));
-
-        ex.AgentId.Should().Be(agentId);
-        ex.ErrorCode.Should().Be("SYSTEM_AGENT_PROTECTED");
-        ex.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
-
-        // Assert — agent is still visible (not modified)
-        (await LoadAgent(agentId)).Should().NotBeNull("system agent must NOT be soft-deleted on exception");
-    }
-
-    // ─── SG3-T6 ────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// SG3-T6: Create agent when user is at free-tier quota → throws TierQuotaExceededException (402).
-    ///
-    /// Free-tier allows MaxAgents=1. This test overrides the tier mock to return false
-    /// for TierAction.CreateAgent, simulating a user at quota.
-    ///
-    /// NOTE: We cannot easily test the Redis-counter path (TierEnforcementService uses Redis),
-    /// so we test the handler's quota check by mocking CanPerformAsync to return false
-    /// (same pattern as SG2-T2 for RaptorRebuild).
-    /// </summary>
-    // Issue #4138: CreateUserAgent_AtFreeTierQuota_ThrowsTierQuotaExceededException stood here.
-    // Its subject was CreateUserAgentCommand, retired with the user-facing creation routes.
-    // The MaxAgents / TierAction.CreateAgent quota it exercised is NOT gone - it survives in
-    // GameManagement/AutoCreateAgentOnPdfReadyHandler, and the rejection path is already covered
-    // by its Handle_TierQuotaExceeded_SkipsAgentCreationAndLogsWarning. So no coverage is lost
-    // here; the quota's own redefinition is the remaining #4138 item.
-
+    // Issue #4138: SG3-T2..T6 stood here. T2-T5 exercised SoftDeleteUserAgentCommand and
+    // RestoreUserAgentCommand, retired with DELETE /agents/{id} and POST /agents/{id}/restore:
+    // those routes let any authenticated user delete or restore any non-system agent, and
+    // user-owned agents no longer exist. T6 exercised the per-user agent quota, retired by #4160.
+    // Admins delete agents through DELETE /admin/agent-definitions/{id}.
 
     // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -403,23 +192,6 @@ public sealed class AgentLifecycleIntegrationTests : IAsyncLifetime
             config: AgentDefinitionConfig.Default());
 
         return agent;
-    }
-
-    private Api.Infrastructure.Entities.ChatThreadEntity BuildChatThreadEntity(
-        Guid id, Guid agentId, string status, string title)
-    {
-        return new Api.Infrastructure.Entities.ChatThreadEntity
-        {
-            Id = id,
-            UserId = TestUserId,
-            GameId = TestGameId,
-            AgentId = agentId,
-            Title = title,
-            Status = status,
-            MessagesJson = "[]",
-            CreatedAt = DateTime.UtcNow,
-            LastMessageAt = DateTime.UtcNow,
-        };
     }
 
     /// <summary>Loads agent from DB using the real repository (respects global IsDeleted filter).</summary>

@@ -95,12 +95,6 @@ vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
   ),
 }));
 
-// Mock AgentSettingsDrawer (Issue #3250)
-vi.mock('@/components/agent/settings', () => ({
-  AgentSettingsDrawer: ({ isOpen }: any) =>
-    isOpen ? <div data-testid="agent-settings-drawer">Settings Drawer</div> : null,
-}));
-
 // Mock AgentSelector (Issue #4465)
 vi.mock('@/components/agent/AgentSelector', () => ({
   AgentSelector: ({ value, onChange, disabled }: any) => (

@@ -35,12 +35,6 @@ import {
 import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
-import type {
-  BackendModelDto,
-  GetModelsResponse,
-  BackendAgentConfigurationDto,
-  UpdateAgentConfigurationRequest,
-} from '../schemas/agent-config.schemas';
 
 export interface CreateAgentsClientParams {
   httpClient: HttpClient;
@@ -420,47 +414,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     // POST /api/v1/agents/{agentId}/chat, a route the backend never mounted, and
     // had no consumer left once `useAgentChatStream` moved to /agents/qa/stream.
     // Removed rather than marked: there is nothing to keep it for.
-
-    // ========== Model & Agent Configuration ==========
-
-    /** Get available AI models, optionally filtered by tier */
-    async getModels(tier?: string): Promise<BackendModelDto[]> {
-      const params = tier ? `?tier=${encodeURIComponent(tier)}` : '';
-      const response = await httpClient.get<GetModelsResponse>(`/api/v1/models${params}`);
-      return response?.models ?? [];
-    },
-
-    /**
-     * Get current LLM configuration for an agent
-     * Resolved by #657 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
-      const response = await httpClient.get<BackendAgentConfigurationDto>(
-        `/api/v1/agents/${agentId}/configuration`
-      );
-      if (!response) {
-        throw new Error('Failed to get agent configuration: no response from server');
-      }
-      return response;
-    },
-
-    /**
-     * Patch LLM configuration for an agent (partial update)
-     * Resolved by #658 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async updateAgentConfiguration(
-      agentId: string,
-      config: UpdateAgentConfigurationRequest
-    ): Promise<BackendAgentConfigurationDto> {
-      const response = await httpClient.patch<BackendAgentConfigurationDto>(
-        `/api/v1/agents/${agentId}/configuration`,
-        config
-      );
-      if (!response) {
-        throw new Error('Failed to update agent configuration: no response from server');
-      }
-      return response;
-    },
 
     // ========== RAG Setup (Admin) ==========
 

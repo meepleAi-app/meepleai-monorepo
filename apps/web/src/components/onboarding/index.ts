@@ -1,25 +1,14 @@
 /**
  * Onboarding Components (Issue #132)
  *
- * Multi-step wizard for invited users to set up their account.
+ * Steps reused by the onboarding wizard at /onboarding (OnboardingGenericWizard).
+ * Issue #4138: the invited-user OnboardingWizard, never mounted by any route, is gone.
  */
-
-export { OnboardingWizard } from './OnboardingWizard';
-export type { OnboardingWizardProps } from './OnboardingWizard';
-
-export { PasswordStep } from './PasswordStep';
-export type { PasswordStepProps } from './PasswordStep';
-
-export { ProfileStep } from './ProfileStep';
-export type { ProfileStepProps } from './ProfileStep';
 
 export { InterestsStep } from './InterestsStep';
 export type { InterestsStepProps } from './InterestsStep';
 
 export { FirstGameStep } from './FirstGameStep';
 export type { FirstGameStepProps } from './FirstGameStep';
-
-export { FirstRulebookStep } from './FirstRulebookStep';
-export type { FirstRulebookStepProps } from './FirstRulebookStep';
 
 export { OnboardingReminderBanner } from './OnboardingReminderBanner';

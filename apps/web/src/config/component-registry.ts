@@ -2308,16 +2308,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tags: ['game', 'card', 'admin'],
   },
   {
-    id: 'agent-builder-modal',
-    name: 'AgentBuilderModal',
-    importPath: '@/components/admin/shared-games/AgentBuilderModal',
-    category: 'Agent',
-    areas: ['admin'],
-    tier: 'interactive',
-    description: 'Modal for configuring an agent linked to a shared game.',
-    tags: ['agent', 'modal', 'game'],
-  },
-  {
     id: 'bgg-search-panel',
     name: 'BggSearchPanel',
     importPath: '@/components/admin/shared-games/BggSearchPanel',

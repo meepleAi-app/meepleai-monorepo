@@ -2,7 +2,7 @@
 
 import { AgentConfigPanel } from '@/components/admin/agents/AgentConfigPanel';
 
-// AgentBuilderModal requires useQuery + admin API context.
+// Issue #4138: AgentBuilderModal (per-game agent creation) is gone.
 // LlmProviderSelector and DocumentSelector require API hooks.
 // AgentConfigPanel uses react-hook-form with local storage — it renders standalone.
 
@@ -57,11 +57,6 @@ export default function AgentBuilderScene() {
           Additional Components (require context)
         </h3>
         <div className="grid gap-3 sm:grid-cols-2">
-          <PlaceholderCard
-            title="AgentBuilderModal"
-            description="Full-screen modal wizard for creating AI agents with model selection, KB card attachment, and system prompt configuration."
-            note="requires useQuery + admin API"
-          />
           <PlaceholderCard
             title="LlmProviderSelector"
             description="Dropdown with live model availability, cost per token, and context window info."

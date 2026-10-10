@@ -35,7 +35,6 @@ const LIMIT_LABELS: Record<LimitKey, string> = {
   maxPrivateGames: 'Max Giochi',
   maxPdfUploadsPerMonth: 'Max PDF/mese',
   maxPdfSizeBytes: 'Max PDF size (bytes)',
-  maxAgents: 'Max Agent',
   maxAgentQueriesPerDay: 'Query/giorno',
   maxSessionQueries: 'Query sessione',
   maxSessionPlayers: 'Max giocatori',

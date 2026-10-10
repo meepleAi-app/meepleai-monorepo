@@ -54,7 +54,6 @@ Logica di business pura e modelli di dominio:
   - `GameSessionRecordedEvent`, `GameStateChangedEvent`
   - `OwnershipDeclaredEvent`
   - `PrivatePdfAssociatedEvent`, `PrivatePdfRemovedEvent`
-  - `AgentLinkedToPrivateGameEvent`, `AgentUnlinkedFromPrivateGameEvent`
   - `ItemAddedToCollectionEvent`, `ItemRemovedFromCollectionEvent`
   - `WishlistItemAddedEvent`, `WishlistItemUpdatedEvent`, `WishlistItemRemovedEvent`
   - `GameSuggestionAcceptedEvent`
@@ -77,7 +76,7 @@ Orchestrazione e casi d'uso (CQRS pattern con MediatR):
   - *Labels*: AddLabelToGame, RemoveLabelFromGame, CreateCustomLabel, DeleteCustomLabel
   - *Collezioni*: AddToCollection, RemoveFromCollection, BulkAddToCollection, BulkRemoveFromCollection
   - *Wishlist*: AddToWishlist, RemoveFromWishlist, UpdateWishlistItem
-  - *Giochi Privati*: AddPrivateGame, UpdatePrivateGame, DeletePrivateGame, ProposePrivateGame, LinkAgentToPrivateGame, UnlinkAgentFromPrivateGame
+  - *Giochi Privati*: AddPrivateGame, UpdatePrivateGame, DeletePrivateGame, ProposePrivateGame
   - *Migrazioni*: HandleMigrationChoice
 - **Queries/**: Operazioni di lettura
   - *Libreria*: GetUserLibrary, GetLibraryStats, GetLibraryQuota, GetGameInLibraryStatus, BatchCheckGamesInLibrary, GetGameDetail
@@ -217,8 +216,6 @@ GET    /private-games/{id}                           -> GetPrivateGameQuery
 PUT    /private-games/{id}                           -> UpdatePrivateGameCommand
 DELETE /private-games/{id}                           -> DeletePrivateGameCommand
 POST   /private-games/{id}/propose-to-catalog        -> ProposePrivateGameCommand
-POST   /private-games/{id}/link-agent/{agentId}      -> LinkAgentToPrivateGameCommand
-DELETE /private-games/{id}/unlink-agent              -> UnlinkAgentFromPrivateGameCommand
 ```
 
 ### Admin Config
@@ -256,7 +253,7 @@ Vedi `Infrastructure/Persistence/`:
 
 ### PrivateGame Aggregate
 - **Identita**: Id (GUID)
-- **Proprieta**: OwnerId, BggId, Title, YearPublished, Description, MinPlayers, MaxPlayers, PlayingTimeMinutes, MinAge, ComplexityRating, ImageUrl, ThumbnailUrl, Source, AgentDefinitionId
+- **Proprieta**: OwnerId, BggId, Title, YearPublished, Description, MinPlayers, MaxPlayers, PlayingTimeMinutes, MinAge, ComplexityRating, ImageUrl, ThumbnailUrl, Source
 - **Invarianti**:
   - MinPlayers >= 1 e <= 100
   - MinPlayers <= MaxPlayers

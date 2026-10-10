@@ -22,10 +22,11 @@ public class PrivateGameEntity
     public int? BggId { get; set; }
 
     /// <summary>
-    /// Foreign key to linked AI agent definition.
-    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
+    /// Name of the retired foreign key to a linked AgentDefinition (Issue #4228), now an EF
+    /// shadow property. Issue #4138 (expand): one system agent for every game, so a private game
+    /// links no agent; the nullable column and its FK stay until a later delivery drops them.
     /// </summary>
-    public Guid? AgentDefinitionId { get; set; }
+    internal const string RetiredAgentDefinitionId = "AgentDefinitionId";
 
     /// <summary>
     /// The title of the game.

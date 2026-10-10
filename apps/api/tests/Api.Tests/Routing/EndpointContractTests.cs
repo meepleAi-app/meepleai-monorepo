@@ -153,6 +153,8 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/start-testing", "#4138 — any user moved any agent's lifecycle; admin route kept"];
         yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/publish", "#4138 — any user published any agent; admin route kept"];
         yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/unpublish", "#4138 — any user could switch the system agent off; admin route kept"];
+        yield return ["POST", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/link-agent/00000000-0000-0000-0000-000000000001", "#4138 — per-game agent link on a private game"];
+        yield return ["DELETE", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/unlink-agent", "#4138 — per-game agent unlink on a private game"];
     }
 
     [Theory]

@@ -1,8 +1,14 @@
 /**
  * KnowledgeBaseTab Component Tests (Issue #4229)
  *
- * Tests for Knowledge Base documents display in SharedGame detail modal.
- * Coverage target: ≥85%
+ * Issue #4138: these tests were written around the per-agent fetch — `useGameAgents` plus one
+ * `api.agents.getDocuments(agent.id)` call per agent, and fixtures of `AgentDocumentsDto`. The tab
+ * now reads the per-game listing (`useDocumentsByGame`), because `/agents/{id}/documents` is not
+ * mounted on the backend and documents belong to a game, not to an agent.
+ *
+ * The test this file was missing is the one added below: **a failed fetch must not look like an
+ * empty KB**. That confusion is precisely how the unmounted route stayed invisible — the error
+ * surfaced as "No Documents Indexed Yet", which is also the legitimate empty state.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -10,14 +16,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { KnowledgeBaseTab } from '../KnowledgeBaseTab';
-import * as useGameAgentsModule from '@/hooks/queries/useGameAgents';
+import * as useDocumentsByGameModule from '@/hooks/queries/useDocumentsByGame';
 import * as useEmbeddingStatusModule from '@/hooks/useEmbeddingStatus';
-import { api } from '@/lib/api';
-import type { AgentDto, AgentDocumentsDto } from '@/lib/api/schemas';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ============================================================================
 // Test Setup
 // ============================================================================
+
+const GAME_ID = '99999999-9999-9999-9999-999999999999';
 
 const createTestQueryClient = () =>
   new QueryClient({
@@ -32,79 +39,36 @@ const renderWithQueryClient = (ui: React.ReactElement) => {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
-// ============================================================================
-// Mock Data
-// ============================================================================
+function doc(overrides: Partial<PdfDocumentDto> & Pick<PdfDocumentDto, 'id' | 'fileName'>) {
+  return {
+    gameId: GAME_ID,
+    filePath: `/pdfs/${overrides.fileName}`,
+    fileSizeBytes: 1024,
+    processingStatus: 'completed',
+    uploadedAt: '2024-01-01T00:00:00Z',
+    processedAt: '2024-01-01T00:05:00Z',
+    pageCount: 12,
+    documentType: 'base' as const,
+    isPublic: false,
+    processingState: 'Completed',
+    progressPercentage: 100,
+    retryCount: 0,
+    maxRetries: 3,
+    ...overrides,
+  } as PdfDocumentDto;
+}
 
-const mockAgent1: AgentDto = {
-  id: '11111111-1111-1111-1111-111111111111',
-  name: 'Rules Agent',
-  type: 'chat',
-  strategyName: 'hybrid',
-  strategyParameters: {},
-  isActive: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  lastInvokedAt: null,
-  invocationCount: 5,
-  isRecentlyUsed: true,
-  isIdle: false,
-};
-
-const mockAgent2: AgentDto = {
-  id: '22222222-2222-2222-2222-222222222222',
-  name: 'FAQ Agent',
-  type: 'chat',
-  strategyName: 'semantic',
-  strategyParameters: {},
-  isActive: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  lastInvokedAt: null,
-  invocationCount: 3,
-  isRecentlyUsed: false,
-  isIdle: false,
-};
-
-const mockDocuments1: AgentDocumentsDto = {
-  agentId: mockAgent1.id,
-  documents: [
-    {
-      id: '33333333-3333-3333-3333-333333333333',
-      sharedGameId: 'game-id',
-      pdfDocumentId: 'pdf-1',
-      documentType: 0, // Rulebook
-      version: '1.0',
-      isActive: true,
-      tags: ['core', 'v1'],
-      gameName: 'Test Game Rulebook',
-    },
-    {
-      id: '44444444-4444-4444-4444-444444444444',
-      sharedGameId: 'game-id',
-      pdfDocumentId: 'pdf-2',
-      documentType: 1, // Errata
-      version: '1.1',
-      isActive: true,
-      tags: ['update'],
-      gameName: 'Test Game Errata',
-    },
-  ],
-};
-
-const mockDocuments2: AgentDocumentsDto = {
-  agentId: mockAgent2.id,
-  documents: [
-    {
-      id: '55555555-5555-5555-5555-555555555555',
-      sharedGameId: 'game-id',
-      pdfDocumentId: 'pdf-3',
-      documentType: 2, // Homerule
-      version: '2.0',
-      isActive: false,
-      tags: ['community'],
-      gameName: 'Test Game Homerules',
-    },
-  ],
-};
+/** Shapes the hook's return so only what the component reads needs to be supplied. */
+function mockDocuments(
+  state: Partial<{ data: PdfDocumentDto[]; isLoading: boolean; error: Error | null }>
+) {
+  vi.spyOn(useDocumentsByGameModule, 'useDocumentsByGame').mockReturnValue({
+    data: state.data,
+    isLoading: state.isLoading ?? false,
+    error: state.error ?? null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any);
+}
 
 // ============================================================================
 // Tests
@@ -113,7 +77,6 @@ const mockDocuments2: AgentDocumentsDto = {
 describe('KnowledgeBaseTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock useEmbeddingStatus to return Completed status by default
     vi.spyOn(useEmbeddingStatusModule, 'useEmbeddingStatus').mockReturnValue({
       data: { status: 'Completed', progress: 100, totalChunks: 10, processedChunks: 10 },
       isLoading: false,
@@ -124,266 +87,140 @@ describe('KnowledgeBaseTab', () => {
       chunkProgress: { processed: 10, total: 10 },
       error: null,
       refetch: vi.fn(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
   });
 
   describe('Loading States', () => {
-    it('renders loading state when agents are being fetched', () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        error: null,
-      } as any);
+    it('renders loading state while documents are being fetched', () => {
+      mockDocuments({ isLoading: true });
 
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
       expect(screen.getByText(/Loading Knowledge Base/i)).toBeInTheDocument();
     });
   });
 
   describe('Error States', () => {
-    it('renders error message when agents fetch fails', () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        error: new Error('Failed to fetch agents'),
-      } as any);
+    // 🔴 The assertion the old suite lacked. A failed fetch rendering as "no documents" is how
+    // the unmounted /agents/{id}/documents route stayed invisible: the two states are
+    // indistinguishable to a reader, so the bug looked like an empty knowledge base.
+    it('renders an error, NOT the empty state, when the fetch fails', () => {
+      mockDocuments({ error: new Error('Network error') });
 
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
-      expect(screen.getByText(/Failed to load agents/i)).toBeInTheDocument();
-      expect(screen.getByText(/Failed to fetch agents/i)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to load documents/i)).toBeInTheDocument();
+      expect(screen.queryByText(/No Documents Indexed Yet/i)).not.toBeInTheDocument();
     });
   });
 
   describe('Empty States', () => {
-    it('renders empty state when no agents are available', () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [],
-        isLoading: false,
-        error: null,
-      } as any);
+    it('renders the empty state when the game has no documents', () => {
+      mockDocuments({ data: [] });
 
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
-      expect(screen.getByText(/No Agents Available/i)).toBeInTheDocument();
-      expect(
-        screen.getByText(/This game doesn't have any AI agents configured yet/i)
-      ).toBeInTheDocument();
-    });
-
-    it('renders empty state when agents have no documents', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue({
-        agentId: mockAgent1.id,
-        documents: [],
-      });
-
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/No Documents Indexed Yet/i)).toBeInTheDocument();
-      });
+      expect(screen.getByText(/No Documents Indexed Yet/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Failed to load documents/i)).not.toBeInTheDocument();
     });
   });
 
   describe('Document Display', () => {
-    it('renders documents from single agent', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
+    it('lists the documents of the game', async () => {
+      mockDocuments({
+        data: [
+          doc({ id: '33333333-3333-3333-3333-333333333333', fileName: 'rulebook.pdf' }),
+          doc({
+            id: '44444444-4444-4444-4444-444444444444',
+            fileName: 'errata-v1.1.pdf',
+            documentType: 'errata',
+          }),
+        ],
+      });
 
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue(mockDocuments1);
-
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Knowledge Base Documents/i)).toBeInTheDocument();
+        expect(screen.getByText('rulebook.pdf')).toBeInTheDocument();
       });
-
-      // Check document count header
-      expect(screen.getByText(/2 documents indexed across 1 agent/i)).toBeInTheDocument();
-
-      // Check document names
-      expect(screen.getByText(/Test Game Rulebook/i)).toBeInTheDocument();
-      expect(screen.getByText(/Test Game Errata/i)).toBeInTheDocument();
-
-      // Check agent names
-      expect(screen.getAllByText(/Agent: Rules Agent/i)).toHaveLength(2);
-
-      // Check document type badges
-      expect(screen.getByText('Rulebook')).toBeInTheDocument();
-      expect(screen.getByText('Errata')).toBeInTheDocument();
-
-      // Check version badges
-      expect(screen.getByText('v1.0')).toBeInTheDocument();
-      expect(screen.getByText('v1.1')).toBeInTheDocument();
-
-      // Check tags
-      expect(screen.getByText('core')).toBeInTheDocument();
-      expect(screen.getByText('v1')).toBeInTheDocument();
-      expect(screen.getByText('update')).toBeInTheDocument();
-
-      // Check active badges (both documents are active)
-      expect(screen.getAllByText('Active')).toHaveLength(2);
+      expect(screen.getByText('errata-v1.1.pdf')).toBeInTheDocument();
+      expect(screen.getByText(/2 documents indexed/i)).toBeInTheDocument();
     });
 
-    it('aggregates documents from multiple agents', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1, mockAgent2],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      // Mock api.agents.getDocuments to return different data based on agentId
-      vi.spyOn(api.agents, 'getDocuments').mockImplementation(async (agentId: string) => {
-        if (agentId === mockAgent1.id) {
-          return mockDocuments1;
-        }
-        return mockDocuments2;
+    // The retired card showed `document.gameName` as the title, so every row displayed the same
+    // text. Two documents of one game is the fixture that catches it.
+    it('shows each document FILE name, not the game name', async () => {
+      mockDocuments({
+        data: [
+          doc({ id: '33333333-3333-3333-3333-333333333333', fileName: 'rulebook.pdf' }),
+          doc({ id: '44444444-4444-4444-4444-444444444444', fileName: 'homerules.pdf' }),
+        ],
       });
 
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
       await waitFor(() => {
-        expect(screen.getByText(/Knowledge Base Documents/i)).toBeInTheDocument();
+        expect(screen.getByText('rulebook.pdf')).toBeInTheDocument();
       });
-
-      // Check aggregated count: 2 from agent1 + 1 from agent2 = 3 total
-      expect(screen.getByText(/3 documents indexed across 2 agents/i)).toBeInTheDocument();
-
-      // Check all documents are displayed
-      expect(screen.getByText(/Test Game Rulebook/i)).toBeInTheDocument();
-      expect(screen.getByText(/Test Game Errata/i)).toBeInTheDocument();
-      expect(screen.getByText(/Test Game Homerules/i)).toBeInTheDocument();
-
-      // Check agent names appear correctly
-      expect(screen.getAllByText(/Agent: Rules Agent/i)).toHaveLength(2);
-      expect(screen.getByText(/Agent: FAQ Agent/i)).toBeInTheDocument();
-
-      // Check all document types
-      expect(screen.getByText('Rulebook')).toBeInTheDocument();
-      expect(screen.getByText('Errata')).toBeInTheDocument();
-      expect(screen.getByText('Homerule')).toBeInTheDocument();
+      expect(screen.getByText('homerules.pdf')).toBeInTheDocument();
     });
 
-    it('shows correct document type badges for all document types', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
+    it('maps the string documentType to a label', async () => {
+      mockDocuments({
+        data: [
+          doc({
+            id: '33333333-3333-3333-3333-333333333333',
+            fileName: 'a.pdf',
+            documentType: 'base',
+          }),
+          doc({
+            id: '44444444-4444-4444-4444-444444444444',
+            fileName: 'b.pdf',
+            documentType: 'expansion',
+          }),
+          doc({
+            id: '55555555-5555-5555-5555-555555555555',
+            fileName: 'c.pdf',
+            documentType: 'homerule',
+          }),
+        ],
+      });
 
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue(mockDocuments1);
-
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
       await waitFor(() => {
         expect(screen.getByText('Rulebook')).toBeInTheDocument();
       });
+      expect(screen.getByText('Expansion')).toBeInTheDocument();
+      expect(screen.getByText('Homerule')).toBeInTheDocument();
     });
 
-    it('displays active status badge only for active documents', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1, mockAgent2],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      vi.spyOn(api.agents, 'getDocuments').mockImplementation(async (agentId: string) => {
-        if (agentId === mockAgent1.id) {
-          return mockDocuments1;
-        }
-        return mockDocuments2;
+    it('singularises the count for one document', async () => {
+      mockDocuments({
+        data: [doc({ id: '33333333-3333-3333-3333-333333333333', fileName: 'only.pdf' })],
       });
 
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
       await waitFor(() => {
-        // mockDocuments1 has 2 active documents, mockDocuments2 has 0 active
-        const activeBadges = screen.getAllByText('Active');
-        expect(activeBadges).toHaveLength(2);
+        expect(screen.getByText(/1 document indexed/i)).toBeInTheDocument();
       });
     });
   });
 
   describe('Accessibility', () => {
-    it('renders document cards with accessible structure', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue(mockDocuments1);
-
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole('heading', { name: /Knowledge Base Documents/i })
-        ).toBeInTheDocument();
+    it('gives the truncated file name a title attribute', async () => {
+      mockDocuments({
+        data: [
+          doc({ id: '33333333-3333-3333-3333-333333333333', fileName: 'a-very-long-name.pdf' }),
+        ],
       });
-    });
 
-    it('has proper title attributes for truncated text', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue(mockDocuments1);
-
-      renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
 
       await waitFor(() => {
-        const rulebookName = screen.getByText(/Test Game Rulebook/i);
-        expect(rulebookName.closest('p')).toHaveAttribute('title', 'Test Game Rulebook');
-      });
-    });
-  });
-
-  describe('Integration with PdfIndexingStatus', () => {
-    it('renders PdfIndexingStatus component for each document', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue(mockDocuments1);
-
-      const { container } = renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
-
-      await waitFor(() => {
-        expect(container).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Responsive Design', () => {
-    it('uses grid layout for documents', async () => {
-      vi.spyOn(useGameAgentsModule, 'useGameAgents').mockReturnValue({
-        data: [mockAgent1],
-        isLoading: false,
-        error: null,
-      } as any);
-
-      vi.spyOn(api.agents, 'getDocuments').mockResolvedValue(mockDocuments1);
-
-      const { container } = renderWithQueryClient(<KnowledgeBaseTab gameId="game-id" />);
-
-      await waitFor(() => {
-        const gridContainer = container.querySelector('.grid');
-        expect(gridContainer).toBeInTheDocument();
+        expect(screen.getByTitle('a-very-long-name.pdf')).toBeInTheDocument();
       });
     });
   });

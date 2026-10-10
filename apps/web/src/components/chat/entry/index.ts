@@ -14,11 +14,11 @@ export type { AgentSelectorProps } from './AgentSelector';
 export { QuickStartSuggestions } from './QuickStartSuggestions';
 export type { QuickStartSuggestionsProps } from './QuickStartSuggestions';
 
-export { createThread, createThreadWithContext, resolveAgentId } from './ThreadCreator';
+export { createThread, createThreadWithContext } from './ThreadCreator';
 export type { CreateThreadParams, CreateThreadResult } from './ThreadCreator';
 
 export { ChatEntryOrchestrator } from './ChatEntryOrchestrator';
 export type { ChatEntryOrchestratorProps } from './ChatEntryOrchestrator';
 
 export { DEFAULT_AGENTS, getQuickStartSuggestions } from './constants';
-export type { AgentOption, CustomAgent, QuickStartSuggestion, PromptType } from './types';
+export type { AgentOption, QuickStartSuggestion, PromptType } from './types';

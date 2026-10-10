@@ -105,12 +105,6 @@ vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
   ),
 }));
 
-vi.mock('@/components/agent/settings', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  AgentSettingsDrawer: ({ isOpen }: any) =>
-    isOpen ? <div data-testid="agent-settings-drawer">Settings</div> : null,
-}));
-
 vi.mock('@/components/agent/AgentSelector', () => ({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   AgentSelector: ({ value, onChange, disabled }: any) => (

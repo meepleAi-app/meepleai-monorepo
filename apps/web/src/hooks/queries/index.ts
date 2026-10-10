@@ -171,13 +171,6 @@ export { CAROUSEL_SORT_OPTIONS } from '@/components/ui/data-display/game-carouse
 // PDF Processing Status (Issue #4946)
 export { usePdfProcessingStatus, pdfStatusKeys } from './usePdfProcessingStatus';
 
-// AI Models & Agent LLM Configuration
-export {
-  useAvailableModels,
-  useAgentConfiguration,
-  useUpdateAgentConfiguration,
-} from './useModels';
-
 // Rulebook Analysis queries (Issue #5584)
 export { useRulebookAnalysis, rulebookAnalysisKeys } from './useRulebookAnalysis';
 

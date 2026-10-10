@@ -107,7 +107,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #657 Phase γ.4
         yield return ["GET", "/api/v1/agents/recent?limit=10"];                                                 // #650 Phase γ.3
         yield return ["GET", "/api/v1/agent-typologies"];                                                       // typology listing
-        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #658 Phase γ.4
 
         // Contact (public, no auth)
         yield return ["POST", "/api/v1/contact"];
@@ -148,6 +147,12 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["PUT", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config write"];
         yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config from the setup modal"];
         yield return ["GET", "/api/v1/user/agent-slots", "#4138 — per-user agent slot quota"];
+        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration", "#4138 — any user rewrote the shared agent's model; admins use PUT /admin/agent-definitions/{id}"];
+        yield return ["DELETE", "/api/v1/agents/00000000-0000-0000-0000-000000000001", "#4138 — user-owned agent soft delete, with no ownership check"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/restore", "#4138 — user-owned agent restore, with no ownership check"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/start-testing", "#4138 — any user moved any agent's lifecycle; admin route kept"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/publish", "#4138 — any user published any agent; admin route kept"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/unpublish", "#4138 — any user could switch the system agent off; admin route kept"];
     }
 
     [Theory]

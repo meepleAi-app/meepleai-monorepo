@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
-import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
 import {
   collectCitations,
@@ -103,7 +102,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAgentConfirm, setShowAgentConfirm] = useState(false);
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
 
@@ -652,7 +650,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             : undefined
         }
         onTitleChange={handleTitleChange}
-        onSettings={thread?.agentId ? () => setSettingsOpen(true) : undefined}
         onDelete={handleDelete}
       />
 
@@ -866,20 +863,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           />
         </div>
 
-        {/* Agent Settings Drawer */}
-        {thread?.agentId && (
-          <AgentSettingsDrawer
-            isOpen={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            agentId={thread.agentId}
-            agentName={
-              thread.agentTypology
-                ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto']
-                : undefined
-            }
-            userTier={user ? 'premium' : 'free'}
-          />
-        )}
+        {/* Issue #4138: an Agent Settings Drawer stood here. It wrote model/temperature onto the
+            system agent, i.e. for every user; configuring the agent is admin-only (ADR-094). */}
 
         {/* Page Viewer Panel (right side, conditionally shown) */}
         {viewerState && (

@@ -29,6 +29,7 @@ ADR-094 ha deciso «un agente, di sistema, configurato dall'admin». Il codice n
 | C6 | Non tutte le chiamate LLM passano dai client registrati: due servizi chiamano OpenRouter direttamente, fuori dal registro costi e da ogni tetto | `ChunkTranslationService.cs:38,128`; `VisionOcrAdapter.cs:28` |
 | C7 | Le quote per utente non bloccano: il budget crediti è fail-open, `TierAction.AgentQuery` non ha chiamanti, la policy di rate limit `AgentQuery` non è montata | `UserBudgetService.cs:79-104`; `ChatWithSessionAgentCommandHandler.cs:327-343`; `RateLimitingServiceExtensions.cs:263` |
 | C8 | Lo streaming non aggiorna il circuit breaker e non ha fallback | `HybridLlmService.cs:232-286` |
+| C9 | Sei rotte di scrittura sugli agenti erano aperte a qualunque utente autenticato, senza controllo di proprietà. `PATCH /agents/{id}/configuration` cambiava il modello dell'agente di sistema per tutti, e `unpublish` poteva spegnerlo. La linea #4138 le ritira con una PR di sicurezza; ne restano le equivalenti admin sotto `/admin/agent-definitions` | segnalato dalla linea #4138, 2026-10-10 |
 
 Vincolo dato dall'utente: **budget in token sotto 20 € al mese** nei prossimi sei mesi, e **provider intercambiabili**, senza un fornitore privilegiato. La sola valutazione KbQuality ha oggi un tetto di $50 al mese (`EvalQualityOptions.cs:7`).
 
@@ -169,6 +170,9 @@ Le impostazioni che oggi non hanno effetto (C4) **si tolgono**, non si lasciano 
 
 ## Migrazione (expand → contract, ogni fetta col suo test «rosso prima»)
 
+> L'ordine segue una regola che #4154 ha reso esplicita: **i consumatori si adeguano prima dei produttori**, per i campi come per le tabelle. Le osservazioni sulle fette 0, 8 e 9-10 vengono dalla linea #4138 (2026-10-10).
+
+0. **Schemi agente tolleranti, prima di ogni ritiro backend.** Ogni schema Zod del frontend che legge `AgentDto` (oggi esige `type`, `strategyName` e `strategyParameters`) accetta l'assenza dei campi destinati a sparire. *Rosso prima*: un test di contratto che valida sia il payload vecchio sia quello nuovo. Senza questa fetta, ogni ritiro di campo o DTO lato backend ripete #4154 su scala più larga.
 1. **Catalogo e registro**: popolare `AiModelConfiguration` con tutti i modelli in uso; costo calcolato dal catalogo; registro attribuito a utente e `RequestSource`. *Rosso prima*: una chiamata a un modello presente solo nel listino del codice viene registrata a $0.
 2. **Gateway unico**: migrare `ChunkTranslationService`, `VisionOcrAdapter` e l'estrattore di meccaniche. *Rosso prima*: il test architetturale che vieta HTTP diretto agli host dei provider.
 3. **Tetto e quote**: la verifica del budget prima della chiamata, le quote per `RequestSource` e il degrado; il fail closed sui modelli fuori catalogo. *Rosso prima*: una chiamata oltre il tetto giornaliero oggi parte.
@@ -176,15 +180,22 @@ Le impostazioni che oggi non hanno effetto (C4) **si tolgono**, non si lasciano 
 5. **Pipeline, prima fetta**: `StreamQa`, `AskQuestion` e la ricerca cross-game sulla pipeline, che legge la versione pubblicata. *Rosso prima*: cambiare la temperatura nella versione pubblicata cambia quella inviata al provider (oggi resta 0,3).
 6. **Pagine admin**: Agente, Modelli e prezzi, Budget e quote; rimozione delle impostazioni morte.
 7. **Qualità**: domande di riferimento, valutazione, gate di pubblicazione, feedback aggregati.
-8. **Pipeline, seconda fetta**: l'assistente in sessione (`ChatWithSession`, `AskSessionAgent`), la guida al setup e la disputa sulle regole.
-9. **Contract**: ritiro di `AgentDefinition`, delle rotte utente degli agenti (#4154) e del playground che ne dipende.
+8. **Pipeline, seconda fetta, e switch dei lettori vivi**: l'assistente in sessione (`ChatWithSession`, `AskSessionAgent`), la guida al setup e la disputa sulle regole passano sulla pipeline. Contemporaneamente si sostituiscono **esplicitamente** i due lettori ancora vivi di `AgentDefinition`:
+   - `GET /games/{id}/agents`, letto da `useSessionAgentLaunch` per l'assistente della sessione live;
+   - `GET /agents?scope=my-library`, letto da `useHybridHubItems` per la libreria.
+
+   Se #4154 non li ha già tolti, un adattatore li serve dalla versione pubblicata di `AgentProfile` fino allo switch. Non si rompono mai.
+9. **Nessun lettore**: una consegna, **deployata**, in cui nessun codice legge né scrive `agent_definitions`: rotte utente e admin, playground, `AgentSession.AgentDefinitionId`, i due `AgentDefinitionId` di `PrivateGame` e `SharedGame` con `link-agent`/`unlink-agent`. *Rosso prima*: il test architetturale «nessun riferimento ad `AgentDefinition`».
+10. **Contract**: `DROP TABLE agent_definitions` e dei riferimenti residui, attraverso il Migration Safety Gate, in una consegna **successiva** alla 9. La tabella ha colonne `NOT NULL` (`strategy` jsonb senza default, `kb_card_ids` con default `'[]'`): finché la versione precedente la legge o la scrive, la drop è bloccata, come per le colonne ([`rollback-runbook.md` §8.3](../../../for-developers/operations/rollback-runbook.md)).
+
+Le rimozioni per campo di `GameId`, `KbCardIds` e `Strategy`, previste da ADR-094 fra i punti aperti, sono **sospese**: le assorbe il ritiro dell'intera tabella (fette 9-10).
 
 ## Verifica
 
 - **Test architetturali**:
   - nessuna richiesta HTTP agli host dei provider LLM fuori dal gateway;
   - nessun handler di risposta che costruisce un prompt o sceglie un modello fuori dalla pipeline;
-  - nessun riferimento ad `AgentDefinition` dopo la fetta 9.
+  - nessun riferimento ad `AgentDefinition` dalla fetta 9 in poi.
 - **Metriche** (nomi composti secondo la regola OTel del repo): costo per `RequestSource` e per versione del profilo, consumo rispetto al tetto, tasso di «non lo so», latenza p95 per versione.
 - **Prova del vincolo**: un test di integrazione porta il consumo del giorno oltre il tetto e verifica che la chiamata successiva **non** raggiunga il provider.
 

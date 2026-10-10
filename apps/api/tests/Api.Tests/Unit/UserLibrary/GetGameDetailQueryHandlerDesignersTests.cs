@@ -32,13 +32,9 @@ public sealed class GetGameDetailQueryHandlerDesignersTests
         // Issue #2790: HybridCache cannot be mocked (sealed). Use an in-memory L1 instance.
         HybridCache cache = TestDbContextFactory.CreateInMemoryHybridCache();
 
-        // Issue #2034: handler now also depends on agent + chat-thread repos for
-        // ConnectionBar pill counts. These tests don't exercise that surface, so
-        // we stub the queries to return empty (counts default to 0).
-        var agentRepo = new Mock<IAgentDefinitionRepository>();
-        agentRepo
-            .Setup(r => r.CountActiveByGameIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
+        // Issue #2034: handler now also depends on the chat-thread repo for the
+        // ConnectionBar pill count. These tests don't exercise that surface, so
+        // we stub the query to return empty (count defaults to 0).
         var chatThreadRepo = new Mock<IChatThreadRepository>();
         chatThreadRepo
             .Setup(r => r.FindByUserIdAndGameIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -48,7 +44,6 @@ public sealed class GetGameDetailQueryHandlerDesignersTests
             libraryRepo.Object,
             sharedGameRepo.Object,
             labelRepo.Object,
-            agentRepo.Object,
             chatThreadRepo.Object,
             // #4085: cover resolution now needs the EF SharedGameEntity + storage service;
             // these tests don't exercise it — empty in-memory context, unused mock.

@@ -79,16 +79,6 @@ public record SendLoanReminderRequest(
 );
 
 /// <summary>
-/// Request body for saving agent configuration (Issue #3212).
-/// Simplified version of AgentConfigDto for frontend modal.
-/// </summary>
-public record SaveAgentConfigRequest(
-    Guid AgentDefinitionId,
-    string ModelName,
-    double CostEstimate
-);
-
-/// <summary>
 /// Request body for creating a custom label (Epic #3511).
 /// </summary>
 public record CreateCustomLabelRequest(

@@ -61,9 +61,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
 
         // Library
         yield return ["GET", "/api/v1/library"];
-        yield return ["GET", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
-        yield return ["PUT", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
-        yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
 
         // PDF / ingest
         yield return ["GET", "/api/v1/pdfs/00000000-0000-0000-0000-000000000001/progress"];
@@ -102,7 +99,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/game-nights"];
 
         // Agent Slots (Issue #417)
-        yield return ["GET", "/api/v1/user/agent-slots"];
 
         // Agents (Issues #641/#647/#648/#650/#654/#655/#657/#658/#659 — handlers all implemented)
         yield return ["GET", "/api/v1/agents"];                                                                 // #641 Wave B.2
@@ -148,6 +144,10 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["POST", "/api/v1/agents/quick-create", "#4138 — 1-click Tutor creation"];
         yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/user", "#4138 — user-owned agent update"];
         yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent", "#4138 — per-game agent configuration (nothing on the answer path read it)"];
+        yield return ["GET", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config read"];
+        yield return ["PUT", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config write"];
+        yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config from the setup modal"];
+        yield return ["GET", "/api/v1/user/agent-slots", "#4138 — per-user agent slot quota"];
     }
 
     [Theory]

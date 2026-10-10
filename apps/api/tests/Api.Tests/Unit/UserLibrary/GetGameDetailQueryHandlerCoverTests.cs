@@ -41,10 +41,6 @@ public sealed class GetGameDetailQueryHandlerCoverTests
         Mock<IBlobStorageService> blobStorage)
     {
         HybridCache cache = TestDbContextFactory.CreateInMemoryHybridCache();
-        var agentRepo = new Mock<IAgentDefinitionRepository>();
-        agentRepo
-            .Setup(r => r.CountActiveByGameIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
         var chatThreadRepo = new Mock<IChatThreadRepository>();
         chatThreadRepo
             .Setup(r => r.FindByUserIdAndGameIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
@@ -54,7 +50,6 @@ public sealed class GetGameDetailQueryHandlerCoverTests
             libraryRepo.Object,
             sharedGameRepo.Object,
             labelRepo.Object,
-            agentRepo.Object,
             chatThreadRepo.Object,
             db,
             blobStorage.Object,

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
@@ -16,15 +15,13 @@ namespace Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 /// </summary>
 internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
 {
-    private readonly ILogger<UserLibraryRepository> _logger;
-
+    // Issue #4138: the logger only served the warning on an undeserializable per-game agent
+    // configuration, which this repository no longer reads.
     public UserLibraryRepository(
         MeepleAiDbContext dbContext,
-        IDomainEventCollector eventCollector,
-        ILogger<UserLibraryRepository> logger)
+        IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<UserLibraryEntry?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -239,15 +236,6 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <inheritdoc />
-    public async Task<int> GetAgentConfigCountAsync(Guid userId, CancellationToken cancellationToken = default)
-    {
-        return await DbContext.UserLibraryEntries
-            .AsNoTracking()
-            .CountAsync(e => e.UserId == userId && e.CustomAgentConfigJson != null, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
     public async Task<IReadOnlyList<UserLibraryEntry>> GetRecentlyPlayedAsync(
         Guid userId,
         int limit,
@@ -410,34 +398,6 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         var statsProp = typeof(UserLibraryEntry).GetProperty("Stats");
         statsProp?.SetValue(entry, gameStats);
 
-        // Deserialize custom agent configuration from JSONB
-        if (!string.IsNullOrWhiteSpace(entity.CustomAgentConfigJson))
-        {
-            try
-            {
-                var configDto = JsonSerializer.Deserialize<AgentConfigJson>(entity.CustomAgentConfigJson);
-                if (configDto != null)
-                {
-                    var agentConfig = AgentConfiguration.Create(
-                        llmModel: configDto.LlmModel,
-                        temperature: configDto.Temperature,
-                        maxTokens: configDto.MaxTokens,
-                        personality: configDto.Personality,
-                        detailLevel: configDto.DetailLevel,
-                        personalNotes: configDto.PersonalNotes
-                    );
-                    entry.ConfigureAgent(agentConfig);
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(ex,
-                    "Failed to deserialize CustomAgentConfigJson for UserLibraryEntry {EntryId}. JSON: {Json}",
-                    entity.Id, entity.CustomAgentConfigJson);
-                // Entry will have null CustomAgentConfig (graceful degradation)
-            }
-        }
-
         // Reconstruct custom PDF metadata
         if (!string.IsNullOrWhiteSpace(entity.CustomPdfUrl) &&
             entity.CustomPdfUploadedAt.HasValue &&
@@ -548,38 +508,11 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     }
 
     /// <summary>
-    /// Internal DTO for JSON serialization of AgentConfiguration.
-    /// </summary>
-    private sealed record AgentConfigJson(
-        string LlmModel,
-        double Temperature,
-        int MaxTokens,
-        string Personality,
-        string DetailLevel,
-        string? PersonalNotes
-    );
-
-    /// <summary>
     /// Maps domain entity to persistence entity.
     /// </summary>
     private static UserLibraryEntryEntity MapToPersistence(UserLibraryEntry domainEntity)
     {
         ArgumentNullException.ThrowIfNull(domainEntity);
-
-        // Serialize custom agent configuration to JSON
-        string? agentConfigJson = null;
-        if (domainEntity.CustomAgentConfig != null)
-        {
-            var configDto = new AgentConfigJson(
-                LlmModel: domainEntity.CustomAgentConfig.LlmModel,
-                Temperature: domainEntity.CustomAgentConfig.Temperature,
-                MaxTokens: domainEntity.CustomAgentConfig.MaxTokens,
-                Personality: domainEntity.CustomAgentConfig.Personality,
-                DetailLevel: domainEntity.CustomAgentConfig.DetailLevel,
-                PersonalNotes: domainEntity.CustomAgentConfig.PersonalNotes
-            );
-            agentConfigJson = JsonSerializer.Serialize(configDto);
-        }
 
         // Access CompetitiveSessions via reflection (private property)
 #pragma warning disable S3011 // Reflection needed for persistence mapping
@@ -600,7 +533,6 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             Xmin = domainEntity.Xmin,
             Notes = domainEntity.Notes?.Value,
             IsFavorite = domainEntity.IsFavorite,
-            CustomAgentConfigJson = agentConfigJson,
             CustomPdfUrl = domainEntity.CustomPdfMetadata?.Url,
             CustomPdfUploadedAt = domainEntity.CustomPdfMetadata?.UploadedAt,
             CustomPdfFileSizeBytes = domainEntity.CustomPdfMetadata?.FileSizeBytes,

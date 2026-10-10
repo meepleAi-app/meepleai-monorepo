@@ -39,11 +39,6 @@ internal static class UserLibraryCoreEndpoints
         MapGetGameInLibraryStatusEndpoint(group);
         MapBatchCheckGamesInLibraryEndpoint(group);
 
-        // Agent configuration endpoints
-        MapGetGameAgentConfigEndpoint(group);
-        MapUpdateAgentConfigEndpoint(group);
-        MapSaveAgentConfigEndpoint(group);
-
         // Library sharing endpoints
         MapCreateLibraryShareLinkEndpoint(group);
         MapGetLibraryShareLinkEndpoint(group);
@@ -434,136 +429,16 @@ internal static class UserLibraryCoreEndpoints
         .WithOpenApi();
     }
 
-    private static void MapGetGameAgentConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/library/games/{gameId:guid}/agent-config", async (
-            Guid gameId,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetGameAgentConfigQuery(userId, gameId);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .Produces<AgentConfigDto?>(200)
-        .Produces(401)
-        .WithTags("Library")
-        .WithSummary("Get AI agent configuration")
-        .WithDescription("Returns the custom AI agent configuration for a game in user's library. Returns null if no custom configuration exists (defaults should be used).")
-        .WithOpenApi();
-    }
-
-    private static void MapUpdateAgentConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPut("/library/games/{gameId:guid}/agent-config", async (
-            Guid gameId,
-            [FromBody] AgentConfigDto agentConfig,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new ConfigureGameAgentCommand(userId, gameId, agentConfig);
-
-            try
-            {
-                var result = await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.Ok(result);
-            }
-            catch (DomainException ex) when (ex.Message.Contains("not found"))
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces<UserLibraryEntryDto>(200)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Library")
-        .WithSummary("Update AI agent configuration")
-        .WithDescription("Updates the custom AI agent configuration for a game in user's library. Replaces any existing configuration.")
-        .WithOpenApi();
-    }
-
-    /// <summary>
-    /// Maps POST endpoint for saving simplified agent configuration (Issue #3212).
-    /// </summary>
-    private static void MapSaveAgentConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/library/games/{gameId:guid}/agent-config", async (
-            Guid gameId,
-            [FromBody] SaveAgentConfigRequest request,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new SaveAgentConfigCommand(
-                userId,
-                gameId,
-                request.AgentDefinitionId,
-                request.ModelName,
-                request.CostEstimate
-            );
-
-            try
-            {
-                var result = await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ConflictException ex)
-            {
-                return Results.Conflict(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces<SaveAgentConfigResponse>(200)
-        .Produces<ProblemDetails>(400)
-        .Produces<ProblemDetails>(401)
-        .Produces<ProblemDetails>(404)
-        .Produces<ProblemDetails>(409)
-        .WithName("SaveAgentConfig")
-        .WithDescription("Save simplified agent configuration for a game (Issue #3212)")
-        .WithOpenApi();
-    }
-
-    // Issue #4138: MapCreateGameAgentEndpoint stood here, serving
-    // POST /library/games/{gameId}/agent. It built a CreateGameAgentCommand, which wrote an
-    // AgentConfiguration (model, temperature, personality, notes) onto the user's library entry.
-    // Measured before removing it: NOTHING on the answer path reads that configuration -
+    // Issue #4138: four per-game agent routes stood here.
+    //   GET/PUT/POST /library/games/{gameId}/agent-config read and wrote an AgentConfiguration
+    //   (model, temperature, personality, detail level, notes) on the user's library entry;
+    //   POST /library/games/{gameId}/agent built a CreateGameAgentCommand that wrote the same thing.
+    // Measured before removing them: NOTHING on the answer path reads that configuration -
     // Personality / DetailLevel / PersonalNotes have zero references outside UserLibrary, its DTOs
     // and the /games/{id}/agents projection, and AskQuestionQueryHandler, StreamQaQueryHandler,
     // RagPromptAssemblyService and PlaygroundChatCommandHandler never touch CustomAgentConfig.
-    // So the endpoint let a user tune an agent that could not change a single answer.
+    // So the routes let a user tune an agent that could not change a single answer. With one
+    // system agent (ADR-094) they are retired; EndpointContractTests.RetiredRoutes keeps them off.
 
     private static void MapCreateLibraryShareLinkEndpoint(RouteGroupBuilder group)
     {

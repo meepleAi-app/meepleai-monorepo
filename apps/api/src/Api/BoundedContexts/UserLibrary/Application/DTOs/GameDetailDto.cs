@@ -45,7 +45,7 @@ internal record GameDetailDto(
     GameChecklistItemDto[]? Checklist = null,
 
     // Custom configurations
-    AgentConfigDto? CustomAgentConfig = null,
+    // Issue #4138: CustomAgentConfig (the per-game agent config) stood before CustomPdf.
     CustomPdfDto? CustomPdf = null,
 
     // Labels
@@ -61,11 +61,9 @@ internal record GameDetailDto(
     // optional parameter (e.g. legacy paths) — current handler never produces null.
     IReadOnlyList<string>? Designers = null,
 
-    // Issue #2034 — ConnectionBar pill counts (replaces FE-side hardcoded zeros).
-    // AgentCount: total active AgentDefinitions linked to this SharedGame
-    // (community-published, cross-user — AgentDefinition.GameId points to SharedGame).
-    // ChatThreadCount: chat threads owned by the requesting user for this game.
-    int AgentCount = 0,
+    // Issue #2034 — ConnectionBar pill count (replaces a FE-side hardcoded zero):
+    // chat threads owned by the requesting user for this game. #4138 removed AgentCount,
+    // which counted AgentDefinitions linked to the SharedGame for the retired agent pip.
     int ChatThreadCount = 0
 );
 

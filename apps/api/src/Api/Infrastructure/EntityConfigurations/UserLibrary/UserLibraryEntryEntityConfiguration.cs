@@ -112,8 +112,10 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .ValueGeneratedOnAddOrUpdate()
             .IsConcurrencyToken();
 
-        // Custom agent configuration (JSONB column for PostgreSQL)
-        builder.Property(e => e.CustomAgentConfigJson)
+        // Issue #4138 (expand): retired per-game agent configuration. Shadow property so the
+        // column keeps its mapping — nullable as before, no schema change — while no code reads
+        // or writes it. A later delivery drops the column.
+        builder.Property<string?>(UserLibraryEntryEntity.RetiredCustomAgentConfigJson)
             .HasColumnType("jsonb")
             .IsRequired(false);
 
@@ -132,10 +134,8 @@ internal class UserLibraryEntryEntityConfiguration : IEntityTypeConfiguration<Us
             .HasMaxLength(255)
             .IsRequired(false);
 
-        // Indexes for custom features
-        builder.HasIndex(e => e.CustomAgentConfigJson)
-            .HasDatabaseName("IX_UserLibraryEntries_CustomAgentConfigJson")
-            .HasMethod("gin"); // GIN index for JSONB queries in PostgreSQL
+        // Issue #4138: the GIN index on CustomAgentConfigJson is dropped now. An index is not part
+        // of any code contract, and nothing queries that column any more.
 
         // Relationships
         builder.HasOne(e => e.User)

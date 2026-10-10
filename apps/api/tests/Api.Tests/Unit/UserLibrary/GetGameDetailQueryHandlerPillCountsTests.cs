@@ -17,10 +17,11 @@ using Xunit;
 namespace Api.Tests.Unit.UserLibrary;
 
 /// <summary>
-/// Issue #2034: <see cref="GetGameDetailQueryHandler"/> must surface AgentCount
-/// (cross-user agents linked to the SharedGame) and ChatThreadCount (the
-/// caller's own chat threads for the game) so ConnectionBar pills can render
-/// solid counts instead of the hardcoded zeros in <c>GameDetailDesktop.tsx</c>.
+/// Issue #2034: <see cref="GetGameDetailQueryHandler"/> must surface ChatThreadCount
+/// (the caller's own chat threads for the game) so the ConnectionBar pill can render
+/// a solid count instead of the hardcoded zero in <c>GameDetailDesktop.tsx</c>.
+/// Issue #4138 removed AgentCount (AgentDefinitions linked to the SharedGame) with the
+/// agent pip it fed.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "UserLibrary")]
@@ -30,7 +31,6 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
         Mock<IUserLibraryRepository> libraryRepo,
         Mock<ISharedGameRepository> sharedGameRepo,
         Mock<IGameLabelRepository> labelRepo,
-        Mock<IAgentDefinitionRepository> agentRepo,
         Mock<IChatThreadRepository> chatThreadRepo)
     {
         HybridCache cache = TestDbContextFactory.CreateInMemoryHybridCache();
@@ -47,7 +47,6 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
             libraryRepo.Object,
             sharedGameRepo.Object,
             labelRepo.Object,
-            agentRepo.Object,
             chatThreadRepo.Object,
             db,
             blobStorage.Object,
@@ -102,43 +101,6 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsAgentCount_FromAgentRepositoryQueryForThisGame()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var (sharedGame, libraryEntry) = BuildCatan(userId);
-
-        var libraryRepo = StubLibrary(libraryEntry, userId, sharedGame.Id);
-        var sharedGameRepo = StubSharedGame(sharedGame);
-        var labelRepo = StubLabels(libraryEntry.Id);
-
-        var agentRepo = new Mock<IAgentDefinitionRepository>();
-        agentRepo
-            .Setup(r => r.CountActiveByGameIdsAsync(
-                It.Is<IReadOnlyList<Guid>>(ids => ids.Count == 1 && ids[0] == sharedGame.Id),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(3);
-
-        var chatThreadRepo = new Mock<IChatThreadRepository>();
-        chatThreadRepo
-            .Setup(r => r.FindByUserIdAndGameIdAsync(userId, sharedGame.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Array.Empty<ChatThread>());
-
-        var handler = CreateHandler(libraryRepo, sharedGameRepo, labelRepo, agentRepo, chatThreadRepo);
-
-        // Act
-        var result = await handler.Handle(new GetGameDetailQuery(userId, sharedGame.Id), CancellationToken.None);
-
-        // Assert
-        result.AgentCount.Should().Be(3);
-        agentRepo.Verify(
-            r => r.CountActiveByGameIdsAsync(
-                It.Is<IReadOnlyList<Guid>>(ids => ids.Count == 1 && ids[0] == sharedGame.Id),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-    }
-
-    [Fact]
     public async Task Handle_ReturnsChatThreadCount_ForOwningUserThisGameOnly()
     {
         // Arrange
@@ -149,11 +111,6 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
         var sharedGameRepo = StubSharedGame(sharedGame);
         var labelRepo = StubLabels(libraryEntry.Id);
 
-        var agentRepo = new Mock<IAgentDefinitionRepository>();
-        agentRepo
-            .Setup(r => r.CountActiveByGameIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-
         // Two threads owned by the requesting user for this game.
         var thread1 = new ChatThread(Guid.NewGuid(), userId, gameId: sharedGame.Id, agentType: "rules");
         var thread2 = new ChatThread(Guid.NewGuid(), userId, gameId: sharedGame.Id, agentType: "rules");
@@ -163,7 +120,7 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
             .Setup(r => r.FindByUserIdAndGameIdAsync(userId, sharedGame.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { thread1, thread2 });
 
-        var handler = CreateHandler(libraryRepo, sharedGameRepo, labelRepo, agentRepo, chatThreadRepo);
+        var handler = CreateHandler(libraryRepo, sharedGameRepo, labelRepo, chatThreadRepo);
 
         // Act
         var result = await handler.Handle(new GetGameDetailQuery(userId, sharedGame.Id), CancellationToken.None);
@@ -176,7 +133,7 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
     }
 
     [Fact]
-    public async Task Handle_ReturnsZeroCounts_WhenNoAgentsNoThreads()
+    public async Task Handle_ReturnsZeroChatThreadCount_WhenNoThreads()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -186,23 +143,17 @@ public sealed class GetGameDetailQueryHandlerPillCountsTests
         var sharedGameRepo = StubSharedGame(sharedGame);
         var labelRepo = StubLabels(libraryEntry.Id);
 
-        var agentRepo = new Mock<IAgentDefinitionRepository>();
-        agentRepo
-            .Setup(r => r.CountActiveByGameIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-
         var chatThreadRepo = new Mock<IChatThreadRepository>();
         chatThreadRepo
             .Setup(r => r.FindByUserIdAndGameIdAsync(userId, sharedGame.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<ChatThread>());
 
-        var handler = CreateHandler(libraryRepo, sharedGameRepo, labelRepo, agentRepo, chatThreadRepo);
+        var handler = CreateHandler(libraryRepo, sharedGameRepo, labelRepo, chatThreadRepo);
 
         // Act
         var result = await handler.Handle(new GetGameDetailQuery(userId, sharedGame.Id), CancellationToken.None);
 
         // Assert
-        result.AgentCount.Should().Be(0);
         result.ChatThreadCount.Should().Be(0);
     }
 }

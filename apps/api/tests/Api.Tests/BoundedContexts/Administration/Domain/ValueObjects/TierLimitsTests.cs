@@ -19,7 +19,6 @@ public sealed class TierLimitsTests
             messagesPerDay: 10,
             maxCollectionSize: 20,
             maxPdfUploadsPerMonth: 5,
-            maxAgentsCreated: 1,
             dailyCreditsLimit: 100m,
             weeklyCreditsLimit: 10_000m);
 
@@ -30,7 +29,6 @@ public sealed class TierLimitsTests
         Assert.Equal(10, limits.MessagesPerDay);
         Assert.Equal(20, limits.MaxCollectionSize);
         Assert.Equal(5, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(1, limits.MaxAgentsCreated);
         Assert.Equal(100m, limits.DailyCreditsLimit);
         Assert.Equal(10_000m, limits.WeeklyCreditsLimit);
     }
@@ -49,7 +47,6 @@ public sealed class TierLimitsTests
                 messagesPerDay: 10,
                 maxCollectionSize: 20,
                 maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
                 weeklyCreditsLimit: 10_000m));
 
@@ -70,7 +67,6 @@ public sealed class TierLimitsTests
                 messagesPerDay: 10,
                 maxCollectionSize: 20,
                 maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
                 weeklyCreditsLimit: 10_000m));
 
@@ -91,7 +87,6 @@ public sealed class TierLimitsTests
                 messagesPerDay: messagesPerDay,
                 maxCollectionSize: 20,
                 maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
                 weeklyCreditsLimit: 10_000m));
 
@@ -112,7 +107,6 @@ public sealed class TierLimitsTests
                 messagesPerDay: 10,
                 maxCollectionSize: maxCollectionSize,
                 maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
                 weeklyCreditsLimit: 10_000m));
 
@@ -133,32 +127,10 @@ public sealed class TierLimitsTests
                 messagesPerDay: 10,
                 maxCollectionSize: 20,
                 maxPdfUploadsPerMonth: maxPdfUploadsPerMonth,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
                 weeklyCreditsLimit: 10_000m));
 
         Assert.Equal("maxPdfUploadsPerMonth", exception.ParamName);
-        Assert.Contains("cannot be negative", exception.Message);
-    }
-
-    [Theory]
-    [InlineData(-1)]
-    [InlineData(-3)]
-    public void Create_WithNegativeMaxAgentsCreated_ShouldThrow(int maxAgentsCreated)
-    {
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() =>
-            TierLimits.Create(
-                tokensPerMonth: 10_000,
-                tokensPerDay: 500,
-                messagesPerDay: 10,
-                maxCollectionSize: 20,
-                maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: maxAgentsCreated,
-                dailyCreditsLimit: 100m,
-                weeklyCreditsLimit: 10_000m));
-
-        Assert.Equal("maxAgentsCreated", exception.ParamName);
         Assert.Contains("cannot be negative", exception.Message);
     }
 
@@ -176,7 +148,6 @@ public sealed class TierLimitsTests
                 messagesPerDay: 10,
                 maxCollectionSize: 20,
                 maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: dailyCreditsLimit,
                 weeklyCreditsLimit: 10_000m));
 
@@ -198,7 +169,6 @@ public sealed class TierLimitsTests
                 messagesPerDay: 10,
                 maxCollectionSize: 20,
                 maxPdfUploadsPerMonth: 5,
-                maxAgentsCreated: 1,
                 dailyCreditsLimit: 100m,
                 weeklyCreditsLimit: weeklyCreditsLimit));
 
@@ -222,7 +192,6 @@ public sealed class TierLimitsTests
         Assert.Equal(10, limits.MessagesPerDay);
         Assert.Equal(20, limits.MaxCollectionSize);
         Assert.Equal(5, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(1, limits.MaxAgentsCreated);
     }
 
     [Fact]
@@ -241,7 +210,6 @@ public sealed class TierLimitsTests
         Assert.Equal(50, limits.MessagesPerDay);
         Assert.Equal(50, limits.MaxCollectionSize);
         Assert.Equal(20, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(3, limits.MaxAgentsCreated);
     }
 
     [Fact]
@@ -260,7 +228,6 @@ public sealed class TierLimitsTests
         Assert.Equal(200, limits.MessagesPerDay);
         Assert.Equal(200, limits.MaxCollectionSize);
         Assert.Equal(100, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(10, limits.MaxAgentsCreated);
     }
 
     [Fact]
@@ -279,7 +246,6 @@ public sealed class TierLimitsTests
         Assert.Equal(int.MaxValue, limits.MessagesPerDay);
         Assert.Equal(int.MaxValue, limits.MaxCollectionSize);
         Assert.Equal(int.MaxValue, limits.MaxPdfUploadsPerMonth);
-        Assert.Equal(int.MaxValue, limits.MaxAgentsCreated);
     }
 
     [Fact]
@@ -306,7 +272,6 @@ public sealed class TierLimitsTests
             messagesPerDay: 0,
             maxCollectionSize: 0,
             maxPdfUploadsPerMonth: 0,
-            maxAgentsCreated: 0,
             dailyCreditsLimit: 0m,
             weeklyCreditsLimit: 0m);
 
@@ -327,7 +292,6 @@ public sealed class TierLimitsTests
             messagesPerDay: int.MaxValue,
             maxCollectionSize: int.MaxValue,
             maxPdfUploadsPerMonth: int.MaxValue,
-            maxAgentsCreated: int.MaxValue,
             dailyCreditsLimit: decimal.MaxValue,
             weeklyCreditsLimit: decimal.MaxValue);
 
@@ -453,7 +417,6 @@ public sealed class TierLimitsTests
             messagesPerDay: 10,
             maxCollectionSize: 20,
             maxPdfUploadsPerMonth: 5,
-            maxAgentsCreated: 1,
             dailyCreditsLimit: daily,
             weeklyCreditsLimit: weekly);
 

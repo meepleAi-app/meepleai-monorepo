@@ -3,13 +3,14 @@ namespace Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 /// <summary>
 /// Value object defining resource limits for a subscription tier.
 /// D3: Game Night Flow - tier system definitions.
+/// Issue #4138: MaxAgents (4th factory parameter, after maxPdfSizeBytes) is retired — nothing
+/// enforced it once the per-game agent was gone. Its column stays until a later delivery drops it.
 /// </summary>
 public record TierLimits
 {
     public int MaxPrivateGames { get; init; }
     public int MaxPdfUploadsPerMonth { get; init; }
     public long MaxPdfSizeBytes { get; init; }
-    public int MaxAgents { get; init; }
     public int MaxAgentQueriesPerDay { get; init; }
     public int MaxSessionQueries { get; init; }
     public int MaxSessionPlayers { get; init; }
@@ -34,7 +35,7 @@ public record TierLimits
 
     public static TierLimits Create(
         int maxPrivateGames, int maxPdfUploadsPerMonth,
-        long maxPdfSizeBytes, int maxAgents,
+        long maxPdfSizeBytes,
         int maxAgentQueriesPerDay, int maxSessionQueries,
         int maxSessionPlayers, int maxPhotosPerSession,
         bool sessionSaveEnabled, int maxCatalogProposalsPerWeek,
@@ -47,8 +48,6 @@ public record TierLimits
             throw new ArgumentException("Cannot be negative", nameof(maxPdfUploadsPerMonth));
         if (maxPdfSizeBytes < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxPdfSizeBytes));
-        if (maxAgents < 0)
-            throw new ArgumentException("Cannot be negative", nameof(maxAgents));
         if (maxAgentQueriesPerDay < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxAgentQueriesPerDay));
         if (maxSessionQueries < 0)
@@ -67,7 +66,6 @@ public record TierLimits
             MaxPrivateGames = maxPrivateGames,
             MaxPdfUploadsPerMonth = maxPdfUploadsPerMonth,
             MaxPdfSizeBytes = maxPdfSizeBytes,
-            MaxAgents = maxAgents,
             MaxAgentQueriesPerDay = maxAgentQueriesPerDay,
             MaxSessionQueries = maxSessionQueries,
             MaxSessionPlayers = maxSessionPlayers,
@@ -82,17 +80,17 @@ public record TierLimits
     /// <summary>Unlimited tier for admin users.</summary>
     public static TierLimits Unlimited => Create(
         int.MaxValue, int.MaxValue, 500L * 1024 * 1024,
-        int.MaxValue, int.MaxValue, int.MaxValue,
+        int.MaxValue, int.MaxValue,
         12, int.MaxValue, true, int.MaxValue, raptorRebuildEnabled: true,
         maxGamebookTranslationsPerMonth: int.MaxValue);
 
     /// <summary>Free tier defaults.</summary>
     public static TierLimits FreeTier => Create(
-        3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1, raptorRebuildEnabled: false,
+        3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, raptorRebuildEnabled: false,
         maxGamebookTranslationsPerMonth: 50);
 
     /// <summary>Premium tier defaults.</summary>
     public static TierLimits PremiumTier => Create(
-        15, 15, 200L * 1024 * 1024, 10, 200, 150, 12, 20, true, 5, raptorRebuildEnabled: true,
+        15, 15, 200L * 1024 * 1024, 200, 150, 12, 20, true, 5, raptorRebuildEnabled: true,
         maxGamebookTranslationsPerMonth: 500);
 }

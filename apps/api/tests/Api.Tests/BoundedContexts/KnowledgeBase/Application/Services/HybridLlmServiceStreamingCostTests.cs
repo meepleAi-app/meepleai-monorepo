@@ -145,6 +145,53 @@ public sealed class HybridLlmServiceStreamingCostTests
     }
 
     [Fact]
+    public async Task Stream_ThatThrowsAfterTheFinalChunk_RecordsOnlyTheSuccess()
+    {
+        // I token sono stati spesi e il costo è arrivato: l'errore successivo non lo annulla.
+        ClientStreams(() => Chunks(
+            [new StreamChunk("answer"), new StreamChunk(null, new LlmUsage(100, 20, 120), FinalCost, IsFinal: true)],
+            new HttpRequestException("reset after usage")));
+
+        var consume = () => ConsumeAsync(CreateSut().GenerateCompletionStreamAsync("system", "question", RequestSource.RagPipeline));
+
+        await consume.Should().ThrowAsync<HttpRequestException>();
+        _costService.Verify(c => c.LogSuccessAsync(
+            It.IsAny<LlmCompletionResult>(), It.IsAny<LlmUserContext>(), It.IsAny<long>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Once);
+        _costService.Verify(c => c.LogFailureAsync(
+            It.IsAny<string?>(), It.IsAny<LlmUserContext>(), It.IsAny<long>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Stream_HttpClientTimeout_IsAFailure_EvenThoughItIsACancellationException()
+    {
+        // Review di #4182: un timeout di HttpClient arriva come TaskCanceledException senza che
+        // il consumatore abbia annullato nulla; è un fallimento del provider.
+        ClientStreams(() => Chunks([], new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout")));
+
+        var consume = () => ConsumeAsync(CreateSut().GenerateCompletionStreamAsync("system", "question", RequestSource.RagPipeline));
+
+        await consume.Should().ThrowAsync<TaskCanceledException>();
+        _costService.Verify(c => c.LogFailureAsync(
+            It.Is<string?>(m => m!.Contains("HttpClient.Timeout")), It.IsAny<LlmUserContext>(), It.IsAny<long>(), RequestSource.RagPipeline, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Stream_CancelledByTheConsumerBeforeAnyContent_IsNotAFailure()
+    {
+        // I client escono dal loop in silenzio quando il token è annullato (review di #4182):
+        // senza il controllo sul token, una disconnessione risulterebbe un fallimento del provider.
+        ClientStreams(() => Chunks([]));
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        await foreach (var _ in CreateSut().GenerateCompletionStreamAsync("system", "question", RequestSource.RagPipeline, cts.Token))
+        {
+        }
+
+        _costService.VerifyNoOtherCalls();
+    }
+
+    [Fact]
     public async Task Stream_WithContentButNoUsage_RecordsNothing()
     {
         // Ollama può chiudere uno stream riuscito senza conteggi: non è un fallimento, ma non c'è

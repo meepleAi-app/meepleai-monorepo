@@ -735,9 +735,13 @@ internal class HybridLlmService : ILlmService
                 {
                     hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                // Un annullamento chiesto dal consumatore non è un fallimento del provider; un
+                // timeout di HttpClient sì, anche se arriva come TaskCanceledException.
+                catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
                 {
+#pragma warning disable S1854 // Falso positivo: «failure» lo legge il finally qui sotto, dopo il throw
                     failure = ex.Message;
+#pragma warning restore S1854
                     throw;
                 }
 
@@ -764,7 +768,10 @@ internal class HybridLlmService : ILlmService
         {
             await enumerator.DisposeAsync().ConfigureAwait(false);
             stopwatch.Stop();
-            await LogStreamOutcomeAsync(costChunk, sawContent, completed, failure, costContext, stopwatch.ElapsedMilliseconds, source)
+            // I client escono dal loop in silenzio quando il token viene annullato: senza questo
+            // controllo una disconnessione prima del primo contenuto risulterebbe un fallimento.
+            var cancelledByConsumer = cancellationToken.IsCancellationRequested;
+            await LogStreamOutcomeAsync(costChunk, sawContent, completed && !cancelledByConsumer, failure, costContext, stopwatch.ElapsedMilliseconds, source)
                 .ConfigureAwait(false);
         }
     }

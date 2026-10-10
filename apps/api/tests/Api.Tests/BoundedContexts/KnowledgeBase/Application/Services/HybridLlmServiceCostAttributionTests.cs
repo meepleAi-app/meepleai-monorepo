@@ -149,18 +149,29 @@ public sealed class HybridLlmServiceCostAttributionTests
     [Fact]
     public async Task ExplicitModelFallback_LogsOneFailurePerFailedAttempt()
     {
+        // Primo tentativo: DeepSeek lancia. Secondo: OpenRouter, dal fallback, risponde con un
+        // fallimento. Poi nessun altro provider.
         _client
             .Setup(c => c.GenerateCompletionAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new HttpRequestException("connection refused"));
+        var openRouter = new Mock<ILlmClient>();
+        openRouter.Setup(c => c.ProviderName).Returns("OpenRouter");
+        openRouter
+            .Setup(c => c.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("404 model not found"));
         _selector
-            .Setup(s => s.GetNextFallbackAsync(It.IsAny<string>(), It.IsAny<HashSet<string>>(), It.IsAny<CancellationToken>()))
+            .SetupSequence(s => s.GetNextFallbackAsync(It.IsAny<string>(), It.IsAny<HashSet<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ProviderSelectionResult(openRouter.Object, new LlmRoutingDecision("OpenRouter", "meta-llama/llama-3.3-70b-instruct", "fallback")))
             .ReturnsAsync(new ProviderSelectionResult(null, new LlmRoutingDecision("none", "none", "no fallback")));
 
         await CreateSut().GenerateCompletionWithModelFallbackAsync("deepseek-chat", "system", "question", RequestSource.AdminOperation);
 
         _costService.Verify(c => c.LogFailureAsync(
             "connection refused", It.IsAny<LlmUserContext>(), It.IsAny<long>(), RequestSource.AdminOperation, It.IsAny<CancellationToken>()), Times.Once);
+        _costService.Verify(c => c.LogFailureAsync(
+            "404 model not found", It.IsAny<LlmUserContext>(), It.IsAny<long>(), RequestSource.AdminOperation, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

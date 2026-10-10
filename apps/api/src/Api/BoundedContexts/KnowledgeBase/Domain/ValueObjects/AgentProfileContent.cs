@@ -183,7 +183,9 @@ public sealed class AgentProfileContent : ValueObject
             vectorWeight,
             keywordWeight,
             rerankerEnabled,
-            allowedCategories.ToArray());
+            // Normalizzare non è validare: le categorie sono un insieme, e l'uguaglianza le confronta
+            // in ordine, quindi un jsonb scritto in un altro ordine deve tornare uguale a Create.
+            allowedCategories.Distinct().Order().ToArray());
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

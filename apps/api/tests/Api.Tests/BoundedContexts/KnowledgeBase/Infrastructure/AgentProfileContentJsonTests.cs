@@ -41,6 +41,23 @@ public sealed class AgentProfileContentJsonTests
     }
 
     /// <summary>
+    /// Ricostruire non valida, ma normalizza come <c>Create</c>: le categorie sono un insieme, e un
+    /// jsonb scritto con un altro ordine deve risultare uguale allo stesso contenuto creato dal codice.
+    /// </summary>
+    [Fact]
+    public void Deserialize_NormalizesTheCategoryOrder_LikeCreate()
+    {
+        var content = AgentProfileTests.Content();
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(content))!;
+        json["allowedCategories"] = new JsonArray(
+            nameof(DocumentCategory.Errata), nameof(DocumentCategory.Rulebook), nameof(DocumentCategory.Errata));
+
+        var restored = AgentProfileContentJson.Deserialize(json.ToJsonString());
+
+        restored.Should().Be(content);
+    }
+
+    /// <summary>
     /// Le versioni archiviate sono storia immutabile: se un giorno le regole di validazione si
     /// stringono, una versione salvata prima deve continuare a caricarsi. Altrimenti l'intero
     /// aggregato — e con lui l'agente — non si caricherebbe più.

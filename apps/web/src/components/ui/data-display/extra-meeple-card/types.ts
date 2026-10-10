@@ -636,7 +636,6 @@ export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';
 export interface SharedGameExtraMeepleCardProps {
   data: SharedGameDetailData;
   onUploadPdf?: () => void;
-  onCreateAgent?: () => void;
   loading?: boolean;
   error?: string;
   className?: string;

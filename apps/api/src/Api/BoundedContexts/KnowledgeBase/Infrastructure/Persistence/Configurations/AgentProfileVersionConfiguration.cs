@@ -39,14 +39,14 @@ public sealed class AgentProfileVersionConfiguration : IEntityTypeConfiguration<
             .IsUnique()
             .HasDatabaseName("ux_agent_profile_versions_profile_version");
 
-        builder.HasIndex(v => v.AgentProfileId)
+        // Indici con nome nel HasIndex, non con HasDatabaseName: due HasIndex senza nome sulla stessa
+        // colonna sono per EF lo stesso indice, e il secondo sovrascriverebbe il filtro del primo.
+        builder.HasIndex(v => v.AgentProfileId, "ux_agent_profile_versions_one_draft")
             .IsUnique()
-            .HasFilter($"status = {(int)AgentProfileVersionStatus.Draft}")
-            .HasDatabaseName("ux_agent_profile_versions_one_draft");
+            .HasFilter($"status = {(int)AgentProfileVersionStatus.Draft}");
 
-        builder.HasIndex(v => v.AgentProfileId)
+        builder.HasIndex(v => v.AgentProfileId, "ux_agent_profile_versions_one_published")
             .IsUnique()
-            .HasFilter($"status = {(int)AgentProfileVersionStatus.Published}")
-            .HasDatabaseName("ux_agent_profile_versions_one_published");
+            .HasFilter($"status = {(int)AgentProfileVersionStatus.Published}");
     }
 }

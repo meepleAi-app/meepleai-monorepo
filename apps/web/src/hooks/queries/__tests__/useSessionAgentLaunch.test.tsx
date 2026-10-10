@@ -22,7 +22,8 @@ vi.mock('@/lib/api', () => ({
 }));
 
 import { api } from '@/lib/api';
-import { ApiError } from '@/lib/api/core/errors';
+import { createApiError } from '@/lib/api/core/errors';
+import { LaunchSessionAgentRequestSchema } from '@/lib/api/clients/agentSessionsClient';
 import { useSessionAgentLaunch } from '../useSessionAgentLaunch';
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -30,9 +31,10 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
-const SESSION_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
-const GAME_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-const AGENT_SESSION_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+// UUID v4 validi: lo schema reale della richiesta (z.string().uuid()) rifiuta 'bbbbbbbb-bbbb-…'.
+const SESSION_ID = '3f2b8c1e-6a4d-4e7f-9b21-5c8d0a7e4f13';
+const GAME_ID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+const AGENT_SESSION_ID = 'a1d0c6e8-3f5b-4c2a-8e7d-9b4f1c2e6a05';
 
 describe('useSessionAgentLaunch', () => {
   beforeEach(() => {
@@ -67,9 +69,13 @@ describe('useSessionAgentLaunch', () => {
     await waitFor(() => expect(result.current.status).toBe('ready'));
     expect(api.games.getAgents).not.toHaveBeenCalled();
     const [, request] = vi.mocked(api.agentSessions.launch).mock.calls[0];
-    expect(request).not.toHaveProperty('agentDefinitionId');
-    expect(request).not.toHaveProperty('agentId');
     expect(request).toMatchObject({ gameId: GAME_ID });
+    // Lo schema reale della richiesta deve accettarla senza id: se tornasse a esigerlo, il client
+    // rifiuterebbe la richiesta prima ancora di mandarla.
+    const parsed = LaunchSessionAgentRequestSchema.safeParse(request);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) throw new Error('richiesta di lancio rifiutata dallo schema');
+    expect(parsed.data).not.toHaveProperty('agentDefinitionId');
   });
 
   /**
@@ -99,13 +105,19 @@ describe('useSessionAgentLaunch', () => {
   });
 
   it('#4154: returns no-agent when the backend reports system_agent_unavailable', async () => {
-    vi.mocked(api.agentSessions.launch).mockRejectedValueOnce(
-      new ApiError({
-        message: "L'assistente non è disponibile: l'agente di sistema non è attivo.",
-        statusCode: 409,
-        code: 'system_agent_unavailable',
-      })
+    // L'errore nasce come lo produce il client HTTP: da una risposta 409 con il corpo che il
+    // middleware del backend scrive ({ error: ErrorCode, message }). Copre la catena intera.
+    const error = await createApiError(
+      '/api/v1/game-sessions/x/agent/launch',
+      new Response(
+        JSON.stringify({
+          error: 'system_agent_unavailable',
+          message: "L'assistente non è disponibile: l'agente di sistema non è attivo.",
+        }),
+        { status: 409, headers: { 'Content-Type': 'application/json' } }
+      )
     );
+    vi.mocked(api.agentSessions.launch).mockRejectedValueOnce(error);
 
     const { result } = renderHook(() => useSessionAgentLaunch(SESSION_ID, GAME_ID), { wrapper });
 

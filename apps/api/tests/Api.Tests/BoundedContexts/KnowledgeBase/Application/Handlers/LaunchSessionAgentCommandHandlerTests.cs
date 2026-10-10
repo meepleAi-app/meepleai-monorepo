@@ -101,6 +101,29 @@ public sealed class LaunchSessionAgentCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithoutAgentDefinitionId_PrefersTheActiveSystemAgent_OverAnOlderInactiveOne()
+    {
+        // ADR-094 prevede un solo agente di sistema, ma se ne esistessero due (uno vecchio spento e
+        // uno attivo) il lancio non deve rispondere «non disponibile» avendo un agente attivo.
+        var olderInactive = SystemAgent(active: false);
+        var newerActive = SystemAgent(active: true);
+        _definitionRepoMock
+            .Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([olderInactive, newerActive]);
+
+        AgentSession? persisted = null;
+        _sessionRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<AgentSession>(), It.IsAny<CancellationToken>()))
+            .Callback<AgentSession, CancellationToken>((s, _) => persisted = s)
+            .Returns(Task.CompletedTask);
+
+        await _handler.Handle(CommandWithoutAgent(), CancellationToken.None);
+
+        Assert.NotNull(persisted);
+        Assert.Equal(newerActive.Id, persisted!.AgentDefinitionId);
+    }
+
+    [Fact]
     public async Task Handle_WithoutAgentDefinitionId_InactiveSystemAgent_ThrowsConflict_AndPersistsNothing()
     {
         _definitionRepoMock

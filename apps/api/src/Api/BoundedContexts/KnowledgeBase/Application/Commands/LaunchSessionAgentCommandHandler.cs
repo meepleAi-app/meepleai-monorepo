@@ -100,9 +100,12 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
             .GetAllAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // Prima l'agente attivo: se ne esistessero due (uno vecchio spento e uno attivo), il lancio
+        // non deve rispondere «non disponibile» avendone uno attivo. A parita`, il piu` vecchio.
         var systemAgent = definitions
             .Where(d => d.IsSystemDefined)
-            .OrderBy(d => d.CreatedAt)
+            .OrderByDescending(d => d.IsActive)
+            .ThenBy(d => d.CreatedAt)
             .FirstOrDefault();
 
         if (systemAgent is null)

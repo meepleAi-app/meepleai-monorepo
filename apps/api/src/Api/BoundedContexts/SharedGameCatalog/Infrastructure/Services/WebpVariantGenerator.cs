@@ -41,8 +41,8 @@ internal sealed class WebpVariantGenerator : IWebpVariantGenerator
     private readonly ILogger<WebpVariantGenerator> _logger;
 
     // #3495 M1 note: Magick.NET ResourceLimits are process-GLOBAL statics. They are deliberately
-    // NOT set here — this class shares the Magick.NET runtime with OCR (VisionOcrAdapter) and user
-    // photos (GamebookPhotoStorageService), which legitimately decode larger images, so imposing
+    // NOT set here — this class shares the Magick.NET runtime with user photos
+    // (GamebookPhotoStorageService), which legitimately decode larger images, so imposing
     // this cover path's tight caps globally (with load-order-dependent timing) would break them.
     // The decompression-bomb defense is instead enforced per-decode below via the header-only ping
     // cap, which bounds every WebpVariantGenerator decode to <= MaxSourcePixels before allocation.

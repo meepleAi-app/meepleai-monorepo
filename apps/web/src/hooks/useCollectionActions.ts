@@ -22,7 +22,6 @@ import { libraryKeys } from '@/hooks/queries/useLibrary';
 // ============================================================================
 
 export interface AssociatedData {
-  hasCustomAgent: boolean;
   hasPrivatePdf: boolean;
   chatSessionsCount: number;
   gameSessionsCount: number;
@@ -221,8 +220,7 @@ export function useCollectionActions(
     // Check if has associated data
     const hasData =
       associatedData &&
-      (associatedData.hasCustomAgent ||
-        associatedData.hasPrivatePdf ||
+      (associatedData.hasPrivatePdf ||
         associatedData.chatSessionsCount > 0 ||
         associatedData.gameSessionsCount > 0 ||
         associatedData.checklistItemsCount > 0 ||
@@ -250,8 +248,7 @@ export function useCollectionActions(
     remove: handleRemove,
     hasAssociatedData:
       data?.associatedData !== null &&
-      (data?.associatedData?.hasCustomAgent ||
-        data?.associatedData?.hasPrivatePdf ||
+      (data?.associatedData?.hasPrivatePdf ||
         (data?.associatedData?.chatSessionsCount ?? 0) > 0 ||
         (data?.associatedData?.gameSessionsCount ?? 0) > 0 ||
         (data?.associatedData?.checklistItemsCount ?? 0) > 0 ||

@@ -6,6 +6,10 @@
  * feature/issue-2034-connection-bar-pill-counts). These fields replace the
  * FE-side hardcoded zeros in `GameDetailDesktop.tsx`. They default to 0 so
  * legacy responses that don't carry the fields parse cleanly.
+ *
+ * Issue #4138: `agentCount` left the schema with the agent pip. The BE still
+ * sends it until its own slice retires the field, so the schema must keep
+ * accepting a payload that carries it — and drop it.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -41,46 +45,44 @@ describe('GameDetailDtoSchema #2034 ConnectionBar pill counts', () => {
     avgDuration: 'N/A',
   };
 
-  it('accepts both pill counts as non-negative integers', () => {
+  it('accepts the chat thread count as a non-negative integer', () => {
+    const parsed = GameDetailDtoSchema.parse({
+      ...validBase,
+      chatThreadCount: 5,
+    });
+    expect(parsed.chatThreadCount).toBe(5);
+  });
+
+  it('defaults a missing chat thread count to 0 (backward compat with legacy BE)', () => {
+    const parsed = GameDetailDtoSchema.parse(validBase);
+    expect(parsed.chatThreadCount).toBe(0);
+  });
+
+  it('still parses a BE payload that carries agentCount, and drops the field', () => {
     const parsed = GameDetailDtoSchema.parse({
       ...validBase,
       agentCount: 3,
       chatThreadCount: 5,
     });
-    expect(parsed.agentCount).toBe(3);
+    expect(parsed).not.toHaveProperty('agentCount');
     expect(parsed.chatThreadCount).toBe(5);
   });
 
-  it('defaults missing pill counts to 0 (backward compat with legacy BE)', () => {
-    const parsed = GameDetailDtoSchema.parse(validBase);
-    expect(parsed.agentCount).toBe(0);
-    expect(parsed.chatThreadCount).toBe(0);
-  });
-
-  it('rejects negative pill counts', () => {
+  it('rejects a negative chat thread count', () => {
     expect(() =>
       GameDetailDtoSchema.parse({
         ...validBase,
-        agentCount: -1,
-        chatThreadCount: 0,
-      }),
-    ).toThrow();
-    expect(() =>
-      GameDetailDtoSchema.parse({
-        ...validBase,
-        agentCount: 0,
         chatThreadCount: -2,
-      }),
+      })
     ).toThrow();
   });
 
-  it('rejects non-integer pill counts', () => {
+  it('rejects a non-integer chat thread count', () => {
     expect(() =>
       GameDetailDtoSchema.parse({
         ...validBase,
-        agentCount: 1.5,
-        chatThreadCount: 0,
-      }),
+        chatThreadCount: 1.5,
+      })
     ).toThrow();
   });
 });

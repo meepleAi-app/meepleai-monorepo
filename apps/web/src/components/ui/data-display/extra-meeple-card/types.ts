@@ -242,14 +242,6 @@ export interface AITabData {
 /** Entity types supported by ExtraMeepleCard variants */
 export type ExtraMeepleCardEntity = 'session' | 'game' | 'player' | 'collection';
 
-/** Compact agent preview for the GameExtraMeepleCard Agent tab (Issue #5029) */
-export interface GameAgentPreview {
-  id: string;
-  name: string;
-  model?: string;
-  isActive: boolean;
-}
-
 /** Game entity detail data */
 export interface GameDetailData {
   id: string;
@@ -269,8 +261,6 @@ export interface GameDetailData {
   kbDocuments?: KbDocumentPreview[];
   /** Full PDF document data with processing state (Issue #5195) */
   pdfDocuments?: PdfDocumentDto[];
-  /** Agent configured for this game (Issue #5029) */
-  agent?: GameAgentPreview;
 }
 
 /** Player entity detail data */

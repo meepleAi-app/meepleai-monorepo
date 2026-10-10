@@ -100,7 +100,6 @@ export type PaginatedLibraryResponse = z.infer<typeof PaginatedLibraryResponseSc
 
 // Associated data that would be lost if a game is removed from library (Issue #4259)
 export const AssociatedDataSchema = z.object({
-  hasCustomAgent: z.boolean(),
   hasPrivatePdf: z.boolean(),
   chatSessionsCount: z.number().int(),
   gameSessionsCount: z.number().int(),
@@ -327,7 +326,6 @@ export const GameDetailDtoSchema = z.object({
   // Optional extended data
   recentSessions: z.array(LibraryGameSessionSchema).nullable().optional(),
   checklist: z.array(LibraryChecklistItemSchema).nullable().optional(),
-  customAgentConfig: z.any().nullable().optional(), // AgentConfigDto
   customPdf: LibraryCustomPdfSchema.nullable().optional(),
 
   // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
@@ -345,12 +343,11 @@ export const GameDetailDtoSchema = z.object({
   // fails — see useLibrary.ts:1023-1029).
   designers: z.array(z.string()).nullable().optional(),
 
-  // Issue #2034 — ConnectionBar pill counts. Replaces FE-side hardcoded zeros
-  // in GameDetailDesktop.tsx (`agentCount: 0`, `chatCount: 0`). `agentCount` is
-  // cross-user (AgentDefinitions linked to this SharedGame); `chatThreadCount`
-  // is the requesting user's own thread count for the game. Defaults to 0 to
-  // tolerate legacy BE responses that don't surface the fields yet.
-  agentCount: z.number().int().nonnegative().optional().default(0),
+  // Issue #2034 — ConnectionBar pill count. Replaces the FE-side hardcoded zero
+  // in GameDetailDesktop.tsx: `chatThreadCount` is the requesting user's own
+  // thread count for the game. Defaults to 0 to tolerate legacy BE responses.
+  // #4138 dropped `agentCount` with the agent pip; a payload that still carries
+  // it parses, and the field is stripped (library.pill-counts.test.ts).
   chatThreadCount: z.number().int().nonnegative().optional().default(0),
 });
 

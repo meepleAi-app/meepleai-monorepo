@@ -4,7 +4,7 @@ import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 import { mapProcessingStateToStatus, mapRawToPdfDocumentDto } from '../drawer-helpers';
 
-import type { GameDetailData, KbDocumentPreview, GameAgentPreview } from '../types';
+import type { GameDetailData, KbDocumentPreview } from '../types';
 
 // ============================================================================
 // Data Fetching Hook — Game
@@ -27,14 +27,13 @@ export function useGameDetail(gameId: string): UseGameDetailResult {
       setLoading(true);
       setError(null);
       try {
-        // Fetch game details, full PDF list (with processing state), and agent config in parallel.
-        // KB: /api/v1/games/{id}/pdfs returns { pdfs: PdfDocumentDto[] } with processingState.
-        // Agent: /agent-config returns AgentConfigDto? (null when not configured).
-        // Both handled gracefully on non-200. (Issue #5029, #5195)
-        const [gameRes, kbRes, agentRes] = await Promise.all([
+        // Fetch game details and the full PDF list (with processing state) in parallel.
+        // KB: /api/v1/games/{id}/pdfs returns { pdfs: PdfDocumentDto[] } with processingState,
+        // handled gracefully on non-200. (Issue #5029, #5195)
+        // Issue #4138: a third fetch read /agent-config for an Agent tab; both are gone.
+        const [gameRes, kbRes] = await Promise.all([
           fetch(`/api/v1/library/games/${gameId}`, { signal }),
           fetch(`/api/v1/games/${gameId}/pdfs`, { signal }),
-          fetch(`/api/v1/library/games/${gameId}/agent-config`, { signal }),
         ]);
 
         if (!gameRes.ok) {
@@ -50,9 +49,7 @@ export function useGameDetail(gameId: string): UseGameDetailResult {
               ? kbRawJson
               : ((kbRawJson as { pdfs?: unknown[] }).pdfs ?? [])
             : [];
-        const agentJson = agentRes.ok ? ((await agentRes.json()) as Record<string, unknown>) : null;
-
-        setData(mapToGameDetailData(json, kbPdfsRaw, agentJson));
+        setData(mapToGameDetailData(json, kbPdfsRaw));
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : 'Impossibile caricare i dati del gioco');
@@ -81,11 +78,7 @@ export function useGameDetail(gameId: string): UseGameDetailResult {
   return { data, loading, error, retry };
 }
 
-function mapToGameDetailData(
-  json: Record<string, unknown>,
-  kbRaw: unknown[] = [],
-  agentRaw: Record<string, unknown> | null = null
-): GameDetailData {
+function mapToGameDetailData(json: Record<string, unknown>, kbRaw: unknown[] = []): GameDetailData {
   // Map full PdfDocumentDto data (Issue #5195: from /api/v1/games/{gameId}/pdfs)
   const pdfDocuments: PdfDocumentDto[] = kbRaw.map(item =>
     mapRawToPdfDocumentDto(item as Record<string, unknown>)
@@ -98,18 +91,6 @@ function mapToGameDetailData(
     uploadedAt: pdf.uploadedAt,
     status: mapProcessingStateToStatus(pdf.processingState),
   }));
-
-  // AgentConfigDto shape: { llmModel, temperature, maxTokens, personality, detailLevel, personalNotes }
-  // No identity fields (id/name/isActive) — use placeholder values when config exists.
-  const agent: GameAgentPreview | undefined =
-    agentRaw != null
-      ? {
-          id: '',
-          name: 'Agente AI',
-          model: agentRaw.llmModel != null ? String(agentRaw.llmModel) : undefined,
-          isActive: true,
-        }
-      : undefined;
 
   return {
     id: String(json.id ?? ''),
@@ -128,6 +109,5 @@ function mapToGameDetailData(
       json.rulesDocumentCount != null ? Number(json.rulesDocumentCount) : undefined,
     kbDocuments: kbDocuments.length > 0 ? kbDocuments : undefined,
     pdfDocuments: pdfDocuments.length > 0 ? pdfDocuments : undefined,
-    agent,
   };
 }

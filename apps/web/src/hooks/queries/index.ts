@@ -68,9 +68,6 @@ export {
   sharedGamesKeys,
 } from './useSharedGames';
 
-// Agent Configuration queries and mutations (Issue #2518)
-export { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from './useAgentConfig';
-
 // Agent Typologies queries and mutations (Issue #3249)
 export {
   useApprovedTypologies,

@@ -12,7 +12,6 @@ import type { AssociatedData } from '@/hooks/useCollectionActions';
 
 describe('CollectionRemovalWarning', () => {
   const mockAssociatedData: AssociatedData = {
-    hasCustomAgent: true,
     hasPrivatePdf: true,
     chatSessionsCount: 3,
     gameSessionsCount: 5,
@@ -58,7 +57,6 @@ describe('CollectionRemovalWarning', () => {
     );
 
     // Assert
-    expect(screen.getByText('Agente AI personalizzato')).toBeInTheDocument();
     expect(screen.getByText('PDF privato caricato')).toBeInTheDocument();
     expect(screen.getByText("3 chat con l'agente")).toBeInTheDocument();
     expect(screen.getByText('5 sessioni registrate')).toBeInTheDocument();
@@ -69,7 +67,6 @@ describe('CollectionRemovalWarning', () => {
   it('should show message when no associated data', () => {
     // Arrange
     const emptyData: AssociatedData = {
-      hasCustomAgent: false,
       hasPrivatePdf: false,
       chatSessionsCount: 0,
       gameSessionsCount: 0,
@@ -89,6 +86,32 @@ describe('CollectionRemovalWarning', () => {
     );
 
     // Assert
+    expect(screen.getByText(/Non ci sono dati associati/i)).toBeInTheDocument();
+  });
+
+  // Issue #4138: the BE still flags a legacy per-game agent config until its own slice
+  // drops the field. That config never reached an answer, so it is not data to warn about.
+  it('does not list a custom agent the BE still flags', () => {
+    const legacy = {
+      hasCustomAgent: true,
+      hasPrivatePdf: false,
+      chatSessionsCount: 0,
+      gameSessionsCount: 0,
+      checklistItemsCount: 0,
+      labelsCount: 0,
+    } as AssociatedData;
+
+    render(
+      <CollectionRemovalWarning
+        entityName="Test Game"
+        associatedData={legacy}
+        open={true}
+        onConfirm={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByText(/agente ai personalizzato/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Non ci sono dati associati/i)).toBeInTheDocument();
   });
 

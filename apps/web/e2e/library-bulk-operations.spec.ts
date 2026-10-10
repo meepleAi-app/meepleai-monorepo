@@ -138,9 +138,9 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     await favoriteButton.first().click();
 
     // Verify success toast appears
-    await expect(
-      userPage.locator('text=/\\d+ giochi segnati come preferiti/')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(userPage.locator('text=/\\d+ giochi segnati come preferiti/')).toBeVisible({
+      timeout: 5000,
+    });
 
     // Verify selection is cleared after bulk action
     await expect(userPage.locator('text=3 selezionati')).not.toBeVisible({ timeout: 3000 });
@@ -197,16 +197,14 @@ test.describe('Library Bulk Operations (Issue #2613)', () => {
     }
 
     // Confirm removal
-    const confirmButton = userPage.locator(
-      `button:has-text("Rimuovi ${mockGames.length} giochi")`
-    );
+    const confirmButton = userPage.locator(`button:has-text("Rimuovi ${mockGames.length} giochi")`);
     await expect(confirmButton).toBeVisible();
     await confirmButton.click();
 
     // Verify success toast appears
-    await expect(
-      userPage.locator('text=/\\d+ giochi rimossi dalla libreria/')
-    ).toBeVisible({ timeout: 5000 });
+    await expect(userPage.locator('text=/\\d+ giochi rimossi dalla libreria/')).toBeVisible({
+      timeout: 5000,
+    });
 
     // Verify dialog is closed and selection is cleared
     await expect(userPage.locator(`text=Rimuovi ${mockGames.length} giochi`)).not.toBeVisible({
@@ -417,6 +415,7 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
+            // Issue #4138: still sent by the BE until its own slice drops it; not rendered.
             totalCustomAgents: 1,
             totalPrivatePdfs: 1,
             totalChatSessions: 5,
@@ -475,8 +474,8 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
     });
 
     // Verify aggregated data items
-    await expect(userPage.locator('text=/1 agenti AI personalizzati/')).toBeVisible();
-    await expect(userPage.locator('text=/5 chat con l\'agente/')).toBeVisible();
+    await expect(userPage.locator('text=/agenti AI personalizzati/')).toHaveCount(0);
+    await expect(userPage.locator("text=/5 chat con l'agente/")).toBeVisible();
     await expect(userPage.locator('text=/1 PDF privati caricati/')).toBeVisible();
     await expect(userPage.locator('text=/8 sessioni registrate/')).toBeVisible();
 

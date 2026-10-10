@@ -12,13 +12,6 @@
 import { z } from 'zod';
 
 import {
-  AgentConfigDtoSchema,
-  UpdateAgentConfigResponseSchema,
-  type AgentConfigDto,
-  type UpdateAgentConfigRequest,
-  type UpdateAgentConfigResponse,
-} from '../schemas/agent-config.schemas';
-import {
   EntityLinkDtoSchema,
   EntityLinkCountResponseSchema,
   type EntityLinkDto,
@@ -160,13 +153,6 @@ export interface LibraryClient {
     gameId: string,
     request: { pdfUrl: string; fileSizeBytes: number; originalFileName: string }
   ): Promise<unknown>;
-  // Agent Configuration (Issue #2518)
-  getAgentConfig(gameId: string): Promise<AgentConfigDto | null>;
-  updateAgentConfig(gameId: string, request: UpdateAgentConfigRequest): Promise<AgentConfigDto>;
-  saveAgentConfig(
-    gameId: string,
-    request: { agentDefinitionId: string; modelName: string; costEstimate: number }
-  ): Promise<{ success: boolean; configId: string; message: string }>;
   // Library Sharing (Issue #2614)
   getShareLink(): Promise<LibraryShareLink | null>;
   createShareLink(request: CreateLibraryShareLinkRequest): Promise<LibraryShareLink>;
@@ -475,70 +461,6 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
       request: { pdfUrl: string; fileSizeBytes: number; originalFileName: string }
     ): Promise<unknown> {
       return httpClient.post<unknown>(`/api/v1/library/games/${gameId}/pdf`, request);
-    },
-
-    /**
-     * Get agent configuration for a game in user's library (Issue #2518)
-     * @param gameId - Game UUID
-     * @returns Agent configuration or null if not configured
-     */
-    async getAgentConfig(gameId: string): Promise<AgentConfigDto | null> {
-      return httpClient.get<AgentConfigDto>(
-        `/api/v1/library/games/${gameId}/agent-config`,
-        AgentConfigDtoSchema
-      );
-    },
-
-    /**
-     * Update agent configuration for a game in user's library (Issue #2518)
-     * @param gameId - Game UUID
-     * @param request - Agent configuration update data
-     * @returns Updated agent configuration
-     */
-    async updateAgentConfig(
-      gameId: string,
-      request: UpdateAgentConfigRequest
-    ): Promise<AgentConfigDto> {
-      // PUT returns the full UserLibraryEntryDto; the persisted config lives in
-      // its `customAgentConfig` field (ConfigureGameAgentCommandHandler).
-      const entry = await httpClient.put<UpdateAgentConfigResponse>(
-        `/api/v1/library/games/${gameId}/agent-config`,
-        request,
-        UpdateAgentConfigResponseSchema
-      );
-      if (!entry?.customAgentConfig) {
-        throw new Error('Failed to update agent configuration');
-      }
-      return entry.customAgentConfig;
-    },
-
-    /**
-     * Save simplified agent configuration from modal (Issue #3212)
-     * @param gameId - Game UUID
-     * @param request - Simplified agent config (typology + model + cost)
-     * @returns Save response with config ID
-     */
-    async saveAgentConfig(
-      gameId: string,
-      request: { agentDefinitionId: string; modelName: string; costEstimate: number }
-    ): Promise<{ success: boolean; configId: string; message: string }> {
-      const data = await httpClient.post<{
-        success: boolean;
-        configId: string;
-        message: string;
-      }>(
-        `/api/v1/library/games/${gameId}/agent-config`,
-        request,
-        z.object({
-          success: z.boolean(),
-          configId: z.string().uuid(),
-          message: z.string(),
-        })
-      );
-      if (!data) {
-        throw new Error('Failed to save agent configuration');
-      }
-      return data;
     },
 
     // ========================================

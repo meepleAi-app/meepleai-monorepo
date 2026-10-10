@@ -13,7 +13,6 @@ import type { BulkAssociatedDataDto } from '@/lib/api/schemas/collections.schema
 
 describe('BulkCollectionWarning', () => {
   const mockAggregatedData: BulkAssociatedDataDto = {
-    totalCustomAgents: 5,
     totalPrivatePdfs: 3,
     totalChatSessions: 18,
     totalGameSessions: 42,
@@ -22,7 +21,6 @@ describe('BulkCollectionWarning', () => {
   };
 
   const emptyAggregatedData: BulkAssociatedDataDto = {
-    totalCustomAgents: 0,
     totalPrivatePdfs: 0,
     totalChatSessions: 0,
     totalGameSessions: 0,
@@ -46,7 +44,6 @@ describe('BulkCollectionWarning', () => {
     expect(screen.getByText(/Rimuovi 12 giochi dalla Collezione/)).toBeInTheDocument();
 
     // All data loss items are rendered
-    expect(screen.getByText('5 agenti AI personalizzati')).toBeInTheDocument();
     expect(screen.getByText("18 chat con l'agente")).toBeInTheDocument();
     expect(screen.getByText('3 PDF privati caricati')).toBeInTheDocument();
     expect(screen.getByText('42 sessioni registrate')).toBeInTheDocument();
@@ -66,9 +63,7 @@ describe('BulkCollectionWarning', () => {
       />
     );
 
-    expect(
-      screen.getByText('Non ci sono dati associati che verranno persi.')
-    ).toBeInTheDocument();
+    expect(screen.getByText('Non ci sono dati associati che verranno persi.')).toBeInTheDocument();
   });
 
   it('calls onConfirm when confirm button clicked', async () => {
@@ -127,15 +122,17 @@ describe('BulkCollectionWarning', () => {
   });
 
   it('only renders items with counts > 0', () => {
-    const partialData: BulkAssociatedDataDto = {
+    // Issue #4138: totalCustomAgents is a field the BE still sends until its own slice
+    // drops it. The per-game agent config it counts never reached an answer.
+    const partialData = {
       totalEntities: 3,
-      totalCustomAgents: 2,
+      totalCustomAgents: 2, // Should not render
       totalPrivatePdfs: 0, // Should not render
       totalChatSessions: 5,
       totalGameSessions: 0, // Should not render
       totalChecklistItems: 1,
       totalLabels: 0, // Should not render
-    };
+    } as BulkAssociatedDataDto;
 
     render(
       <BulkCollectionWarning
@@ -149,11 +146,11 @@ describe('BulkCollectionWarning', () => {
     );
 
     // Should render
-    expect(screen.getByText('2 agenti AI personalizzati')).toBeInTheDocument();
     expect(screen.getByText("5 chat con l'agente")).toBeInTheDocument();
     expect(screen.getByText('1 task nella checklist')).toBeInTheDocument();
 
     // Should NOT render
+    expect(screen.queryByText(/agenti AI personalizzati/)).not.toBeInTheDocument();
     expect(screen.queryByText(/PDF privati/)).not.toBeInTheDocument();
     expect(screen.queryByText(/sessioni registrate/)).not.toBeInTheDocument();
     expect(screen.queryByText(/etichette personalizzate/)).not.toBeInTheDocument();

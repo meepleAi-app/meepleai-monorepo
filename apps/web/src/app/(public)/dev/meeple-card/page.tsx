@@ -87,7 +87,7 @@ export default function MeepleCardDevPage() {
         {/* Canonical connections demo (replaces Step 1.6 Demo A/B comparison) */}
         <Section
           title="Connection Channel (canonical)"
-          description="Game card with the canonical 4-slot connections strip: KB, Agent, Chat, Sessioni."
+          description="Game card with the canonical 3-slot connections strip: KB, Chat, Sessioni."
         >
           <div className="max-w-sm">
             <MeepleCard
@@ -100,7 +100,6 @@ export default function MeepleCardDevPage() {
               connections={
                 [
                   { entityType: 'kb', count: 1, label: 'KB' },
-                  { entityType: 'agent', count: 2, label: 'Agent' },
                   { entityType: 'chat', label: 'Chat', onCreate: () => alert('Chat plus') },
                   { entityType: 'session', count: 5, label: 'Sessioni' },
                 ] satisfies ConnectionChipProps[]
@@ -348,10 +347,9 @@ export default function MeepleCardDevPage() {
                 { icon: '🤖', label: 'Crea agent', onClick: () => alert('Agent') },
               ]}
               connections={buildGameConnections(
-                { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
+                { kbCount: 3, chatCount: 5, sessionCount: 12 },
                 {
                   onKbClick: () => alert('KB'),
-                  onAgentClick: () => alert('Agent'),
                   onChatClick: () => alert('Chat'),
                   onSessionClick: () => alert('Session'),
                 }
@@ -637,10 +635,9 @@ export default function MeepleCardDevPage() {
                 ratingMax={5}
                 metadata={[{ label: '3-4' }, { label: '60min' }]}
                 connections={buildGameConnections(
-                  { kbCount: 3, agentCount: 1, chatCount: 5, sessionCount: 12 },
+                  { kbCount: 3, chatCount: 5, sessionCount: 12 },
                   {
                     onKbClick: () => alert('KB!'),
-                    onAgentClick: () => alert('Agent!'),
                     onChatClick: () => alert('Chat!'),
                     onSessionClick: () => alert('Sessions!'),
                   }
@@ -659,10 +656,9 @@ export default function MeepleCardDevPage() {
                 rating={4.0}
                 ratingMax={5}
                 connections={buildGameConnections(
-                  { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
+                  { kbCount: 0, chatCount: 0, sessionCount: 0 },
                   {
                     onKbPlus: () => alert('Add KB!'),
-                    onAgentPlus: () => alert('Create agent!'),
                     onChatPlus: () => alert('Start chat!'),
                     onSessionPlus: () => alert('New session!'),
                   }
@@ -973,10 +969,9 @@ export default function MeepleCardDevPage() {
                 status: 'owned',
                 metadata: [{ label: '3-4' }, { label: '60-120m' }],
                 connections: buildGameConnections(
-                  { kbCount: 3, agentCount: 1, chatCount: 2, sessionCount: 5 },
+                  { kbCount: 3, chatCount: 2, sessionCount: 5 },
                   {
                     onKbClick: () => alert('KB'),
-                    onAgentClick: () => alert('Agent'),
                     onChatClick: () => alert('Chat'),
                     onSessionClick: () => alert('Session'),
                   }
@@ -1069,10 +1064,9 @@ export default function MeepleCardDevPage() {
                 status: 'wishlist',
                 metadata: [{ label: '2-4' }, { label: '30-45m' }],
                 connections: buildGameConnections(
-                  { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
+                  { kbCount: 0, chatCount: 0, sessionCount: 0 },
                   {
                     onKbPlus: () => alert('Add KB'),
-                    onAgentPlus: () => alert('Create agent'),
                     onChatPlus: () => alert('Start chat'),
                     onSessionPlus: () => alert('New session'),
                   }
@@ -1616,7 +1610,7 @@ function DisabledConnectionsSection() {
     >
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         <div>
-          <Label>agent disabled — limite 0/1</Label>
+          <Label>chat disabled — quota giornaliera esaurita</Label>
           <MeepleCard
             entity="game"
             variant="grid"
@@ -1628,19 +1622,19 @@ function DisabledConnectionsSection() {
             status="owned"
             metadata={[{ label: '1-4' }, { label: '60-120m' }]}
             connections={buildGameConnections(
-              { kbCount: 2, agentCount: 0, chatCount: 0, sessionCount: 0 },
+              { kbCount: 2, chatCount: 0, sessionCount: 0 },
               {
                 onKbClick: () => alert('KB'),
                 onChatPlus: () => alert('Chat plus'),
                 onSessionPlus: () => alert('Session plus'),
               }
             ).map((item, i) =>
-              i === 1 ? { ...item, disabled: true, label: 'Agent (limite 0/1)' } : item
+              i === 1 ? { ...item, disabled: true, label: 'Chat (quota esaurita)' } : item
             )}
           />
         </div>
         <div>
-          <Label>kb+agent disabled — upload pending</Label>
+          <Label>kb+chat disabled — upload pending</Label>
           <MeepleCard
             entity="game"
             variant="grid"
@@ -1651,7 +1645,7 @@ function DisabledConnectionsSection() {
             ratingMax={10}
             metadata={[{ label: '1-4' }, { label: '90-120m' }]}
             connections={buildGameConnections(
-              { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0 },
+              { kbCount: 0, chatCount: 0, sessionCount: 0 },
               { onChatPlus: () => alert('Chat'), onSessionPlus: () => alert('Session') }
             ).map((item, i) => (i <= 1 ? { ...item, disabled: true } : item))}
           />

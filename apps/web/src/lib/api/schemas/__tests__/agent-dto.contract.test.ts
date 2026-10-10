@@ -46,7 +46,11 @@ describe('AgentDtoSchema — contratto con il backend (#4154)', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accetta la lista di GET /api/v1/games/{id}/agents senza `type`', () => {
+  // Nota (#4154): `gamesClient.getAgents` valida un array, ma `GET /api/v1/games/{id}/agents`
+  // risponde `{ success, agents, count }` dal 2026-04-18 (#470): un disallineamento di forma
+  // indipendente da `type`, che la fetta 0b toglie insieme alla chiamata. Qui si verifica solo che
+  // un elenco di agenti senza `type` sia accettato da `AgentDtoSchema.array()`.
+  it('accetta un elenco di agenti senza `type` (la forma che `gamesClient.getAgents` si aspetta)', () => {
     expect(AgentDtoSchema.array().safeParse([CURRENT_AGENT]).success).toBe(true);
   });
 

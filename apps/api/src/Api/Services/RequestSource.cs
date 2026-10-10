@@ -52,4 +52,11 @@ public enum RequestSource
     /// Issue #2.1: TranslationService skeleton + OpenRouter integration.
     /// </summary>
     Translation,
+
+    /// <summary>
+    /// Traduzione dei chunk in indicizzazione (pipeline PDF) per il recupero cross-lingua.
+    /// Distinta da <see cref="Translation"/>, che nasce da un'azione dell'utente: questa è un costo
+    /// di sistema e avrà la sua quota (ADR-095 D6). #4165.
+    /// </summary>
+    ChunkTranslation,
 }

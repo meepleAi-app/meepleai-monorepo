@@ -1,50 +1,42 @@
 using System.Globalization;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using Api.Infrastructure;
+using Api.Services;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
-/// Translates document chunks from a source language to a target language using OpenRouter's LLM API.
+/// Translates document chunks from a source language to a target language through the LLM gateway.
 /// Used in the RAG pipeline to enable cross-language retrieval by translating non-English chunks to English.
 /// </summary>
+/// <remarks>
+/// #4165 (ADR-095 D4): the call goes through <see cref="ILlmService"/> with an explicit model, so it is
+/// cost-logged under <see cref="RequestSource.ChunkTranslation"/>, uses the admin-managed provider
+/// credential and the provider circuit breaker. Two settings now come from the gateway instead of
+/// this class: the temperature (gateway default, was 0.1; per-call temperature arrives with ADR-095
+/// slice 5) and the timeout (the OpenRouter client's, was 120s here).
+/// </remarks>
 internal sealed partial class ChunkTranslationService : IChunkTranslationService
 {
-    private readonly HttpClient _httpClient;
+    private readonly ILlmService _llmService;
     private readonly ILogger<ChunkTranslationService> _logger;
     private readonly string _model;
     private readonly int _batchSize;
 
     private const string DefaultModel = "anthropic/claude-3-haiku";
     private const int DefaultBatchSize = 5;
-    private const double Temperature = 0.1;
     private const int MaxTokens = 4096;
 
     public ChunkTranslationService(
-        IHttpClientFactory httpClientFactory,
+        ILlmService llmService,
         IConfiguration configuration,
         ILogger<ChunkTranslationService> logger)
     {
-        _httpClient = httpClientFactory.CreateClient("ChunkTranslation");
+        _llmService = llmService;
         _logger = logger;
 
         _model = configuration.GetValue<string>("RagTranslation:Model") ?? DefaultModel;
         _batchSize = configuration.GetValue<int?>("RagTranslation:BatchSize") ?? DefaultBatchSize;
-
-#pragma warning disable S1075 // URIs should not be hardcoded - Official API endpoint
-        const string openRouterApiBaseUrl = "https://openrouter.ai/api/v1/";
-#pragma warning restore S1075
-
-        var apiKey = SecretsHelper.GetSecretOrValue(configuration, "OPENROUTER_API_KEY", logger, required: true)
-            ?? throw new InvalidOperationException("OPENROUTER_API_KEY not configured");
-
-        _httpClient.BaseAddress = new Uri(openRouterApiBaseUrl);
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
-        _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://meepleai.app");
-        _httpClient.Timeout = TimeSpan.FromSeconds(120);
 
         _logger.LogInformation(
             "ChunkTranslationService initialized (model={Model}, batchSize={BatchSize})",
@@ -112,42 +104,24 @@ internal sealed partial class ChunkTranslationService : IChunkTranslationService
 
         var userPrompt = BuildBatchUserPrompt(batchChunks);
 
-        var requestPayload = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["model"] = _model,
-            ["messages"] = new object[]
-            {
-                new { role = "system", content = systemPrompt },
-                new { role = "user", content = userPrompt }
-            },
-            ["temperature"] = Temperature,
-            ["max_tokens"] = MaxTokens
-        };
+        var result = await _llmService.GenerateCompletionWithModelAsync(
+            _model, systemPrompt, userPrompt,
+            RequestSource.ChunkTranslation, maxTokens: MaxTokens, ct).ConfigureAwait(false);
 
-        var json = JsonSerializer.Serialize(requestPayload);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "chat/completions")
+        if (!result.Success)
         {
-            Content = new StringContent(json, Encoding.UTF8, "application/json")
-        };
-
-        using var response = await _httpClient.SendAsync(request, ct).ConfigureAwait(false);
-        var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            _logger.LogError(
-                "OpenRouter translation API error: {Status} - {Body}",
-                response.StatusCode, responseBody);
-            throw new HttpRequestException(
-                $"OpenRouter API returned {(int)response.StatusCode} ({response.StatusCode})");
+            // Same outcome as before the gateway: the batch is skipped, the others go on.
+            _logger.LogWarning(
+                "Translation batch at offset {Offset} failed in the LLM gateway: {Error}",
+                globalOffset, result.ErrorMessage);
+            return [];
         }
 
-        var chatResponse = JsonSerializer.Deserialize<TranslationChatResponse>(responseBody);
-        var assistantMessage = chatResponse?.Choices?.FirstOrDefault()?.Message?.Content;
+        var assistantMessage = result.Response;
 
         if (string.IsNullOrWhiteSpace(assistantMessage))
         {
-            _logger.LogWarning("Empty response from OpenRouter for translation batch at offset {Offset}", globalOffset);
+            _logger.LogWarning("Empty response from the LLM gateway for translation batch at offset {Offset}", globalOffset);
             return [];
         }
 
@@ -239,23 +213,4 @@ internal sealed partial class ChunkTranslationService : IChunkTranslationService
 
     [GeneratedRegex(@"\[(?<num>\d+)\]", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
     private static partial Regex BatchSectionRegex();
-
-    // Minimal response models for translation (reuses OpenRouter chat/completions format)
-    private sealed record TranslationChatResponse
-    {
-        [JsonPropertyName("choices")]
-        public List<TranslationChoice>? Choices { get; init; }
-    }
-
-    private sealed record TranslationChoice
-    {
-        [JsonPropertyName("message")]
-        public TranslationMessage? Message { get; init; }
-    }
-
-    private sealed record TranslationMessage
-    {
-        [JsonPropertyName("content")]
-        public string Content { get; init; } = string.Empty;
-    }
 }

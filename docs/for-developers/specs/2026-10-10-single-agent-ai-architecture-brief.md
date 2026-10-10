@@ -1,6 +1,6 @@
 # Agente unico configurabile — brief di architettura
 
-**Data**: 2026-10-10 · **Origine**: `/sc:brainstorm` · **Stato**: brief. Le decisioni vanno ratificate in un ADR (il prossimo numero libero dopo ADR-094) prima del piano.
+**Data**: 2026-10-10 · **Origine**: `/sc:brainstorm` · **Stato**: brief. Le decisioni sono ratificate in [ADR-095](../../for-claude/architecture/adr/adr-095-single-answer-pipeline-and-versioned-agent-profile.md) (Proposed), che le precisa: il profilo è un **nuovo aggregato** `AgentProfile` invece di un'evoluzione di `AgentDefinition`, ed esiste un **gateway LLM unico** per tutte le chiamate.
 **Contesto**: [ADR-094](../../for-claude/architecture/adr/adr-094-single-system-agent.md) (un solo agente di sistema), [ADR-090](../../for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) (`KnowledgeBase` possiede la risposta ancorata), [`copyright-tier-rag.md`](../../for-claude/architecture/copyright-tier-rag.md), report Azure `docs/for-developers/research/2026-10-08-azure-ai-200-provider-switch-research.md` (provider intercambiabili; al 2026-10-10 è ancora un file non committato del checkout principale, non su `main-dev`).
 
 ## Decisioni del brainstorming

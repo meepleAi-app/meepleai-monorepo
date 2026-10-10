@@ -167,6 +167,11 @@ internal record LlmCost
     public required string Provider { get; init; }
 
     /// <summary>
+    /// #4164 (ADR-095): come è stato prezzato il costo; <c>null</c> se non c'era nulla da prezzare.
+    /// </summary>
+    public Api.BoundedContexts.KnowledgeBase.Domain.Models.LlmPricingStatus? PricingStatus { get; init; }
+
+    /// <summary>
     /// Empty cost (zero cost)
     /// </summary>
     public static readonly LlmCost Empty = new()

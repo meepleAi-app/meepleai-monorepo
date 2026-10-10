@@ -100,6 +100,16 @@ internal static partial class MeepleAiMetrics
         description: "Total LLM requests by provider, model, and status");
 
     /// <summary>
+    /// #4164 (ADR-095): chiamate LLM a un modello che il catalogo non prezza, per provider e modello.
+    /// Il registro costi le scrive a $0 con stato <c>Unpriced</c>; questo contatore le rende visibili.
+    /// Serie esposta: <c>meepleai_llm_unpriced_calls_total</c>.
+    /// </summary>
+    public static readonly Counter<long> LlmUnpricedCalls = Meter.CreateCounter<long>(
+        name: "meepleai.llm.unpriced",
+        unit: "calls",
+        description: "LLM calls to a model with no price in the AI model catalog, by provider and model");
+
+    /// <summary>
     /// Histogram for LLM request latency in seconds by provider and model.
     /// Issue #5480: Enables P50/P95/P99 latency dashboards per provider.
     /// </summary>

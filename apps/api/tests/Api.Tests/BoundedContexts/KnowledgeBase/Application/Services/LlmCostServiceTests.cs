@@ -109,6 +109,41 @@ public sealed class LlmCostServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #4164: il servizio ricopia il costo in un nuovo calcolo; senza propagazione esplicita lo
+    /// stato del prezzo si perderebbe e il registro non distinguerebbe un modello senza prezzo.
+    /// </summary>
+    [Fact]
+    public async Task LogSuccessAsync_CarriesThePricingStatusToTheRepository()
+    {
+        var sut = CreateSut();
+        var result = LlmCompletionResult.CreateSuccess(
+            "Test response",
+            new LlmUsage(100, 50, 150),
+            new LlmCost
+            {
+                InputCost = 0m,
+                OutputCost = 0m,
+                ModelId = "anthropic/claude-sonnet-4.5",
+                Provider = "OpenRouter",
+                PricingStatus = LlmPricingStatus.Unpriced
+            });
+
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 150, RequestSource.Manual);
+
+        _costLogRepoMock.Verify(r => r.LogCostAsync(
+            It.IsAny<Guid?>(),
+            It.IsAny<string>(),
+            It.Is<LlmCostCalculation>(c => c.PricingStatus == LlmPricingStatus.Unpriced),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            It.IsAny<string?>(),
+            It.IsAny<int>(),
+            It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<RequestSource>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task LogSuccessAsync_WithUser_RecordsBudgetUsage()
     {

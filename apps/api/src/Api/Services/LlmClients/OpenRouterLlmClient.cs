@@ -256,7 +256,8 @@ internal class OpenRouterLlmClient : ILlmClient
             InputCost = costCalculation.InputCost,
             OutputCost = costCalculation.OutputCost,
             ModelId = model,
-            Provider = ProviderName
+            Provider = ProviderName,
+            PricingStatus = costCalculation.PricingStatus
         };
 
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -735,7 +736,8 @@ internal class OpenRouterLlmClient : ILlmClient
                             InputCost = cost.InputCost,
                             OutputCost = cost.OutputCost,
                             ModelId = chunk.Model,
-                            Provider = ProviderName
+                            Provider = ProviderName,
+                            PricingStatus = cost.PricingStatus
                         };
 
                         _logger.LogInformation(

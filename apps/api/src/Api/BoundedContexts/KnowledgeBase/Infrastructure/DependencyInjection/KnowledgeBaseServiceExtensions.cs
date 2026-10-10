@@ -207,6 +207,11 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-960: Cost Tracking (from main)
         // Domain Services - Cost Calculator and Alerting
+        // #4164 (ADR-095): il listino viene dal catalogo modelli, in un'istantanea caricata
+        // all'avvio (hosted service) e ricaricata in background.
+        services.AddSingleton<CatalogModelPriceList>();
+        services.AddSingleton<IModelPriceList>(sp => sp.GetRequiredService<CatalogModelPriceList>());
+        services.AddHostedService(sp => sp.GetRequiredService<CatalogModelPriceList>());
         services.AddSingleton<ILlmCostCalculator, LlmCostCalculator>();
         services.AddScoped<LlmCostAlertService>(); // Scoped - uses IAlertingService
 

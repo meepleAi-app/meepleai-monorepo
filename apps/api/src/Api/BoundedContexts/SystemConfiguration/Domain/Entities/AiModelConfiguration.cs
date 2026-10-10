@@ -174,11 +174,46 @@ public sealed class AiModelConfiguration
     /// Update pricing information (Issue #2520, Issue #2580: Updated to use InputPricePerMillion API)
     /// Creates new immutable Settings value object with updated pricing
     /// </summary>
+    /// <remarks>
+    /// #4164: un prezzo inserito dall'amministratore è una verifica fatta oggi, con fonte
+    /// <c>admin</c>; il prezzo della cache già presente resta.
+    /// </remarks>
     public void UpdatePricing(decimal inputPricePerMillion, decimal outputPricePerMillion)
     {
-        var newPricing = new ModelPricing(inputPricePerMillion, outputPricePerMillion);
+        var newPricing = new ModelPricing(
+            inputPricePerMillion,
+            outputPricePerMillion,
+            Settings.Pricing.Currency,
+            Settings.Pricing.CacheReadPricePerMillion,
+            DateOnly.FromDateTime(DateTime.UtcNow),
+            AdminPricingSource);
         Settings = new ModelSettings(Settings.MaxTokens, Settings.Temperature, newPricing);
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Fonte registrata quando il prezzo lo inserisce un amministratore.
+    /// </summary>
+    public const string AdminPricingSource = "admin";
+
+    /// <summary>
+    /// #4164: applica un prezzo verificato alla fonte, se la verifica è più recente di quella già
+    /// registrata. Un prezzo senza data di verifica è sempre più vecchio di uno datato.
+    /// </summary>
+    /// <returns>Vero se il prezzo è cambiato.</returns>
+    public bool ApplyVerifiedPricing(ModelPricing verified)
+    {
+        ArgumentNullException.ThrowIfNull(verified);
+        if (verified.VerifiedOn is null)
+            throw new ArgumentException("A verified price must carry its verification date", nameof(verified));
+
+        var current = Settings.Pricing.VerifiedOn;
+        if (current is not null && current >= verified.VerifiedOn)
+            return false;
+
+        Settings = new ModelSettings(Settings.MaxTokens, Settings.Temperature, verified);
+        UpdatedAt = DateTime.UtcNow;
+        return true;
     }
 
     /// <summary>

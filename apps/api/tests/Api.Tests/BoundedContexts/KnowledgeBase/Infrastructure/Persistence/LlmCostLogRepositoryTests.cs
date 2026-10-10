@@ -91,6 +91,45 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         log.Success.Should().BeTrue();
         log.ErrorMessage.Should().BeNull();
         log.LatencyMs.Should().Be(1500);
+        log.PricingStatus.Should().BeNull("il calcolo di questo test non porta uno stato del prezzo");
+    }
+
+    /// <summary>
+    /// #4164: un costo zero perché il catalogo non prezza il modello si distingue nel registro da
+    /// un costo zero vero.
+    /// </summary>
+    [Theory]
+    [InlineData(LlmPricingStatus.Priced, "Priced")]
+    [InlineData(LlmPricingStatus.Free, "Free")]
+    [InlineData(LlmPricingStatus.Unpriced, "Unpriced")]
+    public async Task LogCost_StoresThePricingStatus(LlmPricingStatus status, string stored)
+    {
+        await ResetDatabaseAsync();
+        var cost = new LlmCostCalculation
+        {
+            ModelId = "anthropic/claude-sonnet-4.5",
+            Provider = "OpenRouter",
+            PromptTokens = 1000,
+            CompletionTokens = 500,
+            InputCost = 0m,
+            OutputCost = 0m,
+            PricingStatus = status
+        };
+
+        await Repository.LogCostAsync(
+            userId: null,
+            "Anonymous",
+            cost,
+            "completion",
+            success: true,
+            errorMessage: null,
+            latencyMs: 10,
+            ipAddress: null,
+            userAgent: null,
+            cancellationToken: TestCancellationToken);
+
+        var log = await DbContext.LlmCostLogs.AsNoTracking().SingleAsync(TestCancellationToken);
+        log.PricingStatus.Should().Be(stored);
     }
 
     [Fact]

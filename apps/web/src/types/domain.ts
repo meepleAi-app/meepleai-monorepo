@@ -17,13 +17,14 @@ export interface Game {
 /**
  * Agent entity (AI assistant for a specific game)
  * Issue #1977: Aligned with backend AgentDto (removed gameId)
+ * Issue #4154: `type` e` uscito da `AgentDto` con #4147 (ADR-094); `strategyName`/`strategyParameters`
+ * sono i prossimi a uscire (ADR-095, fetta 0: i consumatori tollerano l'assenza prima del produttore).
  */
 export interface Agent {
   id: string;
   name: string;
-  type: string;
-  strategyName: string;
-  strategyParameters: Record<string, unknown>;
+  strategyName?: string;
+  strategyParameters?: Record<string, unknown>;
   isActive: boolean;
   createdAt: string;
   lastInvokedAt: string | null;

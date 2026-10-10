@@ -16,7 +16,9 @@ export const KbDocConsumingAgentSchema = z.object({
   status: z.enum(['Draft', 'Testing', 'Published']),
   isSystemDefined: z.boolean(),
   typologySlug: z.string().nullable(),
-  gameId: GameIdString.nullable(),
+  // Issue #4154 / ADR-095 fetta 0: `GameId` esce da AgentDefinition (ADR-094). Il consumatore tollera
+  // l'assenza prima che il produttore la introduca, cosi` il ritiro non ripete #4154.
+  gameId: GameIdString.nullable().optional(),
   gameName: z.string().nullable(),
   invocationCount: z.number().int().nonnegative(),
   lastInvokedAt: z.string().datetime({ offset: true }).nullable(),

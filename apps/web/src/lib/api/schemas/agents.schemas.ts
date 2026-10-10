@@ -12,13 +12,18 @@ import { GameIdString } from './common.schemas';
 /**
  * Agent DTO Schema
  * Matches AgentDto from backend
+ *
+ * #4154 — esige solo i campi che qualcuno legge. `type` non c'e` piu`: ADR-094 lo ha ritirato e
+ * #4147 lo ha tolto da `AgentDto`; se un backend vecchio lo manda ancora durante un deploy, Zod lo
+ * scarta. `strategyName`/`strategyParameters` sono opzionali perche' Strategy e` la prossima voce
+ * a uscire da `AgentDefinition` (#4138): i lettori gestiscono gia` l'assenza. Contratto fissato in
+ * `__tests__/agent-dto.contract.test.ts` sul payload reale.
  */
 export const AgentDtoSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  type: z.string(),
-  strategyName: z.string(),
-  strategyParameters: z.record(z.string(), z.any()),
+  strategyName: z.string().optional(),
+  strategyParameters: z.record(z.string(), z.any()).optional(),
   isActive: z.boolean(),
   createdAt: z.string().datetime({ offset: true }),
   lastInvokedAt: z.string().datetime({ offset: true }).nullable(),

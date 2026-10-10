@@ -25,9 +25,9 @@
 | **5** | Pipeline unica, prima fetta: `StreamQa`, `AskQuestion`, cross-game | `KnowledgeBase/Application` | cambiare la temperatura pubblicata cambia quella inviata (oggi resta 0,3) | 2, 3, 4 | #4168 |
 | **6** | Pagine admin: Agente, Modelli e prezzi, Budget e quote; rimozione delle impostazioni morte | `apps/web/src/app/admin` | la pagina Agente pubblica e la risposta lo riflette | 1, 3, 4, 5 | #4169 |
 | **7** | Qualità: domande di riferimento, valutazione, gate di pubblicazione, feedback aggregati | `KnowledgeBase`, admin | una bozza che peggiora non si pubblica | 5, 6 | #4170 |
-| **8** | Pipeline, seconda fetta (sessione, setup, disputa) e switch dei lettori residui | `ChatWithSessionAgentCommandHandler`, `AskSessionAgentCommandHandler`, `StreamSetupGuideQueryHandler`, disputa | la disputa cita pagine recuperate (oggi nessun recupero) | 5, 0b; #4156 per la sessione | #4171 |
+| **8** | Pipeline, seconda fetta (sessione, setup, disputa) e switch dei lettori residui | lettori di `SharedGame.AgentDefinitionId` (`ContextualHandSlot` via `CreateSessionCommandHandler`, `GetGameRagReadinessQueryHandler`, query del catalogo con `EF.Property(a, "_gameId")`); `ChatWithSessionAgentCommandHandler`, `AskSessionAgentCommandHandler`, `StreamSetupGuideQueryHandler`, disputa | la disputa cita pagine recuperate (oggi nessun recupero) | 5, 0b; #4156 per la sessione | #4171 |
 | **9** | «Nessun lettore»: nessun codice legge né scrive `agent_definitions` | rotte, playground, `AgentSession.AgentDefinitionId`, `AgentDefinitionId` di `PrivateGame`/`SharedGame` | test architetturale «nessun riferimento ad `AgentDefinition`» | 8; #4162 e le fette #4138 sugli `AgentDefinitionId` | #4172 |
-| **10** | Contract: `DROP TABLE agent_definitions` | migration | gate di migration | 9 **deployata** | #4173 |
+| **10** | Contract: `DROP TABLE agent_definitions`, più le colonne già in expand (`user_library_entries.CustomAgentConfigJson`, `tier_definitions.max_agents`, `token_tiers.max_agents_created`, `private_games.agent_definition_id`) | migration | gate di migration | 9 **deployata** | #4173 |
 
 **Parallelismo**: 0, 1, 2 e 4 non dipendono fra loro e possono partire insieme. La 3 attende 1 e 2; la 5 attende 2, 3 e 4. Dalla 5 in poi la catena è sequenziale.
 

@@ -21,7 +21,6 @@ public sealed class TierLimitsTests
             maxPrivateGames: 5,
             maxPdfUploadsPerMonth: 10,
             maxPdfSizeBytes: 100L * 1024 * 1024,
-            maxAgents: 3,
             maxAgentQueriesPerDay: 50,
             maxSessionQueries: 30,
             maxSessionPlayers: 6,
@@ -33,7 +32,6 @@ public sealed class TierLimitsTests
         limits.MaxPrivateGames.Should().Be(5);
         limits.MaxPdfUploadsPerMonth.Should().Be(10);
         limits.MaxPdfSizeBytes.Should().Be(100L * 1024 * 1024);
-        limits.MaxAgents.Should().Be(3);
         limits.MaxAgentQueriesPerDay.Should().Be(50);
         limits.MaxSessionQueries.Should().Be(30);
         limits.MaxSessionPlayers.Should().Be(6);
@@ -46,7 +44,7 @@ public sealed class TierLimitsTests
     public void Create_WithZeroValues_ReturnsInstance()
     {
         // Act — zero is valid for most fields
-        var limits = TierLimits.Create(0, 0, 0, 0, 0, 0, 1, 0, false, 0);
+        var limits = TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, 0);
 
         // Assert
         limits.MaxPrivateGames.Should().Be(0);
@@ -57,7 +55,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeMaxPrivateGames_ThrowsArgumentException()
     {
         // Act
-        var act = () => TierLimits.Create(-1, 0, 0, 0, 0, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(-1, 0, 0, 0, 0, 1, 0, false, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -67,7 +65,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxPdfUploadsPerMonth_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, -1, 0, 0, 0, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, -1, 0, 0, 0, 1, 0, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxPdfUploadsPerMonth");
     }
@@ -75,23 +73,15 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxPdfSizeBytes_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, -1, 0, 0, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, -1, 0, 0, 1, 0, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxPdfSizeBytes");
     }
 
     [Fact]
-    public void Create_WithNegativeMaxAgents_ThrowsArgumentException()
-    {
-        var act = () => TierLimits.Create(0, 0, 0, -1, 0, 0, 1, 0, false, 0);
-        act.Should().Throw<ArgumentException>()
-            .WithParameterName("maxAgents");
-    }
-
-    [Fact]
     public void Create_WithZeroMaxSessionPlayers_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 0, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 0, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxSessionPlayers");
     }
@@ -99,7 +89,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxSessionPlayers_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, -1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, -1, 0, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxSessionPlayers");
     }
@@ -107,7 +97,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxAgentQueriesPerDay_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, -1, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, -1, 0, 1, 0, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxAgentQueriesPerDay");
     }
@@ -115,7 +105,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxSessionQueries_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, -1, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, -1, 1, 0, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxSessionQueries");
     }
@@ -123,7 +113,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxPhotosPerSession_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 1, -1, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, -1, false, 0);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxPhotosPerSession");
     }
@@ -131,7 +121,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxCatalogProposalsPerWeek_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 1, 0, false, -1);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, -1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxCatalogProposalsPerWeek");
     }
@@ -148,7 +138,6 @@ public sealed class TierLimitsTests
         limits.MaxPrivateGames.Should().Be(3);
         limits.MaxPdfUploadsPerMonth.Should().Be(3);
         limits.MaxPdfSizeBytes.Should().Be(50L * 1024 * 1024);
-        limits.MaxAgents.Should().Be(1);
         limits.MaxAgentQueriesPerDay.Should().Be(20);
         limits.MaxSessionQueries.Should().Be(30);
         limits.MaxSessionPlayers.Should().Be(6);
@@ -165,7 +154,6 @@ public sealed class TierLimitsTests
         limits.MaxPrivateGames.Should().Be(15);
         limits.MaxPdfUploadsPerMonth.Should().Be(15);
         limits.MaxPdfSizeBytes.Should().Be(200L * 1024 * 1024);
-        limits.MaxAgents.Should().Be(10);
         limits.MaxAgentQueriesPerDay.Should().Be(200);
         limits.MaxSessionQueries.Should().Be(150);
         limits.MaxSessionPlayers.Should().Be(12);
@@ -182,7 +170,6 @@ public sealed class TierLimitsTests
         limits.MaxPrivateGames.Should().Be(int.MaxValue);
         limits.MaxPdfUploadsPerMonth.Should().Be(int.MaxValue);
         limits.MaxPdfSizeBytes.Should().Be(500L * 1024 * 1024);
-        limits.MaxAgents.Should().Be(int.MaxValue);
         limits.MaxAgentQueriesPerDay.Should().Be(int.MaxValue);
         limits.MaxSessionQueries.Should().Be(int.MaxValue);
         limits.MaxSessionPlayers.Should().Be(12);
@@ -198,8 +185,8 @@ public sealed class TierLimitsTests
     [Fact]
     public void TwoLimits_WithSameValues_AreEqual()
     {
-        var a = TierLimits.Create(3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1);
-        var b = TierLimits.Create(3, 3, 50L * 1024 * 1024, 1, 20, 30, 6, 5, false, 1);
+        var a = TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1);
+        var b = TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1);
 
         a.Should().Be(b);
     }

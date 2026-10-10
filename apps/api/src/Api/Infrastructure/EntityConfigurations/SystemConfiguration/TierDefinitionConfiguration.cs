@@ -50,7 +50,13 @@ internal class TierDefinitionConfiguration : IEntityTypeConfiguration<TierDefini
                 .HasColumnName("max_pdf_uploads_per_month");
             limits.Property(l => l.MaxPdfSizeBytes)
                 .HasColumnName("max_pdf_size_bytes");
-            limits.Property(l => l.MaxAgents)
+            // Issue #4138 (expand): MaxAgents is retired. The column stays as a shadow property
+            // until a later delivery drops it. It is an int NOT NULL: making it nullable (as for
+            // the retired string columns) would let new rows hold NULL, and the previous code
+            // version — which maps a non-nullable int — would throw reading them after a rollback.
+            // Measured: EF writes the shadow int as 0 on INSERT, so NOT NULL holds and the model
+            // matches the snapshot — no migration (TierRetiredMaxAgentsColumnsTests).
+            limits.Property<int>("MaxAgents")
                 .HasColumnName("max_agents");
             limits.Property(l => l.MaxAgentQueriesPerDay)
                 .HasColumnName("max_agent_queries_per_day");

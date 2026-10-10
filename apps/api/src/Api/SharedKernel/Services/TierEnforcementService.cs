@@ -122,9 +122,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             .CountAsync(g => g.OwnerId == userId, ct)
             .ConfigureAwait(false);
 
-        // Agent system removed (Task 10: Agent cleanup)
-        var agents = 0;
-
         return new UsageSnapshot(
             PrivateGames: privateGames,
             PrivateGamesMax: limits.MaxPrivateGames,
@@ -134,8 +131,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             AgentQueriesTodayMax: limits.MaxAgentQueriesPerDay,
             SessionQueries: sessionQueries,
             SessionQueriesMax: limits.MaxSessionQueries,
-            Agents: agents,
-            AgentsMax: limits.MaxAgents,
             PhotosThisSession: photosThisSession,
             PhotosThisSessionMax: limits.MaxPhotosPerSession,
             SessionSaveEnabled: limits.SessionSaveEnabled,
@@ -276,7 +271,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
     {
         TierAction.CreatePrivateGame => limits.MaxPrivateGames,
         TierAction.UploadPdf => limits.MaxPdfUploadsPerMonth,
-        TierAction.CreateAgent => limits.MaxAgents,
         TierAction.AgentQuery => limits.MaxAgentQueriesPerDay,
         TierAction.SessionAgentQuery => limits.MaxSessionQueries,
         TierAction.UploadSessionPhoto => limits.MaxPhotosPerSession,

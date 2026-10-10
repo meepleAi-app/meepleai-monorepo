@@ -59,7 +59,6 @@ internal class UpdateTierLimitsCommandHandler : ICommandHandler<UpdateTierLimits
             messagesPerDay: tier.Limits.MessagesPerDay,
             maxCollectionSize: tier.Limits.MaxCollectionSize,
             maxPdfUploadsPerMonth: tier.Limits.MaxPdfUploadsPerMonth,
-            maxAgentsCreated: tier.Limits.MaxAgentsCreated,
             dailyCreditsLimit: tier.Limits.DailyCreditsLimit,
             weeklyCreditsLimit: tier.Limits.WeeklyCreditsLimit);
 

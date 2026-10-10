@@ -11,7 +11,8 @@ public sealed record TierLimits
     public int MessagesPerDay { get; init; }
     public int MaxCollectionSize { get; init; }
     public int MaxPdfUploadsPerMonth { get; init; }
-    public int MaxAgentsCreated { get; init; }
+    // Issue #4138: MaxAgentsCreated is retired — nothing compared it to anything. Its column
+    // stays as an EF shadow property until a later delivery drops it.
 
     // Credit-based budget limits (1 credit = $0.00001 USD)
     public decimal DailyCreditsLimit { get; init; }
@@ -23,7 +24,6 @@ public sealed record TierLimits
         int messagesPerDay,
         int maxCollectionSize,
         int maxPdfUploadsPerMonth,
-        int maxAgentsCreated,
         decimal dailyCreditsLimit,
         decimal weeklyCreditsLimit)
     {
@@ -32,7 +32,6 @@ public sealed record TierLimits
         MessagesPerDay = messagesPerDay;
         MaxCollectionSize = maxCollectionSize;
         MaxPdfUploadsPerMonth = maxPdfUploadsPerMonth;
-        MaxAgentsCreated = maxAgentsCreated;
         DailyCreditsLimit = dailyCreditsLimit;
         WeeklyCreditsLimit = weeklyCreditsLimit;
     }
@@ -43,7 +42,6 @@ public sealed record TierLimits
         int messagesPerDay,
         int maxCollectionSize,
         int maxPdfUploadsPerMonth,
-        int maxAgentsCreated,
         decimal dailyCreditsLimit,
         decimal weeklyCreditsLimit)
     {
@@ -52,7 +50,6 @@ public sealed record TierLimits
         if (messagesPerDay < 0) throw new ArgumentException("Messages per day cannot be negative", nameof(messagesPerDay));
         if (maxCollectionSize < 0) throw new ArgumentException("Max collection size cannot be negative", nameof(maxCollectionSize));
         if (maxPdfUploadsPerMonth < 0) throw new ArgumentException("Max PDF uploads cannot be negative", nameof(maxPdfUploadsPerMonth));
-        if (maxAgentsCreated < 0) throw new ArgumentException("Max agents created cannot be negative", nameof(maxAgentsCreated));
         if (dailyCreditsLimit < 0) throw new ArgumentException("Daily credits limit cannot be negative", nameof(dailyCreditsLimit));
         if (weeklyCreditsLimit < 0) throw new ArgumentException("Weekly credits limit cannot be negative", nameof(weeklyCreditsLimit));
 
@@ -62,7 +59,6 @@ public sealed record TierLimits
             messagesPerDay,
             maxCollectionSize,
             maxPdfUploadsPerMonth,
-            maxAgentsCreated,
             dailyCreditsLimit,
             weeklyCreditsLimit);
     }
@@ -77,7 +73,6 @@ public sealed record TierLimits
         messagesPerDay: 10,
         maxCollectionSize: 20,
         maxPdfUploadsPerMonth: 5,
-        maxAgentsCreated: 1,
         dailyCreditsLimit: 100m,
         weeklyCreditsLimit: 10_000m);
 
@@ -91,7 +86,6 @@ public sealed record TierLimits
         messagesPerDay: 50,
         maxCollectionSize: 50,
         maxPdfUploadsPerMonth: 20,
-        maxAgentsCreated: 3,
         dailyCreditsLimit: 1_000m,
         weeklyCreditsLimit: 5_000m);
 
@@ -105,7 +99,6 @@ public sealed record TierLimits
         messagesPerDay: 200,
         maxCollectionSize: 200,
         maxPdfUploadsPerMonth: 100,
-        maxAgentsCreated: 10,
         dailyCreditsLimit: 5_000m,
         weeklyCreditsLimit: 25_000m);
 
@@ -118,7 +111,6 @@ public sealed record TierLimits
         messagesPerDay: int.MaxValue,
         maxCollectionSize: int.MaxValue,
         maxPdfUploadsPerMonth: int.MaxValue,
-        maxAgentsCreated: int.MaxValue,
         dailyCreditsLimit: decimal.MaxValue,
         weeklyCreditsLimit: decimal.MaxValue);
 }

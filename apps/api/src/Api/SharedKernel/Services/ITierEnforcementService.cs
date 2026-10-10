@@ -34,7 +34,9 @@ public enum TierAction
 {
     CreatePrivateGame,
     UploadPdf,
-    CreateAgent,
+    // Issue #4138: CreateAgent stood here. No caller has passed it since #4150, and the
+    // per-user agent limit it checked is retired. Redis keys carry the action NAME, not its
+    // ordinal, so removing a member does not shift any stored counter.
     AgentQuery,
     SessionAgentQuery,
     UploadSessionPhoto,
@@ -62,7 +64,6 @@ public record UsageSnapshot(
     int PdfThisMonth, int PdfThisMonthMax,
     int AgentQueriesToday, int AgentQueriesTodayMax,
     int SessionQueries, int SessionQueriesMax,
-    int Agents, int AgentsMax,
     int PhotosThisSession, int PhotosThisSessionMax,
     bool SessionSaveEnabled,
     int CatalogProposalsThisWeek, int CatalogProposalsThisWeekMax

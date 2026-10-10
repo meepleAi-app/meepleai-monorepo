@@ -233,7 +233,7 @@ public sealed class JoinSessionCommandHandlerTests
         // Set tier to allow only 1 player
         _tierServiceMock
             .Setup(s => s.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(TierLimits.Create(3, 3, 50L * 1024 * 1024, 1, 20, 30, 1, 5, false, 1));
+            .ReturnsAsync(TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 1, 5, false, 1));
 
         await SeedSessionAndInvite(SessionId, HostUserId);
 

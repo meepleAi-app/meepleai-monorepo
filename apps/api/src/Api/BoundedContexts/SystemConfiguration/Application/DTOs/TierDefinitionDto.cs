@@ -31,12 +31,13 @@ public record TierDefinitionDto(
 /// <summary>
 /// DTO representing tier resource limits for API requests and responses.
 /// E2-1: Admin Tier CRUD Endpoints.
+/// Issue #4138: MaxAgents (4th parameter) is retired. A client that still sends "maxAgents"
+/// is ignored: System.Text.Json drops unknown properties.
 /// </summary>
 public record TierLimitsDto(
     int MaxPrivateGames,
     int MaxPdfUploadsPerMonth,
     long MaxPdfSizeBytes,
-    int MaxAgents,
     int MaxAgentQueriesPerDay,
     int MaxSessionQueries,
     int MaxSessionPlayers,
@@ -51,7 +52,6 @@ public record TierLimitsDto(
         limits.MaxPrivateGames,
         limits.MaxPdfUploadsPerMonth,
         limits.MaxPdfSizeBytes,
-        limits.MaxAgents,
         limits.MaxAgentQueriesPerDay,
         limits.MaxSessionQueries,
         limits.MaxSessionPlayers,
@@ -62,7 +62,7 @@ public record TierLimitsDto(
 
     public TierLimits ToValueObject() => TierLimits.Create(
         MaxPrivateGames, MaxPdfUploadsPerMonth,
-        MaxPdfSizeBytes, MaxAgents,
+        MaxPdfSizeBytes,
         MaxAgentQueriesPerDay, MaxSessionQueries,
         MaxSessionPlayers, MaxPhotosPerSession,
         SessionSaveEnabled, MaxCatalogProposalsPerWeek,

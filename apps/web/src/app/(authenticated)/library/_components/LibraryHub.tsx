@@ -76,7 +76,10 @@ function parseStateOverride(raw: string | null): StateOverride | null {
 }
 type SurfaceKind = 'default' | 'loading' | 'empty' | 'filtered-empty' | 'error';
 
-const HUB_TABS: readonly HybridHubTab[] = ['all', 'games', 'agents', 'kb', 'sessions', 'chat'];
+// #4154 (ADR-095 fetta 0b): niente scheda «agents». L'agente di sistema non è un oggetto della
+// libreria, e la fonte non viene più interrogata (useHybridHubItems). Il valore resta nel tipo
+// HybridHubTab fino al ritiro completo (fetta 9).
+const HUB_TABS: readonly HybridHubTab[] = ['all', 'games', 'kb', 'sessions', 'chat'];
 
 /**
  * SP4 mockup icon mapping (admin-mockups/design_files/sp4-library-desktop.jsx:142,155,172).
@@ -191,11 +194,10 @@ export function LibraryHub(): ReactElement {
     [filteredSources, tab, query]
   );
 
-  // Hero stats: hybrid counts (games/agents/docs/chats) from pre-filter totals.
+  // Hero stats: hybrid counts (games/docs/chats) from pre-filter totals. #4154: niente agenti.
   const heroStats = useMemo(
     () => ({
       games: hub.totalCounts.games,
-      agents: hub.totalCounts.agents,
       docs: hub.totalCounts.kb,
       chats: hub.totalCounts.chat,
     }),
@@ -229,12 +231,6 @@ export function LibraryHub(): ReactElement {
         label: t('pages.library.hero.stats.totalGames'),
         value: heroStats.games,
         entity: 'game',
-      },
-      {
-        key: 'agents',
-        label: t('pages.library.hero.stats.agents'),
-        value: heroStats.agents,
-        entity: 'agent',
       },
       {
         key: 'docs',

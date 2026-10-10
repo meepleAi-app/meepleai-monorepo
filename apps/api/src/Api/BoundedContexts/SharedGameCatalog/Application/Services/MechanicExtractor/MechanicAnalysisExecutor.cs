@@ -1,4 +1,5 @@
 using System.Text;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor.Guardrails;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
@@ -37,12 +38,6 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
     // shipped to every section in M1.2 (M1.3 introduces per-section semantic retrieval).
     private const int MaxRetrievedCharacters = 240_000;
 
-    // DeepSeek list pricing as of 2026-04 (see memory/project_deepseek_llm.md). Used only when
-    // the LLM result does not attribute its own cost; the pipeline's RecordUsage below prefers
-    // the real spend coming back from the LlmCompletionResult.
-    private const decimal DefaultInputCostPerMillion = 0.14m;
-    private const decimal DefaultOutputCostPerMillion = 0.28m;
-
     // The six mechanic sections covered by M1.2. The pipeline fans out one LLM call per section.
     private static readonly IReadOnlyList<MechanicSection> AllSections = new[]
     {
@@ -61,6 +56,7 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMechanicAnalysisPipeline _pipeline;
     private readonly IMechanicPromptProvider _promptProvider;
+    private readonly ILlmCostCalculator _costCalculator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<MechanicAnalysisExecutor> _logger;
@@ -70,6 +66,7 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         MeepleAiDbContext dbContext,
         IMechanicAnalysisPipeline pipeline,
         IMechanicPromptProvider promptProvider,
+        ILlmCostCalculator costCalculator,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         ILogger<MechanicAnalysisExecutor> logger)
@@ -78,6 +75,7 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
+        _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -168,6 +166,11 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
         var sourceChunksBySection = AllSections.ToDictionary(
             s => s, _ => sourceChunks);
 
+        // #4164: prezzi dal catalogo modelli. Il pipeline li usa solo quando il risultato della
+        // chiamata non porta il proprio costo; quello, a sua volta, viene dallo stesso listino.
+        var (inputCostPerMillion, outputCostPerMillion) =
+            MechanicExtractorPricing.Resolve(_costCalculator, analysis.Provider, analysis.ModelUsed);
+
         var request = new MechanicPipelineRequest(
             AnalysisId: analysis.Id,
             SharedGameId: analysis.SharedGameId,
@@ -178,8 +181,8 @@ internal sealed class MechanicAnalysisExecutor : IMechanicAnalysisExecutor
             Provider: analysis.Provider,
             Model: analysis.ModelUsed,
             EffectiveCostCapUsd: analysis.CostCapUsd,
-            InputCostPerMillionTokens: DefaultInputCostPerMillion,
-            OutputCostPerMillionTokens: DefaultOutputCostPerMillion)
+            InputCostPerMillionTokens: inputCostPerMillion,
+            OutputCostPerMillionTokens: outputCostPerMillion)
         {
             SourceChunksBySection = sourceChunksBySection,
             PdfPageCount = pdfPageCount

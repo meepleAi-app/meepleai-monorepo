@@ -58,7 +58,8 @@ internal sealed class LlmCostService : ILlmCostService
                         PromptTokens = result.Usage.PromptTokens,
                         CompletionTokens = result.Usage.CompletionTokens,
                         InputCost = result.Cost.InputCost,
-                        OutputCost = result.Cost.OutputCost
+                        OutputCost = result.Cost.OutputCost,
+                        PricingStatus = result.Cost.PricingStatus
                     },
                     endpoint: "completion",
                     success: true,

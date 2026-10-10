@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.Observability;
 
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 
@@ -7,110 +9,34 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services;
 /// ISSUE-960: BGAI-018 - Financial cost tracking implementation
 /// </summary>
 /// <remarks>
-/// Pricing data sourced from OpenRouter (https://openrouter.ai/models) as of 2026-01-16.
-/// Free tier models (meta-llama/*:free) and local Ollama models have $0 cost.
+/// #4164 (ADR-095): i prezzi vengono dal catalogo modelli tramite <see cref="IModelPriceList"/>.
+/// Il listino statico che stava qui («as of 2026-01-16») divergeva dal catalogo, e un modello
+/// assente da entrambi veniva registrato come gratuito senza che nulla lo segnalasse.
 ///
-/// Pricing Strategy:
-/// - Anonymous/User: meta-llama/llama-3.3-70b-instruct:free ($0)
-/// - Editor/Admin Ollama: llama3:8b ($0 - self-hosted)
-/// - Paid models: DeepSeek, Gemini, Llama (paid tier)
+/// Tre esiti, riportati in <see cref="LlmCostCalculation.PricingStatus"/>:
+/// - <see cref="LlmPricingStatus.Priced"/>: il catalogo ha il prezzo;
+/// - <see cref="LlmPricingStatus.Free"/>: il catalogo lo dà a zero, oppure il modello gira in casa
+///   (Ollama) e non ha un costo per token;
+/// - <see cref="LlmPricingStatus.Unpriced"/>: il catalogo non lo conosce. Il costo resta zero perché
+///   le colonne del registro sono obbligatorie, ma l'esito è un errore nei log e incrementa
+///   <c>meepleai_llm_unpriced_calls_total</c>. Il rifiuto della chiamata arriva con il gateway
+///   (ADR-095 fetta 3).
 ///
-/// NOTE: Future enhancement - move pricing to database for runtime configuration
+/// Il prezzo della lettura dalla cache sta nel catalogo, ma qui non si usa ancora: i client non
+/// riportano i token letti dalla cache, quindi ogni token d'ingresso si paga al prezzo pieno, che è
+/// il limite superiore.
 /// </remarks>
-internal class LlmCostCalculator : ILlmCostCalculator
+internal sealed class LlmCostCalculator : ILlmCostCalculator
 {
-    // Pricing database (per 1M tokens in USD)
-    // Source: OpenRouter pricing (https://openrouter.ai/models) as of 2026-01-16
-    // NOTE: Future enhancement - move to database for runtime configuration
-    private static readonly Dictionary<string, LlmModelPricing> ModelPricing = new(StringComparer.Ordinal)
-    {
-        // OpenRouter Models - Meta Llama (Free Tier)
-        ["meta-llama/llama-3.3-70b-instruct:free"] = new()
-        {
-            ModelId = "meta-llama/llama-3.3-70b-instruct:free",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0m,  // Free tier
-            OutputCostPer1M = 0m
-        },
-        ["meta-llama/llama-3.1-70b-instruct:free"] = new()
-        {
-            ModelId = "meta-llama/llama-3.1-70b-instruct:free",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0m,
-            OutputCostPer1M = 0m
-        },
+    private const string SelfHostedProvider = "Ollama";
 
-        // OpenRouter Models - Meta Llama (Paid Tier)
-        ["meta-llama/llama-3.3-70b-instruct"] = new()
-        {
-            ModelId = "meta-llama/llama-3.3-70b-instruct",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.59m,
-            OutputCostPer1M = 0.79m
-        },
-
-        // OpenRouter Models - Google Gemini
-        ["google/gemini-pro"] = new()
-        {
-            ModelId = "google/gemini-pro",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.125m,
-            OutputCostPer1M = 0.375m
-        },
-
-        // OpenRouter Models - DeepSeek
-        ["deepseek/deepseek-chat"] = new()
-        {
-            ModelId = "deepseek/deepseek-chat",
-            Provider = "OpenRouter",
-            InputCostPer1M = 0.27m,
-            OutputCostPer1M = 1.10m
-        },
-
-        // DeepSeek native API (provider-direct, no OpenRouter prefix).
-        // The DeepSeekLlmClient reports modelId as "deepseek-chat" (the provider's native id),
-        // not the OpenRouter-style "deepseek/deepseek-chat". Without this alias the registry
-        // lookup misses, GetModelPricing returns null, and CalculateCost silently treats the
-        // model as free — which corrupted the M1.2 calibration cost telemetry (T23 spike,
-        // 80,583 tokens reported as $0.000000). Pricing is intentionally identical to the
-        // OpenRouter entry above; if DeepSeek's direct pricing ever diverges, split this entry.
-        ["deepseek-chat"] = new()
-        {
-            ModelId = "deepseek-chat",
-            Provider = "DeepSeek",
-            InputCostPer1M = 0.27m,
-            OutputCostPer1M = 1.10m
-        },
-
-        // Local Ollama Models (self-hosted, zero cost)
-        ["llama3:8b"] = new()
-        {
-            ModelId = "llama3:8b",
-            Provider = "Ollama",
-            InputCostPer1M = 0m,  // Self-hosted
-            OutputCostPer1M = 0m
-        },
-        ["llama3:70b"] = new()
-        {
-            ModelId = "llama3:70b",
-            Provider = "Ollama",
-            InputCostPer1M = 0m,
-            OutputCostPer1M = 0m
-        },
-        ["mistral"] = new()
-        {
-            ModelId = "mistral",
-            Provider = "Ollama",
-            InputCostPer1M = 0m,
-            OutputCostPer1M = 0m
-        }
-    };
-
+    private readonly IModelPriceList _priceList;
     private readonly ILogger<LlmCostCalculator> _logger;
 
-    public LlmCostCalculator(ILogger<LlmCostCalculator> logger)
+    public LlmCostCalculator(IModelPriceList priceList, ILogger<LlmCostCalculator> logger)
     {
-        _logger = logger;
+        _priceList = priceList ?? throw new ArgumentNullException(nameof(priceList));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc/>
@@ -127,12 +53,24 @@ internal class LlmCostCalculator : ILlmCostCalculator
             return LlmCostCalculation.Empty;
         }
 
-        // Get pricing for model
-        var pricing = GetModelPricing(modelId);
-        if (pricing == null)
+        var pricing = ResolvePricing(modelId, provider);
+        LlmPricingStatus status;
+        if (pricing is not null)
         {
-            _logger.LogWarning("No pricing found for model {ModelId}, treating as free", modelId);
+            status = pricing.IsFree ? LlmPricingStatus.Free : LlmPricingStatus.Priced;
+        }
+        else
+        {
+            status = LlmPricingStatus.Unpriced;
             pricing = LlmModelPricing.Free with { ModelId = modelId, Provider = provider };
+            _logger.LogError(
+                "Model {ModelId} (provider {Provider}) has no price in the AI model catalog: the call is logged at $0 with pricing status Unpriced. Add the model to the catalog",
+                modelId, provider);
+            MeepleAiMetrics.LlmUnpricedCalls.Add(1, new TagList
+            {
+                { "provider", provider },
+                { "model", modelId }
+            });
         }
 
         // Calculate costs (tokens / 1M * cost_per_1M)
@@ -146,24 +84,31 @@ internal class LlmCostCalculator : ILlmCostCalculator
             PromptTokens = promptTokens,
             CompletionTokens = completionTokens,
             InputCost = Math.Round(inputCost, 6),  // Round to 6 decimal places (micro-dollars)
-            OutputCost = Math.Round(outputCost, 6)
+            OutputCost = Math.Round(outputCost, 6),
+            PricingStatus = status
         };
 
         _logger.LogDebug(
-            "Cost calculated for {Model}: {Tokens} tokens = ${Cost:F6} (input: ${InputCost:F6}, output: ${OutputCost:F6})",
-            modelId, calculation.TotalTokens, calculation.TotalCost, calculation.InputCost, calculation.OutputCost);
+            "Cost calculated for {Model}: {Tokens} tokens = ${Cost:F6} (input: ${InputCost:F6}, output: ${OutputCost:F6}, pricing: {PricingStatus})",
+            modelId, calculation.TotalTokens, calculation.TotalCost, calculation.InputCost, calculation.OutputCost, status);
 
         return calculation;
     }
 
     /// <inheritdoc/>
-    public LlmModelPricing? GetModelPricing(string modelId)
-    {
-        return ModelPricing.TryGetValue(modelId, out var pricing) ? pricing : null;
-    }
+    public LlmModelPricing? GetModelPricing(string modelId) => _priceList.Find(modelId);
 
-    /// <summary>
-    /// Get all available model pricing information
-    /// </summary>
-    public IReadOnlyDictionary<string, LlmModelPricing> GetAllPricing() => ModelPricing;
+    /// <inheritdoc/>
+    public LlmModelPricing? ResolvePricing(string modelId, string provider)
+    {
+        var pricing = _priceList.Find(modelId);
+        if (pricing is not null)
+        {
+            return pricing;
+        }
+
+        return string.Equals(provider, SelfHostedProvider, StringComparison.OrdinalIgnoreCase)
+            ? LlmModelPricing.Free with { ModelId = modelId, Provider = provider }
+            : null;
+    }
 }

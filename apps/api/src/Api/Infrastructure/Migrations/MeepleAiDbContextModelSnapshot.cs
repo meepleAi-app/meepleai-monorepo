@@ -9082,6 +9082,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("decimal(18,6)")
                         .HasColumnName("output_cost_usd");
 
+                    b.Property<string>("PricingStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("pricing_status");
+
                     b.Property<int>("PromptTokens")
                         .HasColumnType("integer")
                         .HasColumnName("prompt_tokens");

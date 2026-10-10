@@ -243,6 +243,9 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
+        // #4164 (ADR-095 fetta 1b): l'utente della richiesta, per attribuire il costo delle chiamate
+        // che non passano un User. Singleton: legge IHttpContextAccessor, che è già per richiesta.
+        services.AddSingleton<ILlmCallerAccessor, SessionLlmCallerAccessor>();
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 

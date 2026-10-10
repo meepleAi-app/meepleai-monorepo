@@ -152,7 +152,7 @@ internal sealed class TranslateGamebookSegmentQueryHandler
 
             var fullText = new StringBuilder();
             await foreach (var chunk in _llm.GenerateCompletionStreamAsync(
-                systemPrompt, segmentSourceText, RequestSource.Manual, cancellationToken).ConfigureAwait(false))
+                systemPrompt, segmentSourceText, RequestSource.Translation, cancellationToken).ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!string.IsNullOrEmpty(chunk.Content))

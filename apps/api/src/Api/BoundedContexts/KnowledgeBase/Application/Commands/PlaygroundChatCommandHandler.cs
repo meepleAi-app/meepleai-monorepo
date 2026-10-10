@@ -51,6 +51,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
     private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILogger<PlaygroundChatCommandHandler> _logger;
+    private readonly ILlmCallerAccessor? _callerAccessor; // #4164: l'admin che usa il Playground
 
     public PlaygroundChatCommandHandler(
         IAgentDefinitionRepository agentDefinitionRepository,
@@ -60,7 +61,8 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         ILlmCostLogRepository costLogRepository,
         IRagExecutionRepository ragExecutionRepository,
         ICrossEncoderReranker reranker,
-        ILogger<PlaygroundChatCommandHandler> logger)
+        ILogger<PlaygroundChatCommandHandler> logger,
+        ILlmCallerAccessor? callerAccessor = null)
     {
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
         _llmProviderFactory = llmProviderFactory ?? throw new ArgumentNullException(nameof(llmProviderFactory));
@@ -70,6 +72,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _callerAccessor = callerAccessor;
     }
 
 #pragma warning disable S4456 // Standard MediatR streaming pattern
@@ -664,9 +667,13 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         // Persist cost log (fire-and-forget, don't block streaming)
         try
         {
+            // #4164: la riga va all'admin che usa il Playground, con RequestSource.AdminOperation
+            // («debug console»). Prima: userId null, ruolo "Playground", source Manual, cioè
+            // indistinguibile da una domanda di un utente. L'endpoint resta playground/chat.
+            var caller = _callerAccessor?.Current;
             await _costLogRepository.LogCostAsync(
-                userId: null,
-                userRole: "Playground",
+                userId: caller?.UserId,
+                userRole: caller?.RoleName ?? "Playground",
                 cost: costCalculation,
                 endpoint: $"playground/chat?strategy={effectiveStrategy}",
                 success: true,
@@ -674,7 +681,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                 latencyMs: (int)totalStopwatch.ElapsedMilliseconds,
                 ipAddress: null,
                 userAgent: null,
-                source: RequestSource.Manual,
+                source: RequestSource.AdminOperation,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)

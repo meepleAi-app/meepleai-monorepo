@@ -20,8 +20,9 @@ export const UsageSnapshotSchema = z.object({
   agentQueriesTodayMax: z.number(),
   sessionQueries: z.number(),
   sessionQueriesMax: z.number(),
-  agents: z.number(),
-  agentsMax: z.number(),
+  // Issue #4138: `agents`/`agentsMax` left with the per-user agent limit, which nothing
+  // enforces (one system agent, ADR-094). The BE still sends them until its own slice drops
+  // them; zod strips the extra keys.
   photosThisSession: z.number(),
   photosThisSessionMax: z.number(),
   sessionSaveEnabled: z.boolean(),
@@ -39,7 +40,7 @@ export const TierLimitsSchema = z.object({
   maxPrivateGames: z.number().int(),
   maxPdfUploadsPerMonth: z.number().int(),
   maxPdfSizeBytes: z.number().int(),
-  maxAgents: z.number().int(),
+  // Issue #4138: `maxAgents` left the tier contract (see UsageSnapshotSchema above).
   maxAgentQueriesPerDay: z.number().int(),
   maxSessionQueries: z.number().int(),
   maxSessionPlayers: z.number().int(),

@@ -211,8 +211,9 @@ internal static class AgentSessionEndpoints
 }
 
 // Request/Response DTOs
+// Issue #4154: AgentDefinitionId opzionale; assente, si usa l'agente di sistema (ADR-094).
 internal record LaunchSessionAgentRequest(
-    Guid AgentDefinitionId,
+    Guid? AgentDefinitionId,
     Guid GameId,
     string InitialGameStateJson);
 

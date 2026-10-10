@@ -136,7 +136,6 @@ describe('libraryEntryToHubItem', () => {
 const baseAgent: AgentDto = {
   id: '00000000-0000-0000-0000-0000000000b1',
   name: 'Catan Tutor',
-  type: 'Tutor',
   strategyName: 'HybridSearch',
   strategyParameters: {},
   isActive: true,
@@ -158,7 +157,6 @@ describe('agentToHubItem', () => {
     expect(result.title).toBe('Catan Tutor');
     expect(result.subtitle).toBe('Catan');
     expect(result.gameName).toBe('Catan');
-    expect(result.agentType).toBe('Tutor');
     expect(result.isActive).toBe(true);
     expect(result.href).toBe(`/agents/${baseAgent.id}`);
   });

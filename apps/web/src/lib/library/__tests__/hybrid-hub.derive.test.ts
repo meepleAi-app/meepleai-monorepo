@@ -31,7 +31,6 @@ function agentItem(overrides: Partial<AgentHubItem>): AgentHubItem {
     title: 'Tutor',
     updatedAt: '2026-04-02T00:00:00Z',
     href: '/agents/a1',
-    agentType: 'Tutor',
     isActive: true,
     ...overrides,
   };

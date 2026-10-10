@@ -58,7 +58,9 @@ describe('AgentDtoSchema — contratto con il backend (#4154)', () => {
     const result = AgentDtoSchema.safeParse({ ...CURRENT_AGENT, type: 'RAG' });
 
     expect(result.success).toBe(true);
-    expect(result.success && result.data).not.toHaveProperty('type');
+    // Senza questa guardia, un parse fallito renderebbe vacua l'asserzione successiva.
+    if (!result.success) throw new Error('parse fallito: vedi l`asserzione precedente');
+    expect(result.data).not.toHaveProperty('type');
   });
 
   it('tollera l`uscita di `strategyName` e `strategyParameters`, prossima fetta di #4138', () => {

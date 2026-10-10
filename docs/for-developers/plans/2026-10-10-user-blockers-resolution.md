@@ -31,6 +31,16 @@
 
 ### Fase 1 — #4154, insieme alla linea #4138
 
+> **Aggiornamento 2026-10-10.**
+> - **Coordinamento chiuso**: la sessione di #4138 ha confermato che la correzione la fa questa linea, da `origin/main-dev` (#4159 non tocca gli schemi agente).
+> - **Decisione dell'utente**: rimozione dei lettori lato utente invece della correzione dello schema. Il piano diventa:
+>   1. backend, expand: il lancio in sessione senza `AgentDefinitionId` usa l'agente di sistema;
+>   2. frontend: niente più elenchi agenti in libreria e nel lancio;
+>   3. backend, contract: ritiro di `GET /agents?scope=my-library` e `GET /games/{id}/agents`.
+> - Il worktree è `D:/Repositories/wt-4154`, senza `+` nel percorso: un `+` fa fallire la build del pre-push. Contiene già i test di contratto dello schema, che restano per i lettori admin.
+>
+> Il testo che segue è la versione precedente.
+
 **Perché coordinare**: `apps/web/src/lib/api/schemas/agents.schemas.ts` e i client degli agenti sono il terreno di #4138, e la PR #4159 è aperta. Due PR parallele sugli stessi file producono conflitti, e la seconda rischia di reintrodurre ciò che la prima ha tolto.
 
 **Due esiti possibili del coordinamento**, da registrare qui:

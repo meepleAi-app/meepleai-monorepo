@@ -20,6 +20,13 @@
 
 ## #4154 — `AgentDtoSchema` esige un campo che il backend non manda più
 
+> **Aggiornamento (2026-10-10, decisione dell'utente): rimuovere i lettori, non correggere lo schema.** Lato utente l'elenco agenti serve solo alla card della libreria, che porta a `/agents/{id}`, una rotta ritirata, e al lancio dell'assistente in sessione, che usa l'id solo per passarlo al backend senza verifica. Il piano diventa expand → contract:
+> 1. il lancio accetta l'assenza dell'id e usa l'agente di sistema;
+> 2. il frontend smette di chiedere gli elenchi;
+> 3. si ritirano `GET /agents?scope=my-library` e `GET /games/{id}/agents`.
+>
+> La correzione dello schema qui sotto resta valida solo per i lettori **admin** di `AgentDto`. Dettagli e criteri nel commento su #4154 e nel brief [`2026-10-10-single-agent-ai-architecture-brief.md`](./2026-10-10-single-agent-ai-architecture-brief.md).
+
 **FOWLER**: è un contratto rotto fra due consegne della stessa decisione. #4147 ha tolto `Type` da `AgentDto` e nessuno ha aggiornato il lettore. Va corretto il caso, ma soprattutto la regola che l'ha permesso: lo schema **esige** un campo che nessun consumatore legge. `AgentSelector` usa `AgentOption` (la persona statica di `DEFAULT_AGENTS`), non `AgentDto`. `AgentCharacterSheet` usa un suo `AgentDetailData`, e nessuna pagina lo monta.
 
 **NYGARD**: il modo di guasto è il peggiore possibile. Un `200` con dati validi diventa la perdita totale della funzione, e l'unica traccia è un log in console. Non chiedo uno schema permissivo, perché il repo ha scelto apposta di «fallire rumorosamente» su `isSystemDefined`. Chiedo che sia **obbligatorio solo ciò che qualcuno legge**.

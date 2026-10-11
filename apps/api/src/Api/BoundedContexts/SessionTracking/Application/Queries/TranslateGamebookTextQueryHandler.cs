@@ -99,7 +99,7 @@ internal sealed class TranslateGamebookTextQueryHandler
             var fullText = new StringBuilder();
 
             await foreach (var chunk in _llm.GenerateCompletionStreamAsync(
-                systemPrompt, query.Text, RequestSource.Manual, cancellationToken).ConfigureAwait(false))
+                systemPrompt, query.Text, RequestSource.Translation, cancellationToken).ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (!string.IsNullOrEmpty(chunk.Content))

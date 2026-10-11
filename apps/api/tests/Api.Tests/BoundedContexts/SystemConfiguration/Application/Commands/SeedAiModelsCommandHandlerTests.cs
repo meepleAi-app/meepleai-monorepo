@@ -80,11 +80,15 @@ public sealed class SeedAiModelsCommandHandlerTests
 
         await SeedAsync(catalog);
 
-        var deepseek = _added.Should().ContainSingle().Subject;
-        deepseek.ModelId.Should().Be("deepseek-chat");
-        deepseek.Provider.Should().Be("DeepSeek");
-        deepseek.IsActive.Should().BeFalse("una riga attiva in più cambierebbe l'ordine di fallback dei provider");
-        deepseek.Settings.Pricing.VerifiedOn.Should().Be(SeedAiModelsCommandHandler.PricesVerifiedOn);
+        // deepseek-chat è il nome richiesto; deepseek-flash quello che DeepSeek restituisce in
+        // streaming (#4164 fetta 1b). Il registro li deve prezzare entrambi.
+        _added.Select(m => m.ModelId).Should().BeEquivalentTo("deepseek-chat", "deepseek-flash");
+        foreach (var deepseek in _added)
+        {
+            deepseek.Provider.Should().Be("DeepSeek");
+            deepseek.IsActive.Should().BeFalse("una riga attiva in più cambierebbe l'ordine di fallback dei provider");
+            deepseek.Settings.Pricing.VerifiedOn.Should().Be(SeedAiModelsCommandHandler.PricesVerifiedOn);
+        }
 
         _updated.Select(m => m.ModelId).Should().BeEquivalentTo("meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat");
         var llama = catalog.Single(m => m.ModelId == "meta-llama/llama-3.3-70b-instruct");

@@ -78,6 +78,16 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
             Priority: 7, MaxTokens: 4096,
             new ModelPricing(0.30m, 1.20m, cacheReadPricePerMillion: 0.006m,
                 verifiedOn: PricesVerifiedOn, source: DeepSeekPriceSource),
+            IsActive: false, IsPrimary: false),
+
+        // #4164 fetta 1b: è il nome che DeepSeek restituisce nei chunk dello streaming quando gli
+        // si chiede «deepseek-chat», e il client in streaming prezza quel nome. Misurato il
+        // 2026-10-11 sullo stack locale: senza questa riga la risposta in streaming finiva nel
+        // registro come Unpriced, a $0. Stesso listino di deepseek-chat.
+        new("deepseek-flash", "DeepSeek Flash (direct API)", "DeepSeek",
+            Priority: 8, MaxTokens: 4096,
+            new ModelPricing(0.30m, 1.20m, cacheReadPricePerMillion: 0.006m,
+                verifiedOn: PricesVerifiedOn, source: DeepSeekPriceSource),
             IsActive: false, IsPrimary: false)
     ];
 

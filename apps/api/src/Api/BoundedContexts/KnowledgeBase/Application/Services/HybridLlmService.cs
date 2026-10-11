@@ -32,6 +32,7 @@ internal class HybridLlmService : ILlmService
     private readonly ILlmCostService _costService;
     private readonly ILogger<HybridLlmService> _logger;
     private readonly IPiiDetector? _piiDetector; // Issue #5510: PII redaction for OpenRouter-bound prompts
+    private readonly ILlmCallerAccessor? _callerAccessor; // #4164: attribuzione del costo all'utente della richiesta
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
@@ -51,7 +52,8 @@ internal class HybridLlmService : ILlmService
         ICircuitBreakerRegistry circuitBreakerRegistry,
         ILlmCostService costService,
         ILogger<HybridLlmService> logger,
-        IPiiDetector? piiDetector = null)
+        IPiiDetector? piiDetector = null,
+        ILlmCallerAccessor? callerAccessor = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _providerSelector = providerSelector ?? throw new ArgumentNullException(nameof(providerSelector));
@@ -59,6 +61,7 @@ internal class HybridLlmService : ILlmService
         _costService = costService ?? throw new ArgumentNullException(nameof(costService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _piiDetector = piiDetector; // Issue #5510: Optional - PII redaction for OpenRouter
+        _callerAccessor = callerAccessor;
 
         if (_clients.Count == 0)
         {
@@ -108,6 +111,7 @@ internal class HybridLlmService : ILlmService
 
         // Map User entity to KB Domain value object (Application layer ACL)
         var userContext = LlmUserContextMapper.FromUser(user);
+        var costContext = AttributeCost(userContext);
 
         // Step 1: Select provider (routing + emergency override + RPD check + circuit breaker)
         var selection = await _providerSelector.SelectProviderAsync(userContext, strategy, source, cancellationToken)
@@ -162,7 +166,9 @@ internal class HybridLlmService : ILlmService
                     // Step 3: Record success + log cost (Issue #5492: delegated to selector)
                     _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
                     AddRoutingMetadata(result, decision, client, attemptStopwatch.ElapsedMilliseconds);
-                    await _costService.LogSuccessAsync(result, userContext, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                    // #4164: CancellationToken.None, come nei percorsi fire-and-forget: con il token della
+                    // richiesta una disconnessione del client faceva perdere la riga.
+                    await _costService.LogSuccessAsync(result, costContext, attemptStopwatch.ElapsedMilliseconds, source, CancellationToken.None).ConfigureAwait(false);
 
                     return result;
                 }
@@ -170,7 +176,7 @@ internal class HybridLlmService : ILlmService
                 // Issue #5492: Record failure (circuit breaker + rate limit tracking delegated to selector)
                 _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, attemptStopwatch.ElapsedMilliseconds, result);
 
-                await _costService.LogFailureAsync(result.ErrorMessage, userContext, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(result.ErrorMessage, costContext, attemptStopwatch.ElapsedMilliseconds, source, CancellationToken.None).ConfigureAwait(false);
                 lastFailure = NormalizeFailureResult(result, client.ProviderName);
             }
             catch (Exception ex)
@@ -183,7 +189,7 @@ internal class HybridLlmService : ILlmService
                     client.ProviderName, decision.ModelId,
                     _circuitBreakerRegistry.GetCircuitStateDescription(client.ProviderName));
 
-                await _costService.LogFailureAsync(ex.Message, userContext, attemptStopwatch.ElapsedMilliseconds, source, cancellationToken).ConfigureAwait(false);
+                await _costService.LogFailureAsync(ex.Message, costContext, attemptStopwatch.ElapsedMilliseconds, source, CancellationToken.None).ConfigureAwait(false);
                 lastFailure = LlmCompletionResult.CreateFailure($"Provider error: {ex.Message}");
             }
 
@@ -273,13 +279,16 @@ internal class HybridLlmService : ILlmService
             effectiveUserPrompt = _piiDetector.ScanAndRedact(userPrompt);
         }
 
-        await foreach (var chunk in client.GenerateCompletionStreamAsync(
+        var stream = client.GenerateCompletionStreamAsync(
             selection.Decision.ModelId,
             effectiveSystemPrompt,
             effectiveUserPrompt,
             DefaultTemperature,
             DefaultMaxTokens,
-            cancellationToken).ConfigureAwait(false))
+            cancellationToken);
+
+        await foreach (var chunk in WithCostLoggingAsync(stream, AttributeCost(userContext), source, cancellationToken)
+            .ConfigureAwait(false))
         {
             yield return chunk;
         }
@@ -406,13 +415,14 @@ internal class HybridLlmService : ILlmService
             {
                 _logger.LogWarning("Explicit model {Model} call failed: {Error}", explicitModel, result.ErrorMessage);
                 _providerSelector.RecordFailure(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
+                _ = _costService.LogFailureAsync(result.ErrorMessage, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
                 return result;
             }
 
             _providerSelector.RecordSuccess(providerName, explicitModel, stopwatch.ElapsedMilliseconds, result);
 
             // Log cost asynchronously (fire-and-forget — use CancellationToken.None to survive request cancellation)
-            _ = _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
+            _ = _costService.LogSuccessAsync(result, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
 
             _logger.LogInformation(
                 "Explicit model {Model} completion successful (tokens: {Tokens}, cost: ${Cost:F6}, latency: {Latency}ms)",
@@ -425,6 +435,7 @@ internal class HybridLlmService : ILlmService
             stopwatch.Stop();
             _logger.LogError(ex, "Unexpected error generating completion with explicit model {Model}", explicitModel);
             _providerSelector.RecordFailure(providerName, explicitModel, stopwatch.ElapsedMilliseconds);
+            _ = _costService.LogFailureAsync(ex.Message, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
             return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
         }
     }
@@ -493,7 +504,7 @@ internal class HybridLlmService : ILlmService
                     {
                         _providerSelector.RecordSuccess(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
                         // Fire-and-forget cost logging (CancellationToken.None to survive request cancellation).
-                        _ = _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
+                        _ = _costService.LogSuccessAsync(result, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
                         return result;
                     }
 
@@ -501,6 +512,7 @@ internal class HybridLlmService : ILlmService
                         "Model {Model} via {Provider} failed: {Error} — attempting provider fallback",
                         currentModel, client.ProviderName, result.ErrorMessage);
                     _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds, result);
+                    _ = _costService.LogFailureAsync(result.ErrorMessage, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
                     lastFailure = result;
                 }
                 catch (Exception ex)
@@ -508,6 +520,7 @@ internal class HybridLlmService : ILlmService
                     stopwatch.Stop();
                     _logger.LogError(ex, "Error generating completion with model {Model} via {Provider}", currentModel, client.ProviderName);
                     _providerSelector.RecordFailure(client.ProviderName, currentModel, stopwatch.ElapsedMilliseconds);
+                    _ = _costService.LogFailureAsync(ex.Message, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None);
                     lastFailure = LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
                 }
             }
@@ -574,17 +587,19 @@ internal class HybridLlmService : ILlmService
                     if (result.Success)
                     {
                         _providerSelector.RecordSuccess(client.ProviderName, decision.ModelId, stopwatch.ElapsedMilliseconds, result);
-                        await _costService.LogSuccessAsync(result, LlmUserContext.Anonymous, stopwatch.ElapsedMilliseconds, source, ct).ConfigureAwait(false);
+                        await _costService.LogSuccessAsync(result, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None).ConfigureAwait(false);
                         return result;
                     }
 
                     _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, stopwatch.ElapsedMilliseconds, result);
+                    await _costService.LogFailureAsync(result.ErrorMessage, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     stopwatch.Stop();
                     _logger.LogError(ex, "Error generating multimodal completion with {Provider}", client.ProviderName);
                     _providerSelector.RecordFailure(client.ProviderName, decision.ModelId, stopwatch.ElapsedMilliseconds);
+                    await _costService.LogFailureAsync(ex.Message, AttributeCost(LlmUserContext.Anonymous), stopwatch.ElapsedMilliseconds, source, CancellationToken.None).ConfigureAwait(false);
                 }
             }
             else
@@ -644,8 +659,11 @@ internal class HybridLlmService : ILlmService
                     "Starting multimodal streaming via {Provider} ({Model})",
                     client.ProviderName, decision.ModelId);
 
-                await foreach (var chunk in client.GenerateCompletionStreamAsync(
-                    decision.ModelId, messages, DefaultTemperature, DefaultMaxTokens, ct).ConfigureAwait(false))
+                var stream = client.GenerateCompletionStreamAsync(
+                    decision.ModelId, messages, DefaultTemperature, DefaultMaxTokens, ct);
+
+                await foreach (var chunk in WithCostLoggingAsync(stream, AttributeCost(LlmUserContext.Anonymous), source, ct)
+                    .ConfigureAwait(false))
                 {
                     yield return chunk;
                 }
@@ -674,6 +692,122 @@ internal class HybridLlmService : ILlmService
         await foreach (var chunk in GenerateCompletionStreamAsync(systemPrompt, userPrompt, source, ct).ConfigureAwait(false))
         {
             yield return chunk;
+        }
+    }
+
+    /// <summary>
+    /// #4164 (ADR-095 fetta 1b): a chi va il costo. Il contesto usato per instradare resta quello
+    /// ricevuto; per il registro, se non porta un utente, si usa l'utente della richiesta in corso.
+    /// </summary>
+    private LlmUserContext AttributeCost(LlmUserContext routed) =>
+        routed.UserId is not null ? routed : _callerAccessor?.Current ?? routed;
+
+    /// <summary>
+    /// #4164: registra il costo di uno stream, che prima non finiva mai nel registro. Il costo arriva
+    /// con il chunk finale (<see cref="StreamChunk.Usage"/> e <see cref="StreamChunk.Cost"/>), che
+    /// tutti e tre i client emettono a fine stream.
+    /// </summary>
+    /// <remarks>
+    /// I client non lanciano: su un errore lo scrivono nei log e chiudono lo stream. Per questo uno
+    /// stream che finisce senza contenuto e senza costo conta come fallimento. Uno stream con
+    /// contenuto ma senza costo (Ollama senza conteggi), o interrotto dal consumatore prima della
+    /// fine, non ha un costo da registrare: resta un warning.
+    /// </remarks>
+    private async IAsyncEnumerable<StreamChunk> WithCostLoggingAsync(
+        IAsyncEnumerable<StreamChunk> stream,
+        LlmUserContext costContext,
+        RequestSource source,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        StreamChunk? costChunk = null;
+        var sawContent = false;
+        var completed = false;
+        string? failure = null;
+
+        var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+        try
+        {
+            while (true)
+            {
+                bool hasNext;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                }
+                // Un annullamento chiesto dal consumatore non è un fallimento del provider; un
+                // timeout di HttpClient sì, anche se arriva come TaskCanceledException.
+                catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+                {
+#pragma warning disable S1854 // Falso positivo: «failure» lo legge il finally qui sotto, dopo il throw
+                    failure = ex.Message;
+#pragma warning restore S1854
+                    throw;
+                }
+
+                if (!hasNext)
+                {
+                    completed = true;
+                    break;
+                }
+
+                var chunk = enumerator.Current;
+                if (chunk.Usage is not null && chunk.Cost is not null)
+                {
+                    costChunk = chunk;
+                }
+                else if (!string.IsNullOrEmpty(chunk.Content))
+                {
+                    sawContent = true;
+                }
+
+                yield return chunk;
+            }
+        }
+        finally
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+            stopwatch.Stop();
+            // I client escono dal loop in silenzio quando il token viene annullato: senza questo
+            // controllo una disconnessione prima del primo contenuto risulterebbe un fallimento.
+            var cancelledByConsumer = cancellationToken.IsCancellationRequested;
+            await LogStreamOutcomeAsync(costChunk, sawContent, completed && !cancelledByConsumer, failure, costContext, stopwatch.ElapsedMilliseconds, source)
+                .ConfigureAwait(false);
+        }
+    }
+
+    private async Task LogStreamOutcomeAsync(
+        StreamChunk? costChunk,
+        bool sawContent,
+        bool completed,
+        string? failure,
+        LlmUserContext costContext,
+        long latencyMs,
+        RequestSource source)
+    {
+        // CancellationToken.None: la registrazione deve sopravvivere alla fine della richiesta.
+        if (costChunk is { Usage: { } usage, Cost: { } cost })
+        {
+            await _costService.LogSuccessAsync(
+                LlmCompletionResult.CreateSuccess(string.Empty, usage, cost),
+                costContext, latencyMs, source, CancellationToken.None).ConfigureAwait(false);
+        }
+        else if (failure is not null)
+        {
+            await _costService.LogFailureAsync(failure, costContext, latencyMs, source, CancellationToken.None)
+                .ConfigureAwait(false);
+        }
+        else if (completed && !sawContent)
+        {
+            await _costService.LogFailureAsync(
+                "Streaming ended without content or usage: the provider call failed",
+                costContext, latencyMs, source, CancellationToken.None).ConfigureAwait(false);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Streaming {Outcome} without usage metadata: its cost is not recorded",
+                completed ? "completed" : "stopped before the end");
         }
     }
 

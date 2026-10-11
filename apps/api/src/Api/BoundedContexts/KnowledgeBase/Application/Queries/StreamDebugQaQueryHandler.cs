@@ -330,6 +330,14 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // #4166: il gateway non ha fatto partire la chiamata
+            if (chunk.ErrorCode is not null)
+            {
+                yield return CreateEvent(StreamingEventType.Error,
+                    new StreamingError(chunk.ErrorMessage ?? "La chiamata AI non è partita.", chunk.ErrorCode));
+                yield break;
+            }
+
             if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
             {
                 llmUsage = chunk.Usage;

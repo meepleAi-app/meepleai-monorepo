@@ -243,6 +243,9 @@ internal static class KnowledgeBaseServiceExtensions
         // #4164 (ADR-095 fetta 1b): l'utente della richiesta, per attribuire il costo delle chiamate
         // che non passano un User. Singleton: legge IHttpContextAccessor, che è già per richiesta.
         services.AddSingleton<ILlmCallerAccessor, SessionLlmCallerAccessor>();
+        // #4166 (ADR-095 fetta 3): il tetto di spesa prima di ogni chiamata. Singleton: tiene in
+        // memoria le riserve delle chiamate in corso, che devono valere per tutte le richieste.
+        services.AddSingleton<ILlmBudgetGate, LlmBudgetGate>();
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 

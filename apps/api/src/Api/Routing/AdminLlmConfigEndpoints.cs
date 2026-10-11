@@ -56,7 +56,10 @@ internal static class AdminLlmConfigEndpoints
             DailyBudgetUsd: request.DailyBudgetUsd,
             MonthlyBudgetUsd: request.MonthlyBudgetUsd,
             FallbackChainJson: request.FallbackChainJson,
-            UpdatedByUserId: adminUserId), ct).ConfigureAwait(false);
+            UpdatedByUserId: adminUserId,
+            DegradeThresholdPercent: request.DegradeThresholdPercent,
+            BackgroundQuotaPercent: request.BackgroundQuotaPercent,
+            EvaluationQuotaPercent: request.EvaluationQuotaPercent), ct).ConfigureAwait(false);
 
         return Results.Ok(result);
     }
@@ -79,10 +82,14 @@ internal static class AdminLlmConfigEndpoints
 /// <summary>
 /// Request body for updating LLM system configuration.
 /// </summary>
+/// <remarks>#4166: i tre campi della politica di budget sono opzionali; assenti, restano i valori salvati.</remarks>
 internal record UpdateLlmSystemConfigRequest(
     int CircuitBreakerFailureThreshold,
     int CircuitBreakerOpenDurationSeconds,
     int CircuitBreakerSuccessThreshold,
     decimal DailyBudgetUsd,
     decimal MonthlyBudgetUsd,
-    string FallbackChainJson);
+    string FallbackChainJson,
+    int? DegradeThresholdPercent = null,
+    int? BackgroundQuotaPercent = null,
+    int? EvaluationQuotaPercent = null);

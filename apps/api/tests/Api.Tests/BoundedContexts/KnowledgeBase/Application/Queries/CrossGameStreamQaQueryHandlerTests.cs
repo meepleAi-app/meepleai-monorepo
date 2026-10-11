@@ -176,6 +176,36 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         tokenContents.Should().Contain(t => t.Contains("Three"));
     }
 
+    /// <summary>
+    /// #4166: il gateway non ha fatto partire la chiamata. Prima il chunk di rifiuto, senza
+    /// contenuto, veniva saltato e la risposta finiva «Grounded» e vuota.
+    /// </summary>
+    [Fact]
+    public async Task GatewayRefusesTheCall_EmitsTheReason_AndNoComplete()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupAssembledPrompt();
+        _llmService
+            .GenerateCompletionStreamAsync(Arg.Any<string>(), Arg.Any<string>(),
+                Arg.Any<RequestSource>(), Arg.Any<CancellationToken>())
+            .Returns(RefusedStream());
+
+        var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User));
+
+        var error = events.Should().ContainSingle(e => e.Type == StreamingEventType.Error).Which.Data.Should().BeOfType<StreamingError>().Which;
+        error.errorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
+        error.errorMessage.Should().StartWith("Il servizio AI è in pausa");
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> RefusedStream()
+    {
+        await Task.Yield();
+        yield return new StreamChunk(null, IsFinal: true, ErrorCode: "AI_BUDGET_DAILY_EXHAUSTED",
+            ErrorMessage: "Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.");
+    }
+
     // ── Exception in search → Error event, no propagation ───────────────────
 
     [Fact]

@@ -474,6 +474,16 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             yield break;
         }
 
+        // #4166: il gateway non ha fatto partire la chiamata (tetto di spesa, quota, modello fuori
+        // catalogo). Il motivo, in italiano, al posto di «LLM returned empty response».
+        if (chunks.Find(c => c.ErrorCode is not null) is { } refused)
+        {
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError(refused.ErrorMessage ?? "La chiamata AI non è partita.", refused.ErrorCode));
+            yield break;
+        }
+
         // Yield all token events
         foreach (var chunk in chunks)
         {

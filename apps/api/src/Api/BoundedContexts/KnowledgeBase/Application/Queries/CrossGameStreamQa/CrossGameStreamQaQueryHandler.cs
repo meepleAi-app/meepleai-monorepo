@@ -256,6 +256,14 @@ internal sealed class CrossGameStreamQaQueryHandler : IStreamingQueryHandler<Cro
                 if (ct.IsCancellationRequested)
                     break;
 
+                // #4166: il gateway non ha fatto partire la chiamata (tetto di spesa, quota, modello
+                // fuori catalogo): il motivo, non una risposta vuota «Grounded».
+                if (chunk.ErrorCode is not null)
+                {
+                    return (tokenEvents, CreateEvent(StreamingEventType.Error,
+                        new StreamingError(chunk.ErrorMessage ?? "La chiamata AI non è partita.", chunk.ErrorCode)), usage, cost);
+                }
+
                 if (chunk.IsFinal && chunk.Usage != null)
                 {
                     usage = chunk.Usage;

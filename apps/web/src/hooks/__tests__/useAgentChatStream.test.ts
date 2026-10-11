@@ -718,6 +718,39 @@ describe('useAgentChatStream', () => {
     );
   });
 
+  // #4166 (ADR-095 D6): il gateway ferma la chiamata al tetto di spesa e lo dice, in italiano
+  it.each([
+    [
+      'AI_BUDGET_DAILY_EXHAUSTED',
+      'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.',
+    ],
+    [
+      'AI_BUDGET_MONTHLY_EXHAUSTED',
+      'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.',
+    ],
+  ])('shows the Italian budget message for errorCode %s', async (errorCode, expected) => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: "The AI service is paused: today's AI budget has been reached.",
+        errorCode,
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe(expected);
+    expect(onError).toHaveBeenCalledWith(expected);
+  });
+
   it('shows Italian provider_unavailable message for errorCode provider_unavailable', async () => {
     const events = [
       sseEvent(EventType.Error, {

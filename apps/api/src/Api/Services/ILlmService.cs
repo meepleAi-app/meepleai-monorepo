@@ -10,13 +10,17 @@ namespace Api.Services;
 /// Usage: Token usage metadata (only in final chunk)
 /// Cost: Cost metadata (only in final chunk)
 /// IsFinal: True if this is the last chunk containing usage metadata
+/// ErrorCode / ErrorMessage: #4166, set on the only chunk of a call the gateway refused before
+/// reaching the provider (budget cap, quota, model not in the catalog)
 /// </summary>
 internal record StreamChunk(
     string? Content,
     LlmUsage? Usage = null,
     LlmCost? Cost = null,
     bool IsFinal = false,
-    string? FinishReason = null);
+    string? FinishReason = null,
+    string? ErrorCode = null,
+    string? ErrorMessage = null);
 
 /// <summary>
 /// Interface for LLM chat completion services
@@ -125,6 +129,26 @@ internal interface ILlmService
         int? maxTokens = null,
         CancellationToken ct = default)
         => GenerateCompletionWithModelAsync(preferredModel, systemPrompt, userPrompt, source, maxTokens, ct);
+
+    /// <summary>
+    /// #4166: streaming con un modello esplicito e parametri propri, attraverso il gateway (tetto di
+    /// spesa, registro costi). Serve al playground admin, che prova il modello e i parametri di un
+    /// agente e prima chiamava i client direttamente.
+    /// </summary>
+    /// <remarks>
+    /// L'implementazione di default ignora modello e parametri e delega allo streaming instradato,
+    /// come <see cref="GenerateCompletionWithModelFallbackAsync"/> per mock e doppi;
+    /// <c>HybridLlmService</c> la sostituisce.
+    /// </remarks>
+    IAsyncEnumerable<StreamChunk> GenerateCompletionStreamWithModelAsync(
+        string explicitModel,
+        string systemPrompt,
+        string userPrompt,
+        RequestSource source,
+        double? temperature = null,
+        int? maxTokens = null,
+        CancellationToken ct = default)
+        => GenerateCompletionStreamAsync(systemPrompt, userPrompt, source, ct);
 }
 
 /// <summary>

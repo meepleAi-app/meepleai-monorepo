@@ -44,35 +44,29 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
 
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
-    private readonly LlmProviderFactory _llmProviderFactory;
+    private readonly ILlmService _llmService;
     private readonly IHybridSearchService _hybridSearchService;
     private readonly ILlmCostCalculator _costCalculator;
-    private readonly ILlmCostLogRepository _costLogRepository;
     private readonly IRagExecutionRepository _ragExecutionRepository;
     private readonly ICrossEncoderReranker _reranker;
     private readonly ILogger<PlaygroundChatCommandHandler> _logger;
-    private readonly ILlmCallerAccessor? _callerAccessor; // #4164: l'admin che usa il Playground
 
     public PlaygroundChatCommandHandler(
         IAgentDefinitionRepository agentDefinitionRepository,
-        LlmProviderFactory llmProviderFactory,
+        ILlmService llmService,
         IHybridSearchService hybridSearchService,
         ILlmCostCalculator costCalculator,
-        ILlmCostLogRepository costLogRepository,
         IRagExecutionRepository ragExecutionRepository,
         ICrossEncoderReranker reranker,
-        ILogger<PlaygroundChatCommandHandler> logger,
-        ILlmCallerAccessor? callerAccessor = null)
+        ILogger<PlaygroundChatCommandHandler> logger)
     {
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
-        _llmProviderFactory = llmProviderFactory ?? throw new ArgumentNullException(nameof(llmProviderFactory));
+        _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _hybridSearchService = hybridSearchService ?? throw new ArgumentNullException(nameof(hybridSearchService));
         _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
-        _costLogRepository = costLogRepository ?? throw new ArgumentNullException(nameof(costLogRepository));
         _ragExecutionRepository = ragExecutionRepository ?? throw new ArgumentNullException(nameof(ragExecutionRepository));
         _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _callerAccessor = callerAccessor;
     }
 
 #pragma warning disable S4456 // Standard MediatR streaming pattern
@@ -410,6 +404,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         int completionTokens = 0;
         int tokenCount = 0;
         string providerName = "none";
+        string? llmError = null; // #4166: il motivo per cui il gateway non ha fatto partire la chiamata
 
         switch (effectiveStrategy)
         {
@@ -462,22 +457,30 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
 
                     try
                     {
-                        var client = _llmProviderFactory.GetClientForModel(model);
-                        providerName = client.ProviderName;
                         var modelResponse = new StringBuilder();
+                        string? modelError = null;
 
-                        await foreach (var chunk in client.GenerateCompletionStreamAsync(
+                        // #4166: dal gateway, che applica il tetto di spesa e registra il costo.
+                        await foreach (var chunk in _llmService.GenerateCompletionStreamWithModelAsync(
                             model,
                             systemPrompt,
                             userPrompt,
+                            RequestSource.AdminOperation,
                             agentDefinition.Config.Temperature,
                             agentDefinition.Config.MaxTokens,
                             cancellationToken).ConfigureAwait(false))
                         {
+                            if (chunk.ErrorMessage is not null)
+                            {
+                                modelError = chunk.ErrorMessage;
+                                continue;
+                            }
+
                             if (chunk.IsFinal && chunk.Usage != null)
                             {
                                 promptTokens += chunk.Usage.PromptTokens;
                                 completionTokens += chunk.Usage.CompletionTokens;
+                                providerName = chunk.Cost?.Provider ?? providerName;
                             }
 
                             if (!string.IsNullOrEmpty(chunk.Content))
@@ -488,13 +491,13 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                         }
 
                         consensusLlmStopwatch.Stop();
-                        modelResponses.Add((model, modelResponse.ToString()));
+                        modelResponses.Add((model, modelError is null ? modelResponse.ToString() : $"[Error: {modelError}]"));
 
                         // API trace: LLM call (consensus model)
                         apiTraces.Add(new PlaygroundApiTrace(
                             service: "llm",
                             method: "POST",
-                            url: $"{client.ProviderName}/{model}",
+                            url: $"{providerName}/{model}",
                             requestSizeBytes: consensusPromptSize,
                             responseSizeBytes: Encoding.UTF8.GetByteCount(modelResponse.ToString()),
                             statusCode: 200,
@@ -545,24 +548,32 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                     StreamingEventType.StateUpdate,
                     new StreamingStateUpdate($"Generating response with {effectiveModel}..."));
 
-                var singleClient = _llmProviderFactory.GetClientForModel(effectiveModel);
-                providerName = singleClient.ProviderName;
-                Log("debug", "LLM", $"Provider resolved: {providerName}, prompt size: {Encoding.UTF8.GetByteCount(userPrompt)} bytes");
+                Log("debug", "LLM", $"Prompt size: {Encoding.UTF8.GetByteCount(userPrompt)} bytes");
                 var singleLlmStopwatch = Stopwatch.StartNew();
                 var singlePromptSize = Encoding.UTF8.GetByteCount(systemPrompt) + Encoding.UTF8.GetByteCount(userPrompt);
 
-                await foreach (var chunk in singleClient.GenerateCompletionStreamAsync(
+                // #4166: dal gateway, che applica il tetto di spesa e registra il costo.
+                await foreach (var chunk in _llmService.GenerateCompletionStreamWithModelAsync(
                     effectiveModel,
                     systemPrompt,
                     userPrompt,
+                    RequestSource.AdminOperation,
                     agentDefinition.Config.Temperature,
                     agentDefinition.Config.MaxTokens,
                     cancellationToken).ConfigureAwait(false))
                 {
+                    if (chunk.ErrorMessage is not null)
+                    {
+                        llmError = chunk.ErrorMessage;
+                        Log("warn", "LLM", $"Gateway refused the call: {chunk.ErrorCode} - {chunk.ErrorMessage}");
+                        continue;
+                    }
+
                     if (chunk.IsFinal && chunk.Usage != null)
                     {
                         promptTokens = chunk.Usage.PromptTokens;
                         completionTokens = chunk.Usage.CompletionTokens;
+                        providerName = chunk.Cost?.Provider ?? providerName;
                     }
 
                     if (!string.IsNullOrEmpty(chunk.Content))
@@ -585,7 +596,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                     url: $"{providerName}/{effectiveModel}",
                     requestSizeBytes: singlePromptSize,
                     responseSizeBytes: Encoding.UTF8.GetByteCount(responseBuilder.ToString()),
-                    statusCode: 200,
+                    statusCode: llmError is null ? 200 : 503, // #4166: chiamata rifiutata dal gateway
                     latencyMs: singleLlmStopwatch.ElapsedMilliseconds,
                     detail: $"model={effectiveModel}, temp={agentDefinition.Config.Temperature}, maxTokens={agentDefinition.Config.MaxTokens}",
                     requestPreview: userPrompt.Length > 500 ? userPrompt[..500] : userPrompt,
@@ -637,7 +648,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
         if (fullResponse.Length == 0 && !string.Equals(effectiveStrategy, "RetrievalOnly", StringComparison.Ordinal))
         {
             Log("warn", "LLM", $"LLM returned empty response. Provider '{providerName}' may be rate-limited or unavailable.");
-            var emptyMsg = $"The LLM provider ({providerName}/{effectiveModel}) returned an empty response. " +
+            var emptyMsg = llmError ?? $"The LLM provider ({providerName}/{effectiveModel}) returned an empty response. " +
                            "This usually means the model is rate-limited or temporarily unavailable. " +
                            "Try again in a few seconds, or switch to a different model in Advanced Options.";
             yield return CreateEvent(
@@ -664,30 +675,8 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
             : _costCalculator.CalculateCost(effectiveModel, providerName, promptTokens, completionTokens);
         Log("info", "Cost", $"Cost: ${costCalculation.TotalCost:F6} (input: ${costCalculation.InputCost:F6}, output: ${costCalculation.OutputCost:F6}, free: {costCalculation.IsFree})");
 
-        // Persist cost log (fire-and-forget, don't block streaming)
-        try
-        {
-            // #4164: la riga va all'admin che usa il Playground, con RequestSource.AdminOperation
-            // («debug console»). Prima: userId null, ruolo "Playground", source Manual, cioè
-            // indistinguibile da una domanda di un utente. L'endpoint resta playground/chat.
-            var caller = _callerAccessor?.Current;
-            await _costLogRepository.LogCostAsync(
-                userId: caller?.UserId,
-                userRole: caller?.RoleName ?? "Playground",
-                cost: costCalculation,
-                endpoint: $"playground/chat?strategy={effectiveStrategy}",
-                success: true,
-                errorMessage: null,
-                latencyMs: (int)totalStopwatch.ElapsedMilliseconds,
-                ipAddress: null,
-                userAgent: null,
-                source: RequestSource.AdminOperation,
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to persist playground cost log");
-        }
+        // #4166: la riga del registro costi la scrive il gateway, una per chiamata, attribuita
+        // all'admin e con RequestSource.AdminOperation. Il calcolo qui sopra serve solo al pannello.
 
         pipelineTimings.Add(new PlaygroundPipelineStep(
             "Post-Processing", "compute", stepStopwatch.ElapsedMilliseconds, "cost + follow-up"));
@@ -821,8 +810,8 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                 totalCost: costCalculation.TotalCost,
                 confidence: ragConfidence,
                 cacheHit: cacheInfo != null && string.Equals(cacheInfo.status, "hit", StringComparison.Ordinal),
-                status: "Success",
-                errorMessage: null,
+                status: llmError is null ? "Success" : "Error", // #4166: chiamata rifiutata dal gateway
+                errorMessage: llmError,
                 executionTrace: executionTrace);
 
             await _ragExecutionRepository.AddAsync(execution, cancellationToken).ConfigureAwait(false);

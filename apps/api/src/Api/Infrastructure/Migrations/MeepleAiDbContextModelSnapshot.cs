@@ -14344,6 +14344,11 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("BackgroundQuotaPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
                     b.Property<int>("CircuitBreakerFailureThreshold")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -14369,6 +14374,16 @@ namespace Api.Infrastructure.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)")
                         .HasDefaultValue(10.00m);
+
+                    b.Property<int>("DegradeThresholdPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(80);
+
+                    b.Property<int>("EvaluationQuotaPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(20);
 
                     b.Property<string>("FallbackChainJson")
                         .IsRequired()

@@ -4687,7 +4687,9 @@
       "libraryEmpty": "Your library is empty. Add games to suggest them.",
       "selectGame": "Select {name}",
       "deselectGame": "Deselect {name}",
-      "limitWarning": "Maximum {max} games per night."
+      "limitWarning": "Maximum {max} games per night.",
+      "searchLabel": "Search your library",
+      "searchEmpty": "No game in your library matches “{query}”."
     },
     "preview": {
       "title": "Invitation preview",

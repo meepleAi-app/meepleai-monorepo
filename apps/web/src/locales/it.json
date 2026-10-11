@@ -4699,7 +4699,9 @@
       "libraryEmpty": "La tua libreria è vuota. Aggiungi giochi per consigliarli.",
       "selectGame": "Seleziona {name}",
       "deselectGame": "Deseleziona {name}",
-      "limitWarning": "Massimo {max} giochi per serata."
+      "limitWarning": "Massimo {max} giochi per serata.",
+      "searchLabel": "Cerca nella tua libreria",
+      "searchEmpty": "Nessun gioco della tua libreria corrisponde a «{query}»."
     },
     "preview": {
       "title": "Anteprima invito",

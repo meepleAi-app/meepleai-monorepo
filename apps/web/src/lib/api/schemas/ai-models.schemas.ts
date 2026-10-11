@@ -38,6 +38,10 @@ export const ModelPricingSchema = z.object({
   inputPricePerMillion: z.number().min(0),
   outputPricePerMillion: z.number().min(0),
   currency: z.string(),
+  // #4169: da dove viene il prezzo. Il prezzo della cache non entra ancora nei costi.
+  cacheReadPricePerMillion: z.number().min(0).nullable().optional(),
+  verifiedOn: z.string().nullable().optional(),
+  source: z.string().nullable().optional(),
 });
 
 export type ModelPricing = z.infer<typeof ModelPricingSchema>;
@@ -124,6 +128,15 @@ export const SetPrimaryModelRequestSchema = z.object({
 });
 
 export type SetPrimaryModelRequest = z.infer<typeof SetPrimaryModelRequestSchema>;
+
+/**
+ * #4169 — PATCH /api/v1/admin/ai-models/{id}/pricing: il prezzo e nient'altro, in USD per milione di
+ * token. Il gateway lo usa per costo, tetto e degrado entro un minuto.
+ */
+export interface UpdateModelPricingRequest {
+  inputPricePerMillion: number;
+  outputPricePerMillion: number;
+}
 
 /**
  * Cost Tracking DTO

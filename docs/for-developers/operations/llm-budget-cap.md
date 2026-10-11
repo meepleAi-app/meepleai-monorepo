@@ -8,7 +8,7 @@ Il gateway LLM (`HybridLlmService`) **verifica il budget prima di ogni chiamata 
 
 Il controllo è `LlmBudgetGate`. Per ogni chiamata:
 
-1. **Modello nel catalogo** (D5, *fail closed*). Se il catalogo `AiModelConfiguration` non prezza il modello, la chiamata è rifiutata: registrata a $0, sfuggirebbe al tetto. Un modello Ollama vale come gratuito.
+1. **Modello nel catalogo** (D5, *fail closed*). Se il catalogo `AiModelConfiguration` non prezza il modello, la chiamata è rifiutata: registrata a $0, sfuggirebbe al tetto. Un modello Ollama vale come gratuito. I prezzi si leggono e si cambiano in `/admin/ai?tab=models`, tab **Models** (#4169), oppure con `PATCH /api/v1/admin/ai-models/{id}/pricing`. Un prezzo cambiato vale entro un minuto, ed è registrato come verificato oggi dall'admin, così il seed non lo sovrascrive con un listino più vecchio. Attenzione: un modello di un provider a pagamento con prezzo 0/0 conta come gratuito e sfugge al tetto. La pagina lo segnala come «No price».
 2. **Stima del costo massimo**: i caratteri del prompt diviso tre (per eccesso, i prompt in italiano hanno meno caratteri per token dell'inglese), più 1.500 token per immagine, più la lunghezza massima della risposta, ai prezzi del catalogo. Il tetto scatta quindi un po' prima del consumo reale.
 3. **Tetti**: la spesa del giorno (UTC) più la stima non deve superare il tetto giornaliero; quella del mese, il tetto mensile.
 4. **Quote**: il background e le valutazioni hanno ciascuno una quota del tetto, sia del giorno sia del mese. Le risposte agli utenti possono usare tutto il tetto.

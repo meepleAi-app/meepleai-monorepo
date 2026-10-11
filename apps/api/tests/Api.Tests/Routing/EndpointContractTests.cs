@@ -155,6 +155,8 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/unpublish", "#4138 — any user could switch the system agent off; admin route kept"];
         yield return ["POST", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/link-agent/00000000-0000-0000-0000-000000000001", "#4138 — per-game agent link on a private game"];
         yield return ["DELETE", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/unlink-agent", "#4138 — per-game agent unlink on a private game"];
+        yield return ["GET", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved, never read by the answer path"];
+        yield return ["PUT", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved (with mismatched field names), never read"];
     }
 
     [Theory]

@@ -147,17 +147,3 @@ export const AdminKbFeedbackSchema = z.object({
 });
 
 export type AdminKbFeedback = z.infer<typeof AdminKbFeedbackSchema>;
-
-/**
- * Per-game KB settings (admin override).
- * Returned by GET /PUT /api/v1/admin/kb/games/{gameId}/settings
- */
-export const GameKbSettingsSchema = z.object({
-  gameId: z.string(),
-  maxChunksOverride: z.number().int().positive().optional(),
-  chunkSizeOverride: z.number().int().positive().optional(),
-  cacheEnabledOverride: z.boolean().optional(),
-  languageOverride: z.string().optional(),
-});
-
-export type GameKbSettings = z.infer<typeof GameKbSettingsSchema>;

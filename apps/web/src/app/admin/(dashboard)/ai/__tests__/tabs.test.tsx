@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getStats: vi.fn().mockResolvedValue({ agents: [] }),
-  getAgentTypologies: vi.fn().mockResolvedValue([]),
   getPrompts: vi.fn().mockResolvedValue([]),
   getAiModels: vi.fn().mockResolvedValue({ models: [], totalCount: 0, page: 1, pageSize: 20 }),
   getAiRequests: vi.fn().mockResolvedValue({ requests: [], totalCount: 0 }),
@@ -23,8 +22,6 @@ const mocks = vi.hoisted(() => ({
     datapoints: [],
   }),
   deletePrompt: vi.fn().mockResolvedValue(undefined),
-  approveAgentTypology: vi.fn().mockResolvedValue(undefined),
-  deleteAgentTypology: vi.fn().mockResolvedValue(undefined),
   setPrimaryModel: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -62,7 +59,6 @@ import { ModelsTab } from '../ModelsTab';
 import { PromptsTab } from '../PromptsTab';
 import { RagTab } from '../RagTab';
 import { RequestsTab } from '../RequestsTab';
-import { TypologiesTab } from '../TypologiesTab';
 
 describe('AgentsTab', () => {
   it('renders heading', () => {
@@ -78,18 +74,6 @@ describe('AgentsTab', () => {
   it('renders link to full catalog', () => {
     render(<AgentsTab />);
     expect(screen.getByText('Full Catalog')).toBeInTheDocument();
-  });
-});
-
-describe('TypologiesTab', () => {
-  it('renders heading', () => {
-    render(<TypologiesTab />);
-    expect(screen.getByText('Agent Typologies')).toBeInTheDocument();
-  });
-
-  it('shows empty state when no typologies', async () => {
-    render(<TypologiesTab />);
-    expect(await screen.findByText('No typologies found')).toBeInTheDocument();
   });
 });
 

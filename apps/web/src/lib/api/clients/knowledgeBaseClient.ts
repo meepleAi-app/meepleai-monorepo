@@ -14,18 +14,16 @@ import {
   UserGameKbStatusSchema,
   AdminGameKbDocumentsSchema,
   AdminKbFeedbackSchema,
-  GameKbSettingsSchema,
   type KnowledgeBaseStatus,
   type RagConfigResponse,
   type UserGameKbStatus,
   type AdminGameKbDocuments,
   type AdminKbFeedback,
-  type GameKbSettings,
 } from '../schemas/knowledge-base.schemas';
 
 // ========== KB Management DTOs ==========
 
-export type { UserGameKbStatus, AdminGameKbDocuments, AdminKbFeedback, GameKbSettings };
+export type { UserGameKbStatus, AdminGameKbDocuments, AdminKbFeedback };
 
 export interface SubmitKbFeedbackBody {
   chatSessionId: string;
@@ -40,8 +38,6 @@ export interface AdminKbFeedbackParams {
   page?: number;
   pageSize?: number;
 }
-
-export type GameKbSettingsPayload = Omit<GameKbSettings, 'gameId'>;
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -189,35 +185,6 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
       return httpClient.get(
         `/api/v1/admin/kb/games/${encodeURIComponent(gameId)}/feedback${query}`,
         AdminKbFeedbackSchema
-      );
-    },
-
-    /**
-     * KB-10: Get per-game KB settings (admin)
-     * @param gameId Game ID (GUID format)
-     * @returns Current KB settings overrides
-     */
-    async getGameKbSettings(gameId: string): Promise<GameKbSettings | null> {
-      return httpClient.get(
-        `/api/v1/admin/kb/games/${encodeURIComponent(gameId)}/settings`,
-        GameKbSettingsSchema
-      );
-    },
-
-    /**
-     * KB-10: Update per-game KB settings (admin)
-     * @param gameId Game ID (GUID format)
-     * @param settings Settings overrides to apply
-     * @returns Updated KB settings
-     */
-    async setGameKbSettings(
-      gameId: string,
-      settings: GameKbSettingsPayload
-    ): Promise<GameKbSettings> {
-      return httpClient.put(
-        `/api/v1/admin/kb/games/${encodeURIComponent(gameId)}/settings`,
-        settings,
-        GameKbSettingsSchema
       );
     },
 

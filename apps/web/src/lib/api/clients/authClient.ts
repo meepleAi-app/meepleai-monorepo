@@ -6,6 +6,7 @@
  */
 
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
+import { globalRequestCache } from '../core/requestCache';
 import {
   LoginResponseSchema,
   RegisterResponseSchema,
@@ -117,7 +118,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * If requiresTwoFactor is true, use verify2FALogin() to complete authentication.
      */
     async login(request: LoginRequest): Promise<LoginResponse> {
-      return httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+      const response = await httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+      // #4190: la requestCache deduplica le GET con una chiave che non dipende dai cookie: senza
+      // svuotarla, un /auth/me anonimo appena letto poteva essere servito a chi ha fatto login.
+      globalRequestCache.clear();
+      return response;
     },
 
     /**
@@ -142,6 +147,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
       if (!response?.user) {
         throw new Error('2FA verification failed');
       }
+      globalRequestCache.clear(); // #4190: è cambiata l'identità
       return response.user;
     },
 
@@ -155,6 +161,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
         request,
         RegisterResponseSchema
       );
+      globalRequestCache.clear(); // #4190: è cambiata l'identità
       return response.user;
     },
 
@@ -164,6 +171,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      */
     async logout(): Promise<void> {
       await httpClient.post('/api/v1/auth/logout', {}, LogoutResponseSchema);
+      globalRequestCache.clear(); // #4190: è cambiata l'identità
     },
 
     /**

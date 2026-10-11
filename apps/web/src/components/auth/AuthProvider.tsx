@@ -19,8 +19,10 @@ import React, {
   PropsWithChildren,
 } from 'react';
 
+import { userKeys } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
+import { getQueryClient } from '@/lib/queryClient';
 import { AuthUser } from '@/types';
 
 // ============================================================================
@@ -149,6 +151,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       const authUser = await api.auth.register(data);
       setUser(authUser);
       localStorage.setItem('meepleai_has_session', 'true');
+      // #4190: il form di registrazione passava dall'hook omonimo di @/hooks/useAuth, che invalidava
+      // anche la query dell'utente; ora passa da qui, e l'invalidazione resta.
+      await getQueryClient().invalidateQueries({ queryKey: userKeys.current() });
       return authUser;
     } catch (err) {
       logger.error('Registration failed', err instanceof Error ? err : new Error(String(err)), {

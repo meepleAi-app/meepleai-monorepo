@@ -37,7 +37,9 @@ const { mockAuth } = vi.hoisted(() => ({
     clearError: vi.fn(),
   },
 }));
-vi.mock('@/hooks/useAuth', () => ({
+// #4190: il form usa AuthProvider, non più l'hook omonimo di @/hooks/useAuth. Il percorso con il
+// vero AuthProvider è in _content.auth-provider.test.tsx.
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuth: () => mockAuth,
 }));
 

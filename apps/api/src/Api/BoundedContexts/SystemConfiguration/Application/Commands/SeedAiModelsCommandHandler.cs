@@ -126,8 +126,12 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
             .ToDictionary(m => m.ModelId, StringComparer.Ordinal);
 
         var added = new List<AiModelConfiguration>();
+        // Un modello può cambiare due volte nello stesso giro (sostituto promosso a primario e
+        // riprezzato): il repository attacca un'istanza nuova a ogni UpdateAsync, e una seconda
+        // istanza con la stessa chiave fa lanciare EF. Si aggiorna una volta sola, alla fine.
+        var changed = new HashSet<AiModelConfiguration>(ReferenceEqualityComparer.Instance);
         var repriced = 0;
-        var retired = await RetireAsync(existing, cancellationToken).ConfigureAwait(false);
+        var retired = Retire(existing, changed);
 
         foreach (var seed in Models)
         {
@@ -146,9 +150,14 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
 
             if (seed.Pricing.VerifiedOn is not null && model.ApplyVerifiedPricing(seed.Pricing))
             {
-                await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
+                changed.Add(model);
                 repriced++;
             }
+        }
+
+        foreach (var model in changed)
+        {
+            await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
         }
 
         if (added.Count == 0 && repriced == 0 && retired.Count == 0)
@@ -175,12 +184,14 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
     /// il ruolo passa al sostituto, quando questo esiste, è attivo ed è dello stesso provider: un
     /// sostituto che l'admin ha disattivato resta una sua scelta.
     /// </summary>
-    /// <returns>Gli id dei modelli modificati.</returns>
-    private async Task<IReadOnlyList<string>> RetireAsync(
+    /// <param name="existing">Il catalogo, per id del modello.</param>
+    /// <param name="changed">Raccoglie i modelli modificati, da salvare una volta sola.</param>
+    /// <returns>Gli id dei modelli dismessi disattivati.</returns>
+    private static List<string> Retire(
         IReadOnlyDictionary<string, AiModelConfiguration> existing,
-        CancellationToken cancellationToken)
+        HashSet<AiModelConfiguration> changed)
     {
-        var changed = new List<string>();
+        var retired = new List<string>();
         foreach (var retiredModel in RetiredModels)
         {
             if (!existing.TryGetValue(retiredModel.ModelId, out var model) || (!model.IsActive && !model.IsPrimary))
@@ -195,16 +206,16 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 && !replacement.IsPrimary)
             {
                 replacement.SetPrimary(true);
-                await _repository.UpdateAsync(replacement, cancellationToken).ConfigureAwait(false);
+                changed.Add(replacement);
             }
 
             model.SetActive(false);
             model.SetPrimary(false);
-            await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
-            changed.Add(model.ModelId);
+            changed.Add(model);
+            retired.Add(model.ModelId);
         }
 
-        return changed;
+        return retired;
     }
 
     internal sealed record SeedModel(

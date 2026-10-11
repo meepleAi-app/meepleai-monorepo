@@ -35,8 +35,19 @@ public sealed class SeedAiModelsCommandHandlerTests
         _repository.Setup(r => r.AddRangeAsync(It.IsAny<IEnumerable<AiModelConfiguration>>(), It.IsAny<CancellationToken>()))
             .Callback<IEnumerable<AiModelConfiguration>, CancellationToken>((models, _) => _added.AddRange(models))
             .Returns(Task.CompletedTask);
+        // Come EfAiModelConfigurationRepository: ogni UpdateAsync attacca un'istanza nuova, quindi
+        // due aggiornamenti dello stesso modello nella stessa unit of work fanno lanciare EF (#4179).
         _repository.Setup(r => r.UpdateAsync(It.IsAny<AiModelConfiguration>(), It.IsAny<CancellationToken>()))
-            .Callback<AiModelConfiguration, CancellationToken>((model, _) => _updated.Add(model))
+            .Callback<AiModelConfiguration, CancellationToken>((model, _) =>
+            {
+                if (_updated.Any(updated => updated.Id == model.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"The instance of entity type 'AiModelConfigurationEntity' cannot be tracked because another instance with the key value '{model.Id}' is already being tracked.");
+                }
+
+                _updated.Add(model);
+            })
             .Returns(Task.CompletedTask);
     }
 

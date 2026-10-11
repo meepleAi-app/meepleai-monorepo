@@ -151,6 +151,43 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
         }
     }
 
+    /// <summary>
+    /// #4179: la migration sostituisce solo la chiave che nomina ancora un modello dismesso. Un
+    /// modello principale scelto dall'admin resta, anche se la riserva va sostituita.
+    /// </summary>
+    [Fact]
+    public async Task RepublishMigration_ReplacesOnlyTheRetiredModel_AndKeepsTheOtherChoice()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = $"agent_profile_{Guid.NewGuid():N}";
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(databaseName);
+        try
+        {
+            await using var context = _fixture.CreateDbContext(connectionString);
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync("20261010220145_AddLlmCostLogPricingStatus", ct);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE knowledge_base.agent_profile_versions
+                SET content = content || jsonb_build_object('primaryModelId', 'anthropic/claude-sonnet-4.5')
+                WHERE status = 1
+                """,
+                ct);
+
+            await migrator.MigrateAsync(cancellationToken: ct);
+
+            var profile = await new AgentProfileRepository(context).GetAsync(ct);
+            profile!.Published.VersionNumber.Should().Be(2);
+            profile.Published.Content.PrimaryModelId.Should().Be("anthropic/claude-sonnet-4.5",
+                "il principale non è un modello dismesso: è una scelta da non toccare");
+            profile.Published.Content.FallbackModelId.Should().Be("meta-llama/llama-3.3-70b-instruct");
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(databaseName);
+        }
+    }
+
     [Fact]
     public async Task PublishingADraft_IsPersisted_AndArchivesThePublishedVersion()
     {

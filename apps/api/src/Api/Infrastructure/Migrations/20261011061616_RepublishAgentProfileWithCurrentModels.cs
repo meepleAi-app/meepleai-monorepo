@@ -13,8 +13,8 @@ namespace Api.Infrastructure.Migrations
     /// </summary>
     /// <remarks>
     /// Scatta solo se la versione pubblicata nomina ancora uno dei due modelli: un profilo già
-    /// ripubblicato non si tocca. Il contenuto della nuova versione è quello della pubblicata con le
-    /// sole due chiavi dei modelli sostituite, quindi il resto resta byte per byte.
+    /// ripubblicato non si tocca. Il contenuto della nuova versione è quello della pubblicata, con
+    /// sostituita solo la chiave che nomina un modello dismesso: un modello scelto altrimenti resta.
     /// </remarks>
     public partial class RepublishAgentProfileWithCurrentModels : Migration
     {
@@ -48,8 +48,14 @@ namespace Api.Infrastructure.Migrations
                      WHERE agent_profile_id = a.agent_profile_id),
                     1,
                     a.content || jsonb_build_object(
-                        'primaryModelId', 'deepseek-flash',
-                        'fallbackModelId', 'meta-llama/llama-3.3-70b-instruct'),
+                        'primaryModelId',
+                        CASE WHEN a.content->>'primaryModelId' = 'deepseek-chat'
+                             THEN 'deepseek-flash'
+                             ELSE a.content->>'primaryModelId' END,
+                        'fallbackModelId',
+                        CASE WHEN a.content->>'fallbackModelId' = 'meta-llama/llama-3.3-70b-instruct:free'
+                             THEN 'meta-llama/llama-3.3-70b-instruct'
+                             ELSE a.content->>'fallbackModelId' END),
                     NOW(),
                     NOW()
                 FROM archived a;

@@ -72,17 +72,15 @@ public sealed class LlmProviderSelectorDefaultModelTests
         model.Should().Be("deepseek-reasoner");
     }
 
-    [Theory]
-    [InlineData("Ollama")]
-    [InlineData("OpenRouter")]
-    [InlineData("DeepSeek")]
-    public async Task EveryProviderWithAClient_HasItsOwnDefault(string provider)
+    [Fact]
+    public async Task EveryProviderWithAClient_HasItsOwnDefault()
     {
         var sut = CreateSut();
+        var ct = TestContext.Current.CancellationToken;
 
-        var model = await sut.GetDefaultModelForProviderAsync(provider, TestContext.Current.CancellationToken);
-
-        model.Should().Be(AgentDefaults.DefaultModelForProvider(provider));
+        (await sut.GetDefaultModelForProviderAsync("Ollama", ct)).Should().Be(AgentDefaults.OllamaFallbackModel);
+        (await sut.GetDefaultModelForProviderAsync("OpenRouter", ct)).Should().Be(AgentDefaults.DefaultModel);
+        (await sut.GetDefaultModelForProviderAsync("DeepSeek", ct)).Should().Be("deepseek-flash");
     }
 
     [Fact]

@@ -2355,6 +2355,12 @@ Not currently supported. If a single provider needs to be ejected from the routi
 
 Visit `/admin/providers` (admin role required). The `CircuitBreakerGrid` section should show all chips `closed` (green) and the cooldown bar should disappear. The KPI `Circuit health` in the hero should read `N/N` (all healthy).
 
+### LLM — «servizio AI in pausa» (tetto di spesa)
+
+**Quando**: gli utenti ricevono «Il servizio AI è in pausa…», oppure sale `meepleai_llm_budget_rejected_calls_total`. Dalla fetta 3 di ADR-095 (#4166) il gateway rifiuta prima di spendere le chiamate oltre il tetto giornaliero o mensile, oltre la quota di background e valutazioni, o verso un modello fuori catalogo. Il motivo è nell'etichetta `reason` e nel warning dell'API.
+
+**Cosa fare**: se il tetto è giusto, la pausa è il comportamento voluto. Per alzarlo: `/admin/ai` → LLM config, tetti giornaliero e mensile; vale entro un minuto. Dettagli, quote e codici d'errore: [`llm-budget-cap.md`](./llm-budget-cap.md).
+
 ### Communication Template
 
 ```

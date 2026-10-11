@@ -742,10 +742,20 @@ internal static class LiveSessionEndpoints
         Guid sessionId,
         [FromBody] GenerateSetupChecklistRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        // #4206: la guida alla preparazione legge la KB del gioco, e il cancello RAG decide per utente.
+        var (authenticated, session, error) = httpContext.TryGetActiveSession();
+        if (!authenticated) return error!;
+
         var checklist = await mediator.Send(
-            new GenerateSetupChecklistCommand(sessionId, request.PlayerCount), cancellationToken).ConfigureAwait(false);
+            new GenerateSetupChecklistCommand(
+                sessionId,
+                request.PlayerCount,
+                session!.Principal!.Subject.Id,
+                session.Principal!.EffectiveActor.Role),
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(checklist);
     }
 

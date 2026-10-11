@@ -46,6 +46,8 @@ public class RagQueryIdentityArchitectureTests
         ("Api.BoundedContexts.KnowledgeBase.Application.Queries.StreamQaQuery", "UserId", "UserRole"),
         ("Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKnowledgeBaseStatusQuery",
             "RequestingUserId", "RequestingUserRole"),
+        // #4206: la guida alla preparazione cerca nella KB del gioco, quindi passa dal cancello.
+        ("Api.BoundedContexts.KnowledgeBase.Application.Queries.StreamSetupGuideQuery", "UserId", "UserRole"),
     };
 
     private static Type ResolveQueryType(string typeName)

@@ -30,6 +30,8 @@ public class GenerateSetupChecklistCommandHandlerTests
     private readonly Mock<IFeatureFlagService> _featureFlagServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly GenerateSetupChecklistCommandHandler _handler;
+    // #4206: chi chiede la checklist; la guida alla preparazione ne ha bisogno per il cancello RAG.
+    private static readonly Guid TestUserId = Guid.NewGuid();
 
     private static readonly Guid DefaultSessionId = Guid.NewGuid();
     private static readonly Guid DefaultGameId = Guid.NewGuid();
@@ -130,7 +132,7 @@ public class GenerateSetupChecklistCommandHandlerTests
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
 
         // Act & Assert
         var act =
@@ -148,7 +150,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         // Arrange
         SetupFeatureFlagEnabled();
         SetupRepoGetById(DefaultSessionId, null);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
 
         // Act & Assert
         var act =
@@ -167,7 +169,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         SetupFeatureFlagEnabled();
         var session = CreateSessionWithoutGameId();
         SetupRepoGetById(DefaultSessionId, session);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
 
         // Act & Assert
         var act =
@@ -187,7 +189,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId();
         SetupRepoGetById(DefaultSessionId, session);
         SetupStreamingResponse(DefaultGameId.ToString(), 4);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -206,7 +208,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId();
         SetupRepoGetById(DefaultSessionId, session);
         SetupStreamingResponse(DefaultGameId.ToString(), 4);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4);
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -226,7 +228,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId(sessionId, gameId);
         SetupRepoGetById(sessionId, session);
         SetupStreamingResponse(gameId.ToString(), 3);
-        var command = new GenerateSetupChecklistCommand(sessionId, 3);
+        var command = new GenerateSetupChecklistCommand(sessionId, 3, TestUserId, "User");
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -236,7 +238,10 @@ public class GenerateSetupChecklistCommandHandlerTests
             x => x.CreateStream(
                 It.Is<StreamSetupGuideQuery>(q =>
                     q.GameId == gameId.ToString() &&
-                    q.PlayerCount == 3),
+                    q.PlayerCount == 3 &&
+                    // #4206: l'identità arriva fino alla query, dove decide il cancello RAG.
+                    q.UserId == TestUserId &&
+                    q.UserRole == "User"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -249,7 +254,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId();
         SetupRepoGetById(DefaultSessionId, session);
         SetupStreamingResponse(DefaultGameId.ToString(), 2);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 2);
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 2, TestUserId, "User");
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);

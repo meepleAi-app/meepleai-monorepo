@@ -625,7 +625,13 @@ internal static class AiEndpoints
 
         try
         {
-            var query = new StreamSetupGuideQuery(req.gameId, req.playerCount);
+            // #4206: l'identità serve al cancello RAG dell'handler (ADR-096). Argomenti con nome, come
+            // per StreamQaQuery: un parametro obbligatorio aggiunto non rimescola quelli dopo.
+            var query = new StreamSetupGuideQuery(
+                GameId: req.gameId,
+                UserId: session.Principal!.Subject.Id,
+                UserRole: session.Principal!.EffectiveActor.Role,
+                PlayerCount: req.playerCount);
             await ExecuteSetupGuideStreamingAsync(query, context, mediator, streamContext, ct).ConfigureAwait(false);
 
             logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
@@ -636,6 +642,17 @@ internal static class AiEndpoints
             logger.LogInformation(ex, "Setup guide streaming cancelled by client for game {GameId}", req.gameId);
             streamContext.StreamStatus = "Cancelled";
             streamContext.StreamErrorMessage = "Client disconnected";
+        }
+        catch (RagOwnershipRequiredException ex)
+        {
+            // #4206: un diniego atteso, non un guasto. Come nello stream della chat, gli header SSE sono
+            // già partiti: viaggia come evento Error con il proprio codice e il gioco.
+            logger.LogInformation(
+                ex, "Setup guide denied for game {GameId}: RAG ownership not declared", ex.GameId);
+            streamContext.StreamStatus = "Error";
+            streamContext.StreamErrorMessage = ex.Message;
+            await TryWriteStreamErrorAsync(
+                context, new StreamingError(ex.Message, ex.ErrorCode, ex.GameId), ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

@@ -34,6 +34,7 @@ internal class HybridLlmService : ILlmService
     private readonly IPiiDetector? _piiDetector; // Issue #5510: PII redaction for OpenRouter-bound prompts
     private readonly ILlmCallerAccessor? _callerAccessor; // #4164: attribuzione del costo all'utente della richiesta
     private readonly ILlmBudgetGate? _budgetGate; // #4166: tetto di spesa e fail closed, prima di ogni chiamata
+    private readonly IAgentReserveModelProvider? _reserveModels; // #4166: modello di riserva per il degrado
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
@@ -55,7 +56,8 @@ internal class HybridLlmService : ILlmService
         ILogger<HybridLlmService> logger,
         IPiiDetector? piiDetector = null,
         ILlmCallerAccessor? callerAccessor = null,
-        ILlmBudgetGate? budgetGate = null)
+        ILlmBudgetGate? budgetGate = null,
+        IAgentReserveModelProvider? reserveModels = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _providerSelector = providerSelector ?? throw new ArgumentNullException(nameof(providerSelector));
@@ -65,6 +67,7 @@ internal class HybridLlmService : ILlmService
         _piiDetector = piiDetector; // Issue #5510: Optional - PII redaction for OpenRouter
         _callerAccessor = callerAccessor;
         _budgetGate = budgetGate;
+        _reserveModels = reserveModels;
 
         if (_clients.Count == 0)
         {
@@ -127,6 +130,8 @@ internal class HybridLlmService : ILlmService
         {
             return LlmCompletionResult.CreateFailure("Provider error: No providers available");
         }
+
+        (client, decision) = await ApplyBudgetDegradeAsync(client, decision, source, cancellationToken).ConfigureAwait(false);
 
         // Step 2: Execute with retry/fallback loop
         var attemptedProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -291,6 +296,11 @@ internal class HybridLlmService : ILlmService
             _logger.LogError("No client found for streaming, falling back to first available");
             client = _clients[0];
         }
+
+        var (degradedClient, degradedDecision) = await ApplyBudgetDegradeAsync(client, selection.Decision, source, cancellationToken)
+            .ConfigureAwait(false);
+        client = degradedClient;
+        selection = selection with { Decision = degradedDecision };
 
         _logger.LogInformation(
             "Starting streaming completion via {Provider} ({Model}) - Reason: {Reason}",
@@ -868,6 +878,50 @@ internal class HybridLlmService : ILlmService
 
     private void CompleteAdmission(LlmBudgetAdmission admission, decimal actualCostUsd) =>
         _budgetGate?.Complete(admission, actualCostUsd);
+
+    /// <summary>
+    /// #4166 (ADR-095 D6): fra la soglia di degrado e il tetto, una risposta instradata passa al
+    /// modello di riserva della versione pubblicata del profilo. Il background a quel punto è già
+    /// fermo nel gate; le chiamate a modello esplicito tengono il loro modello.
+    /// </summary>
+    private async Task<(ILlmClient Client, LlmRoutingDecision Decision)> ApplyBudgetDegradeAsync(
+        ILlmClient client,
+        LlmRoutingDecision decision,
+        RequestSource source,
+        CancellationToken cancellationToken)
+    {
+        if (_budgetGate is null || _reserveModels is null
+            || LlmBudgetClassification.For(source) != LlmBudgetClass.Answer
+            || !await _budgetGate.IsDegradedAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return (client, decision);
+        }
+
+        var reserve = await _reserveModels.GetReserveModelAsync(cancellationToken).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(reserve) || string.Equals(reserve, decision.ModelId, StringComparison.Ordinal))
+        {
+            return (client, decision);
+        }
+
+        var reserveClient = _clients.FirstOrDefault(c => c.SupportsModel(reserve));
+        if (reserveClient is null || _circuitBreakerRegistry.GetState(reserveClient.ProviderName) == CircuitState.Open)
+        {
+            _logger.LogWarning(
+                "Budget degrade: the reserve model {Reserve} has no available provider, keeping {Model}",
+                reserve, decision.ModelId);
+            return (client, decision);
+        }
+
+        _logger.LogWarning(
+            "Budget degrade: today's LLM spend reached the degrade threshold, answering with the reserve model {Reserve} instead of {Model}",
+            reserve, decision.ModelId);
+        return (reserveClient, decision with
+        {
+            ProviderName = reserveClient.ProviderName,
+            ModelId = reserve,
+            Reason = $"{decision.Reason} (budget degrade: reserve model of the agent profile)",
+        });
+    }
 
     /// <summary>Il risultato di una chiamata che il gateway non ha fatto partire.</summary>
     private static LlmCompletionResult Refused(LlmBudgetAdmission admission)

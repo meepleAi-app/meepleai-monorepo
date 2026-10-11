@@ -30,6 +30,13 @@ internal interface ILlmBudgetGate
     /// fine del mese, invece di dimenticarlo alla lettura successiva del registro.
     /// </param>
     void Complete(LlmBudgetAdmission admission, decimal actualCostUsd, bool recordedInCostLog = true);
+
+    /// <summary>
+    /// #4166 (ADR-095 D6): vero se il consumo del giorno ha raggiunto la soglia di degrado. Fra la
+    /// soglia e il tetto le risposte passano al modello di riserva del profilo e il background si
+    /// ferma; oltre il tetto non parte nulla.
+    /// </summary>
+    Task<bool> IsDegradedAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -71,6 +78,12 @@ internal enum LlmBudgetRejection
 
     /// <summary>La classe della chiamata ha esaurito la sua quota del mese.</summary>
     MonthlyQuotaReached,
+
+    /// <summary>
+    /// Il consumo del giorno ha raggiunto la soglia di degrado: background e valutazioni sono in
+    /// pausa fino a domani, per lasciare il resto del budget alle risposte.
+    /// </summary>
+    BackgroundPaused,
 
     /// <summary>Il catalogo o la spesa non si sono potuti leggere: senza, il tetto non è verificabile.</summary>
     BudgetUnavailable,

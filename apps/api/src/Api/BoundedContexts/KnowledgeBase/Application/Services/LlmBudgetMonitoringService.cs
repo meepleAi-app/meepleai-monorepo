@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,57 +12,46 @@ using Microsoft.Extensions.Logging;
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
-/// ISSUE-1725: Background service for LLM budget monitoring and alerting
-/// Checks hourly spend against configured thresholds and triggers alerts
+/// ISSUE-1725: Background service for LLM budget monitoring and alerting.
 /// </summary>
 /// <remarks>
-/// Configuration keys (appsettings.json):
-/// - LlmBudgetAlerts:DailyBudgetUsd: Daily budget limit (default: 50.00)
-/// - LlmBudgetAlerts:MonthlyBudgetUsd: Monthly budget limit (default: 1000.00)
-/// - LlmBudgetAlerts:Thresholds:Warning: Warning threshold (default: 0.80)
-/// - LlmBudgetAlerts:Thresholds:Critical: Critical threshold (default: 0.95)
-/// - LlmBudgetAlerts:CheckIntervalMinutes: Check interval (default: 60)
-///
-/// Actions:
-/// - Warning threshold: Send alert notification
-/// - Critical threshold: Send alert + enable budget mode (auto-downgrade to cheaper models)
-/// - Below warning: Disable budget mode (restore normal models)
-///
-/// DI Pattern: Uses IServiceScopeFactory to resolve scoped services (ILlmCostLogRepository)
+/// <para>
+/// #4166 (ADR-095 D6): tetti e soglia vengono da <c>LlmSystemConfig</c>, gli stessi che il gateway
+/// applica prima di ogni chiamata. Prima venivano da <c>LlmBudgetAlerts</c> in appsettings
+/// (50 $ / 1000 $), e alla soglia critica questo servizio passava tutte le richieste a modelli più
+/// economici: un budget mode orario, che il degrado del gateway ha sostituito.
+/// </para>
+/// <para>
+/// Qui restano gli allarmi: un warning quando il consumo raggiunge la soglia di degrado, un errore
+/// quando raggiunge il tetto e il gateway rifiuta le chiamate. Un tetto a zero (AI a pagamento
+/// spenta) non genera allarmi.
+/// </para>
+/// <para>Configurazione: <c>LlmBudgetAlerts:CheckIntervalMinutes</c> (default 60).</para>
 /// </remarks>
 internal class LlmBudgetMonitoringService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
-    private readonly ILlmModelOverrideService _modelOverrideService;
+    private readonly ILlmSystemConfigProvider _configProvider;
     private readonly ILogger<LlmBudgetMonitoringService> _logger;
 
-    // Configuration with defaults
-    private decimal DailyBudgetUsd => _configuration.GetValue("LlmBudgetAlerts:DailyBudgetUsd", 50.00m);
-    private decimal MonthlyBudgetUsd => _configuration.GetValue("LlmBudgetAlerts:MonthlyBudgetUsd", 1000.00m);
-    private double WarningThreshold => _configuration.GetValue("LlmBudgetAlerts:Thresholds:Warning", 0.80);
-    private double CriticalThreshold => _configuration.GetValue("LlmBudgetAlerts:Thresholds:Critical", 0.95);
     private int CheckIntervalMinutes => _configuration.GetValue("LlmBudgetAlerts:CheckIntervalMinutes", 60);
 
     public LlmBudgetMonitoringService(
         IServiceScopeFactory scopeFactory,
         IConfiguration configuration,
-        ILlmModelOverrideService modelOverrideService,
+        ILlmSystemConfigProvider configProvider,
         ILogger<LlmBudgetMonitoringService> logger)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-        _modelOverrideService = modelOverrideService ?? throw new ArgumentNullException(nameof(modelOverrideService));
+        _configProvider = configProvider ?? throw new ArgumentNullException(nameof(configProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-        _logger.LogInformation(
-            "LlmBudgetMonitoringService initialized: Daily=${DailyBudget}, Monthly=${MonthlyBudget}, Warning={Warning}%, Critical={Critical}%, Interval={Interval}min",
-            DailyBudgetUsd, MonthlyBudgetUsd, WarningThreshold * 100, CriticalThreshold * 100, CheckIntervalMinutes);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("LLM Budget Monitoring Service starting...");
+        _logger.LogInformation("LLM Budget Monitoring Service starting (interval {Interval} min)", CheckIntervalMinutes);
 
         // Initial delay to allow app to start
         await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken).ConfigureAwait(false);
@@ -73,7 +62,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
             {
                 await CheckBudgetThresholdsAsync(stoppingToken).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Error checking budget thresholds");
             }
@@ -84,33 +73,27 @@ internal class LlmBudgetMonitoringService : BackgroundService
         _logger.LogInformation("LLM Budget Monitoring Service stopping...");
     }
 
-    private async Task CheckBudgetThresholdsAsync(CancellationToken cancellationToken)
+    internal async Task CheckBudgetThresholdsAsync(CancellationToken cancellationToken)
     {
-        // Create scope to resolve scoped services
+        var policy = await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false);
+        var warningRatio = policy.DegradeThresholdPercent / 100.0;
+
         using var scope = _scopeFactory.CreateScope();
         var costLogRepository = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
         var alertingService = scope.ServiceProvider.GetRequiredService<IAlertingService>();
 
         var now = DateTime.UtcNow;
+        var today = DateOnly.FromDateTime(now);
 
-        // Check daily budget
-        var dailySpend = await costLogRepository.GetTotalCostAsync(
-            startDate: DateOnly.FromDateTime(now.Date),
-            endDate: DateOnly.FromDateTime(now),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        var dailySpend = await costLogRepository
+            .GetTotalCostAsync(today, today, cancellationToken).ConfigureAwait(false);
+        await ProcessThresholdAsync(alertingService, "Daily", dailySpend, policy.DailyCapUsd, warningRatio, cancellationToken)
+            .ConfigureAwait(false);
 
-        var dailyPercentage = (double)(dailySpend / DailyBudgetUsd);
-        await ProcessThresholdAsync(alertingService, "Daily", dailySpend, DailyBudgetUsd, dailyPercentage, cancellationToken).ConfigureAwait(false);
-
-        // Check monthly budget
-        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var monthlySpend = await costLogRepository.GetTotalCostAsync(
-            startDate: DateOnly.FromDateTime(monthStart),
-            endDate: DateOnly.FromDateTime(now),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        var monthlyPercentage = (double)(monthlySpend / MonthlyBudgetUsd);
-        await ProcessThresholdAsync(alertingService, "Monthly", monthlySpend, MonthlyBudgetUsd, monthlyPercentage, cancellationToken).ConfigureAwait(false);
+        var monthlySpend = await costLogRepository
+            .GetTotalCostAsync(new DateOnly(today.Year, today.Month, 1), today, cancellationToken).ConfigureAwait(false);
+        await ProcessThresholdAsync(alertingService, "Monthly", monthlySpend, policy.MonthlyCapUsd, warningRatio, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     private async Task ProcessThresholdAsync(
@@ -118,46 +101,30 @@ internal class LlmBudgetMonitoringService : BackgroundService
         string period,
         decimal actualSpend,
         decimal budgetLimit,
-        double percentage,
+        double warningRatio,
         CancellationToken cancellationToken)
     {
-        if (percentage >= CriticalThreshold)
+        if (budgetLimit <= 0m)
         {
-            // ISSUE-1725: Enable budget mode (auto-downgrade to cheaper models)
-            var reason = $"{period} budget {percentage:P0} exceeded (${actualSpend:F2} / ${budgetLimit:F2})";
-            _modelOverrideService.EnableBudgetMode(reason);
+            _logger.LogDebug("{Period} LLM budget is zero (paid AI off): no alert", period);
+            return;
+        }
 
-            await SendBudgetAlertAsync(
-                alertingService,
-                severity: "Critical",
-                period: period,
-                actualSpend: actualSpend,
-                budgetLimit: budgetLimit,
-                percentage: percentage,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-        }
-        else if (percentage >= WarningThreshold)
+        var percentage = (double)(actualSpend / budgetLimit);
+        if (percentage >= 1.0)
         {
-            await SendBudgetAlertAsync(
-                alertingService,
-                severity: "Warning",
-                period: period,
-                actualSpend: actualSpend,
-                budgetLimit: budgetLimit,
-                percentage: percentage,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            await SendBudgetAlertAsync(alertingService, "Critical", period, actualSpend, budgetLimit, percentage,
+                "The LLM gateway is refusing paid calls until the budget resets.", cancellationToken).ConfigureAwait(false);
         }
-        else if (_modelOverrideService.IsInBudgetMode())
+        else if (percentage >= warningRatio)
         {
-            // ISSUE-1725: Budget dropped below warning → disable budget mode
-            _modelOverrideService.DisableBudgetMode();
-            _logger.LogInformation(
-                "{Period} budget recovered to {Percentage:P0} - budget mode disabled",
-                period, percentage);
+            await SendBudgetAlertAsync(alertingService, "Warning", period, actualSpend, budgetLimit, percentage,
+                "Degrade threshold reached: answers use the reserve model of the agent profile, background work is paused.",
+                cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogDebug(
-            "{Period} budget status: ${Spend:F2} / ${Limit:F2} ({Percentage:P0})",
+            "{Period} budget status: ${Spend:F4} / ${Limit:F2} ({Percentage:P0})",
             period, actualSpend, budgetLimit, percentage);
     }
 
@@ -168,9 +135,9 @@ internal class LlmBudgetMonitoringService : BackgroundService
         decimal actualSpend,
         decimal budgetLimit,
         double percentage,
+        string effect,
         CancellationToken cancellationToken)
     {
-        var budgetModeStatus = _modelOverrideService.GetBudgetModeStatus();
         var message = $"""
             🚨 LLM Budget Alert - {severity}
 
@@ -179,9 +146,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
             Budget Limit: ${budgetLimit:F2}
             Usage: {percentage:P0}
 
-            Threshold: {(string.Equals(severity, "Critical", StringComparison.Ordinal) ? CriticalThreshold : WarningThreshold):P0}
-            
-            {budgetModeStatus}
+            {effect}
             """;
 
         _logger.LogWarning(
@@ -192,17 +157,14 @@ internal class LlmBudgetMonitoringService : BackgroundService
             alertType: $"LlmBudget{severity}",
             severity: string.Equals(severity, "Critical", StringComparison.Ordinal) ? "Error" : "Warning",
             message: message,
-            metadata: new Dictionary<string, object>
-(StringComparer.Ordinal)
+            metadata: new Dictionary<string, object>(StringComparer.Ordinal)
             {
                 { "period", period },
                 { "actualSpend", actualSpend },
                 { "budgetLimit", budgetLimit },
                 { "percentage", percentage },
                 { "source", "LlmBudgetMonitoring" },
-                { "budgetModeActive", _modelOverrideService.IsInBudgetMode() }
             },
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 }
-

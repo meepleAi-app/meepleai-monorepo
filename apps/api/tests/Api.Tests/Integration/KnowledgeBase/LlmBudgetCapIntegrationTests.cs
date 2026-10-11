@@ -49,8 +49,12 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
 {
     private const string CatalogModel = "deepseek-flash";
 
+    /// <summary>La riserva della versione del profilo pubblicata dalle migration (#4179).</summary>
+    private const string ReserveModel = "meta-llama/llama-3.3-70b-instruct";
+
     private readonly SharedTestcontainersFixture _fixture;
     private readonly Mock<ILlmClient> _provider = new();
+    private readonly Mock<ILlmClient> _reserveProvider = new();
     private string _databaseName = null!;
     private ServiceProvider _services = null!;
 
@@ -66,6 +70,16 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
                 "answer",
                 new LlmUsage(100, 20, 120),
                 new LlmCost { InputCost = 0.00003m, OutputCost = 0.000024m, ModelId = CatalogModel, Provider = "DeepSeek" }));
+
+        _reserveProvider.Setup(c => c.ProviderName).Returns("OpenRouter");
+        _reserveProvider.Setup(c => c.SupportsModel(ReserveModel)).Returns(true);
+        _reserveProvider
+            .Setup(c => c.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(
+                "answer from the reserve",
+                new LlmUsage(100, 20, 120),
+                new LlmCost { InputCost = 0.00001m, OutputCost = 0.00001m, ModelId = ReserveModel, Provider = "OpenRouter" }));
     }
 
     public async ValueTask InitializeAsync()
@@ -83,6 +97,7 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
         services.AddSingleton<IModelPriceList>(sp => sp.GetRequiredService<CatalogModelPriceList>());
         services.AddSingleton<ILlmCostCalculator, LlmCostCalculator>();
         services.AddSingleton<ILlmBudgetGate, LlmBudgetGate>();
+        services.AddScoped<IAgentProfileRepository, AgentProfileRepository>();
         _services = services.BuildServiceProvider();
 
         var ct = TestContext.Current.CancellationToken;
@@ -120,7 +135,7 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    private HybridLlmService Gateway(string routedModel = CatalogModel)
+    private Mock<ILlmProviderSelector> Selector(string routedModel)
     {
         var selector = new Mock<ILlmProviderSelector>();
         selector
@@ -129,10 +144,28 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
         selector
             .Setup(s => s.GetNextFallbackAsync(It.IsAny<string>(), It.IsAny<HashSet<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ProviderSelectionResult.NoProvider("none"));
+        return selector;
+    }
+
+    private HybridLlmService Gateway(string routedModel = CatalogModel) =>
+        new([_provider.Object], Selector(routedModel).Object, new Mock<ICircuitBreakerRegistry>().Object, new Mock<ILlmCostService>().Object,
+            NullLogger<HybridLlmService>.Instance, budgetGate: _services.GetRequiredService<ILlmBudgetGate>());
+
+    /// <summary>
+    /// Il gateway come lo registra l'API: con il modello di riserva letto dal profilo pubblicato. Il
+    /// provider principale non serve la riserva, così la si vede passare all'altro.
+    /// </summary>
+    private HybridLlmService DegradableGateway()
+    {
+        _provider.Setup(c => c.SupportsModel(ReserveModel)).Returns(false);
+        var reserveModels = new PublishedProfileReserveModelProvider(
+            _services.GetRequiredService<IServiceScopeFactory>(), TimeProvider.System,
+            NullLogger<PublishedProfileReserveModelProvider>.Instance);
 
         return new HybridLlmService(
-            [_provider.Object], selector.Object, new Mock<ICircuitBreakerRegistry>().Object, new Mock<ILlmCostService>().Object,
-            NullLogger<HybridLlmService>.Instance, budgetGate: _services.GetRequiredService<ILlmBudgetGate>());
+            [_provider.Object, _reserveProvider.Object], Selector(CatalogModel).Object, new Mock<ICircuitBreakerRegistry>().Object,
+            new Mock<ILlmCostService>().Object, NullLogger<HybridLlmService>.Instance,
+            budgetGate: _services.GetRequiredService<ILlmBudgetGate>(), reserveModels: reserveModels);
     }
 
     private void ProviderCalled(Times times) =>
@@ -243,5 +276,43 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
         result.Success.Should().BeFalse();
         result.Metadata["error_code"].Should().Be(LlmBudgetAdmission.ModelErrorCode);
         ProviderCalled(Times.Never());
+    }
+
+    /// <summary>
+    /// 3b (D6): fra la soglia di degrado (80%) e il tetto, la risposta esce dal modello di riserva
+    /// del profilo pubblicato e il background è in pausa. Profilo, catalogo, politica e registro sono
+    /// quelli veri.
+    /// </summary>
+    [Fact]
+    public async Task FromTheDegradeThreshold_AnswersUseTheProfileReserve_AndTheBackgroundPauses()
+    {
+        await SpentTodayAsync(0.85m); // l'85% del tetto predefinito di 1 $
+        var gateway = DegradableGateway();
+
+        var answer = await gateway.GenerateCompletionAsync("system", "How do I score?", RequestSource.Manual,
+            TestContext.Current.CancellationToken);
+        var background = await gateway.GenerateCompletionWithModelAsync(CatalogModel, "system", "Translate this",
+            RequestSource.ChunkTranslation, ct: TestContext.Current.CancellationToken);
+
+        answer.Success.Should().BeTrue();
+        answer.Response.Should().Be("answer from the reserve");
+        _reserveProvider.Verify(c => c.GenerateCompletionAsync(
+            ReserveModel, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        background.Success.Should().BeFalse();
+        background.Metadata["budget_rejection"].Should().Be(nameof(LlmBudgetRejection.BackgroundPaused),
+            "la quota del background è intatta: la pausa viene dalla soglia");
+        ProviderCalled(Times.Never());
+    }
+
+    [Fact]
+    public async Task UnderTheDegradeThreshold_TheMainModelAnswers()
+    {
+        await SpentTodayAsync(0.50m);
+
+        var answer = await DegradableGateway().GenerateCompletionAsync("system", "How do I score?", RequestSource.Manual,
+            TestContext.Current.CancellationToken);
+
+        answer.Response.Should().Be("answer");
+        ProviderCalled(Times.Once());
     }
 }

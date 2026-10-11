@@ -1,177 +1,133 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
+using Api.BoundedContexts.SystemConfiguration.Application.Services;
+using Api.Models;
 using Api.Services;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Xunit;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using Xunit;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
 /// <summary>
-/// ISSUE-1725: Tests for LLM budget monitoring and alerting
+/// ISSUE-1725 / #4166: gli allarmi sul budget LLM leggono tetti e soglia di degrado dalla stessa
+/// politica salvata che il gateway applica (ADR-095 D6), non più da <c>LlmBudgetAlerts</c> in
+/// appsettings, e non cambiano più i modelli.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class LlmBudgetMonitoringServiceTests
+[Trait("Issue", "4166")]
+public sealed class LlmBudgetMonitoringServiceTests
 {
-    private readonly Mock<ILlmCostLogRepository> _costLogRepositoryMock;
-    private readonly Mock<IAlertingService> _alertingServiceMock;
-    private readonly Mock<ILogger<LlmBudgetMonitoringService>> _loggerMock;
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock;
-    private readonly Mock<IServiceScope> _scopeMock;
-    private readonly Mock<IServiceProvider> _serviceProviderMock;
-    private readonly IConfiguration _config;
+    private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    private readonly Mock<ILlmCostLogRepository> _costLog = new();
+    private readonly Mock<IAlertingService> _alerting = new();
+    private readonly Mock<ILlmSystemConfigProvider> _config = new();
+    private readonly List<(string Type, string Period)> _alerts = [];
 
     public LlmBudgetMonitoringServiceTests()
     {
-        _costLogRepositoryMock = new Mock<ILlmCostLogRepository>();
-        _alertingServiceMock = new Mock<IAlertingService>();
-        _loggerMock = new Mock<ILogger<LlmBudgetMonitoringService>>();
-        _scopeFactoryMock = new Mock<IServiceScopeFactory>();
-        _scopeMock = new Mock<IServiceScope>();
-        _serviceProviderMock = new Mock<IServiceProvider>();
+        _alerting
+            .Setup(a => a.SendAlertAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, IDictionary<string, object>?, CancellationToken>(
+                (type, _, _, metadata, _) => _alerts.Add((type, (string)metadata!["period"])))
+            .ReturnsAsync(new AlertDto(Guid.NewGuid(), "LlmBudget", "Warning", "message", null, DateTime.UtcNow, null, true, null));
+    }
 
-        // Setup service scope factory
-        _serviceProviderMock
-            .Setup(sp => sp.GetService(typeof(ILlmCostLogRepository)))
-            .Returns(_costLogRepositoryMock.Object);
-        _serviceProviderMock
-            .Setup(sp => sp.GetService(typeof(IAlertingService)))
-            .Returns(_alertingServiceMock.Object);
+    private LlmBudgetMonitoringService CreateSut(IConfiguration? configuration = null)
+    {
+        var services = new ServiceCollection()
+            .AddScoped(_ => _costLog.Object)
+            .AddScoped(_ => _alerting.Object)
+            .BuildServiceProvider();
+        return new LlmBudgetMonitoringService(
+            services.GetRequiredService<IServiceScopeFactory>(),
+            configuration ?? new ConfigurationBuilder().Build(),
+            _config.Object,
+            NullLogger<LlmBudgetMonitoringService>.Instance);
+    }
 
-        _scopeMock.Setup(s => s.ServiceProvider).Returns(_serviceProviderMock.Object);
-        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(_scopeMock.Object);
+    private void Policy(decimal dailyCap, decimal monthlyCap = 20m, int degrade = 80) =>
+        _config.Setup(c => c.GetBudgetPolicyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmBudgetPolicy(dailyCap, monthlyCap, degrade, 30, 20));
 
-        var configData = new Dictionary<string, string?>
+    /// <summary>
+    /// La spesa del giorno è la query che parte da oggi; il primo del mese coincide con quella
+    /// del mese, e le asserzioni guardano solo l'allarme giornaliero, con un tetto mensile ampio.
+    /// </summary>
+    private void SpentToday(decimal amount) =>
+        _costLog.Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DateOnly from, DateOnly _, CancellationToken _) => from == Today ? amount : 0m);
+
+    private Task CheckAsync(IConfiguration? configuration = null) =>
+        CreateSut(configuration).CheckBudgetThresholdsAsync(TestContext.Current.CancellationToken);
+
+    [Fact]
+    public async Task UnderTheDegradeThreshold_NoAlert()
+    {
+        Policy(dailyCap: 1m);
+        SpentToday(0.5m);
+
+        await CheckAsync();
+
+        _alerts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AtTheDegradeThreshold_AWarning()
+    {
+        Policy(dailyCap: 1m);
+        SpentToday(0.8m);
+
+        await CheckAsync();
+
+        _alerts.Should().ContainSingle().Which.Should().Be(("LlmBudgetWarning", "Daily"));
+    }
+
+    [Fact]
+    public async Task AtTheCap_ACriticalAlert()
+    {
+        Policy(dailyCap: 1m);
+        SpentToday(1.0m);
+
+        await CheckAsync();
+
+        _alerts.Should().ContainSingle().Which.Should().Be(("LlmBudgetCritical", "Daily"));
+    }
+
+    [Fact]
+    public async Task AZeroCap_IsPaidAiOff_NotAnAlert()
+    {
+        Policy(dailyCap: 0m);
+        SpentToday(0.5m);
+
+        await CheckAsync();
+
+        _alerts.Should().NotContain(a => a.Period == "Daily");
+    }
+
+    /// <summary>
+    /// Il caso che la fetta 3b corregge: con i 50 $ di appsettings una spesa di 0,90 $ non faceva
+    /// scattare nulla, mentre il gateway, con il tetto salvato di 1 $, stava già degradando.
+    /// </summary>
+    [Fact]
+    public async Task TheCapsComeFromTheSavedPolicy_NotFromAppsettings()
+    {
+        Policy(dailyCap: 1m);
+        SpentToday(0.9m);
+        var legacy = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>(StringComparer.Ordinal)
         {
-            { "LlmBudgetAlerts:DailyBudgetUsd", "50.00" },
-            { "LlmBudgetAlerts:MonthlyBudgetUsd", "1000.00" },
-            { "LlmBudgetAlerts:Thresholds:Warning", "0.80" },
-            { "LlmBudgetAlerts:Thresholds:Critical", "0.95" },
-            { "LlmBudgetAlerts:CheckIntervalMinutes", "1" }
-        };
-        _config = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData)
-            .Build();
-    }
+            ["LlmBudgetAlerts:DailyBudgetUsd"] = "50.00",
+            ["LlmBudgetAlerts:MonthlyBudgetUsd"] = "1000.00",
+        }).Build();
 
-    [Fact]
-    public void Constructor_WithValidDependencies_InitializesSuccessfully()
-    {
-        // Act
-        var sut = new LlmBudgetMonitoringService(
-            _scopeFactoryMock.Object,
-            _config,
-            Mock.Of<ILlmModelOverrideService>(),
-            _loggerMock.Object);
+        await CheckAsync(legacy);
 
-        // Assert
-        sut.Should().NotBeNull();
-    }
-
-    [Fact]
-    public async Task CheckBudgetThresholds_BelowWarning_NoAlertsTriggered()
-    {
-        // Arrange
-        var sut = new LlmBudgetMonitoringService(
-            _scopeFactoryMock.Object,
-            _config,
-            Mock.Of<ILlmModelOverrideService>(),
-            _loggerMock.Object);
-
-        // Mock spend below warning threshold (30 / 50 = 60%)
-        _costLogRepositoryMock
-            .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(30.00m);
-
-        // Act - use reflection to call private method
-        var method = typeof(LlmBudgetMonitoringService).GetMethod(
-            "CheckBudgetThresholdsAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        await (Task)method!.Invoke(sut, new object[] { CancellationToken.None })!;
-
-        // Assert
-        _alertingServiceMock.Verify(
-            a => a.SendAlertAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<Dictionary<string, object>>(),
-                It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task CheckBudgetThresholds_AtWarningLevel_SendsWarningAlert()
-    {
-        // Arrange
-        var sut = new LlmBudgetMonitoringService(
-            _scopeFactoryMock.Object,
-            _config,
-            Mock.Of<ILlmModelOverrideService>(),
-            _loggerMock.Object);
-
-        // Mock spend at warning threshold (41 / 50 = 82% > 80% warning for daily)
-        _costLogRepositoryMock
-            .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(41.00m);
-
-        // Act
-        var method = typeof(LlmBudgetMonitoringService).GetMethod(
-            "CheckBudgetThresholdsAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        await (Task)method!.Invoke(sut, new object[] { CancellationToken.None })!;
-
-        // Assert - should send at least 1 warning alert (daily budget at 82%)
-        // Monthly budget (41/1000 = 4.1%) is below warning threshold
-        _alertingServiceMock.Verify(
-            a => a.SendAlertAsync(
-                It.Is<string>(s => s.Contains("Budget")),
-                "Warning",
-                It.Is<string>(m => m.Contains("Budget Alert")),
-                It.IsAny<Dictionary<string, object>>(),
-                It.IsAny<CancellationToken>()),
-            Times.AtLeastOnce);
-    }
-
-    [Fact]
-    public async Task CheckBudgetThresholds_AtCriticalLevel_SendsErrorAlert()
-    {
-        // Arrange
-        var sut = new LlmBudgetMonitoringService(
-            _scopeFactoryMock.Object,
-            _config,
-            Mock.Of<ILlmModelOverrideService>(),
-            _loggerMock.Object);
-
-        // Mock spend at critical threshold (48 / 50 = 96% > 95% critical for daily)
-        _costLogRepositoryMock
-            .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(48.00m);
-
-        // Act
-        var method = typeof(LlmBudgetMonitoringService).GetMethod(
-            "CheckBudgetThresholdsAsync",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        await (Task)method!.Invoke(sut, new object[] { CancellationToken.None })!;
-
-        // Assert - should send at least 1 critical alert (daily budget at 96%)
-        // Monthly budget (48/1000 = 4.8%) is below warning threshold
-        _alertingServiceMock.Verify(
-            a => a.SendAlertAsync(
-                It.Is<string>(s => s.Contains("Critical")),
-                "Error",
-                It.Is<string>(m => m.Contains("Critical")),
-                It.IsAny<Dictionary<string, object>>(),
-                It.IsAny<CancellationToken>()),
-            Times.AtLeastOnce);
+        _alerts.Should().ContainSingle().Which.Should().Be(("LlmBudgetWarning", "Daily"));
     }
 }

@@ -12,7 +12,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Services.LlmManagement;
 /// <summary>
 /// ISSUE-959 (BGAI-019): Hybrid LLM routing with adaptive model selection
 /// ISSUE-963 (BGAI-021): Enhanced with AI:Providers configuration integration
-/// ISSUE-1725: Enhanced with budget-aware model override support
+/// #4166: il budget mode di ISSUE-1725 (downgrade orario a modelli più economici) è stato sostituito
+/// dal tetto e dal degrado del gateway (ADR-095 D6).
 /// ISSUE-3435: Refactored from tier-based to strategy-based routing.
 ///
 /// Strategy determines model selection, tier validates access.
@@ -21,7 +22,6 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
 {
     private readonly IStrategyModelMappingService _strategyModelMappingService;
     private readonly IServiceScopeFactory _serviceScopeFactory;
-    private readonly ILlmModelOverrideService _modelOverrideService;
     private readonly ILogger<HybridAdaptiveRoutingStrategy> _logger;
     private readonly IOptions<AiProviderSettings> _aiSettings;
 
@@ -29,14 +29,12 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         IStrategyModelMappingService strategyModelMappingService,
         IServiceScopeFactory serviceScopeFactory,
         IOptions<AiProviderSettings> aiSettings,
-        ILogger<HybridAdaptiveRoutingStrategy> logger,
-        ILlmModelOverrideService? modelOverrideService = null)
+        ILogger<HybridAdaptiveRoutingStrategy> logger)
     {
         _strategyModelMappingService = strategyModelMappingService ?? throw new ArgumentNullException(nameof(strategyModelMappingService));
         _serviceScopeFactory = serviceScopeFactory ?? throw new ArgumentNullException(nameof(serviceScopeFactory));
         _aiSettings = aiSettings ?? throw new ArgumentNullException(nameof(aiSettings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _modelOverrideService = modelOverrideService ?? new NullModelOverrideService();
 
         _logger.LogInformation(
             "HybridAdaptiveRoutingStrategy initialized with strategy-based routing (Issue #3435)");
@@ -75,11 +73,8 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         // Step 4: Validate provider is enabled and create decision
         var decision = CreateValidatedDecision(provider, modelId, strategy, tier, userId, settings);
 
-        // Step 5: Apply budget mode override if active
-        var finalDecision = ApplyBudgetModeOverride(decision, userId);
-
-        // Step 6: Attach region hint (Issue #28: no-op for now, future multi-region routing)
-        return region is not null ? finalDecision with { UserRegion = region } : finalDecision;
+        // Step 5: Attach region hint (Issue #28: no-op for now, future multi-region routing)
+        return region is not null ? decision with { UserRegion = region } : decision;
     }
 
     /// <summary>
@@ -264,42 +259,14 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
                 "[{UserId}] Using PreferredProvider override: {Provider}/{Model}",
                 userId, settings.PreferredProvider, preferredModel);
 
-            var rawDecision = new LlmRoutingDecision(
+            decision = new LlmRoutingDecision(
                 settings.PreferredProvider,
                 preferredModel,
                 $"PreferredProvider override (AI:PreferredProvider = {settings.PreferredProvider})");
-
-            decision = ApplyBudgetModeOverride(rawDecision, userId);
             return true;
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Apply budget mode override if active.
-    /// </summary>
-    private LlmRoutingDecision ApplyBudgetModeOverride(LlmRoutingDecision decision, string userId)
-    {
-        if (!_modelOverrideService.IsInBudgetMode())
-        {
-            return decision;
-        }
-
-        var overrideModel = _modelOverrideService.GetOverrideModel(decision.ModelId);
-        if (!string.Equals(overrideModel, decision.ModelId, StringComparison.Ordinal))
-        {
-            _logger.LogWarning(
-                "[{UserId}] Budget mode active: {Original} → {Override}",
-                userId, decision.ModelId, overrideModel);
-
-            return new LlmRoutingDecision(
-                decision.ProviderName,
-                overrideModel,
-                $"{decision.Reason} (Budget mode: downgraded from {decision.ModelId})");
-        }
-
-        return decision;
     }
 
     /// <summary>

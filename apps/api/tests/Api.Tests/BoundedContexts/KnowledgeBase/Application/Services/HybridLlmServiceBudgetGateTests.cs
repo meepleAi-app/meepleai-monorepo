@@ -30,6 +30,7 @@ public sealed class HybridLlmServiceBudgetGateTests
     private readonly Mock<ICircuitBreakerRegistry> _circuitBreakers = new();
     private readonly Mock<ILlmCostService> _costService = new();
     private readonly Mock<ILlmBudgetGate> _gate = new();
+    private readonly Mock<IAgentReserveModelProvider> _reserve = new();
 
     public HybridLlmServiceBudgetGateTests()
     {
@@ -289,5 +290,104 @@ public sealed class HybridLlmServiceBudgetGateTests
 
         chunks.Should().ContainSingle().Which.ErrorCode.Should().Be(LlmBudgetAdmission.DailyBudgetErrorCode);
         ProviderNeverCalled(_deepSeek);
+    }
+
+    private const string ReserveModel = "meta-llama/llama-3.3-70b-instruct";
+
+    private HybridLlmService CreateDegradableSut() =>
+        new([_deepSeek.Object, _openRouter.Object], _selector.Object, _circuitBreakers.Object, _costService.Object,
+            NullLogger<HybridLlmService>.Instance, budgetGate: _gate.Object, reserveModels: _reserve.Object);
+
+    private void Degraded(bool degraded = true, string? reserve = ReserveModel)
+    {
+        _gate.Setup(g => g.IsDegradedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(degraded);
+        _reserve.Setup(r => r.GetReserveModelAsync(It.IsAny<CancellationToken>())).ReturnsAsync(reserve);
+    }
+
+    private void AdmittedWith(string model, string provider) =>
+        _gate.Verify(g => g.AdmitAsync(
+            It.Is<LlmBudgetRequest>(r => r.ModelId == model && r.Provider == provider), It.IsAny<CancellationToken>()), Times.Once);
+
+    /// <summary>3b (D6): fra la soglia di degrado e il tetto la risposta passa al modello di riserva del profilo.</summary>
+    [Fact]
+    public async Task OverTheDegradeThreshold_AnAnswerUsesTheReserveModelOfTheProfile()
+    {
+        Degraded();
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from OpenRouter");
+        _openRouter.Verify(c => c.GenerateCompletionAsync(
+            ReserveModel, "system", "question", It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        ProviderNeverCalled(_deepSeek);
+        AdmittedWith(ReserveModel, "OpenRouter");
+    }
+
+    [Fact]
+    public async Task OverTheDegradeThreshold_AStreamedAnswerUsesTheReserveModel()
+    {
+        Degraded();
+
+        await foreach (var _ in CreateDegradableSut().GenerateCompletionStreamAsync("system", "question", RequestSource.RagPipeline))
+        {
+        }
+
+        _openRouter.Verify(c => c.GenerateCompletionStreamAsync(
+            ReserveModel, "system", "question", It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        ProviderNeverCalled(_deepSeek);
+        AdmittedWith(ReserveModel, "OpenRouter");
+    }
+
+    [Fact]
+    public async Task UnderTheDegradeThreshold_TheMainModelAnswers()
+    {
+        Degraded(degraded: false);
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from DeepSeek");
+        _reserve.Verify(r => r.GetReserveModelAsync(It.IsAny<CancellationToken>()), Times.Never, "senza degrado il profilo non si legge");
+    }
+
+    [Fact]
+    public async Task ABackgroundCall_IsNotMovedToTheReserve()
+    {
+        Degraded();
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.ChunkTranslation);
+
+        result.Response.Should().Be("answer from DeepSeek", "il background lo ferma il gate, non lo devia il gateway");
+        _gate.Verify(g => g.IsDegradedAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AReserveNoProviderServes_KeepsTheMainModel()
+    {
+        Degraded(reserve: "some-vendor/unknown-model");
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from DeepSeek");
+    }
+
+    [Fact]
+    public async Task AReserveWhoseCircuitIsOpen_KeepsTheMainModel()
+    {
+        Degraded();
+        _circuitBreakers.Setup(c => c.GetState("OpenRouter")).Returns(CircuitState.Open);
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from DeepSeek");
+    }
+
+    [Fact]
+    public async Task AProfileWithoutAReserve_KeepsTheMainModel()
+    {
+        Degraded(reserve: null);
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from DeepSeek");
     }
 }

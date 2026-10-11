@@ -59,11 +59,14 @@ internal sealed class LlmCostService : ILlmCostService
                         CompletionTokens = result.Usage.CompletionTokens,
                         InputCost = result.Cost.InputCost,
                         OutputCost = result.Cost.OutputCost,
-                        PricingStatus = result.Cost.PricingStatus
+                        PricingStatus = result.Cost.PricingStatus,
+                        ProfileVersionId = result.ProfileVersionId
                     },
                     endpoint: "completion",
-                    success: true,
-                    errorMessage: null,
+                    // #4168: un risultato fallito arriva qui solo se ha prodotto token fatturati
+                    // (uno stream interrotto dopo il primo token): la riga porta il costo e l'errore.
+                    success: result.Success,
+                    errorMessage: result.Success ? null : result.ErrorMessage,
                     latencyMs: (int)latencyMs,
                     ipAddress: null,
                     userAgent: null,

@@ -118,6 +118,13 @@ public class LlmCostLogEntity
     /// </summary>
     public string? PricingStatus { get; set; }
 
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente che ha prodotto la risposta. È ciò che
+    /// rende confrontabili due versioni (costo per domanda). <c>null</c> per le chiamate che non
+    /// vengono dalla pipeline e per le righe scritte prima di #4168.
+    /// </summary>
+    public Guid? ProfileVersionId { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
 }

@@ -110,6 +110,47 @@ public sealed class LlmCostServiceTests
     }
 
     /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta arriva alla riga. Il
+    /// servizio ricopia il costo in un calcolo nuovo: senza propagazione esplicita andrebbe persa.
+    /// </summary>
+    [Fact]
+    public async Task LogSuccessAsync_CarriesTheProfileVersionToTheRepository()
+    {
+        var versionId = Guid.NewGuid();
+        var result = CreateSuccessResult() with { ProfileVersionId = versionId };
+
+        await CreateSut().LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 150, RequestSource.RagPipeline);
+
+        _costLogRepoMock.Verify(r => r.LogCostAsync(
+            It.IsAny<Guid?>(), It.IsAny<string>(),
+            It.Is<LlmCostCalculation>(c => c.ProfileVersionId == versionId),
+            "completion", true, null, 150, null, null,
+            RequestSource.RagPipeline, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4168: uno stream interrotto dopo il primo token ha prodotto token fatturati. La riga ne porta
+    /// il costo, ma resta un fallimento con il suo errore: non una risposta riuscita.
+    /// </summary>
+    [Fact]
+    public async Task LogSuccessAsync_AFailedResultWithBilledTokens_IsRecordedAsAFailureWithItsCost()
+    {
+        var interrupted = CreateSuccessResult() with
+        {
+            Success = false,
+            ErrorMessage = "Stream interrupted after the first token",
+        };
+
+        await CreateSut().LogSuccessAsync(interrupted, LlmUserContext.Anonymous, latencyMs: 90, RequestSource.RagPipeline);
+
+        _costLogRepoMock.Verify(r => r.LogCostAsync(
+            It.IsAny<Guid?>(), It.IsAny<string>(),
+            It.Is<LlmCostCalculation>(c => c.TotalCost == 0.003m),
+            "completion", false, "Stream interrupted after the first token", 90, null, null,
+            RequestSource.RagPipeline, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
     /// #4164: il servizio ricopia il costo in un nuovo calcolo; senza propagazione esplicita lo
     /// stato del prezzo si perderebbe e il registro non distinguerebbe un modello senza prezzo.
     /// </summary>

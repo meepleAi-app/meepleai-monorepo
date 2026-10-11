@@ -108,6 +108,12 @@ public record LlmCostCalculation
     public LlmPricingStatus? PricingStatus { get; init; }
 
     /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente che ha prodotto la risposta;
+    /// <c>null</c> per le chiamate che non vengono dalla pipeline.
+    /// </summary>
+    public Guid? ProfileVersionId { get; init; }
+
+    /// <summary>
     /// Empty cost calculation (zero cost, zero tokens)
     /// </summary>
     public static readonly LlmCostCalculation Empty = new()

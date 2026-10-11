@@ -2359,6 +2359,8 @@ Visit `/admin/providers` (admin role required). The `CircuitBreakerGrid` section
 
 **Quando**: gli utenti ricevono «Il servizio AI è in pausa…», oppure sale `meepleai_llm_budget_rejected_calls_total`. Dalla fetta 3 di ADR-095 (#4166) il gateway rifiuta prima di spendere le chiamate oltre il tetto giornaliero o mensile, oltre la quota di background e valutazioni, o verso un modello fuori catalogo. Il motivo è nell'etichetta `reason` e nel warning dell'API.
 
+**Prima del tetto** (fetta 3b): oltre la soglia di degrado, l'80% del tetto giornaliero, le risposte passano al modello di riserva del profilo agente e il background e le valutazioni si fermano con `reason=BackgroundPaused`. Le risposte continuano. Nel log dell'API compare «Budget degrade: …».
+
 **Cosa fare**: se il tetto è giusto, la pausa è il comportamento voluto. Per alzarlo: `/admin/ai` → LLM config, tetti giornaliero e mensile; vale entro un minuto. Dettagli, quote e codici d'errore: [`llm-budget-cap.md`](./llm-budget-cap.md).
 
 ### Communication Template

@@ -242,10 +242,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         let gameName: string | null = null;
         if (threadData.gameId) {
           try {
-            const games = await api.games.getAll();
-            const found = (games.games ?? []).find(
-              (g: { id: string }) => g.id === threadData.gameId
-            );
+            // #4158: by id, not by scanning a list — the list is one page of the catalog.
+            const found = await api.games.getById(threadData.gameId);
             if (found) {
               gameName = found.title;
               setGame({

@@ -50,6 +50,7 @@ vi.mock('@/lib/api', () => ({
     },
     games: {
       getAll: vi.fn(),
+      getById: vi.fn(),
     },
   },
 }));
@@ -297,6 +298,7 @@ describe('ChatThreadView — thread-message invariants (characterization)', () =
     apiMock = api;
     (apiMock.chat.getThreadById as Mock).mockResolvedValue(mockThread);
     (apiMock.games.getAll as Mock).mockResolvedValue(mockGames);
+    (apiMock.games.getById as Mock).mockResolvedValue(mockGames.games[0]);
     (apiMock.chat.addMessage as Mock).mockResolvedValue(mockThread);
   });
 

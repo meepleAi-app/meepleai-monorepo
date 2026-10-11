@@ -8,7 +8,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 
-import { api, PaginatedGamesResponse, GameFilters, GameSortOptions } from '@/lib/api';
+import { api, PaginatedGamesResponse, GameFilters } from '@/lib/api';
 
 /**
  * Query key factory for games queries
@@ -16,37 +16,34 @@ import { api, PaginatedGamesResponse, GameFilters, GameSortOptions } from '@/lib
 export const gamesKeys = {
   all: ['games'] as const,
   lists: () => [...gamesKeys.all, 'list'] as const,
-  list: (filters?: GameFilters, sort?: GameSortOptions, page?: number, pageSize?: number) =>
-    [...gamesKeys.lists(), { filters, sort, page, pageSize }] as const,
+  list: (filters?: GameFilters, page?: number, pageSize?: number) =>
+    [...gamesKeys.lists(), { filters, page, pageSize }] as const,
   detail: (id: string) => [...gamesKeys.all, 'detail', id] as const,
   sessions: (gameId: string) => [...gamesKeys.all, 'sessions', gameId] as const,
   documents: (gameId: string) => [...gamesKeys.all, 'documents', gameId] as const,
 };
 
 /**
- * Hook to fetch paginated games list with optional filters and sorting
+ * Hook to fetch a page of the games catalog.
  *
- * Features:
- * - Automatic caching per filter/sort/page combination
- * - Pagination support
- * - Client-side filtering and sorting (MVP)
+ * Search and pagination run on the server over the whole catalog (#4158). Each
+ * filter/page combination has its own cache entry, so a slow response for an older
+ * search can never overwrite the newer one.
  *
- * @param filters Optional game filters (search, players, playtime, year, BGG)
- * @param sort Optional sorting configuration
+ * @param filters Optional filters (`search`)
  * @param page Page number (1-indexed)
  * @param pageSize Items per page
  * @returns UseQueryResult with paginated games data
  */
 export function useGames(
   filters?: GameFilters,
-  sort?: GameSortOptions,
   page: number = 1,
   pageSize: number = 20
 ): UseQueryResult<PaginatedGamesResponse, Error> {
   return useQuery({
-    queryKey: gamesKeys.list(filters, sort, page, pageSize),
+    queryKey: gamesKeys.list(filters, page, pageSize),
     queryFn: async (): Promise<PaginatedGamesResponse> => {
-      return api.games.getAll(filters, sort, page, pageSize);
+      return api.games.getAll(filters, page, pageSize);
     },
     // Keep games list fresh for 5 minutes (default staleTime)
     staleTime: 5 * 60 * 1000,

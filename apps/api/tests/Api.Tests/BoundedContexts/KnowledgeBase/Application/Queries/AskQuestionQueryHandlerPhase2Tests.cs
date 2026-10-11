@@ -276,8 +276,8 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         // Assert — access denial precedes quota + LLM (mirrors the enforcement order at
         // AskQuestionQueryHandler.cs:137-145, ahead of the quota check at :175).
-        await act.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("*autorizzato*");
+        // #4155: the denial is typed and names the game, so the client can offer the declaration.
+        (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
 
         denyRagAccess.Verify(
             s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),

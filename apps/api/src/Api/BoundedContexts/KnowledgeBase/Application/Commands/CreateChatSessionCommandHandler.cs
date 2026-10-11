@@ -4,7 +4,6 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure.Entities;
-using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -48,10 +47,8 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
         {
             var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 request.UserId, request.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         _logger.LogInformation(

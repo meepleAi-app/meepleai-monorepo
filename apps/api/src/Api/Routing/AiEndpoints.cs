@@ -10,6 +10,7 @@ using Api.Configuration;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -203,6 +204,18 @@ internal static class AiEndpoints
             streamContext.StreamStatus = "Cancelled";
             streamContext.StreamErrorMessage = "Client disconnected";
         }
+        catch (RagOwnershipRequiredException ex)
+        {
+            // #4155: un diniego atteso, non un guasto. Gli header SSE sono gia' partiti, quindi non
+            // puo' essere un 403: viaggia come evento Error con il proprio codice e il gioco, che la
+            // chat usa per offrire la dichiarazione di possesso.
+            logger.LogInformation(
+                ex, "Streaming QA denied for game {GameId}: RAG ownership not declared", ex.GameId);
+            streamContext.StreamStatus = "Error";
+            streamContext.StreamErrorMessage = ex.Message;
+            await TryWriteStreamErrorAsync(
+                context, new StreamingError(ex.Message, ex.ErrorCode, ex.GameId), ct).ConfigureAwait(false);
+        }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
         // STREAMING BOUNDARY: Streaming generator boundary - must handle all errors gracefully without throwing
@@ -216,33 +229,39 @@ internal static class AiEndpoints
             streamContext.StreamStatus = "Error";
             streamContext.StreamErrorMessage = ex.Message;
 
-            // Send error event if possible
-            try
-            {
-                var errorEvent = new RagStreamingEvent(
-                    StreamingEventType.Error,
-                    new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
-                    DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
-                await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
-                await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-            // CLEANUP PATTERN: Cleanup operation - must not throw during disposal/cleanup
-            // Error event sending failure is logged but suppressed to ensure graceful stream termination
-#pragma warning restore S125
-            catch
-            {
-                // If we can't send error event, client connection is likely broken
-            }
-#pragma warning restore CA1031
+            await TryWriteStreamErrorAsync(
+                context, new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"), ct).ConfigureAwait(false);
         }
 #pragma warning restore CA1031
 
         await LogQaRequestAsync(req, context, mediator, session, startTime, streamContext).ConfigureAwait(false);
 
         return Results.Empty;
+    }
+
+    /// <summary>
+    /// Scrive un evento Error sullo stream gia' aperto. Se la scrittura fallisce il client se n'e'
+    /// andato e non c'e' nessuno a cui dirlo: l'errore si ignora, lo stream si chiude comunque.
+    /// </summary>
+    private static async Task TryWriteStreamErrorAsync(HttpContext context, StreamingError error, CancellationToken ct)
+    {
+        try
+        {
+            var errorEvent = new RagStreamingEvent(StreamingEventType.Error, error, DateTime.UtcNow);
+            var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
+            await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Cleanup operation - must not throw during disposal/cleanup
+        // Error event sending failure is suppressed to ensure graceful stream termination
+#pragma warning restore S125
+        catch
+        {
+            // If we can't send error event, client connection is likely broken
+        }
+#pragma warning restore CA1031
     }
 
     private static async Task ExecuteQaStreamingAsync(

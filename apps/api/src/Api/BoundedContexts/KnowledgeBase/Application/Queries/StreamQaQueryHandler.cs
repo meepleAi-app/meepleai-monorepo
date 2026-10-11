@@ -12,7 +12,6 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
-using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -114,10 +113,8 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         {
             var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 query.UserId, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         // Issue #1445: Use centralized query validation

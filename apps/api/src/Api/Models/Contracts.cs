@@ -217,7 +217,12 @@ internal record CitationRegion(int Page, double X, double Y, double Width, doubl
         PropertyNameCaseInsensitive = true,
     };
 }
-internal record StreamingError(string errorMessage, string? errorCode = null);
+// #4155: gameId solo per i dinieghi legati a un gioco (RAG_OWNERSHIP_REQUIRED); omesso altrove, cosi'
+// gli altri eventi di errore restano byte-identici.
+internal record StreamingError(
+    string errorMessage,
+    string? errorCode = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? gameId = null);
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
 

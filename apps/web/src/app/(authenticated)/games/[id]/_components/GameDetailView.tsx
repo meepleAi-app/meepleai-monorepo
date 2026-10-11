@@ -54,6 +54,7 @@ import {
 import { useSharedGameDetail } from '@/hooks/useSharedGameDetail';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackEvent } from '@/lib/analytics/track-event';
+import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 import { useGameLeaderboard } from '@/lib/domain-hooks/useGameLeaderboard';
 import {
   useAddHouseRule,
@@ -67,6 +68,8 @@ import {
   IS_VISUAL_TEST_BUILD,
   tryLoadVisualTestFixture,
 } from '@/lib/games/game-detail-visual-test-fixture';
+
+import { GameDetailOwnershipCta } from './GameDetailOwnershipCta';
 
 // ─── State override hatch (dev / visual-test only) ─────────────────────────
 
@@ -650,6 +653,19 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
     );
   };
 
+  // #4155: dichiarato il possesso, il dettaglio va riletto: porta hasRagAccess, che il backend
+  // calcola fuori dalla cache, quindi al refetch la CTA sparisce. Senza manuale caricato lo si dice:
+  // la dichiarazione è registrata, ma l'assistente non ha ancora niente da consultare.
+  const handleOwnershipDeclared = (result: OwnershipResult): void => {
+    const gameTitle = safeDetail.gameTitle;
+    toast.success(
+      result.kbCardCount === 0
+        ? t('pages.gameDetail.ownership.declaredNoManual', { gameTitle })
+        : t('pages.gameDetail.ownership.declared', { gameTitle })
+    );
+    void detailQuery.refetch();
+  };
+
   // #4084: real data, honest empty state. `rulesQuery.data` is `undefined` while the
   // tab-gated query hasn't fired or hasn't resolved yet — `mapRuleSpecsToSections`
   // treats that the same as an empty array, which is correct: an empty accordion is
@@ -689,6 +705,18 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
         }}
         onAddToLibrary={heroVariant === 'community' ? handleAddToLibrary : undefined}
       />
+
+      {/* #4155: non in wishlist, dove il dominio rifiuta la dichiarazione */}
+      {heroVariant === 'own' &&
+        !safeDetail.hasRagAccess &&
+        safeDetail.currentState !== 'Wishlist' &&
+        gameId && (
+          <GameDetailOwnershipCta
+            gameId={gameId}
+            gameTitle={safeDetail.gameTitle}
+            onOwnershipDeclared={handleOwnershipDeclared}
+          />
+        )}
 
       {/* Tab navigation — A11y: role=tablist inside component, role=tabpanel on panels below */}
       <GameDetailTabsAnimated

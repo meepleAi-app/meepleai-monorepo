@@ -3366,6 +3366,12 @@
         "deleteConfirmMessage": "Questa regola della casa verrà eliminata definitivamente.",
         "deleteConfirm": "Elimina",
         "empty": "Nessuna regola della casa. Aggiungine una per personalizzare le regole del gioco."
+      },
+      "ownership": {
+        "message": "Per far consultare il manuale di {gameTitle} all'assistente, dichiara di possederne una copia: i regolamenti sono protetti da copyright, e li leggiamo solo per chi possiede il gioco.",
+        "cta": "Dichiara di possedere {gameTitle}",
+        "declared": "Possesso dichiarato: l'assistente può consultare il manuale di {gameTitle}.",
+        "declaredNoManual": "Possesso dichiarato. Per {gameTitle} non c'è ancora un manuale caricato: finché non ne viene caricato uno, le risposte non potranno citare il regolamento."
       }
     },
     "sharedGames": {

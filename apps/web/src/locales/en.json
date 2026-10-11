@@ -3359,6 +3359,12 @@
         "deleteConfirmMessage": "This house rule will be permanently deleted.",
         "deleteConfirm": "Delete",
         "empty": "No house rules yet. Add one to customize the game's rules."
+      },
+      "ownership": {
+        "message": "To let the assistant read the {gameTitle} rulebook, declare that you own a copy: rulebooks are copyrighted, and we only read them for players who own the game.",
+        "cta": "Declare you own {gameTitle}",
+        "declared": "Ownership declared: the assistant can now read the {gameTitle} rulebook.",
+        "declaredNoManual": "Ownership declared. There is no rulebook uploaded for {gameTitle} yet: until one is, answers cannot cite the rules."
       }
     },
     "sharedGames": {

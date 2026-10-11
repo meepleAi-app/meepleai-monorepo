@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import {
   Search,
@@ -40,7 +40,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
-import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
@@ -137,18 +137,9 @@ export function SessionWizardMobile({
       .finally(() => setIsLoadingPhases(false));
   }, [selectedGameId]);
 
-  // Fetch library games
-  const { data: libraryData, isLoading: isLoadingLibrary } = useLibrary(
-    { page: 1, pageSize: 100 },
-    true
-  );
-
-  const filteredGames = useMemo(() => {
-    const items = libraryData?.items ?? [];
-    if (!searchQuery.trim()) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(g => g.gameTitle.toLowerCase().includes(q));
-  }, [libraryData, searchQuery]);
+  // #4187: the server searches the library. Filtering one downloaded page on the client
+  // could not find a game past it.
+  const { items: filteredGames, isLoading: isLoadingLibrary } = useLibrarySearch(searchQuery);
 
   // Color helpers
   const usedColors = players.map(p => p.color);

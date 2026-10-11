@@ -7,7 +7,7 @@
  * Features:
  * - Shows user's library games in a scrollable list
  * - Each game shows real-time KB readiness status via GamePickerItem
- * - Search/filter games by title
+ * - Search games by title on the server (#4187), so a game past the first page is found
  * - Games without ready KB are disabled with tooltip
  * - On selection: creates session via contextual hand store, navigates to it
  * - Optional gameNightEventId for adding games to existing nights
@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Input } from '@/components/ui/primitives/input';
-import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { useContextualHandStore } from '@/stores/contextual-hand';
 
 import { GamePickerItem, type GamePickerGame } from './GamePickerItem';
@@ -49,19 +49,23 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
   const router = useRouter();
   const [search, setSearch] = useState('');
 
-  // Fetch user's full library (up to 200 games)
-  const { data: libraryData, isLoading: isLibraryLoading } = useLibrary(
-    { page: 1, pageSize: 200 },
-    open // only fetch when dialog is open
-  );
+  // #4187: it asked for 200 games "to have them all", the server returns at most 100 and
+  // said nothing, and the filter ran on the client. Now the server searches the library.
+  const {
+    items: libraryItems,
+    totalCount,
+    isLoading: isLibraryLoading,
+    term,
+  } = useLibrarySearch(search, {
+    enabled: open, // only fetch when dialog is open
+  });
 
   const startSession = useContextualHandStore(s => s.startSession);
   const isStarting = useContextualHandStore(s => s.isLoading);
 
   // Map library entries to the picker shape
   const games: GamePickerGame[] = useMemo(() => {
-    const items = libraryData?.items ?? [];
-    return items.map(entry => ({
+    return libraryItems.map(entry => ({
       id: entry.id,
       gameId: entry.gameId,
       gameTitle: entry.gameTitle,
@@ -71,14 +75,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
       minPlayers: entry.minPlayers,
       maxPlayers: entry.maxPlayers,
     }));
-  }, [libraryData]);
-
-  // Filter by search
-  const filtered = useMemo(() => {
-    if (!search.trim()) return games;
-    const q = search.toLowerCase();
-    return games.filter(g => g.gameTitle.toLowerCase().includes(q));
-  }, [games, search]);
+  }, [libraryItems]);
 
   // Handle game selection: start session and navigate
   const handleSelect = async (gameId: string) => {
@@ -132,17 +129,17 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm">Caricamento libreria...</span>
               </div>
-            ) : filtered.length === 0 ? (
+            ) : games.length === 0 ? (
               <div className="py-12 text-center">
                 <Gamepad2 className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  {games.length === 0
-                    ? 'Nessun gioco nella tua libreria.'
-                    : 'Nessun gioco trovato per la ricerca.'}
+                  {term
+                    ? 'Nessun gioco trovato per la ricerca.'
+                    : 'Nessun gioco nella tua libreria.'}
                 </p>
               </div>
             ) : (
-              filtered.map(game => (
+              games.map(game => (
                 <GamePickerItem
                   key={game.id}
                   game={game}
@@ -157,7 +154,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
         {/* Footer: count */}
         {!isLibraryLoading && games.length > 0 && (
           <div className="pt-3 border-t text-xs text-muted-foreground text-center">
-            {filtered.length} di {games.length} giochi
+            {games.length} di {totalCount} giochi
           </div>
         )}
       </DialogContent>

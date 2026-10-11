@@ -42,7 +42,6 @@ export const PROTECTED_ROUTES = [
   '/profile',
   '/sessions',
   '/settings',
-  '/setup',
   '/toolkit',
   '/toolkits',
   '/upload',

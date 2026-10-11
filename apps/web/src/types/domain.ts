@@ -215,9 +215,3 @@ export interface QaResponse {
   /** RAG citations with page numbers and snippets */
   citations?: Citation[];
 }
-
-/**
- * NOTE (Issue #1977): SetupGuideResponseStep and SetupGuideResponse are now defined
- * in agents.schemas.ts and should be imported from there, not from this file.
- * Use: import { SetupGuideResponse, SetupGuideResponseStep } from '@/lib/api/schemas'
- */

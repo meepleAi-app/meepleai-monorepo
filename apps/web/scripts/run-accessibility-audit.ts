@@ -86,12 +86,6 @@ const PAGES_TO_AUDIT: PageConfig[] = [
     description: 'AI logs viewer',
   },
   {
-    name: 'Setup',
-    url: '/setup',
-    requiresAuth: true,
-    description: 'Setup wizard (AI-03)',
-  },
-  {
     name: 'Chess',
     url: '/chess',
     requiresAuth: false,

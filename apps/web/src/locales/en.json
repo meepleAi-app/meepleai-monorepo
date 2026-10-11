@@ -2194,7 +2194,10 @@
           "emptyManualCta": "Add manually",
           "blockedMessage": "You already have \"{gameTitle}\" in your library.",
           "blockedCta": "Go to game page",
-          "blockedDismiss": "Dismiss"
+          "blockedDismiss": "Dismiss",
+          "ownsCopyLabel": "I own a copy of the game I add",
+          "ownsCopyHint": "It lets the assistant read the rulebook: rulebooks are copyrighted, and we only read them for players who own the game.",
+          "toastOwnershipError": "\"{gameName}\" is in your library, but the ownership declaration failed: you can declare it again from the chat."
         }
       },
       "catalogPagination": {

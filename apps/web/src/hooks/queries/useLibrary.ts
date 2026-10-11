@@ -31,6 +31,7 @@ import type {
   UpdateLibraryShareLinkRequest,
   SharedLibrary,
 } from '@/lib/api/schemas/library.schemas';
+import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 import type {
   PrivateGameDto,
   AddPrivateGameRequest,
@@ -300,6 +301,21 @@ export function useAddGameToLibrary(): UseMutationResult<
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.categories() });
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.mechanics() });
     },
+  });
+}
+
+/**
+ * #4155: dichiara il possesso di un gioco già in libreria. È ciò che apre il manuale del gioco
+ * al cancello RAG (i regolamenti sono protetti da copyright, ADR-059).
+ *
+ * Invalida tutta la libreria: la lista porta `hasRagAccess`, che cambia con la dichiarazione.
+ */
+export function useDeclareOwnership(): UseMutationResult<OwnershipResult, Error, string> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (gameId: string) => api.library.declareOwnership(gameId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: libraryKeys.all }),
   });
 }
 

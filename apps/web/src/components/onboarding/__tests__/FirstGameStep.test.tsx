@@ -8,6 +8,7 @@ import { FirstGameStep } from '../FirstGameStep';
 
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockAddGame = vi.hoisted(() => vi.fn());
+const mockDeclareOwnership = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -16,6 +17,7 @@ vi.mock('@/lib/api', () => ({
     },
     library: {
       addGame: mockAddGame,
+      declareOwnership: mockDeclareOwnership,
     },
   },
   ApiError: class ApiError extends Error {
@@ -242,6 +244,74 @@ describe('FirstGameStep', () => {
     await waitFor(() => {
       expect(onGameAdded).toHaveBeenCalledWith('g1', 'Catan');
       expect(onComplete).toHaveBeenCalled();
+    });
+  });
+
+  // #4155: il cancello RAG apre il manuale solo a chi dichiara di possedere il gioco. Nell'onboarding
+  // la dichiarazione resta esplicita: la casella è spenta di default e spiega perché serve.
+  describe('ownership declaration (#4155)', () => {
+    async function selectCatan() {
+      mockGetAll.mockResolvedValueOnce({
+        games: [{ id: 'g1', title: 'Catan', publisher: 'Kosmos', yearPublished: 1995 }],
+        total: 1,
+        page: 1,
+        pageSize: 20,
+        totalPages: 1,
+      });
+      mockAddGame.mockResolvedValueOnce({});
+      vi.useRealTimers();
+      const realUser = userEvent.setup();
+      renderWithQuery(
+        <FirstGameStep onComplete={onComplete} onSkip={onSkip} onGameAdded={onGameAdded} />
+      );
+      await realUser.type(screen.getByLabelText(/search games/i), 'Catan');
+      await waitFor(() => expect(screen.getByTestId('game-search-results')).toBeInTheDocument(), {
+        timeout: 2000,
+      });
+      await realUser.click(screen.getByText('Catan'));
+      return realUser;
+    }
+
+    const ownsCopy = () => screen.getByRole('checkbox', { name: 'I own a copy of this game' });
+
+    it('is off by default, explains why, and adding does not declare ownership', async () => {
+      const realUser = await selectCatan();
+
+      expect(ownsCopy()).not.toBeChecked();
+      expect(ownsCopy()).toHaveAccessibleDescription(/copyright/i);
+      await realUser.click(screen.getByRole('button', { name: /add to library/i }));
+
+      await waitFor(() => expect(onComplete).toHaveBeenCalled());
+      expect(mockDeclareOwnership).not.toHaveBeenCalled();
+    });
+
+    it('when checked, declares ownership after adding the game', async () => {
+      mockDeclareOwnership.mockResolvedValueOnce({});
+      const realUser = await selectCatan();
+
+      await realUser.click(ownsCopy());
+      await realUser.click(screen.getByRole('button', { name: /add to library/i }));
+
+      await waitFor(() => expect(onComplete).toHaveBeenCalled());
+      expect(mockDeclareOwnership).toHaveBeenCalledWith('g1');
+      expect(mockAddGame.mock.invocationCallOrder[0]).toBeLessThan(
+        mockDeclareOwnership.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('keeps going when the declaration fails: the game is added, and the user is told', async () => {
+      mockDeclareOwnership.mockRejectedValueOnce(new Error('boom'));
+      const { toast } = await import('sonner');
+      const realUser = await selectCatan();
+
+      await realUser.click(ownsCopy());
+      await realUser.click(screen.getByRole('button', { name: /add to library/i }));
+
+      await waitFor(() => expect(onComplete).toHaveBeenCalled());
+      expect(onGameAdded).toHaveBeenCalledWith('g1', 'Catan');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Catan is in your library, but the ownership declaration failed: you can declare it from the chat.'
+      );
     });
   });
 });

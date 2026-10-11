@@ -33,6 +33,7 @@ vi.mock('@/hooks/queries/useBatchGameStatus', () => ({
 
 vi.mock('@/hooks/queries/useLibrary', () => ({
   useAddGameToLibrary: vi.fn(),
+  useDeclareOwnership: vi.fn(),
 }));
 
 vi.mock('@/components/layout', () => ({
@@ -70,12 +71,13 @@ vi.mock('next/image', () => ({
 
 import { useSharedGames } from '@/hooks/queries';
 import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
-import { useAddGameToLibrary } from '@/hooks/queries/useLibrary';
+import { useAddGameToLibrary, useDeclareOwnership } from '@/hooks/queries/useLibrary';
 import { toast } from '@/components/layout';
 
 const mockUseSharedGames = useSharedGames as Mock;
 const mockUseBatchGameStatus = useBatchGameStatus as Mock;
 const mockUseAddGameToLibrary = useAddGameToLibrary as Mock;
+const mockUseDeclareOwnership = useDeclareOwnership as Mock;
 
 // #2275 helper — build the {results, totalChecked} shape returned by
 // useBatchGameStatus from a map of `{gameId: inLibrary?}`. Defaults
@@ -138,6 +140,11 @@ const I18N_MESSAGES: Record<string, string> = {
   'pages.library.addGame.catalog.blockedMessage': 'You already have "{gameTitle}" in your library.',
   'pages.library.addGame.catalog.blockedCta': 'Go to game page',
   'pages.library.addGame.catalog.blockedDismiss': 'Dismiss',
+  // #4155 — ownership declaration at add time
+  'pages.library.addGame.catalog.ownsCopyLabel': 'I own a copy of the game I add',
+  'pages.library.addGame.catalog.ownsCopyHint': 'Rulebooks are copyrighted.',
+  'pages.library.addGame.catalog.toastOwnershipError':
+    '"{gameName}" is in your library, but the ownership declaration failed.',
 };
 
 function renderStep(
@@ -169,12 +176,14 @@ function renderStep(
 
 describe('CatalogSearchStep', () => {
   const mutateAsync = vi.fn().mockResolvedValue(undefined);
+  const declareAsync = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSharedGames.mockReturnValue({ data: makeGamesData(), isLoading: false });
     mockUseBatchGameStatus.mockReturnValue(makeBatchStatus());
     mockUseAddGameToLibrary.mockReturnValue({ mutateAsync });
+    mockUseDeclareOwnership.mockReturnValue({ mutateAsync: declareAsync });
   });
 
   describe('Layout', () => {
@@ -342,6 +351,53 @@ describe('CatalogSearchStep', () => {
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith('Could not add "Catan". Please try again.');
       });
+    });
+  });
+
+  // #4155: il cancello RAG apre il manuale solo a chi dichiara di possedere il gioco. La
+  // dichiarazione resta esplicita: la casella è spenta di default.
+  describe('Ownership declaration (#4155)', () => {
+    const ownsCopy = () => screen.getByRole('checkbox', { name: 'I own a copy of the game I add' });
+
+    it('is off by default, and adding does not declare ownership', async () => {
+      const user = userEvent.setup();
+      const { onSelect } = renderStep();
+
+      expect(ownsCopy()).not.toBeChecked();
+      await user.click(screen.getByTestId('catalog-card-g1-select-btn'));
+
+      await waitFor(() => expect(onSelect).toHaveBeenCalledWith('g1'));
+      expect(declareAsync).not.toHaveBeenCalled();
+    });
+
+    it('when checked, declares ownership of the added game after adding it', async () => {
+      const user = userEvent.setup();
+      const { onSelect } = renderStep();
+
+      await user.click(ownsCopy());
+      await user.click(screen.getByTestId('catalog-card-g1-select-btn'));
+
+      await waitFor(() => expect(onSelect).toHaveBeenCalledWith('g1'));
+      expect(declareAsync).toHaveBeenCalledWith('g1');
+      // Dichiarare richiede la voce di libreria: prima l'aggiunta, poi la dichiarazione.
+      expect(mutateAsync.mock.invocationCallOrder[0]).toBeLessThan(
+        declareAsync.mock.invocationCallOrder[0]
+      );
+    });
+
+    it('keeps the game added when the declaration fails, and says so', async () => {
+      declareAsync.mockRejectedValueOnce(new Error('boom'));
+      const user = userEvent.setup();
+      const { onSelect } = renderStep();
+
+      await user.click(ownsCopy());
+      await user.click(screen.getByTestId('catalog-card-g1-select-btn'));
+
+      await waitFor(() => expect(onSelect).toHaveBeenCalledWith('g1'));
+      expect(toast.error).toHaveBeenCalledWith(
+        '"Catan" is in your library, but the ownership declaration failed.'
+      );
+      expect(toast.error).not.toHaveBeenCalledWith('Could not add "Catan". Please try again.');
     });
   });
 

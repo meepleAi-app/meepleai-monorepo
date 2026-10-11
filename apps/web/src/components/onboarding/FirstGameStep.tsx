@@ -37,6 +37,8 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
   const [isSearching, setIsSearching] = useState(false);
   const [selectedGame, setSelectedGame] = useState<GameResult | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  // #4155: «I own a copy». Off by default: declaring ownership stays an explicit choice.
+  const [ownsCopy, setOwnsCopy] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   // #4158: the search runs on the server, one request per settled keystroke, and responses can
@@ -101,6 +103,17 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
     try {
       await api.library.addGame(selectedGame.id);
       toast.success(`${selectedGame.title} added to your library!`);
+      // #4155: the declaration needs the library entry, so it comes after the add. If it fails the
+      // game stays added and onboarding goes on: the chat offers the declaration again.
+      if (ownsCopy) {
+        try {
+          await api.library.declareOwnership(selectedGame.id);
+        } catch {
+          toast.error(
+            `${selectedGame.title} is in your library, but the ownership declaration failed: you can declare it from the chat.`
+          );
+        }
+      }
       onGameAdded(selectedGame.id, selectedGame.title);
       onComplete();
     } catch (err) {
@@ -202,6 +215,27 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
           >
             Change
           </button>
+        </div>
+      )}
+
+      {/* #4155: ownership declaration at add time, off by default */}
+      {selectedGame && (
+        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+          <label className="flex items-center gap-2 text-foreground">
+            <input
+              type="checkbox"
+              checked={ownsCopy}
+              onChange={e => setOwnsCopy(e.target.checked)}
+              aria-describedby="first-game-owns-copy-hint"
+              className="h-4 w-4"
+              data-testid="first-game-owns-copy"
+            />
+            I own a copy of this game
+          </label>
+          <p id="first-game-owns-copy-hint" className="mt-1 pl-6 text-xs text-muted-foreground">
+            It lets the assistant read the rulebook: rulebooks are copyrighted, and we only read
+            them for players who own the game.
+          </p>
         </div>
       )}
 

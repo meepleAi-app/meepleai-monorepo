@@ -131,7 +131,9 @@ internal class HybridLlmService : ILlmService
             return LlmCompletionResult.CreateFailure("Provider error: No providers available");
         }
 
+        var routed = (Client: client, Decision: decision);
         (client, decision) = await ApplyBudgetDegradeAsync(client, decision, source, cancellationToken).ConfigureAwait(false);
+        var onReserve = !string.Equals(decision.ModelId, routed.Decision.ModelId, StringComparison.Ordinal);
 
         // Step 2: Execute with retry/fallback loop
         var attemptedProviders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -224,6 +226,20 @@ internal class HybridLlmService : ILlmService
                 CompleteAdmission(admission, actualCost);
             }
 
+            // #4166: la riserva del degrado ha fallito. Si torna alla scelta dell'instradamento prima
+            // della catena di fallback: il degrado non deve rendere una risposta meno disponibile.
+            if (onReserve && !attemptedProviders.Contains(routed.Client.ProviderName))
+            {
+                _logger.LogWarning(
+                    "Budget degrade: the reserve model {Reserve} failed, falling back to {Model}",
+                    decision.ModelId, routed.Decision.ModelId);
+                onReserve = false;
+                (client, decision) = routed;
+                continue;
+            }
+
+            onReserve = false;
+
             // Get next fallback
             var nextSelection = await _providerSelector.GetNextFallbackAsync(client.ProviderName, attemptedProviders, cancellationToken)
                 .ConfigureAwait(false);
@@ -299,12 +315,48 @@ internal class HybridLlmService : ILlmService
 
         var (degradedClient, degradedDecision) = await ApplyBudgetDegradeAsync(client, selection.Decision, source, cancellationToken)
             .ConfigureAwait(false);
-        client = degradedClient;
-        selection = selection with { Decision = degradedDecision };
 
+        var answered = false;
+        await foreach (var chunk in StreamRoutedAsync(degradedClient, degradedDecision, systemPrompt, userPrompt, userContext, source, cancellationToken)
+            .ConfigureAwait(false))
+        {
+            answered |= !string.IsNullOrEmpty(chunk.Content) || chunk.IsFinal;
+            yield return chunk;
+        }
+
+        // #4166: lo streaming non ha un fallback suo (C8). Se il degrado ha deviato dalla scelta
+        // dell'instradamento e la riserva non ha prodotto nulla (provider giù, chiave rifiutata), la
+        // risposta riparte sul modello instradato invece di arrivare vuota.
+        if (!answered && !cancellationToken.IsCancellationRequested
+            && !string.Equals(degradedDecision.ModelId, selection.Decision.ModelId, StringComparison.Ordinal))
+        {
+            _logger.LogWarning(
+                "Budget degrade: the reserve model {Reserve} produced no answer, falling back to {Model}",
+                degradedDecision.ModelId, selection.Decision.ModelId);
+            await foreach (var chunk in StreamRoutedAsync(client, selection.Decision, systemPrompt, userPrompt, userContext, source, cancellationToken)
+                .ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Una chiamata in streaming a un client già scelto: redazione dei dati personali per OpenRouter,
+    /// verifica del budget, registrazione del costo.
+    /// </summary>
+    private async IAsyncEnumerable<StreamChunk> StreamRoutedAsync(
+        ILlmClient client,
+        LlmRoutingDecision decision,
+        string systemPrompt,
+        string userPrompt,
+        LlmUserContext userContext,
+        RequestSource source,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         _logger.LogInformation(
             "Starting streaming completion via {Provider} ({Model}) - Reason: {Reason}",
-            client.ProviderName, selection.Decision.ModelId, selection.Decision.Reason);
+            client.ProviderName, decision.ModelId, decision.Reason);
 
         // Issue #5510: Redact PII for OpenRouter-bound streaming prompts
         var effectiveSystemPrompt = systemPrompt;
@@ -315,7 +367,7 @@ internal class HybridLlmService : ILlmService
             effectiveUserPrompt = _piiDetector.ScanAndRedact(userPrompt);
         }
 
-        var admission = await AdmitAsync(source, selection.Decision.ModelId, client.ProviderName,
+        var admission = await AdmitAsync(source, decision.ModelId, client.ProviderName,
             effectiveSystemPrompt.Length + effectiveUserPrompt.Length, DefaultMaxTokens, 0, cancellationToken).ConfigureAwait(false);
         if (!admission.IsAllowed)
         {
@@ -324,7 +376,7 @@ internal class HybridLlmService : ILlmService
         }
 
         var stream = client.GenerateCompletionStreamAsync(
-            selection.Decision.ModelId,
+            decision.ModelId,
             effectiveSystemPrompt,
             effectiveUserPrompt,
             DefaultTemperature,

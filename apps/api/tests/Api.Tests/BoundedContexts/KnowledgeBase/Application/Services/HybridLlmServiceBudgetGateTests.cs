@@ -409,4 +409,92 @@ public sealed class HybridLlmServiceBudgetGateTests
         _gate.Verify(g => g.IsCheaperReserveAsync("deepseek-flash", "DeepSeek", ReserveModel, "OpenRouter", It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+#pragma warning disable CS1998 // uno stream che si chiude senza chunk, come i client quando il provider fallisce
+    private static async IAsyncEnumerable<StreamChunk> EmptyStream()
+    {
+        yield break;
+    }
+#pragma warning restore CS1998
+
+    private void ReserveStreamFails() =>
+        _openRouter
+            .Setup(c => c.GenerateCompletionStreamAsync(
+                ReserveModel, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => EmptyStream());
+
+    private async Task<List<StreamChunk>> StreamAsync(RequestSource source = RequestSource.Manual)
+    {
+        var chunks = new List<StreamChunk>();
+        await foreach (var chunk in CreateDegradableSut().GenerateCompletionStreamAsync("system", "question", source))
+        {
+            chunks.Add(chunk);
+        }
+
+        return chunks;
+    }
+
+    /// <summary>
+    /// Trovato nella verifica a runtime della 3b: con la chiave di OpenRouter rifiutata (401), la
+    /// riserva chiudeva lo stream senza contenuto e l'utente riceveva una risposta vuota, dove senza
+    /// degrado avrebbe risposto il modello instradato.
+    /// </summary>
+    [Fact]
+    public async Task Streaming_AReserveThatProducesNothing_FallsBackToTheRoutedModel()
+    {
+        Degraded();
+        ReserveStreamFails();
+
+        var chunks = await StreamAsync();
+
+        chunks.Should().Contain(c => c.Content == "answer");
+        _deepSeek.Verify(c => c.GenerateCompletionStreamAsync(
+            "deepseek-flash", "system", "question", It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+        AdmittedWith("deepseek-flash", "DeepSeek");
+    }
+
+    [Fact]
+    public async Task Streaming_AReserveRefusedByTheBudget_DoesNotFallBack()
+    {
+        Degraded();
+        Refuse(ReserveModel, LlmBudgetRejection.DailyCapReached);
+
+        var chunks = await StreamAsync();
+
+        chunks.Should().ContainSingle().Which.ErrorCode.Should().Be(LlmBudgetAdmission.DailyBudgetErrorCode,
+            "oltre il tetto il modello instradato verrebbe rifiutato allo stesso modo");
+        ProviderNeverCalled(_deepSeek);
+    }
+
+    [Fact]
+    public async Task Streaming_WithoutDegrade_AnEmptyStreamIsNotRetried()
+    {
+        Degraded(degraded: false);
+        _deepSeek
+            .Setup(c => c.GenerateCompletionStreamAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => EmptyStream());
+
+        var chunks = await StreamAsync();
+
+        chunks.Should().BeEmpty();
+        _deepSeek.Verify(c => c.GenerateCompletionStreamAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AFailedReserve_FallsBackToTheRoutedModel_BeforeTheFallbackChain()
+    {
+        Degraded();
+        _openRouter
+            .Setup(c => c.GenerateCompletionAsync(
+                ReserveModel, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("OpenRouter API error: 401 (Unauthorized)"));
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from DeepSeek");
+        _selector.Verify(s => s.GetNextFallbackAsync("OpenRouter", It.IsAny<HashSet<string>>(), It.IsAny<CancellationToken>()), Times.Never,
+            "la scelta dell'instradamento viene prima della catena di fallback");
+    }
 }

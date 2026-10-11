@@ -68,7 +68,7 @@ La risposta resta sul modello principale, con un warning nel log, quando:
 - la riserva non è nel catalogo, e verrebbe rifiutata (D5);
 - la riserva non costa meno del modello instradato (`LlmBudgetGate.IsCheaperReserveAsync`, confronto sul prezzo di un milione di token in ingresso più uno in uscita). Un modello gratuito non viene quindi mai sostituito. Un modello instradato fuori catalogo invece sì, perché verrebbe rifiutato.
 
-La riserva passa dallo stesso gate di ogni altra chiamata, e il suo costo conta verso il tetto. Il profilo pubblicato con #4179 ha `meta-llama/llama-3.3-70b-instruct` su OpenRouter (0,22 $ + 0,50 $ per milione di token) contro `deepseek-flash` (0,30 $ + 1,20 $).
+Se la riserva fallisce (provider giù, chiave rifiutata), la risposta torna al modello instradato: in streaming quando la riserva chiude lo stream senza contenuto, nelle chiamate unarie prima della catena di fallback. Il degrado non deve rendere una risposta meno disponibile. La riserva passa dallo stesso gate di ogni altra chiamata, e il suo costo conta verso il tetto. Il profilo pubblicato con #4179 ha `meta-llama/llama-3.3-70b-instruct` su OpenRouter (0,22 $ + 0,50 $ per milione di token) contro `deepseek-flash` (0,30 $ + 1,20 $).
 
 **Background in pausa.** Le chiamate rifiutate hanno `reason=BackgroundPaused` nella metrica, il codice `AI_BUDGET_DAILY_EXHAUSTED` e il messaggio «Per oggi il lavoro in background è in pausa…» (o «le valutazioni»). Riprendono il giorno dopo, o prima se l'admin alza il tetto giornaliero o la soglia.
 
@@ -117,5 +117,5 @@ Le chiamate rifiutate non scrivono righe nel registro costi, perché non hanno r
 - **Una sola istanza.** Le riserve stanno in memoria. Con due istanze dell'API, ciascuna vedrebbe solo le proprie fino alla lettura successiva del registro. È il contratto di staging (ADR-087).
 - **Spesa illeggibile.** Se il registro non si legge, si riusa la lettura dello stesso giorno, se c'è; altrimenti la chiamata non parte.
 - **Multimodale senza degrado.** Le chiamate con immagini tengono il loro modello: la riserva del profilo è un modello di solo testo, e non tutte le riserve leggono immagini. Il tetto le ferma come le altre.
-- **Fallback dopo la riserva.** Se la chiamata alla riserva fallisce, il fallback unario sceglie il provider successivo dall'ordine dell'instradamento, che può essere il modello principale. Resta comunque sotto il tetto.
+- **Riserva che lancia in streaming.** Il ritorno al modello instradato copre la riserva che chiude lo stream senza contenuto, il modo in cui i client riportano un errore del provider. Un client che invece lancia un'eccezione la propaga al consumatore, come senza degrado.
 - **Riserva ignota alla prima lettura fallita.** Se il profilo non si è mai letto e la prima lettura fallisce, per un minuto non c'è riserva e le risposte restano sul modello principale (che il tetto continua a fermare).

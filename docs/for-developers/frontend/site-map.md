@@ -3036,7 +3036,7 @@ _Route-group: `admin` · 10 pagine_
   - `-> /admin/analytics?tab=<saved>` (AdminTabPersistence `router.replace` da localStorage `admin-tab-analytics`; solo se no `?tab` && saved≠default 'overview')
 - **`/admin/business`**
   - `-> /admin/business?range=7d|30d|90d|1y` (range `<select>` onChange → `router.replace`)
-  - `-> modal:SetBudgetDialog` ('Imposta budget')
+  - `-> /admin/ai?tab=config` (link 'AI → Budget' nell'intestazione e nella scheda «Tetti AI»; #4169: non c'è più 'Imposta budget')
   - `-> /api/v1/admin/business/usage?period=30` (`<a href>` 'Usage'; endpoint API legacy, non route client)
 - **`/admin/ai`**
   - `-> /admin/ai?tab=<agents|typologies|definitions|lab|prompts|models|requests|rag|config>` (AdminHubTabBar, 9 tab)
@@ -3098,8 +3098,7 @@ _Route-group: `admin` · 10 pagine_
 
 ##### `/admin/business`
 - **range**: da `?range` via `costBreakdownRangeSchema.safeParse`; invalido/assente → default '30d'; passato a CostStackedArea + FeatureCostTable — `apps/web/src/app/admin/(dashboard)/business/page.tsx`
-- **BudgetKpiStrip**: `aria-busy` skeleton mentre isLoading; `budget===null` → 4 placeholder tratteggiati ('—' + tooltip 'Clicca + Imposta budget'); loaded → 4 KPI (Spesa oggi[entity-agent, sparkline solo se ≥2 punti] / Spesa mese[entity-event, progress bar monthPct] / Budget residuo[entity-toolkit] / Proiezione fine mese[entity-chat, emerald se ≤limit else rose]) — `apps/web/src/components/admin/business/BudgetKpiStrip.tsx`
-- **SetBudgetDialog**: controllato da `setBudgetOpen`; pre-popolato da budget esistente (edit) else default (amount ''/alert 80/critical 95); titolo/CTA 'Modifica…/Aggiorna' se budget esiste else 'Imposta…/Imposta'; submit disabled se `!isValid` (amount>0, alert 1-99, critical>alert && ≤100) o `isUpserting`; hint rose se `!isValid && amount`; invia `xmin (budget?.xmin ?? null)` → 409 ConflictException → toast error 'Salvataggio budget fallito' — `apps/web/src/components/admin/business/SetBudgetDialog.tsx`
+- **CostKpiStrip** (#4169): `aria-busy` skeleton mentre il registro carica; registro assente → riquadro 'Spesa non disponibile'; loaded → Spesa oggi[entity-agent, sparkline se ≥2 punti] / Spesa mese[entity-event] / Proiezione fine mese[entity-chat, lineare] dal registro dei costi (`useCostBreakdown('30d')`), più «Tetti AI»[entity-toolkit] con il tetto mensile del gateway (`useLlmSystemConfig`) e il link ad AI → Budget — `apps/web/src/components/admin/business/CostKpiStrip.tsx`
 
 ##### `/admin/ai`
 - **Active tab**: `tab = (await searchParams).tab ?? 'agents'`; switch 9-way (agents/typologies/definitions/lab/prompts/models/requests/rag/config→LlmConfigTab; default null) — `apps/web/src/app/admin/(dashboard)/ai/page.tsx`
@@ -3158,10 +3157,9 @@ _Route-group: `admin` · 10 pagine_
 | AuditLogTab | `apps/web/src/app/admin/(dashboard)/analytics/AuditLogTab.tsx` | Re-export di Operations AuditTab |
 | ApiKeysTab | `apps/web/src/app/admin/(dashboard)/analytics/ApiKeysTab.tsx` | Tabella API keys + export CSV |
 | ChartsSection | `apps/web/src/components/admin/charts/ChartsSection.tsx` | Grafici usage (in OverviewTab) |
-| BudgetPage | `apps/web/src/app/admin/(dashboard)/business/page.tsx` | Hero (range + Imposta budget + Usage) + widget; range in URL |
-| BudgetKpiStrip | `apps/web/src/components/admin/business/BudgetKpiStrip.tsx` | 4 KPI (`useBudget` + `useCostBreakdown('30d')`) |
-| SetBudgetDialog | `apps/web/src/components/admin/business/SetBudgetDialog.tsx` | Upsert AppBudget (xmin optimistic concurrency) |
-| CostStackedArea / BudgetGauge / CostSimulator / FeatureCostTable | `apps/web/src/components/admin/business/*` | Widget costo (chart / gauge / simulator / drill per feature) |
+| BudgetPage | `apps/web/src/app/admin/(dashboard)/business/page.tsx` | «Costs»: hero (range + Usage + link AI → Budget) + widget; range in URL. #4169: via AppBudget |
+| CostKpiStrip | `apps/web/src/components/admin/business/CostKpiStrip.tsx` | 4 KPI (`useCostBreakdown('30d')` + `useLlmSystemConfig`) |
+| CostStackedArea / CostSimulator / FeatureCostTable | `apps/web/src/components/admin/business/*` | Widget costo (chart / simulator, confrontato col tetto mensile del gateway / drill per feature) |
 | AdminAiPage | `apps/web/src/app/admin/(dashboard)/ai/page.tsx` | Hub server async, dispatcher 9-tab (default 'agents') |
 | AdminAiLayout / AiTopBand | `apps/web/src/app/admin/(dashboard)/ai/layout.tsx` · `apps/web/src/components/admin/ai/AiTopBand.tsx` | Wrapper px-6 + header sticky (h1 + AiCrumbs + AiTopActions null #1722) |
 | RequestsTab | `apps/web/src/app/admin/(dashboard)/ai/RequestsTab.tsx` | Log richieste + AiTrendChart + drill (query-param `range`+`queryId`) |

@@ -2201,7 +2201,10 @@
           "emptyManualCta": "Aggiungi manualmente",
           "blockedMessage": "Hai già «{gameTitle}» in libreria.",
           "blockedCta": "Vai alla scheda",
-          "blockedDismiss": "Chiudi"
+          "blockedDismiss": "Chiudi",
+          "ownsCopyLabel": "Possiedo una copia del gioco che aggiungo",
+          "ownsCopyHint": "Serve perché l'assistente possa consultarne il manuale: i regolamenti sono protetti da copyright, e li leggiamo solo per chi possiede il gioco.",
+          "toastOwnershipError": "«{gameName}» è in libreria, ma la dichiarazione di possesso non è riuscita: puoi rifarla dalla chat."
         }
       },
       "catalogPagination": {

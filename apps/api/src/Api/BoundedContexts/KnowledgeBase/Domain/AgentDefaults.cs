@@ -72,4 +72,36 @@ internal static class AgentDefaults
     /// </remarks>
     internal static string ResolveOllamaChatModel(string? configured) =>
         string.IsNullOrWhiteSpace(configured) ? OllamaChatModelDefault : configured.Trim();
+
+    /// <summary>
+    /// Modello predefinito dell'API diretta di DeepSeek.
+    /// </summary>
+    /// <remarks>
+    /// #4179: DeepSeek ha dismesso il nome <c>deepseek-chat</c> il 2026-07-24 (changelog del
+    /// 2026-04-24); il nome corrente è <c>deepseek-flash</c>, ed è anche quello che DeepSeek
+    /// restituisce nei chunk dello streaming a chi chiede ancora il vecchio nome.
+    /// </remarks>
+    public const string DeepSeekDefaultModel = "deepseek-flash";
+
+    /// <summary>
+    /// Il modello da inviare a un provider quando il catalogo non ne ha uno attivo per lui.
+    /// </summary>
+    /// <remarks>
+    /// #4179: prima ogni provider diverso da OpenRouter riceveva il modello di Ollama, quindi
+    /// DeepSeek raggiunto come fallback si vedeva chiedere <c>llama3:8b</c>. Per un provider
+    /// sconosciuto non esiste un modello sensato: si lancia, invece di mandargliene uno altrui.
+    /// </remarks>
+    /// <exception cref="ArgumentException">Il provider non è fra quelli con un client LLM.</exception>
+    public static string DefaultModelForProvider(string providerName)
+    {
+        ArgumentNullException.ThrowIfNull(providerName);
+        return providerName.ToLowerInvariant() switch
+        {
+            "ollama" => OllamaFallbackModel,
+            "openrouter" => DefaultModel,
+            "deepseek" => DeepSeekDefaultModel,
+            _ => throw new ArgumentException(
+                $"No default model is defined for LLM provider '{providerName}'", nameof(providerName))
+        };
+    }
 }

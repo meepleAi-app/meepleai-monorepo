@@ -9,6 +9,8 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql;
 using Xunit;
 
@@ -17,13 +19,15 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// <summary>
 /// Persistenza di <see cref="AgentProfile"/> su Postgres vero (ADR-095, #4167): il seed della
 /// versione 1, una pubblicazione che attraversa la unit of work, la concorrenza ottimistica sulla
-/// radice (ADR-060) e il vincolo «al più una bozza» nello schema.
+/// radice (ADR-060) e il vincolo «al più una bozza» nello schema. Dal #4179 un database nuovo
+/// porta anche la versione 2, ripubblicata dalla migration con i modelli correnti.
 /// </summary>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "4167")]
+[Trait("Issue", "4179")]
 public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -51,18 +55,27 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// I valori che oggi sono fissi nel codice, scritti qui a mano e non letti dal codice: è la
-    /// migration a doverli riprodurre. Fonti: <c>HybridLlmService</c> (temperatura, token),
-    /// <c>DefaultStrategyModelMappings</c> (Balanced → modelli), il prompt di
+    /// I valori che erano fissi nel codice al seed della versione 1, scritti qui a mano e non letti
+    /// dal codice: è la migration a doverli riprodurre. Fonti: <c>HybridLlmService</c> (temperatura,
+    /// token), <c>DefaultStrategyModelMappings</c> (Balanced → modelli), il prompt di
     /// <c>AskQuestionQueryHandler</c>, i parametri di recupero e fusione, nessun filtro per categoria.
     /// </summary>
-    private static AgentProfileContent TodaysHardcodedValues() =>
+    private static AgentProfileContent SeedValues() =>
+        HardcodedValues(primaryModelId: "deepseek-chat", fallbackModelId: "meta-llama/llama-3.3-70b-instruct:free");
+
+    /// <summary>
+    /// #4179: gli stessi valori con i due modelli correnti, quelli della versione 2.
+    /// </summary>
+    private static AgentProfileContent CurrentModelValues() =>
+        HardcodedValues(primaryModelId: "deepseek-flash", fallbackModelId: "meta-llama/llama-3.3-70b-instruct");
+
+    private static AgentProfileContent HardcodedValues(string primaryModelId, string fallbackModelId) =>
         AgentProfileContent.Create(
             name: "MeepleAI",
             description: "Specialized agent for board game rules interpretation and clarification.",
             persona: "a precise board game rules assistant",
-            primaryModelId: "deepseek-chat",
-            fallbackModelId: "meta-llama/llama-3.3-70b-instruct:free",
+            primaryModelId: primaryModelId,
+            fallbackModelId: fallbackModelId,
             temperature: 0.3m,
             maxResponseTokens: 1500,
             citationStyle: CitationStyle.PageReferencesInText,
@@ -86,19 +99,58 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             allowedCategories: Enum.GetValues<DocumentCategory>());
 
     [Fact]
-    public async Task FreshDatabase_HasVersionOnePublished_WithTodaysHardcodedValues()
+    public async Task FreshDatabase_PublishesVersionTwo_WithCurrentModels_AndArchivesTheSeed()
     {
         var profile = await new AgentProfileRepository(_dbContext).GetAsync(TestContext.Current.CancellationToken);
 
         profile.Should().NotBeNull("la tabella ammette una sola riga e il seed deve crearla");
-        profile!.Versions.Should().ContainSingle();
+        profile!.Versions.Should().HaveCount(2);
         profile.Draft.Should().BeNull();
-        profile.Published.VersionNumber.Should().Be(1);
-        profile.Published.Content.Should().Be(TodaysHardcodedValues());
+        profile.Published.VersionNumber.Should().Be(2);
+        profile.Published.Content.Should().Be(CurrentModelValues(),
+            "#4179: la versione 1 nomina due modelli dismessi, e la migration ne pubblica una con i correnti");
+        var seed = profile.Versions.Single(v => v.VersionNumber == 1);
+        seed.Status.Should().Be(AgentProfileVersionStatus.Archived);
+        seed.Content.Should().Be(SeedValues(), "una versione pubblicata non si modifica: si archivia");
+    }
+
+    /// <summary>
+    /// #4179: la ripubblicazione scatta solo se la versione pubblicata nomina ancora un modello
+    /// dismesso. Un profilo già portato su modelli correnti non riceve una versione in più.
+    /// </summary>
+    [Fact]
+    public async Task RepublishMigration_LeavesAProfileWithCurrentModelsUntouched()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = $"agent_profile_{Guid.NewGuid():N}";
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(databaseName);
+        try
+        {
+            await using var context = _fixture.CreateDbContext(connectionString);
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync("20261010220145_AddLlmCostLogPricingStatus", ct);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE knowledge_base.agent_profile_versions
+                SET content = content || '{"primaryModelId": "deepseek-flash", "fallbackModelId": "meta-llama/llama-3.3-70b-instruct"}'::jsonb
+                WHERE status = 1
+                """,
+                ct);
+
+            await migrator.MigrateAsync(cancellationToken: ct);
+
+            var profile = await new AgentProfileRepository(context).GetAsync(ct);
+            profile!.Versions.Should().ContainSingle("la versione pubblicata nomina già i modelli correnti");
+            profile.Published.Content.Should().Be(CurrentModelValues());
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(databaseName);
+        }
     }
 
     [Fact]
-    public async Task PublishingADraft_IsPersisted_AndArchivesVersionOne()
+    public async Task PublishingADraft_IsPersisted_AndArchivesThePublishedVersion()
     {
         var ct = TestContext.Current.CancellationToken;
         var repository = new AgentProfileRepository(_dbContext);
@@ -111,10 +163,10 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
         var persisted = await new AgentProfileRepository(verification).GetAsync(ct);
-        persisted!.Published.VersionNumber.Should().Be(2);
+        persisted!.Published.VersionNumber.Should().Be(3);
         persisted.Published.Content.Temperature.Should().Be(0.5m);
-        persisted.Versions.Single(v => v.VersionNumber == 1).Status.Should().Be(AgentProfileVersionStatus.Archived);
-        persisted.Versions.Single(v => v.VersionNumber == 1).Content.Should().Be(TodaysHardcodedValues());
+        persisted.Versions.Single(v => v.VersionNumber == 2).Status.Should().Be(AgentProfileVersionStatus.Archived);
+        persisted.Versions.Single(v => v.VersionNumber == 2).Content.Should().Be(CurrentModelValues());
     }
 
     /// <summary>
@@ -143,11 +195,11 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         await secondWrite.Should().ThrowAsync<DbUpdateConcurrencyException>(
             "la radice cambia a ogni comando, quindi il suo xmin respinge la scrittura basata su "
-            + "una copia in cui la versione 2 era ancora una bozza");
+            + "una copia in cui la versione 3 era ancora una bozza");
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
         var persisted = await new AgentProfileRepository(verification).GetAsync(ct);
-        persisted!.Published.VersionNumber.Should().Be(2);
+        persisted!.Published.VersionNumber.Should().Be(3);
         persisted.Published.Content.Temperature.Should().Be(0.5m);
     }
 

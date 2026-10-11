@@ -150,20 +150,18 @@ public class AskQuestionQueryHandlerSecurityTests
                 Embeddings = new List<float[]> { new float[768] }
             });
 
-        // ISSUE-977: Setup validation pipeline mock to return a valid result (all 5 layers)
+        // ISSUE-977: Setup validation pipeline mock to return a valid result (standard mode, #4179)
         _mockValidationPipeline
-            .Setup(v => v.ValidateWithMultiModelAsync(
+            .Setup(v => v.ValidateResponseAsync(
                 It.IsAny<Api.Models.QaResponse>(),
-                It.IsAny<string>()!,
-                It.IsAny<string>()!,
-                It.IsAny<string>()!,
-                It.IsAny<string>()!,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RagValidationResult
             {
                 IsValid = true,
-                LayersPassed = 4,
-                TotalLayers = 4,
+                LayersPassed = 3,
+                TotalLayers = 3,
                 ConfidenceValidation = new ConfidenceValidationResult
                 {
                     IsValid = true,
@@ -171,32 +169,6 @@ public class AskQuestionQueryHandlerSecurityTests
                     Severity = ValidationSeverity.Pass,
                     ActualConfidence = 0.8,
                     RequiredThreshold = 0.7
-                },
-                MultiModelConsensus = new MultiModelConsensusResult
-                {
-                    HasConsensus = true,
-                    SimilarityScore = 0.95,
-                    RequiredThreshold = 0.90,
-                    Gpt4Response = new ModelResponse
-                    {
-                        ModelId = "gpt-4",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ClaudeResponse = new ModelResponse
-                    {
-                        ModelId = "claude-3",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ConsensusResponse = "Test response",
-                    Message = "Consensus achieved",
-                    TotalDurationMs = 200,
-                    Severity = ConsensusSeverity.High
                 },
                 CitationValidation = new CitationValidationResult
                 {
@@ -215,8 +187,7 @@ public class AskQuestionQueryHandlerSecurityTests
                     Message = "No hallucinations detected",
                     Severity = HallucinationSeverity.None
                 },
-                ValidationAccuracyMetrics = "Validation accuracy tracking enabled (baseline threshold: 80%)",
-                Message = "All validations passed (multi-model mode)",
+                Message = "All validations passed (standard mode)",
                 Severity = RagValidationSeverity.Pass,
                 DurationMs = 250
             });

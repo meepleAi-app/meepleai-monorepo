@@ -90,7 +90,8 @@ public sealed class SeedAiModelsCommandHandlerTests
             deepseek.Settings.Pricing.VerifiedOn.Should().Be(SeedAiModelsCommandHandler.PricesVerifiedOn);
         }
 
-        _updated.Select(m => m.ModelId).Should().BeEquivalentTo("meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat");
+        // Le altre righe aggiornate sono le dismesse (#4179), coperte dai test qui sotto.
+        _updated.Select(m => m.ModelId).Should().Contain(["meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat"]);
         var llama = catalog.Single(m => m.ModelId == "meta-llama/llama-3.3-70b-instruct");
         llama.Settings.Pricing.InputPricePerMillion.Should().Be(0.22m);
         llama.Settings.Pricing.OutputPricePerMillion.Should().Be(0.50m);
@@ -117,7 +118,10 @@ public sealed class SeedAiModelsCommandHandlerTests
     [Fact]
     public async Task APriceTheAdminEnteredAfterTheVerification_IsNotOverwritten()
     {
-        var catalog = Pre4164Catalog();
+        // Senza le righe dismesse: il loro ritiro aggiorna il sostituto (#4179), e qui conta il prezzo.
+        var catalog = Pre4164Catalog()
+            .Where(m => SeedAiModelsCommandHandler.RetiredModels.All(r => r.ModelId != m.ModelId))
+            .ToArray();
         var llama = catalog.Single(m => m.ModelId == "meta-llama/llama-3.3-70b-instruct");
         llama.UpdatePricing(0.99m, 0.99m); // verifica dell'admin, datata oggi
 
@@ -139,6 +143,67 @@ public sealed class SeedAiModelsCommandHandlerTests
         _added.Should().BeEmpty();
         _updated.Should().BeEmpty();
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4179: le due varianti «:free» sono sparite dal listino di OpenRouter. Il seed le disattiva
+    /// e il ruolo di primario di OpenRouter passa al sostituto: senza, il modello di fallback di
+    /// OpenRouter (il primario attivo) resterebbe un modello che il provider non elenca più.
+    /// </summary>
+    [Fact]
+    public async Task RetiredModels_AreDeactivated_AndThePrimaryRolePassesToTheReplacement()
+    {
+        var catalog = Pre4164Catalog();
+
+        await SeedAsync(catalog);
+
+        foreach (var retired in SeedAiModelsCommandHandler.RetiredModels)
+        {
+            var row = catalog.Single(m => m.ModelId == retired.ModelId);
+            row.IsActive.Should().BeFalse($"{retired.ModelId} non è più nel listino del provider");
+            row.IsPrimary.Should().BeFalse();
+            _updated.Should().Contain(row);
+        }
+
+        catalog.Single(m => m.ModelId == "meta-llama/llama-3.3-70b-instruct").IsPrimary.Should().BeTrue();
+        catalog.Where(m => m.Provider == "OpenRouter" && m.IsPrimary).Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task RetiredModels_AlreadyInactive_AreLeftAlone()
+    {
+        var catalog = SeedAiModelsCommandHandler.Models
+            .Select(m => Row(m.ModelId, m.Provider, m.Priority, m.Pricing, m.IsActive, m.IsPrimary))
+            .Append(Row("meta-llama/llama-3.3-70b-instruct:free", "OpenRouter", 1, ModelPricing.Free, isActive: false))
+            .ToArray();
+
+        await SeedAsync(catalog);
+
+        _updated.Should().BeEmpty();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ARetiredPrimary_DoesNotPromoteAReplacementTheAdminDeactivated()
+    {
+        var catalog = Pre4164Catalog();
+        var llama = catalog.Single(m => m.ModelId == "meta-llama/llama-3.3-70b-instruct");
+        llama.SetActive(false);
+
+        await SeedAsync(catalog);
+
+        llama.IsPrimary.Should().BeFalse("un sostituto disattivato dall'admin resta una sua scelta");
+        catalog.Single(m => m.ModelId == "meta-llama/llama-3.3-70b-instruct:free").IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public void NoSeedModel_IsRetired()
+    {
+        SeedAiModelsCommandHandler.Models.Select(m => m.ModelId)
+            .Should().NotIntersectWith(SeedAiModelsCommandHandler.RetiredModels.Select(m => m.ModelId));
+        SeedAiModelsCommandHandler.Models.Select(m => m.ModelId)
+            .Should().Contain(SeedAiModelsCommandHandler.RetiredModels.Select(m => m.ReplacedBy).Distinct(),
+                "il sostituto di un modello dismesso deve essere nel catalogo");
     }
 
     [Fact]

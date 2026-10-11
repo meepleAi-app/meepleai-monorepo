@@ -172,9 +172,6 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-972: BGAI-030 - Hallucination Detection (forbidden keywords, multilingual)
         services.AddSingleton<IHallucinationDetectionService, HallucinationDetectionService>();
 
-        // ISSUE-974: BGAI-032 - Multi-Model Consensus Validation (GPT-4 + Claude)
-        services.AddSingleton<IMultiModelValidationService, MultiModelValidationService>();
-
         // ISSUE-981: BGAI-039 - Validation Accuracy Baseline Measurement
         services.AddScoped<ValidationAccuracyTrackingService>();
 

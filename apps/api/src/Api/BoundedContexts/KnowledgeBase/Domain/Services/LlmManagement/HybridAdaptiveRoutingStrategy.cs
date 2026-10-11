@@ -226,7 +226,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             if (string.IsNullOrEmpty(alternativeModel))
             {
                 // Use default for the alternative provider
-                alternativeModel = GetDefaultModelForProvider(alternativeProvider);
+                alternativeModel = AgentDefaults.DefaultModelForProvider(alternativeProvider);
             }
 
             _logger.LogInformation(
@@ -258,7 +258,7 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
             var preferredConfig = settings.Providers[settings.PreferredProvider];
             var preferredModel = preferredConfig.Models.Count > 0
                 ? preferredConfig.Models[0]
-                : GetDefaultModelForProvider(settings.PreferredProvider);
+                : AgentDefaults.DefaultModelForProvider(settings.PreferredProvider);
 
             _logger.LogDebug(
                 "[{UserId}] Using PreferredProvider override: {Provider}/{Model}",
@@ -300,20 +300,6 @@ internal class HybridAdaptiveRoutingStrategy : ILlmRoutingStrategy
         }
 
         return decision;
-    }
-
-    /// <summary>
-    /// Get default model for a provider.
-    /// Uses AgentDefaults for centralized, configurable model names.
-    /// </summary>
-    private static string GetDefaultModelForProvider(string providerName)
-    {
-        return providerName.ToLowerInvariant() switch
-        {
-            "ollama" => AgentDefaults.OllamaFallbackModel,
-            "openrouter" => AgentDefaults.DefaultModel,
-            _ => AgentDefaults.OllamaFallbackModel
-        };
     }
 
     /// <summary>

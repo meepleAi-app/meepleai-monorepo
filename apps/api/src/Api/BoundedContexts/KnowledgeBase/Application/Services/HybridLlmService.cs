@@ -399,6 +399,9 @@ internal class HybridLlmService : ILlmService
     private const string NoModelAnsweredMessage =
         "No AI model could answer right now. Please try again in a few minutes.";
 
+    /// <summary>La riga del registro di uno stream che il consumatore ha smesso di leggere.</summary>
+    private const string ClientStoppedFailure = "Stream stopped by the client before the end";
+
     /// <summary>Il messaggio per l'utente quando la risposta si interrompe dopo il primo token.</summary>
     private const string StreamInterruptedMessage =
         "The answer was interrupted before it was complete. Please ask again.";
@@ -450,6 +453,13 @@ internal class HybridLlmService : ILlmService
                 var result = await client.GenerateCompletionAsync(
                     model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).ConfigureAwait(false);
                 stopwatch.Stop();
+
+                // I client trasformano anche l'annullamento in un risultato fallito: chi ha smesso di
+                // aspettare è il chiamante, non il provider, quindi niente circuit breaker né riserva.
+                if (!result.Success && ct.IsCancellationRequested)
+                {
+                    ct.ThrowIfCancellationRequested();
+                }
 
                 if (result.Success)
                 {
@@ -595,55 +605,80 @@ internal class HybridLlmService : ILlmService
             "Answer stream via {Provider} ({Model}), temperature {Temperature}, max tokens {MaxTokens}",
             attempt.Provider, attempt.Model, request.Temperature, request.MaxTokens);
 
-        var enumerator = client.GenerateCompletionStreamAsync(
-            attempt.Model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).GetAsyncEnumerator(ct);
+        IAsyncEnumerator<StreamChunk>? enumerator = null;
         try
         {
-            while (true)
+            enumerator = client.GenerateCompletionStreamAsync(
+                attempt.Model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).GetAsyncEnumerator(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            error = ex;
+        }
+
+        if (enumerator is not null)
+        {
+            try
             {
-                bool hasNext;
-                try
+                while (true)
                 {
-                    hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
-                }
-                // Un annullamento chiesto dal consumatore non è un fallimento del provider; un timeout
-                // di HttpClient sì, anche se arriva come TaskCanceledException.
-                catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-                {
-                    error = ex;
-                    loopExited = true;
-                    break;
-                }
+                    bool hasNext;
+                    try
+                    {
+                        hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    }
+                    // Un annullamento chiesto dal consumatore non è un fallimento del provider; un timeout
+                    // di HttpClient sì, anche se arriva come TaskCanceledException.
+                    catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                    {
+                        error = ex;
+                        loopExited = true;
+                        break;
+                    }
 
-                if (!hasNext)
-                {
-                    loopExited = true;
-                    break;
-                }
+                    if (!hasNext)
+                    {
+                        loopExited = true;
+                        break;
+                    }
 
-                var chunk = enumerator.Current;
-                if (chunk.Usage is not null && chunk.Cost is not null)
-                {
-                    costChunk = chunk;
-                }
+                    var chunk = enumerator.Current;
+                    if (chunk.Usage is not null && chunk.Cost is not null)
+                    {
+                        costChunk = chunk;
+                    }
 
-                generatedCharacters += chunk.Content?.Length ?? 0;
-                yield return chunk;
+                    generatedCharacters += chunk.Content?.Length ?? 0;
+                    yield return chunk;
+                }
+            }
+            finally
+            {
+                await DisposeQuietlyAsync(enumerator, attempt).ConfigureAwait(false);
+                stopwatch.Stop();
+
+                // Il consumatore ha smesso di leggere a metà (disconnessione): niente circuit breaker,
+                // che misura il provider, ma il costo resta da contare.
+                if (!loopExited)
+                {
+                    attempt.Answered = true;
+                    await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                        stopwatch.ElapsedMilliseconds, failure: ClientStoppedFailure).ConfigureAwait(false);
+                }
             }
         }
-        finally
-        {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
-            stopwatch.Stop();
 
-            // Il consumatore ha smesso di leggere (disconnessione, annullamento): niente circuit
-            // breaker, che misura il provider, ma il costo resta da contare.
-            if (!loopExited)
-            {
-                attempt.Answered = true;
-                await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
-                    stopwatch.ElapsedMilliseconds, failure: "Stream stopped by the client before the end").ConfigureAwait(false);
-            }
+        stopwatch.Stop();
+
+        // Annullamento chiesto dal consumatore. I client non lanciano: escono dal ciclo in silenzio,
+        // quindi lo stream sembra finito (vuoto o troncato). Non è un guasto del provider né una
+        // risposta riuscita: niente circuit breaker, niente riserva, solo il conto.
+        if (ct.IsCancellationRequested)
+        {
+            attempt.Answered = true;
+            await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                stopwatch.ElapsedMilliseconds, failure: ClientStoppedFailure).ConfigureAwait(false);
+            yield break;
         }
 
         if (error is not null && generatedCharacters > 0)
@@ -686,6 +721,30 @@ internal class HybridLlmService : ILlmService
     /// il costo si stima dai caratteri, a ~4 per token, sul listino del catalogo.
     /// </summary>
     private async Task SettleAnswerStreamAsync(
+        AnswerStreamAttempt attempt,
+        LlmAnswerRequest request,
+        LlmBudgetAdmission admission,
+        LlmUserContext costContext,
+        StreamChunk? costChunk,
+        int generatedCharacters,
+        long latencyMs,
+        string? failure)
+    {
+        try
+        {
+            await LogAndCompleteAsync(attempt, request, admission, costContext, costChunk, generatedCharacters, latencyMs, failure)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Ogni ramo chiude la prenotazione come ultima istruzione: se si arriva qui, non è chiusa.
+            _logger.LogWarning(ex, "Answer stream via {Provider} ({Model}): recording the cost failed, the gate keeps the estimate",
+                attempt.Provider, attempt.Model);
+            _budgetGate?.Complete(admission, admission.EstimatedCostUsd, recordedInCostLog: false);
+        }
+    }
+
+    private async Task LogAndCompleteAsync(
         AnswerStreamAttempt attempt,
         LlmAnswerRequest request,
         LlmBudgetAdmission admission,
@@ -742,6 +801,23 @@ internal class HybridLlmService : ILlmService
         await _costService.LogSuccessAsync(estimated, costContext, latencyMs, request.Source, CancellationToken.None)
             .ConfigureAwait(false);
         CompleteAdmission(admission, estimate.TotalCost);
+    }
+
+    /// <summary>
+    /// Il dispose di un client non deve impedire di chiudere il conto: un'eccezione qui lascerebbe
+    /// aperta la prenotazione del gate e il circuit breaker senza esito.
+    /// </summary>
+    private async Task DisposeQuietlyAsync(IAsyncEnumerator<StreamChunk> enumerator, AnswerStreamAttempt attempt)
+    {
+        try
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Answer stream via {Provider} ({Model}): disposing the provider stream failed",
+                attempt.Provider, attempt.Model);
+        }
     }
 
     /// <summary>

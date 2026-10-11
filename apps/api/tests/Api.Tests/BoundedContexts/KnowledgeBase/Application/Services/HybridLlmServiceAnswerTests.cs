@@ -190,6 +190,109 @@ public sealed class HybridLlmServiceAnswerTests
         _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), It.Is<decimal>(c => c > 0m), true), Times.Once);
     }
 
+    // ─── Il consumatore smette di aspettare ─────────────────────────────────────
+
+    /// <summary>
+    /// I client non lanciano sull'annullamento: escono dal ciclo e lo stream sembra finito. Se il
+    /// gateway lo leggesse come esito, un utente che chiude la chat aprirebbe il circuito a tutti
+    /// (vuoto prima del primo token) o registrerebbe un successo (troncato dopo).
+    /// </summary>
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task AnswerStream_CancelledByTheConsumer_IsNeitherAProviderFailureNorASuccess(int tokenCount)
+    {
+        string[] tokensBeforeCancel = tokenCount == 0 ? [] : ["Each player"];
+        using var cts = new CancellationTokenSource();
+        _deepSeek
+            .Setup(c => c.GenerateCompletionStreamAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => QuietlyCancelled(cts, tokensBeforeCancel));
+
+        var chunks = new List<StreamChunk>();
+        await foreach (var chunk in CreateSut().GenerateAnswerStreamAsync(Request(), cts.Token))
+        {
+            chunks.Add(chunk);
+        }
+
+        TextOf(chunks).Should().Be(string.Concat(tokensBeforeCancel));
+        chunks.Should().NotContain(c => c.ErrorCode != null, "nessuno legge più lo stream");
+        _selector.Verify(s => s.RecordFailure(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<LlmCompletionResult?>()), Times.Never);
+        _selector.Verify(s => s.RecordSuccess(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<LlmCompletionResult>()), Times.Never);
+        _openRouter.Verify(c => c.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), It.IsAny<decimal>(), It.IsAny<bool>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Answer_CancelledByTheConsumer_IsNotAProviderFailure()
+    {
+        using var cts = new CancellationTokenSource();
+        _deepSeek
+            .Setup(c => c.GenerateCompletionAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                cts.Cancel();
+                return LlmCompletionResult.CreateFailure("Request timeout");
+            });
+
+        var act = () => CreateSut().GenerateAnswerAsync(Request(), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _selector.Verify(s => s.RecordFailure(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<LlmCompletionResult?>()), Times.Never);
+        _openRouter.Verify(c => c.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), 0m, It.IsAny<bool>()), Times.Once);
+    }
+
+    /// <summary>
+    /// Un conto che non si chiude lascia la prenotazione nel gate fino al riavvio: il dispose di un
+    /// client che lancia, o un calcolo del costo che lancia, non devono impedirlo.
+    /// </summary>
+    [Fact]
+    public async Task AnswerStream_WhenRecordingTheCostThrows_TheGateIsStillSettledOnce()
+    {
+        _deepSeek
+            .Setup(c => c.GenerateCompletionStreamAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => Failing(afterTokens: ["Each player"]));
+        _calculator
+            .Setup(c => c.CalculateCost(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Throws(new InvalidOperationException("catalog unreadable"));
+
+        var chunks = await ReadAsync(CreateSut().GenerateAnswerStreamAsync(Request()));
+
+        chunks[^1].ErrorCode.Should().Be(LlmAnswerErrorCodes.StreamInterrupted);
+        _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), 0.004m, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task AnswerStream_WhenTheProviderStreamThrowsOnDispose_TheAnswerStillCompletes()
+    {
+        var stream = new Mock<IAsyncEnumerable<StreamChunk>>();
+        var enumerator = new Mock<IAsyncEnumerator<StreamChunk>>();
+        var chunks = new Queue<StreamChunk>([
+            new StreamChunk("Five."),
+            new StreamChunk(null, new LlmUsage(10, 2, 12),
+                new LlmCost { InputCost = 0.0001m, OutputCost = 0.0002m, ModelId = Primary, Provider = "DeepSeek" }, IsFinal: true),
+        ]);
+        enumerator.Setup(e => e.MoveNextAsync()).Returns(() => ValueTask.FromResult(chunks.Count > 0));
+        enumerator.Setup(e => e.Current).Returns(() => chunks.Dequeue());
+        enumerator.Setup(e => e.DisposeAsync()).Throws(new ObjectDisposedException("socket"));
+        stream.Setup(s => s.GetAsyncEnumerator(It.IsAny<CancellationToken>())).Returns(enumerator.Object);
+        _deepSeek
+            .Setup(c => c.GenerateCompletionStreamAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(stream.Object);
+
+        var read = await ReadAsync(CreateSut().GenerateAnswerStreamAsync(Request()));
+
+        TextOf(read).Should().Be("Five.");
+        _selector.Verify(s => s.RecordSuccess("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult>()), Times.Once);
+        _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), It.IsAny<decimal>(), It.IsAny<bool>()), Times.Once);
+    }
+
     // ─── Nessun modello, tetto, catalogo, degrado ───────────────────────────────
 
     [Fact]
@@ -353,6 +456,21 @@ public sealed class HybridLlmServiceAnswerTests
             new LlmCost { InputCost = 0.0001m, OutputCost = 0.0002m, ModelId = model, Provider = provider },
             IsFinal: true,
             FinishReason: "stop");
+    }
+
+    /// <summary>
+    /// Come i client veri su un annullamento: emettono quel che hanno, poi escono dal ciclo senza
+    /// lanciare (OpenRouter legge finché <c>!ct.IsCancellationRequested</c>).
+    /// </summary>
+    private static async IAsyncEnumerable<StreamChunk> QuietlyCancelled(CancellationTokenSource cts, string[] tokens)
+    {
+        await Task.Yield();
+        foreach (var token in tokens)
+        {
+            yield return new StreamChunk(token);
+        }
+
+        await cts.CancelAsync();
     }
 
     /// <summary>Uno stream che emette dei token e poi si rompe, come una connessione chiusa a metà.</summary>

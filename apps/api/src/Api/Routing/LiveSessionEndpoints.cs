@@ -249,6 +249,7 @@ internal static class LiveSessionEndpoints
             .Produces(400)
             .Produces(404)
             .Produces(401)
+            .Produces(403) // #4206: RAG_OWNERSHIP_REQUIRED, il cancello della guida alla preparazione
             .WithTags("LiveSessions")
             .WithSummary("Generate setup checklist from game rulebook via RAG")
             .WithDescription("Generates a player-count-specific setup checklist by querying the game's PDF rulebook through the KnowledgeBase RAG pipeline.");

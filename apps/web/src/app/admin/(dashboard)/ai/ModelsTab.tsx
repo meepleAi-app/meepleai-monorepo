@@ -40,7 +40,9 @@ const STATUS_TEXT: Record<PriceStatus, string> = {
   'foreign-currency': 'Not in USD: the gateway refuses it',
 };
 
-const usd = (value: number) => `$${value.toFixed(2)}`;
+// Fino a quattro decimali: i modelli economici costano frazioni di centesimo per milione di token.
+const usd = (value: number) =>
+  `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`;
 
 function sortModels(models: AiModelDto[]): AiModelDto[] {
   return [...models].sort(

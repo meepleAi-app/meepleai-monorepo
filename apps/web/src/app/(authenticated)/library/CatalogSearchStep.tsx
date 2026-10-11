@@ -22,7 +22,7 @@
  *        feels like a real state, not a render glitch.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 
 import { ArrowLeft, Search, X } from 'lucide-react';
 import Image from 'next/image';
@@ -260,6 +260,7 @@ export function CatalogSearchStep({
   const [selectingId, setSelectingId] = useState<string | null>(null);
   // #4155: «Possiedo una copia». Spenta di default: la dichiarazione di possesso resta esplicita.
   const [ownsCopy, setOwnsCopy] = useState(false);
+  const ownsCopyHintId = useId();
   // #2269 P0-2 (M2) — non-intrusive inline alert state for already-in-library
   // clicks. `null` = hidden; `{id,title}` = visible. Auto-dismisses after
   // BLOCKED_AUTO_DISMISS_MS unless the user clicks the CTA or close button.
@@ -405,13 +406,13 @@ export function CatalogSearchStep({
             type="checkbox"
             checked={ownsCopy}
             onChange={e => setOwnsCopy(e.target.checked)}
-            aria-describedby="catalog-owns-copy-hint"
+            aria-describedby={ownsCopyHintId}
             className="h-4 w-4"
             data-testid="catalog-owns-copy"
           />
           {t('pages.library.addGame.catalog.ownsCopyLabel')}
         </label>
-        <p id="catalog-owns-copy-hint" className="mt-1 pl-6 text-xs text-muted-foreground">
+        <p id={ownsCopyHintId} className="mt-1 pl-6 text-xs text-muted-foreground">
           {t('pages.library.addGame.catalog.ownsCopyHint')}
         </p>
       </div>

@@ -8,7 +8,7 @@
  * Click a result to add it to the user's library.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,6 +39,7 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
   const [isAdding, setIsAdding] = useState(false);
   // #4155: «I own a copy». Off by default: declaring ownership stays an explicit choice.
   const [ownsCopy, setOwnsCopy] = useState(false);
+  const ownsCopyHintId = useId();
   const [errorMessage, setErrorMessage] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
   // #4158: the search runs on the server, one request per settled keystroke, and responses can
@@ -226,13 +227,13 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
               type="checkbox"
               checked={ownsCopy}
               onChange={e => setOwnsCopy(e.target.checked)}
-              aria-describedby="first-game-owns-copy-hint"
+              aria-describedby={ownsCopyHintId}
               className="h-4 w-4"
               data-testid="first-game-owns-copy"
             />
             I own a copy of this game
           </label>
-          <p id="first-game-owns-copy-hint" className="mt-1 pl-6 text-xs text-muted-foreground">
+          <p id={ownsCopyHintId} className="mt-1 pl-6 text-xs text-muted-foreground">
             It lets the assistant read the rulebook: rulebooks are copyrighted, and we only read
             them for players who own the game.
           </p>

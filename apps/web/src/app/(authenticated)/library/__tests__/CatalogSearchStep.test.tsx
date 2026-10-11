@@ -344,13 +344,16 @@ describe('CatalogSearchStep', () => {
     it('shows error toast when mutation fails', async () => {
       mutateAsync.mockRejectedValueOnce(new Error('Network error'));
       const user = userEvent.setup();
-      renderStep();
+      const { onSelect } = renderStep();
 
       await user.click(screen.getByTestId('catalog-card-g1-select-btn'));
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith('Could not add "Catan". Please try again.');
       });
+      // Un'aggiunta fallita non prosegue: niente passo successivo e niente dichiarazione (#4155).
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(declareAsync).not.toHaveBeenCalled();
     });
   });
 

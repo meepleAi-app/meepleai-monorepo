@@ -6,7 +6,7 @@
  * Provides automatic caching and pagination for shared games catalog.
  */
 
-import { useQueries, useQuery, UseQueryResult } from '@tanstack/react-query';
+import { keepPreviousData, useQueries, useQuery, UseQueryResult } from '@tanstack/react-query';
 
 import {
   api,
@@ -43,7 +43,10 @@ export const sharedGamesKeys = {
  */
 export function useSharedGames(
   params?: SearchSharedGamesParams,
-  enabled: boolean = true
+  enabled: boolean = true,
+  // #4187: chi cambia ricerca a ogni pausa tiene i risultati precedenti finché arrivano i nuovi,
+  // invece di passare da una lista vuota.
+  keepPrevious: boolean = false
 ): UseQueryResult<PagedSharedGames, Error> {
   return useQuery({
     queryKey: sharedGamesKeys.list(params),
@@ -51,6 +54,7 @@ export function useSharedGames(
       return api.sharedGames.search(params);
     },
     enabled,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
     // Shared games catalog changes infrequently (5 minutes)
     staleTime: 5 * 60 * 1000,
   });

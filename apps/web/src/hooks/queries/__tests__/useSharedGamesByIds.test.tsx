@@ -12,13 +12,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 
-const api = vi.hoisted(() => ({ getById: vi.fn() }));
+const api = vi.hoisted(() => ({ getById: vi.fn(), search: vi.fn() }));
 
 vi.mock('@/lib/api', () => ({
-  api: { sharedGames: { getById: (...a: unknown[]) => api.getById(...a) } },
+  api: {
+    sharedGames: {
+      getById: (...a: unknown[]) => api.getById(...a),
+      search: (...a: unknown[]) => api.search(...a),
+    },
+  },
 }));
 
-import { useSharedGamesByIds } from '../useSharedGames';
+import { useSharedGames, useSharedGamesByIds } from '../useSharedGames';
 
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>;
@@ -74,5 +79,33 @@ describe('useSharedGamesByIds (#4187)', () => {
     await new Promise(r => setTimeout(r, 20));
     expect(api.getById).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(false);
+  });
+});
+
+// #4187: il selettore della serata cambia termine di ricerca a ogni pausa. Senza i dati precedenti,
+// fra un termine e la risposta la lista è vuota e il selettore mostra «Nessun gioco adatto».
+describe('useSharedGames keepPreviousData (#4187)', () => {
+  it('keeps the previous results while the next search is in flight, when asked to', async () => {
+    let release: (value: unknown) => void = () => {};
+    api.search.mockImplementation(async (params?: { searchTerm?: string }) =>
+      params?.searchTerm === 'Wing'
+        ? new Promise(resolve => {
+            release = resolve;
+          })
+        : { items: [{ id: 'g1', title: 'Azul' }], total: 1, page: 1, pageSize: 20 }
+    );
+
+    const { result, rerender } = renderHook(
+      ({ term }: { term?: string }) =>
+        useSharedGames(term ? { searchTerm: term } : undefined, true, true),
+      { wrapper, initialProps: {} as { term?: string } }
+    );
+    await waitFor(() => expect(result.current.data?.items[0]?.title).toBe('Azul'));
+
+    rerender({ term: 'Wing' });
+
+    expect(result.current.data?.items[0]?.title).toBe('Azul');
+    release({ items: [{ id: 'g2', title: 'Wingspan' }], total: 1, page: 1, pageSize: 20 });
+    await waitFor(() => expect(result.current.data?.items[0]?.title).toBe('Wingspan'));
   });
 });

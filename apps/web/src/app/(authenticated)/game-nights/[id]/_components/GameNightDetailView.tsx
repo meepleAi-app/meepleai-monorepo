@@ -120,7 +120,8 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const catalogSearchTerm = useDebounce(catalogSearch.trim(), 300);
   const { data: catalogData } = useSharedGames(
     catalogSearchTerm.length >= 2 ? { searchTerm: catalogSearchTerm } : undefined,
-    isDraft
+    isDraft,
+    true
   );
 
   const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();

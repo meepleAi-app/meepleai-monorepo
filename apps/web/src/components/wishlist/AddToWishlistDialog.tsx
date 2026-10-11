@@ -75,6 +75,11 @@ interface AddToWishlistDialogProps {
   trigger?: React.ReactNode;
   /** Pre-selects a game in add mode. Still removable via the combobox. */
   prefillGameId?: string;
+  /**
+   * Title of `prefillGameId`. The caller knows it; the dialog cannot look it up while
+   * closed, because the library search only runs while it is open (#4187).
+   */
+  prefillGameTitle?: string;
   onSuccess?: () => void;
 }
 
@@ -102,6 +107,7 @@ export function AddToWishlistDialog({
   onOpenChange: controlledOnOpenChange,
   trigger,
   prefillGameId,
+  prefillGameTitle,
   onSuccess,
 }: AddToWishlistDialogProps) {
   const { t } = useTranslation();
@@ -116,7 +122,7 @@ export function AddToWishlistDialog({
 
   // #4187: the server filters the library by title. Filtering a downloaded first page
   // on the client could not find a game past it.
-  const { data: searchResults } = useGameSearch(query, {
+  const { data: searchResults, resultsMatchQuery } = useGameSearch(query, {
     source: 'library',
     limit: MAX_MATCHES,
     enabled: open && !isEdit,
@@ -138,7 +144,10 @@ export function AddToWishlistDialog({
       };
     }
     if (prefillGameId) {
-      return { id: prefillGameId, title: resolveGameTitle(prefillGameId) ?? prefillGameId };
+      return {
+        id: prefillGameId,
+        title: prefillGameTitle ?? resolveGameTitle(prefillGameId) ?? prefillGameId,
+      };
     }
     return null;
   }
@@ -243,6 +252,12 @@ export function AddToWishlistDialog({
    * so a second press closes the dialog.
    */
   function handleComboKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    // #4187: while the list on screen belongs to an older text, the keyboard must not
+    // pick from it. Enter is still swallowed, so it does not submit the form.
+    if (!resultsMatchQuery && ['ArrowDown', 'ArrowUp', 'Enter'].includes(e.key)) {
+      if (e.key !== 'Enter' || comboOpen) e.preventDefault();
+      return;
+    }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       setComboOpen(true);
@@ -425,6 +440,7 @@ export function AddToWishlistDialog({
                   <div
                     id="wishlist-game-listbox"
                     role="listbox"
+                    aria-busy={!resultsMatchQuery}
                     className="absolute z-10 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-border bg-card shadow-md"
                   >
                     {matches.map((g, idx) => {

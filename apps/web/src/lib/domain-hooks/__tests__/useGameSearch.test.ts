@@ -488,6 +488,29 @@ describe('useGameSearch', () => {
       expect(library.result.current.data?.[0].source).toBe('library');
     });
 
+    it('resultsMatchQuery è falso finché il debounce non ha raggiunto il testo', async () => {
+      // Il debounce resta indietro di una lettera: i risultati sono per «Win», non per «Wing».
+      vi.mocked(useDebounceModule.useDebounce).mockImplementation((value: string) =>
+        value.slice(0, -1)
+      );
+
+      const { result } = renderHook(() => useGameSearch('Wing', { source: 'library' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.resultsMatchQuery).toBe(false);
+    });
+
+    it('resultsMatchQuery è vero quando i risultati sono del testo corrente', async () => {
+      const { result } = renderHook(() => useGameSearch('Wing', { source: 'library' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.resultsMatchQuery).toBe(true);
+    });
+
     it('con enabled: false non fa richieste', () => {
       renderHook(() => useGameSearch('Wingspan', { source: 'library', enabled: false }), {
         wrapper: createWrapper(),

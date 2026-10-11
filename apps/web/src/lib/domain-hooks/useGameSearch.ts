@@ -14,7 +14,7 @@
  * Issue #4273: Game Search Autocomplete
  */
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
 import { api } from '@/lib/api';
@@ -39,6 +39,15 @@ export interface UseGameSearchOptions {
   enabled?: boolean;
 }
 
+export type UseGameSearchResult = UseQueryResult<GameSearchResult[]> & {
+  /**
+   * False while the list on screen belongs to an older text: during the debounce, or
+   * while the library keeps the previous page (`keepPreviousData`). A picker should not
+   * let Enter commit an entry from that list.
+   */
+  resultsMatchQuery: boolean;
+};
+
 /** `GET /api/v1/library` accepts a page size from 1 to 100 (UserLibraryRepository). */
 const LIBRARY_MAX_PAGE_SIZE = 100;
 
@@ -49,13 +58,16 @@ const LIBRARY_MAX_PAGE_SIZE = 100;
  * @param options - Source, debounce, page size and enabled flag
  * @returns Query result with games array
  */
-export function useGameSearch(query: string, options: UseGameSearchOptions = {}) {
+export function useGameSearch(
+  query: string,
+  options: UseGameSearchOptions = {}
+): UseGameSearchResult {
   const { source = 'catalog', debounceMs = 300, limit = 20, enabled = true } = options;
   const debouncedQuery = useDebounce(query, debounceMs);
   const pageSize = Math.min(Math.max(Math.trunc(limit), 1), LIBRARY_MAX_PAGE_SIZE);
   const isLibrary = source === 'library';
 
-  return useQuery({
+  const result = useQuery({
     queryKey: isLibrary
       ? ['games', 'search', 'library', debouncedQuery, pageSize]
       : ['games', 'search', 'catalog', debouncedQuery],
@@ -108,4 +120,9 @@ export function useGameSearch(query: string, options: UseGameSearchOptions = {})
     placeholderData: isLibrary ? keepPreviousData : undefined,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  return {
+    ...result,
+    resultsMatchQuery: debouncedQuery === query && !result.isPlaceholderData,
+  };
 }

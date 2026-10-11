@@ -193,6 +193,42 @@ describe('AddToWishlistDialog', () => {
       );
     });
 
+    it('mostra il titolo del gioco prefissato senza aspettare la libreria (#4187)', () => {
+      // Il chiamante vero (MeepleLibraryGameCard) monta il dialogo chiuso, quindi la ricerca
+      // non e' partita quando il chip si costruisce: il titolo deve arrivare dal chiamante.
+      mockGetLibrary.mockImplementation(() => new Promise(() => {}));
+      renderWithIntl(
+        <AddToWishlistDialog
+          mode="add"
+          open
+          onOpenChange={() => {}}
+          prefillGameId="game-wingspan"
+          prefillGameTitle="Wingspan"
+        />
+      );
+
+      expect(screen.getByText('Wingspan')).toBeInTheDocument();
+      expect(screen.queryByText('game-wingspan')).not.toBeInTheDocument();
+    });
+
+    it('Invio non sceglie dalla lista del testo precedente mentre arriva quella nuova (#4187)', async () => {
+      const user = userEvent.setup();
+      renderWithIntl(<AddToWishlistDialog mode="add" open onOpenChange={() => {}} />);
+
+      const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
+      await user.type(combo, 'Catan');
+      await screen.findByRole('option', { name: 'Catan' });
+
+      // La risposta per il testo nuovo non arriva: resta a video la lista di «Catan».
+      mockGetLibrary.mockImplementation(() => new Promise(() => {}));
+      await user.type(combo, 'Z');
+      await user.keyboard('{ArrowDown}');
+      await user.keyboard('{Enter}');
+
+      expect(screen.getByRole('combobox', { name: GAME_COMBO_NAME })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeDisabled();
+    });
+
     it('a dialogo chiuso non interroga la libreria', () => {
       renderWithIntl(<AddToWishlistDialog mode="add" open={false} onOpenChange={() => {}} />);
       expect(mockGetLibrary).not.toHaveBeenCalled();

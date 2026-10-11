@@ -139,7 +139,15 @@ export function SessionWizardMobile({
 
   // #4187: the server searches the library. Filtering one downloaded page on the client
   // could not find a game past it.
-  const { items: filteredGames, isLoading: isLoadingLibrary } = useLibrarySearch(searchQuery);
+  // 100 per page, as before (the grid has no "N of M" footer); the rest is found by searching.
+  const {
+    items: filteredGames,
+    isLoading: isLoadingFirstPage,
+    resultsMatchQuery,
+    term: libraryTerm,
+  } = useLibrarySearch(searchQuery, { pageSize: 100 });
+  // An empty list that belongs to an older text says nothing about the current one.
+  const isLoadingLibrary = isLoadingFirstPage || (!resultsMatchQuery && filteredGames.length === 0);
 
   // Color helpers
   const usedColors = players.map(p => p.color);
@@ -331,7 +339,7 @@ export function SessionWizardMobile({
             ) : filteredGames.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery ? 'Nessun gioco trovato' : 'La tua libreria e vuota'}
+                  {libraryTerm ? 'Nessun gioco trovato' : 'La tua libreria e vuota'}
                 </p>
               </div>
             ) : (

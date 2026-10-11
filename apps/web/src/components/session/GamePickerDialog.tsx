@@ -55,6 +55,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
     items: libraryItems,
     totalCount,
     isLoading: isLibraryLoading,
+    resultsMatchQuery,
     term,
   } = useLibrarySearch(search, {
     enabled: open, // only fetch when dialog is open
@@ -76,6 +77,10 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
       maxPlayers: entry.maxPlayers,
     }));
   }, [libraryItems]);
+
+  // An empty list that belongs to an older text says nothing about the current one: keep
+  // the loading state until the answer arrives, instead of "no games".
+  const isSearching = isLibraryLoading || (!resultsMatchQuery && games.length === 0);
 
   // Handle game selection: start session and navigate
   const handleSelect = async (gameId: string) => {
@@ -124,7 +129,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
             className="overflow-y-auto flex-1 min-h-0 space-y-1 pr-1 -mr-1"
             data-testid="game-picker-list"
           >
-            {isLibraryLoading ? (
+            {isSearching ? (
               <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span className="text-sm">Caricamento libreria...</span>
@@ -152,7 +157,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
         </TooltipProvider>
 
         {/* Footer: count */}
-        {!isLibraryLoading && games.length > 0 && (
+        {!isSearching && games.length > 0 && (
           <div className="pt-3 border-t text-xs text-muted-foreground text-center">
             {games.length} di {totalCount} giochi
           </div>

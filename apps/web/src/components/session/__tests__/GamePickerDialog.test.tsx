@@ -86,6 +86,24 @@ describe('GamePickerDialog — ricerca nella libreria (#4187)', () => {
     );
   });
 
+  it('mentre arriva la risposta per un testo nuovo non dice che non ci sono giochi', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    await screen.findAllByTestId('picker-item');
+
+    await user.type(screen.getByTestId('game-picker-search'), 'zzz');
+    expect(await screen.findByText('Nessun gioco trovato per la ricerca.')).toBeInTheDocument();
+
+    // La risposta per «zzzq», testo mai chiesto, non arriva: a video resta la pagina vuota di
+    // «zzz». Cancellare una lettera non basterebbe: «zz» e' gia' in cache, e li' la risposta vuota
+    // e' quella vera.
+    mockGetLibrary.mockImplementation(() => new Promise(() => {}));
+    await user.type(screen.getByTestId('game-picker-search'), 'q');
+
+    expect(screen.queryByText('Nessun gioco trovato per la ricerca.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nessun gioco nella tua libreria.')).not.toBeInTheDocument();
+  });
+
   it('non chiede più giochi di quanti il server ne restituisca', async () => {
     renderDialog();
 

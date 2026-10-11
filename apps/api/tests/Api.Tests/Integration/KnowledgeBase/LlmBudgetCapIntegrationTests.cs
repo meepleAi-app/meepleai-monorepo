@@ -185,6 +185,39 @@ public sealed class LlmBudgetCapIntegrationTests : IAsyncLifetime
         ProviderCalled(Times.Never());
     }
 
+    /// <summary>
+    /// Trovato nella verifica a runtime della 3a: un tetto di 0 salvato dall'admin su una tabella
+    /// vuota finiva a 10 $. EF, con un valore predefinito di colonna, non scrive una proprietà che
+    /// vale il default del tipo (0), e la colonna prende il suo default. Lo stesso per una quota a 0.
+    /// </summary>
+    [Fact]
+    public async Task ZeroSavedByTheAdmin_StaysZero_AndStopsEveryPaidCall()
+    {
+        using (var scope = _services.CreateScope())
+        {
+            var config = LlmSystemConfig.CreateDefault();
+            config.UpdateBudgetLimits(dailyBudgetUsd: 0m, monthlyBudgetUsd: 20m);
+            config.UpdateBudgetPolicy(degradeThresholdPercent: 80, backgroundQuotaPercent: 0, evaluationQuotaPercent: 0);
+            await scope.ServiceProvider.GetRequiredService<ILlmSystemConfigRepository>()
+                .UpsertAsync(config, TestContext.Current.CancellationToken);
+        }
+
+        using (var scope = _services.CreateScope())
+        {
+            var saved = await scope.ServiceProvider.GetRequiredService<ILlmSystemConfigRepository>()
+                .GetCurrentAsync(TestContext.Current.CancellationToken);
+            saved!.DailyBudgetUsd.Should().Be(0m, "un tetto a zero è il modo di spegnere l'AI a pagamento");
+            saved.BackgroundQuotaPercent.Should().Be(0);
+            saved.EvaluationQuotaPercent.Should().Be(0);
+        }
+
+        var result = await Gateway().GenerateCompletionAsync("system", "How do I score?", RequestSource.Manual,
+            TestContext.Current.CancellationToken);
+
+        result.Success.Should().BeFalse();
+        ProviderCalled(Times.Never());
+    }
+
     [Fact]
     public async Task BackgroundOverItsQuota_IsStopped_WhileAnswersPass()
     {

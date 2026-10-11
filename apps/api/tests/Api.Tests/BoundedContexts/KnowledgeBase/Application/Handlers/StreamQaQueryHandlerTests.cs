@@ -3,6 +3,8 @@ using Api.Infrastructure.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
+using Api.SharedKernel.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
@@ -55,10 +57,11 @@ public class StreamQaQueryHandlerTests
     private readonly Mock<IVectorDocumentRepository> _vectorDocumentRepositoryMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IAiResponseCacheService> _cacheMock;
-    private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
+    private readonly Mock<IPublishedAgentProfileReader> _profileReaderMock;
+    private readonly Mock<ILanguageDetectionService> _languageDetectionMock;
     private readonly Mock<IIntentClassifierService> _intentClassifierMock;
     private readonly Mock<ICopyrightTierResolver> _copyrightTierResolverMock;
-    private readonly Mock<ILogger<StreamQaQueryHandler>> _loggerMock;
+    private readonly Mock<ILogger<AnswerPipeline>> _loggerMock;
     private readonly FakeTimeProvider _fakeTimeProvider;
     private readonly StreamQaQueryHandler _handler;
 
@@ -101,7 +104,16 @@ public class StreamQaQueryHandlerTests
         _vectorDocumentRepositoryMock = new Mock<IVectorDocumentRepository>();
         _llmServiceMock = new Mock<ILlmService>();
         _cacheMock = new Mock<IAiResponseCacheService>();
-        _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
+        // #4168: la pipeline legge la versione pubblicata del profilo; qui quella del seed (v1 con il
+        // modello corrente), cioè i valori che l'handler aveva compilati prima della pipeline.
+        _profileReaderMock = new Mock<IPublishedAgentProfileReader>();
+        _profileReaderMock
+            .Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PublishedAgentProfile(Guid.NewGuid(), 2, SeedProfileContent()));
+        _languageDetectionMock = new Mock<ILanguageDetectionService>();
+        _languageDetectionMock
+            .Setup(x => x.Detect(It.IsAny<string>()))
+            .Returns(new LanguageDetection("en", IsConfident: true));
         _intentClassifierMock = new Mock<IIntentClassifierService>();
         _intentClassifierMock
             .Setup(x => x.ClassifyIntent(It.IsAny<string>()))
@@ -114,7 +126,7 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.ResolveAsync(It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyList<ChunkCitation> cits, Guid _, CancellationToken _) =>
                 cits.Select(c => c with { CopyrightTier = CopyrightTier.Full }).ToList());
-        _loggerMock = new Mock<ILogger<StreamQaQueryHandler>>();
+        _loggerMock = new Mock<ILogger<AnswerPipeline>>();
         _fakeTimeProvider = new FakeTimeProvider();
         _fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
 
@@ -126,7 +138,7 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<VectorDocument>());
 
-        _handler = new StreamQaQueryHandler(
+        _handler = new StreamQaQueryHandler(new AnswerPipeline(
             _searchQueryHandler,
             _rerankerMock.Object,
             _qualityTrackingServiceMock.Object,
@@ -136,7 +148,8 @@ public class StreamQaQueryHandlerTests
             _vectorDocumentRepositoryMock.Object,
             _llmServiceMock.Object,
             _cacheMock.Object,
-            _promptTemplateServiceMock.Object,
+            _profileReaderMock.Object,
+            _languageDetectionMock.Object,
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
             CreatePermissiveRagAccessServiceMock(),
@@ -145,7 +158,7 @@ public class StreamQaQueryHandlerTests
             Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,
             _fakeTimeProvider
-        );
+        ));
     }
     // ─── Bug B5: streaming QA per-game RAG access enforcement (IDOR + KB confidentiality) ───
 
@@ -187,7 +200,7 @@ public class StreamQaQueryHandlerTests
             Times.Once);
 
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "no LLM call must happen when RAG access is denied");
 
@@ -420,7 +433,7 @@ public class StreamQaQueryHandlerTests
         // Setup LLM to stream tokens
         var tokens = new[] { "To", " win", " the", " game", ",", " score", " points", "." };
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensAsync(tokens));
 
         SetupQualityTrackingMocks();
@@ -463,7 +476,7 @@ public class StreamQaQueryHandlerTests
         SetupSearchMocks(gameId, userQuery);
         SetupPromptMocks(QuestionType.General);
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .Returns(RefusedStreamAsync());
         SetupQualityTrackingMocks();
 
@@ -481,6 +494,73 @@ public class StreamQaQueryHandlerTests
         _cacheMock.Verify(
             x => x.SetAsync(It.IsAny<string>(), It.IsAny<QaResponse>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    /// <summary>
+    /// #4168 (ADR-095 D3): dopo il primo token il gateway non passa a un secondo modello e chiude con
+    /// <c>AI_STREAM_INTERRUPTED</c>. La pipeline lo inoltra come errore: niente <c>Complete</c>, che
+    /// direbbe al client che la risposta è finita, e niente cache, che la riservirebbe come completa.
+    /// </summary>
+    [Fact]
+    public async Task Handle_StreamInterruptedAfterTheFirstToken_EndsWithTheError_WithoutCompleteOrCache()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupSearchMocks(gameId, query.Query);
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(InterruptedStreamAsync());
+        SetupQualityTrackingMocks();
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        events.Should().Contain(e => e.Type == StreamingEventType.Token);
+        var last = events[^1];
+        last.Type.Should().Be(StreamingEventType.Error);
+        last.Data.Should().BeOfType<StreamingError>().Which.errorCode.Should().Be(LlmAnswerErrorCodes.StreamInterrupted);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+        _cacheMock.Verify(
+            x => x.SetAsync(It.IsAny<string>(), It.IsAny<QaResponse>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// #4168: senza una versione pubblicata del profilo la risposta non parte, con un errore che lo
+    /// dice. Prima della pipeline non poteva succedere perché i valori erano compilati; ora che
+    /// vengono dal profilo, ricadere su quei valori nasconderebbe la mancanza.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithoutAPublishedProfile_RefusesExplicitly_BeforeRetrievalAndGeneration()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        _profileReaderMock
+            .Setup(x => x.GetAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AgentProfileNotPublishedException());
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        events.Should().ContainSingle().Which.Data.Should().BeOfType<StreamingError>()
+            .Which.errorCode.Should().Be(AgentProfileNotPublishedException.Code);
+        _embeddingServiceMock.VerifyNoOtherCalls();
+        _llmServiceMock.Verify(
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> InterruptedStreamAsync()
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Each player");
+        yield return new StreamChunk(null, IsFinal: true,
+            ErrorCode: LlmAnswerErrorCodes.StreamInterrupted, ErrorMessage: "The answer was interrupted before it was complete.");
     }
 
     private static async IAsyncEnumerable<StreamChunk> RefusedStreamAsync()
@@ -562,7 +642,7 @@ public class StreamQaQueryHandlerTests
             Times.Never
         );
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -588,14 +668,13 @@ public class StreamQaQueryHandlerTests
             .Setup(x => x.BuildChatHistoryContext(chatThread))
             .Returns(chatHistory);
 
-        var basePrompt = "Base user prompt";
-        var enrichedPrompt = "Enriched with history: " + basePrompt;
+        // #4168: il prompt utente lo costruisce la pipeline; la cronologia gli si aggiunge come prima.
+        var enrichedPrompt = "Enriched with history";
         _chatContextServiceMock
-            .Setup(x => x.EnrichPromptWithHistory(basePrompt, chatHistory))
+            .Setup(x => x.EnrichPromptWithHistory(It.Is<string>(p => p.Contains("What about the previous rule?")), chatHistory))
             .Returns(enrichedPrompt);
 
         SetupSearchMocks(gameId, query.Query);
-        SetupPromptMocks(QuestionType.General, basePrompt);
         SetupLlmStreamingMock(new[] { "Answer", " with", " context" });
         SetupQualityTrackingMocks();
 
@@ -610,11 +689,11 @@ public class StreamQaQueryHandlerTests
         _chatThreadRepositoryMock.Verify(x => x.GetByIdAsync(threadId, It.IsAny<CancellationToken>()), Times.Once);
         _chatContextServiceMock.Verify(x => x.ShouldIncludeChatHistory(chatThread), Times.Once);
         _chatContextServiceMock.Verify(x => x.BuildChatHistoryContext(chatThread), Times.Once);
-        _chatContextServiceMock.Verify(x => x.EnrichPromptWithHistory(basePrompt, chatHistory), Times.Once);
+        _chatContextServiceMock.Verify(x => x.EnrichPromptWithHistory(It.Is<string>(p => p.Contains("What about the previous rule?")), chatHistory), Times.Once);
 
         // Verify LLM was called with enriched prompt
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), enrichedPrompt, It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateAnswerStreamAsync(It.Is<LlmAnswerRequest>(r => r.UserPrompt == enrichedPrompt), It.IsAny<CancellationToken>()),
             Times.Once
         );
     }
@@ -775,7 +854,7 @@ public class StreamQaQueryHandlerTests
 
         // Should not call LLM
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never
         );
     }
@@ -792,7 +871,7 @@ public class StreamQaQueryHandlerTests
         // Setup LLM with many tokens
         var manyTokens = Enumerable.Repeat("token", 100).ToArray();
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensAsync(manyTokens));
 
         SetupQualityTrackingMocks();
@@ -1271,7 +1350,7 @@ public class StreamQaQueryHandlerTests
 
         // Setup LLM to return partial tokens then throw HttpRequestException mid-stream
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensWithError());
 
         _qualityTrackingServiceMock
@@ -1360,16 +1439,11 @@ public class StreamQaQueryHandlerTests
         // This class uses a MOCKED intent classifier (unlike Phase2Tests' real one) → configure it.
         _intentClassifierMock.Setup(x => x.ClassifyIntent(It.IsAny<string>()))
             .Returns(GameBookRole.Tutorial | GameBookRole.Setup);
-        // SetupPromptMocks stubs RenderUserPrompt to a fixed string that DISCARDS the context; echo the
-        // context instead so the injected [Verified Rules] block (prepended to context) is observable.
-        _promptTemplateServiceMock
-            .Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((PromptTemplate _, string context, string q) => $"Question: {q}\n\nContext:\n{context}");
 
         string? capturedUserPrompt = null;
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => capturedUserPrompt = user)
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((request, _) => capturedUserPrompt = request.UserPrompt)
             .Returns(StreamTokensAsync(new[] { "In", " una", " partita", " a", " 3." }));
 
         var provider = new Mock<IMechanicCardProvider>();
@@ -1387,7 +1461,7 @@ public class StreamQaQueryHandlerTests
 
         // The NO_RESULTS exit was bypassed → the LLM ran, with the injected block in its prompt.
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Once);
         capturedUserPrompt.Should().NotBeNull();
         capturedUserPrompt.Should().Contain("[Verified Rules — human-approved]");
@@ -1421,7 +1495,7 @@ public class StreamQaQueryHandlerTests
             events.Add(e);
 
         _llmServiceMock.Verify(
-            x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -1535,36 +1609,21 @@ public class StreamQaQueryHandlerTests
             .Returns(new List<DomainSearchResult> { fusedResult });
     }
 
-    private void SetupPromptMocks(QuestionType questionType, string? basePrompt = null)
+    /// <summary>
+    /// #4168: prima della pipeline i prompt venivano da IPromptTemplateService e questo metodo li
+    /// stubbava; ora vengono dalla versione pubblicata del profilo, quindi non c'è niente da stubbare.
+    /// Resta come segnaposto per i test che lo chiamano.
+    /// </summary>
+#pragma warning disable S1172, IDE0060 // Unused parameters: kept so the existing call sites stay unchanged
+    private static void SetupPromptMocks(QuestionType questionType, string? basePrompt = null)
+#pragma warning restore S1172, IDE0060
     {
-        _promptTemplateServiceMock
-            .Setup(x => x.ClassifyQuestion(It.IsAny<string>()))
-            .Returns(questionType);
-
-        var template = new PromptTemplate
-        {
-            SystemPrompt = "System prompt",
-            UserPromptTemplate = basePrompt ?? "User prompt",
-            QuestionType = questionType
-        };
-
-        _promptTemplateServiceMock
-            .Setup(x => x.GetTemplateAsync(It.IsAny<Guid?>(), It.IsAny<QuestionType>()))
-            .ReturnsAsync(template);
-
-        _promptTemplateServiceMock
-            .Setup(x => x.RenderSystemPrompt(It.IsAny<PromptTemplate>()))
-            .Returns(template.SystemPrompt);
-
-        _promptTemplateServiceMock
-            .Setup(x => x.RenderUserPrompt(It.IsAny<PromptTemplate>(), It.IsAny<string>(), It.IsAny<string>()))
-            .Returns(basePrompt ?? template.UserPromptTemplate);
     }
 
     private void SetupLlmStreamingMock(string[] tokens)
     {
         _llmServiceMock
-            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .Returns(StreamTokensAsync(tokens));
     }
 
@@ -1647,7 +1706,7 @@ public class StreamQaQueryHandlerTests
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
         Api.Services.IFeatureFlagService? featureFlags = null)
     {
-        return new StreamQaQueryHandler(
+        return new StreamQaQueryHandler(new AnswerPipeline(
             _searchQueryHandler,
             _rerankerMock.Object,
             _qualityTrackingServiceMock.Object,
@@ -1657,7 +1716,8 @@ public class StreamQaQueryHandlerTests
             _vectorDocumentRepositoryMock.Object,
             _llmServiceMock.Object,
             _cacheMock.Object,
-            _promptTemplateServiceMock.Object,
+            _profileReaderMock.Object,
+            _languageDetectionMock.Object,
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
             ragAccessService,
@@ -1665,6 +1725,26 @@ public class StreamQaQueryHandlerTests
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,
-            _fakeTimeProvider);
+            _fakeTimeProvider));
     }
+
+    /// <summary>Il contenuto del profilo del seed: i valori che l'handler aveva compilati prima di #4168.</summary>
+    private static AgentProfileContent SeedProfileContent() => AgentProfileContent.Create(
+        "MeepleAI",
+        "Specialized agent for board game rules interpretation and clarification.",
+        "a precise board game rules assistant",
+        "deepseek-flash",
+        "meta-llama/llama-3.3-70b-instruct",
+        temperature: 0.3m,
+        maxResponseTokens: 1500,
+        CitationStyle.PageReferencesInText,
+        new Dictionary<string, string> { ["en"] = "You are MeepleAI, a precise board game rules assistant." },
+        fallbackLanguage: "en",
+        candidatePoolSize: 20,
+        finalTopK: 5,
+        minScore: 0.55m,
+        vectorWeight: 0.7m,
+        keywordWeight: 0.3m,
+        rerankerEnabled: true,
+        Enum.GetValues<DocumentCategory>());
 }

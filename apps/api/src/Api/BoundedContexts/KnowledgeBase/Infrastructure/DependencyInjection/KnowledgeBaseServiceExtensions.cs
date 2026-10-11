@@ -471,6 +471,12 @@ internal static class KnowledgeBaseServiceExtensions
     {
         // Application - Handlers (Scoped - uses Scoped dependencies)
         services.AddScoped<SearchQueryHandler>();
+        // #4168 (ADR-095 D3): la pipeline di risposta unica e la versione pubblicata del profilo,
+        // letta una volta per richiesta.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IPublishedAgentProfileReader,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.PublishedAgentProfileReader>();
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPipeline,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipeline>();
         services.AddScoped<AskQuestionQueryHandler>();
 
         // ISSUE-2473: Game state parsing for Player Mode AI suggestions

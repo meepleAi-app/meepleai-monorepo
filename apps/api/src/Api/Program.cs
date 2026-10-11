@@ -654,6 +654,14 @@ using (var scope = app.Services.CreateScope())
             Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
     }
 
+    // #4168 (ADR-095 D3): senza una versione pubblicata del profilo la pipeline rifiuta ogni risposta.
+    if (db != null)
+    {
+        await Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AgentProfileStartupCheck.LogIfMissingAsync(
+            scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentProfileRepository>(),
+            app.Logger).ConfigureAwait(false);
+    }
+
     // Create read-only projection views for bounded context entity decomposition.
     // Each BC gets its own view of the "users" table to avoid EF Core conflicts
     // when multiple entities map to the same underlying table/view.

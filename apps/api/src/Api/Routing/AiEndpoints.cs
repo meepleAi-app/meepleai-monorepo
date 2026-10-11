@@ -311,7 +311,8 @@ internal static class AiEndpoints
             ThreadId: req.chatId,
             DocumentIds: req.documentIds,
             ResponseStyle: responseStyle,
-            ContinuationContext: continuationContext); // Issue #2051
+            ContinuationContext: continuationContext, // Issue #2051
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString()); // #4168: lingua delle domande brevi
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON

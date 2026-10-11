@@ -17,6 +17,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <param name="ContinuationContext">Partial answer text from a previous truncated response</param>
 /// <param name="UserId">Authenticated user id — per-game RAG access is enforced against it</param>
 /// <param name="UserRole">Authenticated user role (string) — parsed for RAG access (admin bypass)</param>
+/// <param name="AcceptLanguage">#4168: the request's Accept-Language header — picks the answer language when the question is too short to tell</param>
 /// <remarks>
 /// Issue #4137: <paramref name="UserId"/> and <paramref name="UserRole"/> are REQUIRED.
 /// They were optional (Bug B5 added them with defaults), and the handler's access check
@@ -36,5 +37,6 @@ internal record StreamQaQuery(
     Guid? ThreadId = null,
     IReadOnlyList<Guid>? DocumentIds = null,
     string? ResponseStyle = null,
-    string? ContinuationContext = null
+    string? ContinuationContext = null,
+    string? AcceptLanguage = null
 ) : IStreamingQuery<RagStreamingEvent>;

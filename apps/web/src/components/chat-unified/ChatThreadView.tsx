@@ -51,6 +51,7 @@ import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { qaStreamErrorMessage } from './qaStreamErrors';
 import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
 import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
@@ -446,7 +447,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 deniedQuestionRef.current = question;
                 setOwnershipDenied(true);
               } else {
-                setError(data?.errorMessage ?? data?.message ?? 'Errore nella risposta AI');
+                // #4168: i codici del gateway e della pipeline in italiano. Su un'interruzione il
+                // testo parziale resta nella bolla ma non viene salvato: si esce prima di addMessage.
+                setError(
+                  qaStreamErrorMessage(data?.errorCode, data?.errorMessage ?? data?.message)
+                );
               }
               abortController.abort();
               return;

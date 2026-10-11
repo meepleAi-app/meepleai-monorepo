@@ -63,6 +63,10 @@ jobs:
               - '.github/actions/setup-playwright/**'
             backend:
               - 'apps/api/**'
+              # #4138: FrontendModelRoutingMirrorTests (backend unit) confronta questo file con
+              # LlmModelRouting. Senza questa riga una PR solo frontend che lo cambia non lo
+              # farebbe girare, e la deriva che il test esiste per fermare passerebbe.
+              - 'apps/web/src/lib/llm-model-routing.ts'
               - 'global.json'
               - '.github/workflows/dev-fast.yml'
               - '.github/actions/setup-backend/**'

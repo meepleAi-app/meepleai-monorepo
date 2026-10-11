@@ -126,7 +126,6 @@ const ROUTE_CONTEXTS: Array<[string, string]> = [
   ['/invites', 'Authentication'],
   ['/invitation-expired', 'Authentication'],
   ['/setup-account', 'Authentication'],
-  ['/setup', 'Authentication'],
   ['/onboarding', 'Authentication'],
   ['/welcome', 'Authentication'],
 

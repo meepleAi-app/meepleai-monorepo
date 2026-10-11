@@ -2802,51 +2802,6 @@
       },
       "batchNote": "Mostrati i primi {n} risultati."
     },
-    "setup": {
-      "title": "Guida Setup Gioco",
-      "subtitle": "Genera una guida passo-passo per preparare la partita, con riferimenti al regolamento.",
-      "selectGame": "Seleziona Gioco",
-      "gameLabel": "Gioco:",
-      "selectGamePlaceholder": "Seleziona un gioco...",
-      "generateButton": "Genera Guida Setup",
-      "generating": "Generazione...",
-      "generateForGameAria": "Genera guida di setup per il gioco selezionato",
-      "errors": {
-        "noGameSelected": "Seleziona prima un gioco.",
-        "loadGames": "Errore nel caricamento dei giochi.",
-        "generateGuide": "Errore nella generazione della guida di setup. Riprova.",
-        "retry": "Riprova"
-      },
-      "loading": {
-        "title": "Generazione della guida di setup...",
-        "subtitle": "Potrebbe richiedere alcuni istanti mentre recuperiamo le istruzioni migliori dal regolamento."
-      },
-      "estimatedTime": "Tempo stimato di setup: {minutes} minuti",
-      "resetProgress": "Reimposta Progresso",
-      "resetConfirm": "Sei sicuro di voler reimpostare tutti i progressi?",
-      "progress": "Progresso: {done} / {total} passaggi",
-      "complete": {
-        "title": "Setup Completato!",
-        "body": "Il tuo gioco è pronto per giocare. Buon divertimento!"
-      },
-      "aiConfidence": "Confidenza AI: {percent}%",
-      "empty": {
-        "title": "Nessuna Guida di Setup",
-        "description": "Seleziona un gioco e clicca \"Genera Guida Setup\" per iniziare con istruzioni passo-passo."
-      },
-      "optional": "OPZIONALE",
-      "references": "Riferimenti",
-      "viewReferences": "{n, plural, one {Visualizza # riferimento} other {Visualizza # riferimenti}}",
-      "citation": {
-        "docLabel": "Doc {id}",
-        "pageLabel": "Pagina {n}",
-        "noPage": "Nessuna pagina"
-      },
-      "step": {
-        "markComplete": "Segna come completato",
-        "markIncomplete": "Segna come da completare"
-      }
-    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",

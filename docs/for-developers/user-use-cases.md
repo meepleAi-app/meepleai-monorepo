@@ -52,7 +52,7 @@ Le pagine sotto `(authenticated)` mandano a `/login?from=` chi non ha fatto l'ac
 | HOME-01 | completare l'onboarding, cioè scegliere gli interessi e aggiungere un primo gioco | `/onboarding` | ⚠️ | Il wizard si completa, ma con tre limiti. (1) **La ricerca del primo gioco trova solo la prima pagina del catalogo**: `api.games.getAll` scarica 20 giochi e filtra lato client. «Azul» si trova, «Dominion» no, e nemmeno gli esempi del segnaposto (Catan, Wingspan, Ticket to Ride). (2) Al passo 1 «Continua» salva senza avanzare, mentre «Next» avanza solo dopo «Continua»; premuto prima non fa niente e non dice niente. (3) Il passo «invita un amico» è un segnaposto. Un utente nuovo non viene mandato all'onboarding: dopo la verifica email arriva su `/library`. |
 | HOME-02 | vedere la home: serate in arrivo, sessioni recenti, giochi suggeriti, attività degli amici | `/dashboard` | ✅ | |
 | HOME-03 | rispondere Accetta / Forse / Rifiuta a una serata direttamente dalla home | `/dashboard` | ✅ | `useRsvpGameNight` |
-| HOME-04 | farsi generare dall'AI una guida alla preparazione di un gioco | `/setup` | ✅ | `api.agents.generateSetupGuide`. Non è il setup dell'account. Non è verificato da dove ci si arrivi. |
+| HOME-04 | farsi generare dall'AI una guida alla preparazione di un gioco | — | ⛔ | La pagina `/setup` è stata tolta con [#4206](https://github.com/meepleAi-app/meepleai-monorepo/issues/4206). Nel browser nessun link ci portava, il flag `Features.SetupGuideGeneration` mancava dal DB locale, e il client si aspettava JSON da un endpoint che risponde in SSE. Il setup durante la partita resta nel `SetupWizard` della sessione live. `POST /api/v1/agents/setup` resta: la checklist della sessione usa la stessa query. |
 
 ## 3. Profilo e impostazioni — `SET`
 

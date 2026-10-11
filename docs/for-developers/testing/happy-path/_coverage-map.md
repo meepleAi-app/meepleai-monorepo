@@ -4,7 +4,7 @@
 >
 > Colonna **Liv.**: livello atteso (`Flow` transazionale · `Smoke` vista read-only). Indicativo — il catalogo può correggerlo.
 
-## U1 — Accesso, Onboarding & Pubbliche informative (25)
+## U1 — Accesso, Onboarding & Pubbliche informative (24)
 
 | Route | Liv. |
 |-------|------|
@@ -32,7 +32,6 @@
 | `(public)/cookies` | Smoke |
 | `(public)/cookie-settings` | Flow |
 | `(authenticated)/onboarding` | Flow |
-| `(authenticated)/setup` | Flow |
 
 ## U2 — Catalogo & Discover (11)
 
@@ -309,7 +308,7 @@
 
 | Area | Route |
 |------|-------|
-| U1 | 25 |
+| U1 | 24 |
 | U2 | 11 |
 | U3 | 18 |
 | U4 | 14 |

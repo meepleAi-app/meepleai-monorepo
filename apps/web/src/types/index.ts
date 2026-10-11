@@ -12,7 +12,7 @@ export type { AuthUser, AuthResponse, SessionStatusResponse, UserRole } from './
 export { hasRole, canEdit } from './auth';
 
 // Core Domain Types
-// Issue #1977: RuleAtom, RuleSpec, SetupStep, SetupGuideResponse moved to @/lib/api/schemas
+// Issue #1977: RuleAtom, RuleSpec, SetupStep moved to @/lib/api/schemas
 export type {
   Game,
   Agent,

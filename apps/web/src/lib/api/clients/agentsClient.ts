@@ -13,7 +13,6 @@ import {
   GetAllAgentsResponseSchema,
   ConfigureAgentResponseSchema,
   ChessAgentResponseSchema,
-  SetupGuideResponseSchema,
   AgentDocumentsDtoSchema,
   UpdateAgentDocumentsResponseSchema,
   PlayerModeSuggestionResponseSchema,
@@ -25,7 +24,6 @@ import {
   type ConfigureAgentRequest,
   type ConfigureAgentResponse,
   type ChessAgentResponse,
-  type SetupGuideResponse,
   type AgentDocumentsDto,
   type UpdateAgentDocumentsResponse,
   type PlayerModeSuggestionRequest,
@@ -253,27 +251,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       );
       if (!response) {
         throw new Error('Failed to invoke chess agent: no response from server');
-      }
-      return response;
-    },
-
-    /**
-     * Generate setup guide (convenience wrapper)
-     * POST /api/v1/agents/setup
-     *
-     * Issue #1977: Added SetupGuideResponseSchema validation
-     */
-    async generateSetupGuide(request: {
-      gameId: string;
-      chatId: string | null;
-    }): Promise<SetupGuideResponse> {
-      const response = await httpClient.post(
-        '/api/v1/agents/setup',
-        request,
-        SetupGuideResponseSchema
-      );
-      if (!response) {
-        throw new Error('Failed to generate setup guide: no response from server');
       }
       return response;
     },

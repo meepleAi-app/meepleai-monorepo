@@ -918,7 +918,6 @@ _Route-group: `(authenticated)` · 9 pagine_
 | `/dashboard` | DesktopShell (`(authenticated)` → UserShellClient → DesktopShell); `DashboardClient` (`<main>` + Hero + HubPageContainer + CascadeDrawerHost) | `RequireRole ['User','Editor','Admin']` (superadmin bypassa); `dynamic='force-dynamic'` | loading · error · empty · default |
 | `/discover` | DesktopShell; page rende `<Suspense fallback={null}><DiscoverHub/></Suspense>` (HubLayout `showSearch=false`) | Nessuna esplicita (delega a `(authenticated)`); `Suspense` per `useSearchParams()` | skeleton · loading/error/empty per riga · disabled · default |
 | `/onboarding` | DesktopShell; modal a schermo `WizardModal` (Radix Dialog centrato) | Nessun RequireRole; gate `useAuth` (redirect `/library` se `onboardingCompleted`) | loading · null/redirect · wizard aperto |
-| `/setup` | DesktopShell; `<main min-h-dvh>` proprio con header sticky (no PageContainer condiviso) | Self-guard `api.auth.getMe()` → schermata "Accesso richiesto" (no redirect auto) | unauthorized · loading · empty · success · error |
 | `/versions` | DesktopShell + HubPageContainer; `Suspense` attorno a `VersionHistoryContent` | Self-guard `getMe()` + `?gameId=` obbligatorio; ripristino gated a `admin/superadmin/editor` | unauthorized · missing-gameId · loading · success · error |
 | `/notifications` | DesktopShell + SettingsPageContainer (`py-8`); legge `useNotificationStore` | Nessuna esplicita (delega a `(authenticated)`) | loading · error · empty · default |
 | `/notifications/preferences` | DesktopShell + SettingsPageContainer (`py-8`) | Nessuna esplicita; `dynamic='force-dynamic'` | loading · error · default |
@@ -953,10 +952,6 @@ _Route-group: `(authenticated)` · 9 pagine_
   - `/onboarding -> /library` (`router.replace` on onComplete → `api.auth.completeOnboarding(false)` + refreshUser + toast; al termine del wizard)
   - `/onboarding -> /library` (`router.replace` on onCancel dopo conferma "Cancel Wizard"; utente conferma)
   - `/onboarding -> /library` (`router.replace` useEffect page; se `!loading && user.onboardingCompleted`)
-- **`/setup`**
-  - `/setup -> /` (Link "<- Back to Home" / "Vai al Login" schermata accesso richiesto; solo se `!authUser`)
-  - `/setup -> /` (Link "Home" header sticky; sempre, utente autenticato)
-  - `/setup -> modal:CitationModal` (bottone "View N Reference(s)" su step; solo se `step.references.length>0`, NON cambia route)
 - **`/versions`**
   - `/versions -> /editor?gameId={gameId}` (Link "Editor" header; solo vista principale, `authUser && gameId`)
   - `/versions -> /` (Link "Home" + "Torna alla home"; varie schermate di errore)
@@ -1005,21 +1000,6 @@ _Route-group: `(authenticated)` · 9 pagine_
 - **Step 3 InviteFriendComingSoonStep**: placeholder skip-only, `optional=true` (nessun validate); testo coming-soon — `apps/web/src/app/(authenticated)/onboarding/InviteFriendComingSoonStep.tsx`
 - **WizardModal controlli**: indicatore "Step X of N"; Back nascosto sul primo step (`isFirst`→`<span/>`); Skip solo se `currentStep.optional && !isLast`; Next label "Complete" sull'ultimo step (disabled durante `isValidating`); lista errori `role='alert'` se `errors.length>0`; Cancel apre dialog conferma annidato (overlay `z-[70]`/content `z-[71]`) — `apps/web/src/components/ui/wizard-modal/wizard-modal.tsx`
 - **Titolo Step 1**: "Ciao {userName}, scegli i tuoi interessi" se `userName` presente (`user.displayName` trimmed), altrimenti "Scegli i tuoi interessi" — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
-
-##### `/setup`
-- **Schermata "Accesso richiesto"**: mostrata se `!authUser` (`api.auth.getMe()` fallito/null); sostituisce l'intera UI con 2 link a `/` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **select gioco**: disabled se `isLoadingGames || isLoadingGuide`; auto-seleziona il primo gioco se disponibile e nessuno selezionato — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **bottone "Generate Setup Guide"**: disabled se `!selectedGameId || isLoadingGuide`; label "Generating…" durante `isLoadingGuide` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Banner errore**: solo se `errorMessage` non vuoto — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Card loading guida**: solo se `isLoadingGuide` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Contenuto guida (progress + steps)**: solo se `setupGuide && !isLoadingGuide` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Empty state "🎲 No Setup Guide Yet"**: se `!setupGuide && !isLoadingGuide && !errorMessage` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Bottone "Reset Progress"**: disabled se `completedSteps.size===0`; su click `confirm()` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Messaggio "🎉 Setup Complete"**: solo se `progressPercentage===100` (`role=status` aria-live) — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **AI Confidence**: solo se `setupGuide.confidence !== null` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Bottone references (SetupStepCard)**: solo se `step.references.length>0`; label pluralizzata (Reference/References) — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Badge OPTIONAL**: solo se `step.isOptional` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **CitationModal**: montato solo se `selectedStepReferences !== null`; overlay `z-[1000]`, chiude su backdrop o bottone x — `apps/web/src/app/(authenticated)/setup/page.tsx`
 
 ##### `/versions`
 - **Schermata login-required**: se `!authUser` (`getMe()` null): h1 + "Devi effettuare l'accesso" + link `/` — `apps/web/src/app/(authenticated)/versions/page.tsx`
@@ -1097,9 +1077,6 @@ _Route-group: `(authenticated)` · 9 pagine_
 | InterestsStep | `apps/web/src/components/onboarding/InterestsStep.tsx` | Step 1: selezione categorie board game |
 | FirstGameStep | `apps/web/src/components/onboarding/FirstGameStep.tsx` | Step 2: aggiunta primo gioco dal catalogo interno |
 | InviteFriendComingSoonStep | `apps/web/src/app/(authenticated)/onboarding/InviteFriendComingSoonStep.tsx` | Step 3 placeholder coming-soon skip-only |
-| SetupPage | `apps/web/src/app/(authenticated)/setup/page.tsx` | Pagina inline: auth self-check, selezione gioco, generazione guida, tracking step locale |
-| SetupStepCard | `apps/web/src/app/(authenticated)/setup/page.tsx` | Card step con checkbox + badge OPTIONAL + references |
-| CitationModal | `apps/web/src/app/(authenticated)/setup/page.tsx` | Modal snippet/citazioni rulebook (overlay `z-[1000]`) |
 | VersionHistoryContent | `apps/web/src/app/(authenticated)/versions/page.tsx` | Inner: auth self-check, load history/diff/timeline, restore versione |
 | VersionTimeline | `apps/web/src/components/versioning/VersionTimeline.tsx` | Vista timeline versioni con onVersionClick |
 | DiffViewerEnhanced | `apps/web/src/components/diff/DiffViewerEnhanced.tsx` | Viewer diff side-by-side tra due versioni |
@@ -1128,7 +1105,7 @@ flowchart LR
   prof["/profile"] -->|"'Achievements' (tab overview)"| ach["/profile/achievements"]
 ```
 
-> Gli altri edge di `/dashboard`, `/discover`, `/onboarding`, `/setup`, `/versions` puntano tutti **fuori** dal cluster (`/library`, `/game-nights`, `/games`, `/players`, `/sessions`, `/editor`, `/`) o aprono drawer/modal/sheet senza cambio di route.
+> Gli altri edge di `/dashboard`, `/discover`, `/onboarding`, `/versions` puntano tutti **fuori** dal cluster (`/library`, `/game-nights`, `/games`, `/players`, `/sessions`, `/editor`, `/`) o aprono drawer/modal/sheet senza cambio di route.
 
 ### Libreria personale, giochi privati, wishlist, play & toolbox
 _Route-group: `(authenticated)` · 16 pagine_
@@ -5019,7 +4996,7 @@ _Documento generato il 2026-07-15 · workflow `wf_94e3ee0b-a9a` (66 agenti: 22 f
 | Fonte | Route/superfici coperte | In site-map | Note |
 |---|---|---|---|
 | `admin-mockups/claude-design-handoff/2026-06-04/` (prototipo React desktop) | dashboard, discover, agents, library, sessions, game-nights (+detail/live/wizard), game, auth | ✅ 13/13 | Fonte del redesign **Asse A/B/C/D** già shippato. `screen-dashboard.jsx` = prototipo dashboard priority-driven (Asse-C #1898). |
-| `admin-mockups/claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la route `/setup` generica. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
+| `admin-mockups/claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la vecchia route `/setup` generica, tolta con #4206. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
 | `admin-mockups/claude-design-handoff/2026-07-15-sp8-mobile/` + `sp9-gamenight-mobile/` | viste mobile dashboard/game-nights/detail | ⚠️ partial | Ridisegni mobile-specifici (touch-target ≥44px, CTA RSVP 52px) non riflessi nel site-map. |
 | `admin-mockups/design_handoff_admin/admin/` (SP5 admin, 31 mockup) | console admin (users, content, monitor, llm, knowledge-base, …) | ✅ 24 · ⚠️ 5 · ❌ 2 | Vedi §11.2 (route morte) e §11.3 (path divergenti). |
 | `admin-mockups/standalone/` + `mockup-meeplecard/` | MeepleCard variants, `dashboard-new-user` (empty-state), poster | component-showcase | Mostrano componenti, non route. `meeple-card-real-app--chat-card` rilevante per il rendering entità chat. |
@@ -5067,7 +5044,6 @@ Documenti di handoff datati 2026-05-24, superati dallo stato corrente del codice
 ### 11.6 Annotazioni per route
 
 - **`/dashboard`** — il redesign vivo deriva da `admin-mockups/claude-design-handoff/2026-06-04/js/screen-dashboard.jsx` (Asse-C priority-driven #1898). Il mockup `admin-mockups/design_files/sp4-dashboard` è **obsoleto** (Pre-Stage-3, #2114) e in via di rimozione: non usarlo come riferimento. Restano attivi e distinti: `dashboard-new-user.html` (empty-state) e `sp9-dashboard-game-night-mobile.dc.html` (mobile).
-- **`/setup`** — route generica "Game Setup Guide" (AI). **Da non confondere** con il `setup-wizard`/`setup-chat` di `2026-06-30-sp6`, che è il *play* di un librogame (Tab "Setup"). Redesign SP6 valido e disgiunto (PR #3036).
 - **`/private-games/[id]`** — in **deprecazione** (redirect → `/library/private/:id`). I brief `briefs/SP5-admin-tools.md` e `design_handoff_admin/admin/sp5-private-games.html` descrivono una publish-checklist/index oggi inesistente sulla route reale: resi **moot** dalla deprecazione (nota di riconciliazione).
 - **`/library/[gameId]/play/[campaignId]/translate`** — drift 61.5% vs `translate-gap-report.md` (vedi §11.4). Verificare gli 8 stati mancanti prima di considerare la route completa.
 - **`/profile` (tab settings)** — issue **#1608 P0**: verificare che il tab `settings` sia raggiungibile via UI (wizard 2FA), vedi §11.4.

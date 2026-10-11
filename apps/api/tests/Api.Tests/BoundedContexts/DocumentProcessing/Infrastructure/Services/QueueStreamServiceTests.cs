@@ -8,9 +8,20 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 
+/// <summary>
+/// <c>SubscribeToJob</c> e <c>SubscribeToQueue</c> sono iteratori lazy: il sottoscrittore si registra
+/// alla prima <c>MoveNextAsync</c> del consumer, in un momento deciso dal thread pool. Questi test
+/// pubblicavano dopo un <c>Task.Delay(100)</c> che provava a indovinarlo; sotto il carico della
+/// suite la pubblicazione arrivava prima della registrazione e l'evento andava perso (#4193).
+/// Ora si sincronizzano sul numero di sottoscrittori, e la vita dei sottoscrittori la decide il
+/// test, non un orologio: il limite di <see cref="SafetyNet"/> scatta solo se qualcosa si blocca.
+/// </summary>
 [Trait("Category", TestCategories.Unit)]
 public sealed class QueueStreamServiceTests
 {
+    /// <summary>Limite superiore per non appendere la suite. Mai sul percorso che passa.</summary>
+    private static readonly TimeSpan SafetyNet = TimeSpan.FromSeconds(30);
+
     private readonly QueueStreamService _service;
 
     public QueueStreamServiceTests()
@@ -18,6 +29,28 @@ public sealed class QueueStreamServiceTests
         var loggerMock = new Mock<ILogger<QueueStreamService>>();
         _service = new QueueStreamService(loggerMock.Object);
     }
+
+    private static async Task WaitForCountAsync(Func<int> count, int expected, string what)
+    {
+        var elapsed = System.Diagnostics.Stopwatch.StartNew();
+        int actual;
+        while ((actual = count()) != expected)
+        {
+            if (elapsed.Elapsed > SafetyNet)
+            {
+                throw new TimeoutException(
+                    $"{what}: attesi {expected} sottoscrittori entro {SafetyNet.TotalSeconds:0}s, osservati {actual}.");
+            }
+
+            await Task.Delay(5);
+        }
+    }
+
+    private Task WaitForJobSubscribersAsync(Guid jobId, int expected) =>
+        WaitForCountAsync(() => _service.GetJobSubscriberCount(jobId), expected, $"job {jobId}");
+
+    private Task WaitForQueueSubscribersAsync(int expected) =>
+        WaitForCountAsync(() => _service.QueueSubscriberCount, expected, "coda");
 
     [Fact]
     public async Task PublishJobEvent_WithSubscriber_DeliversEvent()
@@ -29,10 +62,9 @@ public sealed class QueueStreamServiceTests
             new JobStartedData(Guid.NewGuid(), "Processing"),
             DateTimeOffset.UtcNow);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource();
         var received = new List<QueueStreamEvent>();
 
-        // Start subscriber in background
         var subscriberTask = Task.Run(async () =>
         {
             await foreach (var e in _service.SubscribeToJob(jobId, cts.Token))
@@ -43,8 +75,7 @@ public sealed class QueueStreamServiceTests
             }
         }, cts.Token);
 
-        // Allow subscriber to register
-        await Task.Delay(100, cts.Token);
+        await WaitForJobSubscribersAsync(jobId, 1);
 
         // Act - publish events
         await _service.PublishJobEventAsync(evt, cts.Token);
@@ -54,7 +85,7 @@ public sealed class QueueStreamServiceTests
             new JobCompletedData(5.0, null, null, null), DateTimeOffset.UtcNow);
         await _service.PublishJobEventAsync(completedEvt, cts.Token);
 
-        await subscriberTask;
+        await subscriberTask.WaitAsync(SafetyNet);
 
         // Assert
         received.Should().HaveCount(2);
@@ -72,10 +103,9 @@ public sealed class QueueStreamServiceTests
             new JobStartedData(Guid.NewGuid(), "Processing"),
             DateTimeOffset.UtcNow);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource();
         var queueReceived = new List<QueueStreamEvent>();
 
-        // Start queue subscriber in background
         var subscriberTask = Task.Run(async () =>
         {
             await foreach (var e in _service.SubscribeToQueue(cts.Token))
@@ -87,12 +117,12 @@ public sealed class QueueStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token);
+        await WaitForQueueSubscribersAsync(1);
 
         // Act
         await _service.PublishJobEventAsync(evt, cts.Token);
 
-        await subscriberTask;
+        await subscriberTask.WaitAsync(SafetyNet);
 
         // Assert - job events should also go to queue subscribers
         queueReceived.Should().HaveCount(1);
@@ -109,10 +139,9 @@ public sealed class QueueStreamServiceTests
             QueueStreamEventType.QueueReordered, jobId,
             new QueueReorderedData(new List<Guid>()), DateTimeOffset.UtcNow);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource();
         var queueReceived = new List<QueueStreamEvent>();
 
-        // Start queue subscriber
         var queueTask = Task.Run(async () =>
         {
             await foreach (var e in _service.SubscribeToQueue(cts.Token))
@@ -124,12 +153,12 @@ public sealed class QueueStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token);
+        await WaitForQueueSubscribersAsync(1);
 
         // Act
         await _service.PublishQueueEventAsync(evt, cts.Token);
 
-        await queueTask;
+        await queueTask.WaitAsync(SafetyNet);
 
         // Assert
         queueReceived.Should().HaveCount(1);
@@ -141,7 +170,7 @@ public sealed class QueueStreamServiceTests
     {
         // Arrange
         var jobId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource();
         var received = new List<QueueStreamEvent>();
 
         var subscriberTask = Task.Run(async () =>
@@ -152,7 +181,7 @@ public sealed class QueueStreamServiceTests
             }
         }, cts.Token);
 
-        await Task.Delay(100, cts.Token);
+        await WaitForJobSubscribersAsync(jobId, 1);
 
         // Act - publish a terminal event (JobFailed)
         var failedEvt = new QueueStreamEvent(
@@ -160,7 +189,9 @@ public sealed class QueueStreamServiceTests
             new JobFailedData("Test error", null, 0, null, null, null), DateTimeOffset.UtcNow);
         await _service.PublishJobEventAsync(failedEvt, cts.Token);
 
-        await subscriberTask;
+        // The token is never cancelled: if the subscription did not complete by itself on the
+        // terminal event, this would hit the safety net instead of passing.
+        await subscriberTask.WaitAsync(SafetyNet);
 
         // Assert - subscriber auto-completes after terminal event
         received.Should().HaveCount(1);
@@ -203,13 +234,16 @@ public sealed class QueueStreamServiceTests
             }
         }, CancellationToken.None);
 
-        await Task.Delay(100);
+        // Cancel a subscriber that is actually registered: before #4193 the test cancelled after a
+        // fixed delay, possibly before registration, and never checked that anything was removed.
+        await WaitForJobSubscribersAsync(jobId, 1);
 
         // Act - cancel the subscription
         await cts.CancelAsync();
 
-        // Assert - subscriber task completes cleanly
-        var act = () => subscriberTask;
+        // Assert - subscriber task completes cleanly, and the job has no subscriber left
+        var act = () => subscriberTask.WaitAsync(SafetyNet);
         await act.Should().NotThrowAsync();
+        _service.GetJobSubscriberCount(jobId).Should().Be(0);
     }
 }

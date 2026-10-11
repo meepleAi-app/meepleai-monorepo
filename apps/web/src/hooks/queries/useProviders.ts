@@ -11,7 +11,7 @@
  *
  * #1834 SP5 F4-C3 extension:
  * useCircuitBreakerStates: GET /api/v1/admin/circuit-breakers.
- * useLlmSystemConfig: GET /api/v1/admin/llm/config (for routing chain viz).
+ * useLlmSystemConfig: GET /api/v1/admin/llm/config (for the circuit breaker grid).
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';

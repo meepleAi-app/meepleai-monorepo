@@ -126,6 +126,34 @@ describe('LlmConfigTab — Budget e quote (#4169)', () => {
     expect(await screen.findByText(/spend cannot be read/i)).toBeInTheDocument();
   });
 
+  /**
+   * Review della 6a: una richiesta del consumo fallita (401, 500, timeout) non dice nulla sul gate.
+   * Prima la pagina la mostrava come «spend cannot be read: the gateway refuses paid calls», cioè una
+   * diagnosi falsa sullo stato dell'AI.
+   */
+  it('a failed usage request is not reported as the gateway refusing calls', async () => {
+    const user = userEvent.setup();
+    mockGetUsage.mockRejectedValueOnce(new Error('500')).mockResolvedValueOnce(USAGE);
+    renderWithQuery(<LlmConfigTab />);
+
+    expect(await screen.findByText(/could not load the spend/i)).toBeInTheDocument();
+    expect(screen.queryByText(/refuses paid calls/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    expect(await screen.findByRole('region', { name: /today/i })).toHaveTextContent('$0.85');
+  });
+
+  it('reloads the spend after saving', async () => {
+    const user = userEvent.setup();
+    renderWithQuery(<LlmConfigTab />);
+    const daily = await screen.findByLabelText(/daily cap/i);
+    await user.clear(daily);
+    await user.type(daily, '2');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    await waitFor(() => expect(mockGetUsage).toHaveBeenCalledTimes(2));
+  });
+
   it('refuses quotas that together exceed 100% without saving', async () => {
     const user = userEvent.setup();
     renderWithQuery(<LlmConfigTab />);

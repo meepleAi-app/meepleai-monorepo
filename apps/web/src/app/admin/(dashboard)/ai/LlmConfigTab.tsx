@@ -93,28 +93,37 @@ const usd = (value: number) => `$${value.toFixed(2)}`;
 export function LlmConfigTab() {
   const [config, setConfig] = useState<LlmSystemConfigDto | null>(null);
   const [usage, setUsage] = useState<LlmBudgetUsage | null>(null);
+  // Review della 6a: una richiesta fallita non dice nulla sul gate, quindi non si confonde con
+  // available=false (il gate che non legge la spesa).
+  const [usageFailed, setUsageFailed] = useState(false);
   const [form, setForm] = useState<FormState | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const loadUsage = useCallback(async () => {
+    try {
+      setUsage(await api.admin.getLlmBudgetUsage());
+      setUsageFailed(false);
+    } catch {
+      setUsage(null);
+      setUsageFailed(true);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [data, spend] = await Promise.all([
-        api.admin.getLlmSystemConfig(),
-        api.admin.getLlmBudgetUsage().catch(() => null),
-      ]);
+      const [data] = await Promise.all([api.admin.getLlmSystemConfig(), loadUsage()]);
       setConfig(data);
       setForm(configToForm(data));
-      setUsage(spend);
     } catch {
       setError('Failed to load the LLM budget configuration');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadUsage]);
 
   useEffect(() => {
     void load();
@@ -142,6 +151,7 @@ export function LlmConfigTab() {
       setConfig(updated);
       setForm(configToForm(updated));
       setSuccess('Saved. The gateway applies it within a minute.');
+      void loadUsage();
     } catch {
       setError('Failed to save the budget configuration');
     } finally {
@@ -229,7 +239,12 @@ export function LlmConfigTab() {
         </div>
       )}
 
-      <UsagePanel usage={usage} config={config} />
+      <UsagePanel
+        usage={usage}
+        failed={usageFailed}
+        onRetry={() => void loadUsage()}
+        config={config}
+      />
 
       <section
         aria-labelledby="budget-settings-title"
@@ -309,12 +324,33 @@ function Header() {
 
 function UsagePanel({
   usage,
+  failed,
+  onRetry,
   config,
 }: {
   usage: LlmBudgetUsage | null;
+  failed: boolean;
+  onRetry: () => void;
   config: LlmSystemConfigDto;
 }) {
-  if (!usage || !usage.available || !usage.today || !usage.month) {
+  if (failed || !usage) {
+    return (
+      <div
+        role="status"
+        className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm text-foreground"
+      >
+        <span className="flex items-center gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Could not load the spend: the request failed. This says nothing about the gateway.
+        </span>
+        <Button variant="outline" size="sm" onClick={onRetry} className="text-xs">
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (!usage.available || !usage.today || !usage.month) {
     return (
       <div
         role="status"
@@ -409,6 +445,9 @@ function SpendCard({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(usedPercent)}
+        aria-valuetext={
+          capUsd > 0 ? `${Math.round(usedPercent)}% of the cap` : 'Cap is 0: paid AI is off'
+        }
         className="relative h-2 rounded-full bg-muted"
       >
         <div className="h-2 rounded-full bg-primary" style={{ width: `${usedPercent}%` }} />

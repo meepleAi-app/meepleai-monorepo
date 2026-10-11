@@ -38,8 +38,9 @@ I valori stanno in `SystemConfiguration.LlmSystemConfigs`. Finché l'admin non s
 | `EvaluationQuotaPercent` | 20 | quota delle valutazioni; insieme al background non supera 100 |
 | `DegradeThresholdPercent` | 80 | soglia del degrado, sul consumo del giorno |
 
-- **Tetti**: `/admin/ai` → *LLM config*, oppure `PUT /api/v1/admin/llm/config`.
-- **Soglia e quote**: per ora solo l'API, con i campi opzionali `degradeThresholdPercent`, `backgroundQuotaPercent` ed `evaluationQuotaPercent`. Un campo assente lascia il valore salvato. La pagina arriva con la fetta 6 (#4169).
+- **Tetti, soglia e quote**: `/admin/ai?tab=config`, tab **Budget** (#4169), oppure `PUT /api/v1/admin/llm/config`. Nell'API i campi `degradeThresholdPercent`, `backgroundQuotaPercent` ed `evaluationQuotaPercent` sono opzionali: un campo assente lascia il valore salvato.
+- **Consumo**: la stessa pagina mostra la spesa di oggi e del mese, per classe, e se il degrado è attivo. È la vista del gate, cioè il registro più le chiamate in corso, servita da `GET /api/v1/admin/llm/budget/usage`. Se la spesa non si legge, la pagina lo dice: in quel caso il gate rifiuta le chiamate a pagamento.
+- **Non si cambiano più dalla pagina** (#4169): le soglie del circuit breaker, che il runtime prende da `AI:CircuitBreaker` di appsettings, e la catena di fallback (`fallbackChainJson`), che il runtime non ha mai letto. L'ordine di fallback vero viene dai modelli attivi del catalogo. Nell'API restano accettate, opzionali, finché le colonne non escono.
 - Una modifica vale entro un minuto, il tempo della cache di `LlmSystemConfigProvider`.
 
 **Tetto a zero**: ferma ogni chiamata a pagamento. È il modo di spegnere l'AI senza toccare i provider.

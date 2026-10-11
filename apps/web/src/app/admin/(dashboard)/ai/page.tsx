@@ -17,7 +17,7 @@ import {
   Activity,
   ListOrdered,
   ScrollText,
-  Settings,
+  Wallet,
   Tag,
 } from 'lucide-react';
 
@@ -52,7 +52,7 @@ const TABS: readonly HubTab[] = [
   { id: 'models', label: 'Models', href: '/admin/ai?tab=models', icon: <Cpu /> },
   { id: 'requests', label: 'Requests', href: '/admin/ai?tab=requests', icon: <Activity /> },
   { id: 'rag', label: 'RAG', href: '/admin/ai?tab=rag', icon: <BrainCircuit /> },
-  { id: 'config', label: 'Config', href: '/admin/ai?tab=config', icon: <Settings /> },
+  { id: 'config', label: 'Budget', href: '/admin/ai?tab=config', icon: <Wallet /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]['id'];

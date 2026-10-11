@@ -199,6 +199,29 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, ILlmBudgetStatus, IDisposa
     }
 
     /// <inheritdoc/>
+    public async Task<LlmBudgetUsage?> GetUsageAsync(CancellationToken cancellationToken)
+    {
+        var policy = await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false);
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        if (snapshot is null)
+        {
+            return null;
+        }
+
+        lock (_lock)
+        {
+            var answers = Totals(snapshot, LlmBudgetClass.Answer);
+            var background = Totals(snapshot, LlmBudgetClass.Background);
+            var evaluations = Totals(snapshot, LlmBudgetClass.Evaluation);
+            return new LlmBudgetUsage(
+                snapshot.Today,
+                new LlmBudgetSpend(answers.Day, answers.ClassDay, background.ClassDay, evaluations.ClassDay),
+                new LlmBudgetSpend(answers.Month, answers.ClassMonth, background.ClassMonth, evaluations.ClassMonth),
+                IsOverDegradeThreshold(policy, answers));
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<decimal> GetRemainingUsdAsync(RequestSource source, CancellationToken cancellationToken)
     {
         var budgetClass = LlmBudgetClassification.For(source);

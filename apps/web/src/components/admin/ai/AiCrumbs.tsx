@@ -11,7 +11,7 @@ const TAB_LABELS: Record<string, string> = {
   models: 'Models',
   requests: 'Requests',
   rag: 'RAG',
-  config: 'Config',
+  config: 'Budget',
 };
 
 function labelFor(tab: string | null): string {

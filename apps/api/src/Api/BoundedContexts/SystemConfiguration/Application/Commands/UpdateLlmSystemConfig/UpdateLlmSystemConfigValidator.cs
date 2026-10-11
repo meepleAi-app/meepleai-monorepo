@@ -11,17 +11,23 @@ internal sealed class UpdateLlmSystemConfigValidator : AbstractValidator<UpdateL
 {
     public UpdateLlmSystemConfigValidator()
     {
+        // #4169: le soglie del circuit breaker sono opzionali, ma arrivano tutte e tre o nessuna.
+        RuleFor(x => x)
+            .Must(x => x.CircuitBreakerFailureThreshold.HasValue == x.CircuitBreakerOpenDurationSeconds.HasValue
+                       && x.CircuitBreakerOpenDurationSeconds.HasValue == x.CircuitBreakerSuccessThreshold.HasValue)
+            .WithMessage("Circuit breaker thresholds must be sent all together or not at all");
+
         RuleFor(x => x.CircuitBreakerFailureThreshold)
-            .GreaterThanOrEqualTo(1).WithMessage("FailureThreshold must be >= 1")
-            .LessThanOrEqualTo(100).WithMessage("FailureThreshold must be <= 100");
+            .InclusiveBetween(1, 100).When(x => x.CircuitBreakerFailureThreshold.HasValue)
+            .WithMessage("FailureThreshold must be between 1 and 100");
 
         RuleFor(x => x.CircuitBreakerOpenDurationSeconds)
-            .GreaterThanOrEqualTo(1).WithMessage("OpenDurationSeconds must be >= 1")
-            .LessThanOrEqualTo(3600).WithMessage("OpenDurationSeconds must be <= 3600 (1 hour)");
+            .InclusiveBetween(1, 3600).When(x => x.CircuitBreakerOpenDurationSeconds.HasValue)
+            .WithMessage("OpenDurationSeconds must be between 1 and 3600 (1 hour)");
 
         RuleFor(x => x.CircuitBreakerSuccessThreshold)
-            .GreaterThanOrEqualTo(1).WithMessage("SuccessThreshold must be >= 1")
-            .LessThanOrEqualTo(100).WithMessage("SuccessThreshold must be <= 100");
+            .InclusiveBetween(1, 100).When(x => x.CircuitBreakerSuccessThreshold.HasValue)
+            .WithMessage("SuccessThreshold must be between 1 and 100");
 
         RuleFor(x => x.DailyBudgetUsd)
             .GreaterThanOrEqualTo(0).WithMessage("DailyBudgetUsd cannot be negative")
@@ -55,9 +61,8 @@ internal sealed class UpdateLlmSystemConfigValidator : AbstractValidator<UpdateL
             .WithMessage("BackgroundQuotaPercent and EvaluationQuotaPercent together cannot exceed 100");
 
         RuleFor(x => x.FallbackChainJson)
-            .NotNull().WithMessage("FallbackChainJson is required")
-            .NotEmpty().WithMessage("FallbackChainJson cannot be empty")
-            .Must(BeValidJsonArray).WithMessage("FallbackChainJson must be a valid JSON array");
+            .Must(BeValidJsonArray).When(x => x.FallbackChainJson is not null)
+            .WithMessage("FallbackChainJson must be a valid JSON array");
 
         RuleFor(x => x.UpdatedByUserId)
             .NotEqual(Guid.Empty).WithMessage("UpdatedByUserId is required");

@@ -546,4 +546,48 @@ public sealed class LlmBudgetGateTests : IDisposable
 
         (await IsCheaperReserveAsync(UnknownModel, PaidModel)).Should().BeFalse();
     }
+
+    private Task<LlmBudgetUsage?> UsageAsync() => _gate.GetUsageAsync(TestContext.Current.CancellationToken);
+
+    /// <summary>
+    /// #4169 (pagina «Budget e quote»): il consumo per classe, del giorno e del mese, con le stesse
+    /// regole con cui il gate decide.
+    /// </summary>
+    [Fact]
+    public async Task Usage_SplitsTodayAndTheMonth_ByBudgetClass()
+    {
+        Spent(RequestSource.Manual, 0.30m);
+        Spent(RequestSource.ChunkTranslation, 0.10m);
+        Spent(RequestSource.Evaluation, 0.05m);
+        Spent(RequestSource.Manual, 2.00m, Today.AddDays(-3));
+
+        var usage = await UsageAsync();
+
+        usage.Should().NotBeNull();
+        usage!.Day.Should().Be(Today);
+        usage.Today.Should().Be(new LlmBudgetSpend(0.45m, 0.30m, 0.10m, 0.05m));
+        usage.Month.Should().Be(new LlmBudgetSpend(2.45m, 2.30m, 0.10m, 0.05m));
+        usage.IsDegraded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Usage_CountsTheCallsStillOpen_AndSaysWhenTheDegradeIsActive()
+    {
+        Spent(RequestSource.Manual, 0.797m);
+        (await AdmitAsync(Call())).IsAllowed.Should().BeTrue();
+
+        var usage = await UsageAsync();
+
+        usage!.Today.TotalUsd.Should().Be(0.801m, "0,797 letti più 0,004 riservati: è la spesa con cui decide il gate");
+        usage.IsDegraded.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Usage_WithoutAnySpendReading_IsNull()
+    {
+        _costLog.Setup(r => r.GetSpendBySourceAndDayAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("database down"));
+
+        (await UsageAsync()).Should().BeNull();
+    }
 }

@@ -78,8 +78,8 @@ export function useCircuitBreakerStates(options?: { enabled?: boolean }) {
 }
 
 /**
- * #1834 — LLM system configuration. Used by RoutingChainViz to render the
- * fallback chain from `fallbackChainJson`. 60s staleTime to mirror BE cache TTL.
+ * #1834 — LLM system configuration. Used by CircuitBreakerGrid for the open
+ * duration (#4169: RoutingChainViz is gone). 60s staleTime to mirror BE cache TTL.
  *
  * Note: the BE endpoint always returns 200 with the config object (DB or
  * appsettings fallback), so this hook's data is non-nullable once resolved.

@@ -85,7 +85,7 @@ public sealed class UpdateLlmSystemConfigCommandHandlerTests
         _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync(LlmSystemConfig.CreateDefault());
 
         var result = await CreateHandler().Handle(new UpdateLlmSystemConfigCommand(
-            5, 30, 3, 1.00m, 20.00m, "[]", Guid.NewGuid(),
+            1.00m, 20.00m, Guid.NewGuid(), 5, 30, 3, "[]",
             DegradeThresholdPercent: 90, BackgroundQuotaPercent: 10, EvaluationQuotaPercent: 5), CancellationToken.None);
 
         result.DegradeThresholdPercent.Should().Be(90);
@@ -99,7 +99,7 @@ public sealed class UpdateLlmSystemConfigCommandHandlerTests
         _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync(LlmSystemConfig.CreateDefault());
 
         var act = () => CreateHandler().Handle(new UpdateLlmSystemConfigCommand(
-            5, 30, 3, 1.00m, 20.00m, "[]", Guid.NewGuid(), EvaluationQuotaPercent: 80), CancellationToken.None);
+            1.00m, 20.00m, Guid.NewGuid(), 5, 30, 3, "[]", EvaluationQuotaPercent: 80), CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>("80 più il 30 salvato del background supera il tetto");
         _repoMock.Verify(r => r.UpsertAsync(It.IsAny<LlmSystemConfig>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -126,5 +126,30 @@ public sealed class UpdateLlmSystemConfigCommandHandlerTests
         result.CircuitBreakerFailureThreshold.Should().Be(10);
         result.DailyBudgetUsd.Should().Be(50.00m);
         _providerMock.Verify(p => p.InvalidateCache(), Times.Once);
+    }
+
+    /// <summary>
+    /// #4169: la pagina «Budget e quote» non manda più le soglie del circuit breaker né la catena di
+    /// fallback, che il runtime non legge. Un salvataggio dalla pagina non le deve azzerare.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithoutCircuitBreakerAndFallbackChain_KeepsTheSavedOnes()
+    {
+        var existing = LlmSystemConfig.CreateDefault();
+        existing.UpdateCircuitBreakerSettings(10, 60, 5);
+        existing.UpdateFallbackChain("[\"Ollama\"]");
+        _repoMock.Setup(r => r.GetCurrentAsync(It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var result = await CreateHandler().Handle(
+            new UpdateLlmSystemConfigCommand(DailyBudgetUsd: 2.00m, MonthlyBudgetUsd: 30.00m, UpdatedByUserId: Guid.NewGuid(),
+                DegradeThresholdPercent: 70),
+            CancellationToken.None);
+
+        result.DailyBudgetUsd.Should().Be(2.00m);
+        result.DegradeThresholdPercent.Should().Be(70);
+        result.CircuitBreakerFailureThreshold.Should().Be(10);
+        result.CircuitBreakerOpenDurationSeconds.Should().Be(60);
+        result.CircuitBreakerSuccessThreshold.Should().Be(5);
+        result.FallbackChainJson.Should().Be("[\"Ollama\"]");
     }
 }

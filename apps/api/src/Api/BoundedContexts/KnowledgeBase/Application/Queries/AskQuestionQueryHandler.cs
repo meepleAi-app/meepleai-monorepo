@@ -457,7 +457,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var sw5 = System.Diagnostics.Stopwatch.StartNew();
         var response = await BuildValidatedResponseAsync(
             query, llmResponse ?? string.Empty, searchResults, domainSearchResults,
-            searchConfidence, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+            searchConfidence, cancellationToken).ConfigureAwait(false);
         sw5.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 5 DONE: Response validation completed in {ElapsedMs}ms",
             sw5.ElapsedMilliseconds);
@@ -699,8 +699,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 List<SearchResultDto> searchResults,
         List<Domain.Entities.SearchResult> domainSearchResults,
         Confidence searchConfidence,
-        string systemPrompt,
-        string userPrompt,
         CancellationToken cancellationToken)
     {
         // Calculate quality metrics
@@ -732,11 +730,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 confidence: overallConfidence.Value
             );
 
-            var validation = await _validationPipeline.ValidateWithMultiModelAsync(
+            // #4179: validazione standard (livelli 1, 3, 4). Il consenso fra due modelli è stato
+            // tolto: due chiamate in più per domanda, fuori dal gateway, verso modelli dismessi.
+            var validation = await _validationPipeline.ValidateResponseAsync(
                 qaResponse,
                 query.GameId.ToString(),
-                systemPrompt,
-                userPrompt,
                 query.Language,
                 cancellationToken).ConfigureAwait(false);
 

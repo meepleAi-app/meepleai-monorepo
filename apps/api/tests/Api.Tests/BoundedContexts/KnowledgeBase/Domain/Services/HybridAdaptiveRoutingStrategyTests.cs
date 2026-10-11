@@ -101,8 +101,8 @@ public class HybridAdaptiveRoutingStrategyTests
     #region Strategy-Based Model Selection Tests
 
     [Theory]
-    [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct:free")]
-    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-chat")]
+    [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct")]
+    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-flash")]
     [InlineData(RagStrategy.Precise, "Anthropic", "anthropic/claude-sonnet-4.5")]
     [InlineData(RagStrategy.Expert, "Anthropic", "anthropic/claude-sonnet-4.5")]
     [InlineData(RagStrategy.Consensus, "Mixed", "anthropic/claude-sonnet-4.5")]
@@ -135,7 +135,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert
         decision.ProviderName.Should().Be("DeepSeek");
-        decision.ModelId.Should().Be("deepseek-chat");
+        decision.ModelId.Should().Be("deepseek-flash");
         decision.Reason.Should().Contain("Tier: User");
     }
 
@@ -424,7 +424,7 @@ public class HybridAdaptiveRoutingStrategyTests
         var decision = sut.SelectProvider(userContext, RagStrategy.Fast);
 
         // Assert - Original model kept when no mapping exists
-        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct");
         decision.Reason.Should().NotContain("Budget mode:"); // No downgrade occurred
     }
 
@@ -467,7 +467,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert - Should fall back to default
         decision.ProviderName.Should().Be("DeepSeek");
-        decision.ModelId.Should().Be("deepseek-chat");
+        decision.ModelId.Should().Be("deepseek-flash");
     }
 
     #endregion

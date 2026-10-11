@@ -22,5 +22,6 @@ public sealed class MechanicExtractorLlmOptions
     public string DefaultProvider { get; init; } = "DeepSeek";
 
     /// <summary>Model id used for generation; selects the provider via <c>SupportsModel</c>.</summary>
-    public string DefaultModel { get; init; } = "deepseek-chat";
+    /// <remarks>#4179: <c>deepseek-flash</c>, il nome corrente; <c>deepseek-chat</c> è dismesso dal 2026-07-24.</remarks>
+    public string DefaultModel { get; init; } = "deepseek-flash";
 }

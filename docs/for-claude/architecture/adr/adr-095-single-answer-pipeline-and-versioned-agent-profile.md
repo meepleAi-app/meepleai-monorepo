@@ -205,7 +205,7 @@ Le rimozioni per campo di `GameId`, `KbCardIds` e `Strategy`, previste da ADR-09
 
 ## Domande aperte (non bloccano l'accettazione)
 
-1. **Modello predefinito della prima versione.** È un valore del profilo, non una decisione di questo ADR. Il candidato più economico (DeepSeek) tratta i dati in Cina, e l'alias in uso (`deepseek-chat`) è dato per ritirato da una fonte secondaria, mentre oggi risponde ancora. Va verificato sulla pagina ufficiale.
+1. **Modello predefinito della prima versione.** È un valore del profilo, non una decisione di questo ADR. Il candidato più economico (DeepSeek) tratta i dati in Cina. *Verificato il 2026-10-10*: il changelog ufficiale di DeepSeek (2026-04-24) dismette `deepseek-chat` dal 2026-07-24, e il nome corrente è `deepseek-flash`. [#4179](https://github.com/meepleAi-app/meepleai-monorepo/issues/4179) ha portato su `deepseek-flash` la strategia Balanced e l'estrattore, e ha pubblicato la versione 2 del profilo con `deepseek-flash` come principale e `meta-llama/llama-3.3-70b-instruct` (OpenRouter, a pagamento) come riserva. Resta aperta la residenza dei dati.
 2. **Chi scrive le domande di riferimento**, e per quali giochi si parte.
 3. **Semantica del fallback a metà streaming**: dopo il primo token si interrompe o si ricomincia? Va deciso nella fetta 5.
 4. **`Microsoft.Extensions.AI`** come astrazione interna del gateway: è un ADR separato.

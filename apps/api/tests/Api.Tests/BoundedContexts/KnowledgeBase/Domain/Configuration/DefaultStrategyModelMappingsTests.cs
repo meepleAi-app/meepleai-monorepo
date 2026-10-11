@@ -32,10 +32,10 @@ public class DefaultStrategyModelMappingsTests
 
         // Assert
         mapping.Provider.Should().Be("OpenRouter");
-        mapping.PrimaryModel.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+        mapping.PrimaryModel.Should().Be("meta-llama/llama-3.3-70b-instruct");
         mapping.FallbackModels.Should().BeEmpty();
         mapping.IsCustomizable.Should().BeFalse();
-        mapping.EstimatedCostPer1KTokens.Should().Be(0.0m);
+        mapping.EstimatedCostPer1KTokens.Should().Be(0.001m);
     }
 
     [Fact]
@@ -46,9 +46,9 @@ public class DefaultStrategyModelMappingsTests
 
         // Assert
         mapping.Provider.Should().Be("DeepSeek");
-        mapping.PrimaryModel.Should().Be("deepseek-chat");
+        mapping.PrimaryModel.Should().Be("deepseek-flash");
         mapping.FallbackModels.Should().ContainSingle()
-            .Which.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+            .Which.Should().Be("meta-llama/llama-3.3-70b-instruct");
         mapping.IsCustomizable.Should().BeFalse();
         mapping.EstimatedCostPer1KTokens.Should().Be(0.01m);
     }
@@ -92,9 +92,8 @@ public class DefaultStrategyModelMappingsTests
         // Assert
         mapping.Provider.Should().Be("Mixed");
         mapping.PrimaryModel.Should().Be("anthropic/claude-sonnet-4.5");
-        mapping.FallbackModels.Should().HaveCount(2)
-            .And.Contain("openai/gpt-4o")
-            .And.Contain("google/gemini-pro");
+        mapping.FallbackModels.Should().ContainSingle()
+            .Which.Should().Be("openai/gpt-4o");
         mapping.IsCustomizable.Should().BeFalse();
         mapping.EstimatedCostPer1KTokens.Should().Be(0.09m);
     }
@@ -192,14 +191,14 @@ public class DefaultStrategyModelMappingsTests
     }
 
     [Fact]
-    public void Mappings_Fast_HasZeroCost()
+    public void Mappings_Fast_IsCheaperThanBalanced()
     {
         // Act
-        var mapping = DefaultStrategyModelMappings.Mappings[RagStrategy.Fast];
+        var fast = DefaultStrategyModelMappings.Mappings[RagStrategy.Fast];
+        var balanced = DefaultStrategyModelMappings.Mappings[RagStrategy.Balanced];
 
-        // Assert
-        mapping.EstimatedCostPer1KTokens.Should().Be(0.0m,
-            "because FAST strategy uses free tier models");
+        // Assert — #4179: le varianti «:free» non esistono più, FAST usa il modello a pagamento più economico
+        fast.EstimatedCostPer1KTokens.Should().BeLessThan(balanced.EstimatedCostPer1KTokens!.Value);
     }
 
     [Fact]
@@ -240,6 +239,30 @@ public class DefaultStrategyModelMappingsTests
         expertMapping.Provider.Should().Be("Anthropic");
         preciseMapping.PrimaryModel.Should().Contain("claude-sonnet-4.5");
         expertMapping.PrimaryModel.Should().Contain("claude-sonnet-4.5");
+    }
+
+    /// <summary>
+    /// #4179: nessuna mappa predefinita nomina un modello che il provider ha dismesso. Le fonti
+    /// sono quelle della issue: il changelog di DeepSeek per <c>deepseek-chat</c>, il listino di
+    /// OpenRouter del 2026-10-10 per gli altri.
+    /// </summary>
+    [Fact]
+    public void Mappings_NameNoModelTheProviderRetired()
+    {
+        string[] retired =
+        [
+            "deepseek-chat",
+            "google/gemini-pro",
+            .. Api.BoundedContexts.SystemConfiguration.Application.Commands.SeedAiModelsCommandHandler.RetiredModels
+                .Select(m => m.ModelId)
+        ];
+
+        var named = DefaultStrategyModelMappings.Mappings
+            .SelectMany(kvp => kvp.Value.FallbackModels.Prepend(kvp.Value.PrimaryModel)
+                .Select(model => (Strategy: kvp.Key, Model: model)));
+
+        named.Where(n => retired.Contains(n.Model, StringComparer.Ordinal))
+            .Should().BeEmpty("una chiamata a un modello che il provider non elenca più non può riuscire");
     }
 
     [Fact]

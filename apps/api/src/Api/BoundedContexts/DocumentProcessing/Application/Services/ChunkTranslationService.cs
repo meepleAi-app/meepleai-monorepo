@@ -23,7 +23,9 @@ internal sealed partial class ChunkTranslationService : IChunkTranslationService
     private readonly string _model;
     private readonly int _batchSize;
 
-    private const string DefaultModel = "anthropic/claude-3-haiku";
+    // #4179: «anthropic/claude-3-haiku» non è più nel listino di OpenRouter (verificato il
+    // 2026-10-10). Il sostituto è nel catalogo, con prezzo verificato.
+    private const string DefaultModel = "meta-llama/llama-3.3-70b-instruct";
     private const int DefaultBatchSize = 5;
     private const int MaxTokens = 4096;
 

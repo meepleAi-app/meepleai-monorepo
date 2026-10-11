@@ -45,7 +45,7 @@ public sealed class ChunkTranslationServiceTests
 
         result.Should().ContainSingle().Which.TranslatedText.Should().Be("Place the board in the middle.");
         _llm.Verify(l => l.GenerateCompletionWithModelAsync(
-            "anthropic/claude-3-haiku",
+            "meta-llama/llama-3.3-70b-instruct",
             It.Is<string>(prompt => prompt.Contains("from it to en", StringComparison.Ordinal)),
             "Metti il tabellone al centro.",
             RequestSource.ChunkTranslation,

@@ -20,10 +20,16 @@ namespace Api.Tests.Architecture;
 /// è costruito altrove. Gli host fuori dal gateway sono ammessi solo in file dichiarati, ciascuno con
 /// la ragione per cui non genera testo.
 /// </para>
+/// <para>
+/// #4179 aggiunge una terza regola: chi ottiene un client LLM (dal costruttore, dal service
+/// provider o dalla factory) può chiamare un provider senza nominare né host né endpoint, perché la
+/// richiesta HTTP la fa il client.
+/// </para>
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Architecture")]
 [Trait("Issue", "4165")]
+[Trait("Issue", "4179")]
 public sealed class LlmProviderEgressArchitectureTests
 {
     private const string GatewayDirectory = "Services/LlmClients/";
@@ -60,6 +66,62 @@ public sealed class LlmProviderEgressArchitectureTests
             ["BoundedContexts/SystemConfiguration/Application/Commands/SeedAiModelsCommandHandler.cs"] =
                 "OpenRouterPriceSource: l'URL della fonte dei prezzi salvata come provenienza nel catalogo (#4164); nessuna richiesta HTTP",
         };
+
+    /// <summary>I tipi che danno accesso diretto a un client LLM.</summary>
+    private static readonly string[] ClientTypes = ["ILlmClient", "LlmProviderFactory"];
+
+    /// <summary>
+    /// File fuori dal gateway che possono nominare un client LLM, con il motivo.
+    /// </summary>
+    /// <remarks>
+    /// #4179: <c>MultiModelValidationService</c> riceveva i client e chiamava OpenRouter a ogni
+    /// AskQuestion, fuori dal registro costi, e le due regole sugli host e sugli endpoint non lo
+    /// vedevano. Si cerca il nome nel sorgente e non i parametri dei costruttori, perché un client si
+    /// ottiene anche dal service provider (<c>ProviderHealthCheckService</c>) o da un endpoint.
+    /// </remarks>
+    private static readonly IReadOnlyDictionary<string, string> DeclaredClientReferences =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["BoundedContexts/KnowledgeBase/Application/Services/HybridLlmService.cs"] =
+                "il gateway",
+            ["BoundedContexts/KnowledgeBase/Application/Services/LlmProviderSelector.cs"] =
+                "sceglie il client che il gateway chiama; non genera",
+            ["BoundedContexts/KnowledgeBase/Domain/Services/ILlmProviderSelector.cs"] =
+                "ProviderSelectionResult porta il client scelto dal selettore al gateway",
+            ["BoundedContexts/KnowledgeBase/Application/Services/ProviderHealthCheckService.cs"] =
+                "solo CheckHealthAsync: sonde su /models, sul saldo e su api/tags, nessuna generazione",
+            ["BoundedContexts/KnowledgeBase/Infrastructure/DependencyInjection/KnowledgeBaseServiceExtensions.cs"] =
+                "registrazione DI dei client e della factory",
+            ["Routing/LlmEndpoints.cs"] =
+                "GET /llm/providers elenca i nomi dei provider, nessuna generazione",
+            ["BoundedContexts/KnowledgeBase/Application/Commands/PlaygroundChatCommandHandler.cs"] =
+                "DIFETTO noto: il playground admin chiama i client tramite LlmProviderFactory, fuori dal "
+                + "tetto di spesa; lo porta sul gateway la fetta 3 di ADR-095 (#4166)",
+        };
+
+    [Fact]
+    public void LlmClients_AreReachedOnlyByTheGatewayOrByDeclaredFiles()
+    {
+        var undeclared = FilesOutsideGatewayContaining(ClientTypes)
+            .Where(path => !DeclaredClientReferences.ContainsKey(path))
+            .ToList();
+
+        undeclared.Should().BeEmpty(
+            "chi ottiene un ILlmClient (o LlmProviderFactory) può chiamare un provider fuori dal "
+            + "registro costi e dal tetto di spesa: usa ILlmService, oppure dichiara il file in "
+            + "DeclaredClientReferences con il motivo. Non dichiarati: " + string.Join(", ", undeclared));
+    }
+
+    /// <summary>Tiene la lista onesta, come <see cref="DeclaredHostReferences_AreStillNeeded"/>.</summary>
+    [Fact]
+    public void DeclaredClientReferences_AreStillNeeded()
+    {
+        var withClients = FilesOutsideGatewayContaining(ClientTypes).ToHashSet(StringComparer.Ordinal);
+
+        var stale = DeclaredClientReferences.Keys.Where(path => !withClients.Contains(path)).ToList();
+
+        stale.Should().BeEmpty("questi file non nominano più un client LLM: rimuovili");
+    }
 
     [Fact]
     public void GenerationEndpoints_AreCalledOnlyFromTheGateway()

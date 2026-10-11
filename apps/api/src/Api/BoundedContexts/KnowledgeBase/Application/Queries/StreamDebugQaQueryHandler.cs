@@ -421,13 +421,6 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
             events.Add(CreateEvent(StreamingEventType.DebugValidationLayer,
                 new DebugValidationLayerData(4, "Hallucination", validationResult.HallucinationDetection.IsValid,
                     validationStopwatch.Elapsed.TotalMilliseconds)));
-
-            if (validationResult.MultiModelConsensus != null)
-            {
-                events.Add(CreateEvent(StreamingEventType.DebugValidationLayer,
-                    new DebugValidationLayerData(2, "MultiModel", validationResult.MultiModelConsensus.HasConsensus,
-                        validationStopwatch.Elapsed.TotalMilliseconds)));
-            }
         }
 #pragma warning disable CA1031 // Validation is optional debug info
         catch (Exception ex)

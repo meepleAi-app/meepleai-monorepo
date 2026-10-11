@@ -23,7 +23,7 @@
 
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Edit, Send, XCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -41,12 +41,13 @@ import { GameNightDiaryPanel } from '@/components/game-night/GameNightDiaryPanel
 import { GameNightSessionsList } from '@/components/game-night/GameNightSessionsList';
 import { GameNightPlanningLayout } from '@/components/game-night/planning/GameNightPlanningLayout';
 import { FormPageContainer } from '@/components/layout/PageContainer';
+import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGameNightDetail } from '@/hooks/queries/useGameNightDetail';
 import { useCancelGameNight, usePublishGameNight } from '@/hooks/queries/useGameNights';
-import { useSharedGames } from '@/hooks/queries/useSharedGames';
+import { useSharedGames, useSharedGamesByIds } from '@/hooks/queries/useSharedGames';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -103,10 +104,24 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   const { event, rsvps, actor, isLoading, isError, currentResponse, pendingResponse } = detail;
 
-  // Catalog games power the Draft planning layout and the Published voting-panel titles.
   const isDraft = event?.status === 'Draft';
   const needsCatalog = isDraft || event?.status === 'Published';
-  const { data: catalogData } = useSharedGames(undefined, needsCatalog);
+
+  // #4187: i giochi della serata si leggono per id. Prima si cercavano nella prima pagina del
+  // catalogo (20 giochi): quelli oltre sparivano dalla pianificazione e dal pannello di voto.
+  const { gamesById: nightGamesById, isLoading: nightGamesLoading } = useSharedGamesByIds(
+    event?.gameIds ?? [],
+    needsCatalog
+  );
+
+  // #4187: il selettore della pianificazione cerca nel catalogo sul server, invece di offrire solo
+  // la prima pagina. Sotto i due caratteri mostra la prima pagina, come prima.
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const catalogSearchTerm = useDebounce(catalogSearch.trim(), 300);
+  const { data: catalogData } = useSharedGames(
+    catalogSearchTerm.length >= 2 ? { searchTerm: catalogSearchTerm } : undefined,
+    isDraft
+  );
 
   const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();
 
@@ -114,17 +129,16 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   // (preserves legacy behaviour for Draft events).
   useEffect(() => {
     if (!isDraft || !event) return;
-    if (event.gameIds.length > 0 && !catalogData) return;
+    if (event.gameIds.length > 0 && nightGamesLoading) return;
     reset();
     if (rsvps) {
       rsvps
         .filter(r => r.status === 'Accepted')
         .forEach(r => addPlayer({ id: r.userId, displayName: r.userName, isGuest: false }));
     }
-    if (catalogData?.items && event.gameIds.length > 0) {
-      const catalogMap = new Map(catalogData.items.map(g => [g.id, g]));
+    if (event.gameIds.length > 0) {
       event.gameIds.forEach(gid => {
-        const g = catalogMap.get(gid);
+        const g = nightGamesById[gid];
         if (g) {
           addGame({
             id: g.id,
@@ -136,7 +150,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         }
       });
     }
-  }, [isDraft, event, rsvps, catalogData, reset, addPlayer, addGame]);
+  }, [isDraft, event, rsvps, nightGamesById, nightGamesLoading, reset, addPlayer, addGame]);
 
   // ────────────────────────────────────────────────────────────────────
   // Localized label bundles, derived once per render.
@@ -294,9 +308,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   }));
 
   // Candidate-game titles for the voting panel (#2700).
-  const gameTitleById: Record<string, string> = Object.fromEntries(
-    (catalogData?.items ?? []).map(g => [g.id, g.title])
-  );
+  // #4187: i titoli dei giochi della serata vengono dalla lettura per id, non dalla pagina.
+  const gameTitleById: Record<string, string> = {
+    ...Object.fromEntries((catalogData?.items ?? []).map(g => [g.id, g.title])),
+    ...Object.fromEntries(Object.values(nightGamesById).map(g => [g.id, g.title])),
+  };
 
   const isHost = actor?.actor === 'host';
   const isGuest = actor?.actor === 'guest';
@@ -418,7 +434,14 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
       )}
 
       {/* Draft → preserve legacy planning layout. */}
-      {isDraft && <GameNightPlanningLayout title={event.title} availableGames={availableGames} />}
+      {isDraft && (
+        <GameNightPlanningLayout
+          title={event.title}
+          availableGames={availableGames}
+          catalogSearch={catalogSearch}
+          onCatalogSearchChange={setCatalogSearch}
+        />
+      )}
 
       {/* Published tabs — Dettagli | Votazione (#2723, ADR-061, ?tab=voting deep-link). */}
       {isLive && (

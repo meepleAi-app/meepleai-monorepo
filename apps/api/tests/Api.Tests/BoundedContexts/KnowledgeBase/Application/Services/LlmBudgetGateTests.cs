@@ -380,4 +380,170 @@ public sealed class LlmBudgetGateTests : IDisposable
 
         next.IsAllowed.Should().BeTrue("il rifiuto non deve aver riservato nulla");
     }
+
+    private Task<decimal> RemainingAsync(RequestSource source) =>
+        _gate.GetRemainingUsdAsync(source, TestContext.Current.CancellationToken);
+
+    private Task<bool> IsDegradedAsync() => _gate.IsDegradedAsync(TestContext.Current.CancellationToken);
+
+    /// <summary>
+    /// 3b (D6): fra la soglia di degrado e il tetto il background e le valutazioni vanno in pausa
+    /// anche con la loro quota intatta, così ciò che resta del giorno va alle risposte.
+    /// </summary>
+    [Theory]
+    [InlineData(RequestSource.ChunkTranslation)]
+    [InlineData(RequestSource.Evaluation)]
+    public async Task FromTheDegradeThreshold_BackgroundAndEvaluationsPause_WhileAnswersStillPass(RequestSource source)
+    {
+        Spent(RequestSource.Manual, 0.8m); // l'80% di 1 $, speso tutto dalle risposte
+
+        var paused = await AdmitAsync(Call(source));
+        var answer = await AdmitAsync(Call(RequestSource.Manual));
+
+        paused.Rejection.Should().Be(LlmBudgetRejection.BackgroundPaused, "la quota della classe è intatta: la pausa viene dalla soglia");
+        paused.ErrorCode.Should().Be(LlmBudgetAdmission.DailyBudgetErrorCode, "la pausa dura fino a domani");
+        paused.Message.Should().Contain("in pausa").And.Contain("Riprende domani");
+        answer.IsAllowed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UnderTheDegradeThreshold_TheBackgroundStillRuns()
+    {
+        Spent(RequestSource.Manual, 0.79m);
+
+        var background = await AdmitAsync(Call(RequestSource.ChunkTranslation));
+
+        background.IsAllowed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task IsDegraded_FromTheDegradeThreshold_OnTheSpendOfEveryClass()
+    {
+        Spent(RequestSource.Manual, 0.79m);
+        (await IsDegradedAsync()).Should().BeFalse();
+
+        Spent(RequestSource.ChunkTranslation, 0.01m);
+        _time.Advance(LlmBudgetGate.SpendSnapshotTtl);
+
+        (await IsDegradedAsync()).Should().BeTrue("la soglia guarda la spesa del giorno di tutta l'AI, non solo delle risposte");
+    }
+
+    [Fact]
+    public async Task IsDegraded_CountsTheCallsStillOpen()
+    {
+        Spent(RequestSource.Manual, 0.797m);
+        (await AdmitAsync(Call())).IsAllowed.Should().BeTrue();
+
+        (await IsDegradedAsync()).Should().BeTrue("0,797 letti + 0,004 riservati superano 0,8");
+    }
+
+    [Fact]
+    public async Task YesterdaysSpend_DoesNotDegradeToday()
+    {
+        Spent(RequestSource.Manual, 0.9m, Today.AddDays(-1));
+
+        (await IsDegradedAsync()).Should().BeFalse("D6: il degrado guarda il consumo del giorno");
+    }
+
+    [Fact]
+    public async Task WithoutAnySpendReading_ItIsNotDegraded_AndNothingRemains()
+    {
+        _costLog.Setup(r => r.GetSpendBySourceAndDayAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("database down"));
+
+        (await IsDegradedAsync()).Should().BeFalse("la chiamata la ferma comunque AdmitAsync, con BudgetUnavailable");
+        (await RemainingAsync(RequestSource.Evaluation)).Should().Be(0m, "senza la spesa non si promette nulla");
+    }
+
+    [Fact]
+    public async Task Remaining_ForEvaluations_IsTheirDailyQuotaLessWhatTheySpent()
+    {
+        Spent(RequestSource.Evaluation, 0.05m);
+        Spent(RequestSource.Manual, 0.5m);
+
+        (await RemainingAsync(RequestSource.Evaluation)).Should().Be(0.15m, "la quota del giorno è il 20% di 1 $");
+    }
+
+    [Fact]
+    public async Task Remaining_ForEvaluations_IsBoundedByTheMonthlyQuota()
+    {
+        UsePolicy(dailyCap: 1m, monthlyCap: 1m);
+        Spent(RequestSource.Evaluation, 0.1m, Today.AddDays(-3));
+
+        (await RemainingAsync(RequestSource.Evaluation)).Should().Be(0.1m, "la quota del mese è il 20% di 1 $, e 0,1 sono già spesi");
+    }
+
+    [Fact]
+    public async Task Remaining_ForEvaluations_IsZero_FromTheDegradeThreshold()
+    {
+        Spent(RequestSource.Manual, 0.8m);
+
+        (await RemainingAsync(RequestSource.Evaluation)).Should().Be(0m, "il gate le metterebbe in pausa");
+    }
+
+    [Fact]
+    public async Task Remaining_ForAnswers_IsWhatIsLeftOfTheCaps()
+    {
+        Spent(RequestSource.Manual, 0.3m);
+
+        (await RemainingAsync(RequestSource.Manual)).Should().Be(0.7m);
+    }
+
+    private const string CheapModel = "cheap-model";
+
+    private void CheapModelInTheCatalog() =>
+        _calculator.Setup(c => c.ResolvePricingAsync(CheapModel, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmModelPricing { ModelId = CheapModel, Provider = "OpenRouter", InputCostPer1M = 0.1m, OutputCostPer1M = 0.2m });
+
+    private Task<bool> IsCheaperReserveAsync(string routed, string reserve) =>
+        _gate.IsCheaperReserveAsync(routed, "OpenRouter", reserve, "OpenRouter", TestContext.Current.CancellationToken);
+
+    /// <summary>
+    /// Review della 3b: con il tetto a zero «oltre la soglia» era sempre vero, e il degrado spostava
+    /// sulla riserva a pagamento anche le risposte di un modello gratuito, che il gate poi rifiutava.
+    /// </summary>
+    [Fact]
+    public async Task WithAZeroDailyCap_ThereIsNoDegrade()
+    {
+        UsePolicy(dailyCap: 0m, monthlyCap: 20m);
+
+        (await IsDegradedAsync()).Should().BeFalse("con il tetto a zero l'AI a pagamento è spenta: il degrado non ha nulla da ridurre");
+    }
+
+    [Fact]
+    public async Task AReserveCheaperThanTheRoutedModel_CanReplaceIt_ButNotTheOtherWayRound()
+    {
+        CheapModelInTheCatalog();
+
+        (await IsCheaperReserveAsync(PaidModel, CheapModel)).Should().BeTrue();
+        (await IsCheaperReserveAsync(CheapModel, PaidModel)).Should().BeFalse("una riserva più cara alzerebbe la spesa che il degrado deve ridurre");
+    }
+
+    [Fact]
+    public async Task AFreeRoutedModel_IsNeverReplaced()
+    {
+        (await IsCheaperReserveAsync(FreeModel, PaidModel)).Should().BeFalse("un modello gratuito non spende: la riserva a pagamento sì");
+    }
+
+    /// <summary>Review della 3b: una riserva fuori catalogo veniva rifiutata (D5) e lo streaming si fermava.</summary>
+    [Fact]
+    public async Task AReserveOutsideTheCatalog_NeverReplaces()
+    {
+        (await IsCheaperReserveAsync(PaidModel, UnknownModel)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ARoutedModelOutsideTheCatalog_IsReplacedByAPricedReserve()
+    {
+        (await IsCheaperReserveAsync(UnknownModel, PaidModel)).Should().BeTrue("il modello instradato verrebbe rifiutato, la riserva no");
+    }
+
+    [Fact]
+    public async Task WhenTheCatalogCannotBeRead_TheReserveIsNotUsed()
+    {
+        _calculator.Setup(c => c.ResolvePricingAsync(PaidModel, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The model price list could not be loaded"));
+
+        (await IsCheaperReserveAsync(UnknownModel, PaidModel)).Should().BeFalse();
+    }
 }

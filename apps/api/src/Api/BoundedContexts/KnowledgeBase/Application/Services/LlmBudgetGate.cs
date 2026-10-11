@@ -35,7 +35,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// sempre: non spende.
 /// </para>
 /// </remarks>
-internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
+internal sealed class LlmBudgetGate : ILlmBudgetGate, ILlmBudgetStatus, IDisposable
 {
     /// <summary>Ogni quanto si rilegge la spesa dal registro costi.</summary>
     internal static readonly TimeSpan SpendSnapshotTtl = TimeSpan.FromSeconds(30);
@@ -155,6 +155,79 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
         }
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> IsDegradedAsync(CancellationToken cancellationToken)
+    {
+        var policy = await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false);
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        if (snapshot is null)
+        {
+            return false;
+        }
+
+        lock (_lock)
+        {
+            return IsOverDegradeThreshold(policy, Totals(snapshot, LlmBudgetClass.Answer));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsCheaperReserveAsync(
+        string routedModel, string routedProvider, string reserveModel, string reserveProvider, CancellationToken cancellationToken)
+    {
+        LlmModelPricing? routed;
+        LlmModelPricing? reserve;
+        try
+        {
+            reserve = await _costCalculator.ResolvePricingAsync(reserveModel, reserveProvider, cancellationToken).ConfigureAwait(false);
+            routed = await _costCalculator.ResolvePricingAsync(routedModel, routedProvider, cancellationToken).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "The AI model catalog could not be read: no budget degrade to {Reserve}", reserveModel);
+            return false;
+        }
+
+        if (reserve is null)
+        {
+            _logger.LogWarning(
+                "Budget degrade: the reserve model {Reserve} is not in the model catalog, keeping {Model}", reserveModel, routedModel);
+            return false;
+        }
+
+        return routed is null || PricePer1M(reserve) < PricePer1M(routed);
+    }
+
+    /// <inheritdoc/>
+    public async Task<decimal> GetRemainingUsdAsync(RequestSource source, CancellationToken cancellationToken)
+    {
+        var budgetClass = LlmBudgetClassification.For(source);
+        var policy = await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false);
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        if (snapshot is null)
+        {
+            return 0m;
+        }
+
+        lock (_lock)
+        {
+            var spend = Totals(snapshot, budgetClass);
+            if (budgetClass != LlmBudgetClass.Answer && IsOverDegradeThreshold(policy, spend))
+            {
+                return 0m;
+            }
+
+            var remaining = Math.Min(policy.DailyCapUsd - spend.Day, policy.MonthlyCapUsd - spend.Month);
+            if (QuotaPercent(policy, budgetClass) is { } percent)
+            {
+                remaining = Math.Min(remaining, policy.DailyCapUsd * percent / 100m - spend.ClassDay);
+                remaining = Math.Min(remaining, policy.MonthlyCapUsd * percent / 100m - spend.ClassMonth);
+            }
+
+            return Math.Max(remaining, 0m);
+        }
+    }
+
     public void Dispose() => _loadGate.Dispose();
 
     /// <summary>Il costo massimo della chiamata, in USD.</summary>
@@ -177,15 +250,16 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
             return LlmBudgetRejection.MonthlyCapReached;
         }
 
-        var quotaPercent = budgetClass switch
-        {
-            LlmBudgetClass.Background => policy.BackgroundQuotaPercent,
-            LlmBudgetClass.Evaluation => policy.EvaluationQuotaPercent,
-            _ => (int?)null,
-        };
-        if (quotaPercent is not { } percent)
+        if (QuotaPercent(policy, budgetClass) is not { } percent)
         {
             return LlmBudgetRejection.None;
+        }
+
+        // D6: fra la soglia di degrado e il tetto il background e le valutazioni sono in pausa, così
+        // ciò che resta del giorno va alle risposte.
+        if (IsOverDegradeThreshold(policy, spend))
+        {
+            return LlmBudgetRejection.BackgroundPaused;
         }
 
         if (spend.ClassDay + estimate > policy.DailyCapUsd * percent / 100m)
@@ -204,6 +278,24 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
     private const string UnavailableMessage =
         "Il budget AI non si può verificare in questo momento, quindi la chiamata non è partita.";
 
+    /// <summary>La quota della classe, in percento dei tetti; le risposte non ne hanno una.</summary>
+    private static int? QuotaPercent(LlmBudgetPolicy policy, LlmBudgetClass budgetClass) => budgetClass switch
+    {
+        LlmBudgetClass.Background => policy.BackgroundQuotaPercent,
+        LlmBudgetClass.Evaluation => policy.EvaluationQuotaPercent,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Il consumo del giorno ha raggiunto la soglia di degrado (D6). Con il tetto a zero non c'è
+    /// degrado: l'AI a pagamento è spenta, e le chiamate gratuite passano come sempre.
+    /// </summary>
+    private static bool IsOverDegradeThreshold(LlmBudgetPolicy policy, Spend spend) =>
+        policy.DailyCapUsd > 0m && spend.Day >= policy.DailyCapUsd * policy.DegradeThresholdPercent / 100m;
+
+    /// <summary>Il prezzo per confrontare due modelli: un milione di token in ingresso e uno in uscita.</summary>
+    private static decimal PricePer1M(LlmModelPricing pricing) => pricing.InputCostPer1M + pricing.OutputCostPer1M;
+
     /// <summary>
     /// Il messaggio per chi ha fatto la domanda. In italiano, come gli altri messaggi d'errore che il
     /// backend manda agli utenti: ogni consumatore lo può mostrare così com'è.
@@ -218,6 +310,8 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
             $"La quota di oggi per {ClassName(budgetClass)} è esaurita: riprende domani.",
         LlmBudgetRejection.MonthlyQuotaReached =>
             $"La quota del mese per {ClassName(budgetClass)} è esaurita.",
+        LlmBudgetRejection.BackgroundPaused =>
+            $"Per oggi {ClassName(budgetClass)} è in pausa: la spesa del giorno ha raggiunto la soglia del budget. Riprende domani.",
         _ => "La chiamata AI non è partita.",
     };
 

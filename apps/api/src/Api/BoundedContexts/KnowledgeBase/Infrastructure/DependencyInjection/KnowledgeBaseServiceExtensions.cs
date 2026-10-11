@@ -192,9 +192,6 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3435: Strategy-Model mapping service (Singleton - uses IServiceScopeFactory for DB access)
         services.AddSingleton<IStrategyModelMappingService, StrategyModelMappingService>();
 
-        // ISSUE-1725: Model override service for budget-aware downgrading
-        services.AddSingleton<ILlmModelOverrideService, LlmModelOverrideService>();
-
         // ISSUE-1725: Analytics domain services for cost optimization
         // Use Scoped because they depend on scoped repositories (ILlmCostLogRepository)
         services.AddScoped<IQueryEfficiencyAnalyzer, QueryEfficiencyAnalyzer>();
@@ -245,7 +242,10 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ILlmCallerAccessor, SessionLlmCallerAccessor>();
         // #4166 (ADR-095 fetta 3): il tetto di spesa prima di ogni chiamata. Singleton: tiene in
         // memoria le riserve delle chiamate in corso, che devono valere per tutte le richieste.
-        services.AddSingleton<ILlmBudgetGate, LlmBudgetGate>();
+        services.AddSingleton<LlmBudgetGate>();
+        services.AddSingleton<ILlmBudgetGate>(sp => sp.GetRequiredService<LlmBudgetGate>());
+        services.AddSingleton<ILlmBudgetStatus>(sp => sp.GetRequiredService<LlmBudgetGate>());
+        services.AddSingleton<IAgentReserveModelProvider, PublishedProfileReserveModelProvider>();
         services.AddScoped<ILlmService, HybridLlmService>();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 

@@ -64,7 +64,7 @@
 
 | Fetta | Domanda |
 |---|---|
-| 4 | Modello della prima versione del profilo. Il seed usa i valori oggi fissi (DeepSeek `deepseek-chat`). Va verificato sulla pagina ufficiale se l'alias è ritirato, e va deciso se la residenza dei dati (Cina) è accettabile. |
+| 4 | Modello della prima versione del profilo. *Chiusa a metà*: `deepseek-chat` è dismesso (changelog ufficiale), e #4179 ha pubblicato la versione 2 con `deepseek-flash` e, come riserva, `meta-llama/llama-3.3-70b-instruct`. Resta da decidere se la residenza dei dati (Cina) è accettabile. |
 | 2 | Il gateway adotta `Microsoft.Extensions.AI` (`IChatClient`) o resta sull'astrazione attuale? Se lo adotta, serve un ADR a sé prima di cominciare. |
 | 5 | Fallback a metà streaming: dopo il primo token si interrompe o si ricomincia? |
 | 7 | Chi scrive le domande di riferimento, e per quali giochi si parte. |

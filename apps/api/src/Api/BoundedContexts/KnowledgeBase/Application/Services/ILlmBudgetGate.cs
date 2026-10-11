@@ -22,7 +22,14 @@ internal interface ILlmBudgetGate
     /// Chiude un'ammissione con il costo reale della chiamata (zero se è fallita). Va chiamato una
     /// volta per ogni ammissione, anche rifiutata: in quel caso non fa nulla.
     /// </summary>
-    void Complete(LlmBudgetAdmission admission, decimal actualCostUsd);
+    /// <param name="admission">L'ammissione da chiudere.</param>
+    /// <param name="actualCostUsd">Il costo della chiamata.</param>
+    /// <param name="recordedInCostLog">
+    /// Falso quando il costo non arriverà nel registro: uno stream interrotto dal consumatore prima
+    /// del chunk finale. Il provider lo fattura comunque; il gate lo conta con la stima fino alla
+    /// fine del mese, invece di dimenticarlo alla lettura successiva del registro.
+    /// </param>
+    void Complete(LlmBudgetAdmission admission, decimal actualCostUsd, bool recordedInCostLog = true);
 }
 
 /// <summary>

@@ -17,11 +17,13 @@ Una chiamata a un modello gratuito passa sempre.
 
 | Classe | Sorgenti (`RequestSource`) |
 |---|---|
-| Risposte | `Manual`, `RagPipeline`, `RagClassification`, `Translation` |
-| Background | `ChunkTranslation`, `AdminOperation` (estrattore di meccaniche, playground), `EventDriven`, `AgentTask`, `AutomatedTest` |
-| Valutazioni | `Evaluation` (KbQuality), `ABTesting` |
+| Risposte | `Manual`, `RagPipeline`, `RagClassification`, `Translation`, `AgentTask` (chat dell'agente di sessione, risposta ancorata, arbitro, riepilogo del turno) |
+| Background | `ChunkTranslation`, `AdminOperation` (estrattore di meccaniche, playground, chat di debug), `EventDriven`, `AutomatedTest` |
+| Valutazioni | `Evaluation` (KbQuality, valutazione dei dataset), `ABTesting` |
 
-La spesa viene dal registro `llm_cost_logs` e si rilegge ogni 30 secondi. Fra due letture il gate somma da sé le riserve delle chiamate in corso e i costi reali di quelle chiuse: due chiamate concorrenti non passano sullo stesso margine.
+La spesa viene dal registro `llm_cost_logs` e si rilegge ogni 30 secondi. Fra due letture il gate somma da sé le riserve delle chiamate in corso e i costi reali di quelle chiuse: due chiamate concorrenti non passano sullo stesso margine. Se la lettura fallisce si riusa quella dello stesso giorno, e si riprova dopo 5 secondi, non a ogni chiamata.
+
+Uno stream che il consumatore interrompe dopo aver ricevuto testo non arriva al chunk finale, quindi il suo costo non entra nel registro; il provider però lo fattura. Il gate lo conta con la stima fino alla fine del mese (in memoria: un riavvio lo dimentica).
 
 ## Valori e dove si cambiano
 
@@ -35,11 +37,13 @@ I valori stanno in `SystemConfiguration.LlmSystemConfigs`. Finché l'admin non s
 | `EvaluationQuotaPercent` | 20 | quota delle valutazioni; insieme al background non supera 100 |
 | `DegradeThresholdPercent` | 80 | soglia del degrado, sul consumo del giorno (usata dalla fetta 3b) |
 
-- **Tetti**: `/admin/ai` → *LLM config*, oppure `PUT /api/v1/admin/llm-config`.
+- **Tetti**: `/admin/ai` → *LLM config*, oppure `PUT /api/v1/admin/llm/config`.
 - **Soglia e quote**: per ora solo l'API, con i campi opzionali `degradeThresholdPercent`, `backgroundQuotaPercent` ed `evaluationQuotaPercent`. Un campo assente lascia il valore salvato. La pagina arriva con la fetta 6 (#4169).
 - Una modifica vale entro un minuto, il tempo della cache di `LlmSystemConfigProvider`.
 
 **Tetto a zero**: ferma ogni chiamata a pagamento. È il modo di spegnere l'AI senza toccare i provider.
+
+Il messaggio del rifiuto è in italiano, come gli altri messaggi d'errore che il backend manda agli utenti.
 
 ## Cosa vede chi chiama
 
@@ -49,9 +53,11 @@ I valori stanno in `SystemConfiguration.LlmSystemConfigs`. Finché l'admin non s
   - `AI_MODEL_NOT_IN_CATALOG` (modello fuori catalogo);
   - `AI_BUDGET_UNAVAILABLE` (catalogo o spesa illeggibili).
 
-  Nulla finisce nella cache delle risposte.
+  Lo stesso vale per la chat cross-game, la chat dell'agente di sessione e la chat di debug. Nulla finisce nella cache delle risposte.
 - **Chiamate non in streaming**: un `LlmCompletionResult` fallito, con `Metadata["error_code"]` e `Metadata["budget_rejection"]`.
-- **Playground admin**: il messaggio al posto della risposta.
+- **Playground admin**: il messaggio al posto della risposta; l'esecuzione è salvata come errore.
+- **Traduzione del librogame**: `503` con il codice e il messaggio (`LlmCallRefusedException`).
+- **Valutazione dei dataset**: il campione risulta fallito, con il motivo, invece di una risposta vuota valutata come sbagliata.
 
 ## Osservabilità
 
@@ -62,6 +68,7 @@ Le chiamate rifiutate non scrivono righe nel registro costi, perché non hanno r
 
 ## Limiti noti
 
+- **Streaming senza fallback.** Lo streaming instradato non passa a un altro provider se il modello scelto è fuori catalogo: non aveva fallback nemmeno prima (C8 di ADR-095), e lo avrà con la pipeline della fetta 5. Il messaggio dice quale modello aggiungere al catalogo.
 - **Una sola istanza.** Le riserve stanno in memoria. Con due istanze dell'API, ciascuna vedrebbe solo le proprie fino alla lettura successiva del registro. È il contratto di staging (ADR-087).
 - **Spesa illeggibile.** Se il registro non si legge, si riusa la lettura dello stesso giorno, se c'è; altrimenti la chiamata non parte.
 - **Fetta 3b.** Restano da fare:

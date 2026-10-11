@@ -596,7 +596,7 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                     url: $"{providerName}/{effectiveModel}",
                     requestSizeBytes: singlePromptSize,
                     responseSizeBytes: Encoding.UTF8.GetByteCount(responseBuilder.ToString()),
-                    statusCode: 200,
+                    statusCode: llmError is null ? 200 : 503, // #4166: chiamata rifiutata dal gateway
                     latencyMs: singleLlmStopwatch.ElapsedMilliseconds,
                     detail: $"model={effectiveModel}, temp={agentDefinition.Config.Temperature}, maxTokens={agentDefinition.Config.MaxTokens}",
                     requestPreview: userPrompt.Length > 500 ? userPrompt[..500] : userPrompt,
@@ -810,8 +810,8 @@ internal sealed partial class PlaygroundChatCommandHandler : IStreamingQueryHand
                 totalCost: costCalculation.TotalCost,
                 confidence: ragConfidence,
                 cacheHit: cacheInfo != null && string.Equals(cacheInfo.status, "hit", StringComparison.Ordinal),
-                status: "Success",
-                errorMessage: null,
+                status: llmError is null ? "Success" : "Error", // #4166: chiamata rifiutata dal gateway
+                errorMessage: llmError,
                 executionTrace: executionTrace);
 
             await _ragExecutionRepository.AddAsync(execution, cancellationToken).ConfigureAwait(false);

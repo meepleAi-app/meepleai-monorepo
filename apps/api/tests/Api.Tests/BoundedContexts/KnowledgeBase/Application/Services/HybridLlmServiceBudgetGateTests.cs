@@ -141,7 +141,7 @@ public sealed class HybridLlmServiceBudgetGateTests
             It.Is<LlmBudgetRequest>(r => r.Source == RequestSource.RagPipeline && r.ModelId == "deepseek-flash"
                 && r.Provider == "DeepSeek" && r.PromptCharacters == "system".Length + "question".Length && r.MaxOutputTokens > 0),
             It.IsAny<CancellationToken>()), Times.Once);
-        _gate.Verify(g => g.Complete(It.Is<LlmBudgetAdmission>(a => a.IsAllowed), 0.0003m), Times.Once);
+        _gate.Verify(g => g.Complete(It.Is<LlmBudgetAdmission>(a => a.IsAllowed), 0.0003m, true), Times.Once);
     }
 
     [Fact]
@@ -157,7 +157,7 @@ public sealed class HybridLlmServiceBudgetGateTests
 
         await CreateSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
 
-        _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), 0m), Times.Once);
+        _gate.Verify(g => g.Complete(It.IsAny<LlmBudgetAdmission>(), 0m, true), Times.Once);
     }
 
     [Fact]
@@ -185,7 +185,40 @@ public sealed class HybridLlmServiceBudgetGateTests
         {
         }
 
-        _gate.Verify(g => g.Complete(It.Is<LlmBudgetAdmission>(a => a.IsAllowed), 0.0003m), Times.Once);
+        _gate.Verify(g => g.Complete(It.Is<LlmBudgetAdmission>(a => a.IsAllowed), 0.0003m, true), Times.Once);
+    }
+
+    /// <summary>
+    /// Review della 3a: il consumatore che smette di leggere (l'utente chiude la chat) lascia il
+    /// costo senza chunk finale. Il provider lo fattura: il gate lo conta con la stima, fuori registro.
+    /// </summary>
+    [Fact]
+    public async Task Streaming_StoppedByTheConsumerAfterContent_CountsTheEstimate()
+    {
+        await foreach (var _ in CreateSut().GenerateCompletionStreamAsync("system", "question", RequestSource.Manual))
+        {
+            break;
+        }
+
+        _gate.Verify(g => g.Complete(It.Is<LlmBudgetAdmission>(a => a.IsAllowed), 0.004m, false), Times.Once);
+    }
+
+    [Fact]
+    public async Task Multimodal_OverTheCap_DoesNotReachTheVisionProvider()
+    {
+        _deepSeek.Setup(c => c.SupportsVision).Returns(true);
+        Refuse("deepseek-flash", LlmBudgetRejection.DailyCapReached);
+        var messages = new List<LlmMessage>
+        {
+            new("user", [new TextContentPart("What is on this card?"), new ImageContentPart("aGVsbG8=", "image/png")]),
+        };
+
+        var result = await CreateSut().GenerateMultimodalCompletionAsync(messages, RequestSource.Manual);
+
+        result.Success.Should().BeFalse();
+        _gate.Verify(g => g.AdmitAsync(It.Is<LlmBudgetRequest>(r => r.ImageCount == 1), It.IsAny<CancellationToken>()), Times.Once);
+        _deepSeek.Verify(c => c.GenerateCompletionAsync(
+            It.IsAny<string>(), It.IsAny<IReadOnlyList<LlmMessage>>(), It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

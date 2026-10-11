@@ -142,6 +142,8 @@ public sealed class LlmBudgetGateTests : IDisposable
         admission.IsAllowed.Should().BeFalse("0,997 + 0,004 supera il tetto di 1 $");
         admission.Rejection.Should().Be(LlmBudgetRejection.DailyCapReached);
         admission.ErrorCode.Should().Be(LlmBudgetAdmission.DailyBudgetErrorCode);
+        admission.Message.Should().StartWith("Il servizio AI è in pausa fino a domani",
+            "il messaggio arriva così com'è a chi ha fatto la domanda");
     }
 
     [Fact]
@@ -165,6 +167,76 @@ public sealed class LlmBudgetGateTests : IDisposable
 
         first.IsAllowed.Should().BeTrue();
         second.IsAllowed.Should().BeFalse("la prima riserva 0,004 $: 0,993 + 0,004 + 0,004 supera il tetto");
+    }
+
+    /// <summary>
+    /// Review della 3a: concorrenza vera. Il margine basta per una sola chiamata, e venti arrivano
+    /// insieme: ne deve passare esattamente una.
+    /// </summary>
+    [Fact]
+    public async Task ManyConcurrentCalls_OnAMarginForOne_LetExactlyOneThrough()
+    {
+        Spent(RequestSource.Manual, 0.993m);
+
+        var admissions = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => AdmitAsync(Call()))));
+
+        admissions.Count(a => a.IsAllowed).Should().Be(1);
+        _spendReads.Should().Be(1, "le letture concorrenti della spesa si accodano dietro la prima");
+    }
+
+    /// <summary>
+    /// Uno stream interrotto prima del chunk finale non arriverà mai nel registro: il suo costo
+    /// stimato resta contato anche dopo la rilettura.
+    /// </summary>
+    [Fact]
+    public async Task ACostThatNeverReachesTheLog_SurvivesTheNextReading()
+    {
+        Spent(RequestSource.Manual, 0.5m);
+        var interrupted = await AdmitAsync(Call());
+        _gate.Complete(interrupted, actualCostUsd: 0.497m, recordedInCostLog: false);
+
+        _time.Advance(LlmBudgetGate.SpendSnapshotTtl);
+        var next = await AdmitAsync(Call());
+
+        next.IsAllowed.Should().BeFalse("0,5 dal registro + 0,497 mai registrati + 0,004 supera il tetto");
+    }
+
+    [Fact]
+    public async Task ACostThatNeverReachesTheLog_LeavesTheDailyCapAtMidnight_ButNotTheMonth()
+    {
+        UsePolicy(dailyCap: 1m, monthlyCap: 1m);
+        Spent(RequestSource.Manual, 0.5m);
+        var interrupted = await AdmitAsync(Call());
+        _gate.Complete(interrupted, actualCostUsd: 0.497m, recordedInCostLog: false);
+
+        _time.SetUtcNow(new DateTimeOffset(2026, 10, 12, 0, 0, 1, TimeSpan.Zero));
+        _spend = [new LlmSpendBySourceAndDay(nameof(RequestSource.Manual), Today, 0.5m)];
+        var tomorrow = await AdmitAsync(Call());
+
+        tomorrow.Rejection.Should().Be(LlmBudgetRejection.MonthlyCapReached,
+            "il giorno riparte da zero, ma nel mese restano 0,5 + 0,497");
+    }
+
+    [Fact]
+    public async Task AFailedSpendReading_IsNotRepeatedByEveryCall()
+    {
+        Spent(RequestSource.Manual, 0.1m);
+        (await AdmitAsync(Call())).IsAllowed.Should().BeTrue();
+        _costLog.Setup(r => r.GetSpendBySourceAndDayAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TimeoutException("database down"));
+        _time.Advance(LlmBudgetGate.SpendSnapshotTtl);
+
+        await AdmitAsync(Call());
+        await AdmitAsync(Call());
+        await AdmitAsync(Call());
+
+        _costLog.Verify(r => r.GetSpendBySourceAndDayAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2), "una lettura riuscita, poi un solo tentativo fino a SpendRetryInterval");
+
+        _time.Advance(LlmBudgetGate.SpendRetryInterval);
+        await AdmitAsync(Call());
+        _costLog.Verify(r => r.GetSpendBySourceAndDayAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(3));
     }
 
     [Fact]

@@ -34,19 +34,21 @@ internal static class LlmBudgetClassification
     /// <exception cref="ArgumentOutOfRangeException">La sorgente non è classificata.</exception>
     public static LlmBudgetClass For(RequestSource source) => source switch
     {
-        // Ciò che l'utente sta aspettando: la risposta, la sua classificazione per l'instradamento
-        // e la traduzione del librogame chiesta dall'utente.
+        // Ciò che l'utente sta aspettando: la risposta, la sua classificazione per l'instradamento,
+        // la traduzione del librogame e l'assistente in sessione. AgentTask, nonostante il nome, è la
+        // sorgente della chat dell'agente di sessione, della risposta ancorata, dell'arbitro e del
+        // riepilogo del turno: tutte cose che l'utente aspetta.
         RequestSource.Manual => LlmBudgetClass.Answer,
         RequestSource.RagPipeline => LlmBudgetClass.Answer,
         RequestSource.RagClassification => LlmBudgetClass.Answer,
         RequestSource.Translation => LlmBudgetClass.Answer,
+        RequestSource.AgentTask => LlmBudgetClass.Answer,
 
         // Lavoro di sistema o dell'admin: traduzione dei chunk in indicizzazione, estrattore di
-        // meccaniche e playground (AdminOperation), eventi, agenti in background, test automatici.
+        // meccaniche e playground (AdminOperation), eventi, test automatici.
         RequestSource.ChunkTranslation => LlmBudgetClass.Background,
         RequestSource.AdminOperation => LlmBudgetClass.Background,
         RequestSource.EventDriven => LlmBudgetClass.Background,
-        RequestSource.AgentTask => LlmBudgetClass.Background,
         RequestSource.AutomatedTest => LlmBudgetClass.Background,
 
         // Valutazioni: KbQuality e il confronto A/B fra modelli.

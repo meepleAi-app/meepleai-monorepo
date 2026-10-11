@@ -969,7 +969,20 @@ internal class HybridLlmService : ILlmService
             var cancelledByConsumer = cancellationToken.IsCancellationRequested;
             await LogStreamOutcomeAsync(costChunk, sawContent, completed && !cancelledByConsumer, failure, costContext, stopwatch.ElapsedMilliseconds, source)
                 .ConfigureAwait(false);
-            CompleteAdmission(admission, costChunk?.Cost?.TotalCost ?? 0m);
+            // #4166: uno stream interrotto dopo aver prodotto testo è stato fatturato, ma il suo costo
+            // non arriva (manca il chunk finale): il gate lo conta con la stima.
+            if (costChunk?.Cost is { } streamCost)
+            {
+                CompleteAdmission(admission, streamCost.TotalCost);
+            }
+            else if (sawContent)
+            {
+                _budgetGate?.Complete(admission, admission.EstimatedCostUsd, recordedInCostLog: false);
+            }
+            else
+            {
+                CompleteAdmission(admission, 0m);
+            }
         }
     }
 

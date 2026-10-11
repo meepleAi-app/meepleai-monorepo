@@ -30,10 +30,10 @@ public sealed class LlmBudgetClassificationTests
     [InlineData(RequestSource.RagPipeline, "Answer")]
     [InlineData(RequestSource.RagClassification, "Answer")]
     [InlineData(RequestSource.Translation, "Answer")]
+    [InlineData(RequestSource.AgentTask, "Answer")] // chat dell'agente di sessione, risposta ancorata, arbitro
     [InlineData(RequestSource.ChunkTranslation, "Background")]
     [InlineData(RequestSource.AdminOperation, "Background")]
     [InlineData(RequestSource.EventDriven, "Background")]
-    [InlineData(RequestSource.AgentTask, "Background")]
     [InlineData(RequestSource.AutomatedTest, "Background")]
     [InlineData(RequestSource.Evaluation, "Evaluation")]
     [InlineData(RequestSource.ABTesting, "Evaluation")]

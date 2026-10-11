@@ -49,6 +49,12 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
     /// <summary>Token stimati per un'immagine in una chiamata multimodale.</summary>
     internal const int TokensPerImage = 1500;
 
+    /// <summary>
+    /// Dopo una lettura della spesa fallita, quanto si riusa la lettura precedente prima di
+    /// riprovare: senza, ogni chiamata ripeterebbe la query contro un database lento.
+    /// </summary>
+    internal static readonly TimeSpan SpendRetryInterval = TimeSpan.FromSeconds(5);
+
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILlmSystemConfigProvider _configProvider;
     private readonly ILlmCostCalculator _costCalculator;
@@ -89,14 +95,13 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
         catch (InvalidOperationException ex)
         {
             _logger.LogError(ex, "The AI model catalog could not be read: the LLM call to {Model} is refused", request.ModelId);
-            return Reject(request, budgetClass, LlmBudgetRejection.BudgetUnavailable, 0m,
-                "The AI budget cannot be checked right now, so the call was not made.");
+            return Reject(request, budgetClass, LlmBudgetRejection.BudgetUnavailable, 0m, UnavailableMessage);
         }
 
         if (pricing is null)
         {
             return Reject(request, budgetClass, LlmBudgetRejection.ModelNotInCatalog, 0m,
-                $"Model {request.ModelId} is not in the AI model catalog, so its cost cannot be checked. Add it to the catalog to use it.");
+                $"Il modello {request.ModelId} non è nel catalogo dei modelli AI, quindi il suo costo non si può verificare. Aggiungilo al catalogo per usarlo.");
         }
 
         var estimate = Estimate(pricing, request);
@@ -109,8 +114,7 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
         var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
         if (snapshot is null)
         {
-            return Reject(request, budgetClass, LlmBudgetRejection.BudgetUnavailable, estimate,
-                "The AI budget cannot be checked right now, so the call was not made.");
+            return Reject(request, budgetClass, LlmBudgetRejection.BudgetUnavailable, estimate, UnavailableMessage);
         }
 
         lock (_lock)
@@ -129,7 +133,7 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
     }
 
     /// <inheritdoc/>
-    public void Complete(LlmBudgetAdmission admission, decimal actualCostUsd)
+    public void Complete(LlmBudgetAdmission admission, decimal actualCostUsd, bool recordedInCostLog = true)
     {
         ArgumentNullException.ThrowIfNull(admission);
         if (!admission.IsAllowed)
@@ -146,7 +150,7 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
 
             if (actualCostUsd > 0m)
             {
-                _settled.Add(new Settlement(admission.BudgetClass, actualCostUsd, _timeProvider.GetUtcNow()));
+                _settled.Add(new Settlement(admission.BudgetClass, actualCostUsd, _timeProvider.GetUtcNow(), recordedInCostLog));
             }
         }
     }
@@ -197,17 +201,31 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
         return LlmBudgetRejection.None;
     }
 
+    private const string UnavailableMessage =
+        "Il budget AI non si può verificare in questo momento, quindi la chiamata non è partita.";
+
+    /// <summary>
+    /// Il messaggio per chi ha fatto la domanda. In italiano, come gli altri messaggi d'errore che il
+    /// backend manda agli utenti: ogni consumatore lo può mostrare così com'è.
+    /// </summary>
     private static string MessageFor(LlmBudgetRejection rejection, LlmBudgetClass budgetClass) => rejection switch
     {
         LlmBudgetRejection.DailyCapReached =>
-            "The AI service is paused: today's AI budget has been reached. It resumes tomorrow (UTC).",
+            "Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.",
         LlmBudgetRejection.MonthlyCapReached =>
-            "The AI service is paused: this month's AI budget has been reached.",
+            "Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.",
         LlmBudgetRejection.DailyQuotaReached =>
-            $"The {budgetClass} share of today's AI budget has been used up. It resumes tomorrow (UTC).",
+            $"La quota di oggi per {ClassName(budgetClass)} è esaurita: riprende domani.",
         LlmBudgetRejection.MonthlyQuotaReached =>
-            $"The {budgetClass} share of this month's AI budget has been used up.",
-        _ => "The AI call was not made.",
+            $"La quota del mese per {ClassName(budgetClass)} è esaurita.",
+        _ => "La chiamata AI non è partita.",
+    };
+
+    private static string ClassName(LlmBudgetClass budgetClass) => budgetClass switch
+    {
+        LlmBudgetClass.Background => "il lavoro in background",
+        LlmBudgetClass.Evaluation => "le valutazioni",
+        _ => "le risposte",
     };
 
     /// <summary>La spesa contata: registro, più le chiamate chiuse e quelle in corso dopo la lettura.</summary>
@@ -220,12 +238,22 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
 
         foreach (var settlement in _settled)
         {
-            day += settlement.Amount;
+            // Un costo che non arriva nel registro resta qui oltre il giorno in cui è nato: conta per
+            // il mese, e per il giorno solo se è di oggi.
+            var settledToday = DateOnly.FromDateTime(settlement.At.UtcDateTime) == snapshot.Today;
             month += settlement.Amount;
+            if (settledToday)
+            {
+                day += settlement.Amount;
+            }
+
             if (settlement.Class == budgetClass)
             {
-                classDay += settlement.Amount;
                 classMonth += settlement.Amount;
+                if (settledToday)
+                {
+                    classDay += settlement.Amount;
+                }
             }
         }
 
@@ -278,7 +306,10 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
                 {
                     // I costi chiusi prima della lettura sono già nel registro: contarli ancora li
                     // raddoppierebbe. Quelli chiusi dopo restano finché la prossima lettura non li vede.
-                    _settled.RemoveAll(settlement => settlement.At < queriedAt);
+                    // Quelli che il registro non vedrà mai restano fino alla fine del loro mese.
+                    _settled.RemoveAll(settlement => settlement.RecordedInCostLog
+                        ? settlement.At < queriedAt
+                        : !IsSameMonth(settlement.At, today));
                     Volatile.Write(ref _snapshot, fresh);
                 }
 
@@ -287,7 +318,17 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "The LLM spend could not be read from the cost log");
-                return current is not null && current.Today == today ? current : null;
+                if (current is null || current.Today != today)
+                {
+                    return null;
+                }
+
+                // Si riusa la lettura di oggi, e la si considera fresca ancora per un poco: altrimenti
+                // ogni chiamata ripeterebbe la query contro il database che non risponde.
+                var retryAt = queriedAt - SpendSnapshotTtl + SpendRetryInterval;
+                var reused = current with { QueriedAt = retryAt > current.QueriedAt ? retryAt : current.QueriedAt };
+                Volatile.Write(ref _snapshot, reused);
+                return reused;
             }
         }
         finally
@@ -346,7 +387,10 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, IDisposable
 
     private sealed record Reservation(LlmBudgetClass Class, decimal Amount);
 
-    private sealed record Settlement(LlmBudgetClass Class, decimal Amount, DateTimeOffset At);
+    private sealed record Settlement(LlmBudgetClass Class, decimal Amount, DateTimeOffset At, bool RecordedInCostLog);
+
+    private static bool IsSameMonth(DateTimeOffset at, DateOnly today) =>
+        at.UtcDateTime.Year == today.Year && at.UtcDateTime.Month == today.Month;
 
     private sealed record Spend(decimal Day, decimal Month, decimal ClassDay, decimal ClassMonth);
 

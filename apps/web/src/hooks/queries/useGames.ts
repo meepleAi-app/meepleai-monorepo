@@ -38,13 +38,16 @@ export const gamesKeys = {
 export function useGames(
   filters?: GameFilters,
   page: number = 1,
-  pageSize: number = 20
+  pageSize: number = 20,
+  // #4187: chi è montato sempre (il pannello chat) la tiene ferma finché non serve.
+  enabled: boolean = true
 ): UseQueryResult<PaginatedGamesResponse, Error> {
   return useQuery({
     queryKey: gamesKeys.list(filters, page, pageSize),
     queryFn: async (): Promise<PaginatedGamesResponse> => {
       return api.games.getAll(filters, page, pageSize);
     },
+    enabled,
     // Keep games list fresh for 5 minutes (default staleTime)
     staleTime: 5 * 60 * 1000,
   });

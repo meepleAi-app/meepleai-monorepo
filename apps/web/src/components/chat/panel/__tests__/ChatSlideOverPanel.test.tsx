@@ -1,24 +1,36 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { useChatPanelStore } from '@/lib/stores/chat-panel-store';
 
 // Mock the data hooks so the panel renders synchronously with empty lists
+// #4187: spie sugli argomenti, per verificare che a pannello chiuso le query non partano.
+const hookArgs = vi.hoisted(() => ({
+  recent: [] as unknown[][],
+  games: [] as unknown[][],
+}));
+
 vi.mock('@/hooks/queries/useChatSessions', () => ({
-  useRecentChatSessions: () => ({
-    data: { sessions: [], totalCount: 0 },
-    isLoading: false,
-    error: null,
-  }),
+  useRecentChatSessions: (...args: unknown[]) => (
+    hookArgs.recent.push(args),
+    {
+      data: { sessions: [], totalCount: 0 },
+      isLoading: false,
+      error: null,
+    }
+  ),
 }));
 
 vi.mock('@/hooks/queries/useGames', () => ({
-  useGames: () => ({
-    data: { games: [], total: 0, page: 1, pageSize: 50, totalPages: 0 },
-    isLoading: false,
-    error: null,
-  }),
+  useGames: (...args: unknown[]) => (
+    hookArgs.games.push(args),
+    {
+      data: { games: [], total: 0, page: 1, pageSize: 50, totalPages: 0 },
+      isLoading: false,
+      error: null,
+    }
+  ),
 }));
 
 // Mock the streaming hook to surface a stable, inert state
@@ -70,6 +82,21 @@ describe('ChatSlideOverPanel', () => {
   it('renders nothing when panel is closed', () => {
     const { container } = render(<ChatSlideOverPanel />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  // #4187: il pannello è montato su ogni pagina autenticata (DesktopShell). A pannello chiuso le
+  // sue query non devono partire: prima scaricavano 50 giochi e 50 sessioni a ogni pagina.
+  it('does not run its queries while closed, and runs them once opened', () => {
+    hookArgs.recent.length = 0;
+    hookArgs.games.length = 0;
+    const { rerender } = render(<ChatSlideOverPanel />);
+    expect(hookArgs.recent.at(-1)?.[1]).toBe(false);
+    expect(hookArgs.games.at(-1)?.[3]).toBe(false);
+
+    act(() => useChatPanelStore.getState().open());
+    rerender(<ChatSlideOverPanel />);
+    expect(hookArgs.recent.at(-1)?.[1]).toBe(true);
+    expect(hookArgs.games.at(-1)?.[3]).toBe(true);
   });
 
   it('renders panel when open', () => {

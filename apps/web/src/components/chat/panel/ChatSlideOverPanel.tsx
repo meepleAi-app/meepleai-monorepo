@@ -80,9 +80,11 @@ export function ChatSlideOverPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
 
-  // Real data hooks
-  const { data: recentSessions } = useRecentChatSessions(50);
-  const { data: gamesResponse } = useGames(undefined, 1, 50);
+  // Real data hooks. #4187: il pannello è montato su ogni pagina autenticata (DesktopShell), e queste
+  // righe girano prima di `if (!isOpen) return null`: senza `isOpen` partivano due richieste a ogni
+  // pagina, a pannello chiuso.
+  const { data: recentSessions } = useRecentChatSessions(50, isOpen);
+  const { data: gamesResponse } = useGames(undefined, 1, 50, isOpen);
 
   // Issue #4139: the agent lookup that stood here existed only to feed
   // /api/v1/agents/{agentId}/chat, a route the backend never mounted — the comment

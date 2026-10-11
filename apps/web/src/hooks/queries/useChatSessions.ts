@@ -14,23 +14,22 @@ export const chatSessionKeys = {
     [...chatSessionKeys.all, 'recent', userId, { limit }] as const,
   byGame: (userId: string, gameId: string) =>
     [...chatSessionKeys.all, 'byGame', userId, gameId] as const,
-  detail: (sessionId: string) =>
-    [...chatSessionKeys.all, 'detail', sessionId] as const,
-  limit: (userId: string) =>
-    [...chatSessionKeys.all, 'limit', userId] as const,
+  detail: (sessionId: string) => [...chatSessionKeys.all, 'detail', sessionId] as const,
+  limit: (userId: string) => [...chatSessionKeys.all, 'limit', userId] as const,
 };
 
 /**
  * Fetch user's recent chat sessions across all games.
  */
-export function useRecentChatSessions(limit = 50) {
+// #4187: `enabled` per chi è montato sempre (il pannello chat) e la vuole solo quando serve.
+export function useRecentChatSessions(limit = 50, enabled = true) {
   const { user } = useAuth();
   const userId = user?.id;
 
   return useQuery({
     queryKey: chatSessionKeys.recent(userId ?? '', limit),
     queryFn: () => api.chatSessions.getRecent(userId!, { limit }),
-    enabled: !!userId,
+    enabled: enabled && !!userId,
     staleTime: 30_000,
   });
 }

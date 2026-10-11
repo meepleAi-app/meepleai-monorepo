@@ -132,7 +132,9 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             await context.Database.ExecuteSqlRawAsync(
                 """
                 UPDATE knowledge_base.agent_profile_versions
-                SET content = content || '{"primaryModelId": "deepseek-flash", "fallbackModelId": "meta-llama/llama-3.3-70b-instruct"}'::jsonb
+                SET content = content || jsonb_build_object(
+                    'primaryModelId', 'deepseek-flash',
+                    'fallbackModelId', 'meta-llama/llama-3.3-70b-instruct')
                 WHERE status = 1
                 """,
                 ct);

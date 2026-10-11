@@ -449,6 +449,47 @@ public class StreamQaQueryHandlerTests
         );
     }
 
+    /// <summary>
+    /// #4166 (ADR-095 D6): il gateway ha fermato la chiamata al tetto di spesa. L'utente riceve il
+    /// motivo, con il codice che il frontend traduce, e nella cache non finisce una risposta vuota.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GatewayRefusesTheCall_EmitsTheReason_AndCachesNothing()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var userQuery = "How to win?";
+        var query = new StreamQaQuery(gameId, userQuery, TestUserId, "User", ThreadId: null);
+
+        SetupSearchMocks(gameId, userQuery);
+        SetupPromptMocks(QuestionType.General);
+        _llmServiceMock
+            .Setup(x => x.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Returns(RefusedStreamAsync());
+        SetupQualityTrackingMocks();
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        var error = events.Should().ContainSingle(e => e.Type == StreamingEventType.Error).Which
+            .Data.Should().BeOfType<StreamingError>().Which;
+        error.errorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
+        error.errorMessage.Should().Contain("paused");
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+        _cacheMock.Verify(
+            x => x.SetAsync(It.IsAny<string>(), It.IsAny<QaResponse>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> RefusedStreamAsync()
+    {
+        await Task.Yield();
+        yield return new StreamChunk(null, IsFinal: true, ErrorCode: "AI_BUDGET_DAILY_EXHAUSTED",
+            ErrorMessage: "The AI service is paused: today's AI budget has been reached.");
+    }
+
     [Fact]
     public async Task Handle_CachedResponse_StreamsFromCache()
     {

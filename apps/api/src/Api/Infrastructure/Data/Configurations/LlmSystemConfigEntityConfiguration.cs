@@ -37,6 +37,20 @@ public sealed class LlmSystemConfigEntityConfiguration : IEntityTypeConfiguratio
             .HasPrecision(18, 6)
             .HasDefaultValue(100.00m);
 
+        // #4166: valori predefiniti uguali a quelli del dominio, così una riga salvata prima della
+        // fetta 3 riceve la politica di default e non zero (che vorrebbe dire background a quota 0).
+        builder.Property(e => e.DegradeThresholdPercent)
+            .IsRequired()
+            .HasDefaultValue(80);
+
+        builder.Property(e => e.BackgroundQuotaPercent)
+            .IsRequired()
+            .HasDefaultValue(30);
+
+        builder.Property(e => e.EvaluationQuotaPercent)
+            .IsRequired()
+            .HasDefaultValue(20);
+
         builder.Property(e => e.FallbackChainJson)
             .IsRequired()
             .HasColumnType("jsonb")

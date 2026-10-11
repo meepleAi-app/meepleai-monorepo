@@ -35,6 +35,25 @@ internal sealed class UpdateLlmSystemConfigValidator : AbstractValidator<UpdateL
             .LessThanOrEqualTo(x => x.MonthlyBudgetUsd)
             .WithMessage("DailyBudgetUsd cannot exceed MonthlyBudgetUsd");
 
+        // #4166: politica di budget, opzionale. La somma delle due quote la controlla anche il dominio,
+        // che conosce il valore salvato quando ne arriva una sola.
+        RuleFor(x => x.DegradeThresholdPercent)
+            .InclusiveBetween(1, 100).When(x => x.DegradeThresholdPercent.HasValue)
+            .WithMessage("DegradeThresholdPercent must be between 1 and 100");
+
+        RuleFor(x => x.BackgroundQuotaPercent)
+            .InclusiveBetween(0, 100).When(x => x.BackgroundQuotaPercent.HasValue)
+            .WithMessage("BackgroundQuotaPercent must be between 0 and 100");
+
+        RuleFor(x => x.EvaluationQuotaPercent)
+            .InclusiveBetween(0, 100).When(x => x.EvaluationQuotaPercent.HasValue)
+            .WithMessage("EvaluationQuotaPercent must be between 0 and 100");
+
+        RuleFor(x => x)
+            .Must(x => x.BackgroundQuotaPercent!.Value + x.EvaluationQuotaPercent!.Value <= 100)
+            .When(x => x.BackgroundQuotaPercent.HasValue && x.EvaluationQuotaPercent.HasValue)
+            .WithMessage("BackgroundQuotaPercent and EvaluationQuotaPercent together cannot exceed 100");
+
         RuleFor(x => x.FallbackChainJson)
             .NotNull().WithMessage("FallbackChainJson is required")
             .NotEmpty().WithMessage("FallbackChainJson cannot be empty")

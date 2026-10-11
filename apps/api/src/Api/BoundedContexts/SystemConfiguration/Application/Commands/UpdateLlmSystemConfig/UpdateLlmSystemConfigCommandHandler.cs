@@ -45,6 +45,17 @@ internal sealed class UpdateLlmSystemConfigCommandHandler
             request.MonthlyBudgetUsd,
             request.UpdatedByUserId);
 
+        if (request.DegradeThresholdPercent.HasValue
+            || request.BackgroundQuotaPercent.HasValue
+            || request.EvaluationQuotaPercent.HasValue)
+        {
+            config.UpdateBudgetPolicy(
+                request.DegradeThresholdPercent ?? config.DegradeThresholdPercent,
+                request.BackgroundQuotaPercent ?? config.BackgroundQuotaPercent,
+                request.EvaluationQuotaPercent ?? config.EvaluationQuotaPercent,
+                request.UpdatedByUserId);
+        }
+
         config.UpdateFallbackChain(request.FallbackChainJson, request.UpdatedByUserId);
 
         await _repository.UpsertAsync(config, cancellationToken).ConfigureAwait(false);
@@ -64,6 +75,9 @@ internal sealed class UpdateLlmSystemConfigCommandHandler
             config.CircuitBreakerSuccessThreshold,
             config.DailyBudgetUsd,
             config.MonthlyBudgetUsd,
+            config.DegradeThresholdPercent,
+            config.BackgroundQuotaPercent,
+            config.EvaluationQuotaPercent,
             config.FallbackChainJson,
             Source: "database",
             LastUpdatedAt: config.UpdatedAt,

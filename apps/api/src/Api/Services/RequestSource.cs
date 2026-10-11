@@ -59,4 +59,10 @@ public enum RequestSource
     /// di sistema e avrà la sua quota (ADR-095 D6). #4165.
     /// </summary>
     ChunkTranslation,
+
+    /// <summary>
+    /// Valutazione della qualità (KbQuality: generazione delle domande di riferimento e dei giudizi).
+    /// Ha la sua quota dentro il tetto unico, come il background (ADR-095 D6). #4166.
+    /// </summary>
+    Evaluation,
 }

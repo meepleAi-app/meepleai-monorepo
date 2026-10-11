@@ -110,6 +110,16 @@ internal static partial class MeepleAiMetrics
         description: "LLM calls to a model with no price in the AI model catalog, by provider and model");
 
     /// <summary>
+    /// #4166 (ADR-095 D6): chiamate LLM che il gateway non fa partire, per motivo e classe di budget
+    /// (tetto giornaliero o mensile, quota del background o delle valutazioni, modello fuori catalogo).
+    /// Serie esposta: <c>meepleai_llm_budget_rejected_calls_total</c>.
+    /// </summary>
+    public static readonly Counter<long> LlmBudgetRejectedCalls = Meter.CreateCounter<long>(
+        name: "meepleai.llm.budget_rejected",
+        unit: "calls",
+        description: "LLM calls the gateway refused before reaching the provider, by reason and budget class");
+
+    /// <summary>
     /// Histogram for LLM request latency in seconds by provider and model.
     /// Issue #5480: Enables P50/P95/P99 latency dashboards per provider.
     /// </summary>

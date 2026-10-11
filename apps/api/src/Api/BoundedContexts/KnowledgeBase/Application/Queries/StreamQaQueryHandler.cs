@@ -280,6 +280,16 @@ internal class StreamQaQueryHandler : IStreamingQueryHandler<StreamQaQuery, RagS
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // #4166 (ADR-095 D6): il gateway non ha fatto partire la chiamata (tetto di spesa, quota,
+            // modello fuori catalogo). L'utente riceve il motivo invece di una risposta vuota, e
+            // nulla finisce nella cache.
+            if (chunk.ErrorCode is not null)
+            {
+                yield return CreateEvent(StreamingEventType.Error,
+                    new StreamingError(chunk.ErrorMessage ?? "The AI call was not made.", chunk.ErrorCode));
+                yield break;
+            }
+
             // ISSUE-1725: Handle final chunk with usage metadata
             if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
             {

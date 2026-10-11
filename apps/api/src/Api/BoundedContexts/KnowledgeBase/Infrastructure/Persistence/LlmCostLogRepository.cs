@@ -120,6 +120,24 @@ public class LlmCostLogRepository : RepositoryBase, ILlmCostLogRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<LlmSpendBySourceAndDay>> GetSpendBySourceAndDayAsync(
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await DbContext.LlmCostLogs
+            .Where(x => x.RequestDate >= fromDate && x.RequestDate <= toDate)
+            .GroupBy(x => new { x.RequestSource, x.RequestDate })
+            .Select(g => new { g.Key.RequestSource, g.Key.RequestDate, Total = g.Sum(x => x.TotalCost) })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .Select(r => new LlmSpendBySourceAndDay(r.RequestSource, r.RequestDate, r.Total))
+            .ToList();
+    }
+
+    /// <inheritdoc/>
     public async Task<decimal> GetDailyCostAsync(DateOnly date, CancellationToken cancellationToken = default)
     {
         return await DbContext.LlmCostLogs

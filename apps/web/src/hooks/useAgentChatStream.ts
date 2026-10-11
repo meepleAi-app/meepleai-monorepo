@@ -370,6 +370,13 @@ function agentChatEventReducer(
         errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
       } else if (data?.errorCode === 'provider_unavailable') {
         errorMsg = 'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
+      } else if (data?.errorCode === 'AI_BUDGET_DAILY_EXHAUSTED') {
+        // #4166 (ADR-095 D6): il gateway ha fermato la chiamata al tetto di spesa del giorno
+        errorMsg =
+          'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.';
+      } else if (data?.errorCode === 'AI_BUDGET_MONTHLY_EXHAUSTED') {
+        errorMsg =
+          'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.';
       } else {
         errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
       }

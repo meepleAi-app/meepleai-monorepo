@@ -94,9 +94,6 @@ public sealed class LlmProviderEgressArchitectureTests
                 "registrazione DI dei client e della factory",
             ["Routing/LlmEndpoints.cs"] =
                 "GET /llm/providers elenca i nomi dei provider, nessuna generazione",
-            ["BoundedContexts/KnowledgeBase/Application/Commands/PlaygroundChatCommandHandler.cs"] =
-                "DIFETTO noto: il playground admin chiama i client tramite LlmProviderFactory, fuori dal "
-                + "tetto di spesa; lo porta sul gateway la fetta 3 di ADR-095 (#4166)",
         };
 
     [Fact]

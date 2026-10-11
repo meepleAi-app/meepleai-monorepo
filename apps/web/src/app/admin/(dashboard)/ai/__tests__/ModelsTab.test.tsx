@@ -116,8 +116,10 @@ function page(models: unknown[]) {
   return { models, totalCount: models.length, page: 1, pageSize: 100 };
 }
 
+// Il nome della riga è «<modelId> (<provider>)»: confronto esatto sul prefisso, senza costruire una
+// regex dal testo (CodeQL js/incomplete-sanitization sull'escape fatto a mano).
 const rowOf = (modelId: string) =>
-  screen.getByRole('row', { name: new RegExp(modelId.replace(/[/.]/g, '\\$&')) });
+  screen.getByRole('row', { name: name => name.startsWith(`${modelId} (`) });
 
 describe('ModelsTab — Modelli e prezzi (#4169)', () => {
   beforeEach(() => {

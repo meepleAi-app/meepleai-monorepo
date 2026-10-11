@@ -4,7 +4,6 @@ import { useSearchParams } from 'next/navigation';
 
 const TAB_LABELS: Record<string, string> = {
   agents: 'Agents',
-  typologies: 'Typologies',
   definitions: 'Definitions',
   lab: 'AI Lab',
   prompts: 'Prompts',

@@ -4,7 +4,7 @@
  * Issue #5048 — Admin AI Hub Migration
  *
  * Canonical entry for all AI/agent-related admin pages.
- * Tabs: agents · typologies · definitions · lab · prompts · models · requests · rag
+ * Tabs: agents · definitions · lab · prompts · models · requests · rag
  */
 
 import { Suspense } from 'react';
@@ -18,7 +18,6 @@ import {
   ListOrdered,
   ScrollText,
   Wallet,
-  Tag,
 } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
@@ -32,7 +31,6 @@ import { ModelsTab } from './ModelsTab';
 import { PromptsTab } from './PromptsTab';
 import { RagTab } from './RagTab';
 import { RequestsTab } from './RequestsTab';
-import { TypologiesTab } from './TypologiesTab';
 
 interface AdminAiPageProps {
   searchParams: Promise<{ tab?: string; section?: string }>;
@@ -40,7 +38,6 @@ interface AdminAiPageProps {
 
 const TABS: readonly HubTab[] = [
   { id: 'agents', label: 'Agents', href: '/admin/ai?tab=agents', icon: <Bot /> },
-  { id: 'typologies', label: 'Typologies', href: '/admin/ai?tab=typologies', icon: <Tag /> },
   {
     id: 'definitions',
     label: 'Definitions',
@@ -76,12 +73,6 @@ function renderTabContent(tab: TabId) {
       return (
         <Suspense fallback={<TabSkeleton />}>
           <AgentsTab />
-        </Suspense>
-      );
-    case 'typologies':
-      return (
-        <Suspense fallback={<TabSkeleton />}>
-          <TypologiesTab />
         </Suspense>
       );
     case 'definitions':

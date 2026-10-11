@@ -90,27 +90,6 @@ export const ADMIN_KB_ROUTES = {
   vectorSearch: '/api/v1/admin/kb/vector-search',
 } as const;
 
-// ========== Agent Typology Types (Issue #3179) ==========
-
-export type AgentTypology = {
-  id: string;
-  name: string;
-  description: string;
-  systemMessage: string;
-  status: 'Draft' | 'PendingReview' | 'Approved' | 'Rejected';
-  createdBy: string;
-  createdByDisplayName: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AgentTypologyListResponse = {
-  typologies: AgentTypology[];
-  total: number;
-  page: number;
-  pageSize: number;
-};
-
 // ========== Embedding Service Types (Issue #4878) ==========
 
 export interface EmbeddingServiceInfo {
@@ -466,46 +445,6 @@ export function createAdminAiClient(http: HttpClient) {
     async triggerModelAvailabilityCheck(): Promise<{ triggered: boolean; message: string }> {
       const result = await http.post('/api/v1/admin/tier-strategy/check-now', {});
       return result as { triggered: boolean; message: string };
-    },
-
-    // ========== Agent Typologies Management (Issue #3179) ==========
-
-    async getAgentTypologies(params?: {
-      status?: string;
-      createdBy?: string;
-      search?: string;
-      page?: number;
-      pageSize?: number;
-    }) {
-      const queryParams = new URLSearchParams();
-      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
-      if (params?.createdBy && params.createdBy !== 'All')
-        queryParams.set('createdBy', params.createdBy);
-      if (params?.search) queryParams.set('search', params.search);
-      if (params?.page) queryParams.set('page', params.page.toString());
-      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
-
-      const url = `/api/v1/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const result = await http.get<AgentTypologyListResponse>(url);
-      return result || { typologies: [], total: 0, page: 1, pageSize: 20 };
-    },
-
-    async getAgentTypologyById(id: string) {
-      return http.get<AgentTypology>(`/api/v1/admin/agent-typologies/${id}`);
-    },
-
-    async deleteAgentTypology(id: string) {
-      await http.delete(`/api/v1/admin/agent-typologies/${id}`);
-    },
-
-    async approveAgentTypology(id: string) {
-      return http.post<AgentTypology>(`/api/v1/admin/agent-typologies/${id}/approve`, {});
-    },
-
-    async rejectAgentTypology(id: string, reason: string) {
-      return http.post<AgentTypology>(`/api/v1/admin/agent-typologies/${id}/reject`, {
-        reason,
-      });
     },
 
     // ========== A/B Testing (Issue #5497) ==========

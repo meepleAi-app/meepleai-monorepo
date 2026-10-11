@@ -39,6 +39,9 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
   const [isAdding, setIsAdding] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null);
+  // #4158: the search runs on the server, one request per settled keystroke, and responses can
+  // arrive out of order. Only the response to the latest search may touch the state.
+  const latestSearchRef = useRef(0);
 
   // Debounced search
   useEffect(() => {
@@ -46,8 +49,12 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
       clearTimeout(debounceRef.current);
     }
 
+    const searchId = ++latestSearchRef.current;
+
     if (query.trim().length < 2) {
       setResults([]);
+      // A search still in flight is now stale and will not clear the flag itself.
+      setIsSearching(false);
       return;
     }
 
@@ -55,6 +62,7 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
       setIsSearching(true);
       try {
         const response = await api.games.getAll({ search: query.trim() });
+        if (searchId !== latestSearchRef.current) return;
         const games = (response.games ?? []).slice(0, 8).map(g => ({
           id: g.id,
           title: g.title,
@@ -63,9 +71,12 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
         }));
         setResults(games);
       } catch {
+        if (searchId !== latestSearchRef.current) return;
         setResults([]);
       } finally {
-        setIsSearching(false);
+        if (searchId === latestSearchRef.current) {
+          setIsSearching(false);
+        }
       }
     }, 400);
 
@@ -102,7 +113,9 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold text-foreground">Add Your First Game</h2>
+        <h2 className="font-quicksand text-lg font-semibold text-foreground">
+          Add Your First Game
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Search for a board game to add to your library. You can always add more later.
         </p>
@@ -131,7 +144,7 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
           autoComplete="off"
         />
         {isSearching && (
-          <div className="absolute right-3 top-9">
+          <div className="absolute right-3 top-9" data-testid="game-search-pending">
             <Search className="h-4 w-4 animate-pulse text-muted-foreground" aria-hidden="true" />
           </div>
         )}

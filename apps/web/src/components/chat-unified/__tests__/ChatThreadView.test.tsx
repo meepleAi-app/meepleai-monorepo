@@ -43,6 +43,7 @@ vi.mock('@/lib/api', () => ({
     },
     games: {
       getAll: vi.fn(),
+      getById: vi.fn(),
     },
   },
 }));
@@ -229,6 +230,7 @@ describe('ChatThreadView', () => {
 
     (apiMock.chat.getThreadById as Mock).mockResolvedValue(mockThread);
     (apiMock.games.getAll as Mock).mockResolvedValue(mockGames);
+    (apiMock.games.getById as Mock).mockResolvedValue(mockGames.games[0]);
     (apiMock.chat.addMessage as Mock).mockResolvedValue(mockThread);
     (apiMock.chat.updateThreadTitle as Mock).mockResolvedValue({});
     (apiMock.chat.deleteThread as Mock).mockResolvedValue(undefined);
@@ -466,6 +468,31 @@ describe('ChatThreadView', () => {
     });
     // Should show capabilities
     expect(screen.getByText(/Cosa posso fare/)).toBeInTheDocument();
+  });
+
+  // #4158: il gioco del thread si risolve per id. Scorrendo la prima pagina del catalogo
+  // (20 giochi in ordine alfabetico) un gioco oltre quella pagina restava senza nome.
+  it('names the thread game even when it is beyond the first catalog page', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentType: 'Tutor',
+    });
+    (apiMock.games.getAll as Mock).mockResolvedValue({
+      games: [],
+      total: 165,
+      page: 1,
+      pageSize: 20,
+      totalPages: 9,
+    });
+    (apiMock.games.getById as Mock).mockResolvedValue({ id: 'game-1', title: 'Catan' });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ho studiato il regolamento di Catan/)).toBeInTheDocument();
+    });
+    expect(apiMock.games.getById).toHaveBeenCalledWith('game-1');
   });
 
   it('shows welcome message for new thread with agent (Arbitro)', async () => {

@@ -101,6 +101,79 @@ describe('FirstGameStep', () => {
     expect(screen.getByText('Catan: Seafarers')).toBeInTheDocument();
   });
 
+  // #4158: con la ricerca sul server ogni digitazione è una richiesta, e le risposte possono
+  // arrivare fuori ordine. Una risposta a una ricerca superata non deve sovrascrivere l'ultima.
+  it('keeps the results of the latest search when an older response arrives later', async () => {
+    const page = (titles: string[]) => ({
+      games: titles.map((title, i) => ({
+        id: `id-${title}-${i}`,
+        title,
+        publisher: null,
+        yearPublished: null,
+      })),
+      total: titles.length,
+      page: 1,
+      pageSize: 20,
+      totalPages: 1,
+    });
+    let resolveOlder!: (value: unknown) => void;
+    let resolveNewer!: (value: unknown) => void;
+    mockGetAll
+      .mockImplementationOnce(() => new Promise(r => (resolveOlder = r)))
+      .mockImplementationOnce(() => new Promise(r => (resolveNewer = r)));
+
+    vi.useRealTimers();
+    const realUser = userEvent.setup();
+    renderWithQuery(
+      <FirstGameStep onComplete={onComplete} onSkip={onSkip} onGameAdded={onGameAdded} />
+    );
+    const input = screen.getByLabelText(/search games/i);
+
+    await realUser.type(input, 'Wing');
+    await waitFor(() => expect(mockGetAll).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    await realUser.type(input, 'span');
+    await waitFor(() => expect(mockGetAll).toHaveBeenCalledTimes(2), { timeout: 2000 });
+    expect(mockGetAll).toHaveBeenNthCalledWith(1, { search: 'Wing' });
+    expect(mockGetAll).toHaveBeenNthCalledWith(2, { search: 'Wingspan' });
+
+    resolveNewer(page(['Wingspan']));
+    await waitFor(() => expect(screen.getByText('Wingspan')).toBeInTheDocument());
+
+    resolveOlder(page(['Wingmen']));
+    // Lascia che la risposta superata venga elaborata prima di asserire che non ha effetto.
+    await new Promise(r => setTimeout(r, 50));
+
+    expect(screen.queryByText('Wingmen')).not.toBeInTheDocument();
+    expect(screen.getByText('Wingspan')).toBeInTheDocument();
+  });
+
+  // Dalla review di #4188: una ricerca in volo diventata superata non spegne più l'indicatore,
+  // quindi se la query scende sotto i due caratteri nessuno lo spegnerebbe.
+  it('stops the searching indicator when the query is cleared during a search', async () => {
+    let resolveSearch!: (value: unknown) => void;
+    mockGetAll.mockImplementationOnce(() => new Promise(r => (resolveSearch = r)));
+
+    vi.useRealTimers();
+    const realUser = userEvent.setup();
+    renderWithQuery(
+      <FirstGameStep onComplete={onComplete} onSkip={onSkip} onGameAdded={onGameAdded} />
+    );
+    const input = screen.getByLabelText(/search games/i);
+
+    await realUser.type(input, 'ca');
+    await waitFor(() => expect(mockGetAll).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(screen.getByTestId('game-search-pending')).toBeInTheDocument();
+
+    await realUser.clear(input);
+    await waitFor(() =>
+      expect(screen.queryByTestId('game-search-pending')).not.toBeInTheDocument()
+    );
+
+    resolveSearch({ games: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
+    await new Promise(r => setTimeout(r, 50));
+    expect(screen.queryByTestId('game-search-pending')).not.toBeInTheDocument();
+  });
+
   it('selects a game from search results', async () => {
     mockGetAll.mockResolvedValueOnce({
       games: [{ id: 'g1', title: 'Catan', publisher: 'Kosmos', yearPublished: 1995 }],

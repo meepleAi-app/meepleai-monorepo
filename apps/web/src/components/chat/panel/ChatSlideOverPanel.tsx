@@ -82,7 +82,7 @@ export function ChatSlideOverPanel() {
 
   // Real data hooks
   const { data: recentSessions } = useRecentChatSessions(50);
-  const { data: gamesResponse } = useGames(undefined, undefined, 1, 50);
+  const { data: gamesResponse } = useGames(undefined, 1, 50);
 
   // Issue #4139: the agent lookup that stood here existed only to feed
   // /api/v1/agents/{agentId}/chat, a route the backend never mounted — the comment

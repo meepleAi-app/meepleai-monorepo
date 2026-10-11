@@ -2,11 +2,13 @@
  * @vitest-environment jsdom
  */
 
+import { QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 import { flattenMessages } from '@/locales';
 import itMessages from '@/locales/it.json';
 
@@ -46,14 +48,34 @@ vi.mock('@/hooks/queries/useWishlist', () => ({
   }),
 }));
 
+/**
+ * #4187: la libreria finta vive "sul server". `getLibrary` filtra per titolo come fa
+ * `ILike` in UserLibraryRepository e restituisce una pagina. Wingspan sta oltre la
+ * prima pagina: un selettore che filtra solo i giochi gia' scaricati non lo trova.
+ */
 const LIBRARY_ITEMS = [
   { gameId: 'game-catan', gameTitle: 'Catan' },
   { gameId: 'game-brass', gameTitle: 'Brass: Birmingham' },
+  ...Array.from({ length: 30 }, (_, i) => ({
+    gameId: `game-filler-${i}`,
+    gameTitle: `Agricola ${String(i).padStart(2, '0')}`,
+  })),
+  { gameId: 'game-wingspan', gameTitle: 'Wingspan' },
 ];
 
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: () => ({ data: { items: LIBRARY_ITEMS }, isLoading: false }),
+const mockGetLibrary = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/api', () => ({ api: { library: { getLibrary: mockGetLibrary } } }));
+
+vi.mock('@/components/ui/data-display/entity-list-view/hooks/use-debounce', () => ({
+  useDebounce: (value: string) => value,
 }));
+
+function serveLibrary(params?: { search?: string; pageSize?: number }) {
+  const pool = params?.search
+    ? LIBRARY_ITEMS.filter(e => e.gameTitle.toLowerCase().includes(params.search!.toLowerCase()))
+    : LIBRARY_ITEMS;
+  return Promise.resolve({ items: pool.slice(0, params?.pageSize ?? 20) });
+}
 
 vi.mock('@/components/layout/Toast', () => ({
   toast: {
@@ -65,12 +87,18 @@ vi.mock('@/components/layout/Toast', () => ({
 // Helpers
 // ============================================================================
 
+/** Il `rerender` restituito rimonta con gli stessi provider (e la stessa cache). */
 function renderWithIntl(ui: ReactElement) {
-  return render(
-    <IntlProvider locale="it" messages={MESSAGES}>
-      {ui}
-    </IntlProvider>
+  const queryClient = createTestQueryClient();
+  const withProviders = (node: ReactElement) => (
+    <QueryClientProvider client={queryClient}>
+      <IntlProvider locale="it" messages={MESSAGES}>
+        {node}
+      </IntlProvider>
+    </QueryClientProvider>
   );
+  const result = render(withProviders(ui));
+  return { ...result, rerender: (node: ReactElement) => result.rerender(withProviders(node)) };
 }
 
 /**
@@ -115,6 +143,8 @@ describe('AddToWishlistDialog', () => {
     mockUpdateIsError = false;
     mockAddIsPending = false;
     mockUpdateIsPending = false;
+    mockGetLibrary.mockReset();
+    mockGetLibrary.mockImplementation(serveLibrary);
   });
 
   describe('mode=add', () => {
@@ -125,7 +155,7 @@ describe('AddToWishlistDialog', () => {
       // Pick game via combobox
       const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
       await user.type(combo, 'Catan');
-      await user.click(screen.getByRole('option', { name: 'Catan' }));
+      await user.click(await screen.findByRole('option', { name: 'Catan' }));
 
       // Switch priority to "Alta" (default is "Media")
       await user.click(screen.getByRole('radio', { name: 'Alta' }));
@@ -148,6 +178,60 @@ describe('AddToWishlistDialog', () => {
         targetPrice: 29.99,
         notes: 'Da comprare presto',
       });
+    });
+
+    it('cerca nella libreria sul server: «Wingspan», oltre la prima pagina, si trova (#4187)', async () => {
+      const user = userEvent.setup();
+      renderWithIntl(<AddToWishlistDialog mode="add" open onOpenChange={() => {}} />);
+
+      const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
+      await user.type(combo, 'Wingspan');
+
+      expect(await screen.findByRole('option', { name: 'Wingspan' })).toBeInTheDocument();
+      expect(mockGetLibrary).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'Wingspan' })
+      );
+    });
+
+    it('mostra il titolo del gioco prefissato senza aspettare la libreria (#4187)', () => {
+      // Il chiamante vero (MeepleLibraryGameCard) monta il dialogo chiuso, quindi la ricerca
+      // non e' partita quando il chip si costruisce: il titolo deve arrivare dal chiamante.
+      mockGetLibrary.mockImplementation(() => new Promise(() => {}));
+      renderWithIntl(
+        <AddToWishlistDialog
+          mode="add"
+          open
+          onOpenChange={() => {}}
+          prefillGameId="game-wingspan"
+          prefillGameTitle="Wingspan"
+        />
+      );
+
+      expect(screen.getByText('Wingspan')).toBeInTheDocument();
+      expect(screen.queryByText('game-wingspan')).not.toBeInTheDocument();
+    });
+
+    it('Invio non sceglie dalla lista del testo precedente mentre arriva quella nuova (#4187)', async () => {
+      const user = userEvent.setup();
+      renderWithIntl(<AddToWishlistDialog mode="add" open onOpenChange={() => {}} />);
+
+      const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
+      await user.type(combo, 'Catan');
+      await screen.findByRole('option', { name: 'Catan' });
+
+      // La risposta per il testo nuovo non arriva: resta a video la lista di «Catan».
+      mockGetLibrary.mockImplementation(() => new Promise(() => {}));
+      await user.type(combo, 'Z');
+      await user.keyboard('{ArrowDown}');
+      await user.keyboard('{Enter}');
+
+      expect(screen.getByRole('combobox', { name: GAME_COMBO_NAME })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi' })).toBeDisabled();
+    });
+
+    it('a dialogo chiuso non interroga la libreria', () => {
+      renderWithIntl(<AddToWishlistDialog mode="add" open={false} onOpenChange={() => {}} />);
+      expect(mockGetLibrary).not.toHaveBeenCalled();
     });
 
     it('disables submit until a game is selected', () => {
@@ -186,6 +270,7 @@ describe('AddToWishlistDialog', () => {
 
       const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
       await user.type(combo, 'Catan');
+      await screen.findByRole('option', { name: 'Catan' });
 
       // Highlight the only match and commit it — no click involved.
       await user.keyboard('{ArrowDown}');
@@ -207,6 +292,7 @@ describe('AddToWishlistDialog', () => {
 
       const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
       await user.type(combo, 'Catan');
+      await screen.findByRole('option', { name: 'Catan' });
       await user.keyboard('{ArrowDown}');
       expect(screen.getByRole('listbox')).toBeInTheDocument();
 
@@ -223,6 +309,7 @@ describe('AddToWishlistDialog', () => {
 
       const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
       await user.type(combo, 'Catan');
+      await screen.findByRole('option', { name: 'Catan' });
       await user.keyboard('{ArrowDown}');
       expect(screen.getByRole('listbox')).toBeInTheDocument();
 
@@ -242,6 +329,7 @@ describe('AddToWishlistDialog', () => {
 
       const combo = screen.getByRole('combobox', { name: GAME_COMBO_NAME });
       await user.type(combo, 'Catan');
+      await screen.findByRole('option', { name: 'Catan' });
       await user.keyboard('{ArrowDown}');
       await user.keyboard('{Escape}'); // closes the listbox only
       expect(onOpenChange).not.toHaveBeenCalled();
@@ -350,9 +438,7 @@ describe('AddToWishlistDialog', () => {
       // useMutation hook would after reset() is called on close), then reopen.
       mockAddIsError = false;
       rerender(
-        <IntlProvider locale="it" messages={MESSAGES}>
-          <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
-        </IntlProvider>
+        <AddToWishlistDialog mode="add" open onOpenChange={() => {}} prefillGameId="game-catan" />
       );
 
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();

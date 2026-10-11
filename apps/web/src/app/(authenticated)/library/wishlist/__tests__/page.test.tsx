@@ -282,6 +282,25 @@ describe('WishlistPage', () => {
     expect(screen.queryByTestId('wishlist-card')).not.toBeInTheDocument();
   });
 
+  it('in modifica il dialogo mostra il titolo del gioco anche se il DTO non porta gameName (#4187)', async () => {
+    // Il WishlistItemDto del backend non ha GameName: il titolo lo conosce solo la pagina,
+    // dalla sua mappa della libreria. Il dialogo, in modifica, non interroga la libreria.
+    const user = userEvent.setup();
+    mockUseWishlist.mockReturnValue({
+      data: [buildItem({ gameName: undefined })],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderPage(<WishlistPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Modifica wishlist item Wingspan' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Wingspan');
+    expect(dialog).not.toHaveTextContent('game-1');
+  });
+
   it('shows the error state when the wishlist query rejects', () => {
     mockUseWishlist.mockReturnValue({
       data: undefined,

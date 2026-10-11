@@ -147,6 +147,33 @@ describe('FirstGameStep', () => {
     expect(screen.getByText('Wingspan')).toBeInTheDocument();
   });
 
+  // Dalla review di #4188: una ricerca in volo diventata superata non spegne più l'indicatore,
+  // quindi se la query scende sotto i due caratteri nessuno lo spegnerebbe.
+  it('stops the searching indicator when the query is cleared during a search', async () => {
+    let resolveSearch!: (value: unknown) => void;
+    mockGetAll.mockImplementationOnce(() => new Promise(r => (resolveSearch = r)));
+
+    vi.useRealTimers();
+    const realUser = userEvent.setup();
+    renderWithQuery(
+      <FirstGameStep onComplete={onComplete} onSkip={onSkip} onGameAdded={onGameAdded} />
+    );
+    const input = screen.getByLabelText(/search games/i);
+
+    await realUser.type(input, 'ca');
+    await waitFor(() => expect(mockGetAll).toHaveBeenCalledTimes(1), { timeout: 2000 });
+    expect(screen.getByTestId('game-search-pending')).toBeInTheDocument();
+
+    await realUser.clear(input);
+    await waitFor(() =>
+      expect(screen.queryByTestId('game-search-pending')).not.toBeInTheDocument()
+    );
+
+    resolveSearch({ games: [], total: 0, page: 1, pageSize: 20, totalPages: 0 });
+    await new Promise(r => setTimeout(r, 50));
+    expect(screen.queryByTestId('game-search-pending')).not.toBeInTheDocument();
+  });
+
   it('selects a game from search results', async () => {
     mockGetAll.mockResolvedValueOnce({
       games: [{ id: 'g1', title: 'Catan', publisher: 'Kosmos', yearPublished: 1995 }],

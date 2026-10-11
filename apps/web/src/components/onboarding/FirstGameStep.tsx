@@ -53,6 +53,8 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
 
     if (query.trim().length < 2) {
       setResults([]);
+      // A search still in flight is now stale and will not clear the flag itself.
+      setIsSearching(false);
       return;
     }
 
@@ -142,7 +144,7 @@ export function FirstGameStep({ onComplete, onSkip, onGameAdded }: FirstGameStep
           autoComplete="off"
         />
         {isSearching && (
-          <div className="absolute right-3 top-9">
+          <div className="absolute right-3 top-9" data-testid="game-search-pending">
             <Search className="h-4 w-4 animate-pulse text-muted-foreground" aria-hidden="true" />
           </div>
         )}

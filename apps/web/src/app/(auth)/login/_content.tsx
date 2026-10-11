@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
 import { LoginForm, type LoginFormData } from '@/components/auth/LoginForm';
 import { buildOAuthUrl } from '@/components/auth/oauth-url';
 import {
@@ -14,7 +15,6 @@ import {
 import { AuthCard } from '@/components/ui/auth-card';
 import { Divider } from '@/components/ui/divider';
 import { OAuthButton } from '@/components/ui/oauth-buttons';
-import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
@@ -43,7 +43,10 @@ export interface LoginPageContentProps {
 export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { loadCurrentUser } = useAuth();
+  // #4190: AuthProvider, non l'hook omonimo di @/hooks/useAuth. Quello teneva l'utente in uno
+  // stato suo: dopo il login AuthProvider restava fermo all'anonimo letto al montaggio di /login,
+  // e la navigazione lato client non lo rimonta.
+  const { refreshUser } = useAuth();
 
   // Issue #2168: validate ?from= against open-redirect attack vectors.
   // `assertSafeRelativeOrFallback` rejects 8 attack vectors and falls back to /library.
@@ -104,7 +107,7 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
         }
 
         if (response.user) {
-          await loadCurrentUser();
+          await refreshUser();
           await redirectAfterAuth(response.user.role);
         } else {
           throw new Error(t('auth.login.genericError'));
@@ -119,7 +122,7 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
         setIsAuthenticating(false);
       }
     },
-    [loadCurrentUser, redirectAfterAuth, t]
+    [refreshUser, redirectAfterAuth, t]
   );
 
   const handle2FAVerify = useCallback(
@@ -138,7 +141,7 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
           data.code,
           data.rememberDevice
         );
-        await loadCurrentUser();
+        await refreshUser();
         await redirectAfterAuth(user.role);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : t('auth.twoFactor.error');
@@ -148,7 +151,7 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
         setIsAuthenticating(false);
       }
     },
-    [tempSessionToken, loadCurrentUser, redirectAfterAuth, t]
+    [tempSessionToken, refreshUser, redirectAfterAuth, t]
   );
 
   const handleCancel2FA = useCallback(() => {

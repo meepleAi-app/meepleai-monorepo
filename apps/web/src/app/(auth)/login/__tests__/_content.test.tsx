@@ -38,14 +38,15 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
+// #4190: il form usa AuthProvider, non più l'hook omonimo di @/hooks/useAuth. Il percorso con il
+// vero AuthProvider è in _content.auth-provider.test.tsx.
 const { mockAuth } = vi.hoisted(() => ({
   mockAuth: {
-    register: vi.fn(),
-    loadCurrentUser: vi.fn().mockResolvedValue(undefined),
+    refreshUser: vi.fn().mockResolvedValue(undefined),
     clearError: vi.fn(),
   },
 }));
-vi.mock('@/hooks/useAuth', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuth: () => mockAuth,
 }));
 

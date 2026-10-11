@@ -13,6 +13,12 @@ namespace Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 /// <remarks>
 /// Un handler dell'evento e non una riga nel command handler: l'evento parte da
 /// <c>UserLibraryEntry.DeclareOwnership</c>, quindi copre qualunque percorso dichiari il possesso.
+/// <para>
+/// L'invalidazione è immediata solo dove l'outbox è in modalità <c>Hybrid</c> (dev e test). In
+/// staging e produzione (<c>OutboxOnly</c>) arriva quando il processore drena l'outbox, cioè entro
+/// <c>PollIntervalSeconds</c>: fino ad allora il dettaglio può mostrare lo stato vecchio della voce.
+/// L'invito alla dichiarazione non ne risente, perché <c>HasRagAccess</c> si calcola fuori dalla cache.
+/// </para>
 /// </remarks>
 internal sealed class GameDetailCacheInvalidationHandler : INotificationHandler<OwnershipDeclaredEvent>
 {

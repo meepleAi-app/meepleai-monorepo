@@ -64,4 +64,4 @@ Superare il cancello non rende citabile tutto. Un frammento del manuale vale `Fu
 - #4196: backend. Eccezione, controllo unico, ramo del middleware, evento di stream.
 - #4197: chat. Riquadro, dialogo, rinvio della domanda, caso «senza manuale».
 - #4198: casella «Possiedo una copia» nel catalogo e nell'onboarding.
-- Il dettaglio del gioco, ultimo passo di #4155: `HasRagAccess` nel DTO e invito alla dichiarazione. In più, l'evento `OwnershipDeclaredEvent` invalida la cache del dettaglio, che altrimenti mostrava lo stato vecchio della voce fino a 5 minuti dopo la dichiarazione.
+- Il dettaglio del gioco, ultimo passo di #4155: `HasRagAccess` nel DTO e invito alla dichiarazione. In più, l'evento `OwnershipDeclaredEvent` invalida la cache del dettaglio, che altrimenti mostrava lo stato vecchio della voce fino a 5 minuti dopo la dichiarazione. In staging e produzione l'outbox è `OutboxOnly`, quindi l'invalidazione arriva entro l'intervallo del processore (5 s), non subito. L'invito non ne risente: `HasRagAccess` si calcola fuori dalla cache.

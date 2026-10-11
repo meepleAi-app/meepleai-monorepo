@@ -921,6 +921,14 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
       expect(screen.queryByTestId('game-detail-ownership-cta')).not.toBeInTheDocument();
     });
 
+    it('is not offered for a wishlist entry, where the declaration is refused', () => {
+      // UserLibraryEntry.DeclareOwnership rifiuta una voce in wishlist (DomainException → 400):
+      // offrirla lì sarebbe un pulsante che fallisce sempre.
+      renderWith({ currentState: 'Wishlist', hasRagAccess: false });
+
+      expect(screen.queryByTestId('game-detail-ownership-cta')).not.toBeInTheDocument();
+    });
+
     it('is not offered for a game outside the library', () => {
       renderWith({ libraryEntryId: '', hasRagAccess: false });
 

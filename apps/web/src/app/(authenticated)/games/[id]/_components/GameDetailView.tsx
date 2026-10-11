@@ -706,13 +706,17 @@ export function GameDetailView({ gameId }: GameDetailViewProps): ReactElement {
         onAddToLibrary={heroVariant === 'community' ? handleAddToLibrary : undefined}
       />
 
-      {heroVariant === 'own' && !safeDetail.hasRagAccess && gameId && (
-        <GameDetailOwnershipCta
-          gameId={gameId}
-          gameTitle={safeDetail.gameTitle}
-          onOwnershipDeclared={handleOwnershipDeclared}
-        />
-      )}
+      {/* #4155: non in wishlist, dove il dominio rifiuta la dichiarazione */}
+      {heroVariant === 'own' &&
+        !safeDetail.hasRagAccess &&
+        safeDetail.currentState !== 'Wishlist' &&
+        gameId && (
+          <GameDetailOwnershipCta
+            gameId={gameId}
+            gameTitle={safeDetail.gameTitle}
+            onOwnershipDeclared={handleOwnershipDeclared}
+          />
+        )}
 
       {/* Tab navigation — A11y: role=tablist inside component, role=tabpanel on panels below */}
       <GameDetailTabsAnimated

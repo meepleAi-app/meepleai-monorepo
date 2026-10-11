@@ -4,14 +4,16 @@
  * The wizard used to ask for the first 50 library games and offer them as the whole choice,
  * so a game past that page could not be proposed. Now:
  * - the library is searched on the server (`search`, ILike on the title), sorted by title;
- * - a chosen game that the current search does not show is read by id and kept at the top,
- *   so it stays visible and deselectable, and the RSVP preview can still name it.
+ * - a chosen game that the current search does not show is kept at the top, so it stays
+ *   visible and deselectable, and the RSVP preview can still name it. It comes from the
+ *   candidates already seen in earlier results; only a game never seen (a restored draft)
+ *   is read by id.
  *
  * Library entries carry the shared-catalog id (`gameId`), the same id `useSharedGamesByIds`
  * reads. Private games are not part of the library endpoint.
  */
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { GameCandidateOption } from '@/components/features/game-night-create';
 import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
@@ -70,20 +72,40 @@ export function useGameNightCandidates({
     [libraryQuery.data]
   );
 
-  // Until the search has an answer (data or error) nobody is "missing" yet: reading every
-  // chosen game by id on the first render would fetch the ones the search is about to show.
-  const searchSettled = !enabled || !libraryQuery.isPending;
+  // Every candidate the search has shown so far. A chosen game that a later search does not
+  // show is taken from here, so it never blinks out while a by-id read is in flight.
+  const [seen, setSeen] = useState<Readonly<Record<string, GameCandidateOption>>>({});
+  useEffect(() => {
+    if (results.length === 0) return;
+    setSeen(prev => {
+      const fresh = results.filter(g => !prev[g.id]);
+      if (fresh.length === 0) return prev;
+      const next = { ...prev };
+      for (const g of fresh) next[g.id] = g;
+      return next;
+    });
+  }, [results]);
+
   const missingIds = useMemo(() => {
-    if (!searchSettled) return [];
     const shown = new Set(results.map(g => g.id));
     return selectedIds.filter(id => !shown.has(id));
-  }, [searchSettled, results, selectedIds]);
+  }, [results, selectedIds]);
 
-  const { gamesById } = useSharedGamesByIds(missingIds, missingIds.length > 0);
+  // Only games never seen need a by-id read, and only once the search has answered: before
+  // that, reading would fetch the ones the search is about to show. A disabled query still
+  // returns what it has cached, so a game named on an earlier step stays named meanwhile.
+  const searchSettled = !enabled || !libraryQuery.isPending;
+  const unseenIds = useMemo(() => missingIds.filter(id => !seen[id]), [missingIds, seen]);
+  const { gamesById } = useSharedGamesByIds(unseenIds, searchSettled && unseenIds.length > 0);
 
   const games = useMemo<GameCandidateOption[]>(() => {
     const pinned: GameCandidateOption[] = [];
     for (const id of missingIds) {
+      const known = seen[id];
+      if (known) {
+        pinned.push(known);
+        continue;
+      }
       const game = gamesById[id];
       if (!game) continue;
       pinned.push({
@@ -98,7 +120,7 @@ export function useGameNightCandidates({
       });
     }
     return [...pinned, ...results];
-  }, [missingIds, gamesById, results]);
+  }, [missingIds, seen, gamesById, results]);
 
   return { games, isSearching: libraryQuery.isFetching };
 }

@@ -166,6 +166,38 @@ describe('useGameNightCandidates (#4187)', () => {
     expect(mockGetSharedGame).not.toHaveBeenCalled();
   });
 
+  it('cambiando ricerca, un gioco scelto visto nei risultati non sparisce mai (nessun lampo)', async () => {
+    // La lettura per id non risponde: il gioco deve restare grazie a quanto già visto.
+    mockGetSharedGame.mockImplementation(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(
+      ({ search }) =>
+        useGameNightCandidates({ search, selectedIds: ['game-catan'], enabled: true }),
+      { wrapper: wrapper(), initialProps: { search: '' } }
+    );
+    await waitFor(() => expect(result.current.games.map(g => g.title)).toContain('Catan'));
+
+    rerender({ search: 'Wing' });
+
+    await waitFor(() => expect(result.current.games.map(g => g.title)).toContain('Wingspan'));
+    expect(result.current.games.map(g => g.title)).toEqual(['Catan', 'Wingspan']);
+  });
+
+  it('entrando nel passo 4 i giochi scelti già nominati restano mentre la ricerca carica', async () => {
+    const { result, rerender } = renderHook(
+      ({ enabled }) =>
+        useGameNightCandidates({ search: '', selectedIds: ['game-wingspan'], enabled }),
+      { wrapper: wrapper(), initialProps: { enabled: false } }
+    );
+    await waitFor(() => expect(result.current.games.map(g => g.title)).toEqual(['Wingspan']));
+
+    // Passo 4: la libreria non risponde ancora.
+    mockGetLibrary.mockImplementation(() => new Promise(() => {}));
+    rerender({ enabled: true });
+
+    await waitFor(() => expect(mockGetLibrary).toHaveBeenCalled());
+    expect(result.current.games.map(g => g.title)).toEqual(['Wingspan']);
+  });
+
   it('fuori dal passo 4 non cerca nella libreria, ma nomina ancora i giochi scelti (anteprima)', async () => {
     const { result } = renderHook(
       () => useGameNightCandidates({ search: '', selectedIds: ['game-wingspan'], enabled: false }),

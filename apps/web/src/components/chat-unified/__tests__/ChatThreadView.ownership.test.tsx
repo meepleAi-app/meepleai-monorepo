@@ -201,6 +201,8 @@ describe('ChatThreadView — diniego per possesso non dichiarato (#4155)', () =>
     expect(screen.getByRole('button', { name: 'Dichiara di possedere Catan' })).toBeInTheDocument();
     // Non è un guasto: niente banner d'errore generico.
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // Il segnaposto vuoto dell'assistente se ne va: resta solo la domanda.
+    expect(screen.queryAllByTestId('message-assistant')).toHaveLength(0);
   });
 
   it('after the declaration resends the same question once, without duplicating it', async () => {
@@ -220,6 +222,7 @@ describe('ChatThreadView — diniego per possesso non dichiarato (#4155)', () =>
     );
     expect(savedUserMessages).toHaveLength(1);
     expect(screen.queryByTestId('rag-ownership-required')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('message-assistant')).toHaveLength(1);
   });
 
   it('with no manual loaded says so and does not resend the question', async () => {

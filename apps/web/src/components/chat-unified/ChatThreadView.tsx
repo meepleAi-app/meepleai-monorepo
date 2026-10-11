@@ -110,10 +110,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
 
-  // #4155: la domanda respinta dal cancello RAG, da rinviare dopo la dichiarazione di possesso;
+  // #4155: il pannello del diniego del cancello RAG, che offre la dichiarazione di possesso;
   // e l'avviso per un gioco posseduto ma senza manuale caricato.
-  const [ownershipDenial, setOwnershipDenial] = useState<{ question: string } | null>(null);
+  const [ownershipDenied, setOwnershipDenied] = useState(false);
   const [noManualNotice, setNoManualNotice] = useState(false);
+  // La domanda da rinviare la legge un ref, non la closure del callback: se l'utente manda
+  // un'altra domanda mentre la dichiarazione è in volo, il nuovo invio la azzera e la
+  // dichiarazione, quando arriva, non rimanda quella vecchia sopra la nuova.
+  const deniedQuestionRef = useRef<string | null>(null);
 
   // Page viewer panel state (Task 9: Side Panel Citation Viewer)
   const [viewerState, setViewerState] = useState<{ pdfId: string; pageNumber: number } | null>(
@@ -439,7 +443,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 // #4155: not a failure — the RAG gate wants an ownership declaration.
                 // The empty assistant bubble goes; the question stays, to be resent.
                 removeMessageById(assistantMsgId);
-                setOwnershipDenial({ question });
+                deniedQuestionRef.current = question;
+                setOwnershipDenied(true);
               } else {
                 setError(data?.errorMessage ?? data?.message ?? 'Errore nella risposta AI');
               }
@@ -503,7 +508,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       setIsSending(true);
       setInputValue('');
       setError(null);
-      setOwnershipDenial(null);
+      deniedQuestionRef.current = null;
+      setOwnershipDenied(false);
       setNoManualNotice(false);
 
       // Optimistic UI: add user message
@@ -569,18 +575,19 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // instead of resending a question that cannot get a sourced answer.
   const handleOwnershipDeclared = useCallback(
     (result: OwnershipResult) => {
-      const denied = ownershipDenial;
-      setOwnershipDenial(null);
+      const deniedQuestion = deniedQuestionRef.current;
+      deniedQuestionRef.current = null;
+      setOwnershipDenied(false);
       if (result.kbCardCount === 0) {
         setNoManualNotice(true);
         return;
       }
-      if (!denied) return;
+      if (!deniedQuestion) return;
       setIsSending(true);
       setError(null);
-      void runQaStream(denied.question, false);
+      void runQaStream(deniedQuestion, false);
     },
-    [ownershipDenial, runQaStream]
+    [runQaStream]
   );
 
   // Keep ref in sync for voice onTranscript callback
@@ -775,7 +782,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       )}
 
       {/* #4155: denial by the RAG gate — explain it and offer the ownership declaration */}
-      {ownershipDenial && thread?.gameId && (
+      {ownershipDenied && thread?.gameId && (
         <RagOwnershipRequiredNotice
           gameId={thread.gameId}
           gameName={game?.title}

@@ -11,6 +11,7 @@ import {
   CostTrackingDtoSchema,
   TestModelResponseSchema,
   LlmSystemConfigDtoSchema,
+  LlmBudgetUsageSchema,
   AbTestSessionDtoSchema,
   AbTestSessionListDtoSchema,
   AbTestSessionRevealedDtoSchema,
@@ -24,6 +25,7 @@ import {
   type TestModelResponse,
   type LlmSystemConfigDto,
   type UpdateLlmSystemConfigRequest,
+  type LlmBudgetUsage,
   type AbTestSessionDto,
   type AbTestSessionListDto,
   type AbTestSessionRevealedDto,
@@ -371,6 +373,16 @@ export function createAdminAiClient(http: HttpClient) {
         LlmSystemConfigDtoSchema
       );
       if (!result) throw new Error('Failed to fetch LLM system config');
+      return result;
+    },
+
+    /** #4169: today's and this month's LLM spend per budget class, as the gateway counts it. */
+    async getLlmBudgetUsage(): Promise<LlmBudgetUsage> {
+      const result = await http.get<LlmBudgetUsage>(
+        '/api/v1/admin/llm/budget/usage',
+        LlmBudgetUsageSchema
+      );
+      if (!result) throw new Error('Failed to fetch LLM budget usage');
       return result;
     },
 

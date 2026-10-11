@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
 import { AuthCard } from '@/components/ui/auth-card';
 import { Btn } from '@/components/ui/btn';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
@@ -45,6 +46,11 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
   const emailFromParams = emailParam;
   const [email, setEmail] = useState<string | null>(null);
 
+  // #4183: the banner «Verifica ora» brings signed-in users here. They may have neither ?email=
+  // nor sessionStorage, so the session's own email comes before the stored one.
+  const { user, loading: authLoading } = useAuth();
+  const sessionEmail = user?.email ?? null;
+
   const { isResending, error, cooldownSeconds, resendVerificationEmail, clearError } =
     useEmailVerification();
 
@@ -54,6 +60,8 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
       setEmail(emailFromParams);
       // Store in session storage for page refresh
       sessionStorage.setItem('pendingVerificationEmail', emailFromParams);
+    } else if (sessionEmail) {
+      setEmail(sessionEmail);
     } else {
       // Try to get from session storage
       const storedEmail = sessionStorage.getItem('pendingVerificationEmail');
@@ -61,7 +69,7 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
         setEmail(storedEmail);
       }
     }
-  }, [emailFromParams]);
+  }, [emailFromParams, sessionEmail]);
 
   // Clear error when component mounts
   useEffect(() => {
@@ -75,6 +83,12 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
     if (!email) return;
     await resendVerificationEmail(email);
   };
+
+  // While the session is still loading the email may be about to arrive: showing the
+  // «no email» card now would offer /register to a user who is already signed in.
+  if (!email && authLoading) {
+    return <AuthCard title={t('auth.emailVerification.pending.title')}>{null}</AuthCard>;
+  }
 
   // If no email, render a minimal AuthCard with a redirect CTA
   if (!email) {

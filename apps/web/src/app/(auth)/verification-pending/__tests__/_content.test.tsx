@@ -61,6 +61,12 @@ vi.mock('@/hooks/useEmailVerification', () => ({
   }),
 }));
 
+// #4183: the page also resolves the email of the signed-in user.
+const authState = { user: null as { email: string } | null, loading: false };
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => ({ user: authState.user, loading: authState.loading }),
+}));
+
 // Import AFTER mocks
 import { VerificationPendingContent } from '../_content';
 
@@ -90,6 +96,8 @@ beforeEach(() => {
   hookState.isResending = false;
   hookState.error = null;
   hookState.cooldownSeconds = 0;
+  authState.user = null;
+  authState.loading = false;
 });
 
 // ---------------------------------------------------------------------------
@@ -120,6 +128,34 @@ describe('VerificationPendingContent (v2 AuthCard)', () => {
       setSearchParams({});
       renderContent();
       expect(screen.getByText(/s\*\*\*d@example\.com/)).toBeInTheDocument();
+    });
+
+    // #4183: «Verifica ora» in the banner brings a signed-in user here, who may have neither
+    // ?email= nor sessionStorage (registered days ago, or on another device). Without this
+    // branch they landed on the «no email» card, which sends them to /register.
+    it("uses the signed-in user's email when there is no query param and no stored email", () => {
+      authState.user = { email: 'player@example.com' };
+      renderContent();
+
+      expect(screen.getByText(/p\*\*\*r@example\.com/)).toBeInTheDocument();
+      expect(screen.queryByText('auth.emailVerification.pending.noEmail')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('resend-verification-button'));
+      expect(resendMock).toHaveBeenCalledWith('player@example.com');
+    });
+
+    it('prefers the query param over the signed-in user', () => {
+      authState.user = { email: 'player@example.com' };
+      setSearchParams({ email: 'user@example.com' });
+      renderContent();
+
+      expect(screen.getByText(/u\*\*\*r@example\.com/)).toBeInTheDocument();
+    });
+
+    it('does not show the no-email card while the session is still loading', () => {
+      authState.loading = true;
+      renderContent();
+
+      expect(screen.queryByText('auth.emailVerification.pending.noEmail')).not.toBeInTheDocument();
     });
 
     it('renders no-email redirect CTA when neither source has email', () => {

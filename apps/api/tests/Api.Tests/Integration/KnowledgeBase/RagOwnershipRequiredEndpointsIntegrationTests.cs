@@ -100,6 +100,23 @@ public sealed class RagOwnershipRequiredEndpointsIntegrationTests
             UpdatedAt = DateTime.UtcNow,
             CreatedByUserId = userId,
         });
+        // #4206: anche la guida alla preparazione è dietro un flag, assente su un database nuovo.
+        db.SystemConfigurations.Add(new SystemConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            Key = "Features.SetupGuideGeneration",
+            Value = "true",
+            ValueType = "bool",
+            Description = "Integration test seed (#4206)",
+            Category = "Features",
+            IsActive = true,
+            RequiresRestart = false,
+            Environment = "All",
+            Version = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CreatedByUserId = userId,
+        });
         await db.SaveChangesAsync(Ct);
 
         _client = _factory.CreateClient();
@@ -167,6 +184,51 @@ public sealed class RagOwnershipRequiredEndpointsIntegrationTests
         // gameId compare solo nei dinieghi legati a un gioco: gli altri errori restano com'erano,
         // senza un "gameId": null in piu'.
         events[^1].GetProperty("data").TryGetProperty("gameId", out _).Should().BeFalse();
+    }
+
+    // ─── #4206: la guida alla preparazione legge la stessa KB, quindi passa dallo stesso cancello ───
+
+    [Fact]
+    public async Task SetupGuide_WithoutDeclaredOwnership_EmitsOwnershipError_BeforeAnyWork()
+    {
+        var events = await StreamSetupGuideAsync();
+
+        // Prima di #4206 la guida cercava nella KB del gioco senza controllare l'accesso. Ora il
+        // diniego è l'unico evento: niente «Preparing setup guide...», niente ricerca, niente LLM.
+        var error = events.Should().ContainSingle().Which;
+        error.GetProperty("type").GetInt32().Should().Be((int)StreamingEventType.Error);
+        var data = error.GetProperty("data");
+        data.GetProperty("errorCode").GetString().Should().Be(OwnershipCode);
+        data.GetProperty("gameId").GetGuid().Should().Be(_gameId);
+    }
+
+    [Fact]
+    public async Task SetupGuide_AfterDeclaringOwnership_PassesTheGate()
+    {
+        var declare = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, $"/api/v1/library/{_gameId}/declare-ownership", _token),
+            Ct);
+        declare.StatusCode.Should().Be(HttpStatusCode.OK, await declare.Content.ReadAsStringAsync(Ct));
+
+        var events = await StreamSetupGuideAsync();
+
+        events.Should().NotContain(e => ErrorCodeOf(e) == OwnershipCode);
+        events[0].GetProperty("type").GetInt32().Should().Be((int)StreamingEventType.StateUpdate,
+            "superato il cancello, la guida comincia a prepararsi");
+    }
+
+    private async Task<IReadOnlyList<JsonElement>> StreamSetupGuideAsync()
+    {
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/agents/setup", _token,
+                new { gameId = _gameId.ToString(), playerCount = 2 }),
+            Ct);
+
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        return ParseSseEvents(body);
     }
 
     private async Task<IReadOnlyList<JsonElement>> StreamQaAsync()

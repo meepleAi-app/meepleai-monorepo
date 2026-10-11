@@ -70,7 +70,12 @@ internal class GenerateSetupChecklistCommandHandler
         }
 
         // 4. Stream setup guide from KnowledgeBase
-        var query = new StreamSetupGuideQuery(session.GameId.ToString()!, command.PlayerCount);
+        // #4206: l'identità di chi chiede, per il cancello RAG della guida.
+        var query = new StreamSetupGuideQuery(
+            GameId: session.GameId.ToString()!,
+            UserId: command.UserId,
+            UserRole: command.UserRole,
+            PlayerCount: command.PlayerCount);
         var steps = new List<SetupStep>();
         var components = new List<SetupComponent>();
 

@@ -145,10 +145,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         {
             var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         _logger.LogInformation(

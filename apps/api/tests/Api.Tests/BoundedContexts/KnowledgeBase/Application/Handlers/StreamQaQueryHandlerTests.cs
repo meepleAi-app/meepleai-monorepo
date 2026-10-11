@@ -178,9 +178,9 @@ public class StreamQaQueryHandlerTests
             }
         };
 
-        // Assert — denial surfaces as ForbiddenException (mirrors non-stream AskQuestion) and NO
-        // retrieval or LLM work happens.
-        await act.Should().ThrowAsync<ForbiddenException>();
+        // Assert — denial surfaces as the typed RAG denial (#4155), carrying the game so the chat can
+        // offer the ownership declaration for it, and NO retrieval or LLM work happens.
+        (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
 
         denyRagAccess.Verify(
             s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),

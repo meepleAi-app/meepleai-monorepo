@@ -7,7 +7,6 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure.Entities;
-using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -54,10 +53,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         {
             var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         _logger.LogInformation(

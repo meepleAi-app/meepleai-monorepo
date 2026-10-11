@@ -60,10 +60,8 @@ internal sealed class RebuildRaptorCommandHandler : ICommandHandler<RebuildRapto
         // another user's KB. Mirror AskArbiter/TutorQuery handlers.
         var userRole = Enum.TryParse<UserRole>(command.UserRole, ignoreCase: true, out var parsedRole)
             ? parsedRole : UserRole.User;
-        var canAccess = await _ragAccessService.CanAccessRagAsync(
+        await _ragAccessService.EnsureRagAccessAsync(
             command.UserId, command.GameId, userRole, cancellationToken).ConfigureAwait(false);
-        if (!canAccess)
-            throw new ForbiddenException("Accesso RAG non autorizzato");
 
         // === Tier gate ===
         var canRebuild = await _tierEnforcement

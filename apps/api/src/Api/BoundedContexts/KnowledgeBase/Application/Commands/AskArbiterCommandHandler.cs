@@ -75,10 +75,8 @@ internal sealed class AskArbiterCommandHandler : IRequestHandler<AskArbiterComma
         if (definition.GameId is not null && definition.GameId != Guid.Empty)
         {
             var userRole = UserRole.User; // AskArbiterCommand doesn't carry UserRole; default to User
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 command.UserId, definition.GameId.Value, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         // 2. Build the combined search query from the dispute

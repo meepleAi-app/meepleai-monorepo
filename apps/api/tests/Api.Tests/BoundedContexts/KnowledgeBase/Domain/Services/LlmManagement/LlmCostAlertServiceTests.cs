@@ -699,4 +699,28 @@ public sealed class LlmCostAlertServiceTests
     }
 
     #endregion
+
+    /// <summary>
+    /// #4166 (review della 3b): un tetto a zero vuol dire AI a pagamento spenta, non un allarme a ogni
+    /// controllo. È lo stesso contratto di LlmBudgetMonitoringService.
+    /// </summary>
+    [Fact]
+    public async Task WithZeroCaps_NoCheckSendsAnAlert()
+    {
+        _configProviderMock.Setup(p => p.GetBudgetPolicyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmBudgetPolicy(0m, 0m, 80, 30, 20));
+        _costLogRepositoryMock.Setup(r => r.GetDailyCostAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>())).ReturnsAsync(0.5m);
+        _costLogRepositoryMock.Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0.5m);
+        _costLogRepositoryMock.Setup(r => r.GetCostsByProviderAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<string, decimal>(StringComparer.Ordinal));
+
+        await _service.CheckDailyCostThresholdAsync(TestContext.Current.CancellationToken);
+        await _service.CheckWeeklyCostThresholdAsync(TestContext.Current.CancellationToken);
+        await _service.CheckMonthlyCostProjectionAsync(TestContext.Current.CancellationToken);
+
+        _alertingServiceMock.Verify(a => a.SendAlertAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

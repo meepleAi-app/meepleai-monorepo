@@ -76,7 +76,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
     internal async Task CheckBudgetThresholdsAsync(CancellationToken cancellationToken)
     {
         var policy = await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false);
-        var warningRatio = policy.DegradeThresholdPercent / 100.0;
+        var warningRatio = policy.DegradeThresholdPercent / 100m;
 
         using var scope = _scopeFactory.CreateScope();
         var costLogRepository = scope.ServiceProvider.GetRequiredService<ILlmCostLogRepository>();
@@ -101,7 +101,7 @@ internal class LlmBudgetMonitoringService : BackgroundService
         string period,
         decimal actualSpend,
         decimal budgetLimit,
-        double warningRatio,
+        decimal warningRatio,
         CancellationToken cancellationToken)
     {
         if (budgetLimit <= 0m)
@@ -110,13 +110,15 @@ internal class LlmBudgetMonitoringService : BackgroundService
             return;
         }
 
-        var percentage = (double)(actualSpend / budgetLimit);
-        if (percentage >= 1.0)
+        // Il confronto è in decimal come nel gate: l'allarme e il degrado scattano sulla stessa spesa.
+        var ratio = actualSpend / budgetLimit;
+        var percentage = (double)ratio;
+        if (ratio >= 1m)
         {
             await SendBudgetAlertAsync(alertingService, "Critical", period, actualSpend, budgetLimit, percentage,
                 "The LLM gateway is refusing paid calls until the budget resets.", cancellationToken).ConfigureAwait(false);
         }
-        else if (percentage >= warningRatio)
+        else if (ratio >= warningRatio)
         {
             await SendBudgetAlertAsync(alertingService, "Warning", period, actualSpend, budgetLimit, percentage,
                 "Degrade threshold reached: answers use the reserve model of the agent profile, background work is paused.",

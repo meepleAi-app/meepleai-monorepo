@@ -298,9 +298,12 @@ public sealed class HybridLlmServiceBudgetGateTests
         new([_deepSeek.Object, _openRouter.Object], _selector.Object, _circuitBreakers.Object, _costService.Object,
             NullLogger<HybridLlmService>.Instance, budgetGate: _gate.Object, reserveModels: _reserve.Object);
 
-    private void Degraded(bool degraded = true, string? reserve = ReserveModel)
+    private void Degraded(bool degraded = true, string? reserve = ReserveModel, bool reserveIsCheaper = true)
     {
         _gate.Setup(g => g.IsDegradedAsync(It.IsAny<CancellationToken>())).ReturnsAsync(degraded);
+        _gate.Setup(g => g.IsCheaperReserveAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(reserveIsCheaper);
         _reserve.Setup(r => r.GetReserveModelAsync(It.IsAny<CancellationToken>())).ReturnsAsync(reserve);
     }
 
@@ -389,5 +392,21 @@ public sealed class HybridLlmServiceBudgetGateTests
         var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
 
         result.Response.Should().Be("answer from DeepSeek");
+    }
+
+    /// <summary>
+    /// Review della 3b: il gateway chiede al gate se la riserva è a catalogo e costa meno del modello
+    /// instradato, e se no resta sul principale.
+    /// </summary>
+    [Fact]
+    public async Task AReserveThatIsNotCheaperOrNotInTheCatalog_KeepsTheMainModel()
+    {
+        Degraded(reserveIsCheaper: false);
+
+        var result = await CreateDegradableSut().GenerateCompletionAsync("system", "question", RequestSource.Manual);
+
+        result.Response.Should().Be("answer from DeepSeek");
+        _gate.Verify(g => g.IsCheaperReserveAsync("deepseek-flash", "DeepSeek", ReserveModel, "OpenRouter", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

@@ -488,4 +488,62 @@ public sealed class LlmBudgetGateTests : IDisposable
 
         (await RemainingAsync(RequestSource.Manual)).Should().Be(0.7m);
     }
+
+    private const string CheapModel = "cheap-model";
+
+    private void CheapModelInTheCatalog() =>
+        _calculator.Setup(c => c.ResolvePricingAsync(CheapModel, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new LlmModelPricing { ModelId = CheapModel, Provider = "OpenRouter", InputCostPer1M = 0.1m, OutputCostPer1M = 0.2m });
+
+    private Task<bool> IsCheaperReserveAsync(string routed, string reserve) =>
+        _gate.IsCheaperReserveAsync(routed, "OpenRouter", reserve, "OpenRouter", TestContext.Current.CancellationToken);
+
+    /// <summary>
+    /// Review della 3b: con il tetto a zero «oltre la soglia» era sempre vero, e il degrado spostava
+    /// sulla riserva a pagamento anche le risposte di un modello gratuito, che il gate poi rifiutava.
+    /// </summary>
+    [Fact]
+    public async Task WithAZeroDailyCap_ThereIsNoDegrade()
+    {
+        UsePolicy(dailyCap: 0m, monthlyCap: 20m);
+
+        (await IsDegradedAsync()).Should().BeFalse("con il tetto a zero l'AI a pagamento è spenta: il degrado non ha nulla da ridurre");
+    }
+
+    [Fact]
+    public async Task AReserveCheaperThanTheRoutedModel_CanReplaceIt_ButNotTheOtherWayRound()
+    {
+        CheapModelInTheCatalog();
+
+        (await IsCheaperReserveAsync(PaidModel, CheapModel)).Should().BeTrue();
+        (await IsCheaperReserveAsync(CheapModel, PaidModel)).Should().BeFalse("una riserva più cara alzerebbe la spesa che il degrado deve ridurre");
+    }
+
+    [Fact]
+    public async Task AFreeRoutedModel_IsNeverReplaced()
+    {
+        (await IsCheaperReserveAsync(FreeModel, PaidModel)).Should().BeFalse("un modello gratuito non spende: la riserva a pagamento sì");
+    }
+
+    /// <summary>Review della 3b: una riserva fuori catalogo veniva rifiutata (D5) e lo streaming si fermava.</summary>
+    [Fact]
+    public async Task AReserveOutsideTheCatalog_NeverReplaces()
+    {
+        (await IsCheaperReserveAsync(PaidModel, UnknownModel)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ARoutedModelOutsideTheCatalog_IsReplacedByAPricedReserve()
+    {
+        (await IsCheaperReserveAsync(UnknownModel, PaidModel)).Should().BeTrue("il modello instradato verrebbe rifiutato, la riserva no");
+    }
+
+    [Fact]
+    public async Task WhenTheCatalogCannotBeRead_TheReserveIsNotUsed()
+    {
+        _calculator.Setup(c => c.ResolvePricingAsync(PaidModel, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The model price list could not be loaded"));
+
+        (await IsCheaperReserveAsync(UnknownModel, PaidModel)).Should().BeFalse();
+    }
 }

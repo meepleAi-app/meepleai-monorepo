@@ -45,7 +45,8 @@ internal class LlmCostAlertService
         var dailyThreshold = (await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false)).DailyCapUsd;
         var dailyCost = await _costLogRepository.GetDailyCostAsync(today, cancellationToken).ConfigureAwait(false);
 
-        if (dailyCost > dailyThreshold)
+        // Un tetto a zero vuol dire AI a pagamento spenta, non un allarme (come LlmBudgetMonitoringService).
+        if (dailyThreshold > 0m && dailyCost > dailyThreshold)
         {
             _logger.LogWarning(
                 "ALERT: Daily LLM cost ${DailyCost:F2} exceeds threshold ${Threshold:F2}",
@@ -87,7 +88,7 @@ internal class LlmCostAlertService
         var weeklyThreshold = (await _configProvider.GetBudgetPolicyAsync(cancellationToken).ConfigureAwait(false)).DailyCapUsd * DaysPerWeek;
         var weeklyCost = await _costLogRepository.GetTotalCostAsync(weekStart, today, cancellationToken).ConfigureAwait(false);
 
-        if (weeklyCost > weeklyThreshold)
+        if (weeklyThreshold > 0m && weeklyCost > weeklyThreshold)
         {
             _logger.LogWarning(
                 "ALERT: Weekly LLM cost ${WeeklyCost:F2} exceeds threshold ${Threshold:F2}",
@@ -124,7 +125,7 @@ internal class LlmCostAlertService
         var daysInMonth = DateTime.DaysInMonth(today.Year, today.Month);
         var projectedMonthlyCost = (monthCost / daysElapsed) * daysInMonth;
 
-        if (projectedMonthlyCost > monthlyThreshold)
+        if (monthlyThreshold > 0m && projectedMonthlyCost > monthlyThreshold)
         {
             _logger.LogWarning(
                 "ALERT: Projected monthly LLM cost ${ProjectedCost:F2} exceeds budget ${Threshold:F2}",

@@ -56,7 +56,7 @@ D6 di ADR-095 definisce tre fasce sul consumo del giorno:
 | fra la soglia e il tetto | **modello di riserva** del profilo agente | **in pausa** fino a domani |
 | oltre il tetto | non partono | non partono |
 
-La spesa che conta è quella di tutta l'AI: il registro, più le chiamate chiuse e quelle in corso dopo l'ultima lettura (`LlmBudgetGate.IsDegradedAsync`). La spesa di ieri non conta, anche se resta nel mese.
+La spesa che conta è quella di tutta l'AI: il registro, più le chiamate chiuse e quelle in corso dopo l'ultima lettura (`LlmBudgetGate.IsDegradedAsync`). La spesa di ieri non conta, anche se resta nel mese. Con il tetto giornaliero a zero non c'è degrado: l'AI a pagamento è spenta e le chiamate gratuite passano come sempre.
 
 **Modello di riserva.** È il `FallbackModelId` della versione **pubblicata** del profilo agente (#4167), letto al più una volta al minuto (`PublishedProfileReserveModelProvider`). Pubblicare una versione con una riserva diversa vale quindi entro un minuto. Il passaggio riguarda le risposte instradate, unarie e in streaming. Una chiamata a modello esplicito tiene il suo modello: il playground, per esempio, prova il modello che l'admin ha scelto.
 
@@ -64,9 +64,11 @@ La risposta resta sul modello principale, con un warning nel log, quando:
 
 - il profilo non ha una riserva, o non si legge e non è mai stato letto;
 - nessun provider configurato serve il modello di riserva;
-- il circuito del provider della riserva è aperto.
+- il circuito del provider della riserva è aperto;
+- la riserva non è nel catalogo, e verrebbe rifiutata (D5);
+- la riserva non costa meno del modello instradato (`LlmBudgetGate.IsCheaperReserveAsync`, confronto sul prezzo di un milione di token in ingresso più uno in uscita). Un modello gratuito non viene quindi mai sostituito. Un modello instradato fuori catalogo invece sì, perché verrebbe rifiutato.
 
-La riserva passa dallo stesso gate di ogni altra chiamata: dev'essere nel catalogo (D5), e il suo costo conta verso il tetto. Una riserva più economica del principale allunga la giornata; una riserva più cara la accorcerebbe, quindi va scelta di conseguenza. Il profilo pubblicato con #4179 ha `meta-llama/llama-3.3-70b-instruct` su OpenRouter.
+La riserva passa dallo stesso gate di ogni altra chiamata, e il suo costo conta verso il tetto. Il profilo pubblicato con #4179 ha `meta-llama/llama-3.3-70b-instruct` su OpenRouter (0,22 $ + 0,50 $ per milione di token) contro `deepseek-flash` (0,30 $ + 1,20 $).
 
 **Background in pausa.** Le chiamate rifiutate hanno `reason=BackgroundPaused` nella metrica, il codice `AI_BUDGET_DAILY_EXHAUSTED` e il messaggio «Per oggi il lavoro in background è in pausa…» (o «le valutazioni»). Riprendono il giorno dopo, o prima se l'admin alza il tetto giornaliero o la soglia.
 
@@ -84,7 +86,7 @@ Il tetto di KbQuality è la **quota delle valutazioni** (D6: «il tetto di KbQua
 Leggono la stessa politica che il gate applica, non più i propri valori di `appsettings`.
 
 - **`LlmBudgetMonitoringService`** (ogni `LlmBudgetAlerts:CheckIntervalMinutes`, 60 minuti): sulla spesa del giorno e del mese, un warning alla soglia di degrado e un allarme critico al tetto. Un tetto a zero vuol dire AI a pagamento spenta, quindi non genera allarmi.
-- **`LlmCostAlertService`** (comando `CheckLlmCostAlerts`): un allarme oltre il tetto del giorno, oltre sette volte il tetto del giorno sulla settimana, e quando la proiezione del mese supera il tetto mensile.
+- **`LlmCostAlertService`** (comando `CheckLlmCostAlerts`): un allarme oltre il tetto del giorno, oltre sette volte il tetto del giorno sulla settimana, e quando la proiezione del mese supera il tetto mensile. Anche qui un tetto a zero non genera allarmi.
 
 Il **budget mode** (`LlmModelOverrideService`) non c'è più. Sostituiva per tutto il processo i modelli cari con quelli economici quando il job orario vedeva superata una soglia, senza fermare nulla. Il suo posto l'ha preso il degrado del gateway, che agisce prima della chiamata e con il modello che l'admin ha scelto nel profilo. Le chiavi `LlmBudgetAlerts:DailyBudgetUsd`, `MonthlyBudgetUsd` e le soglie in `appsettings` non si leggono più, e sono state tolte.
 
@@ -114,4 +116,6 @@ Le chiamate rifiutate non scrivono righe nel registro costi, perché non hanno r
 - **Streaming senza fallback.** Lo streaming instradato non passa a un altro provider se il modello scelto è fuori catalogo: non aveva fallback nemmeno prima (C8 di ADR-095), e lo avrà con la pipeline della fetta 5. Il messaggio dice quale modello aggiungere al catalogo.
 - **Una sola istanza.** Le riserve stanno in memoria. Con due istanze dell'API, ciascuna vedrebbe solo le proprie fino alla lettura successiva del registro. È il contratto di staging (ADR-087).
 - **Spesa illeggibile.** Se il registro non si legge, si riusa la lettura dello stesso giorno, se c'è; altrimenti la chiamata non parte.
+- **Multimodale senza degrado.** Le chiamate con immagini tengono il loro modello: la riserva del profilo è un modello di solo testo, e non tutte le riserve leggono immagini. Il tetto le ferma come le altre.
+- **Fallback dopo la riserva.** Se la chiamata alla riserva fallisce, il fallback unario sceglie il provider successivo dall'ordine dell'instradamento, che può essere il modello principale. Resta comunque sotto il tetto.
 - **Riserva ignota alla prima lettura fallita.** Se il profilo non si è mai letto e la prima lettura fallisce, per un minuto non c'è riserva e le risposte restano sul modello principale (che il tetto continua a fermare).

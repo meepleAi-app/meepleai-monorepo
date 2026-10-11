@@ -37,6 +37,15 @@ internal interface ILlmBudgetGate
     /// ferma; oltre il tetto non parte nulla.
     /// </summary>
     Task<bool> IsDegradedAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// #4166 (review della 3b): vero se il degrado può passare dal modello instradato alla riserva,
+    /// cioè se la riserva è nel catalogo e costa meno. Una riserva fuori catalogo verrebbe rifiutata
+    /// (D5), e una più cara, o al posto di un modello gratuito, alzerebbe la spesa che il degrado
+    /// deve ridurre. Un modello instradato fuori catalogo verrebbe rifiutato: la riserva lo sostituisce.
+    /// </summary>
+    Task<bool> IsCheaperReserveAsync(
+        string routedModel, string routedProvider, string reserveModel, string reserveProvider, CancellationToken cancellationToken);
 }
 
 /// <summary>

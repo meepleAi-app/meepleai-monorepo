@@ -881,8 +881,9 @@ internal class HybridLlmService : ILlmService
 
     /// <summary>
     /// #4166 (ADR-095 D6): fra la soglia di degrado e il tetto, una risposta instradata passa al
-    /// modello di riserva della versione pubblicata del profilo. Il background a quel punto è già
-    /// fermo nel gate; le chiamate a modello esplicito tengono il loro modello.
+    /// modello di riserva della versione pubblicata del profilo, se la riserva è nel catalogo e costa
+    /// meno del modello instradato. Il background a quel punto è già fermo nel gate; le chiamate a
+    /// modello esplicito e quelle multimodali tengono il loro modello.
     /// </summary>
     private async Task<(ILlmClient Client, LlmRoutingDecision Decision)> ApplyBudgetDegradeAsync(
         ILlmClient client,
@@ -909,6 +910,12 @@ internal class HybridLlmService : ILlmService
             _logger.LogWarning(
                 "Budget degrade: the reserve model {Reserve} has no available provider, keeping {Model}",
                 reserve, decision.ModelId);
+            return (client, decision);
+        }
+
+        if (!await _budgetGate.IsCheaperReserveAsync(
+                decision.ModelId, decision.ProviderName, reserve, reserveClient.ProviderName, cancellationToken).ConfigureAwait(false))
+        {
             return (client, decision);
         }
 

@@ -172,6 +172,33 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, ILlmBudgetStatus, IDisposa
     }
 
     /// <inheritdoc/>
+    public async Task<bool> IsCheaperReserveAsync(
+        string routedModel, string routedProvider, string reserveModel, string reserveProvider, CancellationToken cancellationToken)
+    {
+        LlmModelPricing? routed;
+        LlmModelPricing? reserve;
+        try
+        {
+            reserve = await _costCalculator.ResolvePricingAsync(reserveModel, reserveProvider, cancellationToken).ConfigureAwait(false);
+            routed = await _costCalculator.ResolvePricingAsync(routedModel, routedProvider, cancellationToken).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "The AI model catalog could not be read: no budget degrade to {Reserve}", reserveModel);
+            return false;
+        }
+
+        if (reserve is null)
+        {
+            _logger.LogWarning(
+                "Budget degrade: the reserve model {Reserve} is not in the model catalog, keeping {Model}", reserveModel, routedModel);
+            return false;
+        }
+
+        return routed is null || PricePer1M(reserve) < PricePer1M(routed);
+    }
+
+    /// <inheritdoc/>
     public async Task<decimal> GetRemainingUsdAsync(RequestSource source, CancellationToken cancellationToken)
     {
         var budgetClass = LlmBudgetClassification.For(source);
@@ -259,9 +286,15 @@ internal sealed class LlmBudgetGate : ILlmBudgetGate, ILlmBudgetStatus, IDisposa
         _ => null,
     };
 
-    /// <summary>Il consumo del giorno ha raggiunto la soglia di degrado (D6).</summary>
+    /// <summary>
+    /// Il consumo del giorno ha raggiunto la soglia di degrado (D6). Con il tetto a zero non c'è
+    /// degrado: l'AI a pagamento è spenta, e le chiamate gratuite passano come sempre.
+    /// </summary>
     private static bool IsOverDegradeThreshold(LlmBudgetPolicy policy, Spend spend) =>
-        spend.Day >= policy.DailyCapUsd * policy.DegradeThresholdPercent / 100m;
+        policy.DailyCapUsd > 0m && spend.Day >= policy.DailyCapUsd * policy.DegradeThresholdPercent / 100m;
+
+    /// <summary>Il prezzo per confrontare due modelli: un milione di token in ingresso e uno in uscita.</summary>
+    private static decimal PricePer1M(LlmModelPricing pricing) => pricing.InputCostPer1M + pricing.OutputCostPer1M;
 
     /// <summary>
     /// Il messaggio per chi ha fatto la domanda. In italiano, come gli altri messaggi d'errore che il

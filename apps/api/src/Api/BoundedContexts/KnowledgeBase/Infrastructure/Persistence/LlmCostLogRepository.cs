@@ -62,7 +62,8 @@ public class LlmCostLogRepository : RepositoryBase, ILlmCostLogRepository
             CreatedAt = DateTime.UtcNow,
             RequestDate = DateOnly.FromDateTime(DateTime.UtcNow),
             RequestSource = source.ToString(),
-            PricingStatus = cost.PricingStatus?.ToString()
+            PricingStatus = cost.PricingStatus?.ToString(),
+            ProfileVersionId = cost.ProfileVersionId
         };
 
         DbContext.LlmCostLogs.Add(entity);

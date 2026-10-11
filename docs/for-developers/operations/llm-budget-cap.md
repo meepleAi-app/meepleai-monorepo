@@ -73,6 +73,22 @@ Se la riserva fallisce (provider giù, chiave rifiutata), la risposta torna al m
 
 **Background in pausa.** Le chiamate rifiutate hanno `reason=BackgroundPaused` nella metrica, il codice `AI_BUDGET_DAILY_EXHAUSTED` e il messaggio «Per oggi il lavoro in background è in pausa…» (o «le valutazioni»). Riprendono il giorno dopo, o prima se l'admin alza il tetto giornaliero o la soglia.
 
+## Risposte della pipeline (#4168)
+
+Le risposte della pipeline unica (ADR-095 D3) passano da un ingresso proprio del gateway, `GenerateAnswerStreamAsync` e `GenerateAnswerAsync`. Modello principale, riserva, temperatura e lunghezza massima arrivano dalla versione pubblicata del profilo, non dalla strategia di instradamento. Le chat ci passano una alla volta (fette 5c–5e, poi la fetta 8). Le garanzie sono le stesse in streaming e in risposta unica:
+
+| caso | cosa succede |
+|---|---|
+| il principale fallisce **prima del primo token** (stream vuoto, eccezione) | si prova la riserva; il circuito del principale conta il guasto |
+| il circuito del principale è aperto | il principale non si chiama, si passa alla riserva |
+| tetto o quota raggiunti | la risposta si ferma, senza provare la riserva: spenderebbe dallo stesso budget |
+| il principale è fuori catalogo | si passa alla riserva; se nessuno dei due è nel catalogo, il rifiuto è `AI_MODEL_NOT_IN_CATALOG` |
+| degrado e riserva più economica | la riserva parte per prima, il principale resta dietro |
+| lo stream si interrompe **dopo il primo token** | nessun secondo modello. L'ultimo chunk porta `AI_STREAM_INTERRUPTED`. Il costo stimato dei token generati (circa 4 caratteri per token, sul listino del catalogo) entra nel registro come riga fallita, e il circuito conta il guasto |
+| nessun modello risponde | un solo chunk con `AI_PROVIDER_UNAVAILABLE`, mai uno stream vuoto. Il dettaglio del provider resta nei log |
+
+Ogni tentativo aggiorna il circuit breaker, tranne quando è il client a smettere di leggere. Ogni riga del registro costi di una risposta porta la versione del profilo (`llm_cost_logs.profile_version_id`, ADR-095 D2). Fanno eccezione le righe dei tentativi falliti senza token, che non hanno costo.
+
 ## KbQuality
 
 Il tetto di KbQuality è la **quota delle valutazioni** (D6: «il tetto di KbQuality diventa una quota dentro il tetto unico»). Prima della fetta 3b era un contatore per tenant di 50 $ al mese (`EvalQuality:MonthlyCostCap`), fuori da ogni altro budget.
@@ -114,7 +130,7 @@ Le chiamate rifiutate non scrivono righe nel registro costi, perché non hanno r
 
 ## Limiti noti
 
-- **Streaming senza fallback.** Lo streaming instradato non passa a un altro provider se il modello scelto è fuori catalogo: non aveva fallback nemmeno prima (C8 di ADR-095), e lo avrà con la pipeline della fetta 5. Il messaggio dice quale modello aggiungere al catalogo.
+- **Streaming instradato senza fallback.** Lo streaming instradato, quello delle chat non ancora passate sulla pipeline, non va a un altro provider se il modello scelto è fuori catalogo e non aggiorna il circuit breaker (C8 di ADR-095). Il messaggio dice quale modello aggiungere al catalogo. Le risposte della pipeline hanno l'una e l'altra cosa (sezione sopra), e le chat ci passano con le fette 5c–5e e 8.
 - **Una sola istanza.** Le riserve stanno in memoria. Con due istanze dell'API, ciascuna vedrebbe solo le proprie fino alla lettura successiva del registro. È il contratto di staging (ADR-087).
 - **Spesa illeggibile.** Se il registro non si legge, si riusa la lettura dello stesso giorno, se c'è; altrimenti la chiamata non parte.
 - **Multimodale senza degrado.** Le chiamate con immagini tengono il loro modello: la riserva del profilo è un modello di solo testo, e non tutte le riserve leggono immagini. Il tetto le ferma come le altre.

@@ -35,6 +35,7 @@ internal class HybridLlmService : ILlmService
     private readonly ILlmCallerAccessor? _callerAccessor; // #4164: attribuzione del costo all'utente della richiesta
     private readonly ILlmBudgetGate? _budgetGate; // #4166: tetto di spesa e fail closed, prima di ogni chiamata
     private readonly IAgentReserveModelProvider? _reserveModels; // #4166: modello di riserva per il degrado
+    private readonly ILlmCostCalculator? _costCalculator; // #4168: il costo dei token di uno stream interrotto
 
     // Default LLM parameters
     private const double DefaultTemperature = 0.3;
@@ -57,7 +58,8 @@ internal class HybridLlmService : ILlmService
         IPiiDetector? piiDetector = null,
         ILlmCallerAccessor? callerAccessor = null,
         ILlmBudgetGate? budgetGate = null,
-        IAgentReserveModelProvider? reserveModels = null)
+        IAgentReserveModelProvider? reserveModels = null,
+        ILlmCostCalculator? costCalculator = null)
     {
         _clients = clients?.ToList() ?? throw new ArgumentNullException(nameof(clients));
         _providerSelector = providerSelector ?? throw new ArgumentNullException(nameof(providerSelector));
@@ -68,6 +70,7 @@ internal class HybridLlmService : ILlmService
         _callerAccessor = callerAccessor;
         _budgetGate = budgetGate;
         _reserveModels = reserveModels;
+        _costCalculator = costCalculator;
 
         if (_clients.Count == 0)
         {
@@ -388,6 +391,498 @@ internal class HybridLlmService : ILlmService
         {
             yield return chunk;
         }
+    }
+
+    // ─── #4168 (ADR-095 D3, passo 6): la risposta della pipeline ────────────────────────────────
+
+    /// <summary>Il messaggio per l'utente quando nessun modello risponde: i dettagli restano nei log.</summary>
+    private const string NoModelAnsweredMessage =
+        "No AI model could answer right now. Please try again in a few minutes.";
+
+    /// <summary>La riga del registro di uno stream che il consumatore ha smesso di leggere.</summary>
+    private const string ClientStoppedFailure = "Stream stopped by the client before the end";
+
+    /// <summary>Il messaggio per l'utente quando la risposta si interrompe dopo il primo token.</summary>
+    private const string StreamInterruptedMessage =
+        "The answer was interrupted before it was complete. Please ask again.";
+
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
+    {
+        ValidateAnswerRequest(request);
+        var costContext = AttributeCost(LlmUserContext.Anonymous);
+        LlmCompletionResult? catalogRefusal = null;
+        var attemptedAny = false;
+        string? lastError = null;
+
+        foreach (var model in await OrderAnswerModelsAsync(request, ct).ConfigureAwait(false))
+        {
+            var client = _clients.FirstOrDefault(c => c.SupportsModel(model));
+            if (client is null)
+            {
+                _logger.LogWarning("Answer: no provider supports model {Model}, trying the next model", model);
+                continue;
+            }
+
+            if (_circuitBreakerRegistry.GetState(client.ProviderName) == CircuitState.Open)
+            {
+                _logger.LogWarning("Answer: circuit breaker OPEN for {Provider}, skipping model {Model}", client.ProviderName, model);
+                continue;
+            }
+
+            var (systemPrompt, userPrompt) = RedactFor(client, request.SystemPrompt, request.UserPrompt);
+            var admission = await AdmitAsync(request.Source, model, client.ProviderName,
+                systemPrompt.Length + userPrompt.Length, request.MaxTokens, 0, ct).ConfigureAwait(false);
+            if (!admission.IsAllowed)
+            {
+                // Un tetto o una quota fermano la risposta: la riserva spenderebbe dallo stesso budget.
+                if (admission.Rejection != LlmBudgetRejection.ModelNotInCatalog)
+                {
+                    return Refused(admission) with { ProfileVersionId = request.ProfileVersionId };
+                }
+
+                catalogRefusal = Refused(admission);
+                continue;
+            }
+
+            attemptedAny = true;
+            var stopwatch = Stopwatch.StartNew();
+            var actualCost = 0m;
+            try
+            {
+                var result = await client.GenerateCompletionAsync(
+                    model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).ConfigureAwait(false);
+                stopwatch.Stop();
+
+                // I client trasformano anche l'annullamento in un risultato fallito: chi ha smesso di
+                // aspettare è il chiamante, non il provider, quindi niente circuit breaker né riserva.
+                if (!result.Success && ct.IsCancellationRequested)
+                {
+                    ct.ThrowIfCancellationRequested();
+                }
+
+                if (result.Success)
+                {
+                    actualCost = result.Cost.TotalCost;
+                    result = result with { ProfileVersionId = request.ProfileVersionId };
+                    _providerSelector.RecordSuccess(client.ProviderName, model, stopwatch.ElapsedMilliseconds, result);
+                    await _costService.LogSuccessAsync(result, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+                        .ConfigureAwait(false);
+                    return result;
+                }
+
+                _logger.LogWarning("Answer: model {Model} via {Provider} failed: {Error}", model, client.ProviderName, result.ErrorMessage);
+                _providerSelector.RecordFailure(client.ProviderName, model, stopwatch.ElapsedMilliseconds, result);
+                await _costService.LogFailureAsync(result.ErrorMessage, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+                    .ConfigureAwait(false);
+                lastError = result.ErrorMessage;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                stopwatch.Stop();
+                _logger.LogError(ex, "Answer: model {Model} via {Provider} threw", model, client.ProviderName);
+                _providerSelector.RecordFailure(client.ProviderName, model, stopwatch.ElapsedMilliseconds);
+                await _costService.LogFailureAsync(ex.Message, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+                    .ConfigureAwait(false);
+                lastError = ex.Message;
+            }
+            finally
+            {
+                CompleteAdmission(admission, actualCost);
+            }
+        }
+
+        // Nessun modello del profilo è nel catalogo: il motivo è quello, non un provider giù.
+        if (!attemptedAny && catalogRefusal is not null)
+        {
+            return catalogRefusal with { ProfileVersionId = request.ProfileVersionId };
+        }
+
+        _logger.LogWarning("Answer: no model answered (last error: {Error})", lastError ?? "none");
+        var unavailable = LlmCompletionResult.CreateFailure(NoModelAnsweredMessage);
+        return unavailable with
+        {
+            ProfileVersionId = request.ProfileVersionId,
+            Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["error_code"] = LlmAnswerErrorCodes.ProviderUnavailable,
+            },
+        };
+    }
+
+    /// <inheritdoc/>
+#pragma warning disable S4456 // Parameter validation on async iterator - validated before yield
+    public async IAsyncEnumerable<StreamChunk> GenerateAnswerStreamAsync(
+        LlmAnswerRequest request,
+        [EnumeratorCancellation] CancellationToken ct = default)
+#pragma warning restore S4456
+    {
+        ValidateAnswerRequest(request);
+        var costContext = AttributeCost(LlmUserContext.Anonymous);
+        LlmBudgetAdmission? catalogRefusal = null;
+        var attemptedAny = false;
+
+        foreach (var model in await OrderAnswerModelsAsync(request, ct).ConfigureAwait(false))
+        {
+            var client = _clients.FirstOrDefault(c => c.SupportsModel(model));
+            if (client is null)
+            {
+                _logger.LogWarning("Answer stream: no provider supports model {Model}, trying the next model", model);
+                continue;
+            }
+
+            if (_circuitBreakerRegistry.GetState(client.ProviderName) == CircuitState.Open)
+            {
+                _logger.LogWarning("Answer stream: circuit breaker OPEN for {Provider}, skipping model {Model}", client.ProviderName, model);
+                continue;
+            }
+
+            var (systemPrompt, userPrompt) = RedactFor(client, request.SystemPrompt, request.UserPrompt);
+            var admission = await AdmitAsync(request.Source, model, client.ProviderName,
+                systemPrompt.Length + userPrompt.Length, request.MaxTokens, 0, ct).ConfigureAwait(false);
+            if (!admission.IsAllowed)
+            {
+                if (admission.Rejection != LlmBudgetRejection.ModelNotInCatalog)
+                {
+                    yield return RefusedChunk(admission);
+                    yield break;
+                }
+
+                catalogRefusal = admission;
+                continue;
+            }
+
+            attemptedAny = true;
+            var attempt = new AnswerStreamAttempt(client.ProviderName, model, systemPrompt.Length + userPrompt.Length);
+            await foreach (var chunk in StreamAnswerAttemptAsync(client, systemPrompt, userPrompt, request, admission, costContext, attempt, ct)
+                .ConfigureAwait(false))
+            {
+                yield return chunk;
+            }
+
+            if (attempt.Answered || ct.IsCancellationRequested)
+            {
+                yield break;
+            }
+
+            _logger.LogWarning(
+                "Answer stream: model {Model} via {Provider} failed before the first token ({Error}), trying the next model",
+                model, client.ProviderName, attempt.Failure);
+        }
+
+        if (!attemptedAny && catalogRefusal is not null)
+        {
+            yield return RefusedChunk(catalogRefusal);
+            yield break;
+        }
+
+        yield return new StreamChunk(null, IsFinal: true,
+            ErrorCode: LlmAnswerErrorCodes.ProviderUnavailable, ErrorMessage: NoModelAnsweredMessage);
+    }
+
+    /// <summary>
+    /// Un tentativo su un modello. Ne tiene il resoconto in <paramref name="attempt"/>, perché il
+    /// chiamante deve sapere se passare alla riserva: solo se il tentativo è fallito prima del primo
+    /// token. Ogni esito aggiorna il circuit breaker (C8), tranne l'abbandono da parte del consumatore.
+    /// </summary>
+    private async IAsyncEnumerable<StreamChunk> StreamAnswerAttemptAsync(
+        ILlmClient client,
+        string systemPrompt,
+        string userPrompt,
+        LlmAnswerRequest request,
+        LlmBudgetAdmission admission,
+        LlmUserContext costContext,
+        AnswerStreamAttempt attempt,
+        [EnumeratorCancellation] CancellationToken ct)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        StreamChunk? costChunk = null;
+        var generatedCharacters = 0;
+        Exception? error = null;
+        var loopExited = false;
+
+        _logger.LogInformation(
+            "Answer stream via {Provider} ({Model}), temperature {Temperature}, max tokens {MaxTokens}",
+            attempt.Provider, attempt.Model, request.Temperature, request.MaxTokens);
+
+        IAsyncEnumerator<StreamChunk>? enumerator = null;
+        try
+        {
+            enumerator = client.GenerateCompletionStreamAsync(
+                attempt.Model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).GetAsyncEnumerator(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            error = ex;
+        }
+
+        if (enumerator is not null)
+        {
+            try
+            {
+                while (true)
+                {
+                    bool hasNext;
+                    try
+                    {
+                        hasNext = await enumerator.MoveNextAsync().ConfigureAwait(false);
+                    }
+                    // Un annullamento chiesto dal consumatore non è un fallimento del provider; un timeout
+                    // di HttpClient sì, anche se arriva come TaskCanceledException.
+                    catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                    {
+                        error = ex;
+                        loopExited = true;
+                        break;
+                    }
+
+                    if (!hasNext)
+                    {
+                        loopExited = true;
+                        break;
+                    }
+
+                    var chunk = enumerator.Current;
+                    if (chunk.Usage is not null && chunk.Cost is not null)
+                    {
+                        costChunk = chunk;
+                    }
+
+                    generatedCharacters += chunk.Content?.Length ?? 0;
+                    yield return chunk;
+                }
+            }
+            finally
+            {
+                await DisposeQuietlyAsync(enumerator, attempt).ConfigureAwait(false);
+                stopwatch.Stop();
+
+                // Il consumatore ha smesso di leggere a metà (disconnessione): niente circuit breaker,
+                // che misura il provider, ma il costo resta da contare.
+                if (!loopExited)
+                {
+                    attempt.Answered = true;
+                    await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                        stopwatch.ElapsedMilliseconds, failure: ClientStoppedFailure).ConfigureAwait(false);
+                }
+            }
+        }
+
+        stopwatch.Stop();
+
+        // Annullamento chiesto dal consumatore. I client non lanciano: escono dal ciclo in silenzio,
+        // quindi lo stream sembra finito (vuoto o troncato). Non è un guasto del provider né una
+        // risposta riuscita: niente circuit breaker, niente riserva, solo il conto.
+        if (ct.IsCancellationRequested)
+        {
+            attempt.Answered = true;
+            await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                stopwatch.ElapsedMilliseconds, failure: ClientStoppedFailure).ConfigureAwait(false);
+            yield break;
+        }
+
+        if (error is not null && generatedCharacters > 0)
+        {
+            // D3: dopo il primo token non si passa a un secondo modello. Lo stream finisce con un
+            // errore, il costo dei token generati entra nel registro e il circuit breaker conta il guasto.
+            _logger.LogError(error, "Answer stream via {Provider} ({Model}) interrupted after {Characters} characters",
+                attempt.Provider, attempt.Model, generatedCharacters);
+            attempt.Answered = true;
+            _providerSelector.RecordFailure(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds);
+            await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                stopwatch.ElapsedMilliseconds, failure: $"Stream interrupted after the first token: {error.Message}").ConfigureAwait(false);
+            yield return new StreamChunk(null, IsFinal: true,
+                ErrorCode: LlmAnswerErrorCodes.StreamInterrupted, ErrorMessage: StreamInterruptedMessage);
+            yield break;
+        }
+
+        if (error is null && (generatedCharacters > 0 || costChunk is not null))
+        {
+            attempt.Answered = true;
+            _providerSelector.RecordSuccess(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds,
+                LlmCompletionResult.CreateSuccess(string.Empty, costChunk?.Usage, costChunk?.Cost));
+            await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                stopwatch.ElapsedMilliseconds, failure: null).ConfigureAwait(false);
+            yield break;
+        }
+
+        // Fallito prima del primo token: un'eccezione, o uno stream chiuso senza niente — i client
+        // scrivono l'errore nei log e chiudono. Il chiamante passa alla riserva.
+        attempt.Failure = error?.Message ?? "Streaming ended without content or usage: the provider call failed";
+        _providerSelector.RecordFailure(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds);
+        await _costService.LogFailureAsync(attempt.Failure, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+            .ConfigureAwait(false);
+        CompleteAdmission(admission, 0m);
+    }
+
+    /// <summary>
+    /// Chiude il conto di uno stream che ha prodotto qualcosa: la riga del registro con la versione
+    /// del profilo e la prenotazione del gate. Senza il chunk finale (stream interrotto o abbandonato)
+    /// il costo si stima dai caratteri, a ~4 per token, sul listino del catalogo.
+    /// </summary>
+    private async Task SettleAnswerStreamAsync(
+        AnswerStreamAttempt attempt,
+        LlmAnswerRequest request,
+        LlmBudgetAdmission admission,
+        LlmUserContext costContext,
+        StreamChunk? costChunk,
+        int generatedCharacters,
+        long latencyMs,
+        string? failure)
+    {
+        try
+        {
+            await LogAndCompleteAsync(attempt, request, admission, costContext, costChunk, generatedCharacters, latencyMs, failure)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // Ogni ramo chiude la prenotazione come ultima istruzione: se si arriva qui, non è chiusa.
+            _logger.LogWarning(ex, "Answer stream via {Provider} ({Model}): recording the cost failed, the gate keeps the estimate",
+                attempt.Provider, attempt.Model);
+            _budgetGate?.Complete(admission, admission.EstimatedCostUsd, recordedInCostLog: false);
+        }
+    }
+
+    private async Task LogAndCompleteAsync(
+        AnswerStreamAttempt attempt,
+        LlmAnswerRequest request,
+        LlmBudgetAdmission admission,
+        LlmUserContext costContext,
+        StreamChunk? costChunk,
+        int generatedCharacters,
+        long latencyMs,
+        string? failure)
+    {
+        if (costChunk is { Usage: { } usage, Cost: { } cost })
+        {
+            var completed = LlmCompletionResult.CreateSuccess(string.Empty, usage, cost) with
+            {
+                ProfileVersionId = request.ProfileVersionId,
+            };
+            await _costService.LogSuccessAsync(completed, costContext, latencyMs, request.Source, CancellationToken.None)
+                .ConfigureAwait(false);
+            CompleteAdmission(admission, cost.TotalCost);
+            return;
+        }
+
+        if (generatedCharacters == 0)
+        {
+            CompleteAdmission(admission, 0m);
+            return;
+        }
+
+        if (_costCalculator is null)
+        {
+            _logger.LogWarning("Answer stream via {Provider} ({Model}) has no usage and no cost calculator: its cost is not recorded",
+                attempt.Provider, attempt.Model);
+            _budgetGate?.Complete(admission, admission.EstimatedCostUsd, recordedInCostLog: false);
+            return;
+        }
+
+        var promptTokens = Math.Max(1, attempt.PromptCharacters / 4);
+        var completionTokens = Math.Max(1, generatedCharacters / 4);
+        var estimate = _costCalculator.CalculateCost(attempt.Model, attempt.Provider, promptTokens, completionTokens);
+        var estimated = new LlmCompletionResult
+        {
+            Success = failure is null,
+            ErrorMessage = failure,
+            Usage = new LlmUsage(promptTokens, completionTokens, promptTokens + completionTokens),
+            Cost = new LlmCost
+            {
+                InputCost = estimate.InputCost,
+                OutputCost = estimate.OutputCost,
+                ModelId = attempt.Model,
+                Provider = attempt.Provider,
+                PricingStatus = estimate.PricingStatus,
+            },
+            ProfileVersionId = request.ProfileVersionId,
+        };
+        await _costService.LogSuccessAsync(estimated, costContext, latencyMs, request.Source, CancellationToken.None)
+            .ConfigureAwait(false);
+        CompleteAdmission(admission, estimate.TotalCost);
+    }
+
+    /// <summary>
+    /// Il dispose di un client non deve impedire di chiudere il conto: un'eccezione qui lascerebbe
+    /// aperta la prenotazione del gate e il circuit breaker senza esito.
+    /// </summary>
+    private async Task DisposeQuietlyAsync(IAsyncEnumerator<StreamChunk> enumerator, AnswerStreamAttempt attempt)
+    {
+        try
+        {
+            await enumerator.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Answer stream via {Provider} ({Model}): disposing the provider stream failed",
+                attempt.Provider, attempt.Model);
+        }
+    }
+
+    /// <summary>
+    /// L'ordine in cui provare i modelli di una risposta: il principale, poi la riserva. Quando il
+    /// tetto è in degrado (D6) e la riserva costa meno, la riserva passa davanti; il principale resta
+    /// dietro, perché il degrado non deve rendere una risposta meno disponibile.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> OrderAnswerModelsAsync(LlmAnswerRequest request, CancellationToken ct)
+    {
+        var primary = request.PrimaryModelId;
+        var reserve = request.FallbackModelId;
+        if (string.IsNullOrWhiteSpace(reserve) || string.Equals(reserve, primary, StringComparison.Ordinal))
+        {
+            return [primary];
+        }
+
+        if (_budgetGate is not null
+            && LlmBudgetClassification.For(request.Source) == LlmBudgetClass.Answer
+            && await _budgetGate.IsDegradedAsync(ct).ConfigureAwait(false))
+        {
+            var primaryClient = _clients.FirstOrDefault(c => c.SupportsModel(primary));
+            var reserveClient = _clients.FirstOrDefault(c => c.SupportsModel(reserve));
+            if (primaryClient is not null && reserveClient is not null
+                && await _budgetGate.IsCheaperReserveAsync(
+                    primary, primaryClient.ProviderName, reserve, reserveClient.ProviderName, ct).ConfigureAwait(false))
+            {
+                _logger.LogWarning(
+                    "Budget degrade: today's LLM spend reached the degrade threshold, answering with the reserve model {Reserve} instead of {Model}",
+                    reserve, primary);
+                return [reserve, primary];
+            }
+        }
+
+        return [primary, reserve];
+    }
+
+    private static void ValidateAnswerRequest(LlmAnswerRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrWhiteSpace(request.PrimaryModelId))
+            throw new ArgumentException("An answer needs a primary model.", nameof(request));
+        if (request.SystemPrompt is null || string.IsNullOrWhiteSpace(request.UserPrompt))
+            throw new ArgumentException("An answer needs a system prompt and a non-empty user prompt.", nameof(request));
+        if (request.Temperature < 0 || request.MaxTokens <= 0)
+            throw new ArgumentOutOfRangeException(nameof(request), "Temperature must be >= 0 and MaxTokens > 0.");
+    }
+
+    /// <summary>Issue #5510: i dati personali escono dai prompt diretti a OpenRouter; Ollama è locale.</summary>
+    private (string SystemPrompt, string UserPrompt) RedactFor(ILlmClient client, string systemPrompt, string userPrompt) =>
+        _piiDetector != null && string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal)
+            ? (_piiDetector.ScanAndRedact(systemPrompt), _piiDetector.ScanAndRedact(userPrompt))
+            : (systemPrompt, userPrompt);
+
+    /// <summary>Il resoconto di un tentativo di streaming, letto dal chiamante dopo l'enumerazione.</summary>
+    private sealed class AnswerStreamAttempt(string provider, string model, int promptCharacters)
+    {
+        public string Provider { get; } = provider;
+        public string Model { get; } = model;
+        public int PromptCharacters { get; } = promptCharacters;
+
+        /// <summary>Il tentativo ha prodotto una risposta, completa o interrotta: niente riserva.</summary>
+        public bool Answered { get; set; }
+
+        /// <summary>Perché il tentativo è fallito prima del primo token.</summary>
+        public string? Failure { get; set; }
     }
 
     /// <inheritdoc/>

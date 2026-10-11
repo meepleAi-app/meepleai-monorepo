@@ -149,6 +149,73 @@ internal interface ILlmService
         int? maxTokens = null,
         CancellationToken ct = default)
         => GenerateCompletionStreamAsync(systemPrompt, userPrompt, source, ct);
+
+    /// <summary>
+    /// #4168 (ADR-095 D3, passo 6): la risposta della pipeline in streaming. Modello, riserva,
+    /// temperatura e lunghezza arrivano dalla versione pubblicata del profilo, non dal gateway.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Le garanzie (D3): fallback sulla riserva solo PRIMA del primo token, circuit breaker
+    /// aggiornato a ogni tentativo. Se lo stream si interrompe dopo il primo token non si passa a un
+    /// secondo modello: l'ultimo chunk porta <see cref="LlmAnswerErrorCodes.StreamInterrupted"/>, il
+    /// costo dei token generati finisce nel registro e il circuit breaker conta il fallimento. Se
+    /// nessun modello risponde, l'unico chunk porta <see cref="LlmAnswerErrorCodes.ProviderUnavailable"/>:
+    /// mai uno stream vuoto.
+    /// </para>
+    /// <para>
+    /// L'implementazione di default serve a mock e doppi: chiama il modello principale senza
+    /// fallback. <c>HybridLlmService</c> la sostituisce.
+    /// </para>
+    /// </remarks>
+    IAsyncEnumerable<StreamChunk> GenerateAnswerStreamAsync(LlmAnswerRequest request, CancellationToken ct = default)
+        => GenerateCompletionStreamWithModelAsync(
+            request.PrimaryModelId, request.SystemPrompt, request.UserPrompt, request.Source,
+            request.Temperature, request.MaxTokens, ct);
+
+    /// <summary>
+    /// #4168: la risposta della pipeline in un colpo solo, con le stesse garanzie dello streaming
+    /// (riserva se il principale fallisce, circuit breaker aggiornato). Il risultato porta il
+    /// <see cref="LlmCompletionResult.ProfileVersionId"/> della richiesta.
+    /// </summary>
+    /// <remarks>L'implementazione di default serve a mock e doppi: chiama il modello principale senza fallback.</remarks>
+    Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
+        => GenerateCompletionWithModelAsync(
+            request.PrimaryModelId, request.SystemPrompt, request.UserPrompt, request.Source, request.MaxTokens, ct);
+}
+
+/// <summary>
+/// #4168 (ADR-095 D3): una risposta della pipeline. Il chiamante decide modello e parametri,
+/// presi dalla versione pubblicata del profilo; il gateway resta il solo a chiamare il provider,
+/// con tetto, fallback, circuit breaker e registro.
+/// </summary>
+/// <param name="SystemPrompt">Il prompt di sistema, già nella lingua dell'utente.</param>
+/// <param name="UserPrompt">La domanda con il contesto recuperato.</param>
+/// <param name="PrimaryModelId">Il modello principale della versione pubblicata, dal catalogo.</param>
+/// <param name="FallbackModelId">La riserva: si usa se il principale non risponde prima del primo
+/// token, e al posto del principale quando il tetto è in degrado e la riserva costa meno.</param>
+/// <param name="Temperature">La temperatura della versione pubblicata.</param>
+/// <param name="MaxTokens">La lunghezza massima della risposta, in token.</param>
+/// <param name="ProfileVersionId">La versione del profilo usata davvero: finisce nella riga del registro costi (D2).</param>
+/// <param name="Source">La sorgente per il tetto e il registro: una risposta, salvo eccezioni.</param>
+internal sealed record LlmAnswerRequest(
+    string SystemPrompt,
+    string UserPrompt,
+    string PrimaryModelId,
+    string? FallbackModelId,
+    double Temperature,
+    int MaxTokens,
+    Guid? ProfileVersionId,
+    RequestSource Source = RequestSource.RagPipeline);
+
+/// <summary>#4168: i codici d'errore che il gateway mette sull'ultimo chunk di una risposta.</summary>
+internal static class LlmAnswerErrorCodes
+{
+    /// <summary>Nessun modello ha risposto prima del primo token: provider giù, circuito aperto, chiave rifiutata.</summary>
+    public const string ProviderUnavailable = "AI_PROVIDER_UNAVAILABLE";
+
+    /// <summary>Lo stream si è interrotto dopo il primo token: la risposta è parziale e non va mostrata come completa.</summary>
+    public const string StreamInterrupted = "AI_STREAM_INTERRUPTED";
 }
 
 /// <summary>
@@ -218,6 +285,12 @@ internal record LlmCompletionResult
     public LlmUsage Usage { get; init; } = LlmUsage.Empty;
     public LlmCost Cost { get; init; } = LlmCost.Empty;
     public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente con cui è stata prodotta una risposta
+    /// della pipeline; <c>null</c> per ogni altra chiamata. Il registro costi la copia nella riga.
+    /// </summary>
+    public Guid? ProfileVersionId { get; init; }
 
     public static LlmCompletionResult CreateSuccess(
         string response,

@@ -132,6 +132,44 @@ public class LlmCostLogRepositoryTests : SharedDatabaseTestBase<LlmCostLogReposi
         log.PricingStatus.Should().Be(stored);
     }
 
+    /// <summary>
+    /// #4168 (ADR-095 D2): la riga porta la versione del profilo che ha prodotto la risposta, ed è
+    /// vuota per le chiamate che non vengono dalla pipeline.
+    /// </summary>
+    [Fact]
+    public async Task LogCost_StoresTheProfileVersion_OnlyWhenThereIsOne()
+    {
+        await ResetDatabaseAsync();
+        var versionId = Guid.NewGuid();
+        foreach (var version in new Guid?[] { versionId, null })
+        {
+            await Repository.LogCostAsync(
+                userId: null,
+                "Anonymous",
+                new LlmCostCalculation
+                {
+                    ModelId = "deepseek-flash",
+                    Provider = "DeepSeek",
+                    PromptTokens = 1000,
+                    CompletionTokens = 500,
+                    InputCost = 0.0001m,
+                    OutputCost = 0.0002m,
+                    ProfileVersionId = version
+                },
+                "completion",
+                success: true,
+                errorMessage: null,
+                latencyMs: 10,
+                ipAddress: null,
+                userAgent: null,
+                cancellationToken: TestCancellationToken);
+        }
+
+        var stored = await DbContext.LlmCostLogs.AsNoTracking()
+            .Select(l => l.ProfileVersionId).ToListAsync(TestCancellationToken);
+        stored.Should().BeEquivalentTo(new Guid?[] { versionId, null });
+    }
+
     [Fact]
     public async Task GetTotalCost_MultipleRequests_SumsCorrectly()
     {

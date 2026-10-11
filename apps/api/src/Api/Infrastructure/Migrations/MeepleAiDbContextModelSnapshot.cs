@@ -9087,6 +9087,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(16)")
                         .HasColumnName("pricing_status");
 
+                    b.Property<Guid?>("ProfileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile_version_id");
+
                     b.Property<int>("PromptTokens")
                         .HasColumnType("integer")
                         .HasColumnName("prompt_tokens");

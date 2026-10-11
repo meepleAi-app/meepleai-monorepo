@@ -4,8 +4,10 @@
  * AddToWishlistDialog — Unified ADD/EDIT dialog for the wishlist (Issue #3007, Task B4).
  *
  * `mode="add"` (default) creates a new wishlist entry via `useAddToWishlist`. The game
- * field is a searchable combobox over the user's library (`useLibrary`); the selected
- * game stays removable even when pre-filled via `prefillGameId`.
+ * field is a searchable combobox over the user's library: `useGameSearch` with the
+ * `library` source searches on the server, so a game past the first page is found too
+ * (#4187). It only runs while the add dialog is open. The selected game stays removable
+ * even when pre-filled via `prefillGameId`.
  *
  * `mode="edit"` updates an existing entry (`item`) via `useUpdateWishlistItem`. The game
  * is locked to a non-removable chip (a wishlist entry's game cannot change); priority,
@@ -41,10 +43,10 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useAddToWishlist, useUpdateWishlistItem } from '@/hooks/queries/useWishlist';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { WishlistItemDto } from '@/lib/api/schemas/wishlist.schemas';
+import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -53,6 +55,8 @@ import { cn } from '@/lib/utils';
 
 const NOTES_MAX = 200;
 const NOTES_NEAR_LIMIT = NOTES_MAX - 30;
+/** How many library games the combobox lists at once. */
+const MAX_MATCHES = 6;
 
 interface SelectedGame {
   id: string;
@@ -108,14 +112,22 @@ export function AddToWishlistDialog({
   const open = isControlled ? controlledOpen : internalOpen;
   const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen;
 
-  const { data: libraryData } = useLibrary();
-  const libraryGames = useMemo<SelectedGame[]>(
-    () => (libraryData?.items ?? []).map(entry => ({ id: entry.gameId, title: entry.gameTitle })),
-    [libraryData?.items]
+  const [query, setQuery] = useState('');
+
+  // #4187: the server filters the library by title. Filtering a downloaded first page
+  // on the client could not find a game past it.
+  const { data: searchResults } = useGameSearch(query, {
+    source: 'library',
+    limit: MAX_MATCHES,
+    enabled: open && !isEdit,
+  });
+  const matches = useMemo<SelectedGame[]>(
+    () => (searchResults ?? []).map(g => ({ id: g.id, title: g.name })),
+    [searchResults]
   );
 
   function resolveGameTitle(gameId: string): string | undefined {
-    return libraryGames.find(g => g.id === gameId)?.title;
+    return matches.find(g => g.id === gameId)?.title;
   }
 
   function buildInitialGame(): SelectedGame | null {
@@ -143,7 +155,6 @@ export function AddToWishlistDialog({
   }
 
   const [selectedGame, setSelectedGame] = useState<SelectedGame | null>(buildInitialGame);
-  const [query, setQuery] = useState('');
   const [comboOpen, setComboOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const comboContainerRef = useRef<HTMLDivElement | null>(null);
@@ -203,12 +214,6 @@ export function AddToWishlistDialog({
       event.preventDefault();
     }
   }
-
-  const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const pool = q ? libraryGames.filter(g => g.title.toLowerCase().includes(q)) : libraryGames;
-    return pool.slice(0, 6);
-  }, [query, libraryGames]);
 
   const canSubmit = !!selectedGame && !!priority && !isPending;
 

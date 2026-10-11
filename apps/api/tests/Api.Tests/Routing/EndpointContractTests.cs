@@ -157,6 +157,8 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["DELETE", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/unlink-agent", "#4138 — per-game agent unlink on a private game"];
         yield return ["GET", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved, never read by the answer path"];
         yield return ["PUT", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved (with mismatched field names), never read"];
+        yield return ["GET", "/api/v1/admin/budget", "#4169 — AppBudget: a second budget the LLM gateway never applied; the caps live in /admin/llm/config"];
+        yield return ["PUT", "/api/v1/admin/budget", "#4169 — AppBudget: a second budget the LLM gateway never applied"];
     }
 
     [Theory]

@@ -68,6 +68,12 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
 
         /// <summary>Il repository carica l'entità tracked e la muta, senza <c>Update()</c> su detached.</summary>
         TrackedMutation,
+
+        /// <summary>
+        /// Nessun codice scrive più l'entità: è ritirata e resta mappata solo finché la consegna
+        /// contract non toglie la tabella. Un write-path nuovo deve scegliere una delle tecniche sopra.
+        /// </summary>
+        NoWritePath,
     }
 
     /// <summary>
@@ -78,7 +84,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         new Dictionary<string, (WritePathTechnique, string)>(StringComparer.Ordinal)
         {
             ["AlertChannelEntity"] = (WritePathTechnique.OriginalValue, "AlertChannelRepository:78 — il pattern di riferimento"),
-            ["AppBudgetEntity"] = (WritePathTechnique.OriginalValue, "AppBudgetRepository:66 (#2690)"),
+            ["AppBudgetEntity"] = (WritePathTechnique.NoWritePath, "#4169 — AppBudget ritirato: nessun write-path, la tabella esce con la consegna contract"),
             ["GameNightEventEntity"] = (WritePathTechnique.OriginalValue, "GameNightEventRepository"),
             ["GameToolkitEntity"] = (WritePathTechnique.OriginalValue, "GameToolkitRepository (#3670 — qui il difetto è stato trovato)"),
             ["LiveGameSessionEntity"] = (WritePathTechnique.OriginalValue, "LiveSessionRepository (ADR-060)"),

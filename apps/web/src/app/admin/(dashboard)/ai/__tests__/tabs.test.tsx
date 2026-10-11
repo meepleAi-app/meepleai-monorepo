@@ -137,7 +137,7 @@ describe('PromptsTab', () => {
 describe('ModelsTab', () => {
   it('renders heading', () => {
     render(<ModelsTab />);
-    expect(screen.getByText('AI Models')).toBeInTheDocument();
+    expect(screen.getByText('Models & prices')).toBeInTheDocument();
   });
 
   it('shows empty state when no models', async () => {
@@ -163,7 +163,7 @@ describe('ModelsTab', () => {
     render(<ModelsTab />);
 
     const alert = await screen.findByTestId('models-tab-error');
-    expect(alert).toHaveTextContent(/Impossibile caricare i modelli AI/);
+    expect(alert).toHaveTextContent(/Could not load the AI models/);
     expect(alert).toHaveTextContent(/Schema validation failed/);
     expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
   });
@@ -212,10 +212,11 @@ describe('ModelsTab', () => {
 
     render(<ModelsTab />);
 
-    expect(await screen.findByText('gpt-test')).toBeInTheDocument();
-    // L'identificatore del modello e` reso accanto al provider: se il componente tornasse a
-    // leggere `modelIdentifier` (inesistente) qui comparirebbe "undefined".
-    expect(await screen.findByText(/OpenRouter · meta-llama/)).toBeInTheDocument();
+    // #4169: la riga mostra l'identificatore del modello, e sotto provider e nome visualizzato.
+    // Se il componente tornasse a leggere `modelIdentifier` (inesistente) comparirebbe "undefined".
+    expect(await screen.findByText('meta-llama/llama-3.3-70b-instruct:free')).toBeInTheDocument();
+    expect(screen.getByText(/OpenRouter · gpt-test/)).toBeInTheDocument();
+    expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
     expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
     expect(screen.queryByTestId('models-tab-error')).not.toBeInTheDocument();
   });

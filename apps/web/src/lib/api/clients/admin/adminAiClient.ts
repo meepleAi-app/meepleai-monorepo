@@ -20,6 +20,7 @@ import {
   type PagedAiModels,
   type ConfigureModelRequest,
   type SetPrimaryModelRequest,
+  type UpdateModelPricingRequest,
   type CostTrackingDto,
   type TestModelRequest,
   type TestModelResponse,
@@ -265,8 +266,10 @@ export function createAdminAiClient(http: HttpClient) {
       pageSize?: number;
     }): Promise<PagedAiModels> {
       const queryParams = new URLSearchParams();
+      // #4169: il backend filtra per `isActive`; il parametro `status` che si mandava era ignorato,
+      // e chi chiedeva solo i modelli attivi riceveva anche gli inattivi.
       if (params?.status && params.status !== 'all') {
-        queryParams.append('status', params.status);
+        queryParams.append('isActive', String(params.status === 'active'));
       }
       if (params?.page !== undefined) {
         queryParams.append('page', params.page.toString());
@@ -309,14 +312,47 @@ export function createAdminAiClient(http: HttpClient) {
       return result;
     },
 
+    /**
+     * #4169: rende il modello il predefinito del suo provider (gli altri modelli dello stesso provider
+     * smettono di esserlo). Prima chiamava `POST /ai-models/set-primary`, una rotta inesistente.
+     */
     async setPrimaryModel(request: SetPrimaryModelRequest): Promise<AiModelDto> {
       const result = await http.post(
-        '/api/v1/admin/ai-models/set-primary',
-        request,
+        `/api/v1/admin/ai-models/${encodeURIComponent(request.modelId)}/set-primary`,
+        undefined,
         AiModelDtoSchema
       );
       if (!result) {
         throw new Error('Failed to set primary model');
+      }
+      return result;
+    },
+
+    /** #4169: il prezzo del modello, e nient'altro. */
+    async updateModelPricing(
+      modelId: string,
+      request: UpdateModelPricingRequest
+    ): Promise<AiModelDto> {
+      const result = await http.patch(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/pricing`,
+        request,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to update the model price');
+      }
+      return result;
+    },
+
+    /** #4169: attiva o disattiva il modello nell'ordine di fallback. */
+    async toggleModelActive(modelId: string): Promise<AiModelDto> {
+      const result = await http.patch(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/toggle`,
+        undefined,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to toggle the model');
       }
       return result;
     },

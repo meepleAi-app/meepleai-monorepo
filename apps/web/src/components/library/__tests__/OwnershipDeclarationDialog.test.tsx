@@ -73,6 +73,14 @@ describe('OwnershipDeclarationDialog', () => {
     expect(screen.getByText(/Prestiti/)).toBeInTheDocument();
   });
 
+  it('renders accented text, not escape sequences (#4155)', () => {
+    // Nel testo JSX `é` non è una sequenza di escape: arrivava all'utente così com'era.
+    render(<OwnershipDeclarationDialog {...defaultProps} />);
+
+    expect(screen.getByText('Perché lo chiediamo?')).toBeInTheDocument();
+    expect(screen.getByRole('alertdialog')).not.toHaveTextContent(/\\u00/);
+  });
+
   it('checkbox enables confirm button', async () => {
     const user = userEvent.setup();
     render(<OwnershipDeclarationDialog {...defaultProps} />);

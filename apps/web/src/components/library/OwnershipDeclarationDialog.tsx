@@ -120,12 +120,12 @@ export function OwnershipDeclarationDialog({
 
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                  Perch\u00e9 lo chiediamo?
+                  Perché lo chiediamo?
                 </summary>
                 <p className="mt-2 text-muted-foreground">
-                  La dichiarazione di possesso ci aiuta a offrirti funzionalit\u00e0 personalizzate
-                  e a rispettare le licenze dei contenuti editoriali. Dichiarando il possesso
-                  confermi di avere una copia fisica o digitale del gioco.
+                  La dichiarazione di possesso ci aiuta a offrirti funzionalità personalizzate e a
+                  rispettare le licenze dei contenuti editoriali. Dichiarando il possesso confermi
+                  di avere una copia fisica o digitale del gioco.
                 </p>
               </details>
             </div>

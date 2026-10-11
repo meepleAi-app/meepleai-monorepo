@@ -39,6 +39,7 @@ import {
   type InlineCitationMatch,
   type ContinuationData,
 } from '@/lib/api/clients/chatClient';
+import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -50,6 +51,7 @@ import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
 import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
 // ============================================================================
@@ -107,6 +109,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
+
+  // #4155: la domanda respinta dal cancello RAG, da rinviare dopo la dichiarazione di possesso;
+  // e l'avviso per un gioco posseduto ma senza manuale caricato.
+  const [ownershipDenial, setOwnershipDenial] = useState<{ question: string } | null>(null);
+  const [noManualNotice, setNoManualNotice] = useState(false);
 
   // Page viewer panel state (Task 9: Side Panel Citation Viewer)
   const [viewerState, setViewerState] = useState<{ pdfId: string; pageNumber: number } | null>(
@@ -320,7 +327,174 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     [messages, thread?.gameId, beginAbort, patchMessageById]
   );
 
-  // Send message - SSE streaming when agentId available, REST fallback otherwise
+  // QA stream path (#415): a question on the thread's game, answered via RAG QA streaming.
+  // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
+  // in the backend — the correct SSE endpoint is POST /agents/qa/stream which
+  // takes gameId+query and internally selects the right agent/strategy.
+  // #4155: `persistUserMessage` is false when resending a question after an ownership
+  // declaration — that question is already in the thread.
+  const runQaStream = useCallback(
+    async (question: string, persistUserMessage: boolean) => {
+      if (!thread?.gameId) return;
+
+      const assistantMsgId = `assistant-${Date.now()}`;
+      const assistantMessage: ChatMessageItem = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      };
+      appendMessage(assistantMessage);
+
+      const abortController = beginAbort();
+      let finalAnswer = '';
+      let citations: unknown[] = [];
+      let followUpQuestions: string[] = [];
+
+      try {
+        // Save user message via REST first
+        if (persistUserMessage) {
+          await api.chat.addMessage(threadId, {
+            content: question,
+            role: 'user',
+          });
+        }
+
+        // Stream AI response via QA endpoint
+        for await (const event of qaStream(
+          {
+            gameId: thread.gameId,
+            query: question,
+            chatId: threadId,
+            responseStyle: 'concise',
+          },
+          abortController.signal
+        )) {
+          switch (event.type) {
+            case QA_EVENT_TYPES.INLINE_CITATION: {
+              const data = event.data as { citations: InlineCitationMatch[] };
+              if (data.citations) {
+                patchMessageById(assistantMsgId, { inlineCitations: data.citations });
+              }
+              break;
+            }
+            case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
+              const data = event.data as ContinuationData;
+              if (data.continuationToken) {
+                patchMessageById(assistantMsgId, {
+                  continuationToken: data.continuationToken,
+                });
+              }
+              break;
+            }
+            case QA_EVENT_TYPES.CITATIONS: {
+              const data = event.data as {
+                citations?: Array<{
+                  text: string;
+                  source: string;
+                  page: number;
+                  line: number;
+                  score: number;
+                }>;
+              };
+              if (data.citations) {
+                patchMessageById(assistantMsgId, { snippets: data.citations });
+              }
+              break;
+            }
+            case 7: {
+              // Token
+              const token =
+                typeof event.data === 'string'
+                  ? event.data
+                  : ((event.data as { token?: string })?.token ?? '');
+              if (token) {
+                finalAnswer += token;
+                patchMessageById(assistantMsgId, { content: finalAnswer });
+              }
+              break;
+            }
+            case 4: {
+              // Complete
+              const data = event.data as {
+                answer?: string;
+                snippets?: unknown[];
+                totalTokens?: number;
+                followUpQuestions?: string[];
+              };
+              if (data.answer) finalAnswer = data.answer;
+              citations = data.snippets ?? [];
+              followUpQuestions = data.followUpQuestions ?? [];
+              break;
+            }
+            case 5: {
+              // Error — BE sends `{ errorMessage, errorCode }` (StreamingErrorEvent).
+              // Read both names defensively. #1814.
+              const data = event.data as {
+                errorMessage?: string;
+                errorCode?: string;
+                message?: string;
+              };
+              if (data?.errorCode === RAG_OWNERSHIP_REQUIRED) {
+                // #4155: not a failure — the RAG gate wants an ownership declaration.
+                // The empty assistant bubble goes; the question stays, to be resent.
+                removeMessageById(assistantMsgId);
+                setOwnershipDenial({ question });
+              } else {
+                setError(data?.errorMessage ?? data?.message ?? 'Errore nella risposta AI');
+              }
+              abortController.abort();
+              return;
+            }
+            case 0: // StateUpdate — ignore for now
+            default:
+              break;
+          }
+        }
+
+        // Update assistant message with final data (citations + followUpQuestions)
+        patchMessageById(assistantMsgId, {
+          content: finalAnswer,
+          citations: citations as import('@/types').Citation[],
+          followUpQuestions,
+        });
+
+        // Persist assistant message to backend
+        if (finalAnswer) {
+          await api.chat.addMessage(threadId, {
+            content: finalAnswer,
+            role: 'assistant',
+          });
+        }
+
+        // TTS: auto-speak response when last message was voice-initiated
+        if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current && finalAnswer) {
+          speak(finalAnswer);
+          lastMessageWasVoiceRef.current = false;
+        }
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          setError("Errore nell'invio del messaggio");
+          // Remove optimistic assistant message on error
+          removeMessageById(assistantMsgId);
+        }
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [
+      threadId,
+      thread?.gameId,
+      voicePrefs.ttsEnabled,
+      speak,
+      appendMessage,
+      patchMessageById,
+      removeMessageById,
+      beginAbort,
+    ]
+  );
+
+  // Send message - QA stream when the thread has a game, REST fallback otherwise
   const handleSendMessage = useCallback(
     async (content?: string) => {
       const messageContent = content || inputValue.trim();
@@ -329,6 +503,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       setIsSending(true);
       setInputValue('');
       setError(null);
+      setOwnershipDenial(null);
+      setNoManualNotice(false);
 
       // Optimistic UI: add user message
       const userMessage: ChatMessageItem = {
@@ -339,146 +515,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       };
       appendMessage(userMessage);
 
-      // QA stream path: game context available → use RAG QA streaming (#415)
-      // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
-      // in the backend — the correct SSE endpoint is POST /agents/qa/stream which
-      // takes gameId+query and internally selects the right agent/strategy.
       if (thread?.gameId) {
-        const assistantMsgId = `assistant-${Date.now()}`;
-        const assistantMessage: ChatMessageItem = {
-          id: assistantMsgId,
-          role: 'assistant',
-          content: '',
-          timestamp: new Date().toISOString(),
-        };
-        appendMessage(assistantMessage);
-
-        const abortController = beginAbort();
-        let finalAnswer = '';
-        let citations: unknown[] = [];
-        let followUpQuestions: string[] = [];
-
-        try {
-          // Save user message via REST first
-          await api.chat.addMessage(threadId, {
-            content: messageContent,
-            role: 'user',
-          });
-
-          // Stream AI response via QA endpoint
-          for await (const event of qaStream(
-            {
-              gameId: thread.gameId,
-              query: messageContent,
-              chatId: threadId,
-              responseStyle: 'concise',
-            },
-            abortController.signal
-          )) {
-            switch (event.type) {
-              case QA_EVENT_TYPES.INLINE_CITATION: {
-                const data = event.data as { citations: InlineCitationMatch[] };
-                if (data.citations) {
-                  patchMessageById(assistantMsgId, { inlineCitations: data.citations });
-                }
-                break;
-              }
-              case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
-                const data = event.data as ContinuationData;
-                if (data.continuationToken) {
-                  patchMessageById(assistantMsgId, {
-                    continuationToken: data.continuationToken,
-                  });
-                }
-                break;
-              }
-              case QA_EVENT_TYPES.CITATIONS: {
-                const data = event.data as {
-                  citations?: Array<{
-                    text: string;
-                    source: string;
-                    page: number;
-                    line: number;
-                    score: number;
-                  }>;
-                };
-                if (data.citations) {
-                  patchMessageById(assistantMsgId, { snippets: data.citations });
-                }
-                break;
-              }
-              case 7: {
-                // Token
-                const token =
-                  typeof event.data === 'string'
-                    ? event.data
-                    : ((event.data as { token?: string })?.token ?? '');
-                if (token) {
-                  finalAnswer += token;
-                  patchMessageById(assistantMsgId, { content: finalAnswer });
-                }
-                break;
-              }
-              case 4: {
-                // Complete
-                const data = event.data as {
-                  answer?: string;
-                  snippets?: unknown[];
-                  totalTokens?: number;
-                  followUpQuestions?: string[];
-                };
-                if (data.answer) finalAnswer = data.answer;
-                citations = data.snippets ?? [];
-                followUpQuestions = data.followUpQuestions ?? [];
-                break;
-              }
-              case 5: {
-                // Error — BE sends `{ errorMessage, errorCode }` (StreamingErrorEvent).
-                // Read both names defensively. #1814.
-                const data = event.data as {
-                  errorMessage?: string;
-                  errorCode?: string;
-                  message?: string;
-                };
-                setError(data?.errorMessage ?? data?.message ?? 'Errore nella risposta AI');
-                abortController.abort();
-                return;
-              }
-              case 0: // StateUpdate — ignore for now
-              default:
-                break;
-            }
-          }
-
-          // Update assistant message with final data (citations + followUpQuestions)
-          patchMessageById(assistantMsgId, {
-            content: finalAnswer,
-            citations: citations as import('@/types').Citation[],
-            followUpQuestions,
-          });
-
-          // Persist assistant message to backend
-          if (finalAnswer) {
-            await api.chat.addMessage(threadId, {
-              content: finalAnswer,
-              role: 'assistant',
-            });
-          }
-
-          // TTS: auto-speak response when last message was voice-initiated
-          if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current && finalAnswer) {
-            speak(finalAnswer);
-            lastMessageWasVoiceRef.current = false;
-          }
-        } catch (err) {
-          if ((err as Error).name !== 'AbortError') {
-            setError("Errore nell'invio del messaggio");
-            // Remove optimistic assistant message on error
-            removeMessageById(assistantMsgId);
-          }
-        } finally {
-          setIsSending(false);
-        }
+        await runQaStream(messageContent, true);
         return;
       }
 
@@ -519,14 +557,30 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       isSending,
       threadId,
       thread?.gameId,
-      voicePrefs.ttsEnabled,
-      speak,
+      runQaStream,
       replaceMessagesInHook,
       appendMessage,
-      patchMessageById,
       removeMessageById,
-      beginAbort,
     ]
+  );
+
+  // #4155: ownership declared from the denial notice. With a manual indexed, the denied
+  // question goes out again; without one there is nothing to cite, so the chat says so
+  // instead of resending a question that cannot get a sourced answer.
+  const handleOwnershipDeclared = useCallback(
+    (result: OwnershipResult) => {
+      const denied = ownershipDenial;
+      setOwnershipDenial(null);
+      if (result.kbCardCount === 0) {
+        setNoManualNotice(true);
+        return;
+      }
+      if (!denied) return;
+      setIsSending(true);
+      setError(null);
+      void runQaStream(denied.question, false);
+    },
+    [ownershipDenial, runQaStream]
   );
 
   // Keep ref in sync for voice onTranscript callback
@@ -717,6 +771,23 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           className="mx-4 mt-2 p-2 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-500/20"
         >
           {error}
+        </div>
+      )}
+
+      {/* #4155: denial by the RAG gate — explain it and offer the ownership declaration */}
+      {ownershipDenial && thread?.gameId && (
+        <RagOwnershipRequiredNotice
+          gameId={thread.gameId}
+          gameName={game?.title}
+          onOwnershipDeclared={handleOwnershipDeclared}
+        />
+      )}
+      {noManualNotice && (
+        <div
+          data-testid="rag-no-manual"
+          className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground"
+        >
+          {`Possesso dichiarato, ma per ${game?.title ?? 'questo gioco'} non c'è ancora un manuale caricato: finché non ne viene caricato uno, le risposte non potranno citare il regolamento.`}
         </div>
       )}
 

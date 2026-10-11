@@ -5,9 +5,9 @@ import { useEffect, useState } from 'react';
 import { Mail, RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { useAuth } from '@/components/auth/AuthProvider';
 import { AuthCard } from '@/components/ui/auth-card';
 import { Btn } from '@/components/ui/btn';
+import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useEmailVerification } from '@/hooks/useEmailVerification';
 import { useTranslation } from '@/hooks/useTranslation';
 
@@ -42,34 +42,35 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
   const router = useRouter();
   const { t } = useTranslation();
 
-  // Get email from query params or session storage
   const emailFromParams = emailParam;
-  const [email, setEmail] = useState<string | null>(null);
 
   // #4183: the banner «Verifica ora» brings signed-in users here. They may have neither ?email=
-  // nor sessionStorage, so the session's own email comes before the stored one.
-  const { user, loading: authLoading } = useAuth();
-  const sessionEmail = user?.email ?? null;
+  // nor sessionStorage, so the session's own email comes before the stored one. Same source as
+  // the banner (useCurrentUser): AuthProvider's user was measured null on this page for a
+  // signed-in user, because it is not refreshed after a client-side login.
+  const { data: currentUser, isLoading: authLoading } = useCurrentUser();
+  const sessionEmail = currentUser?.email ?? null;
+
+  // sessionStorage exists only in the browser, so it is read after mount.
+  const [storedEmail, setStoredEmail] = useState<string | null>(null);
+  const [storageChecked, setStorageChecked] = useState(false);
 
   const { isResending, error, cooldownSeconds, resendVerificationEmail, clearError } =
     useEmailVerification();
 
-  // Initialize email from params or session storage
   useEffect(() => {
     if (emailFromParams) {
-      setEmail(emailFromParams);
       // Store in session storage for page refresh
       sessionStorage.setItem('pendingVerificationEmail', emailFromParams);
-    } else if (sessionEmail) {
-      setEmail(sessionEmail);
     } else {
-      // Try to get from session storage
-      const storedEmail = sessionStorage.getItem('pendingVerificationEmail');
-      if (storedEmail) {
-        setEmail(storedEmail);
-      }
+      setStoredEmail(sessionStorage.getItem('pendingVerificationEmail'));
     }
-  }, [emailFromParams, sessionEmail]);
+    setStorageChecked(true);
+  }, [emailFromParams]);
+
+  // Resolved during render, not in an effect: an effect-set email left the first frame empty,
+  // and the «no email» card flashed even when the email was already known.
+  const email = emailFromParams ?? sessionEmail ?? storedEmail;
 
   // Clear error when component mounts
   useEffect(() => {
@@ -84,9 +85,9 @@ export function VerificationPendingContent({ emailParam = null }: VerificationPe
     await resendVerificationEmail(email);
   };
 
-  // While the session is still loading the email may be about to arrive: showing the
-  // «no email» card now would offer /register to a user who is already signed in.
-  if (!email && authLoading) {
+  // While the session or sessionStorage is still unknown the email may be about to arrive:
+  // showing the «no email» card now would offer /register to a user who is already signed in.
+  if (!email && (authLoading || !storageChecked)) {
     return <AuthCard title={t('auth.emailVerification.pending.title')}>{null}</AuthCard>;
   }
 

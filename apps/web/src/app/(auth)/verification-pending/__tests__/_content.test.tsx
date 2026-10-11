@@ -61,10 +61,12 @@ vi.mock('@/hooks/useEmailVerification', () => ({
   }),
 }));
 
-// #4183: the page also resolves the email of the signed-in user.
+// #4183: the page also resolves the email of the signed-in user, from the same source as the
+// banner that links here (useCurrentUser). Measured in the browser: AuthProvider's user was null
+// on this page for a signed-in user, so a test mocking useAuth passed while the page failed.
 const authState = { user: null as { email: string } | null, loading: false };
-vi.mock('@/components/auth/AuthProvider', () => ({
-  useAuth: () => ({ user: authState.user, loading: authState.loading }),
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: authState.user, isLoading: authState.loading }),
 }));
 
 // Import AFTER mocks

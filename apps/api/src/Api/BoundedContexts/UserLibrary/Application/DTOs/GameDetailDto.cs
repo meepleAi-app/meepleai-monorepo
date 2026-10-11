@@ -64,7 +64,11 @@ internal record GameDetailDto(
     // Issue #2034 — ConnectionBar pill count (replaces a FE-side hardcoded zero):
     // chat threads owned by the requesting user for this game. #4138 removed AgentCount,
     // which counted AgentDefinitions linked to the SharedGame for the retired agent pip.
-    int ChatThreadCount = 0
+    int ChatThreadCount = 0,
+
+    // #4155: l'utente può interrogare il manuale del gioco (cancello RAG: admin, RAG pubblico,
+    // possesso dichiarato, gioco privato suo). Calcolato fuori dalla cache del dettaglio.
+    bool HasRagAccess = false
 );
 
 /// <summary>

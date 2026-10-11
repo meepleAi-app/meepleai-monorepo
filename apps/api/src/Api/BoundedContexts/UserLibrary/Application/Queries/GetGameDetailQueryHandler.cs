@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -5,6 +6,7 @@ using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
@@ -26,6 +28,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IGameLabelRepository _labelRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
+    private readonly IRagAccessService _ragAccessService;
     // #4085: injected alongside the repository abstractions, not instead of them — same
     // mixed pattern already used by GetUserLibraryQueryHandler in this bounded context.
     // CoverUrlResolver needs the EF SharedGameEntity (raw cover-key columns +
@@ -47,6 +50,7 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         ISharedGameRepository sharedGameRepository,
         IGameLabelRepository labelRepository,
         IChatThreadRepository chatThreadRepository,
+        IRagAccessService ragAccessService,
         MeepleAiDbContext db,
         IBlobStorageService blobStorage,
         HybridCache cache,
@@ -56,20 +60,26 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// La chiave del dettaglio in cache. #4155: chi cambia la voce di libreria la usa per invalidarlo.
+    /// </summary>
+    internal static string BuildCacheKey(Guid userId, Guid gameId) => $"game-detail:{userId}:{gameId}";
+
     public async Task<GameDetailDto> Handle(GetGameDetailQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
         // Try cache first
-        var cacheKey = $"game-detail:{query.UserId}:{query.GameId}";
+        var cacheKey = BuildCacheKey(query.UserId, query.GameId);
 
-        return await _cache.GetOrCreateAsync(
+        var detail = await _cache.GetOrCreateAsync(
             cacheKey,
             async cancel =>
             {
@@ -232,5 +242,21 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
             options: CacheOptions,
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
+
+        // #4155: l'accesso al manuale si legge FUORI dalla cache. Cambia con la dichiarazione di
+        // possesso e quando un admin rende pubblico il RAG del gioco, e la pagina deve smettere
+        // subito di offrire la dichiarazione. Il ruolo si legge dall'utente, come fa la lista.
+        var role = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == query.UserId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var userRole = Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsedRole) ? parsedRole : UserRole.User;
+        var hasRagAccess = await _ragAccessService
+            .CanAccessRagAsync(query.UserId, query.GameId, userRole, cancellationToken)
+            .ConfigureAwait(false);
+
+        return detail with { HasRagAccess = hasRagAccess };
     }
 }

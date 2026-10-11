@@ -304,6 +304,10 @@ const MESSAGES: Record<string, string> = {
   'pages.gameDetail.chat.openCta': 'Apri chat',
   'pages.gameDetail.chat.userPrefix': 'Tu',
   'pages.gameDetail.chat.assistantPrefix': 'Agente',
+  // #4155 — ownership declaration CTA
+  'pages.gameDetail.ownership.message':
+    "Per far consultare il manuale di {gameTitle} all'assistente, dichiara di possederne una copia.",
+  'pages.gameDetail.ownership.cta': 'Dichiara di possedere {gameTitle}',
 };
 
 function renderWithIntl(ui: ReactElement) {
@@ -890,5 +894,37 @@ describe('GameDetailView — FSM integration tests (Phase 0.5 contract)', () => 
     expect(chatPanel?.querySelector('[data-slot="game-detail-chat-tab"]')).toBeInTheDocument();
     // Issue #4138: e la lista agenti NON c'e' piu`.
     expect(document.querySelector('[data-slot="game-detail-agents-list"]')).not.toBeInTheDocument();
+  });
+
+  // #4155: il cancello RAG apre il manuale solo a chi dichiara di possedere il gioco. Il dettaglio
+  // offre la dichiarazione per un gioco in libreria che non ha ancora accesso, e solo per quello.
+  describe('ownership declaration CTA (#4155)', () => {
+    function renderWith(detail: Partial<import('@/hooks/queries/useLibrary').LibraryGameDetail>) {
+      detailMockState.data = makeDetail(detail);
+      detailMockState.isSuccess = true;
+      useLibraryGameDetailSpy.mockImplementation(() => ({ ...detailMockState }));
+      renderWithIntl(<GameDetailView gameId={VALID_GAME_ID} />);
+    }
+
+    it('is offered for a game in the library without access to its manual', () => {
+      renderWith({ hasRagAccess: false });
+
+      expect(screen.getByTestId('game-detail-ownership-cta')).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Dichiara di possedere Wingspan Test' })
+      ).toBeInTheDocument();
+    });
+
+    it('is not offered once the user can read the manual', () => {
+      renderWith({ hasRagAccess: true });
+
+      expect(screen.queryByTestId('game-detail-ownership-cta')).not.toBeInTheDocument();
+    });
+
+    it('is not offered for a game outside the library', () => {
+      renderWith({ libraryEntryId: '', hasRagAccess: false });
+
+      expect(screen.queryByTestId('game-detail-ownership-cta')).not.toBeInTheDocument();
+    });
   });
 });

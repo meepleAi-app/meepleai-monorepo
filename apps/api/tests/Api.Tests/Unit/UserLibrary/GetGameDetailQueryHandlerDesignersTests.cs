@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -45,6 +46,8 @@ public sealed class GetGameDetailQueryHandlerDesignersTests
             sharedGameRepo.Object,
             labelRepo.Object,
             chatThreadRepo.Object,
+            // #4155: the RAG gate. Loose mock → false; these tests do not look at HasRagAccess.
+            Mock.Of<IRagAccessService>(),
             // #4085: cover resolution now needs the EF SharedGameEntity + storage service;
             // these tests don't exercise it — empty in-memory context, unused mock.
             TestDbContextFactory.CreateInMemoryDbContext(),

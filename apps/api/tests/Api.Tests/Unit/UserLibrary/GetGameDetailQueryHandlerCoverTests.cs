@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -51,6 +52,8 @@ public sealed class GetGameDetailQueryHandlerCoverTests
             sharedGameRepo.Object,
             labelRepo.Object,
             chatThreadRepo.Object,
+            // #4155: the RAG gate. Loose mock → false; these tests do not look at HasRagAccess.
+            Mock.Of<IRagAccessService>(),
             db,
             blobStorage.Object,
             cache,

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useSessionAgentChat } from '../useSessionAgentChat';
 import { useSessionStore } from '@/stores/session/store';
 import { api } from '@/lib/api';
+import { ApiError } from '@/lib/api/core/errors';
 
 // Mock the api module so we can spy on api.chat.getThreadById
 vi.mock('@/lib/api', () => ({
@@ -449,7 +450,8 @@ describe('useSessionAgentChat', () => {
 
     it('THREAD_NOT_FOUND: dimentica il thread salvato, e la domanda successiva ne apre uno nuovo', async () => {
       sessionStorage.setItem(STORAGE_KEY, STALE_THREAD);
-      mockGetThreadById.mockRejectedValueOnce(new Error('403'));
+      // la rilettura al mount fallisce senza provare nulla: il thread salvato parte comunque
+      mockGetThreadById.mockRejectedValueOnce(new Error('Network error'));
       const fetchMock = vi
         .fn()
         .mockResolvedValueOnce(
@@ -537,6 +539,100 @@ describe('useSessionAgentChat', () => {
       });
 
       expect(sentThreadId(fetchMock, 1)).toBe(STALE_THREAD);
+    });
+
+    // Al mount l'hook rilegge il thread salvato. Se il server lo rifiuta lì, non serve aspettare
+    // che fallisca la prima domanda: 403 (non è di chi chiede) e 404 (non esiste più) sono certi.
+    it.each([[403], [404]])(
+      'al mount il server risponde %i al thread salvato: dimenticato prima della prima domanda',
+      async statusCode => {
+        sessionStorage.setItem(STORAGE_KEY, STALE_THREAD);
+        mockGetThreadById.mockRejectedValueOnce(new ApiError({ message: 'no', statusCode }));
+        const fetchMock = vi
+          .fn()
+          .mockResolvedValueOnce(streamOf(sseToken('Risposta'), sseComplete('thread-nuovo')));
+        vi.stubGlobal('fetch', fetchMock);
+
+        const { result } = renderHook(() =>
+          useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+        );
+        await act(async () => {
+          await new Promise(resolve => setTimeout(resolve, 0));
+        });
+
+        expect(sessionStorage.getItem(STORAGE_KEY)).toBeNull();
+
+        await act(async () => {
+          await result.current.ask('Prima domanda');
+        });
+
+        expect(sentThreadId(fetchMock, 0)).toBeUndefined();
+        expect(result.current.error).toBeNull();
+      }
+    );
+
+    // Il controllo: un errore che non prova nulla non deve far perdere la conversazione.
+    it.each([
+      ['un errore di rete', new Error('Network error')],
+      ['un 500', new ApiError({ message: 'boom', statusCode: 500 })],
+    ])('al mount, %s: il thread salvato resta', async (_label, failure) => {
+      sessionStorage.setItem(STORAGE_KEY, STALE_THREAD);
+      mockGetThreadById.mockRejectedValueOnce(failure);
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(streamOf(sseToken('Risposta'), sseComplete(STALE_THREAD)));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBe(STALE_THREAD);
+
+      await act(async () => {
+        await result.current.ask('Prima domanda');
+      });
+
+      expect(sentThreadId(fetchMock, 0)).toBe(STALE_THREAD);
+    });
+
+    // La rilettura è asincrona: se il rifiuto arriva quando la conversazione ha già un thread
+    // nuovo, è quello vecchio a essere rifiutato, e il nuovo non va toccato.
+    it('al mount, il rifiuto arriva dopo che la conversazione ha un thread nuovo: quello resta', async () => {
+      sessionStorage.setItem(STORAGE_KEY, STALE_THREAD);
+      let rejectHydration!: (reason: unknown) => void;
+      mockGetThreadById.mockReturnValueOnce(
+        new Promise((_resolve, reject) => {
+          rejectHydration = reject;
+        })
+      );
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(streamOf(sseToken('Risposta'), sseComplete('thread-nuovo')));
+      vi.stubGlobal('fetch', fetchMock);
+
+      const { result } = renderHook(() =>
+        useSessionAgentChat(GAME_SESSION_ID, 'agent-1', { persistHistory: true })
+      );
+      await act(async () => {
+        await result.current.ask('Prima domanda');
+      });
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBe('thread-nuovo');
+
+      await act(async () => {
+        rejectHydration(new ApiError({ message: 'no', statusCode: 403 }));
+        await new Promise(resolve => setTimeout(resolve, 0));
+      });
+
+      expect(sessionStorage.getItem(STORAGE_KEY)).toBe('thread-nuovo');
+
+      await act(async () => {
+        await result.current.ask('Seconda domanda');
+      });
+      expect(sentThreadId(fetchMock, 1)).toBe('thread-nuovo');
     });
   });
 

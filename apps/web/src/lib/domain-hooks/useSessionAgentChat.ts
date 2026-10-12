@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatCitation } from '@/components/chat/panel/ChatCitationCard';
 import { api } from '@/lib/api';
 import { getAgentChatUrl } from '@/lib/api/clients/sessionAgentClient';
+import { ApiError } from '@/lib/api/core/errors';
 import { CitationSchema } from '@/lib/api/schemas/streaming.schemas';
 import { mapCitationToChatCitation } from '@/lib/session-live/map-citation-to-chat-citation';
 import { useSessionStore } from '@/stores/session/store';
@@ -218,6 +219,18 @@ export function useSessionAgentChat(
 
         setMessages(historicMessages);
       } catch (err) {
+        // #4242: 403 (not the caller's) and 404 (gone) are certain. Forget the thread now, rather
+        // than send it with the first question and have that question refused. Only while the
+        // conversation still points at it: the answer can arrive after a question has already
+        // opened a new thread.
+        if (err instanceof ApiError && (err.statusCode === 403 || err.statusCode === 404)) {
+          if (!cancelled && threadIdRef.current === savedThreadId) {
+            threadIdRef.current = undefined;
+            removeThreadIdFromStorage(gameSessionId);
+          }
+          return;
+        }
+
         // Graceful failure (R4): log but do not crash or block chat
         console.warn('[useSessionAgentChat] Failed to hydrate history:', err);
       }

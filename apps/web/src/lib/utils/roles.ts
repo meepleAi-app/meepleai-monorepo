@@ -4,7 +4,7 @@
  * The backend (Role.cs) normalizes all roles to lowercase via ToLowerInvariant().
  * The frontend MUST treat lowercase as canonical and normalize any external input.
  *
- * Usage sites: AuthModal redirect, proxy.ts middleware, RequireRole component,
+ * Usage sites: proxy.ts middleware, RequireRole component,
  *              InlineRoleSelect, admin users page, user-role-badge.
  */
 

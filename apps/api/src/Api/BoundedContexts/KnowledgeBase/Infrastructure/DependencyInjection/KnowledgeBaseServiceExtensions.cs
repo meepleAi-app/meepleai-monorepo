@@ -247,6 +247,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddSingleton<ILlmBudgetStatus>(sp => sp.GetRequiredService<LlmBudgetGate>());
         services.AddSingleton<IAgentReserveModelProvider, PublishedProfileReserveModelProvider>();
         services.AddScoped<ILlmService, HybridLlmService>();
+        // ADR-097: la catena M.E.AI dell'assistente in partita, sopra il gateway.
+        services.AddSessionAssistant();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)

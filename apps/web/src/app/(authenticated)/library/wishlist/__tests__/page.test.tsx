@@ -49,18 +49,6 @@ vi.mock('@/hooks/queries/useWishlist', () => ({
   useUpdateWishlistItem: mockUseUpdateWishlistItem,
 }));
 
-// #4187: i nomi dei giochi della wishlist si leggono per id dal catalogo, non da una pagina
-// della libreria (ne chiedeva 500, il server ne restituisce al massimo 100).
-const CATALOG_TITLES: Record<string, string> = {
-  'game-1': 'Wingspan',
-  'game-2': 'Catan',
-  'game-far': 'Brass: Birmingham',
-};
-const mockUseSharedGamesByIds = vi.hoisted(() => vi.fn());
-vi.mock('@/hooks/queries/useSharedGames', () => ({
-  useSharedGamesByIds: mockUseSharedGamesByIds,
-}));
-
 // #3010 Task 7 — the wishlist card's game-name body navigates via
 // `router.push`, mirroring the `next/navigation` mock pattern used by
 // `apps/web/src/app/(authenticated)/toolkit/history/__tests__/page.test.tsx`.
@@ -131,12 +119,6 @@ function normalizeNbsp(value: string): string {
 describe('WishlistPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseSharedGamesByIds.mockImplementation((ids: readonly string[]) => ({
-      gamesById: Object.fromEntries(
-        ids.filter(id => CATALOG_TITLES[id]).map(id => [id, { id, title: CATALOG_TITLES[id] }])
-      ),
-      isLoading: false,
-    }));
     mockUseRemoveFromWishlist.mockReturnValue({ mutate: vi.fn() });
     mockUseAddToWishlist.mockReturnValue({ mutate: vi.fn(), isPending: false });
     mockUseUpdateWishlistItem.mockReturnValue({ mutate: vi.fn(), isPending: false });
@@ -284,12 +266,12 @@ describe('WishlistPage', () => {
     expect(screen.queryByTestId('wishlist-card')).not.toBeInTheDocument();
   });
 
-  it('in modifica il dialogo mostra il titolo del gioco anche se il DTO non porta gameName (#4187)', async () => {
-    // Il WishlistItemDto del backend non ha GameName: il titolo lo conosce solo la pagina,
-    // che lo legge per id dal catalogo. Il dialogo, in modifica, non interroga la libreria.
+  it('in modifica il dialogo mostra il titolo portato dal DTO (#4187, #4227)', async () => {
+    // La lettura della wishlist porta il titolo del catalogo in gameName: il dialogo,
+    // in modifica, non interroga la libreria.
     const user = userEvent.setup();
     mockUseWishlist.mockReturnValue({
-      data: [buildItem({ gameName: undefined })],
+      data: [buildItem()],
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
@@ -303,12 +285,12 @@ describe('WishlistPage', () => {
     expect(dialog).not.toHaveTextContent('game-1');
   });
 
-  it('nomina un gioco della wishlist che non sta nella pagina di libreria scaricata (#4187)', () => {
+  it('un gioco non piu nel catalogo, senza gameName nel DTO, mostra il segnaposto (#4227)', () => {
     mockUseWishlist.mockReturnValue({
       data: [
         buildItem({
           id: '00000000-0000-0000-0000-0000000000ff',
-          gameId: 'game-far',
+          gameId: 'game-gone',
           gameName: undefined,
         }),
       ],
@@ -318,7 +300,8 @@ describe('WishlistPage', () => {
     });
     renderPage(<WishlistPage />);
 
-    expect(screen.getByText('Brass: Birmingham')).toBeInTheDocument();
+    expect(screen.getByText(CARD_I18N.unknownGame)).toBeInTheDocument();
+    expect(screen.queryByText('game-gone')).not.toBeInTheDocument();
   });
 
   it('shows the error state when the wishlist query rejects', () => {

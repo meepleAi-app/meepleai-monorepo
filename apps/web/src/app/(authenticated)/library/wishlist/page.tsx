@@ -24,7 +24,6 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { MeepleWishlistCard } from '@/components/wishlist/MeepleWishlistCard';
-import { useSharedGamesByIds } from '@/hooks/queries/useSharedGames';
 import { useRemoveFromWishlist, useWishlist } from '@/hooks/queries/useWishlist';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { WishlistItemDto } from '@/lib/api/schemas/wishlist.schemas';
@@ -78,22 +77,10 @@ export default function WishlistPage(): JSX.Element {
 
   const allItems = useMemo(() => data ?? [], [data]);
 
-  // gameId → title, read by id from the catalog, used when a wishlist item carries no
-  // `gameName` (the backend DTO has none). It used to come from one page of the library,
-  // asked for 500 entries while the server returns at most 100 (#4187).
-  const wishlistGameIds = useMemo(() => allItems.map(item => item.gameId), [allItems]);
-  const { gamesById } = useSharedGamesByIds(wishlistGameIds, wishlistGameIds.length > 0);
-  const gameNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const [id, game] of Object.entries(gamesById)) {
-      map.set(id, game.title);
-    }
-    return map;
-  }, [gamesById]);
   const stats = useMemo(() => computeStats(allItems), [allItems]);
   const filtered = useMemo(
-    () => sortItems(filterItems(allItems, filterState, gameNameMap), filterState.sort),
-    [allItems, filterState, gameNameMap]
+    () => sortItems(filterItems(allItems, filterState), filterState.sort),
+    [allItems, filterState]
   );
   const activeFilterCount = countActiveFilters(filterState);
 
@@ -268,7 +255,6 @@ export default function WishlistPage(): JSX.Element {
             <MeepleWishlistCard
               key={item.id}
               item={item}
-              gameName={item.gameName ?? gameNameMap.get(item.gameId)}
               onRemove={id => removeItem(id)}
               onEdit={setEditingItem}
               onFilterPriority={handleFilterPriority}
@@ -292,12 +278,9 @@ export default function WishlistPage(): JSX.Element {
         <AddToWishlistDialog
           key={editingItem.id}
           mode="edit"
-          // The backend WishlistItemDto carries no game name: the page reads it by id from the
-          // catalog, and the dialog does not query the library while editing (#4187).
-          item={{
-            ...editingItem,
-            gameName: editingItem.gameName ?? gameNameMap.get(editingItem.gameId),
-          }}
+          // The wishlist read carries the catalog title in `gameName` (#4227), so the dialog
+          // does not query the library while editing (#4187).
+          item={editingItem}
           open
           onOpenChange={next => {
             if (!next) setEditingItem(null);

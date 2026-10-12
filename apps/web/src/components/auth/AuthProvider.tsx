@@ -7,6 +7,11 @@
  * - Session management
  *
  * Designed to wrap the entire app in _app.tsx for global auth availability
+ *
+ * #4190: the current user has ONE source, the TanStack query `['user','current']`
+ * (`useCurrentUser`). AuthProvider used to keep its own copy in `useState`, read once on mount:
+ * any change outside it (a login from a form using another hook, a logout seen in another tab,
+ * an invalidate) left it stale. Login, registration and logout now write the query.
  */
 
 import React, {
@@ -19,10 +24,11 @@ import React, {
   PropsWithChildren,
 } from 'react';
 
-import { userKeys } from '@/hooks/queries/useCurrentUser';
+import { useQueryClient } from '@tanstack/react-query';
+
+import { useCurrentUser, userKeys } from '@/hooks/queries/useCurrentUser';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
-import { getQueryClient } from '@/lib/queryClient';
 import { AuthUser } from '@/types';
 
 // ============================================================================
@@ -75,99 +81,93 @@ export { AuthContext };
 // ============================================================================
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [_initialLoading, setInitialLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const currentUser = useCurrentUser();
+  const user = currentUser.data ?? null;
+  // A login, registration or logout in flight; the first read is the query's own loading.
+  const [actionLoading, setActionLoading] = useState(false);
+  const loading = currentUser.isLoading || actionLoading;
   const [error, setError] = useState<string | null>(null);
 
-  const loadCurrentUser = useCallback(async () => {
-    setLoading(true);
-    setInitialLoading(true);
-    setError(null);
-    try {
-      const user = await api.auth.getMe();
-      setUser(user);
-      if (user) {
-        // User authenticated - set flag for optimization
-        localStorage.setItem('meepleai_has_session', 'true');
-      } else {
-        localStorage.removeItem('meepleai_has_session');
-      }
-    } catch (_err) {
-      // 401 expected for anonymous users - not an error
-      setUser(null);
-      localStorage.removeItem('meepleai_has_session');
-    } finally {
-      setLoading(false);
-      setInitialLoading(false);
-    }
-  }, []);
+  // A /me already in flight (on mount, or on window focus) would land after this write and
+  // overwrite it: an anonymous answer erasing a fresh login, or a user resurrected after logout.
+  const writeUser = useCallback(
+    async (next: AuthUser | null) => {
+      await queryClient.cancelQueries({ queryKey: userKeys.current(), exact: true });
+      queryClient.setQueryData(userKeys.current(), next);
+    },
+    [queryClient]
+  );
 
-  // Load user on mount
+  // Optimization flag read before React hydrates (e.g. to skip a /me call when anonymous).
   useEffect(() => {
-    void loadCurrentUser();
-  }, [loadCurrentUser]);
-
-  const login = useCallback(async (email: string, password: string): Promise<LoginResult> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const loginResponse = await api.auth.login({ email, password });
-
-      // Check if 2FA is required
-      if (loginResponse.requiresTwoFactor) {
-        return {
-          user: null,
-          requiresTwoFactor: true,
-          tempSessionToken: loginResponse.tempSessionToken,
-        };
-      }
-
-      // Normal login - set user and return result
-      const user = loginResponse.user ?? null;
-      setUser(user);
-      if (user) {
-        localStorage.setItem('meepleai_has_session', 'true');
-      }
-      return {
-        user,
-        requiresTwoFactor: false,
-      };
-    } catch (err) {
-      logger.error('Login failed', err instanceof Error ? err : new Error(String(err)), {
-        component: 'AuthProvider',
-      });
-      setError(err instanceof Error ? err.message : 'Login failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const register = useCallback(async (data: RegisterData): Promise<AuthUser> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const authUser = await api.auth.register(data);
-      setUser(authUser);
+    if (currentUser.isLoading) return;
+    if (user) {
       localStorage.setItem('meepleai_has_session', 'true');
-      // #4190: il form di registrazione passava dall'hook omonimo di @/hooks/useAuth, che invalidava
-      // anche la query dell'utente; ora passa da qui, e l'invalidazione resta.
-      await getQueryClient().invalidateQueries({ queryKey: userKeys.current() });
-      return authUser;
-    } catch (err) {
-      logger.error('Registration failed', err instanceof Error ? err : new Error(String(err)), {
-        component: 'AuthProvider',
-      });
-      setError(err instanceof Error ? err.message : 'Registration failed');
-      throw err;
-    } finally {
-      setLoading(false);
+    } else {
+      localStorage.removeItem('meepleai_has_session');
     }
-  }, []);
+  }, [user, currentUser.isLoading]);
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<LoginResult> => {
+      setActionLoading(true);
+      setError(null);
+      try {
+        const loginResponse = await api.auth.login({ email, password });
+
+        // Check if 2FA is required
+        if (loginResponse.requiresTwoFactor) {
+          return {
+            user: null,
+            requiresTwoFactor: true,
+            tempSessionToken: loginResponse.tempSessionToken,
+          };
+        }
+
+        // Normal login - write the user where every reader looks, and return it
+        const loggedIn = loginResponse.user ?? null;
+        await writeUser(loggedIn);
+        return {
+          user: loggedIn,
+          requiresTwoFactor: false,
+        };
+      } catch (err) {
+        logger.error('Login failed', err instanceof Error ? err : new Error(String(err)), {
+          component: 'AuthProvider',
+        });
+        setError(err instanceof Error ? err.message : 'Login failed');
+        throw err;
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [writeUser]
+  );
+
+  const register = useCallback(
+    async (data: RegisterData): Promise<AuthUser> => {
+      setActionLoading(true);
+      setError(null);
+      try {
+        const authUser = await api.auth.register(data);
+        await writeUser(authUser);
+        return authUser;
+      } catch (err) {
+        logger.error('Registration failed', err instanceof Error ? err : new Error(String(err)), {
+          component: 'AuthProvider',
+        });
+        setError(err instanceof Error ? err.message : 'Registration failed');
+        throw err;
+      } finally {
+        setActionLoading(false);
+      }
+    },
+    [writeUser]
+  );
 
   const logout = useCallback(async () => {
-    setLoading(true);
+    setActionLoading(true);
     setError(null);
     try {
       await api.auth.logout();
@@ -177,16 +177,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
       });
       setError(err instanceof Error ? err.message : 'Logout failed');
     } finally {
-      // Always clear user, even if API call fails
-      setUser(null);
-      localStorage.removeItem('meepleai_has_session');
-      setLoading(false);
+      // Always clear the user, even if the API call fails
+      await writeUser(null);
+      setActionLoading(false);
     }
-  }, []);
+  }, [writeUser]);
 
   const refreshUser = useCallback(async () => {
-    await loadCurrentUser();
-  }, [loadCurrentUser]);
+    await queryClient.refetchQueries({ queryKey: userKeys.current(), exact: true });
+  }, [queryClient]);
 
   const clearError = useCallback(() => {
     setError(null);

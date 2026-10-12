@@ -18,15 +18,16 @@ import clsx from 'clsx';
 import { useRouter } from 'next/navigation';
 
 import { AccessibleModal } from '@/components/accessible';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Divider } from '@/components/ui/divider';
 import { OAuthButton } from '@/components/ui/oauth-buttons';
 import { Button } from '@/components/ui/primitives/button';
-import { useAuth, type AuthUser } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import { logger } from '@/lib/logger';
 import { isAdminRole } from '@/lib/utils/roles';
+import type { AuthUser } from '@/types';
 
 import { LoginForm, LoginFormData } from './LoginForm';
 import { buildOAuthUrl } from './oauth-url';
@@ -64,7 +65,7 @@ export function AuthModal({
 }: AuthModalProps) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { register, loadCurrentUser, clearError } = useAuth();
+  const { register, refreshUser, clearError } = useAuth();
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(defaultMode);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string>('');
@@ -109,7 +110,8 @@ export function AuthModal({
 
         // Normal login - user should be present
         if (response.user) {
-          await loadCurrentUser(); // Sync useAuth state
+          // #4190: AuthProvider, not a homonymous hook with its own state, so every reader sees the user
+          await refreshUser();
           onSuccess?.(response.user);
           onClose();
           // Redirect admins to admin dashboard, others to specified redirect or default dashboard
@@ -136,7 +138,7 @@ export function AuthModal({
         setIsAuthenticating(false);
       }
     },
-    [loadCurrentUser, onSuccess, onClose, router, redirectTo]
+    [refreshUser, onSuccess, onClose, router, redirectTo]
   );
 
   // Handle 2FA verification (Issue #3077)
@@ -157,7 +159,8 @@ export function AuthModal({
           data.rememberDevice
         );
 
-        await loadCurrentUser(); // Sync useAuth state
+        // #4190: AuthProvider, not a homonymous hook with its own state, so every reader sees the user
+        await refreshUser();
         onSuccess?.(user);
         onClose();
         // Redirect admins to admin dashboard, others to specified redirect or default dashboard
@@ -180,7 +183,7 @@ export function AuthModal({
         setIsAuthenticating(false);
       }
     },
-    [tempSessionToken, loadCurrentUser, onSuccess, onClose, router, redirectTo]
+    [tempSessionToken, refreshUser, onSuccess, onClose, router, redirectTo]
   );
 
   // Handle cancel 2FA - go back to login form

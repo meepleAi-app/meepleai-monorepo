@@ -11,6 +11,7 @@
  * nascondeva il difetto.
  */
 
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -49,6 +50,7 @@ vi.mock('@/components/auth/oauth-url', () => ({
   buildOAuthUrl: (provider: string) => `https://api.test/oauth/${provider}`,
 }));
 
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 
 import { LoginPageContent } from '../_content';
@@ -67,10 +69,12 @@ function AuthProbe() {
 
 function renderLoginInsideProvider() {
   render(
-    <AuthProvider>
-      <LoginPageContent />
-      <AuthProbe />
-    </AuthProvider>
+    <QueryClientProvider client={createTestQueryClient()}>
+      <AuthProvider>
+        <LoginPageContent />
+        <AuthProbe />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

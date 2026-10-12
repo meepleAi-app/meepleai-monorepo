@@ -7,7 +7,7 @@
 
 import { useQuery, useQueryClient, UseQueryResult } from '@tanstack/react-query';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { api } from '@/lib/api';
 import type { SessionQuotaResponse } from '@/lib/api/schemas/session-quota.schemas';
 import {

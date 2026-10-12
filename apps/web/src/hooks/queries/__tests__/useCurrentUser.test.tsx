@@ -75,6 +75,30 @@ describe('useCurrentUser', () => {
     expect(result.current.error?.message).toBe('401 Unauthorized');
   });
 
+  it("un errore che non è un 401 conserva l'utente già noto (#4190)", async () => {
+    // getCurrentUser non lancia: cattura l'errore e lo restituisce in `error`. Se la query lo
+    // trattasse come «anonimo», un refetch al ritorno sulla scheda con la rete giu' azzererebbe
+    // l'utente per tutta l'app, ora che AuthProvider legge da qui.
+    const mockUser = { id: 'u1', email: 'test@example.com', name: 'Test User' };
+    mockGetCurrentUser.mockResolvedValueOnce({ success: true, user: mockUser });
+    const { result } = renderHook(() => useCurrentUser(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.data).toEqual(mockUser));
+    // TanStack ridisegna solo per le proprieta' lette: senza questa lettura il cambio di
+    // `isError` non arriverebbe mai a result.current.
+    expect(result.current.isError).toBe(false);
+
+    // Ogni tentativo fallisce: il retry del hook (un secondo tentativo, dopo ~1 s) prevale su
+    // quello del wrapper.
+    mockGetCurrentUser.mockResolvedValue({
+      success: false,
+      error: { type: 'network', message: 'Impossibile caricare i dati utente.' },
+    });
+    await result.current.refetch();
+
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 4000 });
+    expect(result.current.data).toEqual(mockUser);
+  });
+
   it('starts in loading state', () => {
     mockGetCurrentUser.mockReturnValue(new Promise(() => {})); // never resolves
 

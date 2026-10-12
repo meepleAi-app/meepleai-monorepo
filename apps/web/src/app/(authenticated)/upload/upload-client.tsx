@@ -25,6 +25,7 @@ import { useCallback, useEffect, useState, useMemo } from 'react';
 
 import Link from 'next/link';
 
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { MultiDocumentCollectionUpload } from '@/components/documents';
 import { ErrorDisplay } from '@/components/errors';
 import { GamePicker } from '@/components/game/GamePicker';
@@ -39,7 +40,6 @@ import { Button } from '@/components/ui/primitives/button';
 import { MultiFileUpload } from '@/components/upload';
 import { WizardSteps } from '@/components/wizard/WizardSteps';
 import { useAdminRole } from '@/hooks/useAdminRole';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useGames } from '@/hooks/wizard/useGames';
 import { usePdfs, type PdfDocument } from '@/hooks/wizard/usePdfs';
 import { useWizard } from '@/hooks/wizard/useWizard';

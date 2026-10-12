@@ -56,7 +56,9 @@ internal class GetUserChatThreadsQueryHandler : IQueryHandler<GetUserChatThreads
             AgentType: m.AgentType,
             Confidence: m.Confidence,
             CitationsJson: m.CitationsJson,
-            TokenCount: m.TokenCount
+            TokenCount: m.TokenCount,
+            ProfileVersionId: m.ProfileVersionId,
+            Language: m.Language
         )).ToList();
 
         return new ChatThreadDto(

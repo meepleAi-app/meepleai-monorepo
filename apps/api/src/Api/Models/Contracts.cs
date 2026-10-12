@@ -27,7 +27,10 @@ internal record QaResponse(
     int totalTokens = 0,
     double? confidence = null,
     IReadOnlyDictionary<string, string>? metadata = null,
-    IReadOnlyList<string>? followUpQuestions = null);  // CHAT-02: AI-generated follow-up questions
+    IReadOnlyList<string>? followUpQuestions = null,  // CHAT-02: AI-generated follow-up questions
+    // #4168 (ADR-095 D2): versione del profilo e lingua della risposta
+    Guid? profileVersionId = null,
+    string? language = null);
 internal record Snippet(string text, string source, int page, int line, float score)
 {
     /// <summary>
@@ -156,6 +159,10 @@ internal record StreamingComplete(
     string? strategyTier = null,
     Guid? executionId = null,
     IReadOnlyList<CitationDto>? Citations = null,
+    // #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta e la lingua della
+    // risposta. Chi salva la risposta e chi la valuta le riceve da qui; null fuori dalla pipeline.
+    Guid? ProfileVersionId = null,
+    string? Language = null,
     // #3388: grounding-contract invariant. Every producer below explicitly passes this
     // (derived from its own citation count: Grounded iff count>0, else Ungrounded) rather
     // than relying on the default — the default only exists because C# requires optional

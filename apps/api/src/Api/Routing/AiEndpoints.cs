@@ -336,6 +336,9 @@ internal static class AiEndpoints
             {
                 streamContext.TotalTokens = completeData.totalTokens;
                 streamContext.Confidence = completeData.confidence;
+                // #4168: la versione del profilo e la lingua della risposta, per il registro.
+                streamContext.ProfileVersionId = completeData.ProfileVersionId;
+                streamContext.Language = completeData.Language;
 
                 // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
                 if (generateFollowUps && followUpTask == null)
@@ -381,7 +384,9 @@ internal static class AiEndpoints
             CompletionTokens: streamContext.TotalTokens,
             // #1728: drill payload (chunks from retrieved snippets; breakdown
             // pending pipeline instrumentation)
-            Chunks: MapSnippetsToChunks(streamContext.Snippets)
+            Chunks: MapSnippetsToChunks(streamContext.Snippets),
+            ProfileVersionId: streamContext.ProfileVersionId,
+            Language: streamContext.Language
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
@@ -464,7 +469,9 @@ internal static class AiEndpoints
             resp.totalTokens,
             resp.confidence,
             resp.metadata,
-            followUpQuestions); // CHAT-02
+            followUpQuestions, // CHAT-02
+            qaResponse.ProfileVersionId, // #4168
+            qaResponse.Language);
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
@@ -481,7 +488,7 @@ internal static class AiEndpoints
             qualityScores.IsLowQuality);
 
         // ADM-01: Log AI request with AI-11 quality scores (using CQRS)
-        await LogQaRequestAsync(session.Principal!.Subject.Id.ToString(), req.gameId, req.query, resp, latencyMs,
+        await LogQaRequestAsync(session.Principal!.Subject.Id.ToString(), req.gameId, req.query, finalResponse, latencyMs,
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             context.Request.Headers.UserAgent.ToString(),
             qualityScores, mediator, ct).ConfigureAwait(false);
@@ -835,6 +842,8 @@ internal static class AiEndpoints
         public StringBuilder AnswerBuilder { get; } = new();
         public int TotalTokens { get; set; }
         public double? Confidence { get; set; }
+        public Guid? ProfileVersionId { get; set; }
+        public string? Language { get; set; }
         public List<Snippet> Snippets { get; set; } = new();
         public string StreamStatus { get; set; } = "Success";
         public string? StreamErrorMessage { get; set; }
@@ -977,7 +986,9 @@ internal static class AiEndpoints
             FinishReason: finishReason,
             QualityScores: qualityScores,
             // #1728: drill payload (snippets as chunks)
-            Chunks: MapSnippetsToChunks(resp.snippets)
+            Chunks: MapSnippetsToChunks(resp.snippets),
+            ProfileVersionId: resp.profileVersionId,
+            Language: resp.language
         );
         await mediator.Send(logCommand, ct).ConfigureAwait(false);
     }

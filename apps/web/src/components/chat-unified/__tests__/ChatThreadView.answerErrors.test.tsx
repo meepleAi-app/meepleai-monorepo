@@ -5,6 +5,9 @@
  * spesa, nessun modello disponibile, profilo dell'agente assente, risposta interrotta dopo il primo
  * token. La chat mostra il motivo in italiano invece del messaggio grezzo del backend, e una
  * risposta interrotta non finisce nella cronologia salvata come se fosse completa.
+ *
+ * Una risposta completa, invece, si salva con la versione del profilo e la lingua che il
+ * completamento le ha dato (ADR-095 D2): il feedback e le valutazioni si riferiscono a quella.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -196,6 +199,42 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     expect(await screen.findByText(expected)).toBeInTheDocument();
     expect(screen.queryByText('English backend message')).not.toBeInTheDocument();
     expect(savedAssistantMessages()).toHaveLength(0);
+  });
+});
+
+describe('ChatThreadView — risposta completa (#4168)', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const { api } = await import('@/lib/api');
+    apiMock = api;
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue(thread);
+    (apiMock.games.getById as Mock).mockResolvedValue({ id: 'game-1', title: 'Catan' });
+    (apiMock.chat.addMessage as Mock).mockResolvedValue(thread);
+  });
+
+  it('saves the answer with the profile version and the language of the completion', async () => {
+    qa.script = [
+      { type: qa.EVENT.TOKEN, data: { token: 'Ogni giocatore pesca due carte.' } },
+      {
+        type: qa.EVENT.COMPLETE,
+        data: {
+          answer: 'Ogni giocatore pesca due carte.',
+          snippets: [],
+          profileVersionId: 'b4c5d6e7-0000-4000-8000-000000000001',
+          language: 'it',
+        },
+      },
+    ];
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    await waitFor(() => expect(savedAssistantMessages()).toHaveLength(1));
+    expect(savedAssistantMessages()[0][1]).toMatchObject({
+      content: 'Ogni giocatore pesca due carte.',
+      profileVersionId: 'b4c5d6e7-0000-4000-8000-000000000001',
+      language: 'it',
+    });
   });
 });
 

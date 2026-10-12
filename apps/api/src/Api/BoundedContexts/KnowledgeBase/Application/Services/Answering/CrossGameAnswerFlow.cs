@@ -194,6 +194,8 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
                 completionTokens: usage?.CompletionTokens ?? tokenCount,
                 totalTokens: usage?.TotalTokens ?? tokenCount,
                 confidence: null,
+                ProfileVersionId: profile.VersionId,
+                Language: language,
                 GroundingStatus: snippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
         _logger.LogInformation(

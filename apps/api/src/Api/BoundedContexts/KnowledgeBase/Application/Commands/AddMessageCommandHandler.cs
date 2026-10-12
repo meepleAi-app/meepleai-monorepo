@@ -37,7 +37,7 @@ internal class AddMessageCommandHandler : ICommandHandler<AddMessageCommand, Cha
         }
         else if (string.Equals(command.Role, ChatMessage.AssistantRole, StringComparison.Ordinal))
         {
-            thread.AddAssistantMessage(command.Content);
+            thread.AddAssistantMessage(command.Content, command.ProfileVersionId, command.Language);
         }
         else
         {

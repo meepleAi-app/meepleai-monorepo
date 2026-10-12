@@ -39,7 +39,10 @@ internal record ChatMessageDto(
     string? AgentType = null,
     float? Confidence = null,
     string? CitationsJson = null,
-    int? TokenCount = null
+    int? TokenCount = null,
+    // #4168 (ADR-095 D2): versione del profilo e lingua della risposta
+    Guid? ProfileVersionId = null,
+    string? Language = null
 );
 
 /// <summary>
@@ -60,7 +63,10 @@ internal record CreateChatThreadRequest(
 /// </summary>
 internal record AddMessageRequest(
     string Content,
-    string Role
+    string Role,
+    // #4168: dal completamento dello stream, per una risposta della pipeline
+    Guid? ProfileVersionId = null,
+    string? Language = null
 );
 
 /// <summary>

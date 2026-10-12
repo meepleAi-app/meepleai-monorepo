@@ -29,5 +29,20 @@ internal sealed class AddMessageCommandValidator : AbstractValidator<AddMessageC
             .Must(role => string.Equals(role, ChatMessage.UserRole, StringComparison.Ordinal)
                        || string.Equals(role, ChatMessage.AssistantRole, StringComparison.Ordinal))
             .WithMessage("Role must be 'user' or 'assistant'");
+
+        // #4168: la provenienza descrive una risposta, non una domanda
+        RuleFor(x => x.ProfileVersionId)
+            .Null()
+            .When(x => string.Equals(x.Role, ChatMessage.UserRole, StringComparison.Ordinal))
+            .WithMessage("ProfileVersionId is only allowed on assistant messages");
+
+        RuleFor(x => x.Language)
+            .Null()
+            .When(x => string.Equals(x.Role, ChatMessage.UserRole, StringComparison.Ordinal))
+            .WithMessage("Language is only allowed on assistant messages");
+
+        RuleFor(x => x.Language)
+            .MaximumLength(16)
+            .WithMessage("Language cannot exceed 16 characters");
     }
 }

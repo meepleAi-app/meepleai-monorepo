@@ -516,7 +516,9 @@ internal static class KnowledgeBaseEndpoints
             llmConfidence = response.LlmConfidence,
             overallConfidence = response.OverallConfidence,
             isLowQuality = response.IsLowQuality,
-            citations = response.Citations
+            citations = response.Citations,
+            profileVersionId = response.ProfileVersionId, // #4168
+            language = response.Language
         });
     }
 
@@ -889,7 +891,9 @@ internal static class KnowledgeBaseEndpoints
         var command = new AddMessageCommand(
             ThreadId: threadId,
             Content: req.Content,
-            Role: req.Role
+            Role: req.Role,
+            ProfileVersionId: req.ProfileVersionId,
+            Language: req.Language
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);

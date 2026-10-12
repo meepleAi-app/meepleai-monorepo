@@ -113,10 +113,15 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     /// <summary>
     /// Adds an assistant message to the thread.
     /// </summary>
-    public void AddAssistantMessage(string content)
+    public void AddAssistantMessage(string content, Guid? profileVersionId = null, string? language = null)
     {
         var sequenceNumber = _messages.Count;
         var message = new ChatMessage(content, ChatMessage.AssistantRole, sequenceNumber);
+        if (profileVersionId.HasValue || language != null)
+        {
+            message.SetAnswerProvenance(profileVersionId, language);
+        }
+
         AddMessage(message);
     }
 

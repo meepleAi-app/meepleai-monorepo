@@ -36,6 +36,9 @@ export interface CreateChatThreadRequest {
 export interface AddMessageRequest {
   content: string;
   role: string;
+  /** #4168: per una risposta, la versione del profilo e la lingua dal completamento dello stream. */
+  profileVersionId?: string | null;
+  language?: string | null;
 }
 
 export interface CreateRuleSpecCommentRequest {

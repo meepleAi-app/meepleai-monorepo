@@ -630,6 +630,81 @@ public sealed class AgentProfileFieldEffectTests
         events[0].GetProperty("data").GetProperty("message").GetString().Should().Be("Retrieved from cache");
     }
 
+    // ─── La cronologia del thread (#4242) ───────────────────────────────────────
+    // Stanno qui perché vogliono lo stesso banco: la richiesta HTTP, Postgres, e il prompt che
+    // arriva al modello. I test unit fissano la regola; questi, che la domanda la attraversi.
+
+    private const string ThreadSecret = "ZAFFIRO-7731";
+
+    /// <summary>
+    /// Il controllo: la cronologia del proprio thread entra nel prompt. Senza questa direzione una
+    /// guardia troppo larga spegnerebbe la cronologia a tutti, e nessun test se ne accorgerebbe.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4242")]
+    public async Task ThreadHistory_OfTheAskersOwnThread_IsInThePrompt()
+    {
+        var threadId = await CreateThreadWithMessageAsync($"La nostra variante si chiama {ThreadSecret}.");
+
+        await AskAsync(Question, chatId: threadId);
+
+        _hostFixture.Llm.LastUserPrompt.Should().NotBeNull("il modello è stato interrogato")
+            .And.Contain(ThreadSecret);
+    }
+
+    /// <summary>
+    /// Un altro utente, sullo stesso gioco, nomina quel thread nella sua domanda: riceve la sua
+    /// risposta, senza la conversazione di chi il thread l'ha scritto.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4242")]
+    public async Task ThreadHistory_OfAnotherUsersThread_IsNotInThePrompt()
+    {
+        var threadId = await CreateThreadWithMessageAsync($"La nostra variante si chiama {ThreadSecret}.");
+        var strangerToken = await CreateAnotherOwnerOfTheGameAsync();
+
+        await AskAsync(Question, chatId: threadId, token: strangerToken);
+
+        _hostFixture.Llm.LastUserPrompt.Should().NotBeNull("la domanda riceve comunque la sua risposta")
+            .And.NotContain(ThreadSecret);
+    }
+
+    /// <summary>Un thread dell'utente del test, sul gioco del test, con un messaggio dentro.</summary>
+    private async Task<Guid> CreateThreadWithMessageAsync(string content)
+    {
+        var created = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/chat-threads", _token, new { gameId = _gameId, title = "Cronologia" }), Ct);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Ct));
+        using var thread = JsonDocument.Parse(await created.Content.ReadAsStringAsync(Ct));
+        var threadId = thread.RootElement.GetProperty("id").GetGuid();
+
+        var added = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", _token,
+            new { content, role = "user" }), Ct);
+        added.IsSuccessStatusCode.Should().BeTrue(await added.Content.ReadAsStringAsync(Ct));
+        return threadId;
+    }
+
+    /// <summary>
+    /// Un secondo utente che possiede lo stesso gioco: può fare domande su di esso, quindi ciò che
+    /// lo ferma sul thread altrui è la proprietà del thread e non l'accesso al gioco.
+    /// </summary>
+    private async Task<string> CreateAnotherOwnerOfTheGameAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (strangerId, strangerToken) = await TestSessionHelper.CreateUserSessionAsync(db, cancellationToken: Ct);
+        db.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            UserId = strangerId,
+            SharedGameId = _gameId,
+            AddedAt = DateTime.UtcNow,
+            OwnershipDeclaredAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(Ct);
+        return strangerToken;
+    }
+
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
     private async Task PublishAsync(Func<AgentProfileContent, AgentProfileContent> change)
@@ -673,11 +748,15 @@ public sealed class AgentProfileFieldEffectTests
             rerankerEnabled ?? c.RerankerEnabled,
             c.AllowedCategories.ToList());
 
-    private async Task<List<JsonElement>> AskAsync(string query, string? acceptLanguage = null)
+    private async Task<List<JsonElement>> AskAsync(
+        string query, string? acceptLanguage = null, Guid? chatId = null, string? token = null)
     {
+        // Il thread entra nel corpo solo quando c'è: le altre domande restano quelle di sempre.
+        object payload = chatId is null
+            ? new { gameId = _gameId.ToString(), query }
+            : new { gameId = _gameId.ToString(), query, chatId };
         var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, "/api/v1/agents/qa/stream?generateFollowUps=false", _token,
-            new { gameId = _gameId.ToString(), query });
+            HttpMethod.Post, "/api/v1/agents/qa/stream?generateFollowUps=false", token ?? _token, payload);
         if (acceptLanguage is not null)
         {
             request.Headers.Add("Accept-Language", acceptLanguage);

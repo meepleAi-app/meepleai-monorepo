@@ -8,14 +8,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// #4168: la lingua di una risposta, che guida il recupero e la scelta del prompt.
 /// <list type="number">
 /// <item>la lingua rilevata nel testo della domanda, se il rilevamento è sicuro;</item>
-/// <item>altrimenti — tipicamente una domanda di una o due parole — la prima lingua supportata
-/// di <c>Accept-Language</c>;</item>
+/// <item>altrimenti — tipicamente una domanda di una o due parole — la lingua chiesta dal client,
+/// se la richiesta ne porta una supportata;</item>
+/// <item>altrimenti la prima lingua supportata di <c>Accept-Language</c>;</item>
 /// <item>altrimenti quella rilevata, che su un testo senza segnali è l'inglese.</item>
 /// </list>
 /// </summary>
 internal static class AnswerLanguageResolver
 {
-    internal static AnswerLanguage Resolve(ILanguageDetectionService detector, string question, string? acceptLanguage)
+    internal static AnswerLanguage Resolve(
+        ILanguageDetectionService detector, string question, string? acceptLanguage, string? requestedLanguage = null)
     {
         ArgumentNullException.ThrowIfNull(detector);
 
@@ -23,6 +25,12 @@ internal static class AnswerLanguageResolver
         if (detection.IsConfident)
         {
             return new AnswerLanguage(detection.Language, AnswerLanguageSource.Detected);
+        }
+
+        var requested = requestedLanguage?.Trim().ToLowerInvariant();
+        if (requested is not null && detector.IsSupportedLanguage(requested))
+        {
+            return new AnswerLanguage(requested, AnswerLanguageSource.Requested);
         }
 
         var preferred = FirstSupportedLanguage(detector, acceptLanguage);
@@ -71,6 +79,9 @@ internal enum AnswerLanguageSource
 {
     /// <summary>Rilevata con sicurezza nel testo della domanda.</summary>
     Detected,
+
+    /// <summary>La domanda non bastava: la lingua chiesta esplicitamente dal client.</summary>
+    Requested,
 
     /// <summary>La domanda non bastava: la prima lingua supportata di <c>Accept-Language</c>.</summary>
     AcceptLanguage,

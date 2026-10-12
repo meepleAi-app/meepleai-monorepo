@@ -269,6 +269,79 @@ public sealed class AgentProfileFieldEffectTests
             style == CitationStyle.PageReferencesInText ? CitationStyle.StructuredEvents : CitationStyle.PageReferencesInText));
     }
 
+    // ─── La domanda singola (/knowledge-base/ask) ───────────────────────────────
+
+    /// <summary>
+    /// 5d: la domanda singola passa dagli stessi passi. Prima usava la strategia di instradamento,
+    /// con un override per complessità, e la temperatura e la lunghezza compilate del gateway.
+    /// </summary>
+    [Fact]
+    public async Task Ask_ModelTemperatureAndLength_ComeFromTheProfile()
+    {
+        await PublishAsync(c => Modified(c, primaryModelId: "test/primary-model", temperature: 1.1m, maxResponseTokens: 321));
+
+        await AskSingleAsync(Question);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull("la domanda singola passa dalla pipeline, con i parametri del profilo");
+        _hostFixture.Llm.LastAnswer!.PrimaryModelId.Should().Be("test/primary-model");
+        _hostFixture.Llm.LastAnswer.Temperature.Should().Be(1.1);
+        _hostFixture.Llm.LastAnswer.MaxTokens.Should().Be(321);
+    }
+
+    [Fact]
+    public async Task Ask_SystemPrompt_IsTheOneOfTheQuestionLanguage()
+    {
+        await PublishAsync(c => Modified(c, systemPrompts: new Dictionary<string, string>
+        {
+            ["en"] = "SENTINEL-EN. Answer from the rulebook.",
+            ["it"] = "SENTINEL-IT. Rispondi dal regolamento.",
+        }));
+
+        await AskSingleAsync(ItalianQuestion);
+
+        _hostFixture.Llm.LastSystemPrompt.Should().StartWith("SENTINEL-IT");
+    }
+
+    [Fact]
+    public async Task Ask_FinalTopK_IsTheNumberOfPassagesInThePrompt()
+    {
+        await PublishAsync(c => Modified(c, finalTopK: 1));
+
+        await AskSingleAsync(Question);
+
+        CountOf(_hostFixture.Llm.LastUserPrompt, "[Page ").Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Ask_RerankerDisabled_TheRerankerIsNotCalled()
+    {
+        await PublishAsync(c => Modified(c, rerankerEnabled: false));
+
+        await AskSingleAsync(Question);
+
+        _hostFixture.Reranker.Calls.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Prima un rifiuto del gateway diventava una risposta vuota, servita con <c>success: true</c> e
+    /// valutata dalla validazione come se fosse una risposta: ora è un errore che dice il motivo.
+    /// </summary>
+    [Fact]
+    public async Task Ask_WhenNoModelAnswers_IsA503WithTheCode_NotAnEmptyAnswer()
+    {
+        _hostFixture.Llm.RefuseNext = true;
+
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/knowledge-base/ask", _token,
+                new { gameId = _gameId.ToString(), query = Question }),
+            Ct);
+
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable, body);
+        body.Should().Contain(LlmAnswerErrorCodes.ProviderUnavailable);
+    }
+
     // ─── La cache delle risposte ────────────────────────────────────────────────
 
     /// <summary>
@@ -392,6 +465,19 @@ public sealed class AgentProfileFieldEffectTests
         return events;
     }
 
+    private async Task<JsonElement> AskSingleAsync(string query)
+    {
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/knowledge-base/ask", _token,
+                new { gameId = _gameId.ToString(), query }),
+            Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var doc = JsonDocument.Parse(body);
+        return doc.RootElement.Clone();
+    }
+
     private static List<JsonElement> CitationsOf(IEnumerable<JsonElement> events) =>
         events.Single(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Citations)
             .GetProperty("data").GetProperty("citations").EnumerateArray().ToList();
@@ -490,11 +576,40 @@ internal sealed class RecordingLlmService : ILlmService
     public string? LastSystemPrompt { get; private set; }
     public string? LastUserPrompt { get; private set; }
 
+    /// <summary>Se vero, la prossima risposta fallisce come un gateway senza modelli disponibili.</summary>
+    public bool RefuseNext { get; set; }
+
     public void Reset()
     {
         LastAnswer = null;
         LastSystemPrompt = null;
         LastUserPrompt = null;
+        RefuseNext = false;
+    }
+
+    public Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
+    {
+        LastAnswer = request;
+        return Complete(request.SystemPrompt, request.UserPrompt);
+    }
+
+    private Task<LlmCompletionResult> Complete(string systemPrompt, string userPrompt)
+    {
+        LastSystemPrompt = systemPrompt;
+        LastUserPrompt = userPrompt;
+        if (RefuseNext)
+        {
+            var failure = LlmCompletionResult.CreateFailure("No AI model could answer right now.");
+            return Task.FromResult(failure with
+            {
+                Metadata = new Dictionary<string, string> { ["error_code"] = LlmAnswerErrorCodes.ProviderUnavailable },
+            });
+        }
+
+        return Task.FromResult(LlmCompletionResult.CreateSuccess(
+            "Five cards.",
+            new LlmUsage(100, 3, 103),
+            new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "test-model", Provider = "Test" }));
     }
 
     public IAsyncEnumerable<StreamChunk> GenerateAnswerStreamAsync(LlmAnswerRequest request, CancellationToken ct = default)
@@ -521,7 +636,7 @@ internal sealed class RecordingLlmService : ILlmService
 
     public Task<LlmCompletionResult> GenerateCompletionAsync(
         string systemPrompt, string userPrompt, RequestSource source = RequestSource.Manual, CancellationToken ct = default)
-        => Task.FromResult(LlmCompletionResult.CreateFailure("Not scripted"));
+        => Complete(systemPrompt, userPrompt);
 
     public Task<T?> GenerateJsonAsync<T>(
         string systemPrompt, string userPrompt, RequestSource source = RequestSource.Manual, CancellationToken ct = default)

@@ -491,10 +491,11 @@ internal static class KnowledgeBaseEndpoints
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
-            Language: req.language ?? "en",
+            Language: req.language,
             BypassCache: req.bypassCache ?? false,
             UserId: session!.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            UserRole: session.Principal!.EffectiveActor.Role,
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString() // #4168
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");

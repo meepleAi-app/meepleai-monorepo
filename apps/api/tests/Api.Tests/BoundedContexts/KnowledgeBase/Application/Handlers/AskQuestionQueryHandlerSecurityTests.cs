@@ -38,7 +38,6 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<IChatThreadRepository> _mockThreadRepository;
     private readonly Mock<IPdfDocumentRepository> _mockPdfDocumentRepository;
     private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
     private readonly Mock<IKeywordSearchService> _mockKeywordSearchService;
@@ -132,7 +131,6 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockThreadRepository = new Mock<IChatThreadRepository>();
         _mockPdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         _mockLlmService = new Mock<ILlmService>();
-        _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
 
@@ -192,18 +190,16 @@ public class AskQuestionQueryHandlerSecurityTests
                 DurationMs = 250
             });
 
-        var routingOptionsMonitor = new Mock<Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions>>();
-        routingOptionsMonitor.Setup(m => m.CurrentValue).Returns(new Api.Configuration.LlmQueryComplexityRoutingOptions());
-
         _handler = new AskQuestionQueryHandler(
-            _searchHandler,
-            CreatePassthroughReranker(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+                _searchHandler, CreatePassthroughReranker()),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.ProfileReader(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.UncertainLanguageDetection(),
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
-            _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
             CreatePermissiveRagAccessServiceMock(),
             Mock.Of<IRagQualityTracker>(),
@@ -215,7 +211,6 @@ public class AskQuestionQueryHandlerSecurityTests
             CreateNoOpTranslationServiceMock(),
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
-            routingOptionsMonitor.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
             _mockLogger.Object);
@@ -483,7 +478,7 @@ public class AskQuestionQueryHandlerSecurityTests
 
         // Setup LlmService
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: "Test answer",
                 usage: new LlmUsage(10, 10, 20),
@@ -494,11 +489,6 @@ public class AskQuestionQueryHandlerSecurityTests
                     ModelId = "test-model",
                     Provider = "test"
                 }));
-
-        // Setup PromptTemplateService
-        _mockPromptTemplateService
-            .Setup(s => s.GetActivePromptAsync("rag-system-prompt", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Test system prompt");
     }
 
     /// <summary>

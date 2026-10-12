@@ -45,4 +45,8 @@ internal sealed record CachedRagResponse(
     string Answer,
     IReadOnlyList<CachedCitation> Citations,
     string ModelUsed,
-    DateTimeOffset CachedAt);
+    DateTimeOffset CachedAt,
+    // #4168: la lingua della risposta e la versione del profilo che l'ha prodotta. Una voce di
+    // un'altra lingua o versione, o scritta prima di #4168 (entrambi null), non si serve.
+    string? Language = null,
+    Guid? ProfileVersionId = null);

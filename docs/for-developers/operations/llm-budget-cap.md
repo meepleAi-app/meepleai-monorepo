@@ -75,7 +75,7 @@ Se la riserva fallisce (provider giù, chiave rifiutata), la risposta torna al m
 
 ## Risposte della pipeline (#4168)
 
-Le risposte della pipeline unica (ADR-095 D3) passano da un ingresso proprio del gateway, `GenerateAnswerStreamAsync` e `GenerateAnswerAsync`. Modello principale, riserva, temperatura e lunghezza massima arrivano dalla versione pubblicata del profilo, non dalla strategia di instradamento. Le chat ci passano una alla volta (fette 5c–5e, poi la fetta 8). Le garanzie sono le stesse in streaming e in risposta unica:
+Le risposte della pipeline unica (ADR-095 D3) passano da un ingresso proprio del gateway, `GenerateAnswerStreamAsync` e `GenerateAnswerAsync`. Modello principale, riserva, temperatura e lunghezza massima arrivano dalla versione pubblicata del profilo, non dalla strategia di instradamento. Ci passano la chat in streaming (`/agents/qa/stream`, #4219) e la domanda singola (`/knowledge-base/ask`, `/agents/qa`, l'auto-test admin); la ricerca cross-game segue con la fetta 5e, la sessione con la fetta 8. Sulla domanda singola un rifiuto non è più una risposta vuota: è un `503` con il codice (`LlmCallRefusedException`). Le garanzie sono le stesse in streaming e in risposta unica:
 
 | caso | cosa succede |
 |---|---|

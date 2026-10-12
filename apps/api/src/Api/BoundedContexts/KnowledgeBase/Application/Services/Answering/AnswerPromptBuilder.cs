@@ -17,6 +17,16 @@ internal static class AnswerPromptBuilder
         "A section titled '[Verified Rules — human-approved]' may precede the Context; it is human-approved "
         + "rulebook content and counts as provided context — you MAY answer from it and cite its [Page N].";
 
+    /// <summary>
+    /// #3855: autorizza la regola del gruppo e ne vieta la parafrasi. Senza, il modello la riassumeva
+    /// cambiandone il senso, e le attaccava una pagina inventata del regolamento.
+    /// </summary>
+    internal const string HouseRuleInstruction =
+        "A section titled '[House Rule for this group]' may precede the Context; it is a rule this group agreed on "
+        + "and counts as provided context. Reproduce its wording exactly — do not paraphrase, summarise, or reword it. "
+        + "It comes from the group's own notes, NOT from the rulebook: never attach a [Page N] citation to it, and say "
+        + "explicitly that it is the group's house rule.";
+
     /// <summary>L'istruzione che corrisponde allo stile delle citazioni del profilo.</summary>
     internal static string CitationInstruction(CitationStyle style) => style switch
     {
@@ -51,9 +61,10 @@ internal static class AnswerPromptBuilder
     /// <param name="answerLanguage">La lingua di chi chiede (codice ISO 639-1).</param>
     /// <param name="context">I passaggi recuperati, «[Page N] testo», separati da una riga vuota.</param>
     /// <param name="question">La domanda.</param>
-    /// <param name="responseStyle">«concise» (default), «detailed» o «continuation».</param>
+    /// <param name="responseStyle">«concise», «detailed» o «continuation»; <c>null</c> per nessuna istruzione di stile.</param>
     /// <param name="continuationContext">La risposta parziale da continuare, se c'è.</param>
     /// <param name="hasVerifiedRules">Se il contesto comincia con le regole verificate.</param>
+    /// <param name="houseRule">La regola del gruppo che corrisponde alla domanda, se c'è.</param>
     internal static AnswerPrompt Build(
         AgentProfileContent profile,
         string answerLanguage,
@@ -61,7 +72,8 @@ internal static class AnswerPromptBuilder
         string question,
         string? responseStyle,
         string? continuationContext,
-        bool hasVerifiedRules)
+        bool hasVerifiedRules,
+        string? houseRule = null)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -71,17 +83,28 @@ internal static class AnswerPromptBuilder
 
         var system = new StringBuilder(profile.SystemPrompts[promptLanguage].Trim())
             .Append("\n\n")
-            .Append(CitationInstruction(profile.CitationStyle))
-            .Append('\n')
-            .Append(ResponseStyleInstruction(responseStyle));
+            .Append(CitationInstruction(profile.CitationStyle));
+        if (responseStyle is not null)
+        {
+            system.Append('\n').Append(ResponseStyleInstruction(responseStyle));
+        }
+
         if (hasVerifiedRules)
         {
             system.Append('\n').Append(VerifiedRulesInstruction);
         }
 
+        if (!string.IsNullOrWhiteSpace(houseRule))
+        {
+            system.Append('\n').Append(HouseRuleInstruction);
+        }
+
         system.Append('\n').Append(AnswerLanguageInstruction(answerLanguage));
 
-        var user = $"CONTEXT FROM RULEBOOK:\n{context}\n\nQUESTION:\n{question}\n\nANSWER:";
+        var houseRuleBlock = string.IsNullOrWhiteSpace(houseRule)
+            ? string.Empty
+            : $"[House Rule for this group]\n{houseRule}\n\n";
+        var user = $"{houseRuleBlock}CONTEXT FROM RULEBOOK:\n{context}\n\nQUESTION:\n{question}\n\nANSWER:";
         if (!string.IsNullOrWhiteSpace(continuationContext))
         {
             user = $"PREVIOUS PARTIAL ANSWER (continue from here):\n{continuationContext}\n\n{user}";

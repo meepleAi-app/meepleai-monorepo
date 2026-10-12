@@ -49,8 +49,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// </remarks>
 internal sealed class AnswerPipeline : IAnswerPipeline
 {
-    private readonly SearchQueryHandler _searchQueryHandler;
-    private readonly ICrossEncoderReranker _reranker;
+    private readonly AnswerRetrieval _retrieval;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
@@ -70,8 +69,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private readonly TimeProvider _timeProvider;
 
     public AnswerPipeline(
-        SearchQueryHandler searchQueryHandler,
-        ICrossEncoderReranker reranker,
+        AnswerRetrieval retrieval,
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
@@ -90,8 +88,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         ILogger<AnswerPipeline> logger,
         TimeProvider? timeProvider = null)
     {
-        _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
-        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
+        _retrieval = retrieval ?? throw new ArgumentNullException(nameof(retrieval));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
@@ -399,44 +396,15 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         string language,
         CancellationToken cancellationToken)
     {
-        // Issue #3270 (Task 7): classify user intent into GameBookRole tag(s) so the hybrid
-        // re-ranker can boost chunks whose role_tags overlap (parity with AskQuestionQueryHandler).
-        // The classifier is rule-based, sync, and cheap (~µs); failure modes default to RulesReference.
-        var queryRoleHint = _intentClassifier.ClassifyIntent(queryText);
-        _logger.LogDebug(
-            "[StreamQaHandler] Intent classification: Query={Query}, RoleHint={RoleHint}",
-            queryText, queryRoleHint);
+        // Passi 3 e 4: recupero e reranking con i numeri del profilo, condivisi con la domanda singola.
+        var searchResults = await _retrieval.RetrieveAsync(
+            new AnswerRetrievalRequest(Guid.Parse(gameId), queryText, documentIds),
+            profile, language, cancellationToken).ConfigureAwait(false);
 
-        var searchQuery = new SearchQuery(
-            GameId: Guid.Parse(gameId),
-            Query: queryText,
-            TopK: profile.CandidatePoolSize,
-            MinScore: (double)profile.MinScore,
-            SearchMode: "hybrid",
-            Language: language,
-            DocumentIds: documentIds, // Issue #2051
-            QueryRoleHint: queryRoleHint // Issue #3270: bias re-ranker toward role-matching chunks
-        );
-
-        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
-
-        if (searchResults == null || searchResults.Count == 0)
+        if (searchResults.Count == 0)
         {
-            _logger.LogInformation("No vector results found for query in game {GameId}", gameId);
             return (false, null, null, null);
         }
-
-        // Issue #2708: rerank the wider candidate pool down to the final top-K by semantic relevance
-        // (cross-encoder; graceful degradation to raw top-K if the reranker is unavailable).
-        // #4168: il reranker e i due numeri vengono dal profilo; senza reranker restano i primi K della fusione.
-        // La ricerca ibrida applica TopK a ciascun braccio e restituisce l'unione, fino al doppio: il
-        // pool del profilo è il numero di candidati prima del reranking (ADR-095 D1), quindi si taglia
-        // qui, nell'ordine della fusione.
-        searchResults = searchResults.Take(profile.CandidatePoolSize).ToList();
-        searchResults = profile.RerankerEnabled
-            ? await SearchResultReranker.RerankAsync(
-                _reranker, queryText, searchResults, profile.FinalTopK, _logger, cancellationToken).ConfigureAwait(false)
-            : searchResults.Take(profile.FinalTopK).ToList();
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
@@ -585,8 +553,9 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 : verifiedBlock.PromptText;
         }
 
+        // La chat ha sempre uno stile: senza una scelta dell'utente, sintetico.
         var prompt = AnswerPromptBuilder.Build(
-            profile, language, context, queryText, responseStyle, continuationContext, hasVerifiedRules);
+            profile, language, context, queryText, responseStyle ?? "concise", continuationContext, hasVerifiedRules);
 
         // Enrich with chat history if available
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)

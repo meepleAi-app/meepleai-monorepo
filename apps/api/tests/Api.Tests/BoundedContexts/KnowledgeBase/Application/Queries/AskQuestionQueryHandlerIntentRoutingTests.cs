@@ -186,18 +186,16 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var routingMonitorMock = new Mock<IOptionsMonitor<LlmQueryComplexityRoutingOptions>>();
-        routingMonitorMock.Setup(m => m.CurrentValue).Returns(new LlmQueryComplexityRoutingOptions());
-
         var handler = new AskQuestionQueryHandler(
-            searchHandler,
-            CreatePassthroughReranker(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+                searchHandler, CreatePassthroughReranker(), intentClassifier),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.ProfileReader(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.UncertainLanguageDetection(),
             new QualityTrackingDomainService(),
             new ChatContextDomainService(),
             new Mock<IChatThreadRepository>().Object,
             pdfRepoMock.Object,
             new Mock<ILlmService>().Object,
-            new Mock<IPromptTemplateService>().Object,
             new Mock<IRagValidationPipelineService>().Object,
             ragAccessMock.Object,
             qaTrackerMock.Object,
@@ -208,7 +206,6 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             pricingMock.Object,
             new Mock<IGenericTranslationService>().Object,
             intentClassifier,
-            routingMonitorMock.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
             new Mock<ILogger<AskQuestionQueryHandler>>().Object);

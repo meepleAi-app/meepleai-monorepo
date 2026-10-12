@@ -11,8 +11,10 @@
  * The admin session lives in its own request context: it never reaches the browser, where
  * the test registers as a new user.
  *
- * Shared state: the mode is global. Run these specs serially (CI does, `workers: 1`); two
- * files restoring the mode concurrently could close it under each other.
+ * Shared state: the mode is global, and outside CI Playwright runs files in parallel
+ * (`workers: 2`). Two files using this helper would race: the one that opened the mode
+ * closes it when it ends, under the other that found it already open. So ONE file uses it,
+ * `auth-email-registration-flow.spec.ts`. A second consumer needs a serial project first.
  */
 
 import { request } from '@playwright/test';

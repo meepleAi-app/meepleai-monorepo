@@ -387,7 +387,7 @@ test.describe('Email Verification Flow', () => {
   });
 
   test.describe('Complete User Journey', () => {
-    test('should complete registration → verification link → continue to the library', async ({
+    test('should complete registration → verification link → the success page sends to the library', async ({
       page,
     }) => {
       // #4248: the page, not a modal. The registration and the verification are simulated in
@@ -413,9 +413,10 @@ test.describe('Email Verification Flow', () => {
         timeout: 10000,
       });
 
-      // Step 4: Continue leads to the library (directly, or through the login page that
-      // remembers it)
-      await page.locator('[data-testid="continue-to-dashboard-button"]').click();
+      // Step 4: The success page sends the user to the library on its own (auto-redirect
+      // after 3 seconds), which answers directly or through the login page that remembers it.
+      // The continue button is not clicked here: with the auto-redirect running, a click
+      // would prove nothing. Its own test is tracked in #4249.
       await page.waitForURL(
         url => url.pathname === '/library' || url.searchParams.get('from') === '/library',
         { timeout: 10000 }

@@ -8,9 +8,17 @@
  * 1. the landing's «Inizia gratis» leads to `/register`;
  * 2. registering (email, password, Terms) opens an HttpOnly session and lands on
  *    `/verification-pending`;
- * 3. logging out from the user menu closes it: the library sends to `/login` again.
+ * 3. the dashboard greets the new user by name, not as a guest;
+ * 4. logging out from the user menu closes the session: the library sends to `/login` again.
+ *
+ * Step 3 is what `auth-registration-dashboard.spec.ts` was written for: after registering,
+ * the dashboard showed a "no user" state, because the forms and `AuthProvider` kept separate
+ * user states (fixed by #4228, whose unit test mounts the real provider). That spec set a
+ * fake session cookie; its check lives here, on the one real registration, so that a single
+ * file opens and restores the registration mode (see `_helpers/publicRegistration.ts`).
  *
  * Real APIs Used:
+ * - GET /api/v1/auth/registration-mode, PUT /api/v1/admin/settings/registration-mode
  * - POST /api/v1/auth/register (user registration, session cookie)
  * - GET /api/v1/auth/me (session verification)
  * - POST /api/v1/auth/logout (session destruction, via the logout server action)
@@ -42,13 +50,14 @@ test.describe('Email Registration → Session → Logout Flow', () => {
     if (registration?.available) await registration.restore();
   });
 
-  test('Register with email → session open on verification-pending → logout → library protected again', async ({
+  test('Register with email → session open on verification-pending → dashboard greets by name → logout → library protected again', async ({
     page,
     context,
   }) => {
     if (!registration.available) test.skip(true, registration.reason);
     await seedCookieConsent(page);
     const email = uniqueRegistrationEmail('e2e-reg-flow');
+    let displayName = '';
 
     await test.step('Landing CTA leads to the register page', async () => {
       await page.goto('/');
@@ -61,7 +70,13 @@ test.describe('Email Registration → Session → Logout Flow', () => {
         r => r.url().includes('/api/v1/auth/register') && r.request().method() === 'POST'
       );
       await submitRegistration(page, { email, password: uncommonRegistrationPassword() });
-      expect((await registered).status()).toBe(200);
+      const response = await registered;
+      expect(response.status()).toBe(200);
+      const { user } = (await response.json()) as { user: { email: string; displayName: string } };
+      expect(user.email).toBe(email);
+      // The form sends no name: the backend assigns one (`Player-…`).
+      expect(user.displayName).not.toBe('');
+      displayName = user.displayName;
 
       const session = (await context.cookies()).find(c => c.name === 'meepleai_session');
       expect(session, 'the registration must set the session cookie').toBeDefined();
@@ -71,6 +86,14 @@ test.describe('Email Registration → Session → Logout Flow', () => {
     await test.step('The page asks to verify the email', async () => {
       await page.waitForURL('**/verification-pending**', { timeout: 15000 });
       await expect(page.getByTestId('verification-pending-page')).toBeVisible();
+    });
+
+    await test.step('The dashboard greets the new user by name, not as a guest', async () => {
+      // A full reload: the user comes from the session (`/auth/me`), not from client state.
+      await page.goto('/dashboard');
+      await expect(page.locator('[data-slot="dashboard-hero"] h1')).toContainText(displayName, {
+        timeout: 15000,
+      });
     });
 
     await test.step('The new user reaches a protected page', async () => {

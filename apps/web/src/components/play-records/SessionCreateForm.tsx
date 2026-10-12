@@ -4,7 +4,7 @@
  * Mobile  (<= 768px): wizard steps 1/2/3 with StepIndicator sticky top.
  * Desktop (> 768px):  split-form 8-col (fields) + 4-col (live preview).
  *
- * Step 1 — Gioco:    GameCombobox catalog + freeform fallback
+ * Step 1 — Gioco:    GamePicker (library first, then catalog) + freeform fallback
  * Step 2 — Quando:   sessionDate + location (optional) + notes (optional)
  * Step 3 — Punteggi: PlayerManager (add/remove) + inline scoring
  *
@@ -19,6 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Trophy, Users, X, Plus } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
+import { GamePicker } from '@/components/features/game-picker';
 import {
   Form,
   FormControl,
@@ -46,7 +47,6 @@ import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 import { cn } from '@/lib/utils';
 
 import { DraftAutosaveIndicator } from './DraftAutosaveIndicator';
-import { GameCombobox } from './GameCombobox';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -312,6 +312,8 @@ interface Step1Props {
 
 function Step1Gioco({ form, isSubmitting, t, isReadonly }: Step1Props) {
   const gameType = form.watch('gameType');
+  const selectedGameId = form.watch('gameId');
+  const selectedGameName = form.watch('gameName') ?? '';
 
   return (
     <div className="flex flex-col gap-5">
@@ -366,14 +368,21 @@ function Step1Gioco({ form, isSubmitting, t, isReadonly }: Step1Props) {
             <FormItem>
               <FormLabel>{t('step1.searchPlaceholder')}</FormLabel>
               <FormControl>
-                <GameCombobox
-                  value={field.value}
-                  onSelect={(gameId, gameName) => {
-                    field.onChange(gameId);
-                    form.setValue('gameName', gameName);
+                {/* #4250: the chosen game is shown from the form (id + name), not looked up
+                    among the results of the current search. The id is read with `watch`:
+                    `field.value` falls back to the default value when the field is
+                    undefined, so a game that came preset could never be removed. */}
+                <GamePicker
+                  source="both"
+                  value={selectedGameId ? { id: selectedGameId, title: selectedGameName } : null}
+                  onChange={option => {
+                    field.onChange(option?.id);
+                    form.setValue('gameName', option?.title ?? '');
                   }}
                   disabled={isSubmitting || isReadonly}
                   placeholder={t('step1.searchPlaceholder')}
+                  showLibraryWhenEmpty
+                  testId="play-record-game"
                 />
               </FormControl>
               <FormMessage />

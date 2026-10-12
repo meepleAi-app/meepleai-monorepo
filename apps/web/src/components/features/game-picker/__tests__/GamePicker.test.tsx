@@ -16,6 +16,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { axe, toHaveNoViolations } from 'jest-axe';
 import { useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 
@@ -44,6 +45,8 @@ import { GamePicker, type GameOption } from '../GamePicker';
 const mockGetLibrary = vi.mocked(api.library.getLibrary);
 const mockSharedSearch = vi.mocked(api.sharedGames.search);
 const mockToastError = vi.mocked(toast.error);
+
+expect.extend(toHaveNoViolations);
 
 /** #4227: the picker loads through TanStack Query, so it needs a client. */
 function renderPicker(ui: ReactElement) {
@@ -750,6 +753,17 @@ describe('GamePicker', () => {
       expect(onChange).not.toHaveBeenCalled();
     });
 
+    it('axe: nessuna violazione con la lista aperta e un’opzione attiva', async () => {
+      const { input } = await openWithTwoResults();
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      vi.useRealTimers();
+
+      // Come gli altri test axe del repository: si scansiona il componente, non la pagina.
+      const results = await axe(screen.getByTestId('game-picker'));
+
+      expect(results).toHaveNoViolations();
+    });
+
     it('quando la lista cambia l’opzione attiva si azzera', async () => {
       const { input } = await openWithTwoResults();
       fireEvent.keyDown(input, { key: 'ArrowDown' });
@@ -762,6 +776,70 @@ describe('GamePicker', () => {
       );
 
       expect(input).not.toHaveAttribute('aria-activedescendant');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // #4250 — disabled
+  // -------------------------------------------------------------------------
+  describe('#4250 — disabled', () => {
+    it('senza scelta: il campo è disabilitato e non interroga il server', async () => {
+      renderPicker(
+        <GamePicker
+          source="library"
+          value={null}
+          onChange={vi.fn()}
+          showLibraryWhenEmpty
+          allowManualEntry
+          disabled
+        />
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(screen.getByTestId('game-picker-input')).toBeDisabled();
+      expect(screen.getByTestId('game-picker-manual-input')).toBeDisabled();
+      expect(screen.getByTestId('game-picker-manual-confirm')).toBeDisabled();
+      expect(mockGetLibrary).not.toHaveBeenCalled();
+    });
+
+    it('con una scelta: la mostra, ma non offre la «×» per toglierla', () => {
+      renderPicker(
+        <GamePicker
+          source="library"
+          value={{ id: 'g1', title: 'Wingspan' }}
+          onChange={vi.fn()}
+          disabled
+        />
+      );
+
+      expect(screen.getByTestId('game-picker-selected')).toHaveTextContent('Wingspan');
+      expect(screen.queryByTestId('game-picker-clear')).not.toBeInTheDocument();
+    });
+
+    it('con un gioco scelto non interroga il server, nemmeno con showLibraryWhenEmpty', async () => {
+      renderPicker(
+        <GamePicker
+          source="library"
+          value={{ id: 'g1', title: 'Wingspan' }}
+          onChange={vi.fn()}
+          showLibraryWhenEmpty
+        />
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+
+      expect(mockGetLibrary).not.toHaveBeenCalled();
+    });
+
+    it('senza disabled la «×» c’è', () => {
+      renderPicker(
+        <GamePicker source="library" value={{ id: 'g1', title: 'Wingspan' }} onChange={vi.fn()} />
+      );
+
+      expect(screen.getByTestId('game-picker-clear')).toBeInTheDocument();
     });
   });
 });

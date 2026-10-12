@@ -88,6 +88,11 @@ export interface GamePickerProps {
   id?: string;
   'aria-describedby'?: string;
   'aria-invalid'?: boolean | 'true' | 'false';
+  /**
+   * Extra classes for the listbox, e.g. a max height with its own scroll where the list
+   * is long (the active option is kept in view).
+   */
+  listClassName?: string;
   /** Stable testid prefix for E2E selectors (default: "game-picker"). */
   testId?: string;
   /**
@@ -114,6 +119,7 @@ export function GamePicker({
   id,
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
+  listClassName,
   testId = 'game-picker',
   renderResultExtra,
 }: GamePickerProps): JSX.Element {
@@ -318,7 +324,7 @@ export function GamePicker({
         role="listbox"
         aria-label="Risultati ricerca giochi"
         data-testid={`${testId}-results`}
-        className={cn('space-y-1', results.length === 0 && 'hidden')}
+        className={cn('space-y-1', listClassName, results.length === 0 && 'hidden')}
       >
         {results.map(option => (
           <li key={option.id} role="presentation">

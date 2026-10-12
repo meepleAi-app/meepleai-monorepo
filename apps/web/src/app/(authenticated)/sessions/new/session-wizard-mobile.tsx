@@ -21,7 +21,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import {
-  Search,
   Check,
   Plus,
   Trash2,
@@ -36,11 +35,11 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { GamePicker } from '@/components/features/game-picker';
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
-import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
@@ -95,7 +94,6 @@ export function SessionWizardMobile({
 }: SessionWizardMobileProps = {}) {
   const router = useRouter();
   const [step, setStep] = useState<WizardStep>(prefilledGameId ? 2 : 1);
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedGameId, setSelectedGameId] = useState<string | null>(prefilledGameId ?? null);
   const [selectedGameName, setSelectedGameName] = useState(prefilledGameName ?? '');
   const [players, setPlayers] = useState<WizardPlayer[]>([
@@ -136,18 +134,6 @@ export function SessionWizardMobile({
       })
       .finally(() => setIsLoadingPhases(false));
   }, [selectedGameId]);
-
-  // #4187: the server searches the library. Filtering one downloaded page on the client
-  // could not find a game past it.
-  // 100 per page, as before (the grid has no "N of M" footer); the rest is found by searching.
-  const {
-    items: filteredGames,
-    isLoading: isLoadingFirstPage,
-    resultsMatchQuery,
-    term: libraryTerm,
-  } = useLibrarySearch(searchQuery, { pageSize: 100 });
-  // An empty list that belongs to an older text says nothing about the current one.
-  const isLoadingLibrary = isLoadingFirstPage || (!resultsMatchQuery && filteredGames.length === 0);
 
   // Color helpers
   const usedColors = players.map(p => p.color);
@@ -316,71 +302,35 @@ export function SessionWizardMobile({
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-bold font-quicksand">Scegli un gioco</h2>
-              <p className="text-sm text-muted-foreground">Seleziona un gioco dalla tua libreria</p>
+              <p className="text-sm text-muted-foreground">
+                Seleziona un gioco dalla tua libreria, o scrivi il nome
+              </p>
             </div>
 
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca gioco..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="pl-10"
-                aria-label="Cerca gioco"
-              />
-            </div>
-
-            {/* Game grid */}
-            {isLoadingLibrary ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-sm text-muted-foreground">Caricamento libreria...</p>
-              </div>
-            ) : filteredGames.length === 0 ? (
-              <div className="flex items-center justify-center py-12">
-                <p className="text-sm text-muted-foreground">
-                  {libraryTerm ? 'Nessun gioco trovato' : 'La tua libreria e vuota'}
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto">
-                {filteredGames.map(game => {
-                  const isSelected = selectedGameId === game.gameId;
-                  return (
-                    <button
-                      key={game.gameId}
-                      onClick={() => {
-                        setSelectedGameId(game.gameId);
-                        setSelectedGameName(game.gameTitle);
-                      }}
-                      className={cn(
-                        'flex flex-col items-center gap-2 rounded-xl border p-3 text-left transition-all',
-                        isSelected
-                          ? 'border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/30'
-                          : 'border-border bg-card hover:border-amber-300'
-                      )}
-                    >
-                      {game.gameImageUrl ? (
-                        <img
-                          src={game.gameImageUrl}
-                          alt={game.gameTitle}
-                          className="h-16 w-16 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 rounded-lg bg-muted dark:bg-card flex items-center justify-center">
-                          <Gamepad2 className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                      )}
-                      <span className="text-xs font-medium text-center line-clamp-2">
-                        {game.gameTitle}
-                      </span>
-                      {isSelected && <Check className="h-4 w-4 text-amber-500" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-
+            {/* #4227: the canonical picker. It lists the library before any typing, searches
+                it on the server, and takes a name typed by hand, like the desktop wizard. */}
+            <GamePicker
+              source="library"
+              value={
+                selectedGameName
+                  ? {
+                      id: selectedGameId ?? `manual-${selectedGameName}`,
+                      title: selectedGameName,
+                      manual: !selectedGameId,
+                    }
+                  : null
+              }
+              onChange={option => {
+                setSelectedGameId(option && !option.manual ? option.id : null);
+                setSelectedGameName(option?.title ?? '');
+              }}
+              placeholder="Cerca gioco..."
+              showLibraryWhenEmpty
+              allowManualEntry
+              maxResults={30}
+              listClassName="max-h-[50vh] overflow-y-auto"
+              testId="session-wizard-game"
+            />
             {/* Continue */}
             <GradientButton
               fullWidth

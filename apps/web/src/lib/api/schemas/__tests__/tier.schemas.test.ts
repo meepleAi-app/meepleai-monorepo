@@ -36,6 +36,7 @@ const limits = {
   maxPhotosPerSession: 5,
   sessionSaveEnabled: false,
   maxCatalogProposalsPerWeek: 1,
+  maxGamebookTranslationsPerMonth: 50,
 };
 
 const tier = {
@@ -68,5 +69,30 @@ describe('TierDefinitionSchema', () => {
   it('still parses a BE payload whose limits carry maxAgents, and drops it', () => {
     const parsed = TierDefinitionSchema.parse({ ...tier, limits: { ...limits, maxAgents: 1 } });
     expect(parsed.limits).not.toHaveProperty('maxAgents');
+  });
+});
+
+/**
+ * Issue #4212. Zod strips the keys a schema does not name. The limits schema did not name the
+ * gamebook quota, so the admin page never held it and could not send it back: every save zeroed
+ * it. The library limit and the RAPTOR flag are new in the payload: they are kept when present
+ * and tolerated when absent, so this build still reads a backend that does not send them yet.
+ */
+describe('TierDefinitionSchema — limits the admin page must send back (#4212)', () => {
+  it('keeps the gamebook quota, the library limit and the RAPTOR flag', () => {
+    const parsed = TierDefinitionSchema.parse({
+      ...tier,
+      limits: { ...limits, maxLibraryGames: 5, raptorRebuildEnabled: false },
+    });
+
+    expect(parsed.limits).toMatchObject({
+      maxGamebookTranslationsPerMonth: 50,
+      maxLibraryGames: 5,
+      raptorRebuildEnabled: false,
+    });
+  });
+
+  it('still parses a backend payload without the two new fields', () => {
+    expect(() => TierDefinitionSchema.parse({ ...tier, limits })).not.toThrow();
   });
 });

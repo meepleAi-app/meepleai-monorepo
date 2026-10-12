@@ -47,6 +47,13 @@ export const TierLimitsSchema = z.object({
   maxPhotosPerSession: z.number().int(),
   sessionSaveEnabled: z.boolean(),
   maxCatalogProposalsPerWeek: z.number().int(),
+  // #4212: Zod strips what a schema does not name. Without this key the admin page never held
+  // the gamebook quota and left it out of every save, and the backend rebuilt it as 0.
+  maxGamebookTranslationsPerMonth: z.number().int(),
+  // #4212: new in the payload. Optional, so this build still reads a backend that does not
+  // send them yet.
+  maxLibraryGames: z.number().int().optional(),
+  raptorRebuildEnabled: z.boolean().optional(),
 });
 
 export type TierLimits = z.infer<typeof TierLimitsSchema>;

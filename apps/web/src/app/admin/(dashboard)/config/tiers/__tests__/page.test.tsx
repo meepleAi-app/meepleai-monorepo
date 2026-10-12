@@ -175,4 +175,64 @@ describe('AdminTiersPage', () => {
       expect(screen.getByText(ERROR.tiersLoad)).toBeInTheDocument();
     });
   });
+
+  /**
+   * Issue #4212. The dialog built the limits from the keys it shows. A limit it did not show was
+   * left out of the PUT, and the backend rebuilt it with its default: every save of a plan zeroed
+   * the gamebook translation quota and switched the RAPTOR rebuild off.
+   */
+  describe('saving a plan keeps the limits it carries', () => {
+    const premium = {
+      ...mockTiers[1],
+      limits: {
+        ...mockTiers[1].limits,
+        maxGamebookTranslationsPerMonth: 500,
+        maxLibraryGames: 50,
+        raptorRebuildEnabled: true,
+      },
+    };
+
+    beforeEach(() => {
+      mockGetTiers.mockResolvedValue([premium]);
+      mockUpdateTier.mockResolvedValue(premium);
+    });
+
+    async function openAndSave(edit?: () => Promise<void>) {
+      renderWithQuery(<AdminTiersPage />);
+      await waitFor(() => expect(screen.getByTestId('btn-edit-premium')).toBeInTheDocument());
+      await user.click(screen.getByTestId('btn-edit-premium'));
+      if (edit) await edit();
+      await user.click(screen.getByTestId('btn-save'));
+      await waitFor(() => expect(mockUpdateTier).toHaveBeenCalled());
+      return mockUpdateTier.mock.calls[0][1].limits;
+    }
+
+    it('sends back the gamebook quota, the library limit and the RAPTOR flag untouched', async () => {
+      const sent = await openAndSave();
+
+      expect(sent).toMatchObject({
+        maxGamebookTranslationsPerMonth: 500,
+        maxLibraryGames: 50,
+        raptorRebuildEnabled: true,
+      });
+    });
+
+    it('lets the admin change the library limit', async () => {
+      const sent = await openAndSave(async () => {
+        const field = screen.getByTestId('field-limit-maxLibraryGames');
+        await user.clear(field);
+        await user.type(field, '60');
+      });
+
+      expect(sent.maxLibraryGames).toBe(60);
+    });
+
+    it('lets the admin switch the RAPTOR rebuild off, and only then sends false', async () => {
+      const sent = await openAndSave(async () => {
+        await user.click(screen.getByTestId('field-raptorRebuildEnabled'));
+      });
+
+      expect(sent.raptorRebuildEnabled).toBe(false);
+    });
+  });
 });

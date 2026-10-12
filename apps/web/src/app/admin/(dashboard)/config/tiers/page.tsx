@@ -29,10 +29,11 @@ import type { TierDefinition, TierLimits } from '@/lib/api/schemas/tier.schemas'
 
 // ── Limit key labels ─────────────────────────────────────────────────────────
 
-type LimitKey = keyof Omit<TierLimits, 'sessionSaveEnabled'>;
+type LimitKey = keyof Omit<TierLimits, 'sessionSaveEnabled' | 'raptorRebuildEnabled'>;
 
 const LIMIT_LABELS: Record<LimitKey, string> = {
-  maxPrivateGames: 'Max Giochi',
+  maxPrivateGames: 'Giochi privati',
+  maxLibraryGames: 'Giochi in libreria',
   maxPdfUploadsPerMonth: 'Max PDF/mese',
   maxPdfSizeBytes: 'Max PDF size (bytes)',
   maxAgentQueriesPerDay: 'Query/giorno',
@@ -40,6 +41,7 @@ const LIMIT_LABELS: Record<LimitKey, string> = {
   maxSessionPlayers: 'Max giocatori',
   maxPhotosPerSession: 'Foto sessione',
   maxCatalogProposalsPerWeek: 'Proposte/sett',
+  maxGamebookTranslationsPerMonth: 'Traduzioni librogame/mese',
 };
 
 const LIMIT_KEYS = Object.keys(LIMIT_LABELS) as LimitKey[];
@@ -61,6 +63,7 @@ interface TierFormState {
   llmModelTier: string;
   isDefault: boolean;
   sessionSaveEnabled: boolean;
+  raptorRebuildEnabled: boolean;
   limits: Record<LimitKey, number>;
 }
 
@@ -72,6 +75,7 @@ function buildFormState(tier?: TierDefinition): TierFormState {
       llmModelTier: 'standard',
       isDefault: false,
       sessionSaveEnabled: true,
+      raptorRebuildEnabled: false,
       limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, 0])) as Record<LimitKey, number>,
     };
   }
@@ -81,6 +85,7 @@ function buildFormState(tier?: TierDefinition): TierFormState {
     llmModelTier: tier.llmModelTier,
     isDefault: tier.isDefault,
     sessionSaveEnabled: tier.limits.sessionSaveEnabled,
+    raptorRebuildEnabled: tier.limits.raptorRebuildEnabled ?? false,
     limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, getLimitValue(tier, k)])) as Record<
       LimitKey,
       number
@@ -109,9 +114,13 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Every limit of the plan goes back, the ones this dialog edits and the ones it only
+      // carries: the backend rebuilds the limits from this object, and a key left out comes
+      // back as its default (#4212).
       const limits: TierLimits = {
         ...Object.fromEntries(LIMIT_KEYS.map(k => [k, form.limits[k] ?? 0])),
         sessionSaveEnabled: form.sessionSaveEnabled,
+        raptorRebuildEnabled: form.raptorRebuildEnabled,
       } as TierLimits;
 
       if (isEdit) {
@@ -229,6 +238,17 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                 data-testid="field-sessionSaveEnabled"
               />
               <span className="text-sm">Session Save abilitato</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.raptorRebuildEnabled}
+                onChange={e =>
+                  setForm(prev => ({ ...prev, raptorRebuildEnabled: e.target.checked }))
+                }
+                data-testid="field-raptorRebuildEnabled"
+              />
+              <span className="text-sm">Ricostruzione RAPTOR abilitata</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input

@@ -70,10 +70,9 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        // Validate pagination parameters
-        if (page < 1) page = 1;
-        if (pageSize < 1) pageSize = 20;
-        if (pageSize > 100) pageSize = 100;
+        // Validate pagination parameters: the same bounds the handler reports (#4187).
+        page = UserLibraryPaging.NormalizePage(page);
+        pageSize = UserLibraryPaging.NormalizePageSize(pageSize);
 
         var query = DbContext.UserLibraryEntries
             .AsNoTracking()

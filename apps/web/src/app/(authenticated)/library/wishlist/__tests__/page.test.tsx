@@ -39,7 +39,6 @@ const mockUseWishlist = vi.hoisted(() => vi.fn());
 const mockUseRemoveFromWishlist = vi.hoisted(() => vi.fn());
 const mockUseAddToWishlist = vi.hoisted(() => vi.fn());
 const mockUseUpdateWishlistItem = vi.hoisted(() => vi.fn());
-const mockUseLibrary = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const pushSpy = vi.hoisted(() => vi.fn());
 
@@ -50,8 +49,16 @@ vi.mock('@/hooks/queries/useWishlist', () => ({
   useUpdateWishlistItem: mockUseUpdateWishlistItem,
 }));
 
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: mockUseLibrary,
+// #4187: i nomi dei giochi della wishlist si leggono per id dal catalogo, non da una pagina
+// della libreria (ne chiedeva 500, il server ne restituisce al massimo 100).
+const CATALOG_TITLES: Record<string, string> = {
+  'game-1': 'Wingspan',
+  'game-2': 'Catan',
+  'game-far': 'Brass: Birmingham',
+};
+const mockUseSharedGamesByIds = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/queries/useSharedGames', () => ({
+  useSharedGamesByIds: mockUseSharedGamesByIds,
 }));
 
 // #3010 Task 7 — the wishlist card's game-name body navigates via
@@ -83,16 +90,6 @@ function renderPage(ui: ReactElement) {
     </QueryClientProvider>
   );
 }
-
-const LIBRARY_DATA = {
-  items: [
-    { gameId: 'game-1', gameTitle: 'Wingspan' },
-    { gameId: 'game-2', gameTitle: 'Catan' },
-  ],
-  page: 1,
-  pageSize: 500,
-  totalCount: 2,
-};
 
 function buildItem(overrides: Partial<WishlistItemDto> = {}): WishlistItemDto {
   return {
@@ -134,7 +131,12 @@ function normalizeNbsp(value: string): string {
 describe('WishlistPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseLibrary.mockReturnValue({ data: LIBRARY_DATA, isLoading: false, isError: false });
+    mockUseSharedGamesByIds.mockImplementation((ids: readonly string[]) => ({
+      gamesById: Object.fromEntries(
+        ids.filter(id => CATALOG_TITLES[id]).map(id => [id, { id, title: CATALOG_TITLES[id] }])
+      ),
+      isLoading: false,
+    }));
     mockUseRemoveFromWishlist.mockReturnValue({ mutate: vi.fn() });
     mockUseAddToWishlist.mockReturnValue({ mutate: vi.fn(), isPending: false });
     mockUseUpdateWishlistItem.mockReturnValue({ mutate: vi.fn(), isPending: false });
@@ -284,7 +286,7 @@ describe('WishlistPage', () => {
 
   it('in modifica il dialogo mostra il titolo del gioco anche se il DTO non porta gameName (#4187)', async () => {
     // Il WishlistItemDto del backend non ha GameName: il titolo lo conosce solo la pagina,
-    // dalla sua mappa della libreria. Il dialogo, in modifica, non interroga la libreria.
+    // che lo legge per id dal catalogo. Il dialogo, in modifica, non interroga la libreria.
     const user = userEvent.setup();
     mockUseWishlist.mockReturnValue({
       data: [buildItem({ gameName: undefined })],
@@ -299,6 +301,24 @@ describe('WishlistPage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Wingspan');
     expect(dialog).not.toHaveTextContent('game-1');
+  });
+
+  it('nomina un gioco della wishlist che non sta nella pagina di libreria scaricata (#4187)', () => {
+    mockUseWishlist.mockReturnValue({
+      data: [
+        buildItem({
+          id: '00000000-0000-0000-0000-0000000000ff',
+          gameId: 'game-far',
+          gameName: undefined,
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderPage(<WishlistPage />);
+
+    expect(screen.getByText('Brass: Birmingham')).toBeInTheDocument();
   });
 
   it('shows the error state when the wishlist query rejects', () => {

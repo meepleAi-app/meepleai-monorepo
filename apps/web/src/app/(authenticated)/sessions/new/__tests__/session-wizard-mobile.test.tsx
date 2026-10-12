@@ -118,6 +118,8 @@ describe('SessionWizardMobile — scelta del gioco (#4187, #4227)', () => {
     await user.type(screen.getByRole('combobox', { name: 'Cerca un gioco' }), 'Zz');
 
     expect(screen.queryByTestId('session-wizard-game-empty')).not.toBeInTheDocument();
+    // La lista di prima resta a schermo finché non arriva quella nuova.
+    expect(screen.getByTestId('session-wizard-game-result-game-azul')).toBeInTheDocument();
   });
 
   it('«Avanti» resta spento finché non c’è un gioco', async () => {

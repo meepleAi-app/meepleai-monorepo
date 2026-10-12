@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -206,7 +207,20 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
                 .GetByIdAsync(command.ChatThreadId.Value, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (thread == null)
+            // Security (#4242): this thread receives the question and the answer, and its history goes
+            // into the prompt. It must be the caller's, and about the game of this session. A thread
+            // the caller may not use is answered exactly like one that does not exist.
+            var refusal = thread == null
+                ? null
+                : ChatThreadHistoryPolicy.WhyNot(thread, command.UserId, agentSession.GameId);
+            if (refusal is not null)
+            {
+                _logger.LogWarning(
+                    "Thread {ThreadId} refused for user {UserId} in AgentSession {SessionId}: {Refusal}",
+                    command.ChatThreadId.Value, command.UserId, command.AgentSessionId, refusal.Value);
+            }
+
+            if (thread == null || refusal is not null)
             {
                 yield return CreateEvent(
                     StreamingEventType.Error,

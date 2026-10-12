@@ -366,7 +366,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 2: Loading chat history context...");
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var chatHistoryContext = await LoadChatHistoryContextAsync(
-            query.ThreadId, query.GameId, cancellationToken).ConfigureAwait(false);
+            query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
         sw2.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 2 DONE: Chat context loaded in {ElapsedMs}ms - {ContextLength} chars",
             sw2.ElapsedMilliseconds, chatHistoryContext?.Length ?? 0);
@@ -547,6 +547,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<string> LoadChatHistoryContextAsync(
         Guid? threadId,
         Guid gameId,
+        Guid? userId,
         CancellationToken cancellationToken)
     {
         if (!threadId.HasValue)
@@ -556,13 +557,19 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         if (thread == null)
             return string.Empty;
 
-        // Security: Validate thread belongs to requested game (prevent cross-game data leak)
-        if (thread.GameId.HasValue && thread.GameId.Value != gameId)
+        // Security (#4242): the history is used only for its owner, and only for its game.
+        switch (ChatThreadHistoryPolicy.WhyNot(thread, userId, gameId))
         {
-            _logger.LogWarning(
-                "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
-                threadId.Value, thread.GameId.Value, gameId);
-            return string.Empty;
+            case ChatThreadHistoryRefusal.NotTheOwner:
+                _logger.LogWarning(
+                    "Thread {ThreadId} does not belong to user {UserId}. Ignoring chat history.",
+                    threadId.Value, userId);
+                return string.Empty;
+            case ChatThreadHistoryRefusal.AnotherGame:
+                _logger.LogWarning(
+                    "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
+                    threadId.Value, thread.GameId, gameId);
+                return string.Empty;
         }
 
         if (_chatContextService.ShouldIncludeChatHistory(thread))

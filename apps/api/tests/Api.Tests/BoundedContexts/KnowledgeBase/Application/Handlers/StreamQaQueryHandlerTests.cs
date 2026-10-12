@@ -698,6 +698,58 @@ public class StreamQaQueryHandlerTests
         );
     }
 
+    /// <summary>
+    /// Issue #4242. The thread named by the request is on the same game but belongs to someone
+    /// else: its history must not reach the prompt. Before, only the game was checked.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ThreadOfAnotherUser_IgnoresChatHistory()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid().ToString();
+        var threadId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId, "Test query", TestUserId, "User", ThreadId: threadId);
+
+        var someoneElsesThread = CreateChatThread(threadId, gameId, messageCount: 2, ownerId: Guid.NewGuid());
+        _chatThreadRepositoryMock
+            .Setup(x => x.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(someoneElsesThread);
+        _chatContextServiceMock
+            .Setup(x => x.ShouldIncludeChatHistory(someoneElsesThread))
+            .Returns(true);
+        _chatContextServiceMock
+            .Setup(x => x.BuildChatHistoryContext(someoneElsesThread))
+            .Returns("Someone else's conversation");
+
+        SetupHappyPathMocks(gameId, query.Query);
+
+        // Act
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        // Assert
+        _chatContextServiceMock.Verify(
+            x => x.BuildChatHistoryContext(It.IsAny<ChatThread>()),
+            Times.Never);
+        _llmServiceMock.Verify(
+            x => x.GenerateAnswerStreamAsync(
+                It.Is<LlmAnswerRequest>(r => r.UserPrompt.Contains("Someone else's conversation")),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+        // The question went all the way: the thread was looked up and the model was asked. Without
+        // these two, the "never" above would also hold if the pipeline stopped before the history step.
+        _chatThreadRepositoryMock.Verify(
+            x => x.GetByIdAsync(threadId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _llmServiceMock.Verify(
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Fact]
     public async Task Handle_ThreadIdWithDifferentGame_IgnoresChatHistory()
     {
@@ -1672,11 +1724,14 @@ public class StreamQaQueryHandlerTests
         throw new HttpRequestException("LLM streaming error: Connection interrupted");
     }
 
-    private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount)
+    // #4242: the thread belongs to the user who asks, unless a test says otherwise. It used to be
+    // created for a random user, so Handle_WithThreadId_IncludesChatHistory asserted that a
+    // stranger's history entered the prompt.
+    private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount, Guid? ownerId = null)
     {
         var thread = new ChatThread(
             id: threadId,
-            userId: Guid.NewGuid(),
+            userId: ownerId ?? TestUserId,
             gameId: Guid.Parse(gameId),
             title: "Test Thread"
         );

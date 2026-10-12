@@ -250,7 +250,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -303,7 +304,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId2,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -328,6 +330,100 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
             "Warning should be logged when GameId mismatch is detected");
+    }
+
+    /// <summary>
+    /// Issue #4242. Same game, someone else's thread: the history stays out of the prompt.
+    /// Before, only the game of the thread was checked.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithThreadOfAnotherUser_IgnoresChatHistory()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var threadId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+
+        var thread = new ChatThread(threadId, owner, gameId);
+        thread.AddUserMessage("Someone else's question");
+        thread.AddAssistantMessage("Someone else's answer");
+
+        SetupDefaultMocks(gameId);
+        SetupSearchWithOneResult(gameId);
+
+        _mockThreadRepository
+            .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+
+        _mockChatContextService
+            .Setup(s => s.ShouldIncludeChatHistory(thread))
+            .Returns(true);
+
+        _mockChatContextService
+            .Setup(s => s.BuildChatHistoryContext(thread))
+            .Returns("Someone else's history");
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "Test question",
+            ThreadId: threadId,
+            UserId: Guid.NewGuid());
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockChatContextService.Verify(s => s.BuildChatHistoryContext(It.IsAny<ChatThread>()), Times.Never,
+            "the history of a thread the asker does not own must not be built");
+        _mockChatContextService.Verify(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()), Times.Never,
+            "the prompt must not be enriched with someone else's history");
+    }
+
+    /// <summary>
+    /// Issue #4242. A question with no identity cannot claim a thread: no history.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNoIdentity_IgnoresChatHistory()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var threadId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+
+        var thread = new ChatThread(threadId, owner, gameId);
+        thread.AddUserMessage("Someone else's question");
+        thread.AddAssistantMessage("Someone else's answer");
+
+        SetupDefaultMocks(gameId);
+        SetupSearchWithOneResult(gameId);
+
+        _mockThreadRepository
+            .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+
+        _mockChatContextService
+            .Setup(s => s.ShouldIncludeChatHistory(thread))
+            .Returns(true);
+
+        _mockChatContextService
+            .Setup(s => s.BuildChatHistoryContext(thread))
+            .Returns("Someone else's history");
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "Test question",
+            ThreadId: threadId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockChatContextService.Verify(s => s.BuildChatHistoryContext(It.IsAny<ChatThread>()), Times.Never,
+            "the history of a thread the asker does not own must not be built");
+        _mockChatContextService.Verify(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()), Times.Never,
+            "the prompt must not be enriched with someone else's history");
     }
 
     [Fact]
@@ -361,7 +457,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -434,7 +531,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);

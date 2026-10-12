@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatCitation } from '@/components/chat/panel/ChatCitationCard';
 import { api } from '@/lib/api';
 import { getAgentChatUrl } from '@/lib/api/clients/sessionAgentClient';
+import { ApiError } from '@/lib/api/core/errors';
 import { CitationSchema } from '@/lib/api/schemas/streaming.schemas';
 import { mapCitationToChatCitation } from '@/lib/session-live/map-citation-to-chat-citation';
 import { useSessionStore } from '@/stores/session/store';
@@ -101,6 +102,24 @@ function writeThreadIdToStorage(gameSessionId: string, threadId: string): void {
     // Ignore (quota exceeded, private browsing, etc.)
   }
 }
+
+/** Safe sessionStorage removal. */
+function removeThreadIdFromStorage(gameSessionId: string): void {
+  try {
+    if (typeof window === 'undefined') return;
+    sessionStorage.removeItem(buildStorageKey(gameSessionId));
+  } catch {
+    // Ignore (private browsing, etc.)
+  }
+}
+
+/**
+ * The code the backend answers when the thread named by the request cannot be used: it no longer
+ * exists, or it is not the caller's (#4242). The two are not told apart on purpose.
+ */
+const THREAD_NOT_FOUND = 'THREAD_NOT_FOUND';
+const THREAD_NOT_FOUND_MESSAGE =
+  'La conversazione precedente non è più disponibile. Riprova: ne inizierà una nuova.';
 
 /**
  * Hook for streaming AI agent chat within an active game session.
@@ -200,6 +219,18 @@ export function useSessionAgentChat(
 
         setMessages(historicMessages);
       } catch (err) {
+        // #4242: 403 (not the caller's) and 404 (gone) are certain. Forget the thread now, rather
+        // than send it with the first question and have that question refused. Only while the
+        // conversation still points at it: the answer can arrive after a question has already
+        // opened a new thread.
+        if (err instanceof ApiError && (err.statusCode === 403 || err.statusCode === 404)) {
+          if (!cancelled && threadIdRef.current === savedThreadId) {
+            threadIdRef.current = undefined;
+            removeThreadIdFromStorage(gameSessionId);
+          }
+          return;
+        }
+
         // Graceful failure (R4): log but do not crash or block chat
         console.warn('[useSessionAgentChat] Failed to hydrate history:', err);
       }
@@ -359,9 +390,20 @@ export function useSessionAgentChat(
                     }
                   } else if (event.type === SSE_ERROR) {
                     const d = event.data as { errorMessage?: string; errorCode?: string };
-                    setError(
-                      d.errorMessage ?? "L'agente non è disponibile. Controlla la connessione."
-                    );
+                    if (d.errorCode === THREAD_NOT_FOUND) {
+                      // #4242: forget the thread, or every later question gets the same refusal.
+                      // The id is kept per game session, not per user: on a shared device it can
+                      // be the thread of whoever was signed in before.
+                      threadIdRef.current = undefined;
+                      if (persistHistory) {
+                        removeThreadIdFromStorage(gameSessionId);
+                      }
+                      setError(THREAD_NOT_FOUND_MESSAGE);
+                    } else {
+                      setError(
+                        d.errorMessage ?? "L'agente non è disponibile. Controlla la connessione."
+                      );
+                    }
                   }
                 } catch {
                   // Ignore non-JSON lines (keep-alive, comments, etc.)

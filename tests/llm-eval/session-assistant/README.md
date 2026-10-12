@@ -8,7 +8,8 @@ Set di scenari ed esecutore della spec `docs/for-developers/specs/2026-10-11-ses
 3. Ricrea **solo** l'API **dal checkout principale**, che ha `infra/secrets/` (un worktree no: il container monterebbe una cartella vuota, e smetterebbe di ripartire quando il worktree viene cancellato), con **entrambi** i file compose (con il solo file base l'API perde gli `env_file` e va in crash-loop):
    `cd <checkout principale>/infra && API_IMAGE=meepleai-api:assistant-spike docker compose -f docker-compose.yml -f compose.dev.yml up -d --no-deps --no-build api`
 4. Credenziali di un account admin senza 2FA in `MEEPLE_EMAIL`/`MEEPLE_PASSWORD` (vedi `infra/secrets/admin.secret`; non vanno mai nel repository).
-5. `node tests/llm-eval/session-assistant/run-eval.mjs deepseek-flash qwen2.5:3b`
-6. Ripristina l'immagine annotata al punto 2: `API_IMAGE=<immagine> docker compose -f docker-compose.yml -f compose.dev.yml up -d --no-deps --no-build api`.
+5. Ogni modello da misurare deve stare nel catalogo (`GET /api/v1/admin/ai-models`), anche come riga inattiva: il gateway rifiuta un modello senza prezzo. Una riga inattiva entra nel listino e non nel routing; a fine misura si toglie.
+6. `node tests/llm-eval/session-assistant/run-eval.mjs deepseek-flash qwen2.5:3b`
+7. Ripristina l'immagine annotata al punto 2: `API_IMAGE=<immagine> docker compose -f docker-compose.yml -f compose.dev.yml up -d --no-deps --no-build api`.
 
 I risultati grezzi vanno in `results/`, che è ignorata da git; l'esito si riassume nella spec. I modelli via OpenRouter richiedono una chiave locale valida (oggi `401`: va risincronizzata con `make secrets-sync`).

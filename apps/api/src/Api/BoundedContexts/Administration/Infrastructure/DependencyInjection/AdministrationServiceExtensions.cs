@@ -62,18 +62,14 @@ internal static class AdministrationServiceExtensions
         // Service call logging repository
         services.AddScoped<IServiceCallLogRepository, ServiceCallLogRepository>();
 
-        // Issue #3692: Token Management repositories + OpenRouter API
-        services.AddScoped<ITokenTierRepository, TokenTierRepository>();
-        services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
-        services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
+        // OpenRouter API. Issue #4212: the token-tier repositories and tracking service that
+        // stood here are retired; they fed a per-user plan that never blocked a request.
         services.AddHttpClient<IOpenRouterService, OpenRouterService>()
             .AddPolicyHandler(GetRetryPolicy())
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()));
 
-        // Budget Display System: Credit-based budget services
-        services.AddScoped<ICreditConversionService, CreditConversionService>();
-        services.AddScoped<IUserBudgetService, UserBudgetService>();
+        // Budget display: OpenRouter balance and cost logs for the admin.
         services.AddScoped<IAdminBudgetService, AdminBudgetService>();
 
         // Issue #3693: Batch Job System repositories

@@ -31,7 +31,6 @@ public sealed class LlmCostServiceTests
 {
     private readonly Mock<ILlmCostLogRepository> _costLogRepoMock = new();
     private readonly Mock<IAiModelConfigurationRepository> _modelConfigRepoMock = new();
-    private readonly Mock<IUserBudgetService> _budgetServiceMock = new();
     private readonly Mock<IPublisher> _publisherMock = new();
     private readonly Mock<IOpenRouterFileLogger> _fileLoggerMock = new();
     private readonly Mock<IOpenRouterUsageService> _usageServiceMock = new();
@@ -47,7 +46,6 @@ public sealed class LlmCostServiceTests
         _serviceProviderMock = new Mock<IServiceProvider>();
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(ILlmCostLogRepository))).Returns(_costLogRepoMock.Object);
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(IAiModelConfigurationRepository))).Returns(_modelConfigRepoMock.Object);
-        _serviceProviderMock.Setup(sp => sp.GetService(typeof(IUserBudgetService))).Returns(_budgetServiceMock.Object);
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(IPublisher))).Returns(_publisherMock.Object);
 
         var scopeMock = new Mock<IServiceScope>();
@@ -183,38 +181,6 @@ public sealed class LlmCostServiceTests
             It.IsAny<string?>(), It.IsAny<string?>(),
             It.IsAny<RequestSource>(),
             It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task LogSuccessAsync_WithUser_RecordsBudgetUsage()
-    {
-        var sut = CreateSut();
-        var result = CreateSuccessResult();
-        var user = CreateUser();
-        var userContext = new LlmUserContext(user.Id, user.Role.Value, LlmUserTier.User);
-
-        await sut.LogSuccessAsync(result, userContext, latencyMs: 100, RequestSource.Manual);
-
-        _budgetServiceMock.Verify(b => b.RecordUsageAsync(
-            user.Id,
-            result.Cost.TotalCost,
-            result.Usage.PromptTokens + result.Usage.CompletionTokens,
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task LogSuccessAsync_WithoutUser_SkipsBudgetRecording()
-    {
-        var sut = CreateSut();
-        var result = CreateSuccessResult();
-
-        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
-
-        _budgetServiceMock.Verify(b => b.RecordUsageAsync(
-            It.IsAny<Guid>(),
-            It.IsAny<decimal>(),
-            It.IsAny<int>(),
-            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

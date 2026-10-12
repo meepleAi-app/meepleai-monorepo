@@ -1077,7 +1077,6 @@ v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibili
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
 // AI extended
-v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints

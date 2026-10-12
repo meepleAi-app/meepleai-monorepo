@@ -77,22 +77,7 @@ internal sealed class LlmCostService : ILlmCostService
             // 2. Update model usage stats in DB
             await UpdateModelUsageStatsAsync(result, ct).ConfigureAwait(false);
 
-            // 3. Record user budget usage
-            if (userContext.UserId != null)
-            {
-                using var budgetScope = _scopeFactory.CreateScope();
-                var budgetService = budgetScope.ServiceProvider.GetService<IUserBudgetService>();
-                if (budgetService != null)
-                {
-                    var requestCost = result.Cost.TotalCost;
-                    var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
-                    await budgetService
-                        .RecordUsageAsync(userContext.UserId.Value, requestCost, requestTokens, ct)
-                        .ConfigureAwait(false);
-                }
-            }
-
-            // 4. Publish token usage ledger event
+            // 3. Publish token usage ledger event
             var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
             if (totalCost > 0 && userContext.UserId != null)
             {
@@ -109,7 +94,7 @@ internal sealed class LlmCostService : ILlmCostService
                     ct).ConfigureAwait(false);
             }
 
-            // 5. File logger
+            // 4. File logger
             _openRouterFileLogger?.LogRequest(
                 requestId: Guid.NewGuid().ToString(),
                 model: result.Cost.ModelId,
@@ -124,7 +109,7 @@ internal sealed class LlmCostService : ILlmCostService
                 isFreeModel: result.Cost.TotalCost == 0,
                 sessionId: null);
 
-            // 6. Usage aggregation service
+            // 5. Usage aggregation service
             if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
                 _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost, ct);
         }

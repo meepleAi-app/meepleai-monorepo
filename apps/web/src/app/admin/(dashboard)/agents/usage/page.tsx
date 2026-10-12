@@ -4,7 +4,9 @@
  * Admin — OpenRouter Usage & Costs page
  * Issues #5077-#5083: KPI cards, timeline chart, cost breakdown,
  * rate limit gauge, free quota indicator, and recent requests table.
- * Tabs: OpenRouter | Token Balance | Chat Log
+ * Tabs: OpenRouter | Chat Log. Issue #4212: the Token Balance tab is gone — its tier and
+ * top-consumer tables read token tables nothing ever filled, and its balance card repeated
+ * the OpenRouter one.
  */
 
 import { Suspense, useState } from 'react';
@@ -32,8 +34,6 @@ import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
 
-import { TokenBalanceTab } from './token-balance-tab';
-
 const CostBreakdownPanel = dynamic(
   () => import('@/components/admin/usage/CostBreakdownPanel').then(m => m.CostBreakdownPanel),
   { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-lg bg-muted" /> }
@@ -50,10 +50,18 @@ const adminClient = createAdminClient({ httpClient });
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+const USAGE_TABS = ['openrouter', 'chat-log'] as const;
+type UsageTab = (typeof USAGE_TABS)[number];
+
 export default function UsagePage() {
   // ── Tab deep-link ──
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') ?? 'openrouter';
+  // The tab comes from the URL: a value that names no tab (a bookmark to the retired
+  // `token-balance`, a typo) would select nothing and leave the page empty.
+  const requestedTab = searchParams.get('tab');
+  const defaultTab = USAGE_TABS.includes(requestedTab as UsageTab)
+    ? (requestedTab as UsageTab)
+    : 'openrouter';
 
   // ── Period state ──
   const [timelinePeriod, setTimelinePeriod] = useState<'24h' | '7d' | '30d'>('24h');
@@ -148,7 +156,6 @@ export default function UsagePage() {
       <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
-          <TabsTrigger value="token-balance">Saldo Token</TabsTrigger>
           <TabsTrigger value="chat-log">Log Chat</TabsTrigger>
         </TabsList>
 
@@ -220,11 +227,6 @@ export default function UsagePage() {
               isLoading={requestsLoading}
             />
           </section>
-        </TabsContent>
-
-        {/* ── Token Balance tab ── */}
-        <TabsContent value="token-balance" className="mt-4">
-          <TokenBalanceTab />
         </TabsContent>
 
         {/* ── Chat Log tab ── */}

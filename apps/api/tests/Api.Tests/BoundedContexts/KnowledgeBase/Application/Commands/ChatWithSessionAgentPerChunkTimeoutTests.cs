@@ -505,12 +505,6 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
 
-        var budgetService = new Mock<IUserBudgetService>();
-        budgetService
-            .Setup(b => b.HasBudgetForQueryAsync(
-                It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         var registry = new Mock<ICircuitBreakerRegistry>();
         registry
             .Setup(r => r.GetMonitoringStatus())
@@ -545,7 +539,6 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
             copyrightTierResolver: tierResolver.Object,
             agentMemoryContextBuilder: memoryBuilder.Object,
             llmService: llmService,
-            userBudgetService: budgetService.Object,
             circuitBreakerRegistry: registry.Object,
             scopeFactory: scopeFactory.Object,
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,

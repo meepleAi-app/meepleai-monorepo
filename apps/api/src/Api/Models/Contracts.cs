@@ -565,9 +565,9 @@ internal record UserDto(
     string? SuspendReason = null,
     int Level = 1,
     int ExperiencePoints = 0,
-    string Tier = "Free",           // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
-    int TokenUsage = 0,             // Issue #3698: Tokens used this month
-    int TokenLimit = 10_000         // Issue #3698: Monthly token limit for tier
+    // Issue #4212: TokenUsage and TokenLimit stood here. They came from the token-tier tables,
+    // which nothing ever populated: every user showed 0 of 10,000.
+    string Tier = "Free"            // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
 );
 
 /// <summary>

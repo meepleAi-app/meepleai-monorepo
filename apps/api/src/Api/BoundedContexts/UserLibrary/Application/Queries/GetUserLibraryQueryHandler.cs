@@ -40,6 +40,11 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        // #4187: the page actually served. The response used to echo the requested size, so a
+        // client asking for 500 got 100 entries and "1 page, nothing after".
+        var page = UserLibraryPaging.NormalizePage(query.Page);
+        var pageSize = UserLibraryPaging.NormalizePageSize(query.PageSize);
+
         var (entries, total) = await _libraryRepository.GetUserLibraryPaginatedAsync(
             query.UserId,
             query.Search,
@@ -47,8 +52,8 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             query.StateFilter,
             query.SortBy,
             query.Descending,
-            query.Page,
-            query.PageSize,
+            page,
+            pageSize,
             cancellationToken
         ).ConfigureAwait(false);
 
@@ -263,14 +268,14 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             }
         }
 
-        var totalPages = (int)Math.Ceiling((double)total / query.PageSize);
-        var hasNextPage = query.Page < totalPages;
-        var hasPreviousPage = query.Page > 1;
+        var totalPages = (int)Math.Ceiling((double)total / pageSize);
+        var hasNextPage = page < totalPages;
+        var hasPreviousPage = page > 1;
 
         return new PaginatedLibraryResponseDto(
             Items: entryDtos,
-            Page: query.Page,
-            PageSize: query.PageSize,
+            Page: page,
+            PageSize: pageSize,
             TotalCount: total,
             TotalPages: totalPages,
             HasNextPage: hasNextPage,

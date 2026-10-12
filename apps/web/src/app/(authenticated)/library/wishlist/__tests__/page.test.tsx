@@ -54,6 +54,18 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibrary: mockUseLibrary,
 }));
 
+// #4187: i nomi dei giochi della wishlist si leggono per id dal catalogo, non da una pagina
+// della libreria (ne chiedeva 500, il server ne restituisce al massimo 100).
+const CATALOG_TITLES: Record<string, string> = {
+  'game-1': 'Wingspan',
+  'game-2': 'Catan',
+  'game-far': 'Brass: Birmingham',
+};
+const mockUseSharedGamesByIds = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/queries/useSharedGames', () => ({
+  useSharedGamesByIds: mockUseSharedGamesByIds,
+}));
+
 // #3010 Task 7 — the wishlist card's game-name body navigates via
 // `router.push`, mirroring the `next/navigation` mock pattern used by
 // `apps/web/src/app/(authenticated)/toolkit/history/__tests__/page.test.tsx`.
@@ -135,6 +147,12 @@ describe('WishlistPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseLibrary.mockReturnValue({ data: LIBRARY_DATA, isLoading: false, isError: false });
+    mockUseSharedGamesByIds.mockImplementation((ids: readonly string[]) => ({
+      gamesById: Object.fromEntries(
+        ids.filter(id => CATALOG_TITLES[id]).map(id => [id, { id, title: CATALOG_TITLES[id] }])
+      ),
+      isLoading: false,
+    }));
     mockUseRemoveFromWishlist.mockReturnValue({ mutate: vi.fn() });
     mockUseAddToWishlist.mockReturnValue({ mutate: vi.fn(), isPending: false });
     mockUseUpdateWishlistItem.mockReturnValue({ mutate: vi.fn(), isPending: false });
@@ -299,6 +317,24 @@ describe('WishlistPage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveTextContent('Wingspan');
     expect(dialog).not.toHaveTextContent('game-1');
+  });
+
+  it('nomina un gioco della wishlist che non sta nella pagina di libreria scaricata (#4187)', () => {
+    mockUseWishlist.mockReturnValue({
+      data: [
+        buildItem({
+          id: '00000000-0000-0000-0000-0000000000ff',
+          gameId: 'game-far',
+          gameName: undefined,
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderPage(<WishlistPage />);
+
+    expect(screen.getByText('Brass: Birmingham')).toBeInTheDocument();
   });
 
   it('shows the error state when the wishlist query rejects', () => {

@@ -60,6 +60,52 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             _mockBlobStorage.Object);
     }
 
+    // ─── #4187: la risposta dichiara la pagina che il repository ha davvero applicato ───
+
+    private void SetupEmptyPage(int total)
+    {
+        _mockLibraryRepo
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+                It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<UserLibraryEntry>(), total));
+    }
+
+    [Fact]
+    public async Task Handle_PageSizeOverTheCap_ReportsTheServedPageSize_AndTheRealPages()
+    {
+        // Il repository tronca a 100. Prima la risposta diceva PageSize 500 e TotalPages 1 su
+        // 150 giochi: il client vedeva "una pagina, niente dopo" e ne riceveva 100.
+        SetupEmptyPage(total: 150);
+
+        var result = await _handler.Handle(
+            new GetUserLibraryQuery(UserId: Guid.NewGuid(), Page: 1, PageSize: 500),
+            TestContext.Current.CancellationToken);
+
+        result.PageSize.Should().Be(100);
+        result.TotalPages.Should().Be(2);
+        result.HasNextPage.Should().BeTrue();
+        _mockLibraryRepo.Verify(r => r.GetUserLibraryPaginatedAsync(
+            It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            It.IsAny<string?>(), It.IsAny<bool>(), 1, 100, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NonPositivePaging_ReportsTheDefaults_InsteadOfDividingByZero()
+    {
+        SetupEmptyPage(total: 45);
+
+        var result = await _handler.Handle(
+            new GetUserLibraryQuery(UserId: Guid.NewGuid(), Page: 0, PageSize: 0),
+            TestContext.Current.CancellationToken);
+
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(20);
+        result.TotalPages.Should().Be(3);
+        result.HasPreviousPage.Should().BeFalse();
+    }
+
     [Fact]
     public async Task Handle_WithReadyPdf_SetsHasKbTrue()
     {

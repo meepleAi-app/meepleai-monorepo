@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { MeepleWishlistCard } from '@/components/wishlist/MeepleWishlistCard';
-import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useSharedGamesByIds } from '@/hooks/queries/useSharedGames';
 import { useRemoveFromWishlist, useWishlist } from '@/hooks/queries/useWishlist';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { WishlistItemDto } from '@/lib/api/schemas/wishlist.schemas';
@@ -44,9 +44,6 @@ import {
 // ============================================================================
 // Constants
 // ============================================================================
-
-/** Batch size for the library fetch that resolves the gameId → gameTitle map. */
-const LIBRARY_BATCH_LIMIT = 500;
 
 const DEFAULT_FILTER_STATE: WishlistFilterState = {
   search: '',
@@ -77,20 +74,22 @@ export default function WishlistPage(): JSX.Element {
   const [editingItem, setEditingItem] = useState<WishlistItemDto | null>(null);
 
   const { data, isLoading, isError, refetch } = useWishlist();
-  const { data: libraryData } = useLibrary({ pageSize: LIBRARY_BATCH_LIMIT });
   const { mutate: removeItem } = useRemoveFromWishlist();
 
-  // Build a gameId → gameTitle lookup from the user's library, used as a
-  // fallback when a wishlist item has no denormalized `gameName`.
+  const allItems = useMemo(() => data ?? [], [data]);
+
+  // gameId → title, read by id from the catalog, used when a wishlist item carries no
+  // `gameName` (the backend DTO has none). It used to come from one page of the library,
+  // asked for 500 entries while the server returns at most 100 (#4187).
+  const wishlistGameIds = useMemo(() => allItems.map(item => item.gameId), [allItems]);
+  const { gamesById } = useSharedGamesByIds(wishlistGameIds, wishlistGameIds.length > 0);
   const gameNameMap = useMemo(() => {
     const map = new Map<string, string>();
-    for (const entry of libraryData?.items ?? []) {
-      map.set(entry.gameId, entry.gameTitle);
+    for (const [id, game] of Object.entries(gamesById)) {
+      map.set(id, game.title);
     }
     return map;
-  }, [libraryData?.items]);
-
-  const allItems = useMemo(() => data ?? [], [data]);
+  }, [gamesById]);
   const stats = useMemo(() => computeStats(allItems), [allItems]);
   const filtered = useMemo(
     () => sortItems(filterItems(allItems, filterState, gameNameMap), filterState.sort),

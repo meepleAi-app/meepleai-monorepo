@@ -583,12 +583,6 @@ beforeAll(() => {
     }
     if (
       typeof args[0] === 'string' &&
-      args[0].includes('An update to GameProvider inside a test was not wrapped in act')
-    ) {
-      return;
-    }
-    if (
-      typeof args[0] === 'string' &&
       args[0].includes('An update to AuthProvider inside a test was not wrapped in act')
     ) {
       return;

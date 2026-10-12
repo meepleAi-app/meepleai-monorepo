@@ -53,7 +53,7 @@
 **Lavoro**:
 
 1. Per ogni schema: catturare un payload reale dallo stack locale (immagini ricostruite), scrivere il test di contratto vecchio/nuovo, rendere opzionali i campi destinati a sparire. Un campo resta obbligatorio solo se qualcuno lo legge e la sua assenza cambierebbe il significato, come `isSystemDefined` (#4081).
-2. Correggere i consumatori che il compilatore segnala. Già noti: `hybrid-hub.mappers.ts:84` (`agent.type`) e `GameProvider.tsx:118`, che non è montato da nessuna pagina.
+2. Correggere i consumatori che il compilatore segnala. Già noto: `hybrid-hub.mappers.ts:84` (`agent.type`). Il secondo che stava qui, `GameProvider.tsx`, non era montato da nessuna pagina ed è stato tolto con #4235.
 3. Allineare le fixture di `agentsClient.*.test.ts` al payload reale.
 
 **Verifica**: la suite Vitest degli schemi e dei client agenti, verde con il conteggio; `pnpm typecheck` e `pnpm lint`. Nel browser: nessun errore di validazione su `/library` né su `/sessions/{id}/live`. L'assistente in sessione può ancora non partire per il motivo di #4156 (`/game-sessions/{id}/agent/launch` con un id di `LiveGameSession`): lo si annota e non lo si confonde con questa fetta.

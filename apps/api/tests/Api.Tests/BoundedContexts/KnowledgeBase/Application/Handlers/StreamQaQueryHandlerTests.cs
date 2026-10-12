@@ -739,6 +739,15 @@ public class StreamQaQueryHandlerTests
                 It.Is<LlmAnswerRequest>(r => r.UserPrompt.Contains("Someone else's conversation")),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+
+        // The question went all the way: the thread was looked up and the model was asked. Without
+        // these two, the "never" above would also hold if the pipeline stopped before the history step.
+        _chatThreadRepositoryMock.Verify(
+            x => x.GetByIdAsync(threadId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _llmServiceMock.Verify(
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

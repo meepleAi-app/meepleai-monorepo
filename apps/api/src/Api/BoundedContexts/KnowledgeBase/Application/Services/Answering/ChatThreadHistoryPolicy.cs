@@ -19,8 +19,9 @@ internal enum ChatThreadHistoryRefusal
 /// Issue #4242. A question may name a thread (<c>chatId</c>), and the answer paths put that
 /// thread's history into the prompt. They checked that the thread was about the same game, and
 /// nothing else: a caller who sent someone else's thread id got an answer built on that person's
-/// conversation. The rule lives here so that the streaming path and the single-question path
-/// cannot drift apart.
+/// conversation. The rule lives here so that the paths that take a thread from the request cannot
+/// drift apart: the streaming path and the single-question path, which answer without the history,
+/// and the session agent, which also writes to the thread and therefore refuses it.
 /// </remarks>
 internal static class ChatThreadHistoryPolicy
 {

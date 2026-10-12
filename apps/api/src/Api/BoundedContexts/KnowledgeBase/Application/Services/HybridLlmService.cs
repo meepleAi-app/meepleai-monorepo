@@ -409,36 +409,89 @@ internal class HybridLlmService : ILlmService
     /// <inheritdoc/>
     public async Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
     {
+        // Resta async: un argomento non valido continua a uscire dal Task, come prima del refactor.
         ValidateAnswerRequest(request);
+        return await RunAnswerAttemptsAsync(
+            new AnswerAttemptPlan(request.PrimaryModelId, request.FallbackModelId, request.MaxTokens, request.ProfileVersionId, request.Source),
+            (client, model) =>
+            {
+                var (systemPrompt, userPrompt) = RedactFor(client, request.SystemPrompt, request.UserPrompt);
+                return new AnswerAttempt(
+                    systemPrompt.Length + userPrompt.Length,
+                    token => client.GenerateCompletionAsync(model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, token));
+            },
+            "Answer",
+            ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> ChatAsync(LlmChatRequest request, CancellationToken ct = default)
+    {
+        ValidateChatRequest(request);
+        var toolCharacters = request.Tools.Sum(t => t.Name.Length + t.Description.Length + t.ParametersSchema.GetRawText().Length);
+        return await RunAnswerAttemptsAsync(
+            new AnswerAttemptPlan(request.PrimaryModelId, request.FallbackModelId, request.MaxTokens, request.ProfileVersionId, request.Source),
+            (client, model) =>
+            {
+                var messages = RedactFor(client, request.Messages);
+                var characters = toolCharacters + messages.Sum(m =>
+                    (m.Content?.Length ?? 0) + (m.ToolCalls?.Sum(c => c.Name.Length + c.ArgumentsJson.Length) ?? 0));
+                return new AnswerAttempt(
+                    characters,
+                    token => client.ChatAsync(model, messages, request.Tools, request.Temperature, request.MaxTokens, token));
+            },
+            "Chat",
+            ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Ciò che serve al ciclo dei tentativi, uguale per la risposta e per la chat con strumenti.</summary>
+    private sealed record AnswerAttemptPlan(
+        string PrimaryModelId, string? FallbackModelId, int MaxTokens, Guid? ProfileVersionId, RequestSource Source);
+
+    /// <summary>Un tentativo già preparato per un client: i caratteri del prompt (per il tetto) e la chiamata.</summary>
+    private sealed record AnswerAttempt(int PromptCharacters, Func<CancellationToken, Task<LlmCompletionResult>> Call);
+
+    /// <summary>
+    /// ADR-097: il ciclo dei tentativi di <see cref="GenerateAnswerAsync"/>, estratto perché la chat con
+    /// strumenti lo riusi identico. Per ogni modello in ordine: client, circuit breaker, ammissione al
+    /// tetto, chiamata, costo, chiusura dell'ammissione. Un tetto o una quota fermano tutto; un modello
+    /// fuori catalogo passa al successivo.
+    /// </summary>
+    private async Task<LlmCompletionResult> RunAnswerAttemptsAsync(
+        AnswerAttemptPlan plan,
+        Func<ILlmClient, string, AnswerAttempt> prepare,
+        string operation,
+        CancellationToken ct)
+    {
         var costContext = AttributeCost(LlmUserContext.Anonymous);
         LlmCompletionResult? catalogRefusal = null;
         var attemptedAny = false;
         string? lastError = null;
 
-        foreach (var model in await OrderAnswerModelsAsync(request, ct).ConfigureAwait(false))
+        foreach (var model in await OrderAnswerModelsAsync(plan.PrimaryModelId, plan.FallbackModelId, plan.Source, ct).ConfigureAwait(false))
         {
             var client = _clients.FirstOrDefault(c => c.SupportsModel(model));
             if (client is null)
             {
-                _logger.LogWarning("Answer: no provider supports model {Model}, trying the next model", model);
+                _logger.LogWarning("{Operation}: no provider supports model {Model}, trying the next model", operation, model);
                 continue;
             }
 
             if (_circuitBreakerRegistry.GetState(client.ProviderName) == CircuitState.Open)
             {
-                _logger.LogWarning("Answer: circuit breaker OPEN for {Provider}, skipping model {Model}", client.ProviderName, model);
+                _logger.LogWarning("{Operation}: circuit breaker OPEN for {Provider}, skipping model {Model}", operation, client.ProviderName, model);
                 continue;
             }
 
-            var (systemPrompt, userPrompt) = RedactFor(client, request.SystemPrompt, request.UserPrompt);
-            var admission = await AdmitAsync(request.Source, model, client.ProviderName,
-                systemPrompt.Length + userPrompt.Length, request.MaxTokens, 0, ct).ConfigureAwait(false);
+            var attempt = prepare(client, model);
+            var admission = await AdmitAsync(plan.Source, model, client.ProviderName,
+                attempt.PromptCharacters, plan.MaxTokens, 0, ct).ConfigureAwait(false);
             if (!admission.IsAllowed)
             {
                 // Un tetto o una quota fermano la risposta: la riserva spenderebbe dallo stesso budget.
                 if (admission.Rejection != LlmBudgetRejection.ModelNotInCatalog)
                 {
-                    return Refused(admission) with { ProfileVersionId = request.ProfileVersionId };
+                    return Refused(admission) with { ProfileVersionId = plan.ProfileVersionId };
                 }
 
                 catalogRefusal = Refused(admission);
@@ -450,8 +503,7 @@ internal class HybridLlmService : ILlmService
             var actualCost = 0m;
             try
             {
-                var result = await client.GenerateCompletionAsync(
-                    model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).ConfigureAwait(false);
+                var result = await attempt.Call(ct).ConfigureAwait(false);
                 stopwatch.Stop();
 
                 // I client trasformano anche l'annullamento in un risultato fallito: chi ha smesso di
@@ -464,25 +516,25 @@ internal class HybridLlmService : ILlmService
                 if (result.Success)
                 {
                     actualCost = result.Cost.TotalCost;
-                    result = result with { ProfileVersionId = request.ProfileVersionId };
+                    result = result with { ProfileVersionId = plan.ProfileVersionId };
                     _providerSelector.RecordSuccess(client.ProviderName, model, stopwatch.ElapsedMilliseconds, result);
-                    await _costService.LogSuccessAsync(result, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+                    await _costService.LogSuccessAsync(result, costContext, stopwatch.ElapsedMilliseconds, plan.Source, CancellationToken.None)
                         .ConfigureAwait(false);
                     return result;
                 }
 
-                _logger.LogWarning("Answer: model {Model} via {Provider} failed: {Error}", model, client.ProviderName, result.ErrorMessage);
+                _logger.LogWarning("{Operation}: model {Model} via {Provider} failed: {Error}", operation, model, client.ProviderName, result.ErrorMessage);
                 _providerSelector.RecordFailure(client.ProviderName, model, stopwatch.ElapsedMilliseconds, result);
-                await _costService.LogFailureAsync(result.ErrorMessage, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+                await _costService.LogFailureAsync(result.ErrorMessage, costContext, stopwatch.ElapsedMilliseconds, plan.Source, CancellationToken.None)
                     .ConfigureAwait(false);
                 lastError = result.ErrorMessage;
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 stopwatch.Stop();
-                _logger.LogError(ex, "Answer: model {Model} via {Provider} threw", model, client.ProviderName);
+                _logger.LogError(ex, "{Operation}: model {Model} via {Provider} threw", operation, model, client.ProviderName);
                 _providerSelector.RecordFailure(client.ProviderName, model, stopwatch.ElapsedMilliseconds);
-                await _costService.LogFailureAsync(ex.Message, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
+                await _costService.LogFailureAsync(ex.Message, costContext, stopwatch.ElapsedMilliseconds, plan.Source, CancellationToken.None)
                     .ConfigureAwait(false);
                 lastError = ex.Message;
             }
@@ -492,23 +544,42 @@ internal class HybridLlmService : ILlmService
             }
         }
 
-        // Nessun modello del profilo è nel catalogo: il motivo è quello, non un provider giù.
+        // Nessun modello è nel catalogo: il motivo è quello, non un provider giù.
         if (!attemptedAny && catalogRefusal is not null)
         {
-            return catalogRefusal with { ProfileVersionId = request.ProfileVersionId };
+            return catalogRefusal with { ProfileVersionId = plan.ProfileVersionId };
         }
 
-        _logger.LogWarning("Answer: no model answered (last error: {Error})", lastError ?? "none");
+        _logger.LogWarning("{Operation}: no model answered (last error: {Error})", operation, lastError ?? "none");
         var unavailable = LlmCompletionResult.CreateFailure(NoModelAnsweredMessage);
         return unavailable with
         {
-            ProfileVersionId = request.ProfileVersionId,
+            ProfileVersionId = plan.ProfileVersionId,
             Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["error_code"] = LlmAnswerErrorCodes.ProviderUnavailable,
             },
         };
     }
+
+    private static void ValidateChatRequest(LlmChatRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrWhiteSpace(request.PrimaryModelId))
+            throw new ArgumentException("A chat needs a primary model.", nameof(request));
+        if (request.Messages is null || request.Messages.Count == 0)
+            throw new ArgumentException("A chat needs at least one message.", nameof(request));
+        if (request.Tools is null)
+            throw new ArgumentException("Tools must not be null: pass an empty list.", nameof(request));
+        if (request.Temperature < 0 || request.MaxTokens <= 0)
+            throw new ArgumentOutOfRangeException(nameof(request), "Temperature must be >= 0 and MaxTokens > 0.");
+    }
+
+    /// <summary>Issue #5510 per la chat: il testo dei messaggi esce redatto verso OpenRouter; gli argomenti JSON restano intatti.</summary>
+    private IReadOnlyList<LlmChatMessage> RedactFor(ILlmClient client, IReadOnlyList<LlmChatMessage> messages) =>
+        _piiDetector != null && string.Equals(client.ProviderName, "OpenRouter", StringComparison.Ordinal)
+            ? messages.Select(m => m.Content is null ? m : m with { Content = _piiDetector.ScanAndRedact(m.Content) }).ToList()
+            : messages;
 
     /// <inheritdoc/>
 #pragma warning disable S4456 // Parameter validation on async iterator - validated before yield
@@ -522,7 +593,7 @@ internal class HybridLlmService : ILlmService
         LlmBudgetAdmission? catalogRefusal = null;
         var attemptedAny = false;
 
-        foreach (var model in await OrderAnswerModelsAsync(request, ct).ConfigureAwait(false))
+        foreach (var model in await OrderAnswerModelsAsync(request.PrimaryModelId, request.FallbackModelId, request.Source, ct).ConfigureAwait(false))
         {
             var client = _clients.FirstOrDefault(c => c.SupportsModel(model));
             if (client is null)
@@ -825,17 +896,16 @@ internal class HybridLlmService : ILlmService
     /// tetto è in degrado (D6) e la riserva costa meno, la riserva passa davanti; il principale resta
     /// dietro, perché il degrado non deve rendere una risposta meno disponibile.
     /// </summary>
-    private async Task<IReadOnlyList<string>> OrderAnswerModelsAsync(LlmAnswerRequest request, CancellationToken ct)
+    private async Task<IReadOnlyList<string>> OrderAnswerModelsAsync(
+        string primary, string? reserve, RequestSource source, CancellationToken ct)
     {
-        var primary = request.PrimaryModelId;
-        var reserve = request.FallbackModelId;
         if (string.IsNullOrWhiteSpace(reserve) || string.Equals(reserve, primary, StringComparison.Ordinal))
         {
             return [primary];
         }
 
         if (_budgetGate is not null
-            && LlmBudgetClassification.For(request.Source) == LlmBudgetClass.Answer
+            && LlmBudgetClassification.For(source) == LlmBudgetClass.Answer
             && await _budgetGate.IsDegradedAsync(ct).ConfigureAwait(false))
         {
             var primaryClient = _clients.FirstOrDefault(c => c.SupportsModel(primary));

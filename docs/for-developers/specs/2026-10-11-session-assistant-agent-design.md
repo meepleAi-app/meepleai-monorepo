@@ -227,7 +227,7 @@ La risposta finale si bufferizza, perché passa da `FinalizeAsync` **prima** di 
 
 1. **`POST /live-sessions/{id}/assistant`**. Si verifica nell'handler che l'utente sia `CreatedByUserId`, che la sessione sia `Setup`, `InProgress` o `Paused`, e che l'assistente sia abilitato nella versione pubblicata. Gli strumenti di proposta rifiutano con un errore tipizzato quando lo stato non permette la scrittura.
 2. **Messaggi**, nell'ordine di §4.1. Della storia entrano gli ultimi messaggi del `ChatThread` della sessione. `ChatThread` riceve un `LiveSessionId` nullable (migrazione additiva); le `parts` dei messaggi vanno nel `MessagesJson` esistente, senza migrazione. Dei turni passati si rimandano solo il testo e gli esiti delle proposte, non i risultati degli strumenti.
-3. **Ciclo** con al massimo N giri, preso dal profilo. Ogni giro passa dal gateway con la versione del profilo, l'id della sessione e `RequestSource.SessionAssistant`.
+3. **Ciclo** con al massimo N giri con strumenti, preso dal profilo, più una chiamata finale senza strumenti che obbliga il modello a rispondere: un turno costa al più N+1 chiamate (semantica di `FunctionInvokingChatClient`, fissata da un test in A0). Ogni chiamata passa dal gateway con la versione del profilo, l'id della sessione e `RequestSource.SessionAssistant`.
 4. **Eventi SSE**, nella convenzione degli endpoint SSE esistenti (`AgentSessionEndpoints.cs`): eventi `data:` senza nome, con un campo `type`:
    - `status` mentre gira uno strumento («leggo i punteggi…»);
    - `proposal` per ogni card;

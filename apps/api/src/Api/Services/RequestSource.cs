@@ -65,4 +65,10 @@ public enum RequestSource
     /// Ha la sua quota dentro il tetto unico, come il background (ADR-095 D6). #4166.
     /// </summary>
     Evaluation,
+
+    /// <summary>
+    /// L'assistente in partita (ADR-097, spec 2026-10-11): ogni giro del suo ciclo con strumenti.
+    /// Classe di budget <c>Answer</c>, perché l'host aspetta la risposta.
+    /// </summary>
+    SessionAssistant,
 }

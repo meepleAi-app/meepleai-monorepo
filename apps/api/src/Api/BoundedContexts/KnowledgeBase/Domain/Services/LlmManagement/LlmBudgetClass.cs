@@ -43,6 +43,7 @@ internal static class LlmBudgetClassification
         RequestSource.RagClassification => LlmBudgetClass.Answer,
         RequestSource.Translation => LlmBudgetClass.Answer,
         RequestSource.AgentTask => LlmBudgetClass.Answer,
+        RequestSource.SessionAssistant => LlmBudgetClass.Answer,
 
         // Lavoro di sistema o dell'admin: traduzione dei chunk in indicizzazione, estrattore di
         // meccaniche e playground (AdminOperation), eventi, test automatici.

@@ -87,7 +87,50 @@ public sealed class AnswerPipelinePartsTests
             .Should().Be(new AnswerLanguage("en", AnswerLanguageSource.DetectedUncertain));
     }
 
+    [Fact]
+    public void Resolve_AShortQuestion_PrefersTheLanguageTheClientAsksFor_OverAcceptLanguage()
+    {
+        AnswerLanguageResolver.Resolve(_detector, "Setup?", "en-US", requestedLanguage: "IT")
+            .Should().Be(new AnswerLanguage("it", AnswerLanguageSource.Requested));
+    }
+
+    [Fact]
+    public void Resolve_AConfidentDetection_WinsOverTheRequestedLanguage()
+    {
+        AnswerLanguageResolver.Resolve(
+                _detector, "How many cards does each player draw when the game starts?", null, requestedLanguage: "it")
+            .Should().Be(new AnswerLanguage("en", AnswerLanguageSource.Detected));
+    }
+
+    [Fact]
+    public void Resolve_AnUnsupportedRequestedLanguage_FallsBackToAcceptLanguage()
+    {
+        AnswerLanguageResolver.Resolve(_detector, "Setup?", "de-DE", requestedLanguage: "pt")
+            .Should().Be(new AnswerLanguage("de", AnswerLanguageSource.AcceptLanguage));
+    }
+
     // ─── Prompt ─────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Build_WithAHouseRule_AuthorisesItAndPutsItBeforeTheContext()
+    {
+        var prompt = AnswerPromptBuilder.Build(
+            Content(), "en", "[Page 3] text", "Who starts?", null, null, false,
+            houseRule: "The youngest player starts.");
+
+        prompt.SystemPrompt.Should().Contain(AnswerPromptBuilder.HouseRuleInstruction);
+        prompt.UserPrompt.Should().StartWith("[House Rule for this group]\nThe youngest player starts.\n\nCONTEXT FROM RULEBOOK:");
+    }
+
+    [Fact]
+    public void Build_WithoutAStyle_AddsNoStyleInstruction()
+    {
+        // La domanda singola non ha mai avuto un'istruzione di stile: non la acquista con la pipeline.
+        var prompt = AnswerPromptBuilder.Build(Content(), "en", "ctx", "q?", responseStyle: null, null, false);
+
+        prompt.SystemPrompt.Should().NotContain(AnswerPromptBuilder.ResponseStyleInstruction("concise"));
+        prompt.SystemPrompt.Should().NotContain(AnswerPromptBuilder.HouseRuleInstruction);
+    }
 
     [Fact]
     public void Build_UsesThePromptOfTheAnswerLanguage_WhenTheProfileHasIt()

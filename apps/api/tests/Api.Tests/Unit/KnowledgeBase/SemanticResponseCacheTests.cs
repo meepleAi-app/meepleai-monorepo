@@ -1,5 +1,9 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Caching;
+using Microsoft.Extensions.Logging.Abstractions;
+using FluentAssertions;
+using Moq;
+using StackExchange.Redis;
 using Xunit;
 
 namespace Api.Tests.Unit.KnowledgeBase;
@@ -91,5 +95,64 @@ public sealed class SemanticResponseCacheTests
         var similarity = SemanticResponseCache.CosineSimilarity(a, b);
 
         Assert.Equal(0f, similarity);
+    }
+
+    // ─── #4168: l'ambito nella chiave ────────────────────────────────────────────
+
+    private static readonly Guid GameId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+    private static readonly Guid VersionId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+
+    [Fact]
+    public async Task SetAsync_WritesUnderThePrefixOfTheScope()
+    {
+        var (redis, db, _) = FakeRedis();
+        var cache = new SemanticResponseCache(redis.Object, NullLogger<SemanticResponseCache>.Instance);
+
+        await cache.SetAsync(GameId, new SemanticCacheScope(VersionId, "it"), [1f, 0f],
+            new CachedRagResponse("Risposta.", [], "deepseek-flash", DateTimeOffset.UtcNow), TestContext.Current.CancellationToken);
+
+        // Qualunque overload di StringSetAsync usi la cache: conta la chiave, primo argomento.
+        var write = db.Invocations.Should().ContainSingle(i => i.Method.Name == nameof(IDatabase.StringSetAsync)).Which;
+        ((RedisKey)write.Arguments[0]).ToString()
+            .Should().StartWith($"rag:cache:{GameId}:v3:{VersionId:N}:it:");
+    }
+
+    [Fact]
+    public async Task TryGetAsync_ScansOnlyTheKeysOfTheScope()
+    {
+        var (redis, _, server) = FakeRedis();
+        var cache = new SemanticResponseCache(redis.Object, NullLogger<SemanticResponseCache>.Instance);
+
+        await cache.TryGetAsync(GameId, new SemanticCacheScope(VersionId, "IT"), [1f, 0f], TestContext.Current.CancellationToken);
+
+        server.Verify(s => s.Keys(
+            It.IsAny<int>(),
+            It.Is<RedisValue>(p => p.ToString() == $"rag:cache:{GameId}:v3:{VersionId:N}:it:*"),
+            It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public void Scope_OfAnotherVersionOrLanguage_HasAnotherPrefix()
+    {
+        var prefix = new SemanticCacheScope(VersionId, "en").KeyPrefix(GameId);
+
+        new SemanticCacheScope(Guid.NewGuid(), "en").KeyPrefix(GameId).Should().NotBe(prefix);
+        new SemanticCacheScope(VersionId, "it").KeyPrefix(GameId).Should().NotBe(prefix);
+        // L'invalidazione per gioco usa il prefisso nudo, che li copre tutti.
+        prefix.Should().StartWith($"rag:cache:{GameId}:");
+    }
+
+    private static (Mock<IConnectionMultiplexer> Redis, Mock<IDatabase> Db, Mock<IServer> Server) FakeRedis()
+    {
+        var db = new Mock<IDatabase>();
+        var server = new Mock<IServer>();
+        server.Setup(s => s.Keys(It.IsAny<int>(), It.IsAny<RedisValue>(), It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CommandFlags>()))
+            .Returns([]);
+        var endpoint = new System.Net.DnsEndPoint("localhost", 6379);
+        var redis = new Mock<IConnectionMultiplexer>();
+        redis.Setup(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>())).Returns(db.Object);
+        redis.Setup(r => r.GetEndPoints(It.IsAny<bool>())).Returns([endpoint]);
+        redis.Setup(r => r.GetServer(endpoint, It.IsAny<object>())).Returns(server.Object);
+        return (redis, db, server);
     }
 }

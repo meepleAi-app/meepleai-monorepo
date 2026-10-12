@@ -139,8 +139,8 @@ public class StreamQaQueryHandlerTests
             .ReturnsAsync(new List<VectorDocument>());
 
         _handler = new StreamQaQueryHandler(new AnswerPipeline(
-            _searchQueryHandler,
-            _rerankerMock.Object,
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+                _searchQueryHandler, _rerankerMock.Object, _intentClassifierMock.Object),
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
@@ -1707,8 +1707,8 @@ public class StreamQaQueryHandlerTests
         Api.Services.IFeatureFlagService? featureFlags = null)
     {
         return new StreamQaQueryHandler(new AnswerPipeline(
-            _searchQueryHandler,
-            _rerankerMock.Object,
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+                _searchQueryHandler, _rerankerMock.Object, _intentClassifierMock.Object),
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,

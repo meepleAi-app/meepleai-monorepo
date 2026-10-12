@@ -429,13 +429,13 @@ internal static class AiEndpoints
             Question: req.query,
             ThreadId: null, // No thread context for legacy endpoint
             SearchMode: req.searchMode.ToString(),
-            Language: "en",
             BypassCache: bypassCache,
             // Bug B5 (QA endpoints, plural): thread the authenticated identity so the handler's
             // per-game RAG access check fires (mirror the stream path + KnowledgeBaseEndpoints).
             // Subject.Id = acting user; EffectiveActor.Role = role for authz (admin bypass).
             UserId: session.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            UserRole: session.Principal!.EffectiveActor.Role,
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString() // #4168
         );
 
         var qaResponse = await mediator.Send(askQuery, ct).ConfigureAwait(false);

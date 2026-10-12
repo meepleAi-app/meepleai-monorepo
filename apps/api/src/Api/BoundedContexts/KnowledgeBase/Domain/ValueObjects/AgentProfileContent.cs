@@ -32,6 +32,9 @@ public sealed class AgentProfileContent : ValueObject
     public bool RerankerEnabled { get; }
     public IReadOnlyList<DocumentCategory> AllowedCategories { get; }
 
+    /// <summary>La sezione «Assistente in partita» (spec 2026-10-11 §3.2). Mai nulla: assente vale spenta.</summary>
+    public SessionAssistantSettings SessionAssistant { get; }
+
     private AgentProfileContent(
         string name,
         string description,
@@ -49,7 +52,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal vectorWeight,
         decimal keywordWeight,
         bool rerankerEnabled,
-        IReadOnlyList<DocumentCategory> allowedCategories)
+        IReadOnlyList<DocumentCategory> allowedCategories,
+        SessionAssistantSettings sessionAssistant)
     {
         Name = name;
         Description = description;
@@ -68,6 +72,7 @@ public sealed class AgentProfileContent : ValueObject
         KeywordWeight = keywordWeight;
         RerankerEnabled = rerankerEnabled;
         AllowedCategories = allowedCategories;
+        SessionAssistant = sessionAssistant;
     }
 
     public static AgentProfileContent Create(
@@ -87,7 +92,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal vectorWeight,
         decimal keywordWeight,
         bool rerankerEnabled,
-        IReadOnlyCollection<DocumentCategory> allowedCategories)
+        IReadOnlyCollection<DocumentCategory> allowedCategories,
+        SessionAssistantSettings? sessionAssistant = null)
     {
         Require(!string.IsNullOrWhiteSpace(name), nameof(name), "Name is required.");
         Require(!string.IsNullOrWhiteSpace(primaryModelId), nameof(primaryModelId), "Primary model is required.");
@@ -122,6 +128,10 @@ public sealed class AgentProfileContent : ValueObject
         Require(allowedCategories is { Count: > 0 }, nameof(allowedCategories), "At least one document category is required.");
         Require(allowedCategories.All(c => Enum.IsDefined(c)), nameof(allowedCategories), "Unknown document category.");
 
+        var assistant = sessionAssistant ?? SessionAssistantSettings.Disabled;
+        Require(!assistant.Enabled || assistant.PromptFor(language) is not null, nameof(sessionAssistant),
+            $"The session assistant needs a system prompt for the fallback language '{language}'.");
+
         return new AgentProfileContent(
             name.Trim(),
             description?.Trim() ?? string.Empty,
@@ -139,7 +149,8 @@ public sealed class AgentProfileContent : ValueObject
             vectorWeight,
             keywordWeight,
             rerankerEnabled,
-            allowedCategories.Distinct().Order().ToArray());
+            allowedCategories.Distinct().Order().ToArray(),
+            assistant);
     }
 
     /// <summary>
@@ -165,7 +176,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal vectorWeight,
         decimal keywordWeight,
         bool rerankerEnabled,
-        IReadOnlyCollection<DocumentCategory> allowedCategories) =>
+        IReadOnlyCollection<DocumentCategory> allowedCategories,
+        SessionAssistantSettings? sessionAssistant = null) =>
         new(
             name,
             description,
@@ -185,7 +197,8 @@ public sealed class AgentProfileContent : ValueObject
             rerankerEnabled,
             // Normalizzare non è validare: le categorie sono un insieme, e l'uguaglianza le confronta
             // in ordine, quindi un jsonb scritto in un altro ordine deve tornare uguale a Create.
-            allowedCategories.Distinct().Order().ToArray());
+            allowedCategories.Distinct().Order().ToArray(),
+            sessionAssistant ?? SessionAssistantSettings.Disabled);
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
@@ -217,6 +230,8 @@ public sealed class AgentProfileContent : ValueObject
         {
             yield return category;
         }
+
+        yield return SessionAssistant;
     }
 
     private static string NormalizeLanguage(string language) => language.Trim().ToLowerInvariant();

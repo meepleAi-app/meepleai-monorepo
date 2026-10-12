@@ -20,13 +20,19 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 [Trait("Issue", "4167")]
 public sealed class AgentProfileTests
 {
-    internal static AgentProfileContent Content(decimal temperature = 0.3m, string model = "deepseek-chat") =>
+    internal const string ReserveModel = "meta-llama/llama-3.3-70b-instruct:free";
+
+    internal static AgentProfileContent Content(
+        decimal temperature = 0.3m,
+        string model = "deepseek-chat",
+        SessionAssistantSettings? assistant = null,
+        string? fallbackModel = ReserveModel) =>
         AgentProfileContent.Create(
             name: "MeepleAI",
             description: "Assistente per le regole dei giochi da tavolo",
             persona: "a precise board game rules assistant",
             primaryModelId: model,
-            fallbackModelId: "meta-llama/llama-3.3-70b-instruct:free",
+            fallbackModelId: fallbackModel,
             temperature: temperature,
             maxResponseTokens: 1500,
             citationStyle: CitationStyle.PageReferencesInText,
@@ -38,7 +44,19 @@ public sealed class AgentProfileTests
             vectorWeight: 0.7m,
             keywordWeight: 0.3m,
             rerankerEnabled: true,
-            allowedCategories: [DocumentCategory.Rulebook, DocumentCategory.Errata]);
+            allowedCategories: [DocumentCategory.Rulebook, DocumentCategory.Errata],
+            sessionAssistant: assistant);
+
+    /// <summary>Una sezione «Assistente in partita» valida per <see cref="Content"/>, che ha «en» come lingua di riserva.</summary>
+    internal static SessionAssistantSettings Assistant(bool enabled = true, bool useReserveModel = false) =>
+        SessionAssistantSettings.Create(
+            enabled,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["en"] = "You are the table assistant.",
+                ["it"] = "Sei l'assistente al tavolo.",
+            },
+            useReserveModel: useReserveModel);
 
     private static int PublishedCount(AgentProfile p) =>
         p.Versions.Count(v => v.Status == AgentProfileVersionStatus.Published);

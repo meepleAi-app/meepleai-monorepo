@@ -671,7 +671,8 @@ public sealed class AgentProfileFieldEffectTests
             c.VectorWeight,
             c.KeywordWeight,
             rerankerEnabled ?? c.RerankerEnabled,
-            c.AllowedCategories.ToList());
+            c.AllowedCategories.ToList(),
+            c.SessionAssistant);
 
     private async Task<List<JsonElement>> AskAsync(string query, string? acceptLanguage = null)
     {

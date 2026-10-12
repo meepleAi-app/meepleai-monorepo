@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.SharedKernel.Domain.Enums;
 using Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -71,5 +72,59 @@ public sealed class AgentProfileContentJsonTests
         var restored = AgentProfileContentJson.Deserialize(json.ToJsonString());
 
         restored.Temperature.Should().Be(3.5m);
+    }
+
+    /// <summary>
+    /// Review Focus 2: una versione salvata prima di questa fetta non ha la chiave. Deve caricarsi come
+    /// «disabilitato», e un contenuto senza assistente non deve cominciare a scriverla: il jsonb delle
+    /// versioni esistenti resta byte per byte quello di prima.
+    /// </summary>
+    [Fact]
+    public void LegacyContentWithoutTheSection_LoadsAsDisabled()
+    {
+        var json = AgentProfileContentJson.Serialize(AgentProfileTests.Content());
+
+        JsonNode.Parse(json)!.AsObject().ContainsKey("sessionAssistant").Should().BeFalse();
+        AgentProfileContentJson.Deserialize(json).SessionAssistant.Should().Be(SessionAssistantSettings.Disabled);
+    }
+
+    [Fact]
+    public void Content_WithTheAssistant_SurvivesARoundTrip()
+    {
+        var content = AgentProfileTests.Content(assistant: AgentProfileTests.Assistant(useReserveModel: true));
+
+        var json = AgentProfileContentJson.Serialize(content);
+
+        AgentProfileContentJson.Deserialize(json).Should().Be(content);
+        var section = JsonNode.Parse(json)!["sessionAssistant"]!;
+        section["enabled"]!.GetValue<bool>().Should().BeTrue();
+        section["systemPrompts"]!["it"]!.GetValue<string>().Should().Be("Sei l'assistente al tavolo.");
+        section["maxToolIterations"]!.GetValue<int>().Should().Be(3);
+        section["turnTimeoutSeconds"]!.GetValue<int>().Should().Be(15);
+        section["useReserveModel"]!.GetValue<bool>().Should().BeTrue();
+    }
+
+    /// <summary>
+    /// La migrazione che abiliterà l'assistente scrive questo jsonb a mano: un campo numerico dimenticato
+    /// deve valere il default misurato, non zero (zero giri vorrebbe dire un assistente senza strumenti).
+    /// </summary>
+    [Fact]
+    public void SectionWithOnlyEnabledAndPrompts_TakesTheDefaults()
+    {
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(AgentProfileTests.Content()))!;
+        json["sessionAssistant"] = new JsonObject
+        {
+            ["enabled"] = true,
+            ["systemPrompts"] = new JsonObject { ["en"] = "You are the table assistant." },
+        };
+
+        var assistant = AgentProfileContentJson.Deserialize(json.ToJsonString()).SessionAssistant;
+
+        assistant.Enabled.Should().BeTrue();
+        assistant.Temperature.Should().Be(0.2m);
+        assistant.MaxResponseTokens.Should().Be(600);
+        assistant.MaxToolIterations.Should().Be(3);
+        assistant.TurnTimeoutSeconds.Should().Be(15);
+        assistant.UseReserveModel.Should().BeFalse();
     }
 }

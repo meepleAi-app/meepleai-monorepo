@@ -4,14 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { createThread } from '@/components/chat/entry/ThreadCreator';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
-import { useGames } from '@/hooks/queries/useGames';
+import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useChatPanel } from '@/hooks/useChatPanel';
 import { useEmbeddingStatus } from '@/hooks/useEmbeddingStatus';
 import { useToast } from '@/hooks/useToast';
 import { api } from '@/lib/api';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
-import type { Game } from '@/lib/api/schemas/games.schemas';
+import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 
 import { ChatContextSwitcher, type AvailableGame } from './ChatContextSwitcher';
 import { ChatMainArea, type ChatMessage } from './ChatMainArea';
@@ -60,13 +60,13 @@ function sessionToRecentItem(
   };
 }
 
-function gameToKbGame(game: Game): ChatKbGame {
+/** A library game whose knowledge base is ready (`hasKb`: at least one PDF fully indexed). */
+function libraryEntryToKbGame(entry: UserLibraryEntry): ChatKbGame {
   return {
-    id: game.id,
-    name: game.title,
-    // KB status fetch is out of scope for this PR; treat published games as ready.
+    id: entry.gameId,
+    name: entry.gameTitle,
     status: 'ready',
-    imageUrl: game.imageUrl ?? game.iconUrl ?? undefined,
+    imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
   };
 }
 
@@ -84,7 +84,20 @@ export function ChatSlideOverPanel() {
   // righe girano prima di `if (!isOpen) return null`: senza `isOpen` partivano due richieste a ogni
   // pagina, a pannello chiuso.
   const { data: recentSessions } = useRecentChatSessions(50, isOpen);
-  const { data: gamesResponse } = useGames(undefined, 1, 50, isOpen);
+  // #4187: the context switcher offers the user's library, searched on the server; it used to
+  // offer the first 50 catalog games, and a game outside the library ends at the RAG gate
+  // (#4155). The sidebar lists the library games with a ready KB, unaffected by the search:
+  // its query has the same key as the switcher's empty search, so they share the cache.
+  // Both use the largest page the server serves (100). The sidebar filters `hasKb` on that page:
+  // the library endpoint has no KB filter, so past 100 games the sidebar says it is partial.
+  const [gameSearch, setGameSearch] = useState('');
+  const pickerLibrary = useLibrarySearch(gameSearch, { enabled: isOpen, pageSize: 100 });
+  const sidebarLibrary = useLibrarySearch('', { enabled: isOpen, pageSize: 100 });
+
+  // A search belongs to one opening of the panel.
+  useEffect(() => {
+    if (!isOpen) setGameSearch('');
+  }, [isOpen]);
 
   // Issue #4139: the agent lookup that stood here existed only to feed
   // /api/v1/agents/{agentId}/chat, a route the backend never mounted — the comment
@@ -151,10 +164,10 @@ export function ChatSlideOverPanel() {
   }, [recentSessions, threadId]);
 
   // Adapt games to KB game list
-  const kbGames: ChatKbGame[] = useMemo(() => {
-    if (!gamesResponse) return [];
-    return gamesResponse.games.map(gameToKbGame);
-  }, [gamesResponse]);
+  const kbGames: ChatKbGame[] = useMemo(
+    () => sidebarLibrary.items.filter(entry => entry.hasKb).map(libraryEntryToKbGame),
+    [sidebarLibrary.items]
+  );
 
   // Suggested questions come from the last Complete event; fall back to empty
   const suggestedQuestions: string[] = useMemo(
@@ -258,21 +271,23 @@ export function ChatSlideOverPanel() {
 
   const handleSelectGame = useCallback(
     (gameId: string) => {
-      const game = gamesResponse?.games.find(g => g.id === gameId);
-      if (!game) return;
+      const entry =
+        pickerLibrary.items.find(e => e.gameId === gameId) ??
+        sidebarLibrary.items.find(e => e.gameId === gameId);
+      if (!entry) return;
       setGameContext({
-        id: game.id,
-        name: game.title,
-        year: game.yearPublished ?? undefined,
+        id: entry.gameId,
+        name: entry.gameTitle,
+        year: entry.gameYearPublished ?? undefined,
         pdfCount: 0,
         kbStatus: 'ready',
-        imageUrl: game.imageUrl ?? game.iconUrl ?? undefined,
+        imageUrl: entry.gameImageUrl ?? entry.gameIconUrl ?? undefined,
       });
       setMessages([]);
       setThreadId(null);
       stream.reset();
     },
-    [gamesResponse, setGameContext, stream]
+    [pickerLibrary.items, sidebarLibrary.items, setGameContext, stream]
   );
 
   // Game picker: called by ChatContextSwitcher dropdown with the selected gameId.
@@ -285,8 +300,8 @@ export function ChatSlideOverPanel() {
 
   // Games list passed to ChatContextSwitcher dropdown.
   const availableGames: AvailableGame[] = useMemo(
-    () => (gamesResponse?.games ?? []).map(g => ({ id: g.id, name: g.title })),
-    [gamesResponse]
+    () => pickerLibrary.items.map(e => ({ id: e.gameId, name: e.gameTitle })),
+    [pickerLibrary.items]
   );
 
   if (!isOpen) return null;
@@ -326,11 +341,15 @@ export function ChatSlideOverPanel() {
           gameContext={enrichedGameContext}
           onPickGame={handlePickGame}
           availableGames={availableGames}
+          search={gameSearch}
+          onSearchChange={setGameSearch}
+          onCatalogNavigate={close}
         />
         <div className="flex min-h-0 flex-1">
           <ChatSidebar
             chats={recentChats}
             kbGames={kbGames}
+            kbGamesTruncated={sidebarLibrary.totalCount > sidebarLibrary.items.length}
             onNewChat={handleNewChat}
             onSelectChat={handleSelectChat}
             onSelectGame={handleSelectGame}

@@ -24,6 +24,11 @@ interface ChatSidebarProps {
   onNewChat: () => void;
   onSelectChat: (chatId: string) => void;
   onSelectGame: (gameId: string) => void;
+  /**
+   * True when the library has more games than the page the list was built from (#4187): the
+   * KB filter runs on that page, so a game with a ready KB may be missing, and the list says so.
+   */
+  kbGamesTruncated?: boolean;
 }
 
 const STATUS_COLORS: Record<ChatKbGame['status'], string> = {
@@ -38,6 +43,7 @@ export function ChatSidebar({
   onNewChat,
   onSelectChat,
   onSelectGame,
+  kbGamesTruncated = false,
 }: ChatSidebarProps) {
   return (
     <aside className="flex w-[220px] flex-shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--border)] bg-[rgba(255,252,248,0.5)] px-2.5 py-3.5">
@@ -82,9 +88,7 @@ export function ChatSidebar({
             <div className="truncate font-quicksand text-[0.76rem] font-bold leading-tight text-[var(--text)]">
               {chat.title}
             </div>
-            <div className="mt-0.5 text-[0.66rem] text-[var(--text-muted)]">
-              {chat.timestamp}
-            </div>
+            <div className="mt-0.5 text-[0.66rem] text-[var(--text-muted)]">{chat.timestamp}</div>
           </div>
         </button>
       ))}
@@ -127,6 +131,11 @@ export function ChatSidebar({
           />
         </button>
       ))}
+      {kbGamesTruncated && (
+        <p className="px-2.5 pt-1 font-nunito text-[0.66rem] text-[var(--text-muted)]">
+          La libreria ha altri giochi: cerca nella tendina in alto.
+        </p>
+      )}
     </aside>
   );
 }

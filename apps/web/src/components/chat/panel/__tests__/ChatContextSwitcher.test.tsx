@@ -32,4 +32,83 @@ describe('ChatContextSwitcher', () => {
     await user.click(screen.getByRole('button', { name: /azul/i }));
     expect(onPickGame).toHaveBeenCalled();
   });
+
+  describe('#4187: la libreria, con ricerca', () => {
+    it('con onSearchChange la tendina si apre anche senza giochi, con il campo di ricerca', async () => {
+      const user = userEvent.setup();
+      const onSearchChange = vi.fn();
+      render(
+        <ChatContextSwitcher
+          gameContext={null}
+          onPickGame={() => {}}
+          availableGames={[]}
+          search=""
+          onSearchChange={onSearchChange}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /seleziona gioco/i }));
+      await user.type(screen.getByRole('searchbox', { name: /cerca nella tua libreria/i }), 'W');
+
+      expect(onSearchChange).toHaveBeenCalledWith('W');
+    });
+
+    it('a libreria vuota offre di aggiungere un gioco dal catalogo', async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatContextSwitcher
+          gameContext={null}
+          onPickGame={() => {}}
+          availableGames={[]}
+          search=""
+          onSearchChange={() => {}}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /seleziona gioco/i }));
+
+      expect(screen.getByRole('link', { name: /aggiungi dal catalogo/i })).toHaveAttribute(
+        'href',
+        '/games'
+      );
+    });
+
+    it('seguire «Aggiungi dal catalogo» avvisa il pannello, che deve chiudersi', async () => {
+      const user = userEvent.setup();
+      const onCatalogNavigate = vi.fn();
+      render(
+        <ChatContextSwitcher
+          gameContext={null}
+          onPickGame={() => {}}
+          availableGames={[]}
+          search=""
+          onSearchChange={() => {}}
+          onCatalogNavigate={onCatalogNavigate}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /seleziona gioco/i }));
+      await user.click(screen.getByRole('link', { name: /aggiungi dal catalogo/i }));
+
+      expect(onCatalogNavigate).toHaveBeenCalledOnce();
+    });
+
+    it('una ricerca senza risultati lo dice, e offre comunque il catalogo', async () => {
+      const user = userEvent.setup();
+      render(
+        <ChatContextSwitcher
+          gameContext={null}
+          onPickGame={() => {}}
+          availableGames={[]}
+          search="Zzz"
+          onSearchChange={() => {}}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /seleziona gioco/i }));
+
+      expect(screen.getByText(/nessun gioco della tua libreria/i)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /aggiungi dal catalogo/i })).toBeInTheDocument();
+    });
+  });
 });

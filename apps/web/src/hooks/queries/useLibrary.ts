@@ -5,6 +5,7 @@
  */
 
 import {
+  keepPreviousData,
   useQuery,
   useMutation,
   useQueryClient,
@@ -71,6 +72,8 @@ export const libraryKeys = {
  *
  * @param params - Optional filtering and pagination parameters
  * @param enabled - Whether to run the query (default: true)
+ * @param keepPrevious - Keep the previous page on screen while the next params load, so a
+ *   list fed by a search box does not empty out at every keystroke (default: false, #4187)
  * @returns UseQueryResult with paginated library data
  *
  * Visual-test fixture hatch (issue #1714): when `STATE_OVERRIDE_ENABLED` and
@@ -84,7 +87,8 @@ export const libraryKeys = {
  */
 export function useLibrary(
   params?: GetUserLibraryParams,
-  enabled: boolean = true
+  enabled: boolean = true,
+  keepPrevious: boolean = false
 ): UseQueryResult<PaginatedLibraryResponse, Error> {
   return useQuery({
     queryKey: libraryKeys.list(params),
@@ -98,6 +102,7 @@ export function useLibrary(
       return api.library.getLibrary(params);
     },
     enabled,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
     staleTime: 2 * 60 * 1000, // Library changes frequently (2min)
   });
 }

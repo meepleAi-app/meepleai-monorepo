@@ -164,6 +164,8 @@ export interface GetUserLibraryParams {
   search?: string;
   favoritesOnly?: boolean;
   stateFilter?: GameStateType[];
+  /** Only games that have (true) or lack (false) a ready KB, filtered on the server (#4227). */
+  hasKb?: boolean;
   sortBy?: 'addedAt' | 'title' | 'favorite';
   sortDescending?: boolean;
 }

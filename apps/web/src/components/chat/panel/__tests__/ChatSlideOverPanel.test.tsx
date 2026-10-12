@@ -42,17 +42,20 @@ const LIBRARY_ITEMS = [
   },
 ];
 let libraryTotal = LIBRARY_ITEMS.length;
+// #4227: con `hasKb: true` il server filtra, e il totale e' quello dei giochi con KB.
+let kbTotal = LIBRARY_ITEMS.filter(item => item.hasKb).length;
 vi.mock('@/hooks/queries/useLibrarySearch', () => ({
-  useLibrarySearch: (...args: unknown[]) => (
-    hookArgs.library.push(args),
-    {
-      items: LIBRARY_ITEMS,
-      totalCount: libraryTotal,
+  useLibrarySearch: (...args: unknown[]) => {
+    hookArgs.library.push(args);
+    const onlyKb = (args[1] as { hasKb?: boolean } | undefined)?.hasKb === true;
+    return {
+      items: onlyKb ? LIBRARY_ITEMS.filter(item => item.hasKb) : LIBRARY_ITEMS,
+      totalCount: onlyKb ? kbTotal : libraryTotal,
       isLoading: false,
       resultsMatchQuery: true,
       term: String(args[0] ?? ''),
-    }
-  ),
+    };
+  },
 }));
 
 // Mock the streaming hook to surface a stable, inert state
@@ -96,6 +99,7 @@ import { ChatSlideOverPanel } from '../ChatSlideOverPanel';
 describe('ChatSlideOverPanel', () => {
   beforeEach(() => {
     libraryTotal = LIBRARY_ITEMS.length;
+    kbTotal = LIBRARY_ITEMS.filter(item => item.hasKb).length;
     useChatPanelStore.getState().close();
     useChatPanelStore.getState().clearGameContext();
     streamResetMock.mockClear();
@@ -183,8 +187,30 @@ describe('ChatSlideOverPanel', () => {
     expect(new Set(sizes)).toEqual(new Set([100]));
   });
 
-  it('se la libreria supera la pagina, la barra lo dice e rimanda alla ricerca', () => {
+  it('la barra laterale chiede al server i soli giochi con KB, la tendina tutta la libreria (#4227)', () => {
+    hookArgs.library.length = 0;
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    const filters = hookArgs.library.map(args => (args[1] as { hasKb?: boolean }).hasKb);
+    expect(filters).toContain(true);
+    expect(filters).toContain(undefined);
+  });
+
+  it('una libreria grande con pochi giochi con KB non si dice parziale (#4227)', () => {
+    // Prima la barra filtrava la prima pagina della libreria: oltre 100 giochi diceva di
+    // essere parziale anche se i giochi con KB stavano tutti in una pagina.
     libraryTotal = 250;
+    kbTotal = 1;
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    expect(screen.getByRole('button', { name: /wingspan/i })).toBeInTheDocument();
+    expect(screen.queryByText(/cerca nella tendina/i)).not.toBeInTheDocument();
+  });
+
+  it('se i giochi con KB superano la pagina, la barra lo dice e rimanda alla ricerca', () => {
+    kbTotal = 250;
     useChatPanelStore.getState().open();
     render(<ChatSlideOverPanel />);
 

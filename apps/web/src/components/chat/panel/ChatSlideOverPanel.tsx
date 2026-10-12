@@ -86,13 +86,12 @@ export function ChatSlideOverPanel() {
   const { data: recentSessions } = useRecentChatSessions(50, isOpen);
   // #4187: the context switcher offers the user's library, searched on the server; it used to
   // offer the first 50 catalog games, and a game outside the library ends at the RAG gate
-  // (#4155). The sidebar lists the library games with a ready KB, unaffected by the search:
-  // its query has the same key as the switcher's empty search, so they share the cache.
-  // Both use the largest page the server serves (100). The sidebar filters `hasKb` on that page:
-  // the library endpoint has no KB filter, so past 100 games the sidebar says it is partial.
+  // (#4155). The sidebar lists the library games with a ready KB, unaffected by the search.
+  // Both use the largest page the server serves (100). #4227: the server filters `hasKb`, so the
+  // sidebar says it is partial only when the games with a KB, not the whole library, pass 100.
   const [gameSearch, setGameSearch] = useState('');
   const pickerLibrary = useLibrarySearch(gameSearch, { enabled: isOpen, pageSize: 100 });
-  const sidebarLibrary = useLibrarySearch('', { enabled: isOpen, pageSize: 100 });
+  const sidebarLibrary = useLibrarySearch('', { enabled: isOpen, pageSize: 100, hasKb: true });
 
   // A search belongs to one opening of the panel.
   useEffect(() => {
@@ -165,7 +164,7 @@ export function ChatSlideOverPanel() {
 
   // Adapt games to KB game list
   const kbGames: ChatKbGame[] = useMemo(
-    () => sidebarLibrary.items.filter(entry => entry.hasKb).map(libraryEntryToKbGame),
+    () => sidebarLibrary.items.map(libraryEntryToKbGame),
     [sidebarLibrary.items]
   );
 

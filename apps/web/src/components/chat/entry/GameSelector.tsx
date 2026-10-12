@@ -159,9 +159,11 @@ export function GameSelector({
   const [search, setSearch] = useState('');
   const term = useDebounce(search, 300).trim();
   // The text each tab was last loaded for: only the active tab follows the search, and
-  // switching back to a tab does not refetch a text it already has.
+  // switching back to a tab does not refetch a text it already has. The library tab also
+  // keys on the KB filter, which the server applies (#4227).
   const privateTermRef = useRef<string | null>(null);
   const sharedTermRef = useRef<string | null>(null);
+  const sharedKey = `${showOnlyWithKb ? 'kb' : 'all'}:${term}`;
 
   // Private games: on mount, then at every search while their tab is active
   useEffect(() => {
@@ -194,7 +196,7 @@ export function GameSelector({
 
   // Shared library: lazy, on the first switch to its tab, then at every search while open
   useEffect(() => {
-    if (activeTab !== 'shared' || sharedTermRef.current === term) return;
+    if (activeTab !== 'shared' || sharedTermRef.current === sharedKey) return;
     let cancelled = false;
 
     api.library
@@ -205,14 +207,14 @@ export function GameSelector({
         sortBy: 'title',
         // The endpoint sorts descending unless told otherwise (`sortDescending ?? true`).
         sortDescending: false,
+        // #4227: filtered in the query, so a game with a KB past the first page still shows.
+        hasKb: showOnlyWithKb ? true : undefined,
       })
       .then(res => {
         if (!cancelled) {
-          const items = res.items ?? [];
-          const filtered = showOnlyWithKb ? items.filter(e => e.hasKb) : items;
-          const games = filtered.map(libraryEntryToGame);
+          const games = (res.items ?? []).map(libraryEntryToGame);
           setSharedGames(games);
-          sharedTermRef.current = term;
+          sharedTermRef.current = sharedKey;
           setError(null);
           onGamesLoaded?.(games);
         }
@@ -227,7 +229,7 @@ export function GameSelector({
     return () => {
       cancelled = true;
     };
-  }, [activeTab, term, showOnlyWithKb, onGamesLoaded]);
+  }, [activeTab, term, sharedKey, showOnlyWithKb, onGamesLoaded]);
 
   const activeGames = activeTab === 'private' ? privateGames : sharedGames;
   const isLoading = activeTab === 'private' ? !privateLoaded : !sharedLoaded;

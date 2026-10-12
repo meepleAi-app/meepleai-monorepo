@@ -100,6 +100,28 @@ describe('LibraryClient - Issue #3026', () => {
       );
     });
 
+    it('invia il filtro KB al server, in entrambi i versi, e lo omette se assente (#4227)', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValue({
+        items: [],
+        page: 1,
+        pageSize: 20,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
+      const client = createLibraryClient({ httpClient: mockHttpClient });
+
+      await client.getLibrary({ hasKb: true });
+      await client.getLibrary({ hasKb: false });
+      await client.getLibrary({});
+
+      const urls = vi.mocked(mockHttpClient.get).mock.calls.map(([url]) => String(url));
+      expect(urls[0]).toContain('hasKb=true');
+      expect(urls[1]).toContain('hasKb=false');
+      expect(urls[2]).not.toContain('hasKb');
+    });
+
     it('should filter by state', async () => {
       vi.mocked(mockHttpClient.get).mockResolvedValue({
         items: [],

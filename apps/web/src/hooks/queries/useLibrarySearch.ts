@@ -25,6 +25,11 @@ export interface UseLibrarySearchOptions {
   readonly pageSize?: number;
   /** Debounce delay in milliseconds (default: 300). */
   readonly debounceMs?: number;
+  /**
+   * Only games with (true) or without (false) a ready KB, filtered on the server (#4227):
+   * `totalCount` then counts those games, not the whole library.
+   */
+  readonly hasKb?: boolean;
 }
 
 export interface LibrarySearchResult {
@@ -41,7 +46,7 @@ export interface LibrarySearchResult {
 
 export function useLibrarySearch(
   search: string,
-  { enabled = true, pageSize = 50, debounceMs = 300 }: UseLibrarySearchOptions = {}
+  { enabled = true, pageSize = 50, debounceMs = 300, hasKb }: UseLibrarySearchOptions = {}
 ): LibrarySearchResult {
   const debounced = useDebounce(search, debounceMs);
   const term = debounced.trim();
@@ -52,6 +57,7 @@ export function useLibrarySearch(
       search: term || undefined,
       page: 1,
       pageSize: size,
+      hasKb,
       sortBy: 'title',
       // The endpoint sorts descending unless told otherwise (`sortDescending ?? true`).
       sortDescending: false,

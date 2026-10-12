@@ -1,0 +1,396 @@
+# Assistente in partita: un agente con strumenti — design
+
+**Data**: 2026-10-11, rivista il 2026-10-12 · **Origine**: `/sc:brainstorm` del 2026-10-11 · **Stato**: spec rivista dopo una review avversariale (§0). Nessun codice scritto.
+**Base misurata**: `origin/main-dev` a `afd0cdbb3` (#4233).
+**Contesto**: [ADR-094](../../for-claude/architecture/adr/adr-094-single-system-agent.md) (un solo agente di sistema) · [ADR-095](../../for-claude/architecture/adr/adr-095-single-answer-pipeline-and-versioned-agent-profile.md) e il [piano delle fette](../plans/2026-10-10-adr-095-slices-plan.md) · [ADR-090](../../for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) (`KnowledgeBase` possiede la risposta ancorata) · [ADR-089](../../for-claude/architecture/adr/adr-089-session-scoring-ssot.md) (`LiveGameSession.RoundScores` è la fonte unica del punteggio in partita) · [`copyright-tier-rag.md`](../../for-claude/architecture/copyright-tier-rag.md) · [`user-use-cases.md`](../user-use-cases.md) (SES-07, SES-17) · [correzione dei bloccanti](./2026-10-10-user-use-case-blockers-fix-design.md) (#4156, decisione D3 sulla scheda Score) · [brief del 2026-10-10](./2026-10-10-single-agent-ai-architecture-brief.md).
+
+Al 2026-10-12 questi documenti esistono solo come file non committati del checkout principale, quindi li cito senza link:
+- ADR-092 (l'Arbitro Python diventa un validatore puro): `docs/for-claude/architecture/adr/adr-092-arbiter-ownership-python-validator.md`;
+- il report Azure: `docs/for-developers/research/2026-10-08-azure-ai-200-provider-switch-research.md`.
+
+**Convenzione**: nessun conteggio volatile in prosa; dove serve una misura c'è il comando che la produce. Prezzi e comportamenti dei provider si verificano alla fonte prima di usarli. I percorsi sono relativi a `apps/api/src/Api`, salvo quelli che cominciano con `apps/`, `docs/` o `tests/`.
+
+---
+
+## 0. Revisione del 2026-10-12
+
+Una review avversariale della prima stesura, fatta contro il codice, ha trovato tre bloccanti. Questa versione li risolve così:
+
+| Rilievo | Cosa diceva la prima stesura | Correzione |
+|---|---|---|
+| **B3** — il gateway non si riusa da sotto | Un middleware M.E.AI del tetto, *sotto* il ciclo, attaccato al provider | La logica di ogni tentativo (ammissione e tetto, degrado, scelta del client con circuit breaker, redazione PII, costo) è privata in `HybridLlmService`. Il client M.E.AI va quindi **sopra** il gateway: un metodo di chat con strumenti su `ILlmService` riusa quella logica a ogni giro (§3) |
+| **B1** — la scheda Score non mostra `RoundScores` | La verifica nel browser dava per scontato di vedere il punteggio confermato | La scheda Score legge lo scoring polimorfico, che ADR-089 dice «mai collegato a dati reali». #4156 la riporta su `RoundScores` (decisione D3), quindi la verifica nel browser dipende da #4156 (§8) |
+| **B2** — non esiste un percorso di pubblicazione | Il controllo del tool calling «alla pubblicazione» | `AgentProfile.PublishDraft()` non ha comandi né endpoint (la pagina admin è la fetta 6c). Il controllo diventa un invariante di dominio di `PublishDraft`, e l'abilitazione del pilota passa da una migrazione di dati, come le versioni già pubblicate (§3.2) |
+
+Rilievi maggiori corretti nel testo: gli strumenti non ricevono `IMediator` (M2, §3.2); il controllo «solo punti» non è verificabile e sparisce (M3, §5.1); round e semantica del valore sono definiti (M4, §5.1-5.3); le affermazioni sul copyright sono corrette e la risposta finale passa da `IGroundedAnswerService.FinalizeAsync` (M5, §4.2); proprietario e stati della sessione hanno codici d'errore distinti (M6, §5.3); dipendenze e stato della fetta 5 aggiornati (M7, §8); l'ADR è il **097**, perché il 096 è occupato da `adr-096-rag-ownership-gate.md` (M8).
+
+---
+
+## 1. Perché
+
+L'utente ha chiesto se esista un'architettura AI più adatta di quella in corso. Le motivazioni sono due:
+
+1. un assistente che **agisce**, non uno che risponde e basta;
+2. **imparare i pattern moderni**: tool calling, middleware, valutazione delle traiettorie, anche come esercizio per AI-200.
+
+La risposta non sostituisce ADR-095: lo usa come base. Il gateway con il tetto, il catalogo e il profilo versionato servono **di più** in un ciclo agentico, perché un turno con strumenti moltiplica le chiamate al modello. Cambia invece il ruolo della pipeline di risposta: per l'assistente non è più *la* risposta, ma uno degli strumenti.
+
+### Decisioni del brainstorming
+
+| Domanda | Scelta |
+|---|---|
+| Primo pilota | **Assistente in partita** nella sessione live |
+| Potere sui dati | **Propone, l'host conferma.** Il modello non scrive mai: la conferma passa dai comandi esistenti |
+| Chi interagisce | **Solo l'host, da un dispositivo** |
+| Dove vive il ciclo | **.NET, con `Microsoft.Extensions.AI` sopra il gateway** (§3) |
+| Cache per l'assistente | Nessuna cache delle risposte; **ordine dei messaggi** pensato per la cache del prompt del provider |
+| Cache delle risposte della pipeline | **Solo semantica**, con la versione del profilo nella chiave e una soglia tarata; la cache esatta esce (sottoprogetto a parte, §10.1) |
+| Database delle chat | **Postgres** per il prodotto; un adapter Cosmos DB di `IChatThreadRepository` come esercizio sulla linea `azure/main` (§10.2) |
+| Punteggi nel pilota | Valori interi sulle **dimensioni configurate** della sessione (`SessionScoringConfig`), cioè ciò che il wizard offre |
+
+### Cosa non è
+
+- **Non è un sistema multi-agente.** È un solo agente con degli strumenti, compatibile con ADR-094.
+- **Non è un framework generale di agenti.** È un pilota su un caso solo.
+- **Non usa LangGraph né `orchestration-service`.** Il motivo è in §3.3.
+
+---
+
+## 2. Stato di partenza
+
+| # | Misura | Evidenza |
+|---|---|---|
+| S1 | Nessun tool calling. `ILlmService` accetta un prompt di sistema e un prompt utente; nessun client invia `tools` o legge `tool_calls`, anche se tutti e tre costruiscono già una lista `messages` | `Services/ILlmService.cs`; `Services/LlmClients/{OpenRouter,DeepSeek}LlmClient.cs` (`chat/completions`), `OllamaLlmClient.cs` (`api/chat`) |
+| S2 | Nessun framework AI nel progetto; il progetto referenzia già pacchetti `Microsoft.Extensions.*` 10.0.x su `net9.0` | `Api.csproj` |
+| S3 | Il gateway applica il tetto prima di ogni chiamata, ma la logica di ogni tentativo è privata | `HybridLlmService` (`AdmitAsync`/`CompleteAdmission`, `IsCheaperReserveAsync`, `RecordSuccess`/`RecordFailure`, redazione PII per OpenRouter) |
+| S4 | Un precursore delle proposte registra da solo quando la confidenza dichiarata dal modello supera 0,8 | `ParseAndRecordScoreCommandHandler.cs:125`, rotta `/live-sessions/{sessionId}/scores/parse` |
+| S5 | Esiste già un flusso «proposta → conferma dell'host» per i punteggi proposti dagli ospiti: `ProposeScoreCommand` notifica via SignalR, `ConfirmScoreProposalCommand` verifica l'host (`CreatedByUserId`), chiama `RecordScore`, salva e trasmette | `GameManagement/Application/Commands/Session/`; endpoint in `SessionInviteEndpoints.cs` |
+| S6 | Le card di proposta del frontend non sono montate | `components/session/ScoreProposalCard.tsx`, `components/game-night/ScoreAssistant.tsx`; SES-17 |
+| S7 | La scheda Score della pagina live legge lo scoring polimorfico, non `RoundScores` | `ScoreTabContent.tsx`; `SessionLiveView.tsx` («deferred to Fase 2»); ADR-089 |
+| S8 | `orchestration-service` (LangGraph) non è collegato: nessuna rotta invia `TutorQueryCommand`, e il servizio chiama rotte .NET che non esistono | `infra/docker-compose.yml` lo dichiara «publish-only» |
+| S9 | I `tools` salvati su `AgentDefinition` non sono mai eseguiti; il motore a plugin di `Domain/Plugins` serve il costruttore di pipeline personalizzate, ma la sua generazione è simulata | S1; `GenerationLlmPlugin.cs:142` |
+
+S9 è un avvertimento: qui le astrazioni agentiche costruite senza un consumatore reale non sono mai arrivate a una chiamata vera. Il pilota parte da un consumatore (l'host al tavolo) e da una misura (§7).
+
+---
+
+## 3. Architettura e confini
+
+```
+POST /live-sessions/{id}/assistant (SSE) ──IMediator──> AskSessionAssistantCommand        [KnowledgeBase]
+                                                          │
+   FunctionInvokingChatClient (max N giri)                ▼
+     → OpenTelemetryChatClient
+       → GatewayChatClient : IChatClient   ── nessun HTTP, solo ILlmService
+         → ILlmService.ChatAsync            ── HybridLlmService, a ogni giro:
+              ammissione e tetto → degrado → client con circuit breaker
+              → redazione PII → ILlmClient.ChatAsync (HTTP, Services/LlmClients/) → costo → chiusura
+
+   strumenti (AIFunction):
+     lettura   stato_partita · cerca_regole        → ISessionAssistantReader (porta di sola lettura)
+     proposta  proponi_punteggio · proponi_turno   → IAssistantProposalRepository (salva, non scrive la partita)
+```
+
+### 3.1 Perché il client M.E.AI sta sopra il gateway
+
+La logica di ogni tentativo è in `HybridLlmService` ed è privata (S3). Un client M.E.AI attaccato al provider dovrebbe copiarla, insieme alla risoluzione delle credenziali a ogni chiamata (`IProviderCredentialResolver`) e alle protezioni dei test (`PaidAiHostGuardExtensions`, che bloccano solo i client creati dalla factory). Mettendolo **sopra**:
+
+- ogni giro del ciclo passa da tetto, degrado, fallback, circuit breaker, redazione PII e registro costi, **per costruzione**;
+- l'HTTP resta in `Services/LlmClients/`, quindi `LlmProviderEgressArchitectureTests` non cambia;
+- serve solo il pacchetto `Microsoft.Extensions.AI`, senza l'SDK OpenAI;
+- i test che sostituiscono `ILlmService` con un doppio continuano a coprire il nuovo percorso.
+
+Il prezzo è un refactor di `HybridLlmService`: la sequenza di un tentativo va estratta da `GenerateAnswerAsync` (il percorso della 5b, con modello e riserva decisi dal chiamante) in un metodo comune a quello e al nuovo `ChatAsync`, a comportamento invariato e con test di caratterizzazione prima.
+
+### 3.2 Decisioni
+
+| Elemento | Decisione |
+|---|---|
+| Proprietario | `KnowledgeBase/Application/SessionAssistant/`. La risposta è di `KnowledgeBase` (ADR-090) |
+| Gateway | `ILlmService.ChatAsync(LlmChatRequest)`: messaggi (sistema, utente, assistente, strumento), definizioni degli strumenti, temperatura e lunghezza massima, `RequestSource`. Restituisce testo e/o chiamate a strumenti, con l'uso dei token. `ILlmClient` riceve lo stesso metodo, implementato da OpenRouter e DeepSeek (formato OpenAI `tools`/`tool_calls`) e da Ollama (`api/chat` con `tools`) |
+| Facciata M.E.AI | `GatewayChatClient : IChatClient` traduce i tipi M.E.AI (`ChatMessage`, `FunctionCallContent`, `FunctionResultContent`) da e verso `LlmChatRequest`. Non dipende da `ILlmClient` né da `HttpClient` |
+| Strumenti | **Non ricevono `IMediator`.** Ricevono `ISessionAssistantReader`, una porta di sola lettura implementata in Infrastructure con query MediatR (`GetLiveSessionQuery`, `GetTurnPhasesQuery`, `GetGameMemoryQuery`) e con `IPlayerNameResolutionService` (stesso precedente di `ParseAndRecordScoreCommandHandler`), e `IAssistantProposalRepository`. Alcuni comandi di scrittura di GameManagement implementano `IRequest` e non `ICommand`, quindi un divieto su `ICommand` non basterebbe |
+| Profilo | Un parametro opzionale in coda ad `AgentProfileContentJson.Document` e una proprietà in `AgentProfileContent`, «Assistente in partita»: abilitato, prompt di sistema per lingua, numero massimo di giri, scadenza per turno. Entra in `GetEqualityComponents`; assente vale disabilitato; `AgentProfileFieldEffectTests` riceve le sue righe campo → effetto |
+| Catalogo | `SupportsToolCalling` dentro `SettingsJson` di `AiModelConfiguration` (jsonb, nessuna migrazione), esposto a `KnowledgeBase` da una porta |
+| Pubblicazione | `AgentProfile.PublishDraft` rifiuta una bozza con l'assistente abilitato se il modello principale o quello di riserva del profilo non supportano il tool calling. Finché non esiste la pagina admin (fetta 6c), l'abilitazione del pilota è una migrazione di dati che pubblica una nuova versione, come `20261011061616_RepublishAgentProfileWithCurrentModels` |
+| `RequestSource` | Un valore nuovo, `SessionAssistant`, mappato su `Answer` in `LlmBudgetClassification.For`. `RequestSourceTests` conta i valori dell'enum, quindi va aggiornato |
+| ADR | **ADR-097**: `Microsoft.Extensions.AI` come facciata del gateway per il tool calling, sopra `ILlmService`. Chiude la domanda aperta n. 4 di ADR-095 |
+
+**Test architetturali** (falliscono la suite, non la build):
+- le classi di `SessionAssistant/Tools/` non dipendono da `IMediator`, `ISender` né da tipi di GameManagement;
+- `GatewayChatClient` non dipende da `ILlmClient` né da `HttpClient`;
+- la catena dell'assistente non contiene un client di caching (`DistributedCachingChatClient`).
+
+### 3.3 Approcci scartati
+
+| Approccio | Perché no |
+|---|---|
+| Client M.E.AI sotto il gateway, attaccato al provider (prima stesura) | Duplicherebbe la logica privata di ogni tentativo, la risoluzione delle credenziali e le protezioni dei test (§3.1) |
+| Python con LangGraph in `orchestration-service` | Il servizio non gira su staging e nessuno lo osserva (S8). Le chiamate LLM dovrebbero passare dal gateway .NET (ADR-095 D4), quindi servirebbe un proxy. Lo stato della sessione e l'autorizzazione andrebbero letti attraverso la rete. L'apprendimento Python ha già un consumatore in ADR-092 |
+| Un ciclo scritto a mano, senza M.E.AI | Reinventa l'invocazione degli strumenti e insegna meno; il repo ha già astrazioni fatte in casa senza consumatori (S9) |
+| Un profilo separato per l'assistente | Allontanerebbe da «un agente» (ADR-094). Il prezzo della scelta fatta è che le versioni dell'assistente e quelle della chat sulle regole si pubblicano insieme |
+
+---
+
+## 4. Cache
+
+### 4.1 Per l'assistente
+
+1. **Nessuna cache delle risposte, né esatta né semantica.** La risposta dipende dallo stato vivo e dalla conversazione. `UseDistributedCache()` di M.E.AI calcola la chiave sui messaggi della richiesta, che **non contengono lo stato**: lo stato arriva dopo, dai risultati degli strumenti. Una hit salterebbe gli strumenti e risponderebbe con lo stato di dieci minuti prima. Lo vieta un test architetturale (§3.2).
+2. **Ordine dei messaggi pensato per la cache del prompt del provider.** Ogni giro rimanda tutto il contesto, quindi i messaggi vanno dal più stabile al più volatile:
+   1. prompt di sistema della versione pubblicata;
+   2. definizioni degli strumenti;
+   3. contesto statico della sessione: gioco, giocatori, dimensioni del punteggio, house rules;
+   4. storia;
+   5. domanda.
+
+   I punteggi e il turno arrivano **solo** dai risultati degli strumenti, in coda.
+3. **La contabilità dei token in cache è fuori dal pilota.** `ILlmCostCalculator.CalculateCost` non ha un parametro per i token in cache, `LlmModelPricing` non porta il prezzo della cache, e registrarli richiede una migrazione di `llm_cost_logs`. Diventa un lavoro a sé (§11). Fino ad allora il costo registrato resta prudente, cioè sovrastimato quando il provider usa la cache.
+4. **I risultati di `cerca_regole` non si mettono in cache.** La chiave dovrebbe contenere utente e tier copyright, perché il tier si risolve per utente, e non esiste una «versione dell'indice». Alla scala del pilota non vale la complessità.
+
+### 4.2 Copyright e accesso per `cerca_regole`
+
+`cerca_regole` restituisce **passaggi e citazioni**, senza una chiamata LLM annidata: la risposta finale la compone l'agente, e si risparmia una chiamata per ogni domanda sulle regole. Quattro vincoli:
+
+- **Accesso**: lo strumento chiama `IRagAccessService.EnsureRagAccessAsync` con l'identità di chi chiede, come fa la pipeline (`AnswerPipeline.cs:127`). `AnswerRetrieval` non controlla l'accesso, e `RagQueryIdentityArchitectureTests` richiede l'identità del chiamante.
+- **Tier delle citazioni**: si risolvono con `ICopyrightTierResolver`. Il testo verbatim resta per ogni tier; solo regioni e offset sono limitati al tier Full (`AnswerPipeline.cs:468`, `:482`). Oggi questo passo è privato nella pipeline: l'emendamento E1 (§9) chiede di estrarlo.
+- **Risposta finale**: passa da `IGroundedAnswerService.FinalizeAsync(responseText, resolvedCitations, userQuestion, agentLanguage)`, che fa il controllo dei leak, la parafrasi e l'annullamento delle citazioni secondo il tier. Le citazioni sono quelle raccolte da tutte le chiamate a `cerca_regole` del turno.
+- **Sessione senza gioco**: `GameId` può essere nullo; in quel caso `cerca_regole` non viene offerto al modello.
+
+### 4.3 Degrado (ADR-095 D6)
+
+L'assistente non si può servire dalla cache. Oltre il 100% del tetto risponde «assistente in pausa» e l'inserimento manuale resta disponibile. Sotto la soglia di degrado (80% di default, configurabile) il gateway passa al modello di riserva **del profilo**, e solo se costa meno del principale (`IsCheaperReserveAsync`). Per questo la pubblicazione richiede che anche la riserva supporti il tool calling (§3.2).
+
+---
+
+## 5. Strumenti, proposte e conferma
+
+### 5.1 Strumenti
+
+Il pilota ne ha pochi, di proposito: con i modelli economici meno strumenti significano scelte più affidabili. Lo spike (§7.1) lo verifica.
+
+| Strumento | Tipo | Cosa fa | Limiti voluti |
+|---|---|---|---|
+| `stato_partita()` | lettura | Giocatori, giocatore di turno (`CurrentTurnPlayerId`), indice di turno (`CurrentTurnIndex`), **round corrente** derivato, fase (`TurnPhasesDto`), stato della sessione, dimensioni (`ScoringConfig`) e punteggi per giocatore, round e dimensione (`RoundScores`) | **Nessun parametro.** L'id della sessione lo lega il server alla richiesta: il modello non può sceglierne un'altra |
+| `cerca_regole(domanda)` | lettura | Passaggi e citazioni per il gioco della sessione, nella lingua dell'host (§4.2) | Offerto solo se la sessione ha un gioco. Arriva con la fetta A5 (§8) |
+| `proponi_punteggio(giocatore, punti, dimensione?, round?)` | proposta | Salva una proposta di **punti guadagnati** da un giocatore | Nome ambiguo o sconosciuto: errore tipizzato al modello («Marco R. o Marco B.?»), che lo chiede all'host. La dimensione deve esistere in `ScoringConfig`; se ce n'è una sola si può omettere. Round omesso = round corrente. Punti interi |
+| `proponi_turno()` | proposta | Proposta di passare il turno | La fase segue lo stesso schema, ma è fuori dal pilota |
+
+Le **house rules** non sono uno strumento: vanno nel contesto statico (§4.1), lette con `GetGameMemoryQuery(GameId, OwnerId)`.
+
+**Round.** `LiveGameSession` non ha un round: ha `CurrentTurnIndex`, che cresce a ogni turno di ogni giocatore. Il precursore S4 usa l'indice di turno come round, quindi ogni passaggio di turno apre una nuova cella. L'assistente usa invece un **round derivato**: `CurrentTurnIndex / giocatori attivi + 1`, cioè un giro completo del tavolo. Questa definizione va allineata con l'editor della scheda Score di #4156, che lavora su «giocatore × dimensione × round» (§13).
+
+**Semantica del valore.** `RecordScore` sostituisce la cella (giocatore, round, dimensione). L'assistente propone invece un **incremento**: «Marco fa 5 punti» vuol dire +5 alla cella del round. Il valore scritto alla conferma è il valore della cella più l'incremento. Se l'host dice un totale («Marco è a 30»), il modello calcola l'incremento dallo stato e la card mostra il totale risultante, che l'host verifica.
+
+### 5.2 La proposta
+
+`AssistantProposal`, un aggregato del `KnowledgeBase`: è l'uscita dell'assistente, come la risposta e le citazioni. Il nome evita la collisione con `ProposeScoreCommand` (S5). Tabella `assistant_proposals`:
+
+| Campo | Contenuto |
+|---|---|
+| `id`, `live_session_id`, `chat_thread_id`, `message_id` | identità e provenienza |
+| `kind` | `Score` · `AdvanceTurn` |
+| `payload` (jsonb) | per `Score`: giocatore, dimensione, round, incremento |
+| `expected` (jsonb) | per `Score`: il valore della cella al momento della proposta; per `AdvanceTurn`: `CurrentTurnIndex` |
+| `status` | `Pending` → `Applying` → `Accepted` · `Edited` · `Failed`; da `Pending` anche `Rejected` · `Expired` · `Stale` |
+| `confirmed_payload` (jsonb, nullable) | l'incremento confermato, quando l'host lo corregge |
+| `failure_code` (nullable) | il codice dell'errore di dominio, per `Failed` |
+| `profile_version_id` | la versione del profilo che l'ha prodotta |
+| `created_at`, `resolved_at`, `resolved_by` | tempi e autore |
+| `xmin` | concorrenza ottimistica, come gli altri aggregati (ADR-060) |
+
+**Scadenza**: una proposta ancora `Pending` diventa `Expired` quando inizia il turno successivo dell'assistente o quando la sessione si chiude.
+
+### 5.3 Conferma: «prima prenota, poi applica»
+
+`POST /live-sessions/{id}/assistant/proposals/{pid}/confirm`, con l'eventuale incremento corretto, invia `ConfirmAssistantProposalCommand`. È **l'unico ponte verso le scritture**, ed è avviato da una persona.
+
+1. **Proprietario**: chi conferma deve essere `CreatedByUserId` della sessione. Il filtro degli endpoint live controlla solo la partecipazione (`EndpointFilterExtensions.cs:104`), quindi il controllo sta nell'handler. Altrimenti `403`.
+2. **Prenotazione**: la proposta passa da `Pending` ad `Applying` e si salva, con `xmin`. Un secondo tap concorrente perde sulla concorrenza e riceve lo stato attuale, senza scrivere. È l'idempotenza.
+3. **Stato atteso**: se la cella o l'indice di turno sono diversi da `expected`, la proposta diventa `Stale` e la risposta è `409` con codice `proposal_stale`.
+4. **Applicazione**: per `Score` si invia `ConfirmScoreProposalCommand` (S5) con il valore della cella più l'incremento: verifica di nuovo l'host, scrive con `RecordScore`, salva e trasmette ai partecipanti via SignalR. Per `AdvanceTurn` si invia `AdvanceLiveSessionTurnCommand`.
+5. **Esito**: `Accepted` o `Edited`. Se il dominio rifiuta (`RecordScore` vuole la sessione `InProgress` o `Paused`, `AdvanceTurn` la vuole `InProgress`), la proposta diventa `Failed` con il codice e la risposta è `409` con codice `session_state_invalid`, distinto da `proposal_stale`.
+
+Il comando di dominio salva da solo, quindi proposta e partita non stanno nella stessa transazione. La prenotazione garantisce comunque che una proposta non si applichi due volte. Se il processo cade fra il passo 4 e il 5, la proposta resta `Applying`: è un caso raro e visibile, e un controllo di coerenza (`Applying` più vecchio di un minuto) lo segnala nei log.
+
+Il rifiuto è `POST …/proposals/{pid}/reject`, con le stesse verifiche di proprietario e di stato.
+
+---
+
+## 6. Il turno, i limiti e gli errori
+
+### 6.1 Risposta bufferizzata
+
+La risposta finale si bufferizza, perché passa da `FinalizeAsync` **prima** di arrivare all'host (§4.2). È una scelta di questo design: la chat di sessione attuale invia i token prima di `FinalizeAsync`. Le risposte al tavolo sono brevi, quindi la latenza aggiunta è bassa; in cambio sparisce il problema del fallback a metà flusso, e il ciclo usa la chiamata non in streaming di M.E.AI.
+
+### 6.2 Un turno
+
+1. **`POST /live-sessions/{id}/assistant`**. Si verifica nell'handler che l'utente sia `CreatedByUserId`, che la sessione sia `Setup`, `InProgress` o `Paused`, e che l'assistente sia abilitato nella versione pubblicata. Gli strumenti di proposta rifiutano con un errore tipizzato quando lo stato non permette la scrittura.
+2. **Messaggi**, nell'ordine di §4.1. Della storia entrano gli ultimi messaggi del `ChatThread` della sessione. `ChatThread` riceve un `LiveSessionId` nullable (migrazione additiva); le `parts` dei messaggi vanno nel `MessagesJson` esistente, senza migrazione. Dei turni passati si rimandano solo il testo e gli esiti delle proposte, non i risultati degli strumenti.
+3. **Ciclo** con al massimo N giri, preso dal profilo. Ogni giro passa dal gateway con la versione del profilo, l'id della sessione e `RequestSource.SessionAssistant`.
+4. **Eventi SSE**, nella convenzione degli endpoint SSE esistenti (`AgentSessionEndpoints.cs`): eventi `data:` senza nome, con un campo `type`:
+   - `status` mentre gira uno strumento («leggo i punteggi…»);
+   - `proposal` per ogni card;
+   - `answer`, con testo e citazioni, dopo `FinalizeAsync`;
+   - `done`, con `responseId` e versione del profilo;
+   - `error`, con un codice.
+5. **Salvataggio**: messaggi con le loro `parts` (testo, citazioni, riferimenti alle proposte) e proposte. Le righe di costo le scrive il gateway.
+
+**Quota per piano**: fuori dal pilota. Arriva con la fetta 5g di ADR-095, non ancora consegnata; fino ad allora vale il tetto globale. L'host del pilota è uno solo.
+
+### 6.3 Limiti ed errori
+
+| Situazione | Comportamento |
+|---|---|
+| Giri esauriti senza una risposta | Messaggio esplicito («non sono riuscito, riprova o segna a mano») e metrica `loop_exhausted`. Le proposte già create restano valide: richiedono comunque la conferma |
+| Argomenti non validi | Lo strumento restituisce al modello un errore tipizzato, non un'eccezione. Il giro conta |
+| Eccezione dentro uno strumento | `IncludeDetailedErrors = false`: `ex.Message` non arriva né al modello né all'utente |
+| **Il modello dichiara un'azione senza aver creato la proposta** («ho segnato 5 punti a Marco») | È il rischio più insidioso, perché l'host crede che il punteggio sia registrato. Il prompt vieta di dichiarare azioni compiute. Un controllo finale cerca affermazioni di questo tipo in un turno senza proposte, aggiunge un avviso e registra la metrica `claimed_action_without_proposal`. Il caso è nel set di valutazione |
+| Il tetto rifiuta un giro a metà ciclo | Il ciclo si ferma: `error budget_paused` e «assistente in pausa» |
+| Il provider fallisce | Il gateway applica fallback e circuit breaker a ogni giro (§3.1) |
+| Un secondo turno mentre il primo è in corso | Il frontend disabilita l'invio durante un turno. Il repo non ha un lock distribuito, e il pilota non ne aggiunge uno: anche due turni concorrenti producono solo proposte, che la conferma protegge |
+| Tempo | Una scadenza per turno, configurabile nel profilo. Il valore iniziale viene dal p95 misurato nello spike |
+
+---
+
+## 7. Valutazione, test e criteri di successo
+
+### 7.1 Spike: prima di costruire il resto
+
+Domanda: **i modelli disponibili chiamano gli strumenti in modo affidabile?**
+
+- **Set di scenari al tavolo**, in italiano e in inglese, in `tests/llm-eval/session-assistant/`. Ogni scenario è uno stato della partita in JSON, una frase dell'host e la **traiettoria attesa** (strumenti chiamati, proposte attese o nessuna proposta). Categorie:
+  - punteggi, inclusi nomi ambigui, giocatori assenti e totali dichiarati;
+  - turno;
+  - domande sullo stato, che **non** devono generare proposte;
+  - domande sulle regole, che devono chiamare `cerca_regole`;
+  - richieste miste;
+  - trappole: «segna tu», dimensione inesistente, chiacchiere.
+
+  Dimensione del set: `node -e "console.log(require('./tests/llm-eval/session-assistant/scenarios.json').scenarios.length)"`.
+- **Esecutore**: un endpoint admin, `POST /api/v1/admin/session-assistant/evaluations`, riceve il set e il modello, esegue ogni scenario con il **ciclo vero** e con lettori finti che restituiscono lo stato dello scenario, e restituisce le metriche. Gli strumenti hanno gli stessi schemi di quelli di produzione: cambia solo il lettore. La cartella `tests/llm-eval` oggi contiene solo script Python, e l'endpoint serve di nuovo alla fetta A6 come gate.
+- **Il set gira attraverso il gateway vero**, con `RequestSource.Evaluation`: consuma la quota delle valutazioni (ADR-095 D6) e non la aggira.
+- **Candidati in locale**: `deepseek-flash` (DeepSeek diretto) e `qwen2.5:3b` (Ollama). I modelli via OpenRouter, compresa la riserva del profilo pubblicato (`meta-llama/llama-3.3-70b-instruct`), richiedono che la chiave locale venga risincronizzata: oggi risponde `401`.
+- **Metriche per modello**: esattezza delle proposte (tipo, giocatore, dimensione, round, incremento), proposte non dovute, proposte mancate, `claimed_action_without_proposal`, argomenti non validi, giri medi per turno, costo per turno dal registro del gateway, latenza p95.
+- **Uscita**: il modello consigliato, il numero predefinito di giri, la scadenza per turno e le **soglie del gate**, ricavate dalla baseline misurata e scritte in questa spec. Nessuna soglia si fissa prima dello spike.
+
+### 7.2 Test, ciascuno «rosso prima» nella sua fetta
+
+| Livello | Cosa verifica |
+|---|---|
+| Gateway (caratterizzazione) | Prima del refactor di `HybridLlmService`: tetto, degrado, fallback e costo di `GenerateAnswerAsync` restano identici (`HybridLlmServiceAnswerTests`) |
+| Gateway (chat) | Un turno da tre giri produce **tre ammissioni al tetto e tre righe di costo**. Con il tetto raggiunto al secondo giro, quel giro **non arriva al client**: lo verifica un client finto che conta le chiamate. È la garanzia centrale |
+| Client | OpenRouter, DeepSeek e Ollama serializzano `tools` e leggono `tool_calls` (con `HttpMessageHandler` finto) |
+| Facciata | `GatewayChatClient` traduce chiamate e risultati degli strumenti in entrambe le direzioni |
+| Dominio | Macchina a stati di `AssistantProposal`; invariante di `PublishDraft` sul tool calling |
+| Strumenti | Id della sessione legato dal server; errori tipizzati; nomi ambigui; incremento e round derivato |
+| Architettura | Le tre regole di §3.2 |
+| Conferma (integrazione, Postgres vero) | Una conferma scrive la cella giusta; una proposta `Stale` dà `409 proposal_stale` e non scrive; chi non è il proprietario riceve `403`; una sessione `Completed` dà `409 session_state_invalid`; **un doppio tap su `AdvanceTurn` avanza il turno una volta sola**. Su `Score` il doppio tap non si vede dalla cella, perché `RecordScore` sostituisce: lo si verifica contando gli eventi trasmessi |
+| Contratto | Una suite per `IChatThreadRepository`, che l'adapter Cosmos riuserà (§10.2) |
+| Frontend | Test di contratto degli schemi Zod (vecchio e nuovo payload) prima del componente |
+| Browser | Una partita completa sullo stack locale con immagini ricostruite: domanda, proposta, conferma, punteggio visibile nella scheda Score. Richiede #4156 |
+
+Le classi di test seguono `apps/api/tests/Api.Tests/` (`Architecture/`, fixture `SharedHostPerTestDatabaseFixture` o `IntegrationHostFixture`, categorie `TestCategories.Unit` e `Integration`). I doppi dei servizi AI a pagamento passano da `AddFailClosedAiTestDoubles`, che va esteso a `ChatAsync`.
+
+### 7.3 Criteri di successo del pilota
+
+1. **Nessuna scrittura senza conferma.** È garantito dalla struttura (§3.2) e verificato dai test di architettura e di integrazione.
+2. Le soglie del set di scenari sono rispettate; si fissano dopo lo spike.
+3. Il costo per partita (turni per partita × costo per turno) sta in una quota del tetto mensile che l'utente fissa dopo lo spike.
+4. Una partita completa giocata nel browser con l'assistente.
+5. Il **tasso di accettazione** reale, cioè accettate / (accettate + corrette + rifiutate), viene registrato per ogni versione del profilo. Nel pilota si osserva, non è un gate.
+
+Le metriche OTel seguono la regola di composizione dei nomi del repo.
+
+---
+
+## 8. Fette
+
+Stato di ADR-095 su `origin/main-dev` al 2026-10-12: fette 1, 2, 3, 4 e 6 (6a, 6b, 6d, 6e) consegnate. Della fetta 5 sono consegnate caratterizzazione (#4214), gateway con i parametri della pipeline (#4217), `StreamQa` (#4219), domanda singola (#4223), ricerca nella libreria (#4229), versione e lingua su risposte, chat e registro (#4231) e feedback (#4233); restano la 5e e la 5g. Da fare: 6c, 7, 8, 9 e 10. #4156 è aperta.
+
+| Fetta | Contenuto | Dipende da | «Rosso prima» |
+|---|---|---|---|
+| **A0** | ADR-097; pacchetto `Microsoft.Extensions.AI`; estrazione della sequenza di un tentativo in `HybridLlmService`; `ILlmService.ChatAsync` e `ILlmClient.ChatAsync` nei tre client; `GatewayChatClient`; `RequestSource.SessionAssistant`; doppi di test estesi | ADR-095 fette 1-3 e 5b | Caratterizzazione invariata; tre giri, tre ammissioni e tre righe di costo; con il tetto raggiunto il giro non parte |
+| **A1** | Definizioni degli strumenti con lettori finti, set di scenari, endpoint admin di valutazione, **spike** | A0 | Nessuno per lo spike: l'uscita è una raccomandazione, scritta in questa spec. I test dell'esecutore sì |
+| **A2** | `AssistantProposal` e migrazione; sezione «Assistente in partita» nel profilo; `SupportsToolCalling` nel catalogo e porta verso KB; invariante di `PublishDraft`; migrazione di dati che pubblica la versione con l'assistente abilitato | ADR-095 fetta 4 | Invarianti della proposta; pubblicazione rifiutata con un modello senza tool calling |
+| **A3** | Lettore reale, ciclo, strumenti di proposta, endpoint SSE, conferma e rifiuto; `ChatThread.LiveSessionId`; test di architettura | A1, A2 | Doppio tap su `AdvanceTurn` applicato una volta; `Stale` e `Failed` con codici distinti; strumenti senza `IMediator` |
+| **A4** | Frontend: pannello in `/sessions/[id]/live` con eventi di stato, card di proposta (da `ScoreProposalCard`), conferma, correzione, rifiuto. **Prima** gli schemi Zod tolleranti, in `live-sessions.schemas.ts` (consumatori prima dei produttori, #4154) | contratto di A3; **#4156** per la verifica nel browser | Test di contratto; partita completa nel browser |
+| **A5** | `cerca_regole` con accesso, tier e `FinalizeAsync` | emendamento E1 | Una risposta dell'agente che riporta un passaggio protetto oltre il limite viene sanificata |
+| **A6** | L'esecutore di A1 diventa gate di pubblicazione; metriche (accettazione, `loop_exhausted`, `claimed_action_without_proposal`) | ADR-095 fetta 7 | Una bozza che peggiora non si pubblica |
+| **A7** | Ritiro di `ParseAndRecordScore` (rotta `/scores/parse`), di `ScoreAssistant` e della parte live di `ChatWithSessionAgent`, per expand → contract, con le rotte in `RetiredRoutes` | A4 in uso | Le rotte ritirate sono in `RetiredRoutes` |
+
+`HybridLlmService` è condiviso con la fetta 5 ancora in corso: A0 va coordinata con chi la porta avanti, per non rifattorizzare lo stesso file in parallelo.
+
+---
+
+## 9. Emendamenti proposti ad ADR-095
+
+La fetta 5 ha già consegnato la pipeline, quindi E1 ed E2 non sono vincoli su una fetta da costruire: sono lavori a sé, da pianificare dentro l'epic #4163.
+
+| # | Dove | Emendamento |
+|---|---|---|
+| E1 | pipeline (#4219) | Estrarre da `AnswerPipeline.PerformSearchAndBuildCitationsAsync` il passo «recupero → citazioni con tier risolto, regioni e offset limitati al tier Full» in un servizio riusabile, usato dalla pipeline e da `cerca_regole`. Recupero (`AnswerRetrieval`) e finalizzazione (`IGroundedAnswerService.FinalizeAsync`) sono già separati |
+| E2 | cache della pipeline | La cache esatta (`AiResponseCacheService`, chiavi `meepleai:qa:*`) **esce** dalla pipeline, e resta solo la cache semantica, con la versione del profilo nella chiave (§10.1). La chiave esatta contiene già lingua e versione del profilo dalla 5c (`AnswerPipeline.cs:719`): il motivo per toglierla non è la correttezza, ma il tasso di hit delle parafrasi |
+| E3 | fetta 8 | La fetta 8 si restringe: setup e disputa passano sulla pipeline come previsto; la chat di sessione live **viene sostituita** dall'assistente (fette A3-A7) invece di essere portata sulla pipeline |
+| E4 | D4, domanda aperta n. 4 | Chiusa da ADR-097 (fetta A0) |
+
+---
+
+## 10. Sottoprogetti decisi, con una spec propria
+
+### 10.1 Cache semantica delle risposte (legata alla fetta 5)
+
+Decisione dell'utente: **solo cache semantica**, con la versione del profilo nella chiave e una soglia tarata; la cache esatta esce. Motivo: la chiave esatta normalizza solo con `Trim()` e `ToLowerInvariant()` (`Services/AiResponseCacheService.cs:165`), quindi una parafrasi non colpisce mai. Il suo tasso di hit, poi, non è misurato: `RecordCacheAccessAsync` è vuoto e non ha chiamanti (`git grep -n RecordCacheAccessAsync origin/main-dev -- apps/api/src/Api` → solo la definizione e l'interfaccia).
+
+Nota: durante il brainstorming si era detto che alla chiave esatta mancasse la versione del profilo. La 5c (#4219) l'aveva già aggiunta, insieme alla lingua. La decisione resta, perché si regge sul tasso di hit.
+
+Punti già decisi:
+- **Chiave**: gioco, versione del profilo, lingua. Esclusi: domande cross-game, domande con una house rule pertinente (precedente #3981, «la cache serviva la house rule di un utente a tutti gli altri»), giochi privati. Il controllo d'accesso resta prima della lettura (`AnswerPipeline.cs:127`).
+- **Soglia**: oggi 0,95 fissa (`SemanticResponseCache.cs:12`). Va tarata su un set di coppie in it/en: le parafrasi devono colpire; numeri, negazioni, nomi di carte e fasi diversi non devono. Il set diventa un test di regressione. Se nessuna soglia dà zero falsi hit con un tasso utile, si aggiunge un controllo lessicale su numeri, negazioni ed entità, oppure si rinuncia alla cache.
+- **Tier copyright**: si risolve per utente, quindi la voce in cache non può portare estratti già filtrati per un altro utente. Va deciso nella sua spec se la cache conserva la risposta e ri-risolve le citazioni a ogni hit.
+- **Attribuzione**: una hit si registra come risposta a costo zero, con la versione del profilo che l'ha prodotta.
+- **Vettore**: si riusa quello della query già calcolato per il recupero.
+- **Memorizzazione**: proposta pgvector al posto della scansione delle chiavi Redis di oggi (`SemanticResponseCache.cs:23`). Da decidere nella sua spec.
+- **Metrica** di hit e miss per endpoint, prima di tutto il resto.
+
+### 10.2 Cosmos DB per le chat, sulla linea `azure/main`
+
+Decisione dell'utente: **le chat del prodotto restano in Postgres**, e Cosmos DB NoSQL diventa un esercizio AI-200 nella seconda iterazione del profilo `azure-local`. La spec di quel profilo vive nel worktree `azure/main`, in `docs/for-developers/specs/2026-10-09-azure-local-profile-design.md`.
+
+Perché non Cosmos per il prodotto:
+- la tracciabilità di ADR-095 (D2) collega risposta, costo, feedback e versione del profilo con dei join;
+- un secondo sistema di record sul VPS significa backup separati e la cancellazione di un utente su due store;
+- l'emulatore non è per la produzione, e il Cosmos vero sarebbe una dipendenza cloud con un salto di rete a ogni messaggio;
+- il formato eterogeneo dei messaggi dell'agente sta già nel `MessagesJson` di `chat_threads` (`ChatThreadRepository.cs`).
+
+Correzione al piano del report Azure (esercizio n. 9): l'adapter riguarda **`IChatThreadRepository`, non `ConversationMemory`**, che oggi non ha un flusso reale che la legga. Temi d'esame coperti: chiave di partizione, anche gerarchica `userId/threadId`; change feed processor; vector policy (che nel profilo Azure potrebbe ospitare la cache semantica); consistenza e RU.
+
+Vincoli che valgono già per il pilota: la conversazione dell'assistente passa solo da `IChatThreadRepository`, e costi e feedback fanno riferimento a `responseId` **senza join SQL sul contenuto dei messaggi**. Attenzione: le analytics dell'amministrazione leggono `chat_threads` senza passare dal repository (`GetOverviewAnalyticsQueryHandler.cs:37`); l'adapter Cosmos dovrà tenerne conto.
+
+---
+
+## 11. Segnalazioni laterali, da verificare prima di agire
+
+1. **Provider senza client.** `LlmProviderSelector.GetClient` cerca il client per nome esatto (`BoundedContexts/KnowledgeBase/Application/Services/LlmProviderSelector.cs:324-328`) e, se non lo trova, ripiega sul primo client registrato (`:127-131`). I client sono Ollama, OpenRouter e DeepSeek: una mappatura con provider «Anthropic» ripiegherebbe sul primo. Va verificato se una mappatura del DB arriva davvero su quel ramo.
+2. **Costi sovrastimati con la cache del provider.** Nessun client legge i token in cache, il calcolatore non ha il parametro e `llm_cost_logs` non ha la colonna (§4.1). È un lavoro a sé, utile anche per la pipeline.
+
+---
+
+## 12. Dopo il pilota (nulla di questo si fa ora)
+
+- Fasi; tipi di punteggio oltre le dimensioni numeriche, se il wizard li offrirà.
+- Multi-dispositivo: gli ospiti chiedono, l'host conferma (`ProposeScoreCommand` e `ScoreProposalCard` sono nati per questo).
+- `valida_mossa`, sul validatore di ADR-092.
+- Un server MCP con gli stessi strumenti, per guidare una sessione di prova da Claude Desktop o Claude Code.
+- L'organizzatore fuori partita («cosa giochiamo stasera?»).
+
+---
+
+## 13. Domande aperte
+
+1. **Round**: la definizione derivata di §5.1 va confermata con l'editor della scheda Score di #4156. Se #4156 sceglie diversamente, l'assistente si adegua: il round è un parametro dello strumento, non un concetto del dominio.
+2. **Gioco pilota**: uno con dimensioni di punteggio semplici, KB indicizzata e house rules di prova, fra quelli del golden set.
+3. **Quota del tetto** da riservare al costo per partita, dopo lo spike.
+4. **Chi scrive gli scenari** dello spike, e se partire da partite reali trascritte.
+5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese.
+6. **Chiave OpenRouter locale**: va risincronizzata (`make secrets-sync`, che richiede SSH) per misurare i modelli via OpenRouter e la riserva del profilo.

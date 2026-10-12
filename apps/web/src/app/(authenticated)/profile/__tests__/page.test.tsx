@@ -34,7 +34,7 @@ const mockUploadAvatar = vi.hoisted(() => vi.fn());
 const mockUseAuth = vi.hoisted(() => vi.fn());
 const mockUseRecentSessions = vi.hoisted(() => vi.fn());
 const mockUseDashboardActivityFeed = vi.hoisted(() => vi.fn());
-vi.mock('@/hooks/useAuth', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuth: mockUseAuth,
 }));
 

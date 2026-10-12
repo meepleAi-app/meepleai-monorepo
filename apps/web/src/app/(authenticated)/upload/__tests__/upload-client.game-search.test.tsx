@@ -24,7 +24,7 @@ const WINGSPAN = {
   createdAt: '2026-01-01',
 };
 
-vi.mock('@/hooks/useAuthUser', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuthUser: () => ({ user: { id: 'u1', email: 'tester@meepleai.app' }, loading: false }),
 }));
 vi.mock('@/hooks/useAdminRole', () => ({ useAdminRole: () => ({ isAdminOrAbove: false }) }));

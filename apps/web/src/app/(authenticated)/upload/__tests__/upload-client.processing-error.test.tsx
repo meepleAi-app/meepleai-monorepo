@@ -23,7 +23,7 @@ const GAME_ID = '3fa85f64-5717-4562-b3fc-2c963f66afa6';
 const DOCUMENT_ID = '7d0f2b1a-1111-2222-3333-444455556666';
 const BACKEND_ERROR = 'Extraction failed: page 3 is corrupted';
 
-vi.mock('@/hooks/useAuthUser', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuthUser: () => ({ user: { id: 'u1', email: 'tester@meepleai.app' }, loading: false }),
 }));
 

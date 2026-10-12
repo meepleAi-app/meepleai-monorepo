@@ -6,6 +6,7 @@
  * `user` nullo: le liste delle chat restavano vuote. Questo test NON fa il mock di AuthProvider.
  */
 
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -42,6 +43,7 @@ vi.mock('@/lib/logger', () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 
 import { ResetPasswordPageContent } from '../_content';
@@ -66,10 +68,12 @@ beforeEach(() => {
 describe('ResetPasswordPageContent dentro il vero AuthProvider (#4190)', () => {
   it('after the automatic login AuthProvider exposes the user, before navigating', async () => {
     render(
-      <AuthProvider>
-        <ResetPasswordPageContent token="tok-4190" />
-        <AuthProbe />
-      </AuthProvider>
+      <QueryClientProvider client={createTestQueryClient()}>
+        <AuthProvider>
+          <ResetPasswordPageContent token="tok-4190" />
+          <AuthProbe />
+        </AuthProvider>
+      </QueryClientProvider>
     );
 
     const pwd = await screen.findByLabelText('auth.resetPassword.passwordLabel');

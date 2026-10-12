@@ -38,11 +38,11 @@ const { mockAuth } = vi.hoisted(() => ({
       email: 'test@example.com',
       role: 'User',
     }),
-    loadCurrentUser: vi.fn().mockResolvedValue(undefined),
+    refreshUser: vi.fn().mockResolvedValue(undefined),
     clearError: vi.fn(),
   },
 }));
-vi.mock('@/hooks/useAuth', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuth: () => mockAuth,
 }));
 

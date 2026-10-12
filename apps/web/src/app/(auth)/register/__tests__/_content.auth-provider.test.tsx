@@ -6,6 +6,7 @@
  * mock di AuthProvider né di `@/hooks/useAuth`.
  */
 
+import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -56,6 +57,7 @@ vi.mock('@/lib/analytics/flywheel-events', () => ({
   trackSignUp: vi.fn(),
 }));
 
+import { createTestQueryClient } from '@/__tests__/utils/query-test-utils';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
 
 import { RegisterPageContent } from '../_content';
@@ -80,10 +82,12 @@ beforeEach(() => {
 describe('RegisterPageContent dentro il vero AuthProvider (#4190)', () => {
   it('after registering AuthProvider exposes the new user, without remounting', async () => {
     render(
-      <AuthProvider>
-        <RegisterPageContent />
-        <AuthProbe />
-      </AuthProvider>
+      <QueryClientProvider client={createTestQueryClient()}>
+        <AuthProvider>
+          <RegisterPageContent />
+          <AuthProbe />
+        </AuthProvider>
+      </QueryClientProvider>
     );
     await screen.findByTestId('register-form');
     expect(screen.getByTestId('auth-probe')).toHaveTextContent('anonymous');

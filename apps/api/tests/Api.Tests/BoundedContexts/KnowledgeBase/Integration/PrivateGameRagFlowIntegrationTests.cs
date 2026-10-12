@@ -93,30 +93,30 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
     }
 
     /// <summary>
-    /// Flow: CreateChatThreadCommand with PrivateGameId → handler stores PrivateGameId as effective GameId.
-    /// Uses mocks only — verifies PrivateGameId scoping logic without DB.
+    /// Flow: CreateChatThreadCommand on the caller's own private game.
+    /// Issue #4230: this test asserted that the handler stored the private id in the thread's
+    /// GameId, and it passed because nothing here enforces the foreign key to shared_games. On
+    /// Postgres that request was a 500. Until the thread can hold a private game (#4244) the
+    /// handler refuses it explicitly and stores nothing.
     /// </summary>
     [Fact]
     [Trait("Category", TestCategories.Unit)]
-    public async Task Handle_PrivateGame_CreateChatThread_GameIdScopedToPrivateGame()
+    public async Task Handle_PrivateGame_CreateChatThread_IsRefusedUntilTheThreadCanHoldAPrivateGame()
     {
         // Arrange
         var userId = Guid.NewGuid();
         var privateGameId = Guid.NewGuid();
 
-        ChatThread? capturedThread = null;
         var mockRepo = new Mock<IChatThreadRepository>();
-        mockRepo
-            .Setup(r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()))
-            .Callback<ChatThread, CancellationToken>((t, _) => capturedThread = t)
-            .Returns(Task.CompletedTask);
-
         var mockUow = new Mock<IUnitOfWork>();
-        mockUow
-            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
 
         var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.PrivateGames.Add(new Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity
+        {
+            Id = privateGameId, OwnerId = userId, Title = "Home-made", MinPlayers = 1, MaxPlayers = 4
+        });
+        await db.SaveChangesAsync();
+
         var handler = new CreateChatThreadCommandHandler(mockRepo.Object, mockUow.Object, db);
         var command = new CreateChatThreadCommand(
             UserId: userId,
@@ -124,22 +124,12 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
             Title: "Private Game RAG Chat");
 
         // Act
-        var result = await handler.Handle(command, CancellationToken.None);
+        var act = () => handler.Handle(command, CancellationToken.None);
 
-        // Assert — PrivateGameId is stored as effective GameId
-        result.Should().NotBeNull();
-        result.GameId.Should().Be(privateGameId);
-        result.UserId.Should().Be(userId);
-
-        capturedThread.Should().NotBeNull();
-        capturedThread!.GameId.Should().Be(privateGameId);
-
+        // Assert
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.PrivateGameChatUnavailableException>();
         mockRepo.Verify(
-            r => r.AddAsync(
-                It.Is<ChatThread>(t => t.GameId == privateGameId && t.UserId == userId),
-                It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

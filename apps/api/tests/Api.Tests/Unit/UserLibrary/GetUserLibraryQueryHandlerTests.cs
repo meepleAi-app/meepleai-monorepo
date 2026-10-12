@@ -67,6 +67,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         _mockLibraryRepo
             .Setup(r => r.GetUserLibraryPaginatedAsync(
                 It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<UserLibraryEntry>(), total));
@@ -88,7 +89,28 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         result.HasNextPage.Should().BeTrue();
         _mockLibraryRepo.Verify(r => r.GetUserLibraryPaginatedAsync(
             It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            It.IsAny<bool?>(),
             It.IsAny<string?>(), It.IsAny<bool>(), 1, 100, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public async Task Handle_PassesTheKbFilter_ToTheRepository(bool? hasKb)
+    {
+        // #4227: il filtro va applicato nella query, non sulla pagina ricevuta dal client.
+        SetupEmptyPage(total: 0);
+
+        await _handler.Handle(
+            new GetUserLibraryQuery(UserId: Guid.NewGuid(), HasKb: hasKb),
+            TestContext.Current.CancellationToken);
+
+        _mockLibraryRepo.Verify(r => r.GetUserLibraryPaginatedAsync(
+            It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            hasKb,
+            It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -152,6 +174,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
@@ -215,6 +238,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
@@ -284,6 +308,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
@@ -368,6 +393,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),

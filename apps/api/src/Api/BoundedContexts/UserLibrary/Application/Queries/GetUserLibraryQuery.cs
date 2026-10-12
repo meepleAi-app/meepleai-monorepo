@@ -11,6 +11,7 @@ internal record GetUserLibraryQuery(
     string? Search = null,
     bool? FavoritesOnly = null,
     string[]? StateFilter = null,
+    bool? HasKb = null,
     string? SortBy = null,
     bool Descending = false,
     int Page = 1,

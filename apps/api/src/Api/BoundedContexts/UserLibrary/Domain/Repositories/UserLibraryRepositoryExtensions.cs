@@ -30,6 +30,7 @@ internal static class UserLibraryRepositoryExtensions
                 search: null,
                 favoritesOnly: null,
                 stateFilter: null,
+                hasKb: null,
                 sortBy,
                 descending,
                 page,

@@ -64,6 +64,7 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         string? search,
         bool? favoritesOnly,
         string[]? stateFilter,
+        bool? hasKb,
         string? sortBy,
         bool descending,
         int page,
@@ -106,6 +107,20 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             {
                 query = query.Where(e => stateValues.Contains(e.CurrentState));
             }
+        }
+
+        // KB filter (#4227): the same rule as HasKb in GetUserLibraryQueryHandler, applied in SQL so
+        // the total and the pages cover the whole library, not one page filtered by the client.
+        if (hasKb.HasValue)
+        {
+            var completed = LibraryKbStates.CompletedLowerCase;
+            var wanted = hasKb.Value;
+#pragma warning disable CA1304, CA1311, MA0011 // p.ProcessingState.ToLower() is EF-translated to SQL lower(), never run in-process
+            query = query.Where(e => DbContext.PdfDocuments.Any(p =>
+                p.SharedGameId == e.SharedGameId
+                && p.PrivateGameId == null
+                && completed.Contains(p.ProcessingState.ToLower())) == wanted);
+#pragma warning restore CA1304, CA1311, MA0011
         }
 
         // Get total count before pagination

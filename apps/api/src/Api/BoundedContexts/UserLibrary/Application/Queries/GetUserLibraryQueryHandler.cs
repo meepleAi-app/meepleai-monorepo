@@ -50,6 +50,7 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             query.Search,
             query.FavoritesOnly,
             query.StateFilter,
+            query.HasKb,
             query.SortBy,
             query.Descending,
             page,
@@ -76,11 +77,9 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
 
         // ProcessingState is stored as the enum member name (e.g., "Ready", "Failed")
         // because PdfDocumentEntity.ProcessingState is a string property (HasConversion<string>()).
-        // Legacy data may contain "Indexed" instead of "Ready" — treat both as completed.
-        static bool IsCompleted(string? state) =>
-            string.Equals(state, nameof(PdfProcessingState.Ready), StringComparison.OrdinalIgnoreCase)
-            || string.Equals(state, "Indexed", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(state, "completed", StringComparison.OrdinalIgnoreCase);
+        // Which states count as completed lives in LibraryKbStates, shared with the hasKb filter
+        // of the repository (#4227).
+        static bool IsCompleted(string? state) => LibraryKbStates.IsCompleted(state);
 
         static bool IsFailed(string? state) =>
             string.Equals(state, nameof(PdfProcessingState.Failed), StringComparison.OrdinalIgnoreCase);

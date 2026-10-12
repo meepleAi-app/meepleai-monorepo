@@ -95,6 +95,19 @@ describe('useLibrarySearch (#4187)', () => {
     expect(mockGetLibrary.mock.calls[0][0].pageSize).toBe(100);
   });
 
+  it('passa il filtro KB al server, e senza opzione non lo chiede (#4227)', async () => {
+    const { result } = renderHook(() => useLibrarySearch('', { hasKb: true }), {
+      wrapper: wrapper(),
+    });
+    await waitFor(() => expect(mockGetLibrary).toHaveBeenCalled());
+    expect(mockGetLibrary.mock.calls[0][0].hasKb).toBe(true);
+
+    renderHook(() => useLibrarySearch('x'), { wrapper: wrapper() });
+    await waitFor(() => expect(mockGetLibrary).toHaveBeenCalledTimes(2));
+    expect(mockGetLibrary.mock.calls[1][0].hasKb).toBeUndefined();
+    expect(result.current.items).toBeDefined();
+  });
+
   it('con enabled: false non fa richieste', () => {
     renderHook(() => useLibrarySearch('Wingspan', { enabled: false }), { wrapper: wrapper() });
     expect(mockGetLibrary).not.toHaveBeenCalled();

@@ -63,7 +63,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
         var userId = Guid.NewGuid();
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<UserLibraryEntry>(), 0));
 
         var query = new GetLibraryForDowngradeQuery(userId, NewQuota: 5);
@@ -92,7 +92,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((entries, entries.Count));
 
         SeedSharedGames(new[] { gameId1, gameId2 });
@@ -117,7 +117,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((entries, entries.Count));
 
         SeedSharedGames(gameIds);
@@ -143,7 +143,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((entries, entries.Count));
 
         SeedSharedGames(gameIds);
@@ -168,7 +168,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((entries, entries.Count));
 
         SeedSharedGames(gameIds);
@@ -207,7 +207,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((entries, entries.Count));
 
         SeedSharedGames(new[] { favoriteGameId, regularGameId1, regularGameId2 });
@@ -249,7 +249,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((entries, entries.Count));
 
         SeedSharedGames(new[] { highPlayGameId, lowPlayGameId });
@@ -283,7 +283,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<UserLibraryEntry> { entry }, 1));
 
         _db.SharedGames.Add(new SharedGameEntity
@@ -320,7 +320,7 @@ public sealed class GetLibraryForDowngradeQueryHandlerTests : IDisposable
 
         _mockRepository
             .Setup(r => r.GetUserLibraryPaginatedAsync(
-                userId, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
+                userId, null, null, null, null, "addedAt", true, 1, UserLibraryPaging.MaxPageSize, It.IsAny<CancellationToken>()))
             .ReturnsAsync((new List<UserLibraryEntry> { entry }, 1));
 
         // No SharedGame seeded — handler should fall back to "Unknown Game"

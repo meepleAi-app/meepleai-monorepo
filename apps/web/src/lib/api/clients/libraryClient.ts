@@ -224,6 +224,9 @@ export function createLibraryClient({ httpClient }: CreateLibraryClientParams): 
           queryParams.append('stateFilter', state);
         }
       }
+      if (params?.hasKb !== undefined) {
+        queryParams.append('hasKb', String(params.hasKb));
+      }
       if (params?.sortBy !== undefined) {
         queryParams.append('sortBy', params.sortBy);
       }

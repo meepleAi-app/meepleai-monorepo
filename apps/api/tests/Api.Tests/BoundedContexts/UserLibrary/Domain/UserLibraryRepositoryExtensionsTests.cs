@@ -27,9 +27,10 @@ public sealed class UserLibraryRepositoryExtensionsTests
         var mock = new Mock<IUserLibraryRepository>();
         mock.Setup(r => r.GetUserLibraryPaginatedAsync(
                 It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
                 It.IsAny<CancellationToken>()))
-            .ReturnsAsync((Guid _, string? _, bool? _, string[]? _, string? _, bool _, int page, int pageSize,
+            .ReturnsAsync((Guid _, string? _, bool? _, string[]? _, bool? _, string? _, bool _, int page, int pageSize,
                 CancellationToken _) =>
             {
                 var size = UserLibraryPaging.NormalizePageSize(pageSize);
@@ -51,6 +52,7 @@ public sealed class UserLibraryRepositoryExtensionsTests
         total.Should().Be(250);
         repo.Verify(r => r.GetUserLibraryPaginatedAsync(
             It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            It.IsAny<bool?>(),
             It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), UserLibraryPaging.MaxPageSize,
             It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
@@ -66,6 +68,7 @@ public sealed class UserLibraryRepositoryExtensionsTests
         entries.Should().BeEmpty();
         repo.Verify(r => r.GetUserLibraryPaginatedAsync(
             It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            It.IsAny<bool?>(),
             It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }

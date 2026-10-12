@@ -38,12 +38,15 @@ function servePrivate(all: Array<{ id: string; title: string }>) {
   };
 }
 
-function serveLibrary(all: Array<{ gameId: string; gameTitle: string }>) {
-  return (params?: { search?: string; pageSize?: number }) => {
+function serveLibrary(all: Array<{ gameId: string; gameTitle: string; hasKb?: boolean }>) {
+  return (params?: { search?: string; pageSize?: number; hasKb?: boolean }) => {
     const size = Math.min(params?.pageSize ?? 20, 100); // UserLibraryRepository: tetto a 100
-    const pool = params?.search
-      ? all.filter(e => e.gameTitle.toLowerCase().includes(params.search!.toLowerCase()))
-      : all;
+    const pool = all
+      .filter(
+        e => !params?.search || e.gameTitle.toLowerCase().includes(params.search.toLowerCase())
+      )
+      // #4227: hasKb filtra nella query, come LibraryKbStates.
+      .filter(e => params?.hasKb === undefined || (e.hasKb ?? true) === params.hasKb);
     return Promise.resolve({
       items: pool.slice(0, size).map(e => ({
         id: `lib-${e.gameId}`,
@@ -219,6 +222,47 @@ describe('GameSelector', () => {
       for (const [params] of mockGetLibrary.mock.calls) {
         expect(params.pageSize).toBeLessThanOrEqual(100);
       }
+    });
+
+    it('libreria condivisa: i giochi con KB li filtra il server, anche oltre i primi 100 (#4227)', async () => {
+      mockGetLibrary.mockImplementation(
+        serveLibrary([
+          ...Array.from({ length: 120 }, (_, i) => ({
+            gameId: `n${i}`,
+            gameTitle: `Agricola ${i}`,
+            hasKb: false,
+          })),
+          { gameId: 's-zombicide', gameTitle: 'Zombicide', hasKb: true },
+        ])
+      );
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+
+      fireEvent.click(screen.getByTestId('tab-shared-games'));
+
+      expect(await screen.findByTestId('game-card-s-zombicide')).toBeInTheDocument();
+      expect(mockGetLibrary).toHaveBeenLastCalledWith(expect.objectContaining({ hasKb: true }));
+    });
+
+    it('libreria condivisa: se cambia showOnlyWithKb rifà la richiesta, anche a testo invariato (#4227)', async () => {
+      mockGetLibrary.mockImplementation(
+        serveLibrary([
+          { gameId: 's-kb', gameTitle: 'Con KB', hasKb: true },
+          { gameId: 's-nokb', gameTitle: 'Senza KB', hasKb: false },
+        ])
+      );
+      const { rerender } = render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+      fireEvent.click(screen.getByTestId('tab-shared-games'));
+      await screen.findByTestId('game-card-s-kb');
+      expect(screen.queryByTestId('game-card-s-nokb')).not.toBeInTheDocument();
+
+      rerender(<GameSelector onSelect={onSelect} selectedGameId={null} showOnlyWithKb={false} />);
+
+      expect(await screen.findByTestId('game-card-s-nokb')).toBeInTheDocument();
+      expect(mockGetLibrary).toHaveBeenLastCalledWith(
+        expect.objectContaining({ hasKb: undefined })
+      );
     });
 
     it("dopo un errore, una ricerca riuscita toglie l'avviso", async () => {

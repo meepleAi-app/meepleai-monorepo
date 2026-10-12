@@ -341,4 +341,26 @@ public class GenerateSetupChecklistCommandHandlerTests
             x => x.CreateStream(It.IsAny<StreamSetupGuideQuery>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_HostNoLongerExists_TheGateEvaluatesItAsAPlainUser()
+    {
+        // Un host cancellato: GetUserByIdQuery non lo trova. Il cancello lo valuta come utente
+        // semplice, quindi senza una voce in libreria nega, salvo un gioco con RAG pubblico.
+        SetupFeatureFlagEnabled();
+        _mediatorMock
+            .Setup(x => x.Send(It.Is<GetUserByIdQuery>(q => q.UserId == DefaultUserId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AuthUserDto?)null);
+        var session = CreateSessionWithGameId();
+        SetupRepoGetById(DefaultSessionId, session);
+        SetupStreamingResponse(DefaultGameId.ToString(), 4);
+
+        await _handler.Handle(new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId), CancellationToken.None);
+
+        _mediatorMock.Verify(
+            x => x.CreateStream(
+                It.Is<StreamSetupGuideQuery>(q => q.UserId == DefaultUserId && q.UserRole == "User"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

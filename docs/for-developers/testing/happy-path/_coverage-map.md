@@ -62,7 +62,7 @@
 | `(authenticated)/library/[gameId]` | Smoke |
 | `(authenticated)/library/[gameId]/kb` | Smoke |
 | `(authenticated)/private-games/[id]` | Smoke |
-| `(authenticated)/upload` | Flow |
+| `(authenticated)/upload` | — (dismessa con #4257: redirect) |
 | `(authenticated)/knowledge-base` | Smoke |
 | `(authenticated)/knowledge-base/global` | Smoke |
 | `(authenticated)/knowledge-base/[id]` | Smoke |

@@ -330,7 +330,7 @@ export async function setupMockAuthWithForbidden(
 }
 
 /**
- * Setup mock games API routes (similar to pdf-preview.spec.ts pattern)
+ * Setup mock games API routes
  */
 export async function setupGamesRoutes(page: Page) {
   const games = [

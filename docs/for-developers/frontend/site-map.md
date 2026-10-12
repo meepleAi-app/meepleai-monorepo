@@ -104,7 +104,7 @@ La protezione è una **difesa a due livelli**:
 | Livello | Meccanismo | Comportamento |
 |---|---|---|
 | **Layer 1 — edge/server** | `apps/web/src/proxy.ts` (`config.matcher` = tutto tranne `api`/`_next`/asset statici) | Valida il **session cookie** `meepleai_session` server-side chiamando `/api/v1/auth/me` (cache 2 min, timeout 5s). Poi: (a) **unauth su route protetta** → `redirect('/login?from=<path>')`; (b) **non-admin su route admin** → `redirect('/')`; (c) auth su `/login`\|`/register` → redirect a `/library` (o `/admin`); (d) home autenticata → `/library`\|`/admin`. Aggiunge gli header di sicurezza (CSP, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin`, …). |
-| **Layer 2 — client** | `RequireRole` (`components/auth/RequireRole.tsx`) | `getCurrentUser()` → se non-auth `router.replace('/login?from=<path>')`; se ruolo errato `router.replace('/')`; spinner **"Verifica autorizzazioni..."** durante il check. Usato dal layout `admin` e da singole pagine (es. `/dashboard`, `/upload` con `['Admin','Editor']`). |
+| **Layer 2 — client** | `RequireRole` (`components/auth/RequireRole.tsx`) | `getCurrentUser()` → se non-auth `router.replace('/login?from=<path>')`; se ruolo errato `router.replace('/')`; spinner **"Verifica autorizzazioni..."** durante il check. Usato dal layout `admin` e da singole pagine (es. `/dashboard`, `/editor` con `['Admin','Editor']`). |
 | Gruppo `admin` | `admin/(dashboard)/layout.tsx` | Oltre al Layer 1 (redirect non-admin): (a) server legge il cookie `meepleai_view_mode`; se `'user'` → `redirect('/')`; (b) client `RequireRole allowedRoles={['Admin']}`. |
 | Navbar | `filterNavItemsByRole` | filtra le voci (vedi §4) — non protegge la route, solo la sua *visibilità* nel menu. |
 
@@ -2619,7 +2619,7 @@ _Route-group: `(authenticated)` · 10 pagine_
 | `/knowledge-base/global` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback null) → KbGlobaleView (URL SSOT) | Nessuna; Suspense richiesto perché KbGlobaleView usa `useSearchParams()` | home (loading/empty-no-CTA/error/list) · results (loading/empty/error/list/loadingMore) · viewer overlay (ready-only) · ask drawer (idle/streaming/completed/empty/error) · editor overlay (owned-only) |
 | `/gamebook` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback PageFallback) → GamebookIndexView; HubPageContainer | Nessuna; metadata title 'I tuoi manuali \| MeepleAI' | loading · error · empty · default · quota-soft · quota-hard · fixture-override (dev/E2E) |
 | `/gamebook/upload` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback null) → GamebookUploadView; DetailPageContainer | Nessuna guardia di pagina; `showBggIntegration = isAdminOrAbove && !isAdminLoading` (BGG admin-only) | 14-cell FSM: step1-default/searching/no-results/bgg-loading · step2-ready/capturing/low-light/failed/denied · step3-progress/partial/complete/offline/cancel-modal · wizard-cancelled · fixture-mode |
-| `/upload` | `(authenticated)` → UserShell → DesktopShell; page client wrapper RequireRole → UploadClient (lazy `next/dynamic`); DetailPageContainer | RequireRole `['Admin','Editor']` (+superadmin inherit) client-side; `!auth`→`/login?from=`, ruolo insufficiente→`/`; Layer 1 `proxy.ts` edge (`/upload` ∈ PROTECTED_ROUTES) + Layer 2 RequireRole client + backend 403 | auth-check · unauthorized→redirect · dynamic-loading · authLoading · step upload/parse/review/publish · error (upload/wizard) |
+| `/upload` | Nessuna pagina: redirect di `next.config.js` verso `/admin/knowledge-base/upload`, con la query (#4257). Era il wizard RuleSpec di Admin ed Editor | La destinazione è solo Admin (layout `admin`) | — |
 | `/n8n` | `(authenticated)` → UserShell → DesktopShell; HubPageContainer | NESSUNA guardia client-side (no RequireRole) benché chiami endpoint admin `/admin/n8n`; autorizzazione delegata al backend (403→stato error) | loading · error · empty · list (config cards) · form (create/edit) |
 | `/pipeline-builder` | `(authenticated)` → UserShell → DesktopShell; server component Suspense (fallback PipelineBuilderSkeleton) → PipelineBuilder; `h-[calc(100vh-4rem)]` | Nessuna; metadata title 'Pipeline Builder \| MeepleAI' | skeleton · default-pipeline-created · node-selected (config) · edge-selected (config) · nessuna-selezione (placeholder) · test-tab · pannelli collassati/espansi |
 
@@ -2654,12 +2654,7 @@ _Route-group: `(authenticated)` · 10 pagine_
   - `/gamebook/upload` -> `?q=<query>` (handleQueryChange / handleCreateNew / handleAddPrivate, `router.replace`; ricerca o azioni NoResults)
   - `/gamebook/upload` -> `/gamebook` (handleCancelConfirm; annulla wizard, abort upload + CANCEL reducer + stop camera)
 - **`/upload`**
-  - `/upload` -> `/login?from=<path>` (RequireRole `router.replace`; non autenticato o eccezione in getCurrentUser())
-  - `/upload` -> `/` (RequireRole `router.replace`; autenticato ma ruolo non Admin/Editor/superadmin)
-  - `/upload` -> `/` (Link '← Back to Home'; sempre, header UploadClient)
-  - `/upload` -> `/admin/knowledge-base/queue?flow=embedding&gameId=&gameName=&documentId=` (Link 'Vai alla Queue →', step publish; `isAdminOrAbove && confirmedGameId`)
-  - `/upload` -> `/editor?gameId=<id>` (Link 'Edit in RuleSpec Editor', step publish; `gameId = ruleSpec.gameId ?? confirmedGameId ?? ''`)
-  - `/upload` -> `window.open(pdf.logUrl, _blank)` (PdfTable onOpenLog; `pdf.logUrl` presente)
+  - `/upload` -> `/admin/knowledge-base/upload` (redirect `next.config.js`, query conservata; pagina dismessa con #4257)
 - **`/n8n`**
   - `/n8n` -> `/` (Link 'Back to Home'; sempre header, anche stato error)
 - **`/pipeline-builder`**
@@ -2729,18 +2724,7 @@ _Route-group: `(authenticated)` · 10 pagine_
 - useBggSearch — `enabled` solo se `!isFixtureMode && tabParam==='bgg'`; endpoint `/api/v1/bgg/search` gated RequireAuthenticatedUser + rate-limit 60/h; adapter `title=name`, `publisher=null` in v1. `apps/web/src/hooks/queries/`
 
 ##### `/upload`
-- Spinner 'Verifica autorizzazioni...' — mostrato mentre `loading===true` nel check RequireRole (getCurrentUser in corso). `apps/web/src/components/auth/RequireRole.tsx`
-- Fallback 'Caricamento upload...' — mostrato dopo che RequireRole passa e prima che il chunk lazy di UploadClient idrati (`loading` callback di `next/dynamic`). `apps/web/src/app/(authenticated)/upload/page.tsx`
-- Spinner 'Loading...' — quando `authLoading` (useAuthUser) dentro UploadClient, dopo idratazione del chunk. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- WizardSteps indicator — sempre visibile; steps upload/parse/review/publish; `currentStep = wizardState.currentStep`. `apps/web/src/components/wizard/WizardSteps.tsx`
-- ErrorDisplay (uploadError) — mostrato se `uploadError != null`; `onRetry` solo se `uploadError.canRetry`. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Card errore `wizardState.error` — mostrato se `wizardState.error && !uploadError`. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 1 Upload — 'Confirm Game Selection' solo se `selectedGameId && !confirmedGameId`; area upload solo se `confirmedGameId && confirmedGame` trovato. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Upload Mode toggle — `single`→PdfUploadForm + MultiFileUpload + PdfTable; `collection`→MultiDocumentCollectionUpload (onSuccess ritorna a single). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 2 Parse — ProcessingProgress mostrato solo se `showProcessingProgress && wizardState.documentId` (gated `NEXT_PUBLIC_ENABLE_PROGRESS_UI`); Parse disabilitato finché `parsing || processingStatus!=='completed'`, auto-advance su completamento; 'Start Over'→resetWizard (no route nav). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 3 Review — solo se `currentStep==='review' && ruleSpec`; atoms editabili (text/section/page/line) + Add Rule/Delete; '← Back'→SET_STEP parse, 'Cancel'→resetWizard (transizioni wizard, no route nav). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 4 Publish — UploadProgressTracker solo se `enableProcessingProgress && documentId`; 'Vai alla Queue →' solo se `isAdminOrAbove && confirmedGameId` (admin-only); 'Import Another PDF'→resetWizard (no route nav), 'Edit in RuleSpec Editor'→Link `/editor?gameId` (route nav). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- PdfTable — stati loading/error (`pdfsError`) + `retryingPdfId` per riga; `onOpenLog` apre `pdf.logUrl` in nuova tab. `apps/web/src/components/upload/`
+- Nessuno stato: la pagina è dismessa (#4257) e la rotta è un redirect verso `/admin/knowledge-base/upload`.
 
 ##### `/n8n`
 - h1 'Loading...' — quando `loading` (fetchConfigs in corso). `apps/web/src/app/(authenticated)/n8n/page.tsx`
@@ -2795,7 +2779,7 @@ _Route-group: `(authenticated)` · 10 pagine_
 | RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | Guardia client-side ruolo (Admin/Editor +superadmin), redirect `/login?from` o `/` |
 | UploadClient | `apps/web/src/app/(authenticated)/upload/upload-client.tsx` | Wizard 4-step lazy (upload/parse/review/publish); handlePublish `PUT /api/v1/games/{id}/rulespec` |
 | GamePicker | `apps/web/src/components/game/GamePicker.tsx` | Selettore/creazione gioco |
-| PdfUploadForm / MultiFileUpload / PdfTable / MultiDocumentCollectionUpload | `apps/web/src/components/pdf/` · `apps/web/src/components/upload/` · `apps/web/src/components/documents/` | Upload singolo/multiplo + tabella PDF (retry/log) + modalità collezione |
+| PdfUploadForm | `apps/web/src/components/pdf/` | Upload singolo. `MultiFileUpload`, `PdfTable` e `MultiDocumentCollectionUpload` servivano solo al wizard `/upload` e sono stati tolti con #4257 |
 | WizardSteps | `apps/web/src/components/wizard/WizardSteps.tsx` | Indicatore step wizard upload |
 | N8nWorkflowManagement | `apps/web/src/app/(authenticated)/n8n/page.tsx` | Pagina intera CRUD config n8n via fetch diretto a `/admin/n8n` (no client mediator) |
 | PipelineBuilder | `apps/web/src/components/pipeline-builder/PipelineBuilder.tsx` | Layout 3-pannelli resizable (palette/canvas/config-test) |
@@ -2820,7 +2804,7 @@ flowchart LR
   KBGLOBAL -->|"overlay/drawer deep-link (docId / ask=1 / edit=1)"| KBGLOBAL
 ```
 
-_Le route `/knowledge-base`, `/upload`, `/n8n`, `/pipeline-builder` non hanno edge di navigazione interni al cluster: reindirizzano o linkano solo a surface esterne (`/library`, `/login`, `/`, `/editor`, `/admin/...`, `/library/[gameId]/play`) oppure operano interamente intra-pagina (pipeline-builder)._
+_Le route `/knowledge-base`, `/n8n`, `/pipeline-builder` non hanno edge di navigazione interni al cluster: reindirizzano o linkano solo a surface esterne (`/library`, `/login`, `/`, `/editor`, `/admin/...`, `/library/[gameId]/play`) oppure operano interamente intra-pagina (pipeline-builder)._
 
 
 ## Chat — `(chat)`
@@ -4908,7 +4892,7 @@ _Sono elencati i **74 componenti condivisi** (usati in ≥2 route). I componenti
 | EmptyFeatureState | `apps/web/src/components/admin/EmptyFeatureState.tsx` | 5 | `/admin/agents/config`, `/admin/agents/templates`, `/admin/agents/usage`, `/admin/agents/analytics`, `/admin/config/n8n` |
 | HeroGradient | `apps/web/src/components/ui/hero-gradient/hero-gradient.tsx` | 4 | `/about`, `/how-it-works`, `/pricing`, `/cookie-settings` |
 | LegalPageLayout | `apps/web/src/components/legal/LegalPageLayout.tsx` | 4 | `/terms`, `/privacy`, `/cookies`, `/legal/takedown` |
-| RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | 4 | `/dashboard`, `/game-nights`, `/editor`, `/upload` |
+| RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | 3 | `/dashboard`, `/game-nights`, `/editor` |
 | usePlayerStatistics | `apps/web/src/hooks/queries/usePlayersFromRecords.ts` | 4 | `/players`, `/players/[id]`, `/players/[id]/games`, `/players/[id]/stats` |
 | AuthLayout | `apps/web/src/components/layouts/AuthLayout.tsx` | 3 | `/setup-account`, `/verification-success`, `/invitation-expired` |
 | StructuredData + learningResourceSchema | `apps/web/src/components/legal/StructuredData` | 3 | `/how-it-works/game-comprehension`, `/terms`, `/privacy` |

@@ -44,7 +44,6 @@ export const PROTECTED_ROUTES = [
   '/settings',
   '/toolkit',
   '/toolkits',
-  '/upload',
   '/versions',
 ] as const;
 

@@ -89,7 +89,6 @@ const ROUTE_CONTEXTS: Array<[string, string]> = [
   ['/library/[gameId]/kb', 'DocumentProcessing'],
   ['/library-public', 'UserLibrary'],
   ['/library', 'UserLibrary'],
-  ['/upload', 'DocumentProcessing'],
   ['/gamebook', 'GameManagement'],
   ['/games', 'GameManagement'],
   ['/editor', 'GameManagement'],

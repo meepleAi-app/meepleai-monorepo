@@ -66,7 +66,7 @@ MeepleAI è organizzato come **monorepo** con architettura a microservizi, orche
 **Dettagli Next.js:**
 - **Proxy catch-all**: `/api/v1/*` → backend .NET `:8080`
 - **Middleware auth**: controlla cookie `meepleai_session` prima del rendering
-- **Rotte protette**: `/dashboard`, `/chat`, `/upload`, `/admin`, `/editor`, `/settings`
+- **Rotte protette**: `/dashboard`, `/chat`, `/admin`, `/editor`, `/settings`
 - **Rotte pubbliche**: `/`, `/login`, `/register`
 - **Cache sessione**: in-memory, TTL 2 min, max 200 entry
 - **Design system**: glassmorphic `bg-white/70 backdrop-blur-md`, font Quicksand (heading) + Nunito (body)

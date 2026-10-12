@@ -1,7 +1,7 @@
 # Assistente in partita: un agente con strumenti — design
 
 **Data**: 2026-10-11 · **Origine**: `/sc:brainstorm` del 2026-10-11 · **Stato**: spec da revisionare. Nessun codice scritto.
-**Base misurata**: `origin/main-dev` a `4c3f02149` (#4213).
+**Base misurata**: `origin/main-dev` a `4c3f02149` (#4213). I §4.2, §8, §9 e §10.1 sono stati riverificati a `64dd3c887` (#4231), dopo l'avanzamento della fetta 5.
 **Contesto**: [ADR-094](../../for-claude/architecture/adr/adr-094-single-system-agent.md) (un solo agente di sistema) · [ADR-095](../../for-claude/architecture/adr/adr-095-single-answer-pipeline-and-versioned-agent-profile.md) e il [piano delle fette](../plans/2026-10-10-adr-095-slices-plan.md) · [ADR-090](../../for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) (`KnowledgeBase` possiede la risposta ancorata) · [ADR-089](../../for-claude/architecture/adr/adr-089-session-scoring-ssot.md) (`LiveGameSession` è la fonte unica del punteggio in partita) · [`copyright-tier-rag.md`](../../for-claude/architecture/copyright-tier-rag.md) · [`user-use-cases.md`](../user-use-cases.md) (SES-07, SES-17, AI-03) · [brief del 2026-10-10](./2026-10-10-single-agent-ai-architecture-brief.md).
 
 Al 2026-10-11 questi documenti esistono solo come file non committati del checkout principale, quindi li cito senza link:
@@ -118,7 +118,13 @@ POST /live-sessions/{id}/assistant (SSE) ──IMediator──> AskSessionAssist
 
 ### 4.2 Conseguenza sulla pipeline
 
-`cerca_regole` restituisce **passaggi e citazioni**, senza una chiamata LLM annidata: la risposta finale la compone l'agente. Si risparmia una chiamata per ogni domanda sulle regole, ma la pipeline della fetta 5 deve offrire `recupera()` separato da `rispondi()`, e il **controllo copyright** (tier per chunk, controllo dei leak, citazioni) deve potersi applicare a un testo generato fuori dalla pipeline. È l'emendamento E1 (§9).
+`cerca_regole` restituisce **passaggi e citazioni**, senza una chiamata LLM annidata: la risposta finale la compone l'agente, e si risparmia una chiamata per ogni domanda sulle regole. La pipeline mergiata con la fetta 5c (#4219) rende la cosa poco costosa:
+
+- il recupero è già una classe a sé, `AnswerRetrieval.RetrieveAsync` (`Services/Answering/AnswerRetrieval.cs`);
+- il controllo dei leak sul testo è già un servizio a sé, `ICopyrightLeakGuard` (`NgramCopyrightLeakGuard.cs`), applicabile a un testo generato fuori dalla pipeline;
+- resta **privato** il passo che risolve il tier copyright di ogni citazione e limita estratti e regioni al tier Full (`AnswerPipeline.PerformSearchAndBuildCitationsAsync`).
+
+L'emendamento E1 (§9) chiede di estrarre quel passo in un servizio riusabile, non di dividere la pipeline.
 
 ### 4.3 Degrado (ADR-095 D6)
 
@@ -257,16 +263,16 @@ Le metriche OTel seguono la regola di composizione dei nomi del repo.
 
 ## 8. Fette
 
-Stato di ADR-095 su `origin/main-dev` al 2026-10-11: fette 1, 2, 3, 4 e 6 (6a, 6b, 6d, 6e) consegnate; la fetta 5 è in corso (5a mergiata, #4214); 6c, 7, 8, 9 e 10 da fare. #4156 è aperta, e serve alla verifica nel browser: la scheda Score si blocca sulle sessioni create dal wizard.
+Stato di ADR-095 su `origin/main-dev` al 2026-10-12: fette 1, 2, 3, 4 e 6 (6a, 6b, 6d, 6e) consegnate. La fetta 5 è avanzata: caratterizzazione (#4214), gateway con i parametri della pipeline (#4217), `StreamQa` sulla pipeline (#4219), domanda singola (#4223), ricerca nella libreria (#4229), versione e lingua su risposte, chat e registro (#4231); la 5f-2 (feedback) è in corso. Da fare: 6c, 7, 8, 9 e 10. #4156 è aperta, e serve alla verifica nel browser: la scheda Score si blocca sulle sessioni create dal wizard.
 
 | Fetta | Contenuto | Dipende da | «Rosso prima» |
 |---|---|---|---|
-| **A0** | ADR-096; adapter `IChatClient` in `Services/LlmClients/`; middleware del tetto **interno** al ciclo; lettura dei token in cache e costo con `CacheReadPricePerMillion` | ADR-095 fette 1-3; **dopo la 5b**, che modifica lo stesso gateway | Tre giri, tre controlli e tre righe di costo; con il tetto raggiunto il giro non parte |
+| **A0** | ADR-096; adapter `IChatClient` in `Services/LlmClients/`; middleware del tetto **interno** al ciclo; lettura dei token in cache e costo con `CacheReadPricePerMillion` | ADR-095 fette 1-3 e 5b (#4217), che ha già modificato lo stesso gateway | Tre giri, tre controlli e tre righe di costo; con il tetto raggiunto il giro non parte |
 | **A1** | Spike sul set di scenari (§7.1) | A0 | Nessuno: l'uscita è una raccomandazione, scritta in questa spec |
 | **A2** | Aggregato della proposta e migrazione; sezione «Assistente in partita» in `AgentProfileContent`; capacità `SupportsToolCalling` nel catalogo, controllata alla pubblicazione | ADR-095 fetta 4 | Invarianti della proposta; pubblicazione rifiutata con un modello senza tool calling |
 | **A3** | Ciclo, `stato_partita`, strumenti di proposta, endpoint SSE, conferma e rifiuto; `RequestSource.SessionAssistant`; `ChatThread` con `LiveSessionId` e `parts`; test di architettura | A0, A2 | Un doppio tap non registra due punteggi; uno strumento che importa un comando GameManagement fa fallire la build |
 | **A4** | Frontend: pannello in `/sessions/[id]/live` con eventi di stato, card di proposta (da `ScoreProposalCard`), conferma, correzione, rifiuto. **Prima** gli schemi Zod tolleranti (regola di #4154: i consumatori prima dei produttori) | contratto di A3; #4156 per la verifica nel browser | Test di contratto dello schema; partita completa nel browser |
-| **A5** | `cerca_regole` | ADR-095 fetta 5 con l'emendamento E1 | Una risposta dell'agente che riporta un passaggio oltre il limite viene bloccata |
+| **A5** | `cerca_regole`, sopra `AnswerRetrieval` e il servizio estratto da E1; risposta finale filtrata da `ICopyrightLeakGuard` | emendamento E1 | Una risposta dell'agente che riporta un passaggio oltre il limite viene bloccata |
 | **A6** | Il set di scenari diventa gate di pubblicazione; metriche (accettazione, `loop_exhausted`, `claimed_action_without_proposal`, hit della cache del prompt) | ADR-095 fetta 7 | Una bozza che peggiora non si pubblica |
 | **A7** | Ritiro di `ParseAndRecordScore`, di `ScoreAssistant` e della parte live di `ChatWithSessionAgent`, per expand → contract, con le rotte in `RetiredRoutes` | A4 in uso | Le rotte ritirate sono in `RetiredRoutes` |
 
@@ -274,16 +280,16 @@ Stato di ADR-095 su `origin/main-dev` al 2026-10-11: fette 1, 2, 3, 4 e 6 (6a, 6
 
 ## 9. Emendamenti proposti ad ADR-095
 
-La fetta 5 è in corso, quindi E1 ed E2 vanno concordati con chi la porta avanti **prima della 5c**, che costruisce il servizio della pipeline.
+La fetta 5 è già oltre la 5c (§8), quindi E1 ed E2 non sono più vincoli su una fetta da costruire: sono lavori a sé, da pianificare con chi porta avanti l'epic #4163.
 
-| # | Fetta | Emendamento |
+| # | Dove | Emendamento |
 |---|---|---|
-| E1 | **5c** | La pipeline espone `recupera()` (accesso, recupero, reranking, passaggi con tier copyright) separato da `rispondi()` (prompt, generazione, controllo copyright, registro). Il controllo copyright si può applicare anche a un testo generato fuori dalla pipeline |
-| E2 | **5f** | Oggi la 5f prevede «versione su messaggio di chat e feedback, e nelle chiavi delle due cache». Con la decisione di §10.1 la cache esatta (`AiResponseCacheService`, chiavi `meepleai:qa:*`) **esce** dalla pipeline, e resta solo la cache semantica, con la versione del profilo nella chiave |
+| E1 | pipeline mergiata (#4219) | Estrarre da `AnswerPipeline.PerformSearchAndBuildCitationsAsync` il passo «recupero → citazioni con tier copyright risolto, estratti e regioni limitati al tier Full» in un servizio riusabile, usato sia dalla pipeline sia da `cerca_regole`. Recupero (`AnswerRetrieval`) e controllo dei leak (`ICopyrightLeakGuard`) sono già separati (§4.2) |
+| E2 | cache della pipeline | La cache esatta (`AiResponseCacheService`, chiavi `meepleai:qa:*`) **esce** dalla pipeline, e resta solo la cache semantica, con la versione del profilo nella chiave (§10.1). Dalla 5c la chiave esatta contiene già lingua e versione del profilo (`AnswerPipeline.cs:719`): il motivo per toglierla non è più la correttezza, ma il tasso di hit delle parafrasi |
 | E3 | **8** | La fetta 8 si restringe: setup e disputa passano sulla pipeline come previsto; la chat di sessione live **viene sostituita** dall'assistente (fette A3-A7) invece di essere portata sulla pipeline |
 | E4 | D4, domanda aperta n. 4 | Chiusa da ADR-096 (fetta A0) |
 
-La domanda aperta n. 3 (fallback a metà streaming) **non riguarda l'assistente**, che bufferizza la risposta (§6.1). Resta aperta per `StreamQa`, che la 5b affronta.
+La domanda aperta n. 3 (fallback a metà streaming) **non riguarda l'assistente**, che bufferizza la risposta (§6.1). Per `StreamQa` l'ha affrontata la 5b (#4217).
 
 ---
 
@@ -291,7 +297,9 @@ La domanda aperta n. 3 (fallback a metà streaming) **non riguarda l'assistente*
 
 ### 10.1 Cache semantica delle risposte (legata alla fetta 5)
 
-Decisione dell'utente: **solo cache semantica**, con la versione del profilo nella chiave e una soglia tarata; la cache esatta esce. Motivo: la chiave esatta normalizza solo con `Trim()` e `ToLowerInvariant()` (`AiResponseCacheService.cs:165`), quindi una parafrasi non colpisce mai. E il suo tasso di hit non è misurato: `RecordCacheAccessAsync` è vuoto e non ha chiamanti (`git grep -n RecordCacheAccessAsync origin/main-dev -- apps/api/src/Api` → solo la definizione e l'interfaccia).
+Decisione dell'utente: **solo cache semantica**, con la versione del profilo nella chiave e una soglia tarata; la cache esatta esce. Motivo: la chiave esatta normalizza solo con `Trim()` e `ToLowerInvariant()` (`AiResponseCacheService.cs:165`), quindi una parafrasi non colpisce mai. Il suo tasso di hit, poi, non è misurato: `RecordCacheAccessAsync` è vuoto e non ha chiamanti (`git grep -n RecordCacheAccessAsync origin/main-dev -- apps/api/src/Api` → solo la definizione e l'interfaccia).
+
+Nota del 2026-10-12: durante il brainstorming si era detto che alla chiave esatta mancasse la versione del profilo. La 5c (#4219) l'aveva già aggiunta, insieme alla lingua (`AnswerPipeline.cs:719`). La decisione resta, perché si regge sul tasso di hit e non su quel difetto.
 
 Punti già decisi:
 - **Chiave**: gioco, versione del profilo, lingua. Esclusi: domande cross-game, domande con una house rule pertinente (precedente #3981, «la cache serviva la house rule di un utente a tutti gli altri»), giochi privati. Il controllo d'accesso resta prima della lettura, come oggi (`StreamQaQueryHandler.cs:116` prima di `:145`).

@@ -92,9 +92,18 @@ public sealed class AssistantConversationTests
     [InlineData("it-IT", false)]
     [InlineData("de", false)]
     [InlineData("english", false)]
+    [InlineData("eng", false)]
     [InlineData("", false)]
-    public void PromptSet_PicksEnglishForAnyEnglishLocale_AndItalianOtherwise(string language, bool english) =>
+    [InlineData(null, false)]
+    public void PromptSet_PicksEnglishForAnyEnglishLocale_AndItalianOtherwise(string? language, bool english) =>
         SessionAssistantPrompts.Default.For(language).Should().Be(english ? SessionAssistantPrompts.English : SessionAssistantPrompts.Italian);
+
+    // run-eval.mjs calcola la stessa impronta in Node: SHA-256 del testo in UTF-8, esadecimale minuscolo.
+    [Fact]
+    public void PromptFingerprint_IsThePlainSha256OfTheUtf8Text() =>
+        new AssistantPromptSet("abc", "è").Fingerprint().Should().Be(new AssistantPromptFingerprint(
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "97c916cd94785d7b9b52ae7013c267854f275691ddaae212bc1c07f639b8a0c7"));
 
     [Fact]
     public void PromptSet_With_ReplacesOnlyTheLanguagesItIsGiven()
@@ -113,9 +122,11 @@ public sealed class AssistantConversationTests
         var english = AssistantConversation.Build(SessionAssistantPrompts.Default, "en-US", State(), [], "x")[1].Text;
         var italian = AssistantConversation.Build(SessionAssistantPrompts.Default, "it", State(), [], "x")[1].Text;
 
-        english.Should().Contain("Game: Azul").And.Contain("Players: Marco").And.Contain("Scoring dimensions: punti").And.Contain("House rules");
+        english.Should().Contain("Game: Azul").And.Contain("Players: Marco").And.Contain("Scoring dimensions: punti")
+            .And.Contain("they override the rulebook");
         english.Should().NotContain("Giocatori").And.NotContain("Dimensioni");
-        italian.Should().Contain("Gioco: Azul").And.Contain("Giocatori: Marco").And.Contain("Dimensioni del punteggio: punti");
+        italian.Should().Contain("Gioco: Azul").And.Contain("Giocatori: Marco").And.Contain("Dimensioni del punteggio: punti")
+            .And.Contain("valgono sul regolamento");
     }
 
     [Theory]

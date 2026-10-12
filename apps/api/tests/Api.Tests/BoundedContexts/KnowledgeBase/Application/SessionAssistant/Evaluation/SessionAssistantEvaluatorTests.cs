@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
@@ -212,6 +214,30 @@ public sealed class SessionAssistantEvaluatorTests
         sent[0].Messages[0].Content.Should().Be("PROMPT ITALIANO DI PROVA");
         sent[1].Messages[0].Content.Should().Be(SessionAssistantPrompts.English);
     }
+
+    // Review di #4256: il file dei risultati deve dire quale prompt è stato USATO, non quale è stato mandato.
+    // Un'immagine che non conosce il campo «prompts» lo scarta in silenzio e misura il predefinito.
+    [Fact]
+    public async Task Handler_ReportsTheFingerprintOfThePromptsItUsed()
+    {
+        var handler = new RunSessionAssistantEvaluationCommandHandler(Evaluator(Script(Answer("ok"), Answer("ok"))));
+        var set = new AssistantScenarioSet(3, [Scenario()]);
+
+        var byDefault = await handler.Handle(
+            new RunSessionAssistantEvaluationCommand(set, "deepseek-flash", null, 0.2, 600, 4),
+            TestContext.Current.CancellationToken);
+        var overridden = await handler.Handle(
+            new RunSessionAssistantEvaluationCommand(set, "deepseek-flash", null, 0.2, 600, 4,
+                new AssistantPromptOverride(Italian: "PROMPT ITALIANO DI PROVA", English: null)),
+            TestContext.Current.CancellationToken);
+
+        byDefault.PromptFingerprint.Should().Be(
+            new AssistantPromptFingerprint(Sha256(SessionAssistantPrompts.Italian), Sha256(SessionAssistantPrompts.English)));
+        overridden.PromptFingerprint.Should().Be(
+            new AssistantPromptFingerprint(Sha256("PROMPT ITALIANO DI PROVA"), Sha256(SessionAssistantPrompts.English)));
+    }
+
+    private static string Sha256(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
     [Fact]
     public async Task Run_GatewayRefuses_IsAnErrorResult_NotAnException()

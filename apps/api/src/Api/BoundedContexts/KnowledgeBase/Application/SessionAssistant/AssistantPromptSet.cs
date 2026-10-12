@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 
 /// <summary>
@@ -13,4 +16,9 @@ internal sealed record AssistantPromptSet(string Italian, string English)
     public AssistantPromptSet With(string? italian, string? english) => new(
         string.IsNullOrWhiteSpace(italian) ? Italian : italian,
         string.IsNullOrWhiteSpace(english) ? English : english);
+
+    /// <summary>L'impronta dei due testi, per dire in un report quale prompt è stato usato davvero.</summary>
+    public AssistantPromptFingerprint Fingerprint() => new(Hash(Italian), Hash(English));
+
+    private static string Hash(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 }

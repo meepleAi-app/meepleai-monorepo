@@ -1,6 +1,6 @@
 # Assistente in partita: un agente con strumenti — design
 
-**Data**: 2026-10-11, rivista il 2026-10-12 · **Origine**: `/sc:brainstorm` del 2026-10-11 · **Stato**: spec rivista dopo una review avversariale (§0). A0 consegnata (#4247); spike di A1 concluso, con l'esito in §7.1: con il prompt v1 nessun modello superava tutte le trappole; il prompt v2 di #4256 supera il gate.
+**Data**: 2026-10-11, rivista il 2026-10-12 · **Origine**: `/sc:brainstorm` del 2026-10-11 · **Stato**: spec rivista dopo una review avversariale (§0). A0 consegnata (#4247); spike di A1 concluso, con l'esito in §7.1: con il prompt v1 nessun modello superava tutte le trappole; il prompt v2 di #4256 supera il gate. Prima di pubblicare l'assistente va chiusa #4270.
 **Base misurata**: `origin/main-dev` a `afd0cdbb3` (#4233).
 **Contesto**: [ADR-094](../../for-claude/architecture/adr/adr-094-single-system-agent.md) (un solo agente di sistema) · [ADR-095](../../for-claude/architecture/adr/adr-095-single-answer-pipeline-and-versioned-agent-profile.md) e il [piano delle fette](../plans/2026-10-10-adr-095-slices-plan.md) · [ADR-090](../../for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) (`KnowledgeBase` possiede la risposta ancorata) · [ADR-089](../../for-claude/architecture/adr/adr-089-session-scoring-ssot.md) (`LiveGameSession.RoundScores` è la fonte unica del punteggio in partita) · [`copyright-tier-rag.md`](../../for-claude/architecture/copyright-tier-rag.md) · [`user-use-cases.md`](../user-use-cases.md) (SES-07, SES-17) · [correzione dei bloccanti](./2026-10-10-user-use-case-blockers-fix-design.md) (#4156, decisione D3 sulla scheda Score) · [brief del 2026-10-10](./2026-10-10-single-agent-ai-architecture-brief.md).
 
@@ -334,7 +334,7 @@ Anche fra gli scenari che supera ci sono testi falsi («Adesso Marco ha 4 punti�
 2. **Nessuna azione o proposta dichiarata senza una proposta, in tutto il set.** Non solo sulle trappole: l'unico caso osservato, `en-turn`, non è una trappola, ed è il rischio che §6.3 chiama il più insidioso.
 3. **Nessun errore del gateway e nessun argomento non valido.**
 4. **La prima versione supera tutti gli scenari; le successive nessuno in meno della versione pubblicata.** Il confronto è per nome dello scenario, non per percentuale, così regge quando il set cresce.
-5. Le regole si applicano al **caso peggiore di tre esecuzioni** del set: `it-score-dimension-unknown` fallisce in un run su due, e un solo run lo avrebbe mancato la metà delle volte. Tre run costano sei centesimi, cioè un terzo della quota giornaliera delle valutazioni.
+5. Le regole si applicano al **caso peggiore di tre esecuzioni** del set: `it-score-dimension-unknown` fallisce in un run su due, e un solo run lo avrebbe mancato la metà delle volte. Tre run costano sei centesimi, cioè un terzo della quota giornaliera delle valutazioni (otto centesimi, circa il 40%, con il set alla versione 3).
 
 Con il prompt v1 `deepseek-flash` non passa le regole 1, 2 e 4; con il prompt v2 le passa tutte (esito più sotto).
 
@@ -358,22 +358,25 @@ Stesso giorno, stesso modello e stessi parametri dello spike. Per misurare, la q
 | Misura con `deepseek-flash` | Prompt v1 | Prompt v2 |
 |---|---|---|
 | Set alla versione 2, run completi | 24, 23, 24, 24, 22 e 23 su 25 | 25 su 25 in tre run su tre |
-| I tre scenari che la v1 falliva, ripetuti | 7 turni su 12 | 18 su 18 |
-| Otto scenari nuovi, tre volte ciascuno | 13 turni su 24, con 4 proposte non dovute | 24 su 24 |
+| I tre scenari che la v1 falliva, ripetuti | 7 turni su 12: `en-turn` 1 su 4, `it-score-dimension-unknown` 2 su 4, `it-score-explicit-round` 4 su 4 | 18 su 18 |
+| Otto scenari nuovi, tre volte ciascuno | 13 turni su 24: 4 proposte non dovute, 2 proposte dichiarate e mai create, 5 proposte mancate senza altro errore | 24 su 24 |
 
-Con il prompt v2, in nessuno dei 117 turni misurati c'è una proposta non dovuta, una proposta dichiarata e mai creata, un argomento non valido o un errore del gateway. Le soglie di sopra sono rispettate sul set alla versione 2, nel caso peggiore di tre esecuzioni: **#4256 non blocca più la pubblicazione dell'assistente.**
+Con il prompt v2, in nessuno dei 117 turni misurati c'è una proposta non dovuta, una proposta dichiarata e mai creata, un argomento non valido o un errore del gateway. Come per lo spike, i 117 turni non sono campioni indipendenti: sono 33 frasi ripetute da tre a nove volte a temperatura 0,2, in pochi minuti. Con tre esecuzioni per scenario, uno che fallisse una volta su sei le supererebbe comunque più di una volta su due.
 
-Costo e latenza non cambiano le raccomandazioni: $0,00082 per turno in media (massimo $0,00142), p95 2,4 s, in media due chiamate per turno e mai più di tre.
+Le soglie di sopra sono rispettate sul set alla versione 2, nel caso peggiore di tre esecuzioni. **L'esito vale per il testo di `prompts/v2.json` e per i quattro strumenti di oggi.** La versione che A2 pubblicherà avrà un testo diverso (senza la regola 2, finché A5 non consegna `cerca_regole`) e tre strumenti: va rimisurata tre volte prima della migrazione che pubblica, insieme al resto di #4270.
 
-**Gli otto scenari nuovi** sono frasi diverse per le stesse classi di errore, scritte dopo il prompt e prima di vederne il comportamento: `en-turn-done`, `en-turn-end`, `it-turn-avanti`, `it-score-dimension-unknown-oro`, `en-score-dimension-unknown`, `it-score-past-round`, `en-score-past-round`, `en-score-ambiguous`. Servono a distinguere un prompt che ha imparato tre frasi da uno che ha capito la regola: la v1 li fallisce quasi una volta su due, la v2 mai. Ora fanno parte del set, alla versione 3.
+Costo e latenza non cambiano le raccomandazioni. Sui 75 turni dei tre run completi: $0,00082 per turno in media (massimo $0,00142), p95 2,4 s, in media due chiamate per turno e mai più di tre.
+
+**Gli otto scenari nuovi** sono frasi diverse per le stesse classi di errore, scritte dopo il prompt e prima di vederne il comportamento: `en-turn-done`, `en-turn-end`, `it-turn-avanti`, `it-score-dimension-unknown-oro`, `en-score-dimension-unknown`, `it-score-past-round`, `en-score-past-round`, `en-score-ambiguous`. Servono a distinguere un prompt che ha imparato tre frasi da uno che ha capito la regola: la v1 li fallisce quasi una volta su due, la v2 in nessuna delle tre esecuzioni di ciascuno. Ora fanno parte del set, alla versione 3.
 
 **Che cosa ha corretto, e che cosa no.**
 
+- Per la regola sul round la prova sono i due scenari nuovi: con la v1 `en-score-past-round` passa 0 volte su 3 e `it-score-past-round` 2 su 3. `it-score-explicit-round`, che nello spike falliva un run su sei, oggi con la v1 passa quattro volte su quattro.
 - Il contesto statico in inglese, da solo, non basta: con il prompt v1 e il contesto nella lingua della sessione `en-turn` passa una volta su quattro. È il prompt a fare la differenza.
 - `it-score-dimension-missing` non passa più dall'errore tipizzato: con la v2 il modello chiede la dimensione senza provare a proporre.
 - Le correzioni al codice fatte insieme: il prompt è un dato (`AssistantPromptSet`) che la richiesta di valutazione può sostituire, così una variante si misura senza ricostruire l'immagine; `en-US` e le altre varianti regionali prendono il prompt inglese; il contesto statico è nella lingua della sessione; lo script esegue scenari scelti, li ripete, e si ferma quando la quota finisce.
 
-**Limiti di questa misura.** Il prompt è stato scritto guardando gli scenari che falliva, e gli scenari nuovi li ha scritti la stessa mano: è una prova di regressione, non una stima di come andrà al tavolo. Il set alla versione 3 non è stato eseguito per intero in una volta: i 25 scenari della versione 2 hanno tre run completi, gli otto nuovi tre esecuzioni a parte. Restano non misurati i modelli via OpenRouter, la latenza su staging, le conversazioni con storia e `cerca_regole` con il recupero vero.
+**Limiti di questa misura.** Il prompt è stato scritto guardando gli scenari che falliva, e gli scenari nuovi li ha scritti la stessa mano: è una prova di regressione, non una stima di come andrà al tavolo. Il prompt v2 è stato misurato mandandolo nella richiesta, contro un'immagine il cui predefinito era ancora la v1: che il predefinito del codice sia lo stesso testo lo garantisce un test, non un run. Il set non contiene casi in cui la prudenza della regola 4 sarebbe un errore (una dimensione unica chiamata in un altro modo, un diminutivo, un nome che identifica un solo giocatore). Tutto questo è in #4270. Il set alla versione 3 non è stato eseguito per intero in una volta: i 25 scenari della versione 2 hanno tre run completi, gli otto nuovi tre esecuzioni a parte. Restano non misurati i modelli via OpenRouter, la latenza su staging, le conversazioni con storia e `cerca_regole` con il recupero vero.
 
 ### 7.2 Test, ciascuno «rosso prima» nella sua fetta
 
@@ -413,7 +416,7 @@ Stato di ADR-095 su `origin/main-dev` al 2026-10-12: fette 1, 2, 3, 4 e 6 (6a, 6
 |---|---|---|---|
 | **A0** | ADR-097; pacchetto `Microsoft.Extensions.AI`; estrazione della sequenza di un tentativo in `HybridLlmService`; `ILlmService.ChatAsync` e `ILlmClient.ChatAsync` nei tre client; `GatewayChatClient`; `RequestSource.SessionAssistant`; doppi di test estesi | ADR-095 fette 1-3 e 5b | Caratterizzazione invariata; tre giri, tre ammissioni e tre righe di costo; con il tetto raggiunto il giro non parte |
 | **A1** | Definizioni degli strumenti con lettori finti, set di scenari, endpoint admin di valutazione, **spike** | A0 | Nessuno per lo spike: l'uscita è una raccomandazione, scritta in questa spec. I test dell'esecutore sì |
-| **A2** | `AssistantProposal` e migrazione; sezione «Assistente in partita» nel profilo; `SupportsToolCalling` nel catalogo e porta verso KB; invariante di `PublishDraft`; migrazione di dati che pubblica la versione con l'assistente abilitato | ADR-095 fetta 4 | Invarianti della proposta; pubblicazione rifiutata con un modello senza tool calling |
+| **A2** | `AssistantProposal` e migrazione; sezione «Assistente in partita» nel profilo; `SupportsToolCalling` nel catalogo e porta verso KB; invariante di `PublishDraft`; migrazione di dati che pubblica la versione con l'assistente abilitato | ADR-095 fetta 4; **#4270** prima della migrazione che pubblica | Invarianti della proposta; pubblicazione rifiutata con un modello senza tool calling |
 | **A3** | Lettore reale, ciclo, strumenti di proposta, endpoint SSE, conferma e rifiuto; `ChatThread.LiveSessionId`; test di architettura | A1, A2 | Doppio tap su `AdvanceTurn` applicato una volta; `Stale` e `Failed` con codici distinti; strumenti senza `IMediator` |
 | **A4** | Frontend: pannello in `/sessions/[id]/live` con eventi di stato, card di proposta (da `ScoreProposalCard`), conferma, correzione, rifiuto. **Prima** gli schemi Zod tolleranti, in `live-sessions.schemas.ts` (consumatori prima dei produttori, #4154) | contratto di A3; **#4156** per la verifica nel browser | Test di contratto; partita completa nel browser |
 | **A5** | `cerca_regole` con accesso, tier e `FinalizeAsync` | emendamento E1 | Una risposta dell'agente che riporta un passaggio protetto oltre il limite viene sanificata |

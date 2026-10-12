@@ -8,35 +8,55 @@
 // Opzioni (#4256), per provare un prompt spendendo poco della quota delle valutazioni:
 //   --only=en-turn,it-turn      solo questi scenari
 //   --repeat=6                  ogni scenario scelto più volte: il comportamento non è deterministico
-//   --prompts=prompts/x.json    un prompt alternativo, { "italian": "...", "english": "..." } (una lingua basta)
+//   --prompts=<file.json>       un prompt alternativo, { "italian": "...", "english": "..." } (una lingua basta);
+//                               il percorso parte dalla cartella da cui lanci lo script
 //   --label=candidato           entra nel nome del file dei risultati, che altrimenti si sovrascrive
+import { createHash } from 'node:crypto';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const base = process.env.MEEPLE_API ?? 'http://localhost:8080/api/v1';
-const args = process.argv.slice(2);
-const models = args.filter((a) => !a.startsWith('--'));
-const option = (name) => args.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-const only = option('only')?.split(',').map((id) => id.trim()).filter(Boolean);
-const repeat = Number(option('repeat') ?? 1);
-const promptsFile = option('prompts');
-const label = option('label');
+const usage = 'uso: MEEPLE_EMAIL=... MEEPLE_PASSWORD=... node run-eval.mjs <modello> [altri modelli] [--only=id,id] [--repeat=N] [--prompts=file.json] [--label=nome]';
+const fail = (message) => { console.error(message); process.exit(2); };
 
-if (models.length === 0 || !process.env.MEEPLE_EMAIL || !process.env.MEEPLE_PASSWORD || !Number.isInteger(repeat) || repeat < 1) {
-  console.error('uso: MEEPLE_EMAIL=... MEEPLE_PASSWORD=... node run-eval.mjs <modello> [altri modelli] [--only=id,id] [--repeat=N] [--prompts=file.json] [--label=nome]');
-  process.exit(2);
+// Un'opzione scritta male non deve essere ignorata: «--promtps=…» misurerebbe il prompt predefinito mentre
+// chi lancia crede di misurare il candidato, e «--repeat 6» farebbe di «6» un modello.
+const known = ['only', 'repeat', 'prompts', 'label'];
+const args = process.argv.slice(2);
+const options = {};
+const models = [];
+for (const arg of args) {
+  if (!arg.startsWith('--')) {
+    models.push(arg);
+    continue;
+  }
+  const [name, ...rest] = arg.slice(2).split('=');
+  if (!known.includes(name) || rest.length === 0 || rest.join('=') === '') {
+    fail(`opzione non valida: ${arg}\n${usage}`);
+  }
+  options[name] = rest.join('=');
+}
+const only = options.only?.split(',').map((id) => id.trim()).filter(Boolean);
+const repeat = Number(options.repeat ?? 1);
+const label = options.label?.replace(/[^a-z0-9._-]/gi, '_');
+
+if (models.length === 0 || models.some((m) => /^\d+$/.test(m)) || !Number.isInteger(repeat) || repeat < 1) {
+  fail(usage);
+}
+if (!process.env.MEEPLE_EMAIL || !process.env.MEEPLE_PASSWORD) {
+  fail(usage);
 }
 
 const set = JSON.parse(readFileSync(join(here, 'scenarios.json'), 'utf8'));
 const unknown = (only ?? []).filter((id) => !set.scenarios.some((s) => s.id === id));
-if (unknown.length > 0) {
-  console.error(`scenari sconosciuti: ${unknown.join(', ')}`);
-  process.exit(2);
+if (unknown.length > 0 || (only && only.length === 0)) {
+  fail(only?.length === 0 ? '--only non nomina nessuno scenario' : `scenari sconosciuti: ${unknown.join(', ')}`);
 }
 const scenarios = only ? set.scenarios.filter((s) => only.includes(s.id)) : set.scenarios;
-const prompts = promptsFile ? JSON.parse(readFileSync(resolve(promptsFile), 'utf8')) : null;
+const prompts = options.prompts ? JSON.parse(readFileSync(resolve(options.prompts), 'utf8')) : null;
+const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
 
 const login = await fetch(`${base}/auth/login`, {
   method: 'POST',
@@ -59,9 +79,27 @@ const notRun = (scenario, errorCode) => ({
   roundTrips: 0, costUsd: 0, latencyMs: 0, errorCode, finalText: '',
 });
 
+// Il server dice con un'impronta quale prompt ha USATO. Un'immagine che non conosce il campo «prompts» lo
+// scarta in silenzio e misura il suo predefinito: senza questo controllo il file direbbe «candidato».
+const promptMismatch = (fingerprint) => {
+  if (!prompts) {
+    return null;
+  }
+  if (!fingerprint) {
+    return "l'API non restituisce l'impronta del prompt: l'immagine non conosce il campo «prompts» e misurerebbe il suo predefinito. Ricostruiscila da un commit che lo ha (#4256).";
+  }
+  for (const language of ['italian', 'english']) {
+    if (typeof prompts[language] === 'string' && sha256(prompts[language]) !== fingerprint[language]) {
+      return `il prompt ${language} usato dall'API non è quello mandato (impronta ${fingerprint[language].slice(0, 12)} invece di ${sha256(prompts[language]).slice(0, 12)}).`;
+    }
+  }
+  return null;
+};
+
 for (const model of models) {
   const results = [];
   let stopped = null;
+  let promptFingerprint = null;
   for (let pass = 1; pass <= repeat && !stopped; pass++) {
     for (const scenario of scenarios) {
       const response = await fetch(`${base}/admin/session-assistant/evaluations`, {
@@ -80,11 +118,18 @@ for (const model of models) {
         process.stdout.write('!');
         continue;
       }
-      const result = (await response.json()).results[0];
+      const report = await response.json();
+      const mismatch = promptMismatch(report.promptFingerprint);
+      if (mismatch) {
+        fail(`\nINTERROTTO al primo turno: ${mismatch}`);
+      }
+      promptFingerprint ??= report.promptFingerprint ?? null;
+      const result = report.results[0];
       // La quota delle valutazioni è finita: ogni altra chiamata sarebbe rifiutata, e un run fatto di
-      // rifiuti non misura niente.
+      // rifiuti non misura niente. Il turno rifiutato resta nel file, come non eseguito.
       if (result?.errorCode?.startsWith('AI_BUDGET_')) {
         stopped = result.errorCode;
+        results.push({ ...notRun(scenario, stopped), pass });
         break;
       }
       results.push({ ...result, pass });
@@ -92,8 +137,9 @@ for (const model of models) {
     }
   }
 
-  // Stesse formule di AssistantEvaluationReport.From.
-  const latencies = results.map((r) => r.latencyMs).sort((a, b) => a - b);
+  // Stesse formule di AssistantEvaluationReport.From, sui soli turni che il modello ha eseguito.
+  const executed = results.filter((r) => r.roundTrips > 0);
+  const latencies = executed.map((r) => r.latencyMs).sort((a, b) => a - b);
   const p95 = latencies.length === 0 ? 0 : latencies[Math.max(0, Math.ceil(latencies.length * 0.95) - 1)];
   const average = (values) => (values.length === 0 ? 0 : values.reduce((a, b) => a + b, 0) / values.length);
   const byScenario = scenarios.map((s) => {
@@ -105,7 +151,9 @@ for (const model of models) {
     setVersion: set.version,
     only: only ?? null,
     repeat,
+    planned: scenarios.length * repeat,
     prompts,
+    promptFingerprint,
     stopped,
     scenarios: results.length,
     passed: results.filter((r) => r.passed).length,
@@ -115,8 +163,8 @@ for (const model of models) {
     toolErrors: results.reduce((a, r) => a + r.toolErrors, 0),
     invalidArguments: results.reduce((a, r) => a + r.invalidArguments, 0),
     gatewayErrors: results.filter((r) => r.errorCode).length,
-    averageRoundTrips: average(results.map((r) => r.roundTrips)),
-    averageCostPerTurnUsd: average(results.map((r) => r.costUsd)),
+    averageRoundTrips: average(executed.map((r) => r.roundTrips)),
+    averageCostPerTurnUsd: average(executed.map((r) => r.costUsd)),
     totalCostUsd: results.reduce((a, r) => a + r.costUsd, 0),
     latencyP95Ms: p95,
     byScenario,
@@ -124,11 +172,11 @@ for (const model of models) {
   };
 
   const name = [new Date().toISOString().slice(0, 10), model.replace(/[^a-z0-9.-]/gi, '_'), label].filter(Boolean).join('-');
-  const file = join(outDir, `${name}.json`);
+  const file = join(outDir, `${name}${stopped ? '.interrotto' : ''}.json`);
   writeFileSync(file, JSON.stringify(summary, null, 2));
-  console.log(`\n== ${model}${prompts ? ` · prompt da ${promptsFile}` : ''}${only ? ` · solo ${only.join(', ')}` : ''}${repeat > 1 ? ` · ${repeat} volte` : ''}`);
+  console.log(`\n== ${model}${prompts ? ` · prompt da ${options.prompts}` : ''}${only ? ` · solo ${only.join(', ')}` : ''}${repeat > 1 ? ` · ${repeat} volte` : ''}`);
   if (stopped) {
-    console.log(`INTERROTTO: il gateway ha rifiutato con ${stopped} (quota delle valutazioni). I numeri sotto valgono per i soli turni eseguiti.`);
+    console.log(`INTERROTTO: il gateway ha rifiutato con ${stopped} (quota delle valutazioni) dopo ${executed.length} turni su ${summary.planned}. I numeri sotto valgono per i soli turni eseguiti.`);
     process.exitCode = 1;
   }
   console.log(`superati ${summary.passed}/${summary.scenarios} · proposte non dovute ${summary.scenariosWithExtraProposals} · mancate ${summary.scenariosWithMissingProposals} · azioni dichiarate ${summary.claimedActionsWithoutProposal}`);

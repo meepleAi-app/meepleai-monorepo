@@ -75,6 +75,6 @@ internal sealed class RunSessionAssistantEvaluationCommandHandler(SessionAssista
             results.Add(await evaluator.RunAsync(scenario, settings, prompts, cancellationToken).ConfigureAwait(false));
         }
 
-        return AssistantEvaluationReport.From(command.PrimaryModelId, results);
+        return AssistantEvaluationReport.From(command.PrimaryModelId, results, prompts);
     }
 }

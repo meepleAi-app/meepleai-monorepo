@@ -14,14 +14,7 @@ internal static class AdminSessionAssistantEndpoints
 
         // POST /api/v1/admin/session-assistant/evaluations
         group.MapPost("/evaluations", async (RunSessionAssistantEvaluationRequest body, IMediator mediator, CancellationToken ct) =>
-            Results.Ok(await mediator.Send(new RunSessionAssistantEvaluationCommand(
-                body.Scenarios,
-                body.PrimaryModelId,
-                body.FallbackModelId,
-                body.Temperature ?? 0.2,
-                body.MaxTokens ?? 600,
-                body.MaxToolIterations ?? 4,
-                body.Prompts), ct).ConfigureAwait(false)))
+            Results.Ok(await mediator.Send(body.ToCommand(), ct).ConfigureAwait(false)))
             .WithName("RunSessionAssistantEvaluation")
             .WithSummary("Run the in-game assistant scenario set against a model (Admin)")
             .Produces<AssistantEvaluationReport>(StatusCodes.Status200OK);
@@ -34,5 +27,15 @@ internal static class AdminSessionAssistantEndpoints
         double? Temperature,
         int? MaxTokens,
         int? MaxToolIterations,
-        AssistantPromptOverride? Prompts = null);
+        AssistantPromptOverride? Prompts = null)
+    {
+        public RunSessionAssistantEvaluationCommand ToCommand() => new(
+            Scenarios,
+            PrimaryModelId,
+            FallbackModelId,
+            Temperature ?? 0.2,
+            MaxTokens ?? 600,
+            MaxToolIterations ?? 4,
+            Prompts);
+    }
 }

@@ -76,6 +76,16 @@ public sealed class RunSessionAssistantEvaluationCommandValidatorTests
     }
 
     [Fact]
+    public void PromptOverride_WithOneUsableAndOneBlankPrompt_IsAValidationError()
+    {
+        // Senza la regola per lingua, la stringa vuota verrebbe scartata in silenzio a favore del predefinito.
+        var result = _validator.Validate(WithPrompts(new AssistantPromptOverride("Sei l'assistente.", " ")));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle().Which.ErrorMessage.Should().Contain("prompts.english");
+    }
+
+    [Fact]
     public void PromptOverride_TooLong_IsAValidationError()
     {
         var tooLong = new string('x', RunSessionAssistantEvaluationCommandValidator.MaxPromptLength + 1);

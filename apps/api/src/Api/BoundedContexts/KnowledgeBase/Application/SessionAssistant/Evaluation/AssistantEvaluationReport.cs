@@ -1,6 +1,9 @@
 namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation;
 
-/// <summary>Le metriche dello spike per un modello (spec §7.1).</summary>
+/// <summary>
+/// Le metriche dello spike per un modello (spec §7.1), con l'impronta dei prompt usati: chi ha mandato un
+/// prompt alternativo la confronta con la propria (#4256).
+/// </summary>
 internal sealed record AssistantEvaluationReport(
     string Model,
     int Scenarios,
@@ -14,9 +17,11 @@ internal sealed record AssistantEvaluationReport(
     double AverageRoundTrips,
     decimal AverageCostPerTurnUsd,
     long LatencyP95Ms,
-    IReadOnlyList<AssistantScenarioResult> Results)
+    IReadOnlyList<AssistantScenarioResult> Results,
+    AssistantPromptFingerprint? PromptFingerprint = null)
 {
-    public static AssistantEvaluationReport From(string model, IReadOnlyList<AssistantScenarioResult> results)
+    public static AssistantEvaluationReport From(
+        string model, IReadOnlyList<AssistantScenarioResult> results, AssistantPromptSet? prompts = null)
     {
         var latencies = results.Select(r => r.LatencyMs).OrderBy(l => l).ToList();
         var p95 = latencies.Count == 0 ? 0 : latencies[Math.Max(0, (int)Math.Ceiling(latencies.Count * 0.95) - 1)];
@@ -33,6 +38,7 @@ internal sealed record AssistantEvaluationReport(
             results.Count == 0 ? 0 : results.Average(r => r.RoundTrips),
             results.Count == 0 ? 0 : results.Average(r => r.CostUsd),
             p95,
-            results);
+            results,
+            prompts?.Fingerprint());
     }
 }

@@ -2,24 +2,23 @@
  * Chat Sessions List Page - /chat
  *
  * Lists user's chat sessions grouped by agent with collapsible groups.
- * Shows a tier usage banner when the user reaches 80% of their session limit.
  *
- * @see Issue #4695 (original), #4913 (grouped history + tier banner)
+ * @see Issue #4695 (original), #4913 (grouped history). The tier banner (#4913) left with #4212:
+ * the limit it showed governed chat sessions, which no page creates.
  */
 
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { AlertTriangle, ChevronDown, ChevronRight, MessageCircle, Plus, Bot } from 'lucide-react';
+import { ChevronDown, ChevronRight, MessageCircle, Plus, Bot } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { ChatListMobile } from '@/components/chat-unified/ChatListMobile';
 import { MeepleChatCard } from '@/components/chat-unified/MeepleChatCard';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { Progress } from '@/components/ui/feedback/progress';
 import { Button } from '@/components/ui/primitives/button';
-import { useChatSessionLimit, useRecentChatSessions } from '@/hooks/queries/useChatSessions';
+import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import type { ChatSessionSummaryDto } from '@/lib/api/schemas/chat-sessions.schemas';
 import { useRecentsStore } from '@/stores/use-recents';
 
@@ -138,7 +137,6 @@ function AgentGroupSection({
 export default function ChatListPage() {
   const router = useRouter();
   const { data, isLoading, error } = useRecentChatSessions(500);
-  const { data: limitData } = useChatSessionLimit();
 
   useEffect(() => {
     useRecentsStore.getState().push({
@@ -153,18 +151,6 @@ export default function ChatListPage() {
     const sessions = data?.sessions ?? [];
     return groupSessionsByAgent(sessions);
   }, [data]);
-
-  // Tier banner: show when >= 80% of limit is used (limit=0 means unlimited)
-  const showBanner =
-    limitData !== null &&
-    limitData !== undefined &&
-    limitData.limit > 0 &&
-    limitData.used / limitData.limit >= 0.8;
-
-  const usagePercent =
-    limitData && limitData.limit > 0
-      ? Math.min(100, Math.round((limitData.used / limitData.limit) * 100))
-      : 0;
 
   if (error) {
     return (
@@ -239,20 +225,6 @@ export default function ChatListPage() {
               </p>
             </div>
           </div>
-
-          {/* Tier usage banner */}
-          {showBanner && limitData && (
-            <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-900">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="flex flex-col gap-2">
-                <span className="font-nunito font-medium">
-                  Stai utilizzando {limitData.used} su {limitData.limit} chat ({usagePercent}%). Le
-                  chat più vecchie verranno archiviate automaticamente quando raggiungi il limite.
-                </span>
-                <Progress value={usagePercent} className="h-2 bg-amber-200 [&>div]:bg-amber-500" />
-              </AlertDescription>
-            </Alert>
-          )}
 
           {/* Empty state */}
           {!isLoading && groups.length === 0 && (

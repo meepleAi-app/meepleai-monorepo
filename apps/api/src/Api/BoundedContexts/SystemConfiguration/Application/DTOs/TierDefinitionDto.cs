@@ -44,9 +44,13 @@ public record TierLimitsDto(
     int MaxPhotosPerSession,
     bool SessionSaveEnabled,
     int MaxCatalogProposalsPerWeek,
+    int MaxLibraryGames,
     // #2750 (C14): optional (defaults 0) so existing positional constructions keep compiling;
     // FromValueObject/ToValueObject round-trip the real value so admin edits don't reset the quota.
-    int MaxGamebookTranslationsPerMonth = 0)
+    int MaxGamebookTranslationsPerMonth = 0,
+    // #4212: carried both ways. Without it every admin save rebuilt the limits with the
+    // default (false) and took the RAPTOR rebuild away from premium.
+    bool RaptorRebuildEnabled = false)
 {
     public static TierLimitsDto FromValueObject(TierLimits limits) => new(
         limits.MaxPrivateGames,
@@ -58,7 +62,9 @@ public record TierLimitsDto(
         limits.MaxPhotosPerSession,
         limits.SessionSaveEnabled,
         limits.MaxCatalogProposalsPerWeek,
-        limits.MaxGamebookTranslationsPerMonth);
+        limits.MaxLibraryGames,
+        limits.MaxGamebookTranslationsPerMonth,
+        limits.RaptorRebuildEnabled);
 
     public TierLimits ToValueObject() => TierLimits.Create(
         MaxPrivateGames, MaxPdfUploadsPerMonth,
@@ -66,5 +72,7 @@ public record TierLimitsDto(
         MaxAgentQueriesPerDay, MaxSessionQueries,
         MaxSessionPlayers, MaxPhotosPerSession,
         SessionSaveEnabled, MaxCatalogProposalsPerWeek,
+        MaxLibraryGames,
+        raptorRebuildEnabled: RaptorRebuildEnabled,
         maxGamebookTranslationsPerMonth: MaxGamebookTranslationsPerMonth);
 }

@@ -40,9 +40,9 @@ const STATIC_HREF = /href:\s*'(\/[^']*)'/g;
 /**
  * Known debt, tracked and deliberately not fixed here.
  *
- * `admin-navigation.ts` declares **38** hrefs to routes that do not exist — the
+ * `admin-navigation.ts` declares **37** hrefs to routes that do not exist — the
  * admin console was reorganised and its navigation config was not. That is a real
- * defect, but the admin surface is out of scope for epic #3916, and fixing 38
+ * defect, but the admin surface is out of scope for epic #3916, and fixing 37
  * destinations in this PR would bury a settings change under an unrelated
  * refactor.
  *
@@ -51,7 +51,7 @@ const STATIC_HREF = /href:\s*'(\/[^']*)'/g;
  */
 const KNOWN_BROKEN = {
   file: 'admin-navigation.ts',
-  count: 38,
+  count: 37,
 } as const;
 
 /**

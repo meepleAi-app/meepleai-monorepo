@@ -26,7 +26,8 @@ public sealed class TierLimitsTests
             maxSessionPlayers: 6,
             maxPhotosPerSession: 10,
             sessionSaveEnabled: true,
-            maxCatalogProposalsPerWeek: 2);
+            maxCatalogProposalsPerWeek: 2,
+            maxLibraryGames: 8);
 
         // Assert
         limits.MaxPrivateGames.Should().Be(5);
@@ -38,13 +39,14 @@ public sealed class TierLimitsTests
         limits.MaxPhotosPerSession.Should().Be(10);
         limits.SessionSaveEnabled.Should().BeTrue();
         limits.MaxCatalogProposalsPerWeek.Should().Be(2);
+        limits.MaxLibraryGames.Should().Be(8);
     }
 
     [Fact]
     public void Create_WithZeroValues_ReturnsInstance()
     {
         // Act — zero is valid for most fields
-        var limits = TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, 0);
+        var limits = TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, 0, 1);
 
         // Assert
         limits.MaxPrivateGames.Should().Be(0);
@@ -55,7 +57,7 @@ public sealed class TierLimitsTests
     public void Create_WithNegativeMaxPrivateGames_ThrowsArgumentException()
     {
         // Act
-        var act = () => TierLimits.Create(-1, 0, 0, 0, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(-1, 0, 0, 0, 0, 1, 0, false, 0, 1);
 
         // Assert
         act.Should().Throw<ArgumentException>()
@@ -65,7 +67,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxPdfUploadsPerMonth_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, -1, 0, 0, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, -1, 0, 0, 0, 1, 0, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxPdfUploadsPerMonth");
     }
@@ -73,7 +75,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxPdfSizeBytes_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, -1, 0, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, -1, 0, 0, 1, 0, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxPdfSizeBytes");
     }
@@ -81,7 +83,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithZeroMaxSessionPlayers_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 0, 0, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxSessionPlayers");
     }
@@ -89,7 +91,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxSessionPlayers_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, -1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, -1, 0, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxSessionPlayers");
     }
@@ -97,7 +99,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxAgentQueriesPerDay_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, -1, 0, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, -1, 0, 1, 0, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxAgentQueriesPerDay");
     }
@@ -105,7 +107,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxSessionQueries_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, -1, 1, 0, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, -1, 1, 0, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxSessionQueries");
     }
@@ -113,7 +115,7 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxPhotosPerSession_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, -1, false, 0);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, -1, false, 0, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxPhotosPerSession");
     }
@@ -121,9 +123,48 @@ public sealed class TierLimitsTests
     [Fact]
     public void Create_WithNegativeMaxCatalogProposalsPerWeek_ThrowsArgumentException()
     {
-        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, -1);
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, -1, 1);
         act.Should().Throw<ArgumentException>()
             .WithParameterName("maxCatalogProposalsPerWeek");
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Create_WithMaxLibraryGamesBelowOne_ThrowsArgumentException(int maxLibraryGames)
+    {
+        // Issue #4212: a library that holds no game is not a plan, it is a mistake. A client that
+        // omits the field sends 0, and accepting it would block every add for the whole tier.
+        var act = () => TierLimits.Create(0, 0, 0, 0, 0, 1, 0, false, 0, maxLibraryGames);
+        act.Should().Throw<ArgumentException>()
+            .WithParameterName("maxLibraryGames");
+    }
+
+    #endregion
+
+    #region Library limit (#4212)
+
+    /// <summary>
+    /// The library limits enforced before #4212, when <c>GameLibraryQuotaService</c> held them as
+    /// constants (free 5, normal 20, premium 50). Moving them into the plan must not change them.
+    /// </summary>
+    [Fact]
+    public void PresetLibraryLimits_MatchTheValuesEnforcedBeforeThePlan()
+    {
+        TierLimits.FreeTier.MaxLibraryGames.Should().Be(5);
+        TierLimits.NormalTier.MaxLibraryGames.Should().Be(20);
+        TierLimits.PremiumTier.MaxLibraryGames.Should().Be(50);
+        TierLimits.Unlimited.MaxLibraryGames.Should().Be(int.MaxValue);
+    }
+
+    /// <summary>
+    /// Before #4212 no "normal" plan existed, so normal users fell back to the free plan for every
+    /// limit but the library. The normal preset keeps exactly that: free, with a 20-game library.
+    /// </summary>
+    [Fact]
+    public void NormalTier_IsTheFreePlanWithALargerLibrary()
+    {
+        TierLimits.NormalTier.Should().Be(TierLimits.FreeTier with { MaxLibraryGames = 20 });
     }
 
     #endregion
@@ -185,8 +226,8 @@ public sealed class TierLimitsTests
     [Fact]
     public void TwoLimits_WithSameValues_AreEqual()
     {
-        var a = TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1);
-        var b = TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1);
+        var a = TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, 5);
+        var b = TierLimits.Create(3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, 5);
 
         a.Should().Be(b);
     }

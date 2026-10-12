@@ -47,6 +47,13 @@ export const TierLimitsSchema = z.object({
   maxPhotosPerSession: z.number().int(),
   sessionSaveEnabled: z.boolean(),
   maxCatalogProposalsPerWeek: z.number().int(),
+  // #4212: Zod strips what a schema does not name. Without this key the admin page never held
+  // the gamebook quota and left it out of every save, and the backend rebuilt it as 0.
+  maxGamebookTranslationsPerMonth: z.number().int(),
+  // #4212: new in the payload. Optional, so this build still reads a backend that does not
+  // send them yet.
+  maxLibraryGames: z.number().int().optional(),
+  raptorRebuildEnabled: z.boolean().optional(),
 });
 
 export type TierLimits = z.infer<typeof TierLimitsSchema>;
@@ -67,7 +74,10 @@ export type TierLimit = z.infer<typeof TierLimitSchema>;
 // ========================================
 
 export const TierDefinitionSchema = z.object({
-  id: z.string().uuid(),
+  // #4212: not `.uuid()`. The seeder gives the plans deterministic ids
+  // (`00000000-0000-0000-0000-00000000000N`) that are not RFC-4122 UUIDs; the strict check
+  // refused every seeded plan and the admin page could not load. Same reason as GameIdString.
+  id: z.string().min(1),
   name: z.string(),
   displayName: z.string(),
   limits: TierLimitsSchema,

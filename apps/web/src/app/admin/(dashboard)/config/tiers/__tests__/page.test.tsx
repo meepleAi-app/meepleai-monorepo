@@ -175,4 +175,111 @@ describe('AdminTiersPage', () => {
       expect(screen.getByText(ERROR.tiersLoad)).toBeInTheDocument();
     });
   });
+
+  /**
+   * Issue #4212. The dialog built the limits from the keys it shows. A limit it did not show was
+   * left out of the PUT, and the backend rebuilt it with its default: every save of a plan zeroed
+   * the gamebook translation quota and switched the RAPTOR rebuild off.
+   */
+  describe('saving a plan keeps the limits it carries', () => {
+    const premium = {
+      ...mockTiers[1],
+      limits: {
+        ...mockTiers[1].limits,
+        maxGamebookTranslationsPerMonth: 500,
+        maxLibraryGames: 50,
+        raptorRebuildEnabled: true,
+      },
+    };
+
+    beforeEach(() => {
+      mockGetTiers.mockResolvedValue([premium]);
+      mockUpdateTier.mockResolvedValue(premium);
+    });
+
+    async function openAndSave(edit?: () => Promise<void>) {
+      renderWithQuery(<AdminTiersPage />);
+      await waitFor(() => expect(screen.getByTestId('btn-edit-premium')).toBeInTheDocument());
+      await user.click(screen.getByTestId('btn-edit-premium'));
+      if (edit) await edit();
+      await user.click(screen.getByTestId('btn-save'));
+      await waitFor(() => expect(mockUpdateTier).toHaveBeenCalled());
+      return mockUpdateTier.mock.calls[0][1].limits;
+    }
+
+    it('sends back the gamebook quota, the library limit and the RAPTOR flag untouched', async () => {
+      const sent = await openAndSave();
+
+      expect(sent).toMatchObject({
+        maxGamebookTranslationsPerMonth: 500,
+        maxLibraryGames: 50,
+        raptorRebuildEnabled: true,
+      });
+    });
+
+    it('lets the admin change the library limit', async () => {
+      const sent = await openAndSave(async () => {
+        const field = screen.getByTestId('field-limit-maxLibraryGames');
+        await user.clear(field);
+        await user.type(field, '60');
+      });
+
+      expect(sent.maxLibraryGames).toBe(60);
+    });
+
+    it('lets the admin switch the RAPTOR rebuild off, and only then sends false', async () => {
+      const sent = await openAndSave(async () => {
+        await user.click(screen.getByTestId('field-raptorRebuildEnabled'));
+      });
+
+      expect(sent.raptorRebuildEnabled).toBe(false);
+    });
+  });
+
+  /**
+   * Issue #4212. The backend refuses a library limit, or a player count, below 1. The dialog
+   * offered 0 for both: a new plan started at 0 and the first save was a 400.
+   */
+  describe('limits that cannot be zero', () => {
+    const field = (key: string) => screen.getByTestId(`field-limit-${key}`) as HTMLInputElement;
+
+    it('start a new plan at their minimum', async () => {
+      renderWithQuery(<AdminTiersPage />);
+      await waitFor(() => expect(screen.getByTestId('tier-row-free')).toBeInTheDocument());
+      await user.click(screen.getByTestId('btn-create-tier'));
+
+      expect(field('maxLibraryGames').value).toBe('1');
+      expect(field('maxLibraryGames').min).toBe('1');
+      expect(field('maxSessionPlayers').value).toBe('1');
+      expect(field('maxSessionPlayers').min).toBe('1');
+      // A limit that may be zero keeps starting, and bottoming out, at zero.
+      expect(field('maxPrivateGames').value).toBe('0');
+      expect(field('maxPrivateGames').min).toBe('0');
+    });
+
+    it('start from the minimum when the payload has no library limit', async () => {
+      // mockTiers carry no maxLibraryGames: a backend that does not send it yet.
+      renderWithQuery(<AdminTiersPage />);
+      await waitFor(() => expect(screen.getByTestId('btn-edit-free')).toBeInTheDocument());
+      await user.click(screen.getByTestId('btn-edit-free'));
+
+      expect(field('maxLibraryGames').value).toBe('1');
+    });
+  });
+
+  /**
+   * Issue #4255. The admin shell scopes a dark theme to its container but does not set the text
+   * colour, so text with no colour class of its own inherits the dark text of the light theme:
+   * the title and every cell of this table were dark on dark. Until the shell is fixed the page
+   * declares its own colours. jsdom does not compute Tailwind, so this asserts the declaration;
+   * the rendered contrast is measured in the browser (see the PR).
+   */
+  it('declares its text and border colours instead of inheriting them', async () => {
+    renderWithQuery(<AdminTiersPage />);
+    await waitFor(() => expect(screen.getByTestId('tiers-table')).toBeInTheDocument());
+
+    expect(screen.getByText('Tier Management').closest('.text-foreground')).not.toBeNull();
+    expect(screen.getByTestId('tiers-table').closest('.text-foreground')).not.toBeNull();
+    expect(screen.getByTestId('tiers-table').parentElement).toHaveClass('border-border');
+  });
 });

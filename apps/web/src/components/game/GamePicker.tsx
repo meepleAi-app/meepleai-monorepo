@@ -28,13 +28,17 @@ interface GamePickerProps {
   onGameSelect: (gameId: string) => void;
   onGameCreate: (name: string) => Promise<void>;
   loading?: boolean;
+  /** Current search text (#4187). */
+  search?: string;
+  /** When set, a search box above the list forwards what the user types; the search runs on the server. */
+  onSearchChange?: (value: string) => void;
 }
 
 /**
  * GamePicker - Game selection and creation component
  *
  * Features:
- * - Select from existing games
+ * - Select from existing games, optionally narrowed by a server-side search (#4187)
  * - Create new games with validation
  * - Loading states
  * - Design system compliance
@@ -46,6 +50,8 @@ export function GamePicker({
   onGameSelect,
   onGameCreate,
   loading = false,
+  search = '',
+  onSearchChange,
 }: GamePickerProps) {
   const [newGameName, setNewGameName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -83,6 +89,18 @@ export function GamePicker({
     <Card className="p-4 space-y-4">
       <div>
         <Label htmlFor="game-select">Select Game</Label>
+        {onSearchChange && (
+          <Input
+            type="search"
+            value={search}
+            onChange={e => onSearchChange(e.target.value)}
+            placeholder="Search games..."
+            aria-label="Search games"
+            autoComplete="off"
+            className="mb-2"
+            data-testid="game-picker-search"
+          />
+        )}
         <Select
           value={selectedGameId ?? ''}
           onValueChange={onGameSelect}

@@ -140,4 +140,36 @@ describe('GamePicker', () => {
       expect(createButton).toBeDisabled();
     });
   });
+
+  describe('#4187: ricerca nel catalogo', () => {
+    it('mostra il campo di ricerca e inoltra quello che si scrive', async () => {
+      const user = userEvent.setup();
+      const onSearchChange = vi.fn();
+      render(
+        <GamePicker
+          games={mockGames}
+          selectedGameId={null}
+          onGameSelect={mockOnGameSelect}
+          onGameCreate={mockOnGameCreate}
+          search=""
+          onSearchChange={onSearchChange}
+        />
+      );
+
+      await user.type(screen.getByRole('searchbox', { name: /search games/i }), 'W');
+      expect(onSearchChange).toHaveBeenCalledWith('W');
+    });
+
+    it('senza onSearchChange non mostra il campo (comportamento di prima)', () => {
+      render(
+        <GamePicker
+          games={mockGames}
+          selectedGameId={null}
+          onGameSelect={mockOnGameSelect}
+          onGameCreate={mockOnGameCreate}
+        />
+      );
+      expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+    });
+  });
 });

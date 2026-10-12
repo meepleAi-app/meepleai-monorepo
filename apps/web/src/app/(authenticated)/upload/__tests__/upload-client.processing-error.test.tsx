@@ -34,6 +34,7 @@ vi.mock('@/hooks/useAdminRole', () => ({
 vi.mock('@/hooks/wizard/useGames', () => ({
   useGames: () => ({
     games: [{ id: GAME_ID, title: 'Catan' }],
+    gamesById: { [GAME_ID]: { id: GAME_ID, title: 'Catan' } },
     loading: false,
     createGame: vi.fn(),
   }),

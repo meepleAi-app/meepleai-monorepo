@@ -70,7 +70,14 @@ export function UploadClient({
   const { state: wizardState, dispatch: wizardDispatch } = useWizard();
 
   // Data fetching hooks - use user from hook (user may be null while auth loads)
-  const { games, loading: loadingGames, createGame } = useGames(user ?? undefined);
+  // #4187: the game list follows the picker's search on the server.
+  const [gameSearch, setGameSearch] = useState('');
+  const {
+    games,
+    gamesById,
+    loading: loadingGames,
+    createGame,
+  } = useGames(user ?? undefined, gameSearch);
   const [confirmedGameId, setConfirmedGameId] = useState<string | null>(null);
   const {
     pdfs,
@@ -310,7 +317,14 @@ export function UploadClient({
     );
   }
 
-  const confirmedGame = games.find(g => g.id === confirmedGameId);
+  // From every game seen, not the current search: the upload form below depends on it, and
+  // it must not disappear when the user searches again after confirming.
+  const confirmedGame = confirmedGameId ? gamesById[confirmedGameId] : undefined;
+  // The chosen game stays in the picker even when the current search does not show it.
+  const pickerGames =
+    selectedGameId && gamesById[selectedGameId] && !games.some(g => g.id === selectedGameId)
+      ? [gamesById[selectedGameId], ...games]
+      : games;
 
   return (
     <DetailPageContainer className="p-10">
@@ -363,11 +377,13 @@ export function UploadClient({
         {wizardState.currentStep === 'upload' && (
           <div className="space-y-6">
             <GamePicker
-              games={games}
+              games={pickerGames}
               selectedGameId={selectedGameId}
               onGameSelect={handleGameSelect}
               onGameCreate={handleGameCreate}
               loading={loadingGames}
+              search={gameSearch}
+              onSearchChange={setGameSearch}
             />
 
             {selectedGameId && !confirmedGameId && (

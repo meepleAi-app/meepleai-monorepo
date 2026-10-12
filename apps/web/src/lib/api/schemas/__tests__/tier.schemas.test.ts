@@ -96,3 +96,23 @@ describe('TierDefinitionSchema — limits the admin page must send back (#4212)'
     expect(() => TierDefinitionSchema.parse({ ...tier, limits })).not.toThrow();
   });
 });
+
+/**
+ * Issue #4212. The seeder gives the plans deterministic ids
+ * (`00000000-0000-0000-0000-00000000000N`), which are not RFC-4122 UUIDs. `z.string().uuid()`
+ * refused them, so /admin/config/tiers answered «Errore nel caricamento dei tier» on every
+ * database the seeder had touched. The page tests mock the client and never met the schema.
+ */
+describe('TierDefinitionSchema — the plans the seeder creates (#4212)', () => {
+  it.each([
+    ['free', '00000000-0000-0000-0000-000000000001'],
+    ['premium', '00000000-0000-0000-0000-000000000002'],
+    ['normal', '00000000-0000-0000-0000-000000000003'],
+  ])('parses the seeded %s plan', (name, id) => {
+    expect(() => TierDefinitionSchema.parse({ ...tier, name, id, limits })).not.toThrow();
+  });
+
+  it('still refuses a plan without an id', () => {
+    expect(() => TierDefinitionSchema.parse({ ...tier, id: '', limits })).toThrow();
+  });
+});

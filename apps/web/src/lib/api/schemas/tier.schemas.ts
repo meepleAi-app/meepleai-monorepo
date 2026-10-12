@@ -74,7 +74,10 @@ export type TierLimit = z.infer<typeof TierLimitSchema>;
 // ========================================
 
 export const TierDefinitionSchema = z.object({
-  id: z.string().uuid(),
+  // #4212: not `.uuid()`. The seeder gives the plans deterministic ids
+  // (`00000000-0000-0000-0000-00000000000N`) that are not RFC-4122 UUIDs; the strict check
+  // refused every seeded plan and the admin page could not load. Same reason as GameIdString.
+  id: z.string().min(1),
   name: z.string(),
   displayName: z.string(),
   limits: TierLimitsSchema,

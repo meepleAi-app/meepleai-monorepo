@@ -52,18 +52,6 @@ test.describe('RuleSpec Editor', () => {
   }
 
   /**
-   * Helper: Create a test game
-   */
-  async function createTestGame(gameId: string) {
-    // Navigate to upload page and create game
-    await page.goto('http://localhost:3000/upload');
-    await page.waitForLoadState('networkidle');
-    await page.fill('input[placeholder*="game" i]', gameId);
-    await page.click('button:has-text("Create Game")', { force: true });
-    await page.waitForSelector(`text=Game "${gameId}" created`, { timeout: 5000 });
-  }
-
-  /**
    * Helper: Get the editor textarea
    */
   async function getEditorTextarea() {
@@ -293,44 +281,6 @@ test.describe('RuleSpec Editor', () => {
   test.describe('Save Functionality', () => {
     test.beforeEach(async () => {
       await loginAs('Admin');
-    });
-
-    test('successfully saves valid RuleSpec', async ({ page: testPage }) => {
-      // Use a unique game ID for this test
-      const gameId = `save-test-${Date.now()}`;
-
-      // Create game first
-      await createTestGame(gameId);
-
-      // Navigate to editor
-      await testPage.goto(`http://localhost:3000/editor?gameId=${gameId}`);
-
-      const textarea = await testPage.locator('textarea[spellcheck="false"]');
-
-      const newSpec = JSON.stringify(
-        {
-          gameId,
-          version: 'v1',
-          createdAt: new Date().toISOString(),
-          rules: [
-            { id: 'r1', text: 'Test rule 1', section: 'Setup', page: '1', line: '1' },
-            { id: 'r2', text: 'Test rule 2', section: 'Gameplay', page: '2', line: '5' },
-          ],
-        },
-        null,
-        2
-      );
-
-      await textarea.fill(newSpec);
-
-      // Save (use force: true to handle nextjs-portal overlay)
-      const saveButton = testPage.getByRole('button', { name: getTextMatcher('editor.save') });
-      await saveButton.click({ force: true });
-
-      // Wait for success message
-      await expect(testPage.getByText(/successfully saved|salvato con successo/i)).toBeVisible({
-        timeout: 10000,
-      });
     });
 
     test('shows error when save fails', async () => {

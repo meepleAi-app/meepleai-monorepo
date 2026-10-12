@@ -29,4 +29,26 @@ public sealed class SessionAssistantArchitectureTests
         dependencies.Should().NotContain(t => Forbidden.Contains(t), $"{type.Name} deve passare da ILlmService (ADR-097)");
         dependencies.Should().Contain(typeof(ILlmService));
     }
+
+    [Fact]
+    public void Tools_DoNotDependOnTheMediatorOrOnGameManagement()
+    {
+        var toolTypes = typeof(Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Tools.SessionAssistantToolset).Assembly
+            .GetTypes()
+            .Where(t => t.Namespace == "Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Tools")
+            .ToList();
+
+        toolTypes.Should().NotBeEmpty();
+        foreach (var type in toolTypes)
+        {
+            var dependencies = type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .SelectMany(c => c.GetParameters()).Select(p => p.ParameterType)
+                .Concat(type.GetFields(BindingFlags.NonPublic | BindingFlags.Instance).Select(f => f.FieldType))
+                .ToList();
+
+            dependencies.Should().NotContain(typeof(MediatR.IMediator), $"{type.Name}: gli strumenti non scrivono (spec §3.2)");
+            dependencies.Should().NotContain(typeof(MediatR.ISender));
+            dependencies.Should().NotContain(t => t.Namespace != null && t.Namespace.StartsWith("Api.BoundedContexts.GameManagement", StringComparison.Ordinal));
+        }
+    }
 }

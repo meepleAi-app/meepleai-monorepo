@@ -24,11 +24,15 @@ public sealed class SessionAssistantRegistrationTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddScoped(_ => Mock.Of<ILlmService>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.GameManagement.Application.Services.IPlayerNameResolutionService>());
         services.AddSessionAssistant();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
         using var scope = provider.CreateScope();
 
         scope.ServiceProvider.GetRequiredService<IAssistantChatClientFactory>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<IAssistantPlayerMatcher>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation.SessionAssistantEvaluator>()
+            .Should().NotBeNull();
     }
 }

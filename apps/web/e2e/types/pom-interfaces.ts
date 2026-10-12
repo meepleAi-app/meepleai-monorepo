@@ -447,27 +447,6 @@ export interface IChatPage extends IBasePage {
   loginFromRedirect(email: string, password: string): Promise<void>;
 }
 
-export interface IUploadPage extends IBasePage {
-  // Game Selection
-  selectGame(gameName: string): Promise<void>;
-  createNewGame(gameName: string): Promise<void>;
-  selectOrCreateGame(gameName: string, createNew?: boolean): Promise<void>;
-
-  // Language Selection
-  selectLanguage(languageCode: string): Promise<void>;
-
-  // File Upload
-  uploadPdf(filePath: string, options?: { language?: string; autoWait?: boolean }): Promise<void>;
-  waitForUploadSuccess(): Promise<void>;
-
-  // Status and Information
-  getUploadedGameName(): Promise<string | null>;
-  getErrorMessage(): Promise<string | null>;
-  isUploading(): Promise<boolean>;
-  waitForProcessingComplete(documentId: string): Promise<void>;
-  getStatusText(): Promise<string | null>;
-}
-
 export interface IEditorPage extends IBasePage {
   // Mode switching
   switchToRichTextMode(): Promise<void>;

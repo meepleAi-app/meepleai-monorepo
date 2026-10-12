@@ -971,6 +971,7 @@ v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
+v1Api.MapAdminSessionAssistantEndpoints(); // spec 2026-10-11 §7.1: esecutore di valutazione dell'assistente
 v1Api.MapStatusBannerEndpoints();          // Issue #1089: Global incident/status banner (public GET + admin GET/PUT)
 if (!app.Environment.IsProduction())
     app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)

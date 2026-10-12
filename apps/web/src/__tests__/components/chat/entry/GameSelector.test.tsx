@@ -18,7 +18,46 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+vi.mock('@/components/ui/data-display/entity-list-view/hooks/use-debounce', () => ({
+  useDebounce: (value: string) => value,
+}));
+
 import { GameSelector } from '@/components/chat/entry/GameSelector';
+
+/** I filtri lato server: `search` sul titolo e il tetto della pagina, come i due endpoint. */
+function servePrivate(all: Array<{ id: string; title: string }>) {
+  return (params?: { search?: string; pageSize?: number }) => {
+    const size = Math.min(params?.pageSize ?? 12, 50); // PrivateGameEndpoints: Math.Min(pageSize, 50)
+    const pool = params?.search
+      ? all.filter(g => g.title.toLowerCase().includes(params.search!.toLowerCase()))
+      : all;
+    return Promise.resolve({
+      items: pool.slice(0, size).map(g => ({ ...g, createdAt: '2026-01-01T00:00:00Z' })),
+      totalCount: pool.length,
+    });
+  };
+}
+
+function serveLibrary(all: Array<{ gameId: string; gameTitle: string }>) {
+  return (params?: { search?: string; pageSize?: number }) => {
+    const size = Math.min(params?.pageSize ?? 20, 100); // UserLibraryRepository: tetto a 100
+    const pool = params?.search
+      ? all.filter(e => e.gameTitle.toLowerCase().includes(params.search!.toLowerCase()))
+      : all;
+    return Promise.resolve({
+      items: pool.slice(0, size).map(e => ({
+        id: `lib-${e.gameId}`,
+        userId: 'u1',
+        addedAt: '2026-01-01T00:00:00Z',
+        isFavorite: false,
+        currentState: 'Owned',
+        hasKb: true,
+        ...e,
+      })),
+      totalCount: pool.length,
+    });
+  };
+}
 
 describe('GameSelector', () => {
   const onSelect = vi.fn();
@@ -83,6 +122,12 @@ describe('GameSelector', () => {
   });
 
   it('filters games by search text', async () => {
+    mockGetPrivateGames.mockImplementation(
+      servePrivate([
+        { id: 'g1', title: 'Catan' },
+        { id: 'g2', title: 'Wingspan' },
+      ])
+    );
     render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
     await waitFor(() => {
       expect(screen.getByTestId('game-card-g1')).toBeInTheDocument();
@@ -91,7 +136,9 @@ describe('GameSelector', () => {
     const searchInput = screen.getByTestId('game-search-input');
     fireEvent.change(searchInput, { target: { value: 'wing' } });
 
-    expect(screen.queryByTestId('game-card-g1')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('game-card-g1')).not.toBeInTheDocument();
+    });
     expect(screen.getByTestId('game-card-g2')).toBeInTheDocument();
   });
 
@@ -118,6 +165,70 @@ describe('GameSelector', () => {
     render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
     await waitFor(() => {
       expect(screen.getByRole('alert')).toBeInTheDocument();
+    });
+  });
+
+  describe('#4187: la ricerca va al server', () => {
+    const MANY_PRIVATE = [
+      ...Array.from({ length: 60 }, (_, i) => ({ id: `p${i}`, title: `Agricola ${i}` })),
+      { id: 'p-wingspan', title: 'Wingspan' },
+    ];
+    const MANY_LIBRARY = [
+      ...Array.from({ length: 120 }, (_, i) => ({ gameId: `s${i}`, gameTitle: `Agricola ${i}` })),
+      { gameId: 's-wingspan', gameTitle: 'Wingspan' },
+    ];
+
+    beforeEach(() => {
+      mockGetPrivateGames.mockImplementation(servePrivate(MANY_PRIVATE));
+      mockGetLibrary.mockImplementation(serveLibrary(MANY_LIBRARY));
+    });
+
+    it('i miei giochi: «Wingspan», oltre i primi 50, si trova', async () => {
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+
+      fireEvent.change(screen.getByTestId('game-search-input'), { target: { value: 'Wingspan' } });
+
+      expect(await screen.findByTestId('game-card-p-wingspan')).toBeInTheDocument();
+      expect(mockGetPrivateGames).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'Wingspan' })
+      );
+    });
+
+    it('i miei giochi: non chiede più di 50, quanti il server ne restituisce', async () => {
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+
+      for (const [params] of mockGetPrivateGames.mock.calls) {
+        expect(params.pageSize).toBeLessThanOrEqual(50);
+      }
+    });
+
+    it('libreria condivisa: «Wingspan», oltre i primi 100, si trova, in ordine di titolo', async () => {
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+      fireEvent.click(screen.getByTestId('tab-shared-games'));
+      await screen.findByTestId('game-card-s0');
+
+      fireEvent.change(screen.getByTestId('game-search-input'), { target: { value: 'Wingspan' } });
+
+      expect(await screen.findByTestId('game-card-s-wingspan')).toBeInTheDocument();
+      expect(mockGetLibrary).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'Wingspan', sortBy: 'title', sortDescending: false })
+      );
+      for (const [params] of mockGetLibrary.mock.calls) {
+        expect(params.pageSize).toBeLessThanOrEqual(100);
+      }
+    });
+
+    it('mentre la ricerca carica il campo resta al suo posto, con il testo', async () => {
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+
+      mockGetPrivateGames.mockImplementation(() => new Promise(() => {}));
+      fireEvent.change(screen.getByTestId('game-search-input'), { target: { value: 'Wing' } });
+
+      expect(screen.getByTestId('game-search-input')).toHaveValue('Wing');
     });
   });
 });

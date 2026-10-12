@@ -3184,7 +3184,7 @@ _Route-group: `admin` · 12 pagine_
 | `/admin/agents/models` | AdminShell (dark) — Server Component `redirect()`, nessun chrome | Server: `redirect()` in render (precede RequireRole). Eredita comunque layout guard, ma il `redirect()` domina | redirect |
 | `/admin/agents/strategy` | AdminShell (dark) — Server Component `redirect()` | Server: `redirect()` immediato. Layout guard ereditato ma dominato | redirect |
 | `/admin/agents/templates` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | loading (Skeleton grid 3) · unavailable/404 · empty · success (review-grid) · acting (approve/reject) |
-| `/admin/agents/usage` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | success (tabbed) · loading · unavailable/404 · error (non-404) · empty (token-balance) |
+| `/admin/agents/usage` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | success (tabbed) · loading · unavailable/404 · error (non-404) |
 | `/admin/agents/analytics` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | success (tabbed) · loading · unavailable/404 · error (Riprova) · empty · trends-placeholder |
 | `/admin/agents/infrastructure` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) + fine-grained `useAdminRole()` → `isSuperAdmin` per gating azioni | success · loading · error (API unreachable + Retry) · detail-open · restart-modal-open · superadmin-gated |
 | `/admin/agents/inspector` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | loading (10 Skeleton rows) · empty · success · detail-loading · no-trace · auto-refresh ON/OFF |
@@ -3259,14 +3259,13 @@ _Route-group: `admin` · 12 pagine_
 - React Query retry: disabilitato su `isNotFoundError`, altrimenti fino a 3 — `admin/(dashboard)/agents/templates/page.tsx`
 
 ##### `/admin/agents/usage`
-- Tabs default: `defaultTab` da `?tab=` (openrouter|token-balance|chat-log); default 'openrouter'. **NON validato**: `?tab` invalido apre tab body vuoto. Stato interno, non scrive URL — `admin/(dashboard)/agents/usage/page.tsx`
+- Tabs default: `defaultTab` da `?tab=` (openrouter|chat-log); default 'openrouter'. Validato: un `?tab` che non nomina una tab ricade su 'openrouter' (#4212, che ha tolto la tab token-balance). Stato interno, non scrive URL — `admin/(dashboard)/agents/usage/page.tsx`
 - Label 'Aggiornato ...': mostrato solo quando `dataUpdatedAt>0` (formatDistanceToNow, locale it) — `admin/(dashboard)/agents/usage/page.tsx`
 - Refresh button: disabled quando `statusLoading`; icona spin quando `statusLoading` — `admin/(dashboard)/agents/usage/page.tsx`
 - EmptyFeatureState (OpenRouter tab): mostrato quando `isNotFoundError(error)` — `admin/(dashboard)/agents/usage/page.tsx`
 - Error banner `role=alert`: mostrato quando `isError && !isNotFoundError(error)` — `admin/(dashboard)/agents/usage/page.tsx`
 - CostBreakdownPanel + RequestTimelineChart: dynamic import `ssr:false` con placeholder `animate-pulse` (h-48); period toggle interno (timeline 24h/7d/30d default 24h, cost 1d/7d/30d default 7d) — `admin/(dashboard)/agents/usage/page.tsx`
 - KpiCards / RateLimitGauge / FreeQuotaIndicator / RecentRequestsTable: ricevono `isLoading` dalle query (refetchInterval 30-60s); RecentRequestsTable filtrata da `requestFilters` (source/model/successOnly/page/pageSize) — `admin/(dashboard)/agents/usage/page.tsx`
-- TokenBalanceTab (tab token-balance): balance/tier/consumers loading → pulse; dati vuoti → 'No ... data available'; `projectedDaysUntilDepletion` mostrato solo se `!==null`; polling 60s — `admin/(dashboard)/agents/usage/token-balance-tab.tsx`
 - ChatHistoryFilters + ChatHistoryTable (tab chat-log): avvolti in Suspense con fallback `animate-pulse` (h-28 / h-600px) — `admin/(dashboard)/agents/usage/page.tsx`
 - React Query retry (status): disabilitato su `isNotFoundError`, altrimenti fino a 3 — `admin/(dashboard)/agents/usage/page.tsx`
 
@@ -3343,7 +3342,6 @@ _Route-group: `admin` · 12 pagine_
 | RecentRequestsTable | `apps/web/src/components/admin/usage/RecentRequestsTable.tsx` | Tabella richieste recenti con filtri |
 | CostBreakdownPanel | `apps/web/src/components/admin/usage/CostBreakdownPanel.tsx` | Breakdown costi (dynamic ssr:false) |
 | RequestTimelineChart | `apps/web/src/components/admin/usage/RequestTimelineChart.tsx` | Timeline richieste (dynamic ssr:false) |
-| TokenBalanceTab | `apps/web/src/app/admin/(dashboard)/agents/usage/token-balance-tab.tsx` | Saldo token, uso per tier, top consumatori (polling 60s) |
 | ChatHistoryFilters / ChatHistoryTable | `apps/web/src/components/admin/agents/chat-history-{filters,table}.tsx` | Filtri + tabella log chat (Suspense) |
 | MetricsKpiCards | `apps/web/src/components/admin/agents/MetricsKpiCards.tsx` | KPI metriche agenti (analytics) |
 | UsageChart / CostBreakdownChart | `apps/web/src/components/admin/agents/{UsageChart,CostBreakdownChart}.tsx` | Utilizzo nel tempo / costi per modello |
@@ -4581,7 +4579,7 @@ _`/admin/users/roles` e `/admin/notifications/compose` non hanno edge di navigaz
 - UserHeader status badge: 'Suspended' (destructive) se `user.isSuspended`, altrimenti 'Active' (verde).
 - Badge ruolo: colore via `getRoleBadgeClass(normalizeRole)` → admin/superadmin=rosso, editor/creator=viola, altrimenti blu.
 - Tab content: `overview`→OverviewTab (Info Account + Utilizzo + LibraryStatsCard); `role`→ChangeRoleCard + RoleHistoryTable; `activity`→UserAuditLogTable.
-- OverviewTab barra token: width `min(100,(tokenUsage??0)/(tokenLimit??10000)*100)%`; tier Badge default 'Free'; ultimo accesso 'Mai' se `!lastSeenAt`; 2FA Sì/No.
+- OverviewTab: tier Badge default 'Free' (la barra dei token è uscita con #4212: mostrava sempre 0 su 10.000); ultimo accesso 'Mai' se `!lastSeenAt`; 2FA Sì/No.
 - LibraryStatsCard: `getUserLibraryStats`+`getUserBadges`; fallback `0` / `'—'` (avgSessionDuration).
 - ChangeRoleCard Button 'Change Role': disabled a meno di `canSubmit` (`newRole && newRole!==currentRole` normalizzato) e non `changeRoleMutation.isPending`; opzione ruolo corrente disabilitata con '(current)'; apre AlertDialog (mostra reason se presente).
 - ChangeRoleCard messaggi: errore rosso (AlertCircle) se `isError`; 'Role changed successfully.' verde se `isSuccess`.

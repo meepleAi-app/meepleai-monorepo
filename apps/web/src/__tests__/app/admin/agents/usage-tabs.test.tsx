@@ -2,10 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+const search = vi.hoisted(() => ({ value: '' }));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
   usePathname: () => '/admin/agents/usage',
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(search.value),
 }));
 
 vi.mock('@/lib/api/clients/adminClient', () => ({
@@ -45,5 +47,38 @@ describe('Usage & Costs Tabs', () => {
     // #4212: the «Saldo Token» tab read the token-tier tables, which nothing ever filled.
     expect(screen.queryByRole('tab', { name: /saldo token/i })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /log chat/i })).toBeInTheDocument();
+  });
+
+  /**
+   * Issue #4212. The page took the initial tab from the URL without checking it. A bookmark to
+   * the retired tab (`?tab=token-balance`) selected nothing and left the page empty below the
+   * tab list.
+   */
+  it('falls back to the OpenRouter tab when the URL names a tab that no longer exists', async () => {
+    search.value = 'tab=token-balance';
+    try {
+      const { default: UsagePage } = await import('@/app/admin/(dashboard)/agents/usage/page');
+      render(<UsagePage />, { wrapper: Wrapper });
+      expect(screen.getByRole('tab', { name: /openrouter/i })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+    } finally {
+      search.value = '';
+    }
+  });
+
+  it('still opens the chat log tab from its deep link', async () => {
+    search.value = 'tab=chat-log';
+    try {
+      const { default: UsagePage } = await import('@/app/admin/(dashboard)/agents/usage/page');
+      render(<UsagePage />, { wrapper: Wrapper });
+      expect(screen.getByRole('tab', { name: /log chat/i })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+    } finally {
+      search.value = '';
+    }
   });
 });

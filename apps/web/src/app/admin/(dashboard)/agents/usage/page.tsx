@@ -50,10 +50,18 @@ const adminClient = createAdminClient({ httpClient });
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
+const USAGE_TABS = ['openrouter', 'chat-log'] as const;
+type UsageTab = (typeof USAGE_TABS)[number];
+
 export default function UsagePage() {
   // ── Tab deep-link ──
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') ?? 'openrouter';
+  // The tab comes from the URL: a value that names no tab (a bookmark to the retired
+  // `token-balance`, a typo) would select nothing and leave the page empty.
+  const requestedTab = searchParams.get('tab');
+  const defaultTab = USAGE_TABS.includes(requestedTab as UsageTab)
+    ? (requestedTab as UsageTab)
+    : 'openrouter';
 
   // ── Period state ──
   const [timelinePeriod, setTimelinePeriod] = useState<'24h' | '7d' | '30d'>('24h');

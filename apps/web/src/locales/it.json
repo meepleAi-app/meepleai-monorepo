@@ -2347,6 +2347,24 @@
         "toast": {
           "saved": "{count} interessi salvati!"
         }
+      },
+      "firstGame": {
+        "intro": "Cerca un gioco da tavolo da aggiungere alla tua libreria. Potrai aggiungerne altri in seguito.",
+        "searchPlaceholder": "es. Catan, Wingspan, Ticket to Ride…",
+        "ownsCopy": {
+          "label": "Ho una copia di questo gioco",
+          "hint": "Permette all'assistente di leggere il regolamento: i regolamenti sono protetti da diritto d'autore, e li leggiamo solo per chi possiede il gioco."
+        },
+        "add": "Aggiungi alla libreria",
+        "adding": "Aggiunta in corso…",
+        "skip": "Salta per ora",
+        "toast": {
+          "added": "{title} è nella tua libreria!",
+          "ownershipFailed": "{title} è nella tua libreria, ma la dichiarazione di possesso non è riuscita: puoi farla dalla chat."
+        },
+        "error": {
+          "addFailed": "Impossibile aggiungere il gioco alla libreria."
+        }
       }
     },
     "discover": {

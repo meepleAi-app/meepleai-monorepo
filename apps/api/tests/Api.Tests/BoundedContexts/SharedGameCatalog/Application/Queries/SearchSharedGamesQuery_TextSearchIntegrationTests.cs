@@ -28,8 +28,14 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Queries;
 /// The catalog seeded here is built so that the order by title alone and the order by
 /// relevance disagree: the games that only mention the searched text in their description
 /// sort alphabetically before the ones that carry it in their title.
+///
+/// Group A, not the Group C its bounded context would suggest (#3742): on the Games shard of
+/// dev-async, Group C is one serial chain of classes that the session timeout cuts short, and
+/// in Group C this class was never reached — the .trx of the shard did not list it. Group A
+/// has no other class on that shard, so here it runs at once. The class owns its database
+/// and shares nothing with the others, so the group only decides when it runs.
 /// </summary>
-[Collection("Integration-GroupC")]
+[Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "SharedGameCatalog")]

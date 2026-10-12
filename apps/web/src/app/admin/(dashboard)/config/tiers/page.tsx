@@ -46,8 +46,21 @@ const LIMIT_LABELS: Record<LimitKey, string> = {
 
 const LIMIT_KEYS = Object.keys(LIMIT_LABELS) as LimitKey[];
 
+/**
+ * The lowest value the backend accepts, where it is not 0. A library that holds no game and a
+ * session with no player are refused: the dialog must not offer them, nor start from them.
+ */
+const LIMIT_MIN: Partial<Record<LimitKey, number>> = {
+  maxLibraryGames: 1,
+  maxSessionPlayers: 1,
+};
+
+function minOf(key: LimitKey): number {
+  return LIMIT_MIN[key] ?? 0;
+}
+
 function getLimitValue(tier: TierDefinition, key: LimitKey): number {
-  return (tier.limits[key] as number) ?? 0;
+  return (tier.limits[key] as number | undefined) ?? minOf(key);
 }
 
 function formatLimit(value: number): string {
@@ -76,7 +89,7 @@ function buildFormState(tier?: TierDefinition): TierFormState {
       isDefault: false,
       sessionSaveEnabled: true,
       raptorRebuildEnabled: false,
-      limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, 0])) as Record<LimitKey, number>,
+      limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, minOf(k)])) as Record<LimitKey, number>,
     };
   }
   return {
@@ -118,7 +131,7 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
       // carries: the backend rebuilds the limits from this object, and a key left out comes
       // back as its default (#4212).
       const limits: TierLimits = {
-        ...Object.fromEntries(LIMIT_KEYS.map(k => [k, form.limits[k] ?? 0])),
+        ...Object.fromEntries(LIMIT_KEYS.map(k => [k, form.limits[k] ?? minOf(k)])),
         sessionSaveEnabled: form.sessionSaveEnabled,
         raptorRebuildEnabled: form.raptorRebuildEnabled,
       } as TierLimits;
@@ -217,9 +230,9 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                   </label>
                   <input
                     type="number"
-                    min={0}
+                    min={minOf(key)}
                     className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                    value={form.limits[key] ?? 0}
+                    value={form.limits[key] ?? minOf(key)}
                     onChange={e => setLimit(key, Number(e.target.value))}
                     data-testid={`field-limit-${key}`}
                   />

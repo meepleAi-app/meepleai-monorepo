@@ -10,7 +10,6 @@
  * Route /chat → ChatListPage. Auth-gated via useAuth (Storybook preview's
  * MockAuthProvider supplies user.id='storybook-user', so the queries run). On mount:
  *   GET /users/:userId/chat-sessions/recent → ChatSessionSummaryDto[] (bare array, Zod-validated)
- *   GET /users/:userId/chat-sessions/limit  → { limit, used, tier }
  * States: default (sessions) / empty / loading / error. The recent fixtures MUST be
  * Zod-valid (uuid v4 ids + RFC3339 datetimes WITH offset) or the client throws
  * SchemaValidationError and the query lands in error.

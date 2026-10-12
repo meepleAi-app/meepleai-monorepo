@@ -235,4 +235,35 @@ describe('AdminTiersPage', () => {
       expect(sent.raptorRebuildEnabled).toBe(false);
     });
   });
+
+  /**
+   * Issue #4212. The backend refuses a library limit, or a player count, below 1. The dialog
+   * offered 0 for both: a new plan started at 0 and the first save was a 400.
+   */
+  describe('limits that cannot be zero', () => {
+    const field = (key: string) => screen.getByTestId(`field-limit-${key}`) as HTMLInputElement;
+
+    it('start a new plan at their minimum', async () => {
+      renderWithQuery(<AdminTiersPage />);
+      await waitFor(() => expect(screen.getByTestId('tier-row-free')).toBeInTheDocument());
+      await user.click(screen.getByTestId('btn-create-tier'));
+
+      expect(field('maxLibraryGames').value).toBe('1');
+      expect(field('maxLibraryGames').min).toBe('1');
+      expect(field('maxSessionPlayers').value).toBe('1');
+      expect(field('maxSessionPlayers').min).toBe('1');
+      // A limit that may be zero keeps starting, and bottoming out, at zero.
+      expect(field('maxPrivateGames').value).toBe('0');
+      expect(field('maxPrivateGames').min).toBe('0');
+    });
+
+    it('start from the minimum when the payload has no library limit', async () => {
+      // mockTiers carry no maxLibraryGames: a backend that does not send it yet.
+      renderWithQuery(<AdminTiersPage />);
+      await waitFor(() => expect(screen.getByTestId('btn-edit-free')).toBeInTheDocument());
+      await user.click(screen.getByTestId('btn-edit-free'));
+
+      expect(field('maxLibraryGames').value).toBe('1');
+    });
+  });
 });

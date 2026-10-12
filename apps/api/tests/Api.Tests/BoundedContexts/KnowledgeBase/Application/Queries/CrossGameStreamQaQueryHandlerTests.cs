@@ -1,6 +1,8 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.CrossGameStreamQa;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
+using Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -31,15 +33,17 @@ public sealed class CrossGameStreamQaQueryHandlerTests
 
     private readonly IRagAccessService _ragAccessService = Substitute.For<IRagAccessService>();
     private readonly IMultiGameHybridSearchService _searchService = Substitute.For<IMultiGameHybridSearchService>();
-    private readonly IRagPromptAssemblyService _promptService = Substitute.For<IRagPromptAssemblyService>();
     private readonly ILlmService _llmService = Substitute.For<ILlmService>();
 
-    private CrossGameStreamQaQueryHandler CreateSut() => new(
+    // #4168: l'handler è un adattatore; la risposta sta nel flusso cross-game della pipeline, con il
+    // profilo del seed e un reranker che non riordina.
+    private CrossGameStreamQaQueryHandler CreateSut() => new(new CrossGameAnswerFlow(
         _ragAccessService,
-        _searchService,
-        _promptService,
+        AnswerPipelineTestDoubles.RetrievalAcrossGames(_searchService),
+        AnswerPipelineTestDoubles.ProfileReader(),
+        AnswerPipelineTestDoubles.UncertainLanguageDetection(),
         _llmService,
-        NullLogger<CrossGameStreamQaQueryHandler>.Instance);
+        NullLogger<CrossGameAnswerFlow>.Instance));
 
     // ── EC-1: no accessible games → Complete with no-context answer, LLM never called ──
 
@@ -64,9 +68,8 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         types.Should().NotContain(StreamingEventType.Error);
 
         // LLM must never be called
-        _llmService.DidNotReceive().GenerateCompletionStreamAsync(
-            Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<RequestSource>(), Arg.Any<CancellationToken>());
+        _llmService.DidNotReceive().GenerateAnswerStreamAsync(
+            Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>());
 
         // Search must never be called either
         await _searchService.DidNotReceive().SearchAsync(
@@ -88,7 +91,6 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         // Arrange
         SetupTwoAccessibleGames();
         SetupSearchResults();
-        SetupAssembledPrompt();
         SetupLlmStream("Hello World");
 
         var query = new CrossGameStreamQaQuery("How do I win?", UserId, UserRole.User);
@@ -118,12 +120,11 @@ public sealed class CrossGameStreamQaQueryHandlerTests
     // ── Citations carry GameId for cross-game deep-link ──────────────────────
 
     [Fact]
-    public async Task Citations_CarryGameId_ForCrossGameDeepLink()
+    public async Task Citations_AndPrompt_CoverBothGames()
     {
         // Arrange
         SetupTwoAccessibleGames();
         SetupSearchResults(); // returns results for GameId1 and GameId2
-        SetupAssembledPrompt();
         SetupLlmStream("Answer text");
 
         var query = new CrossGameStreamQaQuery("Tell me about the game", UserId, UserRole.User);
@@ -132,19 +133,15 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         // Act
         var events = await CollectEventsAsync(sut, query);
 
-        // Assert — AssembleFromContextAsync was called with citations that carry GameId
-        await _promptService.Received(1).AssembleFromContextAsync(
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Any<string>(),
-            Arg.Is<IReadOnlyList<ChunkCitation>>(chunks =>
-                chunks.Any(c => c.GameId == GameId1) &&
-                chunks.Any(c => c.GameId == GameId2)),
-            Arg.Any<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread?>(),
-            Arg.Any<UserTier?>(),
-            Arg.Any<string>(),
-            Arg.Any<CancellationToken>(),
-            Arg.Any<bool>());
+        // Assert — le citazioni portano il chunk di ciascun gioco per il collegamento al passaggio, e
+        // il prompt numera le fonti di entrambi.
+        var citations = ((StreamingCitations)events.Single(e => e.Type == StreamingEventType.Citations).Data!).citations;
+        citations.Select(c => c.chunkId).Should().BeEquivalentTo("chunk-1", "chunk-2");
+        _llmService.Received(1).GenerateAnswerStreamAsync(
+            Arg.Is<LlmAnswerRequest>(r =>
+                r.UserPrompt.Contains("[1] [Source: Document doc-1", StringComparison.Ordinal)
+                && r.UserPrompt.Contains("[2] [Source: Document doc-2", StringComparison.Ordinal)),
+            Arg.Any<CancellationToken>());
     }
 
     // ── Each StreamChunk.Content from LLM → one Token event ─────────────────
@@ -155,7 +152,6 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         // Arrange
         SetupTwoAccessibleGames();
         SetupSearchResults();
-        SetupAssembledPrompt();
         SetupLlmStream("One Two Three"); // produces 3 content tokens
 
         var query = new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User);
@@ -185,10 +181,8 @@ public sealed class CrossGameStreamQaQueryHandlerTests
     {
         SetupTwoAccessibleGames();
         SetupSearchResults();
-        SetupAssembledPrompt();
         _llmService
-            .GenerateCompletionStreamAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<RequestSource>(), Arg.Any<CancellationToken>())
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
             .Returns(RefusedStream());
 
         var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User));
@@ -237,7 +231,9 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         // Assert
         var errorEvents = events.Where(e => e.Type == StreamingEventType.Error).ToList();
         errorEvents.Should().HaveCount(1);
-        ((StreamingError)errorEvents[0].Data!).errorMessage.Should().Contain("Vector store unavailable");
+        var error = (StreamingError)errorEvents[0].Data!;
+        error.errorCode.Should().Be("RETRIEVAL_FAILED");
+        error.errorMessage.Should().NotContain("Vector store unavailable", "il dettaglio interno resta nei log");
     }
 
     // ── Cancellation stops the stream early, no events after token phase ─────
@@ -248,13 +244,11 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         // Arrange
         SetupTwoAccessibleGames();
         SetupSearchResults();
-        SetupAssembledPrompt();
 
         var cts = new CancellationTokenSource();
 
         _llmService
-            .GenerateCompletionStreamAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<RequestSource>(), Arg.Any<CancellationToken>())
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
             .Returns(SlowLlmStream(cts));
 
         var query = new CrossGameStreamQaQuery("Question?", UserId, UserRole.User);
@@ -273,6 +267,51 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         var types = events.Select(e => e.Type).ToList();
         types.Should().Contain(StreamingEventType.Token); // at least one token was emitted
         types.Should().NotContain(StreamingEventType.Complete, "stream was cancelled before Complete");
+    }
+
+    // ── #4168: i token arrivano man mano ─────────────────────────────────────
+
+    /// <summary>
+    /// Prima i token si accumulavano in una lista e arrivavano tutti a generazione finita: il primo
+    /// token non usciva finché l'LLM non chiudeva lo stream. Qui l'LLM aspetta che il primo token sia
+    /// arrivato a chi legge prima di continuare: con l'accumulo, il test resterebbe fermo.
+    /// </summary>
+    [Fact]
+    public async Task Tokens_ReachTheReader_BeforeTheGenerationEnds()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        var firstTokenRead = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(GatedStream(firstTokenRead.Task));
+
+        var read = Task.Run(async () =>
+        {
+            var events = new List<RagStreamingEvent>();
+            await foreach (var evt in CreateSut().Handle(new CrossGameStreamQaQuery("Rules?", UserId, UserRole.User), CancellationToken.None))
+            {
+                events.Add(evt);
+                if (evt.Type == StreamingEventType.Token)
+                {
+                    firstTokenRead.TrySetResult();
+                }
+            }
+
+            return events;
+        });
+
+        var finished = await Task.WhenAny(read, Task.Delay(TimeSpan.FromSeconds(10)));
+        finished.Should().BeSameAs(read, "il primo token deve arrivare prima della fine della generazione");
+        (await read).Where(e => e.Type == StreamingEventType.Token).Select(e => ((StreamingToken)e.Data!).token)
+            .Should().Equal("First", " second");
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> GatedStream(Task firstTokenRead)
+    {
+        yield return new StreamChunk("First");
+        await firstTokenRead;
+        yield return new StreamChunk(" second");
     }
 
     // ── RBAC: MultiGameSearch receives only the accessible gameIds ───────────
@@ -295,7 +334,6 @@ public sealed class CrossGameStreamQaQueryHandlerTests
                 MakeSearchResult(GameId1, "chunk-a", "doc-a")
             });
 
-        SetupAssembledPrompt();
         SetupLlmStream("Answer");
 
         var query = new CrossGameStreamQaQuery("Rules?", UserId, UserRole.User);
@@ -333,28 +371,9 @@ public sealed class CrossGameStreamQaQueryHandlerTests
                 MakeSearchResult(GameId2, "chunk-2", "doc-2")
             });
 
-    private void SetupAssembledPrompt() =>
-        _promptService
-            .AssembleFromContextAsync(
-                Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<IReadOnlyList<ChunkCitation>>(),
-                Arg.Any<Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread?>(),
-                Arg.Any<UserTier?>(), Arg.Any<string>(), Arg.Any<CancellationToken>(),
-                Arg.Any<bool>())
-            .Returns(new AssembledPrompt(
-                "You are a board game assistant.",
-                "Context: ...\nQuestion: ...",
-                new List<ChunkCitation>
-                {
-                    new("doc-1", 1, 0.9f, "snippet from game 1") { GameId = GameId1 },
-                    new("doc-2", 2, 0.8f, "snippet from game 2") { GameId = GameId2 }
-                },
-                200));
-
     private void SetupLlmStream(string text) =>
         _llmService
-            .GenerateCompletionStreamAsync(Arg.Any<string>(), Arg.Any<string>(),
-                Arg.Any<RequestSource>(), Arg.Any<CancellationToken>())
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
             .Returns(CreateStreamChunks(text));
 
     private static async IAsyncEnumerable<StreamChunk> CreateStreamChunks(string text)

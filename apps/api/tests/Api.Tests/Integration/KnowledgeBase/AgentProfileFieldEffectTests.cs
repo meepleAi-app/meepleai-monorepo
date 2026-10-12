@@ -342,6 +342,58 @@ public sealed class AgentProfileFieldEffectTests
         body.Should().Contain(LlmAnswerErrorCodes.ProviderUnavailable);
     }
 
+    // ─── La ricerca nella libreria (/knowledge-base/ask/global) ─────────────────
+
+    /// <summary>
+    /// 5e-b: anche la ricerca fra i giochi passa dai passi della pipeline. Prima usava la strategia
+    /// di instradamento con temperatura e lunghezza fisse, un prompt «tutor» suo, nessun reranker, e
+    /// il numero di passaggi lo decideva la richiesta.
+    /// </summary>
+    [Fact]
+    public async Task CrossGame_ModelTemperatureAndLength_ComeFromTheProfile()
+    {
+        await PublishAsync(c => Modified(c, primaryModelId: "test/primary-model", temperature: 1.1m, maxResponseTokens: 321));
+
+        await AskLibraryAsync(Question);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull("la ricerca nella libreria passa dalla pipeline");
+        _hostFixture.Llm.LastAnswer!.PrimaryModelId.Should().Be("test/primary-model");
+        _hostFixture.Llm.LastAnswer.Temperature.Should().Be(1.1);
+        _hostFixture.Llm.LastAnswer.MaxTokens.Should().Be(321);
+    }
+
+    [Fact]
+    public async Task CrossGame_SystemPrompt_IsTheOneOfTheQuestionLanguage()
+    {
+        await PublishAsync(c => Modified(c, systemPrompts: new Dictionary<string, string>
+        {
+            ["en"] = "SENTINEL-EN. Answer from the rulebook.",
+            ["it"] = "SENTINEL-IT. Rispondi dal regolamento.",
+        }));
+
+        await AskLibraryAsync(ItalianQuestion);
+
+        _hostFixture.Llm.LastSystemPrompt.Should().StartWith("SENTINEL-IT");
+    }
+
+    [Fact]
+    public async Task CrossGame_TheCandidatesGoThroughTheReranker()
+    {
+        await AskLibraryAsync(Question);
+
+        _hostFixture.Reranker.Calls.Should().Be(1, "il profilo del seed ha il reranker attivo");
+    }
+
+    [Fact]
+    public async Task CrossGame_FinalTopK_IsTheNumberOfCitations()
+    {
+        await PublishAsync(c => Modified(c, finalTopK: 1));
+
+        var events = await AskLibraryAsync(Question);
+
+        CitationsOf(events).Should().ContainSingle();
+    }
+
     // ─── La cache delle risposte ────────────────────────────────────────────────
 
     /// <summary>
@@ -449,6 +501,28 @@ public sealed class AgentProfileFieldEffectTests
         }
 
         var response = await _client.SendAsync(request, Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        var events = new List<JsonElement>();
+        foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith("data:", StringComparison.Ordinal)) continue;
+            using var doc = JsonDocument.Parse(trimmed["data:".Length..].Trim());
+            events.Add(doc.RootElement.Clone());
+        }
+
+        events.Should().NotContain(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Error, body);
+        return events;
+    }
+
+    private async Task<List<JsonElement>> AskLibraryAsync(string query)
+    {
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/knowledge-base/ask/global", _token, new { query }),
+            Ct);
         var body = await response.Content.ReadAsStringAsync(Ct);
         response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 

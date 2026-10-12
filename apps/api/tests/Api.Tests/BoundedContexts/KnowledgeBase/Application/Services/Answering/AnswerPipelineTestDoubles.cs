@@ -64,6 +64,37 @@ internal static class AnswerPipelineTestDoubles
     public static AnswerRetrieval Retrieval(
         SearchQueryHandler searchQueryHandler,
         ICrossEncoderReranker reranker,
-        IIntentClassifierService? intentClassifier = null) =>
-        new(searchQueryHandler, reranker, intentClassifier ?? new IntentClassifierService(), NullLogger<AnswerRetrieval>.Instance);
+        IIntentClassifierService? intentClassifier = null,
+        IMultiGameHybridSearchService? multiGameSearch = null) =>
+        new(searchQueryHandler, multiGameSearch ?? Mock.Of<IMultiGameHybridSearchService>(), reranker,
+            intentClassifier ?? new IntentClassifierService(), NullLogger<AnswerRetrieval>.Instance);
+
+    /// <summary>Il recupero per la ricerca fra giochi: la ricerca per gioco non serve, il reranker non riordina.</summary>
+    public static AnswerRetrieval RetrievalAcrossGames(IMultiGameHybridSearchService multiGameSearch, ICrossEncoderReranker? reranker = null)
+    {
+        var searchQueryHandler = new SearchQueryHandler(
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IEmbeddingRepository>(),
+            new Mock<VectorSearchDomainService>().Object,
+            new Mock<RrfFusionDomainService>().Object,
+            Mock.Of<IEmbeddingService>(),
+            Mock.Of<IKeywordSearchService>(),
+            Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService>(),
+            NullLogger<SearchQueryHandler>.Instance);
+        return Retrieval(searchQueryHandler, reranker ?? PassThroughReranker(), multiGameSearch: multiGameSearch);
+    }
+
+    /// <summary>Un reranker che lascia l'ordine della fusione e taglia ai primi K.</summary>
+    public static ICrossEncoderReranker PassThroughReranker()
+    {
+        var reranker = new Mock<ICrossEncoderReranker>();
+        reranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IReadOnlyList<RerankChunk> chunks, int? topK, CancellationToken _) =>
+                new RerankResult(
+                    chunks.Take(topK ?? chunks.Count)
+                        .Select(c => new RerankedChunk(c.Id, c.Content, c.OriginalScore, c.OriginalScore))
+                        .ToList(),
+                    "pass-through", 0));
+        return reranker.Object;
+    }
 }

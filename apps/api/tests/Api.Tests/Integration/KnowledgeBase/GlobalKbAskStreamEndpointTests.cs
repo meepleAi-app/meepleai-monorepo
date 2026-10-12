@@ -524,13 +524,9 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
     {
         var mock = new Mock<ILlmService>();
 
-        mock.Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<RequestSource>(),
-                It.IsAny<CancellationToken>()))
-            .Returns<string, string, RequestSource, CancellationToken>(
-                (_, _, _, ct) => EmitTokensAsync(ct));
+        // #4168: la ricerca nella libreria passa dalla pipeline, che chiama l'ingresso «risposta» del gateway.
+        mock.Setup(s => s.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns<LlmAnswerRequest, CancellationToken>((_, ct) => EmitTokensAsync(ct));
 
         return mock.Object;
     }

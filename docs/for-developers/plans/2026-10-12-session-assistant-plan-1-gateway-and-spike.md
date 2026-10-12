@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Stato (2026-10-12): eseguito.** A0 è consegnata con #4247 (issue #4239), A1 con la PR di #4240. L'esito dello spike è nella spec, §7.1: nessun modello supera tutte le trappole, e la pubblicazione dell'assistente aspetta #4256. Le caselle qui sotto restano come le ha scritte il piano: decisioni prese in corso d'opera e rilievi rinviati sono nel corpo delle due PR.
+**Stato (2026-10-12): eseguito.** A0 è consegnata con #4247 (issue #4239), A1 con la PR di #4240. L'esito dello spike è nella spec, §7.1: con il prompt v1 nessun modello superava tutte le trappole; #4256 lo ha risolto con il prompt v2, che supera il gate. Le caselle qui sotto restano come le ha scritte il piano: decisioni prese in corso d'opera e rilievi rinviati sono nel corpo delle due PR.
 
 **Goal:** far passare dal gateway LLM una chat con strumenti (tool calling) con le stesse garanzie di oggi — tetto, degrado, fallback, circuit breaker, redazione PII, costo — esporla come `IChatClient` di `Microsoft.Extensions.AI`, e misurare con uno spike se i modelli disponibili chiamano gli strumenti dell'assistente in partita in modo affidabile.
 

@@ -12,10 +12,19 @@ internal sealed record RunSessionAssistantEvaluationCommand(
     string? FallbackModelId,
     double Temperature,
     int MaxTokens,
-    int MaxToolIterations) : ICommand<AssistantEvaluationReport>;
+    int MaxToolIterations,
+    AssistantPromptOverride? Prompts = null) : ICommand<AssistantEvaluationReport>;
+
+/// <summary>
+/// Un prompt alternativo da misurare al posto di quello del codice (#4256). Una lingua lasciata a
+/// <c>null</c> usa il prompt predefinito.
+/// </summary>
+internal sealed record AssistantPromptOverride(string? Italian, string? English);
 
 internal sealed class RunSessionAssistantEvaluationCommandValidator : AbstractValidator<RunSessionAssistantEvaluationCommand>
 {
+    internal const int MaxPromptLength = 8000;
+
     public RunSessionAssistantEvaluationCommandValidator()
     {
         RuleFor(c => c.PrimaryModelId).NotEmpty();
@@ -31,10 +40,23 @@ internal sealed class RunSessionAssistantEvaluationCommandValidator : AbstractVa
                 }
             })
             .When(c => c.Scenarios?.Scenarios is not null);
+        When(c => c.Prompts is not null, () =>
+        {
+            RuleFor(c => c.Prompts!)
+                .Must(p => !string.IsNullOrWhiteSpace(p.Italian) || !string.IsNullOrWhiteSpace(p.English))
+                .WithMessage("'prompts' needs a prompt for at least one language.");
+            RuleFor(c => c.Prompts!.Italian).Must(BeUsablePrompt)
+                .WithMessage($"'prompts.italian' must not be blank or longer than {MaxPromptLength} characters.");
+            RuleFor(c => c.Prompts!.English).Must(BeUsablePrompt)
+                .WithMessage($"'prompts.english' must not be blank or longer than {MaxPromptLength} characters.");
+        });
         RuleFor(c => c.Temperature).InclusiveBetween(0, 2);
         RuleFor(c => c.MaxTokens).InclusiveBetween(64, 4000);
         RuleFor(c => c.MaxToolIterations).InclusiveBetween(1, 10);
     }
+
+    private static bool BeUsablePrompt(string? prompt) =>
+        prompt is null || (!string.IsNullOrWhiteSpace(prompt) && prompt.Length <= MaxPromptLength);
 }
 
 internal sealed class RunSessionAssistantEvaluationCommandHandler(SessionAssistantEvaluator evaluator)
@@ -46,12 +68,13 @@ internal sealed class RunSessionAssistantEvaluationCommandHandler(SessionAssista
             command.PrimaryModelId, command.FallbackModelId, command.Temperature, command.MaxTokens,
             command.MaxToolIterations, ProfileVersionId: null, RequestSource.Evaluation);
 
+        var prompts = SessionAssistantPrompts.Default.With(command.Prompts?.Italian, command.Prompts?.English);
         var results = new List<AssistantScenarioResult>();
         foreach (var scenario in command.Scenarios.Scenarios)
         {
-            results.Add(await evaluator.RunAsync(scenario, settings, cancellationToken).ConfigureAwait(false));
+            results.Add(await evaluator.RunAsync(scenario, settings, prompts, cancellationToken).ConfigureAwait(false));
         }
 
-        return AssistantEvaluationReport.From(command.PrimaryModelId, results);
+        return AssistantEvaluationReport.From(command.PrimaryModelId, results, prompts);
     }
 }

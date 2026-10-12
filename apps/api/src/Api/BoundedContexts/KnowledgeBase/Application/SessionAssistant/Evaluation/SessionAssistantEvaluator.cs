@@ -30,8 +30,9 @@ internal sealed class SessionAssistantEvaluator(
     IAssistantChatClientFactory factory, IAssistantPlayerMatcher matcher, ILogger<SessionAssistantEvaluator> logger)
 {
     public async Task<AssistantScenarioResult> RunAsync(
-        AssistantScenario scenario, AssistantModelSettings settings, CancellationToken cancellationToken)
+        AssistantScenario scenario, AssistantModelSettings settings, AssistantPromptSet prompts, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(scenario);
         var turn = new Turn();
         string? errorCode = null;
@@ -41,7 +42,7 @@ internal sealed class SessionAssistantEvaluator(
         // il codice, non la perdita dell'intero report del modello. L'eccezione resta nei log.
         try
         {
-            await ExecuteAsync(scenario, settings, turn, cancellationToken).ConfigureAwait(false);
+            await ExecuteAsync(scenario, settings, prompts, turn, cancellationToken).ConfigureAwait(false);
         }
         catch (AssistantGatewayException ex)
         {
@@ -67,12 +68,13 @@ internal sealed class SessionAssistantEvaluator(
     }
 
     private async Task ExecuteAsync(
-        AssistantScenario scenario, AssistantModelSettings settings, Turn turn, CancellationToken cancellationToken)
+        AssistantScenario scenario, AssistantModelSettings settings, AssistantPromptSet prompts, Turn turn,
+        CancellationToken cancellationToken)
     {
         var reader = new ScenarioSessionAssistantReader(scenario);
         turn.Toolset = new SessionAssistantToolset(reader, turn.Sink, matcher);
         var state = await reader.GetStateAsync(cancellationToken).ConfigureAwait(false);
-        var messages = AssistantConversation.Build(scenario.Language, state, [], scenario.Utterance);
+        var messages = AssistantConversation.Build(prompts, scenario.Language, state, [], scenario.Utterance);
 
         using var chat = factory.Create(settings, turn.Meter);
         turn.Response = await chat.GetResponseAsync(

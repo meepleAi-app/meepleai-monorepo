@@ -55,6 +55,44 @@ public sealed class RunSessionAssistantEvaluationCommandValidatorTests
     public void NullScenario_IsAValidationError_NotAnException() =>
         _validator.Validate(Command(Scenario(), null!)).IsValid.Should().BeFalse();
 
+    // #4256: un prompt alternativo nella richiesta.
+    private static RunSessionAssistantEvaluationCommand WithPrompts(AssistantPromptOverride? prompts) =>
+        new(new AssistantScenarioSet(1, [Scenario()]), "deepseek-flash", null, 0.2, 600, 4, prompts);
+
+    [Fact]
+    public void PromptOverride_ForOneLanguageOnly_IsValid() =>
+        _validator.Validate(WithPrompts(new AssistantPromptOverride(null, "You are the assistant."))).IsValid.Should().BeTrue();
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(" ", null)]
+    [InlineData(null, "")]
+    public void PromptOverride_WithNoUsablePrompt_IsAValidationError(string? italian, string? english)
+    {
+        var result = _validator.Validate(WithPrompts(new AssistantPromptOverride(italian, english)));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().OnlyContain(e => e.ErrorMessage.Contains("prompts"));
+    }
+
+    [Fact]
+    public void PromptOverride_WithOneUsableAndOneBlankPrompt_IsAValidationError()
+    {
+        // Senza la regola per lingua, la stringa vuota verrebbe scartata in silenzio a favore del predefinito.
+        var result = _validator.Validate(WithPrompts(new AssistantPromptOverride("Sei l'assistente.", " ")));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle().Which.ErrorMessage.Should().Contain("prompts.english");
+    }
+
+    [Fact]
+    public void PromptOverride_TooLong_IsAValidationError()
+    {
+        var tooLong = new string('x', RunSessionAssistantEvaluationCommandValidator.MaxPromptLength + 1);
+
+        _validator.Validate(WithPrompts(new AssistantPromptOverride(tooLong, null))).IsValid.Should().BeFalse();
+    }
+
     public static TheoryData<string, string> MalformedScenarios() => new()
     {
         { "state", """{"id":"s1","language":"it","category":"x","passages":[],"utterance":"ciao","expected":{"tools":[],"proposals":[]}}""" },

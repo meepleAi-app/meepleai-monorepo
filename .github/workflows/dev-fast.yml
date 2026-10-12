@@ -22,6 +22,10 @@ on:
       - '.github/actions/**'
       - 'infra/scripts/**'
       - 'infra/seed-schema.version'
+      # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
+      # del backend leggono dal repository (vedi il filtro `backend` più sotto).
+      - 'tests/llm-eval/session-assistant/prompts/**'
+      - 'tests/llm-eval/session-assistant/scenarios.json'
   workflow_dispatch:
 
 concurrency:
@@ -67,6 +71,11 @@ jobs:
               # LlmModelRouting. Senza questa riga una PR solo frontend che lo cambia non lo
               # farebbe girare, e la deriva che il test esiste per fermare passerebbe.
               - 'apps/web/src/lib/llm-model-routing.ts'
+              # #4256: DefaultPrompts_AreTheMeasuredOnes confronta il prompt del codice con il file
+              # misurato, e due test validano scenarios.json. Senza queste righe una PR che cambia solo
+              # quei file non li farebbe girare: si potrebbe misurare un prompt e spedirne un altro.
+              - 'tests/llm-eval/session-assistant/prompts/**'
+              - 'tests/llm-eval/session-assistant/scenarios.json'
               - 'global.json'
               - '.github/workflows/dev-fast.yml'
               - '.github/actions/setup-backend/**'

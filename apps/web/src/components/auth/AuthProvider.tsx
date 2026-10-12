@@ -89,8 +89,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const loading = currentUser.isLoading || actionLoading;
   const [error, setError] = useState<string | null>(null);
 
+  // A /me already in flight (on mount, or on window focus) would land after this write and
+  // overwrite it: an anonymous answer erasing a fresh login, or a user resurrected after logout.
   const writeUser = useCallback(
-    (next: AuthUser | null) => {
+    async (next: AuthUser | null) => {
+      await queryClient.cancelQueries({ queryKey: userKeys.current(), exact: true });
       queryClient.setQueryData(userKeys.current(), next);
     },
     [queryClient]
@@ -124,7 +127,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         // Normal login - write the user where every reader looks, and return it
         const loggedIn = loginResponse.user ?? null;
-        writeUser(loggedIn);
+        await writeUser(loggedIn);
         return {
           user: loggedIn,
           requiresTwoFactor: false,
@@ -148,7 +151,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setError(null);
       try {
         const authUser = await api.auth.register(data);
-        writeUser(authUser);
+        await writeUser(authUser);
         return authUser;
       } catch (err) {
         logger.error('Registration failed', err instanceof Error ? err : new Error(String(err)), {
@@ -175,7 +178,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setError(err instanceof Error ? err.message : 'Logout failed');
     } finally {
       // Always clear the user, even if the API call fails
-      writeUser(null);
+      await writeUser(null);
       setActionLoading(false);
     }
   }, [writeUser]);

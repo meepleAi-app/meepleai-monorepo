@@ -36,6 +36,13 @@ export function useCurrentUser(): UseQueryResult<AuthUser | null, Error> {
     queryKey: userKeys.current(),
     queryFn: async (): Promise<AuthUser | null> => {
       const result = await getCurrentUser();
+      // getCurrentUser catches every failure. Only a missing user (a 401) means "anonymous": a
+      // real failure (network down, 5xx) carries `error`, and returning null for it would log the
+      // user out of the whole app on a refetch, now that AuthProvider reads from here (#4190).
+      // Throwing keeps the user TanStack already has, and lets `retry` below do its job.
+      if (!result.success && result.error) {
+        throw new Error(result.error.message);
+      }
       return result.user ?? null;
     },
     // Retry only on network errors, not on 401 (user not authenticated)

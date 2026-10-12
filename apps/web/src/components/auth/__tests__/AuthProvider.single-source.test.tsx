@@ -22,6 +22,11 @@ const api = vi.hoisted(() => ({
   register: vi.fn(),
 }));
 vi.mock('@/lib/api', () => ({
+  // getCurrentUser fa `error instanceof ApiError` nel suo catch: senza la classe nel mock quel
+  // controllo lancerebbe, e un errore di rete sembrerebbe gestito per la ragione sbagliata.
+  ApiError: class ApiError extends Error {
+    statusCode = 0;
+  },
   api: {
     auth: {
       getMe: (...a: unknown[]) => api.getMe(...a),
@@ -101,5 +106,44 @@ describe('AuthProvider — fonte unica (#4190)', () => {
 
     expect(client.getQueryData(userKeys.current())).toBeNull();
     expect(screen.getByTestId('probe')).toHaveTextContent('anonymous');
+  });
+
+  it("un errore di rete al refresh non fa sparire l'utente", async () => {
+    api.getMe.mockResolvedValueOnce(USER);
+    const client = createTestQueryClient();
+    renderWithClient(client);
+    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent(USER.email));
+
+    api.getMe.mockRejectedValue(new Error('Failed to fetch'));
+    await act(async () => {
+      await auth!.refreshUser();
+    });
+    // TanStack consegna la notifica in modo asincrono: senza questo giro la sonda verrebbe letta
+    // prima del nuovo render, e il test passerebbe anche col difetto.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    });
+
+    expect(screen.getByTestId('probe')).toHaveTextContent(USER.email);
+  });
+
+  it("un /me anonimo ancora in volo non cancella l'utente scritto dal login", async () => {
+    let resolveMe: (value: unknown) => void = () => {};
+    api.getMe.mockImplementationOnce(() => new Promise(resolve => (resolveMe = resolve)));
+    api.login.mockResolvedValue({ requiresTwoFactor: false, user: USER });
+    const client = createTestQueryClient();
+    renderWithClient(client);
+    await waitFor(() => expect(auth).not.toBeNull());
+
+    await act(async () => {
+      await auth!.login(USER.email, 'StrongPassword1');
+    });
+    // Arriva la risposta del /me partito prima del login: diceva «anonimo».
+    await act(async () => {
+      resolveMe(null);
+    });
+
+    expect(client.getQueryData(userKeys.current())).toEqual(USER);
+    expect(screen.getByTestId('probe')).toHaveTextContent(USER.email);
   });
 });

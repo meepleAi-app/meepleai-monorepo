@@ -59,4 +59,24 @@ public sealed class AssistantConversationTests
     [InlineData("I prepared a proposal: please confirm it.", false)]
     public void ClaimedActionDetector_FlagsCompletedActions(string text, bool expected) =>
         ClaimedActionDetector.ClaimsAction(text).Should().Be(expected);
+
+    // Spike #4240: su «next player please» il modello ha risposto «I've prepared a proposal… please confirm it»
+    // senza chiamare proponi_turno. Dire che una proposta esiste è giusto solo se esiste: lo decide chi conosce
+    // le proposte del turno, il rilevatore riconosce la frase.
+    [Theory]
+    [InlineData("Current turn: Luca (round 2). I've prepared a proposal to pass the turn to the next player — please confirm it.", true)]
+    [InlineData("I prepared a proposal: please confirm it.", true)]
+    [InlineData("I have just created two proposals for you.", true)]
+    [InlineData("Ho preparato una proposta: +5 punti a Marco (round 2). Confermi?", true)]
+    [InlineData("Ho preparato la proposta per passare il turno al giocatore successivo.", true)]
+    [InlineData("Ho preparato due proposte da confermare.", true)]
+    [InlineData("La proposta è pronta: confermala.", true)]
+    [InlineData("Non ho preparato nessuna proposta: quale Marco intendi?", false)]
+    [InlineData("La partita è conclusa, quindi non posso preparare una proposta di punteggio.", false)]
+    [InlineData("Dimmi chi ha fatto punti e preparo la proposta da confermare.", false)]
+    [InlineData("I haven't prepared a proposal yet: which Marco do you mean?", false)]
+    [InlineData("Tocca a Luca (round 2).", false)]
+    [InlineData("", false)]
+    public void ClaimedActionDetector_FlagsDeclaredProposals(string text, bool expected) =>
+        ClaimedActionDetector.ClaimsProposal(text).Should().Be(expected);
 }

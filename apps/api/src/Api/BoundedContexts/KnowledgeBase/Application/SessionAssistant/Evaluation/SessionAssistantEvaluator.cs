@@ -67,7 +67,8 @@ internal sealed class SessionAssistantEvaluator(IAssistantChatClientFactory fact
         var finalText = response?.Text ?? string.Empty;
         var (extra, missing) = Compare(scenario.Expected.Proposals, sink.Proposals);
         var missingTools = scenario.Expected.Tools.Where(t => !toolsCalled.Contains(t, StringComparer.Ordinal)).ToList();
-        var claimed = sink.Proposals.Count == 0 && ClaimedActionDetector.ClaimsAction(finalText);
+        var claimed = sink.Proposals.Count == 0
+            && (ClaimedActionDetector.ClaimsAction(finalText) || ClaimedActionDetector.ClaimsProposal(finalText));
 
         return new AssistantScenarioResult(
             scenario.Id,

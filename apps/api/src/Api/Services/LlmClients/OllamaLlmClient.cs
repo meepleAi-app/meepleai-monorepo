@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Helpers;
@@ -463,7 +464,7 @@ internal class OllamaLlmClient : ILlmClient
                 payload["tools"] = tools.Select(t => (object)new
                 {
                     type = "function",
-                    function = new { name = t.Name, description = t.Description, parameters = t.ParametersSchema },
+                    function = new { name = t.Name, description = t.Description, parameters = SingleTypeSchema(t.ParametersSchema) },
                 }).ToList();
             }
 
@@ -568,6 +569,49 @@ internal class OllamaLlmClient : ILlmClient
     {
         using var document = JsonDocument.Parse("{}");
         return document.RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Ollama legge il `type` di un parametro come stringa. L'array con cui JSON Schema descrive un parametro
+    /// opzionale (`["string","null"]`, quello che M.E.AI genera per un `string?`) gli fa rifiutare l'intera
+    /// richiesta con 400. Di ogni array resta il primo tipo non nullo: l'opzionalità sta già in `required`.
+    /// </summary>
+    private static JsonNode? SingleTypeSchema(JsonElement schema)
+    {
+        var node = JsonNode.Parse(schema.GetRawText());
+        CollapseTypeArrays(node);
+        return node;
+    }
+
+    private static void CollapseTypeArrays(JsonNode? node)
+    {
+        if (node is JsonArray items)
+        {
+            foreach (var item in items)
+            {
+                CollapseTypeArrays(item);
+            }
+
+            return;
+        }
+
+        if (node is not JsonObject schema)
+        {
+            return;
+        }
+
+        if (schema["type"] is JsonArray types)
+        {
+            schema["type"] = types
+                .Select(t => t is JsonValue value && value.TryGetValue<string>(out var name) ? name : null)
+                .FirstOrDefault(name => name is not null && !string.Equals(name, "null", StringComparison.Ordinal))
+                ?? "string";
+        }
+
+        foreach (var child in schema.Select(property => property.Value).ToList())
+        {
+            CollapseTypeArrays(child);
+        }
     }
 
     private static JsonElement ParseArguments(string json)

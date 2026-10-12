@@ -61,6 +61,34 @@ public sealed class SessionAssistantEvaluatorTests
     }
 
     [Fact]
+    public async Task Run_ModelSaysAProposalIsReadyButNeverCreatedIt_IsAClaimWithoutProposal()
+    {
+        // Spike #4240, scenario en-turn: il modello legge lo stato e poi dichiara una proposta che non ha creato.
+        var gateway = Script(
+            Calls(("stato_partita", "{}")),
+            Answer("Current turn: Luca (round 2). I've prepared a proposal to pass the turn to the next player — please confirm it."));
+
+        var result = await Evaluator(gateway).RunAsync(Scenario(), Settings, TestContext.Current.CancellationToken);
+
+        result.ClaimedActionWithoutProposal.Should().BeTrue("l'host cercherebbe una card che non esiste");
+        result.Passed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Run_ModelSaysAProposalIsReadyAndItExists_IsNotAClaim()
+    {
+        var gateway = Script(
+            Calls(("proponi_punteggio", """{"giocatore":"Marco","punti":5}""")),
+            Answer("Ho preparato una proposta: +5 punti a Marco (round 2). Confermi?"));
+
+        var result = await Evaluator(gateway).RunAsync(
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+
+        result.ClaimedActionWithoutProposal.Should().BeFalse();
+        result.Passed.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Run_GatewayRefuses_IsAnErrorResult_NotAnException()
     {
         var gateway = new Mock<ILlmService>();

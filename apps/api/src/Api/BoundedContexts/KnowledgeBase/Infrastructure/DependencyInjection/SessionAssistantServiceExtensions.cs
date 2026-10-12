@@ -9,6 +9,7 @@ internal static class SessionAssistantServiceExtensions
     public static IServiceCollection AddSessionAssistant(this IServiceCollection services)
     {
         services.AddScoped<IAssistantChatClientFactory, AssistantChatClientFactory>();
+        services.AddScoped<IAssistantPlayerMatcher, AssistantPlayerMatcher>();
         return services;
     }
 }

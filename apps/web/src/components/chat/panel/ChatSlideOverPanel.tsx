@@ -88,9 +88,16 @@ export function ChatSlideOverPanel() {
   // offer the first 50 catalog games, and a game outside the library ends at the RAG gate
   // (#4155). The sidebar lists the library games with a ready KB, unaffected by the search:
   // its query has the same key as the switcher's empty search, so they share the cache.
+  // Both use the largest page the server serves (100). The sidebar filters `hasKb` on that page:
+  // the library endpoint has no KB filter, so past 100 games the sidebar says it is partial.
   const [gameSearch, setGameSearch] = useState('');
-  const pickerLibrary = useLibrarySearch(gameSearch, { enabled: isOpen, pageSize: 50 });
-  const sidebarLibrary = useLibrarySearch('', { enabled: isOpen, pageSize: 50 });
+  const pickerLibrary = useLibrarySearch(gameSearch, { enabled: isOpen, pageSize: 100 });
+  const sidebarLibrary = useLibrarySearch('', { enabled: isOpen, pageSize: 100 });
+
+  // A search belongs to one opening of the panel.
+  useEffect(() => {
+    if (!isOpen) setGameSearch('');
+  }, [isOpen]);
 
   // Issue #4139: the agent lookup that stood here existed only to feed
   // /api/v1/agents/{agentId}/chat, a route the backend never mounted — the comment
@@ -336,11 +343,13 @@ export function ChatSlideOverPanel() {
           availableGames={availableGames}
           search={gameSearch}
           onSearchChange={setGameSearch}
+          onCatalogNavigate={close}
         />
         <div className="flex min-h-0 flex-1">
           <ChatSidebar
             chats={recentChats}
             kbGames={kbGames}
+            kbGamesTruncated={sidebarLibrary.totalCount > sidebarLibrary.items.length}
             onNewChat={handleNewChat}
             onSelectChat={handleSelectChat}
             onSelectGame={handleSelectGame}

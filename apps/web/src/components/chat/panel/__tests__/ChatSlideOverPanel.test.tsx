@@ -41,12 +41,13 @@ const LIBRARY_ITEMS = [
     hasKb: false,
   },
 ];
+let libraryTotal = LIBRARY_ITEMS.length;
 vi.mock('@/hooks/queries/useLibrarySearch', () => ({
   useLibrarySearch: (...args: unknown[]) => (
     hookArgs.library.push(args),
     {
       items: LIBRARY_ITEMS,
-      totalCount: LIBRARY_ITEMS.length,
+      totalCount: libraryTotal,
       isLoading: false,
       resultsMatchQuery: true,
       term: String(args[0] ?? ''),
@@ -94,6 +95,7 @@ import { ChatSlideOverPanel } from '../ChatSlideOverPanel';
 
 describe('ChatSlideOverPanel', () => {
   beforeEach(() => {
+    libraryTotal = LIBRARY_ITEMS.length;
     useChatPanelStore.getState().close();
     useChatPanelStore.getState().clearGameContext();
     streamResetMock.mockClear();
@@ -159,6 +161,34 @@ describe('ChatSlideOverPanel', () => {
     // La tendina e' chiusa: l'unico «Gioco senza KB» possibile sarebbe nella barra laterale.
     expect(screen.getByRole('button', { name: /wingspan/i })).toBeInTheDocument();
     expect(screen.queryByText('Gioco senza KB')).not.toBeInTheDocument();
+  });
+
+  it('«Aggiungi dal catalogo» chiude il pannello, che altrimenti coprirebbe /games', async () => {
+    const user = userEvent.setup();
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    await user.click(screen.getByRole('button', { name: /seleziona gioco/i }));
+    await user.click(screen.getByRole('link', { name: /aggiungi dal catalogo/i }));
+
+    expect(useChatPanelStore.getState().isOpen).toBe(false);
+  });
+
+  it('chiede alla libreria la pagina massima, la stessa per tendina e barra laterale', () => {
+    hookArgs.library.length = 0;
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    const sizes = hookArgs.library.map(args => (args[1] as { pageSize?: number }).pageSize);
+    expect(new Set(sizes)).toEqual(new Set([100]));
+  });
+
+  it('se la libreria supera la pagina, la barra lo dice e rimanda alla ricerca', () => {
+    libraryTotal = 250;
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    expect(screen.getByText(/cerca nella tendina/i)).toBeInTheDocument();
   });
 
   it('closes when the ✕ header button is clicked', async () => {

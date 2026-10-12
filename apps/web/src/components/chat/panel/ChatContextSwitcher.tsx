@@ -22,6 +22,8 @@ interface ChatContextSwitcherProps {
    * games, shows a search box, and offers to add a game from the catalog.
    */
   onSearchChange?: (value: string) => void;
+  /** Called when the user follows «Aggiungi dal catalogo»: the host panel must close, or it covers the page. */
+  onCatalogNavigate?: () => void;
 }
 
 export function ChatContextSwitcher({
@@ -30,6 +32,7 @@ export function ChatContextSwitcher({
   availableGames = [],
   search = '',
   onSearchChange,
+  onCatalogNavigate,
 }: ChatContextSwitcherProps) {
   const searchable = onSearchChange !== undefined;
   const [open, setOpen] = useState(false);
@@ -154,6 +157,10 @@ export function ChatContextSwitcher({
               gate (#4155) until the user adds it and declares ownership. */}
           <Link
             href="/games"
+            onClick={() => {
+              setOpen(false);
+              onCatalogNavigate?.();
+            }}
             className="block px-4 py-2 font-nunito text-[0.78rem] font-semibold text-[hsl(25,95%,38%)] hover:underline"
           >
             Aggiungi dal catalogo

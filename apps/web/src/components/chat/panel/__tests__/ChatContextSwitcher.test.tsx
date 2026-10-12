@@ -73,6 +73,26 @@ describe('ChatContextSwitcher', () => {
       );
     });
 
+    it('seguire «Aggiungi dal catalogo» avvisa il pannello, che deve chiudersi', async () => {
+      const user = userEvent.setup();
+      const onCatalogNavigate = vi.fn();
+      render(
+        <ChatContextSwitcher
+          gameContext={null}
+          onPickGame={() => {}}
+          availableGames={[]}
+          search=""
+          onSearchChange={() => {}}
+          onCatalogNavigate={onCatalogNavigate}
+        />
+      );
+
+      await user.click(screen.getByRole('button', { name: /seleziona gioco/i }));
+      await user.click(screen.getByRole('link', { name: /aggiungi dal catalogo/i }));
+
+      expect(onCatalogNavigate).toHaveBeenCalledOnce();
+    });
+
     it('una ricerca senza risultati lo dice, e offre comunque il catalogo', async () => {
       const user = userEvent.setup();
       render(

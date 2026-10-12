@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import {
   Search,
@@ -40,7 +40,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
-import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
@@ -137,18 +137,17 @@ export function SessionWizardMobile({
       .finally(() => setIsLoadingPhases(false));
   }, [selectedGameId]);
 
-  // Fetch library games
-  const { data: libraryData, isLoading: isLoadingLibrary } = useLibrary(
-    { page: 1, pageSize: 100 },
-    true
-  );
-
-  const filteredGames = useMemo(() => {
-    const items = libraryData?.items ?? [];
-    if (!searchQuery.trim()) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(g => g.gameTitle.toLowerCase().includes(q));
-  }, [libraryData, searchQuery]);
+  // #4187: the server searches the library. Filtering one downloaded page on the client
+  // could not find a game past it.
+  // 100 per page, as before (the grid has no "N of M" footer); the rest is found by searching.
+  const {
+    items: filteredGames,
+    isLoading: isLoadingFirstPage,
+    resultsMatchQuery,
+    term: libraryTerm,
+  } = useLibrarySearch(searchQuery, { pageSize: 100 });
+  // An empty list that belongs to an older text says nothing about the current one.
+  const isLoadingLibrary = isLoadingFirstPage || (!resultsMatchQuery && filteredGames.length === 0);
 
   // Color helpers
   const usedColors = players.map(p => p.color);
@@ -340,7 +339,7 @@ export function SessionWizardMobile({
             ) : filteredGames.length === 0 ? (
               <div className="flex items-center justify-center py-12">
                 <p className="text-sm text-muted-foreground">
-                  {searchQuery ? 'Nessun gioco trovato' : 'La tua libreria e vuota'}
+                  {libraryTerm ? 'Nessun gioco trovato' : 'La tua libreria e vuota'}
                 </p>
               </div>
             ) : (

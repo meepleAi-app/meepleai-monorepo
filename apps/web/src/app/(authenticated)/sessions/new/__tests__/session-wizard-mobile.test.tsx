@@ -2,6 +2,7 @@
  * SessionWizardMobile — S1 prefill + S2 turn order tests
  */
 import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -20,8 +21,17 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+const emptyLibrary = vi.hoisted(() => (..._args: unknown[]) => ({
+  data: { items: [], totalCount: 0 },
+  isLoading: false,
+}));
+const mockUseLibrary = vi.hoisted(() => vi.fn(emptyLibrary));
 vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: () => ({ data: { items: [] }, isLoading: false }),
+  useLibrary: mockUseLibrary,
+}));
+
+vi.mock('@/components/ui/data-display/entity-list-view/hooks/use-debounce', () => ({
+  useDebounce: (value: string) => value,
 }));
 
 const mockApi = vi.hoisted(() => ({
@@ -42,10 +52,55 @@ vi.mock('@/lib/api', () => ({ api: mockApi }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseLibrary.mockReset();
+  mockUseLibrary.mockImplementation(emptyLibrary);
   mockApi.liveSessions.addPlayer
     .mockResolvedValueOnce('player-uuid-1')
     .mockResolvedValueOnce('player-uuid-2')
     .mockResolvedValueOnce('player-uuid-3');
+});
+
+// ── #4187: la ricerca del gioco va al server ───────────────────────────────────
+
+describe('SessionWizardMobile — #4187: ricerca nella libreria sul server', () => {
+  it('scrivere nella ricerca manda il testo al server, in ordine di titolo', async () => {
+    const user = userEvent.setup();
+    render(<SessionWizardMobile />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Cerca gioco' }), 'Wing');
+
+    const [params, enabled] = mockUseLibrary.mock.calls.at(-1) as [
+      { search?: string; pageSize?: number; sortBy?: string; sortDescending?: boolean },
+      boolean,
+    ];
+    expect(enabled).toBe(true);
+    expect(params).toEqual(
+      expect.objectContaining({ search: 'Wing', sortBy: 'title', sortDescending: false })
+    );
+    expect(params.pageSize).toBeLessThanOrEqual(100);
+  });
+
+  it('mentre la risposta per il testo nuovo non è arrivata non dice che la libreria è vuota', async () => {
+    const user = userEvent.setup();
+    // Dati segnaposto: la pagina vuota di un testo precedente.
+    mockUseLibrary.mockReturnValue({
+      data: { items: [], totalCount: 0 },
+      isLoading: false,
+      isPlaceholderData: true,
+    } as never);
+    render(<SessionWizardMobile />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Cerca gioco' }), 'Wing');
+
+    expect(screen.queryByText('Nessun gioco trovato')).not.toBeInTheDocument();
+    expect(screen.queryByText('La tua libreria e vuota')).not.toBeInTheDocument();
+  });
+
+  it('chiede al server pagine da 100, come prima, non da 50', async () => {
+    render(<SessionWizardMobile />);
+    const [params] = mockUseLibrary.mock.calls.at(-1) as [{ pageSize?: number }];
+    expect(params.pageSize).toBe(100);
+  });
 });
 
 // ── S1: Pre-fill ───────────────────────────────────────────────────────────────

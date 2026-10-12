@@ -287,10 +287,17 @@ jobs:
       # ciò che è esplicitamente marcato come lento o infra-dipendente. Le categorie escluse sono
       # pinnate da TestCategoryGateArchitectureTests, che fallisce se ne compare una nuova — senza
       # quel guard la deny-list tornerebbe incompleta al primo `Category` inedito.
+      #
+      # #4274: il logger esplicito. Con il solo `--verbosity quiet` di un test rosso resta la riga
+      # `[FAIL]` e nient'altro: né il messaggio dell'asserzione né il valore trovato. Quel dettaglio
+      # non si recupera dopo — un rerun sostituisce il log — e senza non si distingue una soglia
+      # sforata di poco da una regressione. `minimal` stampa messaggio e stack dei soli rossi e una
+      # riga per ogni salto; i test superati restano fuori dal log.
       - name: Unit tests (everything not explicitly slow/infra — #3622)
         working-directory: apps/api/tests/Api.Tests
         run: |
           dotnet test --no-build --configuration Release --verbosity quiet \
+            --logger "console;verbosity=minimal" \
             --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow"
 
   migration-safety:

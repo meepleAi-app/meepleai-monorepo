@@ -355,6 +355,9 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       let finalAnswer = '';
       let citations: unknown[] = [];
       let followUpQuestions: string[] = [];
+      // #4168: la versione del profilo e la lingua della risposta, salvate col messaggio
+      let profileVersionId: string | null = null;
+      let answerLanguage: string | null = null;
 
       try {
         // Save user message via REST first
@@ -426,10 +429,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 snippets?: unknown[];
                 totalTokens?: number;
                 followUpQuestions?: string[];
+                profileVersionId?: string | null;
+                language?: string | null;
               };
               if (data.answer) finalAnswer = data.answer;
               citations = data.snippets ?? [];
               followUpQuestions = data.followUpQuestions ?? [];
+              profileVersionId = data.profileVersionId ?? null;
+              answerLanguage = data.language ?? null;
               break;
             }
             case 5: {
@@ -474,6 +481,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           await api.chat.addMessage(threadId, {
             content: finalAnswer,
             role: 'assistant',
+            profileVersionId,
+            language: answerLanguage,
           });
         }
 

@@ -3898,6 +3898,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<bool>("IsLowQuality")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<int>("LatencyMs")
                         .HasColumnType("integer");
 
@@ -3910,6 +3914,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<double?>("OverallConfidence")
                         .HasColumnType("double precision");
+
+                    b.Property<Guid?>("ProfileVersionId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("PromptTokens")
                         .ValueGeneratedOnAdd()

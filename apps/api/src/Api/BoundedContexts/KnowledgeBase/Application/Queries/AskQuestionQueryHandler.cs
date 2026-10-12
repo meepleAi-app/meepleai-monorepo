@@ -285,7 +285,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                             LlmConfidence: 0,
                             OverallConfidence: 0,
                             IsLowQuality: false,
-                            Citations: servableCitations);
+                            Citations: servableCitations,
+                            // la chiave della cache porta versione e lingua: sono quelle di adesso
+                            ProfileVersionId: profile.VersionId,
+                            Language: language);
                     }
                 }
             }
@@ -404,6 +407,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var response = await BuildValidatedResponseAsync(
             query, language, llmResponse ?? string.Empty, searchResults, domainSearchResults,
             searchConfidence, cancellationToken).ConfigureAwait(false);
+        // #4168 (ADR-095 D2): la versione e la lingua con cui la risposta è stata prodotta
+        response = response with { ProfileVersionId = profile.VersionId, Language = language };
         sw5.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 5 DONE: Response validation completed in {ElapsedMs}ms",
             sw5.ElapsedMilliseconds);

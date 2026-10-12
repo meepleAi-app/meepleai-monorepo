@@ -209,6 +209,9 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                     cachedResponse.completionTokens,
                     cachedResponse.totalTokens,
                     cachedResponse.confidence,
+                    // La chiave della cache contiene versione e lingua: la risposta servita e' di queste.
+                    ProfileVersionId: profile.VersionId,
+                    Language: language.Language,
                     GroundingStatus: cachedResponse.snippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
             yield break;
@@ -359,6 +362,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value,
+                ProfileVersionId: profile.VersionId,
+                Language: language,
                 GroundingStatus: allSnippets.Count > 0 ? "Grounded" : "Ungrounded"));
 
         // Emit inline citation matches (over RAG + claim citations, so [Vk] claim markers can match too)

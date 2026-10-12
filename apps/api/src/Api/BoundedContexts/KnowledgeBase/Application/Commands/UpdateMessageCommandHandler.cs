@@ -87,18 +87,7 @@ internal class UpdateMessageCommandHandler : ICommandHandler<UpdateMessageComman
 
     private static ChatThreadDto MapToDto(Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread thread)
     {
-        var messageDtos = thread.Messages.Select(m => new ChatMessageDto(
-            Id: m.Id,
-            Content: m.Content,
-            Role: m.Role,
-            Timestamp: m.Timestamp,
-            SequenceNumber: m.SequenceNumber,
-            UpdatedAt: m.UpdatedAt,
-            IsDeleted: m.IsDeleted,
-            DeletedAt: m.DeletedAt,
-            DeletedByUserId: m.DeletedByUserId,
-            IsInvalidated: m.IsInvalidated
-        )).ToList();
+        var messageDtos = thread.Messages.Select(ChatMessageDtoMapping.ToDto).ToList();
 
         return new ChatThreadDto(
             Id: thread.Id,

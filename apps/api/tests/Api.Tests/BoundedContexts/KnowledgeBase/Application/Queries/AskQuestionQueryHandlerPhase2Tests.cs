@@ -558,6 +558,35 @@ public class AskQuestionQueryHandlerPhase2Tests
             "il documentId deve venire dalla voce in cache");
     }
 
+    /// <summary>
+    /// #4168 (ADR-095 D2): anche una risposta servita dalla cache dice con quale versione e in che
+    /// lingua è stata prodotta. La chiave della cache le contiene, quindi sono quelle di adesso.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_CarriesTheVersionAndTheLanguage()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                Answer: "Cached answer.",
+                Citations: new List<CachedCitation>(),
+                ModelUsed: "test-model",
+                CachedAt: DateTimeOffset.UtcNow));
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How does the pawn move?", Language: "en", UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("Cached answer.");
+        result.ProfileVersionId.Should().Be(AnswerPipelineTestDoubles.SeedVersionId);
+        result.Language.Should().Be("en");
+    }
+
     // -------------------------------------------------------------------------
     // Cache-hit: una citazione senza DocumentId non e' servibile
     //

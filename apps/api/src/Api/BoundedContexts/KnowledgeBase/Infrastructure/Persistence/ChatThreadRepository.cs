@@ -322,6 +322,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
                 typeof(ChatMessage).GetProperty(nameof(ChatMessage.TokenCount))?.SetValue(message, dto.TokenCount);
             }
 
+            // #4168: versione del profilo e lingua della risposta
+            if (dto.ProfileVersionId.HasValue || dto.Language != null)
+            {
+                message.SetAnswerProvenance(dto.ProfileVersionId, dto.Language);
+            }
+
             return message;
         }).ToList();
 
@@ -397,7 +403,9 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             AgentType: m.AgentType,
             Confidence: m.Confidence,
             CitationsJson: m.CitationsJson,
-            TokenCount: m.TokenCount
+            TokenCount: m.TokenCount,
+            ProfileVersionId: m.ProfileVersionId,
+            Language: m.Language
         )).ToList();
 
         var messagesJson = JsonSerializer.Serialize(messageDtos);
@@ -457,7 +465,10 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         string? AgentType = null,
         float? Confidence = null,
         string? CitationsJson = null,
-        int? TokenCount = null
+        int? TokenCount = null,
+        // #4168: versione del profilo e lingua della risposta
+        Guid? ProfileVersionId = null,
+        string? Language = null
     );
 
 }

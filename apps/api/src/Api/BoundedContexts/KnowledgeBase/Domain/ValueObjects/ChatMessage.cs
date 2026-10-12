@@ -25,6 +25,10 @@ internal sealed class ChatMessage
     public string? CitationsJson { get; private set; }
     public int? TokenCount { get; private set; }
 
+    // #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta, e la sua lingua
+    public Guid? ProfileVersionId { get; private set; }
+    public string? Language { get; private set; }
+
     // Known roles
     public static readonly string UserRole = "user";
     public static readonly string AssistantRole = "assistant";
@@ -119,6 +123,19 @@ internal sealed class ChatMessage
         Confidence = confidence;
         CitationsJson = citationsJson;
         TokenCount = tokenCount;
+    }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): registra quale versione del profilo ha prodotto la risposta e in che lingua,
+    /// così il feedback e le valutazioni possono riferirsi a quella versione.
+    /// </summary>
+    public void SetAnswerProvenance(Guid? profileVersionId, string? language)
+    {
+        if (!IsAssistantMessage)
+            throw new InvalidOperationException("Answer provenance can only be set on assistant messages");
+
+        ProfileVersionId = profileVersionId;
+        Language = language;
     }
 
     public override string ToString() => $"[{Role}] {Content.Substring(0, Math.Min(50, Content.Length))}...";

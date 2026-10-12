@@ -9,5 +9,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 internal record AddMessageCommand(
     Guid ThreadId,
     string Content,
-    string Role
+    string Role,
+    // #4168: per una risposta della pipeline, la versione del profilo e la lingua dal completamento
+    Guid? ProfileVersionId = null,
+    string? Language = null
 ) : ICommand<ChatThreadDto>;

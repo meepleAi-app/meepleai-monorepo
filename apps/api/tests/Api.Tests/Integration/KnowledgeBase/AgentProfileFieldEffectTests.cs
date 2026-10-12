@@ -394,6 +394,130 @@ public sealed class AgentProfileFieldEffectTests
         CitationsOf(events).Should().ContainSingle();
     }
 
+    // ─── Il registro: versione e lingua di ogni risposta (5f, ADR-095 D2) ────────
+
+    /// <summary>
+    /// La versione usata e la lingua della risposta escono con il completamento, così che chi
+    /// salva la risposta e chi la valuta sappia con quale versione è stata prodotta.
+    /// </summary>
+    [Fact]
+    public async Task Complete_CarriesTheVersionAndTheLanguageOfTheAnswer()
+    {
+        await PublishAsync(c => Modified(c, temperature: 0.4m));
+        var published = await PublishedVersionIdAsync();
+
+        var events = await AskAsync(ItalianQuestion);
+
+        var complete = events.Single(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Complete)
+            .GetProperty("data");
+        complete.GetProperty("profileVersionId").GetGuid().Should().Be(published);
+        complete.GetProperty("language").GetString().Should().Be("it");
+    }
+
+    /// <summary>La riga di <c>ai_request_logs</c> della chat porta la versione e la lingua.</summary>
+    [Fact]
+    public async Task RequestLog_RecordsTheVersionAndTheLanguage()
+    {
+        var published = await PublishedVersionIdAsync();
+
+        await AskAsync(ItalianQuestion);
+
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var log = await db.AiRequestLogs.AsNoTracking()
+            .Where(l => l.Endpoint == "qa-stream")
+            .OrderByDescending(l => l.CreatedAt)
+            .FirstAsync(Ct);
+        log.ProfileVersionId.Should().Be(published);
+        log.Language.Should().Be("it");
+    }
+
+    /// <summary>
+    /// La chat salva la risposta dopo lo stream: il messaggio conserva la versione e la lingua che
+    /// il completamento gli ha dato, e le restituisce quando il thread si rilegge.
+    /// </summary>
+    [Fact]
+    public async Task ChatMessage_KeepsTheVersionAndTheLanguage()
+    {
+        var published = await PublishedVersionIdAsync();
+        var created = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/chat-threads", _token, new { gameId = _gameId, title = "Profilo" }), Ct);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Ct));
+        using var thread = JsonDocument.Parse(await created.Content.ReadAsStringAsync(Ct));
+        var threadId = thread.RootElement.GetProperty("id").GetGuid();
+
+        var added = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", _token,
+            new { content = "Five cards.", role = "assistant", profileVersionId = published, language = "it" }), Ct);
+        var addedBody = await added.Content.ReadAsStringAsync(Ct);
+        added.IsSuccessStatusCode.Should().BeTrue(addedBody);
+        // anche il thread restituito dal salvataggio: è da lì che la chat prende l'id del messaggio
+        using (var addedJson = JsonDocument.Parse(addedBody))
+        {
+            var saved = addedJson.RootElement.GetProperty("messages").EnumerateArray()
+                .Single(m => m.GetProperty("role").GetString() == "assistant");
+            saved.GetProperty("profileVersionId").GetGuid().Should().Be(published);
+            saved.GetProperty("language").GetString().Should().Be("it");
+        }
+
+        var reread = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/chat-threads/{threadId}", _token), Ct);
+        using var body = JsonDocument.Parse(await reread.Content.ReadAsStringAsync(Ct));
+        var message = body.RootElement.GetProperty("messages").EnumerateArray()
+            .Single(m => m.GetProperty("role").GetString() == "assistant");
+        message.GetProperty("profileVersionId").GetGuid().Should().Be(published);
+        message.GetProperty("language").GetString().Should().Be("it");
+    }
+
+    /// <summary>La risposta non in streaming porta anch'essa la versione e la lingua.</summary>
+    [Fact]
+    public async Task SingleAnswer_CarriesTheVersionAndTheLanguage()
+    {
+        var published = await PublishedVersionIdAsync();
+
+        var answer = await AskSingleAsync(ItalianQuestion);
+
+        answer.GetProperty("profileVersionId").GetGuid().Should().Be(published);
+        answer.GetProperty("language").GetString().Should().Be("it");
+    }
+
+    /// <summary>
+    /// <c>/agents/qa</c> risponde con gli stessi passi e scrive la sua riga di
+    /// <c>ai_request_logs</c>: anche quella porta la versione e la lingua.
+    /// </summary>
+    [Fact]
+    public async Task SingleAnswerRequestLog_RecordsTheVersionAndTheLanguage()
+    {
+        var published = await PublishedVersionIdAsync();
+
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/agents/qa?generateFollowUps=false", _token,
+                new { gameId = _gameId.ToString(), query = ItalianQuestion }),
+            Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("profileVersionId").GetGuid().Should().Be(published);
+        json.RootElement.GetProperty("language").GetString().Should().Be("it");
+
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var log = await db.AiRequestLogs.AsNoTracking()
+            .Where(l => l.Endpoint == "qa")
+            .OrderByDescending(l => l.CreatedAt)
+            .FirstAsync(Ct);
+        log.ProfileVersionId.Should().Be(published);
+        log.Language.Should().Be("it");
+    }
+
+    private async Task<Guid> PublishedVersionIdAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(Ct);
+        return profile!.Published.Id;
+    }
+
     // ─── La cache delle risposte ────────────────────────────────────────────────
 
     /// <summary>

@@ -111,6 +111,33 @@ public sealed class AnswerPipelinePartsTests
 
     // ─── Prompt ─────────────────────────────────────────────────────────────────
 
+    [Theory]
+    [InlineData(CitationStyle.PageReferencesInText, "[2]")]
+    [InlineData(CitationStyle.StructuredEvents, "Do not add source markers")]
+    public void BuildAcrossGames_TheCitationStyleDecidesTheSourceMarkers(CitationStyle style, string expected)
+    {
+        var content = AgentProfileContent.Create(
+            "MeepleAI", "d", "p", "deepseek-flash", null, 0.3m, 1500, style,
+            new Dictionary<string, string> { ["en"] = "EN prompt" }, "en", 20, 5, 0.55m, 0.7m, 0.3m, true,
+            Enum.GetValues<DocumentCategory>());
+
+        var prompt = AnswerPromptBuilder.BuildAcrossGames(content, "en", "[1] [Source: Document d1, Page 3]\ntext", "q?", hasProtectedSources: true);
+
+        prompt.SystemPrompt.Should().StartWith("EN prompt");
+        prompt.SystemPrompt.Should().Contain(expected);
+        prompt.SystemPrompt.Should().Contain(AnswerPromptBuilder.ProtectedSourcesInstruction);
+        prompt.UserPrompt.Should().StartWith("CONTEXT FROM YOUR GAME LIBRARY:\n[1] [Source: Document d1, Page 3]");
+    }
+
+    [Fact]
+    public void BuildAcrossGames_WithoutProtectedSources_AsksForNoParaphrase()
+    {
+        var prompt = AnswerPromptBuilder.BuildAcrossGames(Content(), "it", "ctx", "q?", hasProtectedSources: false);
+
+        prompt.SystemPrompt.Should().NotContain(AnswerPromptBuilder.ProtectedSourcesInstruction);
+        prompt.SystemPrompt.Should().EndWith(AnswerPromptBuilder.AnswerLanguageInstruction("it"));
+    }
+
     [Fact]
     public void Build_WithAHouseRule_AuthorisesItAndPutsItBeforeTheContext()
     {

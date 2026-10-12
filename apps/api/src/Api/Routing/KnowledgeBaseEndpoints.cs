@@ -224,8 +224,8 @@ internal static class KnowledgeBaseEndpoints
                 Query: request.Query,
                 UserId: userId,
                 Role: userRole,
-                AgentLanguage: request.Language ?? "it",
-                TopK: request.TopK ?? 8);
+                AgentLanguage: request.Language,
+                AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString()); // #4168
 
             await foreach (var evt in mediator.CreateStream(query, streamCt).ConfigureAwait(false))
             {
@@ -1544,9 +1544,8 @@ internal sealed record GlobalKbSearchRequest(
 /// User/Role are NOT in the request — they are resolved from the authenticated session.
 /// </summary>
 /// <param name="Query">The natural-language question to ask across all accessible games.</param>
-/// <param name="Language">ISO 639-1 language code for the LLM prompt (default: "it").</param>
-/// <param name="TopK">Max chunks to retrieve cross-game (default: 8, capped by handler).</param>
+/// <param name="Language">ISO 639-1 language the client asks for; used when the question is too short to detect it (#4168).</param>
+/// <remarks>#4168: the number of chunks comes from the published agent profile; a `topK` in the body is ignored.</remarks>
 internal sealed record GlobalKbAskRequest(
     string Query,
-    string? Language = null,
-    int? TopK = null);
+    string? Language = null);

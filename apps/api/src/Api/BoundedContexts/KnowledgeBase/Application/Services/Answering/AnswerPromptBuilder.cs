@@ -113,6 +113,66 @@ internal static class AnswerPromptBuilder
         return new AnswerPrompt(system.ToString(), user, promptLanguage);
     }
 
+    /// <summary>
+    /// #4168: le fonti di un'altra persona, nella libreria, sono regolamenti coperti da copyright.
+    /// La ricerca cross-game le tratta tutte come protette: si riformula, non si copia.
+    /// </summary>
+    internal const string ProtectedSourcesInstruction =
+        "The sources marked PROTECTED are copyrighted rulebooks: paraphrase them in your own words and never copy "
+        + "their text verbatim.";
+
+    /// <summary>
+    /// Lo stile delle citazioni quando le fonti sono numerate, come nella ricerca fra più giochi: un
+    /// numero di pagina da solo non dice a quale manuale appartiene, il marcatore [N] sì, e la pagina
+    /// della libreria lo trasforma in un collegamento al passaggio.
+    /// </summary>
+    internal static string NumberedCitationInstruction(CitationStyle style) => style switch
+    {
+        CitationStyle.PageReferencesInText =>
+            "Each source in the context is numbered [N]. After every statement drawn from a source, add its marker, "
+            + "for example [2]; use [2,5] when a statement is supported by several sources.",
+        CitationStyle.StructuredEvents =>
+            "Do not add source markers in the text: the sources are attached to the answer separately.",
+        _ => throw new ArgumentOutOfRangeException(nameof(style), style, "Unknown citation style."),
+    };
+
+    /// <summary>
+    /// #4168: il prompt di una risposta fra i giochi della libreria. Il prompt di sistema è quello
+    /// del profilo, come per un gioco solo; cambiano le citazioni (fonti numerate) e il contesto,
+    /// che porta per ogni fonte documento, pagina e tier di copyright.
+    /// </summary>
+    /// <param name="profile">Il contenuto della versione pubblicata.</param>
+    /// <param name="answerLanguage">La lingua di chi chiede (codice ISO 639-1).</param>
+    /// <param name="numberedContext">Le fonti, ciascuna preceduta da [N] e dalla sua etichetta.</param>
+    /// <param name="question">La domanda.</param>
+    /// <param name="hasProtectedSources">Se fra le fonti ce ne sono di protette da copyright.</param>
+    internal static AnswerPrompt BuildAcrossGames(
+        AgentProfileContent profile,
+        string answerLanguage,
+        string numberedContext,
+        string question,
+        bool hasProtectedSources)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var promptLanguage = profile.SystemPrompts.ContainsKey(answerLanguage)
+            ? answerLanguage
+            : profile.FallbackLanguage;
+
+        var system = new StringBuilder(profile.SystemPrompts[promptLanguage].Trim())
+            .Append("\n\n")
+            .Append(NumberedCitationInstruction(profile.CitationStyle));
+        if (hasProtectedSources)
+        {
+            system.Append('\n').Append(ProtectedSourcesInstruction);
+        }
+
+        system.Append('\n').Append(AnswerLanguageInstruction(answerLanguage));
+
+        var user = $"CONTEXT FROM YOUR GAME LIBRARY:\n{numberedContext}\n\nQUESTION:\n{question}\n\nANSWER:";
+        return new AnswerPrompt(system.ToString(), user, promptLanguage);
+    }
+
     private static string LanguageName(string language) => language switch
     {
         "en" => "English",

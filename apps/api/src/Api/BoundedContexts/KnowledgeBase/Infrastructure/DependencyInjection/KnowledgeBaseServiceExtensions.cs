@@ -476,6 +476,8 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IPublishedAgentProfileReader,
             Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.PublishedAgentProfileReader>();
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerRetrieval>();
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ICrossGameAnswerFlow,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.CrossGameAnswerFlow>();
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPipeline,
             Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipeline>();
         services.AddScoped<AskQuestionQueryHandler>();

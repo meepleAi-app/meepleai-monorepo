@@ -1,6 +1,6 @@
 /**
  * Admin Game Creation E2E Tests
- * @slow - 39 test cases, API integration and authorization tests
+ * @slow - API integration and authorization tests
  *
  * Tests for game creation by admin and editor users.
  * Covers the API-level game creation flow. The UI-level tests drove the game

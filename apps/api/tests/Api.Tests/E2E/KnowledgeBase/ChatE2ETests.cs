@@ -132,9 +132,73 @@ public sealed class ChatE2ETests : E2ETestBase
         // l assenza di un servizio esterno.
         response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
             "CreateChatThread (invalid game) ha risposto 500: " + await DescribeResponseAsync(response));
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.NotFound,
-            HttpStatusCode.BadRequest);
+        // #4230: 404 and nothing else. The assertion used to accept a 400 as well, which would
+        // have let the unknown-id path drift to a different refusal without a red test.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// Issue #4230. The handler looked the game up in the shared catalogue only, kept the id it
+    /// was given when it found nothing, and let the insert break the FK to shared_games: a 500.
+    /// A private game is not in the catalogue either, so the same happened to every private game.
+    /// Someone else's private game must look exactly like a game that does not exist: a 404 does
+    /// not say whether the id is real.
+    /// </summary>
+    [Fact]
+    public async Task CreateChatThread_OnAnotherUsersPrivateGame_ReturnsNotFound()
+    {
+        var (_, ownerId) = await RegisterUserAsync(
+            $"chat_pg_owner_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
+        var privateGameId = await SeedPrivateGameAsync(ownerId);
+
+        var (sessionToken, _) = await RegisterUserAsync(
+            $"chat_pg_other_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+
+        var response = await Client.PostAsJsonAsync(
+            "/api/v1/chat-threads", new { gameId = privateGameId, title = "Not my game" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound,
+            "CreateChatThread (gioco privato altrui): " + await DescribeResponseAsync(response));
+    }
+
+    /// <summary>
+    /// Issue #4230. A thread on the caller's own private game cannot be stored yet: the thread's
+    /// game column references shared_games (the private-game column arrives with #4244). Until
+    /// then the answer says so, with a code the client can read, instead of a 500.
+    /// </summary>
+    [Fact]
+    public async Task CreateChatThread_OnOwnPrivateGame_SaysItIsNotAvailableYet()
+    {
+        var (sessionToken, userId) = await RegisterUserAsync(
+            $"chat_pg_self_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+        var privateGameId = await SeedPrivateGameAsync(userId);
+
+        var response = await Client.PostAsJsonAsync(
+            "/api/v1/chat-threads", new { gameId = privateGameId, title = "My private game" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity,
+            "CreateChatThread (gioco privato proprio): " + await DescribeResponseAsync(response));
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        body.GetProperty("error").GetString().Should().Be("PRIVATE_GAME_CHAT_UNAVAILABLE");
+    }
+
+    private async Task<Guid> SeedPrivateGameAsync(Guid ownerId)
+    {
+        var game = new Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            Title = $"E2E Private Game {Guid.NewGuid():N}",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
+            CreatedAt = DateTime.UtcNow
+        };
+        DbContext.PrivateGames.Add(game);
+        await DbContext.SaveChangesAsync();
+        return game.Id;
     }
 
     #endregion

@@ -41,8 +41,15 @@ internal sealed class AddMessageCommandValidator : AbstractValidator<AddMessageC
             .When(x => string.Equals(x.Role, ChatMessage.UserRole, StringComparison.Ordinal))
             .WithMessage("Language is only allowed on assistant messages");
 
+        RuleFor(x => x.ProfileVersionId)
+            .NotEqual(Guid.Empty)
+            .When(x => x.ProfileVersionId.HasValue)
+            .WithMessage("ProfileVersionId cannot be empty");
+
+        // la pipeline produce un codice ISO 639-1 minuscolo («it-IT» diventa «it»)
         RuleFor(x => x.Language)
-            .MaximumLength(16)
-            .WithMessage("Language cannot exceed 16 characters");
+            .Matches("^[a-z]{2}$")
+            .When(x => x.Language != null)
+            .WithMessage("Language must be a two-letter ISO 639-1 code");
     }
 }

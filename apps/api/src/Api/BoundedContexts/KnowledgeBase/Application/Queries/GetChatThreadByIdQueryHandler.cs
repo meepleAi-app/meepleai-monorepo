@@ -28,25 +28,7 @@ internal class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQu
 
     private static ChatThreadDto MapToDto(ChatThread thread)
     {
-        var messageDtos = thread.Messages.Select(m => new ChatMessageDto(
-            Id: m.Id,
-            Content: m.Content,
-            Role: m.Role,
-            Timestamp: m.Timestamp,
-            SequenceNumber: m.SequenceNumber,
-            UpdatedAt: m.UpdatedAt,
-            IsDeleted: m.IsDeleted,
-            DeletedAt: m.DeletedAt,
-            DeletedByUserId: m.DeletedByUserId,
-            IsInvalidated: m.IsInvalidated,
-            // Issue #2500: map agent metadata so citations survive thread reload
-            AgentType: m.AgentType,
-            Confidence: m.Confidence,
-            CitationsJson: m.CitationsJson,
-            TokenCount: m.TokenCount,
-            ProfileVersionId: m.ProfileVersionId,
-            Language: m.Language
-        )).ToList();
+        var messageDtos = thread.Messages.Select(ChatMessageDtoMapping.ToDto).ToList();
 
         return new ChatThreadDto(
             Id: thread.Id,

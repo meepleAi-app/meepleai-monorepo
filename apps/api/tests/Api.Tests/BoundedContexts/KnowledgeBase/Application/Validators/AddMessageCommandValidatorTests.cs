@@ -65,11 +65,24 @@ public sealed class AddMessageCommandValidatorTests
         result.ShouldHaveValidationErrorFor(x => x.Language);
     }
 
-    [Fact]
-    public void Validate_LanguageLongerThanTheColumn_HasLanguageError()
+    [Theory]
+    [InlineData("IT")]
+    [InlineData("it-IT")]
+    [InlineData(" it")]
+    [InlineData("italiano")]
+    [InlineData("")]
+    public void Validate_LanguageNotAnIsoCode_HasLanguageError(string language)
     {
-        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "assistant", Guid.NewGuid(), new string('x', 17));
+        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "assistant", Guid.NewGuid(), language);
 
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.Language);
+    }
+
+    [Fact]
+    public void Validate_EmptyProfileVersionId_HasError()
+    {
+        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "assistant", Guid.Empty, "it");
+
+        _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.ProfileVersionId);
     }
 }

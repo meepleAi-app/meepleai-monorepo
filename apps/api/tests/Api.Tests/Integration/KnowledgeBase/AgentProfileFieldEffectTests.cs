@@ -449,7 +449,16 @@ public sealed class AgentProfileFieldEffectTests
         var added = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", _token,
             new { content = "Five cards.", role = "assistant", profileVersionId = published, language = "it" }), Ct);
-        added.IsSuccessStatusCode.Should().BeTrue(await added.Content.ReadAsStringAsync(Ct));
+        var addedBody = await added.Content.ReadAsStringAsync(Ct);
+        added.IsSuccessStatusCode.Should().BeTrue(addedBody);
+        // anche il thread restituito dal salvataggio: è da lì che la chat prende l'id del messaggio
+        using (var addedJson = JsonDocument.Parse(addedBody))
+        {
+            var saved = addedJson.RootElement.GetProperty("messages").EnumerateArray()
+                .Single(m => m.GetProperty("role").GetString() == "assistant");
+            saved.GetProperty("profileVersionId").GetGuid().Should().Be(published);
+            saved.GetProperty("language").GetString().Should().Be("it");
+        }
 
         var reread = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Get, $"/api/v1/chat-threads/{threadId}", _token), Ct);

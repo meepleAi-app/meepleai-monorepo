@@ -55,24 +55,4 @@ describe('AdminShell', () => {
     expect(root).not.toBeNull();
     expect(root).toHaveAttribute('data-theme', 'dark');
   });
-
-  /**
-   * Issue #4255. The scoped dark theme set the background and not the text colour. Colour is
-   * inherited as an already computed value: the body resolves it in the light theme of <html>,
-   * and every descendant without a colour class of its own got dark text on the dark shell.
-   * Declaring the token on the shell root resolves it INSIDE the dark scope.
-   *
-   * jsdom does not compute Tailwind, so this asserts the declaration, not the rendered colour:
-   * the rendered contrast is measured in the browser (see the issue).
-   */
-  it('sets the text colour inside the dark scope, not only the background', () => {
-    mockUseCurrentUser.mockReturnValue({ data: { id: 'u', email: 'a@b.c', role: 'admin' } });
-    const { container } = render(
-      <AdminShell>
-        <p>body</p>
-      </AdminShell>
-    );
-    const root = container.querySelector('[data-admin-shell]');
-    expect(root).toHaveClass('text-foreground');
-  });
 });

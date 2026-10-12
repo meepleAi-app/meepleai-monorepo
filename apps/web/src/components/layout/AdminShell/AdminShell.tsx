@@ -21,14 +21,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    // #4255: `text-foreground` here, not only the background. Colour is inherited as a computed
-    // value, so without it every descendant with no colour class of its own kept the dark text
-    // the body resolved in the light theme, on the dark shell.
-    <div
-      data-admin-shell
-      data-theme="dark"
-      className="flex min-h-dvh flex-col bg-[var(--bg)] text-foreground"
-    >
+    <div data-admin-shell data-theme="dark" className="flex min-h-dvh flex-col bg-[var(--bg)]">
       <AppTopBar adminMode onMenuClick={() => setDrawerOpen(true)} />
       <MobileTopBar adminMode onHamburgerClick={() => setDrawerOpen(true)} />
 

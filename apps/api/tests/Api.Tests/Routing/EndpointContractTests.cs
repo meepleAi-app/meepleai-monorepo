@@ -159,6 +159,11 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["PUT", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved (with mismatched field names), never read"];
         yield return ["GET", "/api/v1/admin/budget", "#4169 — AppBudget: a second budget the LLM gateway never applied; the caps live in /admin/llm/config"];
         yield return ["PUT", "/api/v1/admin/budget", "#4169 — AppBudget: a second budget the LLM gateway never applied"];
+        yield return ["GET", "/api/v1/admin/config/chat-history-limits", "#4212 — ChatHistory:*TierLimit keys: saved, never read by the runtime"];
+        yield return ["PUT", "/api/v1/admin/config/chat-history-limits", "#4212 — ChatHistory:*TierLimit keys: saved, never read by the runtime"];
+        yield return ["GET", "/api/v1/admin/config/game-library-limits", "#4212 — GameLibrary:*TierLimit keys: the quota read other keys; the limit is now the plan's MaxLibraryGames"];
+        yield return ["PUT", "/api/v1/admin/config/game-library-limits", "#4212 — GameLibrary:*TierLimit keys: the quota read other keys; the limit is now the plan's MaxLibraryGames"];
+        yield return ["GET", "/api/v1/users/00000000-0000-0000-0000-000000000001/chat-sessions/limit", "#4212 — chat session tier limit: it governed chat_sessions, which no page creates"];
     }
 
     [Theory]

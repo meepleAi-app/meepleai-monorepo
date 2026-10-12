@@ -220,8 +220,6 @@ POST   /private-games/{id}/propose-to-catalog        -> ProposePrivateGameComman
 
 ### Admin Config
 ```
-GET    /admin/config/game-library-limits             -> GetGameLibraryLimitsQuery
-PUT    /admin/config/game-library-limits             -> UpdateGameLibraryLimitsCommand
 ```
 
 ## Database Entities

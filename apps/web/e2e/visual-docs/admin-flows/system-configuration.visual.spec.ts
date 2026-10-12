@@ -2,7 +2,6 @@
  * System Configuration - Visual Documentation (Admin Role)
  *
  * Captures visual documentation for system configuration:
- * - Library limits configuration
  * - Upload quotas
  * - Feature flags
  * - System settings
@@ -23,12 +22,6 @@ import {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 // Mock configuration data
-const MOCK_LIBRARY_LIMITS = {
-  free: 5,
-  normal: 20,
-  premium: 50,
-};
-
 const MOCK_UPLOAD_QUOTAS = {
   free: { daily: 5, weekly: 20 },
   normal: { daily: 20, weekly: 100 },
@@ -60,22 +53,6 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
     await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
 
     // Mock configuration endpoints
-    await page.route(`${API_BASE}/api/v1/admin/system/game-library-limits`, async route => {
-      if (route.request().method() === 'PUT') {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ success: true }),
-        });
-      } else {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify(MOCK_LIBRARY_LIMITS),
-        });
-      }
-    });
-
     await page.route(`${API_BASE}/api/v1/admin/system/upload-quotas`, async route => {
       await route.fulfill({
         status: 200,
@@ -143,63 +120,6 @@ test.describe('System Configuration - Visual Documentation (Admin)', () => {
 
     helper.setTotalSteps(2);
     console.log(`\n✅ Config dashboard captured: ${helper.getCapturedSteps().length} screenshots`);
-  });
-
-  test('library limits - tier configuration', async ({ page }) => {
-    // Step 1: Navigate to library limits
-    await page.goto('/admin/configuration/library-limits');
-    await waitForStableState(page);
-
-    await helper.capture(page, {
-      step: 1,
-      title: 'Library Limits',
-      description: 'Configure game library limits per tier',
-      annotations: [
-        {
-          selector: 'input[name="free"], [data-tier="free"]',
-          label: 'Free Limit',
-          color: ANNOTATION_COLORS.neutral,
-        },
-        {
-          selector: 'input[name="normal"], [data-tier="normal"]',
-          label: 'Normal Limit',
-          color: ANNOTATION_COLORS.info,
-        },
-        {
-          selector: 'input[name="premium"], [data-tier="premium"]',
-          label: 'Premium Limit',
-          color: ANNOTATION_COLORS.success,
-        },
-      ],
-      nextAction: 'Modify limits',
-    });
-
-    // Step 2: Edit a limit
-    const freeInput = page.locator('input[name="free"], [data-tier="free"] input').first();
-    if (await freeInput.isVisible({ timeout: 2000 })) {
-      await freeInput.clear();
-      await freeInput.fill('10');
-      await waitForStableState(page);
-
-      await helper.capture(page, {
-        step: 2,
-        title: 'Limit Modified',
-        description: 'Changed Free tier limit from 5 to 10',
-        annotations: [
-          { selector: 'input[name="free"]', label: 'Updated', color: ANNOTATION_COLORS.warning },
-          {
-            selector: 'button[type="submit"], button:has-text("Save")',
-            label: 'Save',
-            color: ANNOTATION_COLORS.success,
-          },
-        ],
-        previousAction: 'Edit limit',
-        nextAction: 'Save changes',
-      });
-    }
-
-    helper.setTotalSteps(2);
-    console.log(`\n✅ Library limits captured: ${helper.getCapturedSteps().length} screenshots`);
   });
 
   test('upload quotas - daily and weekly limits', async ({ page }) => {

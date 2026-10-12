@@ -56,33 +56,6 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
             request.UserId,
             request.GameId);
 
-        // Auto-archive: sliding window when tier limit is reached (TierLimit > 0 means enforced)
-        if (request.TierLimit > 0)
-        {
-            var currentCount = await _sessionRepository
-                .CountByUserIdAsync(request.UserId, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (currentCount >= request.TierLimit)
-            {
-                var oldest = await _sessionRepository
-                    .GetOldestActiveByUserIdAsync(request.UserId, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (oldest != null)
-                {
-                    oldest.Archive();
-                    await _sessionRepository.UpdateAsync(oldest, cancellationToken).ConfigureAwait(false);
-
-                    _logger.LogInformation(
-                        "Auto-archived oldest chat session {SessionId} for user {UserId} (tier limit={Limit})",
-                        oldest.Id,
-                        request.UserId,
-                        request.TierLimit);
-                }
-            }
-        }
-
         // Resolve gameName for the ChatSessionCreatedEvent payload (BE-3 #1590 H2).
         // The event must carry gameName so the activity rail can show a meaningful title
         // without a secondary join at read time.

@@ -23,28 +23,18 @@ vi.mock('@/lib/api/core/httpClient', () => ({
   HttpClient: MockHttpClient,
 }));
 
-vi.mock('@/lib/api', () => ({
-  api: {
-    config: {
-      getChatHistoryLimits: vi
-        .fn()
-        .mockResolvedValue({ free: 10, normal: 50, premium: 100, admin: 999 }),
-      updateChatHistoryLimits: vi.fn().mockResolvedValue({}),
-    },
-  },
-}));
-
 function Wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
 }
 
 describe('Configuration', () => {
-  it('renders three tabs', async () => {
+  it('renders the strategy and models tabs', async () => {
     const { default: ConfigPage } = await import('@/app/admin/(dashboard)/agents/config/page');
     render(<ConfigPage />, { wrapper: Wrapper });
     expect(screen.getByRole('tab', { name: /strategy/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /models/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /limits/i })).toBeInTheDocument();
+    // #4212: the Limits tab saved chat-history keys nobody read; it is gone.
+    expect(screen.queryByRole('tab', { name: /limits/i })).not.toBeInTheDocument();
   });
 });

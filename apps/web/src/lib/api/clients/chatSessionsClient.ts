@@ -10,12 +10,10 @@ import {
   ChatSessionArraySchema,
   ChatSessionDtoSchema,
   ChatSessionListResponseSchema,
-  ChatSessionTierLimitSchema,
   type AddChatSessionMessageRequest,
   type AddChatSessionMessageResponse,
   type ChatSessionDto,
   type ChatSessionSummaryDto,
-  type ChatSessionTierLimit,
   type CreateChatSessionRequest,
 } from '../schemas/chat-sessions.schemas';
 
@@ -57,13 +55,10 @@ export interface ChatSessionsClient {
    * Add a message to a chat session
    * Backend returns { messageId } — use getById to fetch the updated session if needed
    */
-  addMessage(sessionId: string, request: Omit<AddChatSessionMessageRequest, 'sessionId'>): Promise<AddChatSessionMessageResponse>;
-
-  /**
-   * Get the user's chat session tier limit and current usage
-   * Issue #4913
-   */
-  getLimit(userId: string): Promise<ChatSessionTierLimit | null>;
+  addMessage(
+    sessionId: string,
+    request: Omit<AddChatSessionMessageRequest, 'sessionId'>
+  ): Promise<AddChatSessionMessageResponse>;
 
   /**
    * Delete a chat session
@@ -132,13 +127,6 @@ export function createChatSessionsClient({
         `/api/v1/chat/sessions/${encodeURIComponent(sessionId)}/messages`,
         request,
         AddChatSessionMessageResponseSchema
-      );
-    },
-
-    async getLimit(userId: string): Promise<ChatSessionTierLimit | null> {
-      return httpClient.get(
-        `/api/v1/users/${encodeURIComponent(userId)}/chat-sessions/limit`,
-        ChatSessionTierLimitSchema
       );
     },
 

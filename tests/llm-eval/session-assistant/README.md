@@ -14,4 +14,8 @@ Set di scenari ed esecutore della spec `docs/for-developers/specs/2026-10-11-ses
 
 I risultati grezzi vanno in `results/`, che è ignorata da git, e il file di un modello si sovrascrive a ogni run dello stesso giorno: copialo prima di rilanciare. L'esito si riassume nella spec, e i run citati dalla spec si copiano in `baselines/<data>/`.
 
-Le chiamate passano dal gateway con la quota giornaliera delle valutazioni (`GET /api/v1/admin/llm/budget/usage` la mostra): quando finisce, ogni scenario esce con `AI_BUDGET_DAILY_EXHAUSTED` fino al giorno dopo. Per iterare su un prompt esegui solo gli scenari che falliscono. I modelli via OpenRouter richiedono una chiave locale valida (oggi `401`: va risincronizzata con `make secrets-sync`).
+Le chiamate passano dal gateway con la quota giornaliera delle valutazioni (`GET /api/v1/admin/llm/budget/usage` la mostra): quando finisce, ogni scenario esce con `AI_BUDGET_DAILY_EXHAUSTED` fino al giorno dopo. Per iterare su un prompt esegui solo gli scenari che falliscono, più volte, con il prompt in un file:
+
+`node tests/llm-eval/session-assistant/run-eval.mjs deepseek-flash --only=en-turn,it-score-dimension-unknown --repeat=6 --prompts=tests/llm-eval/session-assistant/prompts/v2.json --label=prova`
+
+`--prompts` manda il prompt nella richiesta (`{ "italian": "...", "english": "..." }`, una lingua basta): non serve ricostruire l'immagine. Senza, vale il prompt del codice, che un test tiene uguale a `prompts/v2.json`. Quando un prompt supera il set intero tre volte su tre, diventa il nuovo file misurato e il nuovo predefinito. I modelli via OpenRouter richiedono una chiave locale valida (oggi `401`: va risincronizzata con `make secrets-sync`).

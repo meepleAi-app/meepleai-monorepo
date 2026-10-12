@@ -15,12 +15,13 @@ internal sealed record AssistantHistoryTurn(string Role, string Text);
 internal static class AssistantConversation
 {
     public static List<ChatMessage> Build(
-        string language, AssistantSessionState state, IReadOnlyList<AssistantHistoryTurn> history, string question)
+        AssistantPromptSet prompts, string language, AssistantSessionState state, IReadOnlyList<AssistantHistoryTurn> history, string question)
     {
+        ArgumentNullException.ThrowIfNull(prompts);
         var messages = new List<ChatMessage>
         {
-            new(ChatRole.System, SessionAssistantPrompts.For(language)),
-            new(ChatRole.System, StaticContext(state)),
+            new(ChatRole.System, prompts.For(language)),
+            new(ChatRole.System, StaticContext(state, AssistantLanguage.IsEnglish(language))),
         };
         messages.AddRange(history.Select(h => new ChatMessage(
             string.Equals(h.Role, "assistant", StringComparison.Ordinal) ? ChatRole.Assistant : ChatRole.User, h.Text)));
@@ -28,15 +29,18 @@ internal static class AssistantConversation
         return messages;
     }
 
-    private static string StaticContext(AssistantSessionState state)
+    /// <summary>Nella lingua della sessione, come il prompt: in una sessione inglese era in italiano (#4256).</summary>
+    private static string StaticContext(AssistantSessionState state, bool english)
     {
         var text = new StringBuilder();
-        text.AppendLine($"Gioco: {state.GameName ?? "(nessun gioco collegato)"}");
-        text.AppendLine($"Giocatori: {string.Join(", ", state.Players.Select(p => p.Name))}");
-        text.AppendLine($"Dimensioni del punteggio: {string.Join(", ", state.Dimensions)}");
+        text.AppendLine(english
+            ? $"Game: {state.GameName ?? "(no game linked)"}"
+            : $"Gioco: {state.GameName ?? "(nessun gioco collegato)"}");
+        text.AppendLine($"{(english ? "Players" : "Giocatori")}: {string.Join(", ", state.Players.Select(p => p.Name))}");
+        text.AppendLine($"{(english ? "Scoring dimensions" : "Dimensioni del punteggio")}: {string.Join(", ", state.Dimensions)}");
         if (state.HouseRules.Count > 0)
         {
-            text.AppendLine("House rules (valgono sul regolamento):");
+            text.AppendLine(english ? "House rules (they override the rulebook):" : "House rules (valgono sul regolamento):");
             foreach (var rule in state.HouseRules)
             {
                 text.AppendLine($"- {rule}");

@@ -39,7 +39,7 @@ public sealed class SessionAssistantEvaluatorTests
             Answer("Ho preparato la proposta: +5 a Marco. Confermala."));
 
         var result = await Evaluator(gateway).RunAsync(
-            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.Passed.Should().BeTrue();
         result.ToolsCalled.Should().Equal("proponi_punteggio");
@@ -52,7 +52,7 @@ public sealed class SessionAssistantEvaluatorTests
         var gateway = Script(Answer("Ho segnato 5 punti a Marco."));
 
         var result = await Evaluator(gateway).RunAsync(
-            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.Passed.Should().BeFalse();
         result.ClaimedActionWithoutProposal.Should().BeTrue();
@@ -68,7 +68,7 @@ public sealed class SessionAssistantEvaluatorTests
             Calls(("stato_partita", "{}")),
             Answer("Current turn: Luca (round 2). I've prepared a proposal to pass the turn to the next player — please confirm it."));
 
-        var result = await Evaluator(gateway).RunAsync(Scenario(), Settings, TestContext.Current.CancellationToken);
+        var result = await Evaluator(gateway).RunAsync(Scenario(), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.ClaimedActionWithoutProposal.Should().BeTrue("l'host cercherebbe una card che non esiste");
         result.Passed.Should().BeFalse();
@@ -82,7 +82,7 @@ public sealed class SessionAssistantEvaluatorTests
             Answer("Ho preparato una proposta: +5 punti a Marco (round 2). Confermi?"));
 
         var result = await Evaluator(gateway).RunAsync(
-            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.ClaimedActionWithoutProposal.Should().BeFalse();
         result.Passed.Should().BeTrue();
@@ -98,7 +98,7 @@ public sealed class SessionAssistantEvaluatorTests
             Answer("Ho preparato una proposta: +5 punti a Giulia. Confermi?"));
 
         var result = await Evaluator(gateway).RunAsync(
-            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.ExtraProposals.Should().Be(1);
         result.MissingProposals.Should().Be(1);
@@ -113,7 +113,7 @@ public sealed class SessionAssistantEvaluatorTests
             Answer("Ho preparato la proposta: +5 a Marco. Confermi?"));
 
         var result = await Evaluator(gateway).RunAsync(
-            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.ExtraProposals.Should().Be(1, "l'host vedrebbe due card per gli stessi punti");
         result.MissingProposals.Should().Be(0);
@@ -126,7 +126,7 @@ public sealed class SessionAssistantEvaluatorTests
         var gateway = Script(Calls(("proponi_turno", "{}")), Answer("Ho preparato la proposta per passare il turno."));
 
         var result = await Evaluator(gateway).RunAsync(
-            Scenario() with { Expected = new AssistantExpectation([], []) }, Settings, TestContext.Current.CancellationToken);
+            Scenario() with { Expected = new AssistantExpectation([], []) }, Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.ExtraProposals.Should().Be(1);
         result.MissingProposals.Should().Be(0);
@@ -142,7 +142,7 @@ public sealed class SessionAssistantEvaluatorTests
 
         var result = await Evaluator(gateway).RunAsync(
             Scenario(new ExpectedProposal("AdvanceTurn", null, null, null, null), new ExpectedProposal("Score", "marco", "PUNTI", 2, 5)),
-            Settings, TestContext.Current.CancellationToken);
+            Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.ExtraProposals.Should().Be(0);
         result.MissingProposals.Should().Be(0);
@@ -155,7 +155,7 @@ public sealed class SessionAssistantEvaluatorTests
     public async Task Run_ScenarioWithoutState_IsAnErrorResult_NotAnException()
     {
         var result = await Evaluator(Script(Answer("ok"))).RunAsync(
-            Scenario() with { State = null! }, Settings, TestContext.Current.CancellationToken);
+            Scenario() with { State = null! }, Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.Id.Should().Be("it-score-simple");
         result.Passed.Should().BeFalse();
@@ -166,11 +166,51 @@ public sealed class SessionAssistantEvaluatorTests
     public async Task Run_ScenarioWithoutExpectation_IsAnErrorResult_AndKeepsTheTurnCounters()
     {
         var result = await Evaluator(Script(Answer("Tocca a Luca."))).RunAsync(
-            Scenario() with { Expected = null! }, Settings, TestContext.Current.CancellationToken);
+            Scenario() with { Expected = null! }, Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.Passed.Should().BeFalse();
         result.ErrorCode.Should().StartWith("evaluator_error:");
         result.RoundTrips.Should().Be(1, "il turno è stato eseguito: i suoi contatori restano");
+    }
+
+    // #4256: il prompt arriva dalla richiesta, così una variante si misura senza ricostruire l'immagine.
+    [Fact]
+    public async Task Run_SendsThePromptSetItIsGiven_ToTheModel()
+    {
+        LlmChatRequest? sent = null;
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmChatRequest, CancellationToken>((request, _) => sent = request)
+            .ReturnsAsync(Answer("Tocca a Luca."));
+
+        await Evaluator(gateway).RunAsync(
+            Scenario(), Settings, new AssistantPromptSet("PROMPT ITALIANO DI PROVA", "ENGLISH TEST PROMPT"),
+            TestContext.Current.CancellationToken);
+
+        sent!.Messages[0].Role.Should().Be(LlmChatRoles.System);
+        sent.Messages[0].Content.Should().Be("PROMPT ITALIANO DI PROVA");
+    }
+
+    [Fact]
+    public async Task Handler_PartialPromptOverride_KeepsTheDefaultForTheOtherLanguage()
+    {
+        var sent = new List<LlmChatRequest>();
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmChatRequest, CancellationToken>((request, _) => sent.Add(request))
+            .ReturnsAsync(Answer("ok"));
+        var handler = new RunSessionAssistantEvaluationCommandHandler(Evaluator(gateway));
+        var english = Scenario() with { Id = "en-state", Language = "en" };
+
+        var report = await handler.Handle(
+            new RunSessionAssistantEvaluationCommand(
+                new AssistantScenarioSet(2, [Scenario(), english]), "deepseek-flash", null, 0.2, 600, 4,
+                new AssistantPromptOverride(Italian: "PROMPT ITALIANO DI PROVA", English: null)),
+            TestContext.Current.CancellationToken);
+
+        report.Results.Should().HaveCount(2);
+        sent[0].Messages[0].Content.Should().Be("PROMPT ITALIANO DI PROVA");
+        sent[1].Messages[0].Content.Should().Be(SessionAssistantPrompts.English);
     }
 
     [Fact]
@@ -183,7 +223,7 @@ public sealed class SessionAssistantEvaluatorTests
                 Metadata = new Dictionary<string, string>(StringComparer.Ordinal) { ["error_code"] = LlmBudgetAdmission.DailyBudgetErrorCode },
             });
 
-        var result = await Evaluator(gateway).RunAsync(Scenario(), Settings, TestContext.Current.CancellationToken);
+        var result = await Evaluator(gateway).RunAsync(Scenario(), Settings, SessionAssistantPrompts.Default, TestContext.Current.CancellationToken);
 
         result.Passed.Should().BeFalse();
         result.ErrorCode.Should().Be(LlmBudgetAdmission.DailyBudgetErrorCode);

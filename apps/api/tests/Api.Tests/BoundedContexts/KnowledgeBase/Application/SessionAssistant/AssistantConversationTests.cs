@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -22,19 +23,19 @@ public sealed class AssistantConversationTests
     [Fact]
     public void Build_OrdersFromTheMostStableToTheMostVolatile()
     {
-        var messages = AssistantConversation.Build("it", State(),
+        var messages = AssistantConversation.Build(SessionAssistantPrompts.Default, "it", State(),
             [new AssistantHistoryTurn("user", "chi tocca?"), new AssistantHistoryTurn("assistant", "Tocca a Marco.")],
             "Marco fa 5 punti");
 
         messages.Select(m => m.Role).Should().Equal(ChatRole.System, ChatRole.System, ChatRole.User, ChatRole.Assistant, ChatRole.User);
-        messages[0].Text.Should().Be(SessionAssistantPrompts.For("it"));
+        messages[0].Text.Should().Be(SessionAssistantPrompts.Italian);
         messages[^1].Text.Should().Be("Marco fa 5 punti");
     }
 
     [Fact]
     public void Build_StaticContextHasGamePlayersDimensionsAndHouseRules_ButNoScoresTurnOrPhase()
     {
-        var context = AssistantConversation.Build("it", State(), [], "x")[1].Text;
+        var context = AssistantConversation.Build(SessionAssistantPrompts.Default, "it", State(), [], "x")[1].Text;
 
         context.Should().Contain("Azul").And.Contain("Marco").And.Contain("punti").And.Contain("tessera in più");
         context.Should().NotContain("37", "i punteggi arrivano solo da stato_partita (spec §4.1)");
@@ -44,8 +45,77 @@ public sealed class AssistantConversationTests
     [Fact]
     public void Prompts_ExistForItalianAndEnglish_AndFallBackToItalian()
     {
-        SessionAssistantPrompts.For("en").Should().Contain("never");
-        SessionAssistantPrompts.For("de").Should().Be(SessionAssistantPrompts.For("it"));
+        SessionAssistantPrompts.Default.For("en").Should().Contain("never");
+        SessionAssistantPrompts.Default.For("de").Should().Be(SessionAssistantPrompts.Default.For("it"));
+    }
+
+    // #4256: le misure passano dalla richiesta di valutazione (un file), il predefinito è una costante: senza
+    // questo test si potrebbe misurare un testo e spedirne un altro.
+    [Fact]
+    public void DefaultPrompts_AreTheMeasuredOnes()
+    {
+        var path = Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "prompts", "v2.json");
+        using var measured = JsonDocument.Parse(File.ReadAllText(path));
+
+        SessionAssistantPrompts.Italian.Should().Be(measured.RootElement.GetProperty("italian").GetString());
+        SessionAssistantPrompts.English.Should().Be(measured.RootElement.GetProperty("english").GetString());
+    }
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "tests", "llm-eval")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Radice del repository non trovata.");
+    }
+
+    // #4256: il prompt è un dato. Lo spike lo teneva nel codice, e ogni variante costava un'immagine nuova.
+    [Fact]
+    public void Build_UsesThePromptOfTheSessionLanguage_FromThePromptSetItIsGiven()
+    {
+        var prompts = new AssistantPromptSet("PROMPT ITALIANO DI PROVA", "ENGLISH TEST PROMPT");
+
+        AssistantConversation.Build(prompts, "it", State(), [], "x")[0].Text.Should().Be("PROMPT ITALIANO DI PROVA");
+        AssistantConversation.Build(prompts, "en", State(), [], "x")[0].Text.Should().Be("ENGLISH TEST PROMPT");
+    }
+
+    // #4256: «en-US» prendeva il prompt italiano, perché il confronto era esatto su «en».
+    [Theory]
+    [InlineData("en", true)]
+    [InlineData("EN", true)]
+    [InlineData("en-US", true)]
+    [InlineData("en_GB", true)]
+    [InlineData("it", false)]
+    [InlineData("it-IT", false)]
+    [InlineData("de", false)]
+    [InlineData("english", false)]
+    [InlineData("", false)]
+    public void PromptSet_PicksEnglishForAnyEnglishLocale_AndItalianOtherwise(string language, bool english) =>
+        SessionAssistantPrompts.Default.For(language).Should().Be(english ? SessionAssistantPrompts.English : SessionAssistantPrompts.Italian);
+
+    [Fact]
+    public void PromptSet_With_ReplacesOnlyTheLanguagesItIsGiven()
+    {
+        var onlyEnglish = SessionAssistantPrompts.Default.With(italian: null, english: "ENGLISH TEST PROMPT");
+
+        onlyEnglish.Italian.Should().Be(SessionAssistantPrompts.Italian);
+        onlyEnglish.English.Should().Be("ENGLISH TEST PROMPT");
+        SessionAssistantPrompts.Default.With(" ", null).Should().Be(SessionAssistantPrompts.Default, "una stringa vuota non è un prompt");
+    }
+
+    // #4256, ipotesi su en-turn: in una sessione inglese il contesto statico era in italiano.
+    [Fact]
+    public void Build_StaticContextSpeaksTheSessionLanguage()
+    {
+        var english = AssistantConversation.Build(SessionAssistantPrompts.Default, "en-US", State(), [], "x")[1].Text;
+        var italian = AssistantConversation.Build(SessionAssistantPrompts.Default, "it", State(), [], "x")[1].Text;
+
+        english.Should().Contain("Game: Azul").And.Contain("Players: Marco").And.Contain("Scoring dimensions: punti").And.Contain("House rules");
+        english.Should().NotContain("Giocatori").And.NotContain("Dimensioni");
+        italian.Should().Contain("Gioco: Azul").And.Contain("Giocatori: Marco").And.Contain("Dimensioni del punteggio: punti");
     }
 
     [Theory]

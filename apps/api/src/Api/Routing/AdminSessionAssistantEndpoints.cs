@@ -20,7 +20,8 @@ internal static class AdminSessionAssistantEndpoints
                 body.FallbackModelId,
                 body.Temperature ?? 0.2,
                 body.MaxTokens ?? 600,
-                body.MaxToolIterations ?? 4), ct).ConfigureAwait(false)))
+                body.MaxToolIterations ?? 4,
+                body.Prompts), ct).ConfigureAwait(false)))
             .WithName("RunSessionAssistantEvaluation")
             .WithSummary("Run the in-game assistant scenario set against a model (Admin)")
             .Produces<AssistantEvaluationReport>(StatusCodes.Status200OK);
@@ -32,5 +33,6 @@ internal static class AdminSessionAssistantEndpoints
         string? FallbackModelId,
         double? Temperature,
         int? MaxTokens,
-        int? MaxToolIterations);
+        int? MaxToolIterations,
+        AssistantPromptOverride? Prompts = null);
 }

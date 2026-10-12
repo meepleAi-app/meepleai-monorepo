@@ -14,7 +14,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { toast } from 'sonner';
 
 // Mock the api module BEFORE importing the component
@@ -42,6 +44,35 @@ import { GamePicker, type GameOption } from '../GamePicker';
 const mockGetLibrary = vi.mocked(api.library.getLibrary);
 const mockSharedSearch = vi.mocked(api.sharedGames.search);
 const mockToastError = vi.mocked(toast.error);
+
+/** #4227: the picker loads through TanStack Query, so it needs a client. */
+function renderPicker(ui: ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
+
+function libraryPage(items: ReadonlyArray<Record<string, unknown>>, totalCount = items.length) {
+  return {
+    items,
+    page: 1,
+    pageSize: 10,
+    totalCount,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  } as never;
+}
+
+function catalogPage(items: ReadonlyArray<Record<string, unknown>>) {
+  return { items, total: items.length, page: 1, pageSize: 10 } as never;
+}
+
+async function type(value: string, testId = 'game-picker-input') {
+  fireEvent.change(screen.getByTestId(testId), { target: { value } });
+  await act(async () => {
+    vi.advanceTimersByTime(350);
+  });
+}
 
 const sampleLibraryItem = {
   id: 'entry-1',
@@ -105,7 +136,7 @@ describe('GamePicker', () => {
       () => new Promise(() => {}) // never resolves — hold loading state
     );
 
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
 
     const input = screen.getByTestId('game-picker-input');
     fireEvent.change(input, { target: { value: 'wing' } });
@@ -125,7 +156,7 @@ describe('GamePicker', () => {
   it('shows error toast when the search API rejects (no silent catch)', async () => {
     mockGetLibrary.mockRejectedValue(new Error('Network down'));
 
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
 
     const input = screen.getByTestId('game-picker-input');
     fireEvent.change(input, { target: { value: 'wing' } });
@@ -155,7 +186,7 @@ describe('GamePicker', () => {
       hasPreviousPage: false,
     });
 
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
 
     const input = screen.getByTestId('game-picker-input');
     fireEvent.change(input, { target: { value: 'nope' } });
@@ -174,21 +205,21 @@ describe('GamePicker', () => {
   // State 4: Manual entry
   // -------------------------------------------------------------------------
   it('renders manual-entry input when allowManualEntry=true', () => {
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} allowManualEntry />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} allowManualEntry />);
 
     expect(screen.getByTestId('game-picker-manual-input')).toBeInTheDocument();
     expect(screen.getByTestId('game-picker-manual-confirm')).toBeInTheDocument();
   });
 
   it('does NOT render manual-entry input when allowManualEntry=false (default)', () => {
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
 
     expect(screen.queryByTestId('game-picker-manual-input')).not.toBeInTheDocument();
   });
 
   it('emits a manual GameOption when the user confirms a manual entry', () => {
     const onChange = vi.fn();
-    render(<GamePicker source="library" value={null} onChange={onChange} allowManualEntry />);
+    renderPicker(<GamePicker source="library" value={null} onChange={onChange} allowManualEntry />);
 
     fireEvent.change(screen.getByTestId('game-picker-manual-input'), {
       target: { value: 'Homebrew Game' },
@@ -209,7 +240,7 @@ describe('GamePicker', () => {
   it('shows the manual-unknown warning when the selected value is manual', () => {
     const value: GameOption = { id: 'manual-foo', title: 'Foo', manual: true };
 
-    render(<GamePicker source="library" value={value} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={value} onChange={vi.fn()} />);
 
     expect(screen.getByTestId('game-picker-manual-warning')).toBeInTheDocument();
     expect(screen.getByTestId('game-picker-manual-warning')).toHaveTextContent(
@@ -220,7 +251,7 @@ describe('GamePicker', () => {
   it('does NOT show the manual-unknown warning for a non-manual (library/catalog) selection', () => {
     const value: GameOption = { id: 'game-1', title: 'Wingspan' };
 
-    render(<GamePicker source="library" value={value} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={value} onChange={vi.fn()} />);
 
     expect(screen.queryByTestId('game-picker-manual-warning')).not.toBeInTheDocument();
   });
@@ -239,7 +270,7 @@ describe('GamePicker', () => {
       hasPreviousPage: false,
     });
 
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
 
     fireEvent.change(screen.getByTestId('game-picker-input'), { target: { value: 'wing' } });
 
@@ -248,7 +279,15 @@ describe('GamePicker', () => {
     });
 
     await waitFor(() => {
-      expect(mockGetLibrary).toHaveBeenCalledWith({ search: 'wing', pageSize: 10 });
+      // #4227: sorted by title, like every other library picker (the endpoint sorts
+      // descending by date unless told otherwise).
+      expect(mockGetLibrary).toHaveBeenCalledWith({
+        search: 'wing',
+        page: 1,
+        pageSize: 10,
+        sortBy: 'title',
+        sortDescending: false,
+      });
     });
     expect(mockSharedSearch).not.toHaveBeenCalled();
   });
@@ -261,7 +300,7 @@ describe('GamePicker', () => {
       pageSize: 10,
     });
 
-    render(<GamePicker source="catalog" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="catalog" value={null} onChange={vi.fn()} />);
 
     fireEvent.change(screen.getByTestId('game-picker-input'), { target: { value: 'catan' } });
 
@@ -270,11 +309,12 @@ describe('GamePicker', () => {
     });
 
     await waitFor(() => {
+      // #4227: no `status`. The public endpoint returns published games only and ignores
+      // the parameter; the 1 that was sent meant PendingApproval, not Published.
       expect(mockSharedSearch).toHaveBeenCalledWith({
         searchTerm: 'catan',
         page: 1,
         pageSize: 10,
-        status: 1,
       });
     });
     expect(mockGetLibrary).not.toHaveBeenCalled();
@@ -297,7 +337,7 @@ describe('GamePicker', () => {
       pageSize: 10,
     });
 
-    render(<GamePicker source="both" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="both" value={null} onChange={vi.fn()} />);
 
     fireEvent.change(screen.getByTestId('game-picker-input'), { target: { value: 'game' } });
 
@@ -326,7 +366,7 @@ describe('GamePicker', () => {
     });
 
     const onChange = vi.fn();
-    render(<GamePicker source="library" value={null} onChange={onChange} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={onChange} />);
 
     fireEvent.change(screen.getByTestId('game-picker-input'), { target: { value: 'wing' } });
 
@@ -351,7 +391,7 @@ describe('GamePicker', () => {
     const onChange = vi.fn();
     const value: GameOption = { id: 'game-1', title: 'Wingspan' };
 
-    render(<GamePicker source="library" value={value} onChange={onChange} />);
+    renderPicker(<GamePicker source="library" value={value} onChange={onChange} />);
 
     fireEvent.click(screen.getByTestId('game-picker-clear'));
 
@@ -359,7 +399,7 @@ describe('GamePicker', () => {
   });
 
   it('does NOT trigger search for queries shorter than 2 chars', async () => {
-    render(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+    renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
 
     fireEvent.change(screen.getByTestId('game-picker-input'), { target: { value: 'a' } });
 
@@ -368,5 +408,189 @@ describe('GamePicker', () => {
     });
 
     expect(mockGetLibrary).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // #4227 — data layer, library browsing, errors
+  // -------------------------------------------------------------------------
+  describe('#4227 — dati, libreria a campo vuoto, errori', () => {
+    const wingspan = { ...sampleLibraryItem };
+    const azul = { ...sampleLibraryItem, id: 'entry-2', gameId: 'game-azul', gameTitle: 'Azul' };
+
+    it('catalogo: la copertina viene da coverUrl, non da thumbnailUrl (#2123)', async () => {
+      mockSharedSearch.mockResolvedValue(
+        catalogPage([{ ...sampleCatalogItem, coverUrl: 'https://cdn.example.com/catan-cover.png' }])
+      );
+      const onChange = vi.fn();
+      renderPicker(<GamePicker source="catalog" value={null} onChange={onChange} />);
+
+      await type('catan');
+      fireEvent.click(await screen.findByTestId('game-picker-result-cat-catan'));
+
+      expect(onChange).toHaveBeenCalledWith(
+        expect.objectContaining({ imageUrl: 'https://cdn.example.com/catan-cover.png' })
+      );
+    });
+
+    it('senza showLibraryWhenEmpty il campo vuoto non interroga il server', async () => {
+      renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(mockGetLibrary).not.toHaveBeenCalled();
+    });
+
+    it('con showLibraryWhenEmpty mostra la libreria a campo vuoto, senza testo di ricerca', async () => {
+      mockGetLibrary.mockResolvedValue(libraryPage([azul, wingspan]));
+      renderPicker(
+        <GamePicker source="library" value={null} onChange={vi.fn()} showLibraryWhenEmpty />
+      );
+
+      expect(await screen.findByTestId('game-picker-result-game-azul')).toBeInTheDocument();
+      expect(screen.getByTestId('game-picker-result-game-wingspan')).toBeInTheDocument();
+      expect(mockGetLibrary).toHaveBeenCalledWith(
+        expect.objectContaining({ search: undefined, sortBy: 'title', sortDescending: false })
+      );
+    });
+
+    it('con showLibraryWhenEmpty cerca già dalla prima lettera', async () => {
+      mockGetLibrary.mockResolvedValue(libraryPage([azul]));
+      renderPicker(
+        <GamePicker source="library" value={null} onChange={vi.fn()} showLibraryWhenEmpty />
+      );
+      await screen.findByTestId('game-picker-result-game-azul');
+
+      await type('a');
+
+      await waitFor(() =>
+        expect(mockGetLibrary).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'a' }))
+      );
+    });
+
+    it('showLibraryWhenEmpty non riguarda il catalogo: a campo vuoto non lo interroga', async () => {
+      renderPicker(
+        <GamePicker source="catalog" value={null} onChange={vi.fn()} showLibraryWhenEmpty />
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(mockSharedSearch).not.toHaveBeenCalled();
+    });
+
+    it('libreria vuota a campo vuoto: lo dice, invece di non mostrare nulla', async () => {
+      mockGetLibrary.mockResolvedValue(libraryPage([]));
+      renderPicker(
+        <GamePicker source="library" value={null} onChange={vi.fn()} showLibraryWhenEmpty />
+      );
+
+      expect(await screen.findByTestId('game-picker-empty')).toHaveTextContent(/libreria è vuota/i);
+    });
+
+    it('se la libreria ha più giochi di quelli mostrati, invita a restringere', async () => {
+      mockGetLibrary.mockResolvedValue(libraryPage([azul, wingspan], 42));
+      renderPicker(
+        <GamePicker source="library" value={null} onChange={vi.fn()} showLibraryWhenEmpty />
+      );
+
+      expect(await screen.findByTestId('game-picker-more')).toHaveTextContent(/2 di 42/);
+    });
+
+    it('una risposta arrivata in ritardo per un testo vecchio non sostituisce quella nuova', async () => {
+      let resolveOld: (value: never) => void = () => {};
+      mockGetLibrary.mockImplementation(params => {
+        if (params?.search === 'wi') {
+          return new Promise(resolve => {
+            resolveOld = resolve as (value: never) => void;
+          });
+        }
+        return Promise.resolve(libraryPage([azul]));
+      });
+      renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+
+      await type('wi');
+      await type('az');
+      await screen.findByTestId('game-picker-result-game-azul');
+      await act(async () => {
+        resolveOld(libraryPage([wingspan]));
+      });
+
+      expect(screen.getByTestId('game-picker-result-game-azul')).toBeInTheDocument();
+      expect(screen.queryByTestId('game-picker-result-game-wingspan')).not.toBeInTheDocument();
+    });
+
+    it('un errore resta in pagina, e «Riprova» rifà la ricerca', async () => {
+      mockGetLibrary.mockRejectedValueOnce(new Error('Network down'));
+      mockGetLibrary.mockResolvedValue(libraryPage([wingspan]));
+      renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+
+      await type('wing');
+      const alert = await screen.findByTestId('game-picker-error');
+      expect(alert).toHaveTextContent(/Network down/);
+
+      fireEvent.click(screen.getByTestId('game-picker-retry'));
+
+      expect(await screen.findByTestId('game-picker-result-game-wingspan')).toBeInTheDocument();
+      expect(screen.queryByTestId('game-picker-error')).not.toBeInTheDocument();
+    });
+
+    it('both: se una fonte fallisce mostra i risultati della seconda e dice che sono parziali', async () => {
+      mockGetLibrary.mockRejectedValue(new Error('library down'));
+      mockSharedSearch.mockResolvedValue(catalogPage([sampleCatalogItem]));
+      renderPicker(<GamePicker source="both" value={null} onChange={vi.fn()} />);
+
+      await type('cat');
+
+      expect(await screen.findByTestId('game-picker-result-cat-catan')).toBeInTheDocument();
+      expect(screen.getByTestId('game-picker-partial')).toBeInTheDocument();
+      expect(screen.queryByTestId('game-picker-error')).not.toBeInTheDocument();
+    });
+
+    it('una copertina su un host BGG non viene mai richiesta: resta il segnaposto (#2123)', async () => {
+      mockGetLibrary.mockResolvedValue(
+        libraryPage([{ ...wingspan, gameImageUrl: 'https://cf.geekdo-images.com/wingspan.png' }])
+      );
+      renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+
+      await type('wing');
+      const row = await screen.findByTestId('game-picker-result-game-wingspan');
+
+      expect(row.querySelector('img')).toBeNull();
+    });
+
+    it('una copertina che non si carica lascia il posto al segnaposto, non a un\u2019immagine rotta', async () => {
+      mockGetLibrary.mockResolvedValue(libraryPage([wingspan]));
+      renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+
+      await type('wing');
+      const row = await screen.findByTestId('game-picker-result-game-wingspan');
+      const img = row.querySelector('img');
+      expect(img).not.toBeNull();
+
+      fireEvent.error(img as HTMLImageElement);
+
+      expect(row.querySelector('img')).toBeNull();
+    });
+
+    it('anche la scheda del gioco scelto non richiede una copertina BGG', () => {
+      renderPicker(
+        <GamePicker
+          source="library"
+          value={{ id: 'g1', title: 'Wingspan', imageUrl: 'https://cf.geekdo-images.com/w.png' }}
+          onChange={vi.fn()}
+        />
+      );
+
+      expect(screen.getByTestId('game-picker-selected').querySelector('img')).toBeNull();
+    });
+    it('both: se falliscono entrambe è un errore, non una lista vuota', async () => {
+      mockGetLibrary.mockRejectedValue(new Error('library down'));
+      mockSharedSearch.mockRejectedValue(new Error('catalog down'));
+      renderPicker(<GamePicker source="both" value={null} onChange={vi.fn()} />);
+
+      await type('cat');
+
+      expect(await screen.findByTestId('game-picker-error')).toBeInTheDocument();
+      expect(screen.queryByTestId('game-picker-empty')).not.toBeInTheDocument();
+    });
   });
 });

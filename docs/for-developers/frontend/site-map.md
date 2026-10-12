@@ -2119,7 +2119,7 @@ _Route-group: `(authenticated)` · 11 pagine_
 - SessionCreateForm `isSubmitting`: disabilita il wizard quando `createRecord.isPending || isSaving` (`isSaving` copre l'intera sequenza post-create) — `apps/web/src/app/(authenticated)/play-records/new/page.tsx`
 - Layout mobile vs desktop: `useMediaQuery(max-width:768px)` → single-column; altrimenti split 8fr form + 4fr LivePreview (aside sticky classifica bozza) — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - DraftAutosaveIndicator + restore draft: attivo solo `mode==='create'`; ripristina draft localStorage al mount se nessun `initialValues` (prefill ha precedenza); clamp step 0..STEP_COUNT-1 — `apps/web/src/components/play-records/SessionCreateForm.tsx`
-- Step1 gameType radio (catalog/freeform): `catalog` → GameCombobox; `freeform` → Input testo libero; hint se `catalog && !watch('gameId')` — `apps/web/src/components/play-records/SessionCreateForm.tsx`
+- Step1 gameType radio (catalog/freeform): `catalog` → `GamePicker` canonico (libreria a campo vuoto, poi catalogo; #4250); `freeform` → Input testo libero; hint se `catalog && !watch('gameId')` — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - Action bar Avanti vs Salva: `currentStep < STEP_COUNT-1` → Button `type=button` 'Avanti' (valida STEP_FIELDS + gameName step0); altrimenti Button `type=submit` 'Salva'; Cancel solo step 0 && onCancel; Back solo `step>0` — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - Premature-submit guard: `handleFormSubmit` fa `nextStep()` invece di creare se `currentStep < STEP_COUNT-1` (evita record vuoto 'Planned' su re-render async) — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - Step3 winner badge inline: 🏆 sul player con punteggio massimo (`winnerIdx`, solo se `p.score !== ''`) — `apps/web/src/components/play-records/SessionCreateForm.tsx`
@@ -2218,7 +2218,7 @@ _Route-group: `(authenticated)` · 11 pagine_
 | RecordCardList / RecordCardGrid | `apps/web/src/components/play-records/index/RecordCardList.tsx` · `.../RecordCardGrid.tsx` | Card (button → detail), OutcomeBadge, resume/launch condizionali |
 | NewPlayRecordSheet | `apps/web/src/components/play-records/NewPlayRecordSheet.tsx` | Bottom-sheet 3-step create (gioco/giocatori/riepilogo) → detail |
 | SessionCreateForm | `apps/web/src/components/play-records/SessionCreateForm.tsx` | Wizard 3-step responsive create/edit + draft autosave + K5 gate + LivePreview |
-| GameCombobox | `apps/web/src/components/play-records/GameCombobox.tsx` | Picker gioco da libreria/catalogo |
+| GamePicker | `apps/web/src/components/features/game-picker/GamePicker.tsx` | Selettore di gioco canonico: libreria, catalogo o entrambi. Ha sostituito `GameCombobox` nei form delle partite (#4250) |
 | DraftAutosaveIndicator | `apps/web/src/components/play-records/DraftAutosaveIndicator.tsx` | Indicatore salvataggio bozza (solo create) |
 | StatisticsView | `apps/web/src/components/play-records/StatisticsView.tsx` | Corpo stats condiviso (inline `?tab=stats` + route standalone) |
 | StatsHero / MostPlayedBar / WinByGameBar / TrendChart | `apps/web/src/components/play-records/stats/*` | KPI 4-col · top 5 giochi · win-rate per gioco · trend (recharts) |

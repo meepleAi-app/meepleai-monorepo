@@ -76,6 +76,18 @@ export interface GamePickerProps {
    * Default false.
    */
   showLibraryWhenEmpty?: boolean;
+  /**
+   * Read-only picker (#4250): the field does not search and a selected game is shown
+   * without the × that would clear it. Default false.
+   */
+  disabled?: boolean;
+  /**
+   * Forwarded to the search input, so the picker can sit inside a form control: a
+   * `<label htmlFor>` reaches the field, and the field carries the error state.
+   */
+  id?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: boolean | 'true' | 'false';
   /** Stable testid prefix for E2E selectors (default: "game-picker"). */
   testId?: string;
   /**
@@ -98,6 +110,10 @@ export function GamePicker({
   debounceMs = 300,
   maxResults = 10,
   showLibraryWhenEmpty = false,
+  disabled = false,
+  id,
+  'aria-describedby': ariaDescribedBy,
+  'aria-invalid': ariaInvalid,
   testId = 'game-picker',
   renderResultExtra,
 }: GamePickerProps): JSX.Element {
@@ -120,7 +136,8 @@ export function GamePicker({
   const term = searchQuery.trim() === '' ? '' : debouncedQuery.trim();
   const wantsLibrary = source !== 'catalog' && term.length >= (showLibraryWhenEmpty ? 0 : 2);
   const wantsCatalog = source !== 'library' && term.length >= 2;
-  const active = wantsLibrary || wantsCatalog;
+  // No request while read-only, nor while a game is selected: the list is not on screen.
+  const active = !disabled && !value && (wantsLibrary || wantsCatalog);
 
   const search = useQuery({
     queryKey: ['game-picker', term, maxResults, wantsLibrary, wantsCatalog],
@@ -232,16 +249,18 @@ export function GamePicker({
               {value.manual ? 'Inserimento manuale' : 'Dalla tua libreria/catalogo'}
             </p>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            data-testid={`${testId}-clear`}
-            aria-label="Rimuovi gioco selezionato"
-          >
-            ×
-          </Button>
+          {!disabled && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              data-testid={`${testId}-clear`}
+              aria-label="Rimuovi gioco selezionato"
+            >
+              ×
+            </Button>
+          )}
         </div>
 
         {value.manual && <ManualUnknownWarning testId={testId} />}
@@ -261,11 +280,15 @@ export function GamePicker({
           aria-hidden="true"
         />
         <Input
+          id={id}
           type="search"
           role="combobox"
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           placeholder={placeholder}
           value={searchQuery}
           autoComplete="off"
+          disabled={disabled}
           onChange={e => {
             setSearchQuery(e.target.value);
             setActiveId(null);
@@ -392,6 +415,7 @@ export function GamePicker({
               placeholder="Nome del gioco (es. Catan, Ticket to Ride…)"
               value={manualTitle}
               onChange={e => setManualTitle(e.target.value)}
+              disabled={disabled}
               data-testid={`${testId}-manual-input`}
               aria-label="Nome del gioco"
             />
@@ -399,7 +423,7 @@ export function GamePicker({
               type="button"
               variant="outline"
               onClick={handleManualConfirm}
-              disabled={manualTitle.trim().length === 0}
+              disabled={disabled || manualTitle.trim().length === 0}
               data-testid={`${testId}-manual-confirm`}
             >
               Usa

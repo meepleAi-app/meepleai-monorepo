@@ -100,7 +100,7 @@ La logica di ogni tentativo è in `HybridLlmService` ed è privata (S3). Un clie
 - serve solo il pacchetto `Microsoft.Extensions.AI`, senza l'SDK OpenAI;
 - i test che sostituiscono `ILlmService` con un doppio continuano a coprire il nuovo percorso.
 
-Il prezzo è un refactor di `HybridLlmService`: la sequenza di un tentativo va estratta in un metodo comune a `GenerateCompletionAsync` e al nuovo `ChatAsync`, a comportamento invariato e con test di caratterizzazione prima.
+Il prezzo è un refactor di `HybridLlmService`: la sequenza di un tentativo va estratta da `GenerateAnswerAsync` (il percorso della 5b, con modello e riserva decisi dal chiamante) in un metodo comune a quello e al nuovo `ChatAsync`, a comportamento invariato e con test di caratterizzazione prima.
 
 ### 3.2 Decisioni
 
@@ -278,7 +278,7 @@ Domanda: **i modelli disponibili chiamano gli strumenti in modo affidabile?**
 
 | Livello | Cosa verifica |
 |---|---|
-| Gateway (caratterizzazione) | Prima del refactor di `HybridLlmService`: tetto, degrado, fallback e costo di `GenerateCompletionAsync` restano identici |
+| Gateway (caratterizzazione) | Prima del refactor di `HybridLlmService`: tetto, degrado, fallback e costo di `GenerateAnswerAsync` restano identici (`HybridLlmServiceAnswerTests`) |
 | Gateway (chat) | Un turno da tre giri produce **tre ammissioni al tetto e tre righe di costo**. Con il tetto raggiunto al secondo giro, quel giro **non arriva al client**: lo verifica un client finto che conta le chiamate. È la garanzia centrale |
 | Client | OpenRouter, DeepSeek e Ollama serializzano `tools` e leggono `tool_calls` (con `HttpMessageHandler` finto) |
 | Facciata | `GatewayChatClient` traduce chiamate e risultati degli strumenti in entrambe le direzioni |

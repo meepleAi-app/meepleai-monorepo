@@ -2,21 +2,31 @@
  * GameSelector — Two-tab game picker (private games / shared library)
  *
  * Loads private games on mount, lazy-loads shared library on first tab switch.
- * Provides search filtering and a "skip game" option for generic chat.
+ * Provides a search box and a "skip game" option for generic chat.
+ *
+ * #4187: the search runs on the server, on the active tab. Both tabs used to download one
+ * page (100 requested; the private-games endpoint returns at most 50 and says nothing) and
+ * filter it on the client, so a game past that page could not be found.
  */
 
 'use client';
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 import { Gamepad2, Search } from 'lucide-react';
 
+import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { api } from '@/lib/api';
 import type { UserLibraryEntry } from '@/lib/api/schemas/library.schemas';
 import type { PrivateGameDto } from '@/lib/api/schemas/private-games.schemas';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
+
+/** `GET /private-games` returns at most 50 per page (PrivateGameEndpoints: Math.Min(pageSize, 50)). */
+const PRIVATE_PAGE_SIZE = 50;
+/** `GET /library` returns at most 100 per page (UserLibraryRepository). */
+const LIBRARY_PAGE_SIZE = 100;
 
 // ── Type Adapters ───────────────────────────────────────────────────────────
 
@@ -35,20 +45,17 @@ function GameGrid({
   selectedGameId,
   onSelect,
   isLoading,
+  search,
+  onSearchChange,
 }: {
   games: Game[];
   selectedGameId: string | null;
   onSelect: (gameId: string) => void;
+  /** Only the first load: a search refresh keeps the grid, so the search box keeps focus. */
   isLoading: boolean;
+  search: string;
+  onSearchChange: (value: string) => void;
 }) {
-  const [search, setSearch] = useState('');
-
-  const filtered = useMemo(() => {
-    if (!search.trim()) return games;
-    const lower = search.toLowerCase();
-    return games.filter(g => g.title.toLowerCase().includes(lower));
-  }, [games, search]);
-
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -68,7 +75,7 @@ function GameGrid({
           type="text"
           placeholder="Cerca gioco..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => onSearchChange(e.target.value)}
           className="w-full pl-9 pr-3 py-2 rounded-lg border border-border/50 bg-card/70 dark:bg-card/70 backdrop-blur-md text-sm font-nunito placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/40"
           data-testid="game-search-input"
         />
@@ -76,12 +83,12 @@ function GameGrid({
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-64 overflow-y-auto pr-1">
-        {filtered.length === 0 ? (
+        {games.length === 0 ? (
           <p className="col-span-full text-sm text-muted-foreground text-center py-4">
             Nessun gioco trovato
           </p>
         ) : (
-          filtered.map(game => (
+          games.map(game => (
             <button
               key={game.id}
               onClick={() => onSelect(game.id)}
@@ -144,22 +151,32 @@ export function GameSelector({
   const [activeTab, setActiveTab] = useState<'private' | 'shared'>('private');
   const [privateGames, setPrivateGames] = useState<Game[]>([]);
   const [sharedGames, setSharedGames] = useState<Game[]>([]);
-  const [isLoadingPrivate, setIsLoadingPrivate] = useState(true);
-  const [isLoadingShared, setIsLoadingShared] = useState(false);
+  // The skeleton covers only the first load of each tab: replacing the grid at every search
+  // would unmount the search box under the user's fingers.
+  const [privateLoaded, setPrivateLoaded] = useState(false);
   const [sharedLoaded, setSharedLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const term = useDebounce(search, 300).trim();
+  // The text each tab was last loaded for: only the active tab follows the search, and
+  // switching back to a tab does not refetch a text it already has.
+  const privateTermRef = useRef<string | null>(null);
+  const sharedTermRef = useRef<string | null>(null);
 
-  // Load private games on mount
+  // Private games: on mount, then at every search while their tab is active
   useEffect(() => {
+    if (activeTab !== 'private' || privateTermRef.current === term) return;
     let cancelled = false;
-    setIsLoadingPrivate(true);
 
     api.library
-      .getPrivateGames({ pageSize: 100 })
+      .getPrivateGames({ search: term || undefined, pageSize: PRIVATE_PAGE_SIZE })
       .then(res => {
         if (!cancelled) {
           const games = (res.items ?? []).map(privateGameToGame);
           setPrivateGames(games);
+          privateTermRef.current = term;
+          // Each search is a new request: an earlier failure must not outlive a success.
+          setError(null);
           onGamesLoaded?.(games);
         }
       })
@@ -167,28 +184,36 @@ export function GameSelector({
         if (!cancelled) setError('Errore nel caricamento dei dati');
       })
       .finally(() => {
-        if (!cancelled) setIsLoadingPrivate(false);
+        if (!cancelled) setPrivateLoaded(true);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [onGamesLoaded]);
+  }, [activeTab, term, onGamesLoaded]);
 
-  // Lazy-load shared library on first tab switch
+  // Shared library: lazy, on the first switch to its tab, then at every search while open
   useEffect(() => {
-    if (activeTab !== 'shared' || sharedLoaded) return;
+    if (activeTab !== 'shared' || sharedTermRef.current === term) return;
     let cancelled = false;
-    setIsLoadingShared(true);
 
     api.library
-      .getLibrary({ pageSize: 100 })
+      .getLibrary({
+        search: term || undefined,
+        page: 1,
+        pageSize: LIBRARY_PAGE_SIZE,
+        sortBy: 'title',
+        // The endpoint sorts descending unless told otherwise (`sortDescending ?? true`).
+        sortDescending: false,
+      })
       .then(res => {
         if (!cancelled) {
           const items = res.items ?? [];
           const filtered = showOnlyWithKb ? items.filter(e => e.hasKb) : items;
           const games = filtered.map(libraryEntryToGame);
           setSharedGames(games);
+          sharedTermRef.current = term;
+          setError(null);
           onGamesLoaded?.(games);
         }
       })
@@ -196,19 +221,16 @@ export function GameSelector({
         if (!cancelled) setError('Errore nel caricamento della libreria');
       })
       .finally(() => {
-        if (!cancelled) {
-          setIsLoadingShared(false);
-          setSharedLoaded(true);
-        }
+        if (!cancelled) setSharedLoaded(true);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [activeTab, sharedLoaded, showOnlyWithKb, onGamesLoaded]);
+  }, [activeTab, term, showOnlyWithKb, onGamesLoaded]);
 
   const activeGames = activeTab === 'private' ? privateGames : sharedGames;
-  const isLoading = activeTab === 'private' ? isLoadingPrivate : isLoadingShared;
+  const isLoading = activeTab === 'private' ? !privateLoaded : !sharedLoaded;
 
   const handleSelect = useCallback(
     (gameId: string) => {
@@ -280,6 +302,8 @@ export function GameSelector({
         selectedGameId={selectedGameId}
         onSelect={handleSelect}
         isLoading={isLoading}
+        search={search}
+        onSearchChange={setSearch}
       />
     </section>
   );

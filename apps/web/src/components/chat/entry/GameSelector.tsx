@@ -158,11 +158,14 @@ export function GameSelector({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const term = useDebounce(search, 300).trim();
-  // The text the shared tab was last loaded for: switching tabs back does not refetch it.
+  // The text each tab was last loaded for: only the active tab follows the search, and
+  // switching back to a tab does not refetch a text it already has.
+  const privateTermRef = useRef<string | null>(null);
   const sharedTermRef = useRef<string | null>(null);
 
-  // Private games: on mount, then at every search
+  // Private games: on mount, then at every search while their tab is active
   useEffect(() => {
+    if (activeTab !== 'private' || privateTermRef.current === term) return;
     let cancelled = false;
 
     api.library
@@ -171,6 +174,9 @@ export function GameSelector({
         if (!cancelled) {
           const games = (res.items ?? []).map(privateGameToGame);
           setPrivateGames(games);
+          privateTermRef.current = term;
+          // Each search is a new request: an earlier failure must not outlive a success.
+          setError(null);
           onGamesLoaded?.(games);
         }
       })
@@ -184,7 +190,7 @@ export function GameSelector({
     return () => {
       cancelled = true;
     };
-  }, [term, onGamesLoaded]);
+  }, [activeTab, term, onGamesLoaded]);
 
   // Shared library: lazy, on the first switch to its tab, then at every search while open
   useEffect(() => {
@@ -207,6 +213,7 @@ export function GameSelector({
           const games = filtered.map(libraryEntryToGame);
           setSharedGames(games);
           sharedTermRef.current = term;
+          setError(null);
           onGamesLoaded?.(games);
         }
       })

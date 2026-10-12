@@ -221,6 +221,32 @@ describe('GameSelector', () => {
       }
     });
 
+    it("dopo un errore, una ricerca riuscita toglie l'avviso", async () => {
+      mockGetPrivateGames.mockRejectedValueOnce(new Error('Network error'));
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByRole('alert');
+
+      fireEvent.change(screen.getByTestId('game-search-input'), {
+        target: { value: 'Agricola 1' },
+      });
+
+      await screen.findByTestId('game-card-p1');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('scrivendo sulla scheda libreria non interroga i giochi privati', async () => {
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-p0');
+      fireEvent.click(screen.getByTestId('tab-shared-games'));
+      await screen.findByTestId('game-card-s0');
+      const privateCalls = mockGetPrivateGames.mock.calls.length;
+
+      fireEvent.change(screen.getByTestId('game-search-input'), { target: { value: 'Wingspan' } });
+      await screen.findByTestId('game-card-s-wingspan');
+
+      expect(mockGetPrivateGames.mock.calls.length).toBe(privateCalls);
+    });
+
     it('mentre la ricerca carica il campo resta al suo posto, con il testo', async () => {
       render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
       await screen.findByTestId('game-card-p0');

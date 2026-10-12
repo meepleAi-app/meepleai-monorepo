@@ -61,6 +61,20 @@ public sealed class OpenAiToolPayloadTests
     }
 
     [Fact]
+    public async Task CreateRequest_DisableThinking_SendsTheDeepSeekToggle_OnlyWhenAsked()
+    {
+        using var deepSeek = OpenAiToolPayload.CreateRequest("deepseek-flash",
+            [new LlmChatMessage(LlmChatRoles.User, "ciao")], [], 0.2, 100, disableThinking: true);
+        using var openRouter = OpenAiToolPayload.CreateRequest("meta-llama/llama-3.3-70b-instruct",
+            [new LlmChatMessage(LlmChatRoles.User, "ciao")], [], 0.2, 100);
+        using var withToggle = JsonDocument.Parse(await deepSeek.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken));
+        using var without = JsonDocument.Parse(await openRouter.Content!.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        withToggle.RootElement.GetProperty("thinking").GetProperty("type").GetString().Should().Be("disabled");
+        without.RootElement.TryGetProperty("thinking", out _).Should().BeFalse();
+    }
+
+    [Fact]
     public void ReadToolCalls_MapsIdNameAndArguments_AndFillsMissingIds()
     {
         var message = JsonSerializer.Deserialize<OpenAiChatMessage>("""
@@ -73,7 +87,7 @@ public sealed class OpenAiToolPayloadTests
 
         calls.Should().HaveCount(2);
         calls[0].Should().Be(new LlmToolCall("call_9", "stato_partita", "{}"));
-        calls[1].Id.Should().Be("call_1");
+        calls[1].Id.Should().StartWith("call_").And.NotBe("call_1", "un id per indice si ripeterebbe a ogni giro");
         calls[1].ArgumentsJson.Should().Be("{}");
     }
 }

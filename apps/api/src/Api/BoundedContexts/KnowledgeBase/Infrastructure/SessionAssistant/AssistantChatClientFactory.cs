@@ -18,12 +18,14 @@ internal sealed class AssistantChatClientFactory : IAssistantChatClientFactory
     private readonly ILlmService _gateway;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IServiceProvider _services;
+    private readonly ILogger<AssistantChatClientFactory> _logger;
 
     public AssistantChatClientFactory(ILlmService gateway, ILoggerFactory loggerFactory, IServiceProvider services)
     {
         _gateway = gateway ?? throw new ArgumentNullException(nameof(gateway));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _services = services ?? throw new ArgumentNullException(nameof(services));
+        _logger = loggerFactory.CreateLogger<AssistantChatClientFactory>();
     }
 
     public IChatClient Create(AssistantModelSettings settings, ChatTurnMeter meter) =>
@@ -32,30 +34,38 @@ internal sealed class AssistantChatClientFactory : IAssistantChatClientFactory
             {
                 client.MaximumIterationsPerRequest = settings.MaxToolIterations;
                 client.IncludeDetailedErrors = false;
-                client.FunctionInvoker = (context, cancellationToken) => InvokeToolAsync(context, meter, cancellationToken);
+                client.FunctionInvoker = (context, cancellationToken) => InvokeToolAsync(context, meter, _logger, cancellationToken);
             })
             .UseOpenTelemetry(_loggerFactory, TelemetrySourceName)
             .Build(_services);
 
     /// <summary>
-    /// Il binding di M.E.AI lancia <see cref="ArgumentException"/> quando manca un parametro obbligatorio
-    /// o un valore non si converte, prima che lo strumento parta. Il modello riceve un errore che può
-    /// correggere, e il turno lo conta.
+    /// Gli argomenti che non si legano ai parametri falliscono nel binding di M.E.AI, prima che lo
+    /// strumento parta: il modello riceve un errore che può correggere, e il turno lo conta. Un errore
+    /// dentro lo strumento non passa di qui: resta un fallimento generico dello strumento (spec §6.3).
     /// </summary>
     private static async ValueTask<object?> InvokeToolAsync(
-        FunctionInvocationContext context, ChatTurnMeter meter, CancellationToken cancellationToken)
+        FunctionInvocationContext context, ChatTurnMeter meter, ILogger logger, CancellationToken cancellationToken)
     {
         meter.RecordToolCall(context.Function.Name);
         try
         {
             return await context.Function.InvokeAsync(context.Arguments, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is ArgumentException or JsonException or FormatException or InvalidCastException)
+        catch (Exception ex) when (IsArgumentBindingFailure(ex))
         {
             meter.RecordInvalidArguments();
+            logger.LogWarning(ex, "Session assistant: the arguments of tool {Tool} did not bind", context.Function.Name);
             return new AssistantToolError(
                 "argomenti_non_validi",
                 "Gli argomenti non sono validi: controlla nomi e tipi dei parametri dello strumento e riprova.");
         }
     }
+
+    /// <summary>
+    /// Misurato con M.E.AI 10.6.0: un parametro obbligatorio mancante lancia <see cref="ArgumentException"/>
+    /// con <c>ParamName == "arguments"</c>; un valore che non si converte lancia <see cref="JsonException"/>.
+    /// </summary>
+    private static bool IsArgumentBindingFailure(Exception ex) =>
+        ex is JsonException || ex is ArgumentException { ParamName: "arguments" };
 }

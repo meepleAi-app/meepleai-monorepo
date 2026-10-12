@@ -488,8 +488,9 @@ internal class OllamaLlmClient : ILlmClient
             var text = chatResponse.Message.Content ?? string.Empty;
             var calls = (chatResponse.Message.ToolCalls ?? [])
                 .Where(c => c.Function is not null && !string.IsNullOrWhiteSpace(c.Function.Name))
-                .Select((c, index) => new LlmToolCall(
-                    $"call_{index}",
+                .Select(c => new LlmToolCall(
+                    // Ollama non dà id: uno univoco per chiamata, così due giri non si confondono.
+                    $"call_{Guid.NewGuid():N}",
                     c.Function!.Name,
                     c.Function.Arguments.ValueKind == JsonValueKind.Object ? c.Function.Arguments.GetRawText() : "{}"))
                 .ToList();

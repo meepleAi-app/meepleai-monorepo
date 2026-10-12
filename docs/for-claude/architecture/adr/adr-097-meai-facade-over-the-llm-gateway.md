@@ -21,4 +21,7 @@ La logica di ogni tentativo è privata in `HybridLlmService`. Un `IChatClient` a
 - `LlmCompletionResult.ToolCalls` è additivo: vuoto per ogni altra chiamata.
 - Lo streaming della chat con strumenti non c'è: l'assistente bufferizza la risposta (spec §6.1).
 - Gli argomenti non validi di uno strumento falliscono nel binding di M.E.AI prima dello strumento: un `FunctionInvoker` li traduce in un errore tipizzato per il modello invece di «Error: Function failed.».
+- Un turno con `MaxToolIterations = N` fa al più N giri con strumenti e una chiamata finale senza strumenti, che obbliga il modello a rispondere: al più N+1 chiamate al gateway. È la semantica di `FunctionInvokingChatClient` 10.6.0, fissata da un test.
+- DeepSeek ha il thinking attivo di default e, con `tools`, vuole `reasoning_content` rimandato a ogni turno (altrimenti 400 dal secondo giro). La chat con strumenti lo spegne (`"thinking": {"type": "disabled"}`); misurare il thinking acceso richiede di portare `reasoning_content` da un giro all'altro.
+- Gli argomenti delle chiamate a strumenti non passano dalla redazione PII verso OpenRouter, a differenza del testo dei messaggi: il rilevatore non riconosce comunque i nomi dei giocatori, e il caso residuo (email o telefono negli argomenti) è accettato per il pilota.
 - La contabilità dei token in cache resta fuori (spec §4.1).

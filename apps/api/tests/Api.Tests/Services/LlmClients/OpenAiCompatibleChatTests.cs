@@ -50,6 +50,29 @@ public sealed class OpenAiCompatibleChatTests
         sentBody.Should().Contain("\"tools\"");
     }
 
+    /// <summary>
+    /// DeepSeek ha il thinking attivo di default e, con «tools», esige che reasoning_content torni a ogni
+    /// turno, altrimenti risponde 400 dal secondo giro (api-docs.deepseek.com/guides/thinking_mode).
+    /// </summary>
+    [Theory]
+    [InlineData("DeepSeek", true)]
+    [InlineData("OpenRouter", false)]
+    public async Task ChatAsync_DisablesThinkingOnlyForDeepSeek(string provider, bool expected)
+    {
+        string? sentBody = null;
+        var client = Create(provider, ToolCallsResponse, body => sentBody = body);
+
+        await client.ChatAsync("model-x", [new LlmChatMessage(LlmChatRoles.User, "x")], [], 0.2, 100,
+            TestContext.Current.CancellationToken);
+
+        using var body = JsonDocument.Parse(sentBody!);
+        body.RootElement.TryGetProperty("thinking", out var thinking).Should().Be(expected);
+        if (expected)
+        {
+            thinking.GetProperty("type").GetString().Should().Be("disabled");
+        }
+    }
+
     [Theory]
     [MemberData(nameof(Providers))]
     public async Task ChatAsync_ProviderError_IsAFailure(string provider)

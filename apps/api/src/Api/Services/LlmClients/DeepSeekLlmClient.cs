@@ -285,7 +285,7 @@ internal class DeepSeekLlmClient : ILlmClient
 
         try
         {
-            using var httpRequest = OpenAiToolPayload.CreateRequest(model, messages, tools, temperature, maxTokens);
+            using var httpRequest = OpenAiToolPayload.CreateRequest(model, messages, tools, temperature, maxTokens, disableThinking: true);
             ApplyAuthorization(httpRequest, apiKey);
 
             _logger.LogInformation("Generating DeepSeek tool chat using {Model} ({ToolCount} tools, max_tokens={MaxTokens})",

@@ -14,7 +14,8 @@ internal static class OpenAiToolPayload
         IReadOnlyList<LlmChatMessage> messages,
         IReadOnlyList<LlmToolDefinition> tools,
         double temperature,
-        int maxTokens)
+        int maxTokens,
+        bool disableThinking = false)
     {
         var payload = new Dictionary<string, object>(StringComparer.Ordinal)
         {
@@ -24,6 +25,14 @@ internal static class OpenAiToolPayload
             ["max_tokens"] = maxTokens,
             ["stream"] = false,
         };
+
+        // DeepSeek: con «tools» e thinking attivo (il default) reasoning_content deve tornare a ogni turno,
+        // altrimenti il secondo giro riceve 400. Spento, la chat con strumenti resta a un solo formato e
+        // la temperatura torna ad avere effetto (api-docs.deepseek.com/guides/thinking_mode).
+        if (disableThinking)
+        {
+            payload["thinking"] = new { type = "disabled" };
+        }
 
         if (tools.Count > 0)
         {
@@ -49,8 +58,8 @@ internal static class OpenAiToolPayload
 
         return calls
             .Where(c => c.Function is not null && !string.IsNullOrWhiteSpace(c.Function.Name))
-            .Select((c, index) => new LlmToolCall(
-                string.IsNullOrWhiteSpace(c.Id) ? $"call_{index}" : c.Id,
+            .Select(c => new LlmToolCall(
+                string.IsNullOrWhiteSpace(c.Id) ? $"call_{Guid.NewGuid():N}" : c.Id,
                 c.Function!.Name,
                 string.IsNullOrWhiteSpace(c.Function.Arguments) ? "{}" : c.Function.Arguments))
             .ToList();

@@ -50,6 +50,33 @@ public sealed class GatewayChatClientTests
         sent.Messages[3].Content.Should().Be("""{"turno":"Luca"}""");
     }
 
+    /// <summary>
+    /// Ollama non dà id alle chiamate: ogni giro ricomincia da call_0. Il nome dello strumento sul
+    /// risultato deve essere quello della chiamata del suo giro, non del primo.
+    /// </summary>
+    [Fact]
+    public async Task GetResponse_RepeatedCallIdsAcrossRounds_KeepEachResultsToolName()
+    {
+        LlmChatRequest? sent = null;
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmChatRequest, CancellationToken>((r, _) => sent = r)
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess("Fatto."));
+        var client = new GatewayChatClient(gateway.Object, Settings, new ChatTurnMeter());
+
+        await client.GetResponseAsync(
+        [
+            new ChatMessage(ChatRole.User, "passa il turno"),
+            new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("call_0", "stato_partita", new Dictionary<string, object?>())]),
+            new ChatMessage(ChatRole.Tool, [new FunctionResultContent("call_0", "{}")]),
+            new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("call_0", "proponi_turno", new Dictionary<string, object?>())]),
+            new ChatMessage(ChatRole.Tool, [new FunctionResultContent("call_0", "{}")]),
+        ], null, TestContext.Current.CancellationToken);
+
+        sent!.Messages[2].ToolName.Should().Be("stato_partita");
+        sent.Messages[4].ToolName.Should().Be("proponi_turno");
+    }
+
     [Fact]
     public async Task GetResponse_ToolCalls_BecomeFunctionCallContents()
     {

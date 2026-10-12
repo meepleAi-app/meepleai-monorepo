@@ -43,7 +43,7 @@ public sealed class OllamaChatTests
         result.Success.Should().BeTrue();
         var call = result.ToolCalls.Should().ContainSingle().Subject;
         call.Name.Should().Be("proponi_punteggio");
-        call.Id.Should().Be("call_0");
+        call.Id.Should().StartWith("call_").And.NotBe("call_0", "un id per indice si ripeterebbe a ogni giro");
         JsonDocument.Parse(call.ArgumentsJson).RootElement.GetProperty("punti").GetInt32().Should().Be(5);
 
         using var body = JsonDocument.Parse(sent!);

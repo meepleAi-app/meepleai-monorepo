@@ -47,4 +47,63 @@ public sealed class AssistantToolInvocationTests
         requests[1].Messages[^1].Role.Should().Be(LlmChatRoles.Tool);
         requests[1].Messages[^1].Content.Should().Contain("argomenti_non_validi");
     }
+
+    /// <summary>
+    /// Un errore DENTRO lo strumento non è un errore di argomenti: il modello non deve ritentare gli
+    /// stessi argomenti, e la metrica «argomenti non validi» dello spike resta pulita (spec §6.3).
+    /// </summary>
+    [Fact]
+    public async Task Turn_ToolBodyException_IsNotCountedAsInvalidArguments()
+    {
+        var responses = new Queue<LlmCompletionResult>(
+        [
+            LlmCompletionResult.CreateSuccess(string.Empty) with
+            {
+                ToolCalls = [new LlmToolCall("call_1", "proponi_punteggio", """{"giocatore":"Marco","punti":5}""")],
+            },
+            LlmCompletionResult.CreateSuccess("Non riesco a segnarlo."),
+        ]);
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => responses.Dequeue());
+        var meter = new ChatTurnMeter();
+        var tool = AIFunctionFactory.Create(
+            new Func<string, int, string>((giocatore, punti) => throw new ArgumentOutOfRangeException(nameof(punti))),
+            "proponi_punteggio", "Propone");
+        var factory = new AssistantChatClientFactory(gateway.Object, NullLoggerFactory.Instance, new ServiceCollection().BuildServiceProvider());
+
+        var response = await factory.Create(new AssistantModelSettings("deepseek-flash", null, 0.2, 600, 4, null, RequestSource.SessionAssistant), meter)
+            .GetResponseAsync([new ChatMessage(ChatRole.User, "Marco fa 5")], new ChatOptions { Tools = [tool] }, TestContext.Current.CancellationToken);
+
+        response.Text.Should().Be("Non riesco a segnarlo.");
+        meter.InvalidArguments.Should().Be(0);
+        meter.ToolCalls.Should().Equal("proponi_punteggio");
+    }
+
+    /// <summary>
+    /// Fissa la semantica di MaxToolIterations (misurata con M.E.AI 10.6.0): N giri con strumenti, poi
+    /// UNA chiamata finale senza strumenti che obbliga il modello a rispondere. Un turno costa quindi al
+    /// più N+1 chiamate. Se un aggiornamento della libreria la cambia, questo test diventa rosso.
+    /// </summary>
+    [Fact]
+    public async Task Turn_ModelThatNeverStops_MakesNToolRoundsPlusOneFinalCallWithoutTools()
+    {
+        var requests = new List<LlmChatRequest>();
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmChatRequest, CancellationToken>((r, _) => requests.Add(r))
+            .ReturnsAsync(() => LlmCompletionResult.CreateSuccess(string.Empty) with
+            {
+                ToolCalls = [new LlmToolCall($"call_{requests.Count}", "stato_partita", "{}")],
+            });
+        var tool = AIFunctionFactory.Create(() => "{}", "stato_partita", "Legge lo stato");
+        var factory = new AssistantChatClientFactory(gateway.Object, NullLoggerFactory.Instance, new ServiceCollection().BuildServiceProvider());
+
+        await factory.Create(new AssistantModelSettings("deepseek-flash", null, 0.2, 600, MaxToolIterations: 2, null, RequestSource.SessionAssistant), new ChatTurnMeter())
+            .GetResponseAsync([new ChatMessage(ChatRole.User, "a chi tocca?")], new ChatOptions { Tools = [tool] }, TestContext.Current.CancellationToken);
+
+        requests.Should().HaveCount(3);
+        requests.Take(2).Should().OnlyContain(r => r.Tools.Count == 1);
+        requests[2].Tools.Should().BeEmpty("l'ultima chiamata obbliga il modello a rispondere");
+    }
 }

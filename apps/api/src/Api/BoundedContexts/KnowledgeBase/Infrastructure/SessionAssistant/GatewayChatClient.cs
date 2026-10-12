@@ -90,15 +90,17 @@ internal sealed class GatewayChatClient : IChatClient
 
     private static List<LlmChatMessage> ToGatewayMessages(IReadOnlyList<ChatMessage> history)
     {
+        // La mappa id → nome si aggiorna mentre si scorre la storia: un provider che non dà id (Ollama)
+        // ripete call_0 a ogni giro, e ogni risultato deve prendere il nome della chiamata del suo giro.
         var toolNames = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var call in history.SelectMany(m => m.Contents.OfType<FunctionCallContent>()))
-        {
-            toolNames.TryAdd(call.CallId, call.Name);
-        }
-
         var result = new List<LlmChatMessage>();
         foreach (var message in history)
         {
+            foreach (var call in message.Contents.OfType<FunctionCallContent>())
+            {
+                toolNames[call.CallId] = call.Name;
+            }
+
             if (message.Role == ChatRole.Tool)
             {
                 result.AddRange(message.Contents.OfType<FunctionResultContent>().Select(r => new LlmChatMessage(

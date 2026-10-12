@@ -4,7 +4,9 @@
  * Admin — OpenRouter Usage & Costs page
  * Issues #5077-#5083: KPI cards, timeline chart, cost breakdown,
  * rate limit gauge, free quota indicator, and recent requests table.
- * Tabs: OpenRouter | Token Balance | Chat Log
+ * Tabs: OpenRouter | Chat Log. Issue #4212: the Token Balance tab is gone — its tier and
+ * top-consumer tables read token tables nothing ever filled, and its balance card repeated
+ * the OpenRouter one.
  */
 
 import { Suspense, useState } from 'react';
@@ -31,8 +33,6 @@ import { Button } from '@/components/ui/primitives/button';
 import { createAdminClient } from '@/lib/api/clients/adminClient';
 import { isNotFoundError } from '@/lib/api/core/errors';
 import { HttpClient } from '@/lib/api/core/httpClient';
-
-import { TokenBalanceTab } from './token-balance-tab';
 
 const CostBreakdownPanel = dynamic(
   () => import('@/components/admin/usage/CostBreakdownPanel').then(m => m.CostBreakdownPanel),
@@ -148,7 +148,6 @@ export default function UsagePage() {
       <Tabs defaultValue={defaultTab}>
         <TabsList>
           <TabsTrigger value="openrouter">OpenRouter</TabsTrigger>
-          <TabsTrigger value="token-balance">Saldo Token</TabsTrigger>
           <TabsTrigger value="chat-log">Log Chat</TabsTrigger>
         </TabsList>
 
@@ -220,11 +219,6 @@ export default function UsagePage() {
               isLoading={requestsLoading}
             />
           </section>
-        </TabsContent>
-
-        {/* ── Token Balance tab ── */}
-        <TabsContent value="token-balance" className="mt-4">
-          <TokenBalanceTab />
         </TabsContent>
 
         {/* ── Chat Log tab ── */}

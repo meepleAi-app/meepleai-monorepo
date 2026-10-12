@@ -164,6 +164,13 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/admin/config/game-library-limits", "#4212 — GameLibrary:*TierLimit keys: the quota read other keys; the limit is now the plan's MaxLibraryGames"];
         yield return ["PUT", "/api/v1/admin/config/game-library-limits", "#4212 — GameLibrary:*TierLimit keys: the quota read other keys; the limit is now the plan's MaxLibraryGames"];
         yield return ["GET", "/api/v1/users/00000000-0000-0000-0000-000000000001/chat-sessions/limit", "#4212 — chat session tier limit: it governed chat_sessions, which no page creates"];
+        yield return ["GET", "/api/v1/admin/resources/tokens", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/admin/resources/tokens/consumption", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/admin/resources/tokens/tiers", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/admin/resources/tokens/top-consumers", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["PUT", "/api/v1/admin/resources/tokens/tiers/free", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["POST", "/api/v1/admin/resources/tokens/add-credits", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/budget/user/00000000-0000-0000-0000-000000000001", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
     }
 
     [Theory]

@@ -15,9 +15,6 @@ vi.mock('@/lib/api/clients/adminClient', () => ({
     getUsageCosts: vi.fn().mockResolvedValue({}),
     getUsageFreeQuota: vi.fn().mockResolvedValue({}),
     getRecentRequests: vi.fn().mockResolvedValue([]),
-    getTokenBalance: vi.fn().mockResolvedValue({ tokensUsed: 0, cost: 0 }),
-    getTokenTierUsage: vi.fn().mockResolvedValue([]),
-    getTopConsumers: vi.fn().mockResolvedValue([]),
   }),
 }));
 
@@ -41,11 +38,12 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 }
 
 describe('Usage & Costs Tabs', () => {
-  it('renders three tabs', async () => {
+  it('renders the OpenRouter and chat log tabs', async () => {
     const { default: UsagePage } = await import('@/app/admin/(dashboard)/agents/usage/page');
     render(<UsagePage />, { wrapper: Wrapper });
     expect(screen.getByRole('tab', { name: /openrouter/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /saldo token/i })).toBeInTheDocument();
+    // #4212: the «Saldo Token» tab read the token-tier tables, which nothing ever filled.
+    expect(screen.queryByRole('tab', { name: /saldo token/i })).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /log chat/i })).toBeInTheDocument();
   });
 });

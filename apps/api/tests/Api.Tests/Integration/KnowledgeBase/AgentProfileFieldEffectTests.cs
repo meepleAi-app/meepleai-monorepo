@@ -269,6 +269,59 @@ public sealed class AgentProfileFieldEffectTests
             style == CitationStyle.PageReferencesInText ? CitationStyle.StructuredEvents : CitationStyle.PageReferencesInText));
     }
 
+    // ─── La cache delle risposte ────────────────────────────────────────────────
+
+    /// <summary>
+    /// La chiave della cache era (gioco, domanda). Con la lingua che dipende da
+    /// <c>Accept-Language</c> sulle domande brevi, la risposta in inglese a «Setup?» sarebbe stata
+    /// riservita a chi chiede in italiano.
+    /// </summary>
+    [Fact]
+    public async Task Cache_DoesNotServeAnAnswerInAnotherLanguage()
+    {
+        await PublishAsync(c => Modified(c, systemPrompts: new Dictionary<string, string>
+        {
+            ["en"] = "SENTINEL-EN. Answer from the rulebook.",
+            ["it"] = "SENTINEL-IT. Rispondi dal regolamento.",
+        }));
+        await AskAsync("Setup?", acceptLanguage: "en-US");
+        _hostFixture.Llm.Reset();
+
+        await AskAsync("Setup?", acceptLanguage: "it-IT");
+
+        _hostFixture.Llm.LastSystemPrompt.Should().NotBeNull("la risposta in italiano non è quella in cache")
+            .And.StartWith("SENTINEL-IT");
+    }
+
+    /// <summary>
+    /// Una versione pubblicata vale dalla domanda successiva (D2): la cache non riserve per 24 ore
+    /// le risposte prodotte con la versione precedente.
+    /// </summary>
+    [Fact]
+    public async Task Cache_DoesNotServeAnAnswerOfThePreviousVersion()
+    {
+        await AskAsync(Question);
+        await PublishAsync(c => Modified(c, temperature: 1.1m));
+        _hostFixture.Llm.Reset();
+
+        await AskAsync(Question);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull("la versione nuova risponde da sé");
+        _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(1.1);
+    }
+
+    [Fact]
+    public async Task Cache_StillServesTheSameQuestionInTheSameLanguageAndVersion()
+    {
+        await AskAsync(Question);
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question);
+
+        _hostFixture.Llm.LastAnswer.Should().BeNull("la seconda risposta viene dalla cache");
+        events[0].GetProperty("data").GetProperty("message").GetString().Should().Be("Retrieved from cache");
+    }
+
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
     private async Task PublishAsync(Func<AgentProfileContent, AgentProfileContent> change)

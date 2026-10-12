@@ -168,7 +168,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // Check cache first - if cached, return it as streaming events.
         // R1: skip the semantic cache when injecting (the (game,query) key carries no card fingerprint,
         // so a cached no-card answer must not shadow, nor a claim answer replay after suppression — §6.2).
-        var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
+        var cacheKey = QaCacheKey(query, profile, language.Language);
         var cachedResponse = injectClaims
             ? null
             : await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
@@ -233,7 +233,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     {
         var injectClaims = !verifiedBlock.IsEmpty;
         var startTime = _timeProvider.GetUtcNow();
-        var cacheKey = _cache.GenerateQaCacheKey(query.GameId, query.Query);
+        var cacheKey = QaCacheKey(query, profile, language);
 
         // Step 0: Check if documents are still being processed
         var gameGuid = Guid.Parse(query.GameId);
@@ -734,6 +734,16 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             return null;
         }
     }
+
+    /// <summary>
+    /// La chiave della cache delle risposte: gioco e domanda, più la lingua della risposta e la
+    /// versione del profilo che l'ha prodotta. Senza la lingua, la risposta in inglese a una domanda
+    /// breve tornava a chi chiede in italiano; senza la versione, una pubblicazione restava invisibile
+    /// fino alla scadenza della cache (24 ore). Entrano nell'hash, così la chiave e i tag con cui la
+    /// cache invalida per gioco restano quelli di sempre.
+    /// </summary>
+    private string QaCacheKey(AnswerRequest query, PublishedAgentProfile profile, string language) =>
+        _cache.GenerateQaCacheKey(query.GameId, $"{language}|{profile.VersionId:N}|{query.Query}");
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)
     {

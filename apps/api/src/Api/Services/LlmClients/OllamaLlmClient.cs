@@ -436,6 +436,16 @@ internal class OllamaLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
+    public Task<LlmCompletionResult> ChatAsync(
+        string model,
+        IReadOnlyList<LlmChatMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default) =>
+        Task.FromResult(LlmCompletionResult.CreateFailure("Ollama tool chat is not implemented yet."));
+
+    /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
         try

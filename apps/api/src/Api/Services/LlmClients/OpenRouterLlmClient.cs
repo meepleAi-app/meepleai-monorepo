@@ -284,7 +284,71 @@ internal class OpenRouterLlmClient : ILlmClient
 
         _logger.LogInformation("Successfully generated OpenRouter completion (cost: ${Cost:F6})", cost.TotalCost);
 
-        return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
+        return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata) with
+        {
+            ToolCalls = OpenAiToolPayload.ReadToolCalls(chatResponse.Choices[0].Message),
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> ChatAsync(
+        string model,
+        IReadOnlyList<LlmChatMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        if (messages.Count == 0)
+        {
+            return LlmCompletionResult.CreateFailure("No messages provided");
+        }
+
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogError(ex, "OpenRouter provider is not configured (no DB row and no env var)");
+            return LlmCompletionResult.CreateFailure("OpenRouter provider is not configured (missing API key)");
+        }
+
+        try
+        {
+            using var httpRequest = OpenAiToolPayload.CreateRequest(model, messages, tools, temperature, maxTokens);
+            ApplyAuthorization(httpRequest, apiKey);
+
+            _logger.LogInformation("Generating OpenRouter tool chat using {Model} ({ToolCount} tools, max_tokens={MaxTokens})",
+                model, tools.Count, maxTokens);
+
+            using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+            return await HandleCompletionResponseAsync(response, model, ct).ConfigureAwait(false);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "OpenRouter tool chat timed out");
+            return LlmCompletionResult.CreateFailure("Request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during OpenRouter tool chat");
+            return LlmCompletionResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize OpenRouter tool chat response");
+            return LlmCompletionResult.CreateFailure("Invalid response format");
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // SERVICE BOUNDARY: wraps unexpected OpenRouter errors into a failed LlmCompletionResult
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during OpenRouter tool chat");
+            return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+        }
+#pragma warning restore CA1031
     }
 
     /// <inheritdoc/>

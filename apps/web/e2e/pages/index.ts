@@ -65,8 +65,5 @@ export { ChatPage } from './chat/ChatPage';
 // Pages - Games
 export { GamePage } from './game/GamePage';
 
-// Pages - Upload/PDF
-export { UploadPage } from './upload/UploadPage';
-
 // Pages - Home
 export { HomePage } from './home/HomePage';

@@ -56,12 +56,6 @@ const PAGES_TO_AUDIT: PageConfig[] = [
     description: 'Chat interface with Timeline component (UI-04)',
   },
   {
-    name: 'Upload',
-    url: '/upload',
-    requiresAuth: true,
-    description: 'PDF upload wizard',
-  },
-  {
     name: 'Editor',
     url: '/editor',
     requiresAuth: true,

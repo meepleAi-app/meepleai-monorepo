@@ -246,6 +246,11 @@ const nextConfig = {
         permanent: true,
       },
 
+      // #4257: `/upload`, the RuleSpec wizard of Admin and Editor, is retired. Safety net for
+      // bookmarks: the query string (`?gameId=`) is carried over. The destination is
+      // Admin-only, so an Editor lands on the admin guard.
+      { source: '/upload', destination: '/admin/knowledge-base/upload', permanent: true },
+
       // Profile / Settings consolidation
       // NOTE: the eight `/settings*` redirects that used to live here — seven per-section
       //       plus `/settings` itself — are REMOVED (#3938/#3946/#3961). They shadowed the

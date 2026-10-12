@@ -5,7 +5,7 @@
  *
  * Canonical states tested:
  *   1. loading       — input shows aria-busy + loader visible during search
- *   2. error         — sonner toast.error called when API fails (replaces silent catch{})
+ *   2. error         — alert on the page, with a retry, when the API fails (replaces silent catch{})
  *   3. empty         — "Nessun risultato" status when search has no matches
  *   4. manual-entry  — allowManualEntry=true surfaces a manual-input + "Usa" button
  *   5. manual-unknown-warning — selecting a manual entry surfaces the AI-not-available alert
@@ -16,7 +16,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import type { ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 
 // Mock the api module BEFORE importing the component
@@ -48,7 +48,7 @@ const mockToastError = vi.mocked(toast.error);
 /** #4227: the picker loads through TanStack Query, so it needs a client. */
 function renderPicker(ui: ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return { client, ...render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>) };
 }
 
 function libraryPage(items: ReadonlyArray<Record<string, unknown>>, totalCount = items.length) {
@@ -153,7 +153,7 @@ describe('GamePicker', () => {
   // -------------------------------------------------------------------------
   // State 2: Error
   // -------------------------------------------------------------------------
-  it('shows error toast when the search API rejects (no silent catch)', async () => {
+  it('shows the error on the page when the search API rejects (no silent catch)', async () => {
     mockGetLibrary.mockRejectedValue(new Error('Network down'));
 
     renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
@@ -165,11 +165,11 @@ describe('GamePicker', () => {
       vi.advanceTimersByTime(350);
     });
 
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith(
-        expect.stringContaining('Impossibile cercare i giochi')
-      );
-    });
+    expect(await screen.findByTestId('game-picker-error')).toHaveTextContent(
+      'Impossibile cercare i giochi: Network down'
+    );
+    // #4227: one announcement, on the page; the toast repeated it.
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -581,6 +581,41 @@ describe('GamePicker', () => {
       );
 
       expect(screen.getByTestId('game-picker-selected').querySelector('img')).toBeNull();
+    });
+    it('se un aggiornamento in background fallisce, la lista già mostrata resta', async () => {
+      mockGetLibrary.mockResolvedValueOnce(libraryPage([wingspan]));
+      mockGetLibrary.mockRejectedValue(new Error('rete assente'));
+      const { client } = renderPicker(
+        <GamePicker source="library" value={null} onChange={vi.fn()} />
+      );
+      await type('wing');
+      await screen.findByTestId('game-picker-result-game-wingspan');
+
+      await act(async () => {
+        await client.refetchQueries();
+      });
+
+      // La notifica di TanStack arriva un giro dopo: si aspetta l'avviso, poi si guarda la lista.
+      expect(await screen.findByTestId('game-picker-error')).toHaveTextContent(/rete assente/);
+      expect(screen.getByTestId('game-picker-result-game-wingspan')).toBeInTheDocument();
+    });
+
+    it('dopo la «×» non riappare la lista del testo precedente', async () => {
+      mockGetLibrary.mockResolvedValue(libraryPage([wingspan]));
+      function Controlled() {
+        const [value, setValue] = useState<GameOption | null>(null);
+        return <GamePicker source="library" value={value} onChange={setValue} />;
+      }
+      renderPicker(<Controlled />);
+      await type('wing');
+      fireEvent.click(await screen.findByTestId('game-picker-result-game-wingspan'));
+      expect(screen.getByTestId('game-picker-selected')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('game-picker-clear'));
+
+      // Subito dopo, a campo vuoto e prima che il debounce si assesti.
+      expect(screen.getByTestId('game-picker-input')).toHaveValue('');
+      expect(screen.queryByTestId('game-picker-result-game-wingspan')).not.toBeInTheDocument();
     });
     it('both: se falliscono entrambe è un errore, non una lista vuota', async () => {
       mockGetLibrary.mockRejectedValue(new Error('library down'));

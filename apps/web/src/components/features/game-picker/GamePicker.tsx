@@ -13,7 +13,7 @@
  * - Debounced input (300ms default) — replaces Enter-only / no-debounce patterns
  * - 5 canonical states: loading / error / empty / manual-entry / manual-unknown-warning
  * - BE-side search filter (uses api.library.getLibrary({ search }) / api.sharedGames.search)
- * - Error feedback via sonner toast (replaces silent catch{})
+ * - Error feedback on the page, with a retry (replaces silent catch{})
  *
  * Issue #4227 — the data layer:
  * - loaded through TanStack Query, keyed by what is asked: a late answer to an older text
@@ -28,7 +28,6 @@ import { useCallback, useEffect, useId, useState, type JSX } from 'react';
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2, Search } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -107,7 +106,9 @@ export function GamePicker({
   // belongs to another key and cannot replace the current list; the previous list stays
   // on screen while the next one loads.
   // ---------------------------------------------------------------------------
-  const term = debouncedQuery.trim();
+  // An emptied field counts at once: waiting for the debounce would leave the list of the
+  // previous text under an empty input (after the × that clears a selection).
+  const term = searchQuery.trim() === '' ? '' : debouncedQuery.trim();
   const wantsLibrary = source !== 'catalog' && term.length >= (showLibraryWhenEmpty ? 0 : 2);
   const wantsCatalog = source !== 'library' && term.length >= 2;
   const active = wantsLibrary || wantsCatalog;
@@ -118,26 +119,25 @@ export function GamePicker({
     enabled: active,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
+    // A list the user is choosing from must not reload when the tab regains focus.
+    refetchOnWindowFocus: false,
   });
 
   const searchError = active && search.isError ? search.error : null;
-  const outcome = active && !search.isError ? search.data : undefined;
+  // A failed refresh keeps the data it had: the list stays, next to the error.
+  const outcome = active ? search.data : undefined;
   const results = outcome?.options ?? [];
   const isSearching = active && search.isFetching;
   // False while the list on screen belongs to an older text.
   const resultsMatchQuery = debouncedQuery === searchQuery && !search.isPlaceholderData;
 
-  // Replace silent catch{} pattern — surface failure to user (Bug B2.2/B3.2).
+  // Replace silent catch{} pattern — surface failure to user (Bug B2.2/B3.2). The message
+  // stays on the page with a retry; a toast on top of it announced the same thing twice.
   const searchErrorMessage = searchError
     ? searchError instanceof Error
       ? searchError.message
       : 'Errore di ricerca'
     : null;
-  useEffect(() => {
-    if (searchErrorMessage) {
-      toast.error(`Impossibile cercare i giochi: ${searchErrorMessage}`);
-    }
-  }, [searchErrorMessage, search.errorUpdatedAt]);
 
   const handleSelect = useCallback(
     (option: GameOption) => {
@@ -290,7 +290,7 @@ export function GamePicker({
       )}
 
       {/* Empty state */}
-      {outcome && !isSearching && resultsMatchQuery && results.length === 0 && (
+      {outcome && !searchError && !isSearching && resultsMatchQuery && results.length === 0 && (
         <p
           role="status"
           data-testid={`${testId}-empty`}

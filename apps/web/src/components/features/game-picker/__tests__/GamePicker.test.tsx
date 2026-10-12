@@ -628,4 +628,140 @@ describe('GamePicker', () => {
       expect(screen.queryByTestId('game-picker-empty')).not.toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // #4227 — keyboard and ARIA (combobox pattern)
+  // -------------------------------------------------------------------------
+  describe('#4227 — tastiera e ARIA da combobox', () => {
+    const azul = { ...sampleLibraryItem, id: 'entry-2', gameId: 'game-azul', gameTitle: 'Azul' };
+    const brass = { ...sampleLibraryItem, id: 'entry-3', gameId: 'game-brass', gameTitle: 'Brass' };
+
+    async function openWithTwoResults(onChange = vi.fn()) {
+      mockGetLibrary.mockResolvedValue(libraryPage([azul, brass]));
+      renderPicker(<GamePicker source="library" value={null} onChange={onChange} />);
+      await type('as');
+      await screen.findByTestId('game-picker-result-game-azul');
+      return { input: screen.getByTestId('game-picker-input'), onChange };
+    }
+
+    it('il campo è un combobox che controlla la lista, chiuso finché non ci sono risultati', async () => {
+      renderPicker(<GamePicker source="library" value={null} onChange={vi.fn()} />);
+      const input = screen.getByRole('combobox', { name: 'Cerca un gioco' });
+
+      expect(input).toHaveAttribute('aria-expanded', 'false');
+      expect(input).toHaveAttribute('aria-autocomplete', 'list');
+      expect(input).not.toHaveAttribute('aria-activedescendant');
+
+      mockGetLibrary.mockResolvedValue(libraryPage([azul]));
+      await type('az');
+      await screen.findByTestId('game-picker-result-game-azul');
+
+      expect(input).toHaveAttribute('aria-expanded', 'true');
+      expect(document.getElementById(input.getAttribute('aria-controls') as string)).toBe(
+        screen.getByRole('listbox')
+      );
+    });
+
+    it('le opzioni non sono nel giro del Tab e stanno in voci di lista senza ruolo proprio', async () => {
+      await openWithTwoResults();
+
+      const options = screen.getAllByRole('option');
+      expect(options).toHaveLength(2);
+      for (const option of options) {
+        expect(option).toHaveAttribute('tabindex', '-1');
+        expect(option.parentElement).toHaveAttribute('role', 'presentation');
+      }
+    });
+
+    it('freccia giù e freccia su spostano l’opzione attiva, senza uscire dalla lista', async () => {
+      const { input } = await openWithTwoResults();
+      const [first, second] = screen.getAllByRole('option');
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      expect(input).toHaveAttribute('aria-activedescendant', first.id);
+      expect(first).toHaveAttribute('aria-selected', 'true');
+      expect(second).toHaveAttribute('aria-selected', 'false');
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      expect(input).toHaveAttribute('aria-activedescendant', second.id);
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      expect(input).toHaveAttribute('aria-activedescendant', second.id);
+
+      fireEvent.keyDown(input, { key: 'ArrowUp' });
+      expect(input).toHaveAttribute('aria-activedescendant', first.id);
+
+      fireEvent.keyDown(input, { key: 'ArrowUp' });
+      expect(input).toHaveAttribute('aria-activedescendant', first.id);
+    });
+
+    it('freccia su senza opzione attiva parte dall’ultima', async () => {
+      const { input } = await openWithTwoResults();
+      const options = screen.getAllByRole('option');
+
+      fireEvent.keyDown(input, { key: 'ArrowUp' });
+
+      expect(input).toHaveAttribute('aria-activedescendant', options[1].id);
+    });
+
+    it('Invio sceglie l’opzione attiva', async () => {
+      const { input, onChange } = await openWithTwoResults();
+
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ id: 'game-brass' }));
+    });
+
+    it('Invio senza opzione attiva non sceglie nulla', async () => {
+      const { input, onChange } = await openWithTwoResults();
+
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('Esc toglie l’opzione attiva', async () => {
+      const { input } = await openWithTwoResults();
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+
+      fireEvent.keyDown(input, { key: 'Escape' });
+
+      expect(input).not.toHaveAttribute('aria-activedescendant');
+      for (const option of screen.getAllByRole('option')) {
+        expect(option).toHaveAttribute('aria-selected', 'false');
+      }
+    });
+
+    it('mentre la lista appartiene a un testo vecchio la tastiera non sceglie', async () => {
+      const { input, onChange } = await openWithTwoResults();
+
+      // Nuovo testo, debounce non ancora passato: a schermo c’è ancora la lista di prima.
+      fireEvent.change(input, { target: { value: 'asx' } });
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      // fireEvent restituisce false quando l'evento è stato annullato: l'Invio è ingoiato,
+      // così non invia un form attorno su una scelta vecchia.
+      const enterWentThrough = fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(enterWentThrough).toBe(false);
+
+      expect(input).not.toHaveAttribute('aria-activedescendant');
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('quando la lista cambia l’opzione attiva si azzera', async () => {
+      const { input } = await openWithTwoResults();
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+      expect(input).toHaveAttribute('aria-activedescendant');
+
+      mockGetLibrary.mockResolvedValue(libraryPage([brass]));
+      await type('br');
+      await waitFor(() =>
+        expect(screen.queryByTestId('game-picker-result-game-azul')).not.toBeInTheDocument()
+      );
+
+      expect(input).not.toHaveAttribute('aria-activedescendant');
+    });
+  });
 });

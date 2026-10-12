@@ -22,9 +22,14 @@
  * - `showLibraryWhenEmpty` lists the library before any typing;
  * - an error stays on the page with a retry, and with two sources a failing one is
  *   reported as partial results instead of being swallowed.
+ *
+ * Issue #4227 — keyboard: the input is an ARIA combobox (APG list-autocomplete pattern)
+ * over the inline listbox. Arrow keys move the active option, Enter picks it, Escape
+ * drops it; the options are not tab stops. While the list belongs to an older text the
+ * keyboard does not pick from it.
  */
 
-import { useCallback, useEffect, useId, useState, type JSX } from 'react';
+import { useCallback, useEffect, useId, useState, type JSX, type KeyboardEvent } from 'react';
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2, Search } from 'lucide-react';
@@ -99,7 +104,11 @@ export function GamePicker({
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedQuery = useDebounce(searchQuery, debounceMs);
   const [manualTitle, setManualTitle] = useState('');
+  // The option the keyboard is on, by game id: when the list changes and the game is gone,
+  // there is no active option any more.
+  const [activeId, setActiveId] = useState<string | null>(null);
   const listboxId = useId();
+  const optionDomId = (option: GameOption): string => `${listboxId}-option-${option.id}`;
 
   // ---------------------------------------------------------------------------
   // Search — a query keyed by what is asked (#4227). A late answer to an older text
@@ -142,10 +151,60 @@ export function GamePicker({
   const handleSelect = useCallback(
     (option: GameOption) => {
       onChange(option);
+      setActiveId(null);
       // Don't reset search query: caller may want to render the selected state.
     },
     [onChange]
   );
+
+  const activeIndex = activeId === null ? -1 : results.findIndex(o => o.id === activeId);
+  const activeOption = activeIndex >= 0 ? results[activeIndex] : undefined;
+  const activeDomId = activeOption ? optionDomId(activeOption) : undefined;
+
+  // Keep the active option in view when the list scrolls.
+  useEffect(() => {
+    if (!activeDomId) return;
+    document.getElementById(activeDomId)?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeDomId]);
+
+  /** ARIA combobox keyboard pattern (APG) over the inline listbox. */
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (results.length === 0) return;
+
+    const picks = event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter';
+    // The list on screen belongs to an older text: the keyboard must not pick from it.
+    // Enter is swallowed too, so it cannot submit a surrounding form on a stale choice.
+    if (picks && !resultsMatchQuery) {
+      event.preventDefault();
+      return;
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      const next =
+        activeIndex < 0
+          ? direction === 1
+            ? 0
+            : results.length - 1
+          : Math.min(Math.max(activeIndex + direction, 0), results.length - 1);
+      setActiveId(results[next].id);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      // With no active option Enter is left alone (a surrounding form may want it).
+      if (!activeOption) return;
+      event.preventDefault();
+      handleSelect(activeOption);
+      return;
+    }
+
+    if (event.key === 'Escape' && activeOption) {
+      event.preventDefault();
+      setActiveId(null);
+    }
+  };
 
   const handleClear = useCallback(() => {
     onChange(null);
@@ -203,12 +262,21 @@ export function GamePicker({
         />
         <Input
           type="search"
+          role="combobox"
           placeholder={placeholder}
           value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
+          autoComplete="off"
+          onChange={e => {
+            setSearchQuery(e.target.value);
+            setActiveId(null);
+          }}
+          onKeyDown={handleKeyDown}
           className="pl-9"
           aria-label="Cerca un gioco"
+          aria-autocomplete="list"
+          aria-expanded={results.length > 0}
           aria-controls={listboxId}
+          aria-activedescendant={activeDomId}
           aria-busy={isSearching}
           data-testid={`${testId}-input`}
         />
@@ -230,14 +298,23 @@ export function GamePicker({
         className={cn('space-y-1', results.length === 0 && 'hidden')}
       >
         {results.map(option => (
-          <li key={option.id}>
+          <li key={option.id} role="presentation">
             <button
               type="button"
               role="option"
-              aria-selected={false}
+              id={optionDomId(option)}
+              aria-selected={option.id === activeOption?.id}
+              // The keyboard reaches the options with the arrows, from the input.
+              tabIndex={-1}
               onClick={() => handleSelect(option)}
               data-testid={`${testId}-result-${option.id}`}
-              className="flex items-center gap-3 w-full p-3 rounded-lg border border-border bg-card text-left hover:border-primary/30 hover:bg-primary/5 transition-colors"
+              className={cn(
+                'flex items-center gap-3 w-full p-3 rounded-lg border bg-card text-left transition-colors',
+                'hover:border-primary/30 hover:bg-primary/5',
+                option.id === activeOption?.id
+                  ? 'border-primary/30 bg-primary/5 ring-2 ring-ring'
+                  : 'border-border'
+              )}
             >
               <PickerCover
                 imageUrl={option.imageUrl}

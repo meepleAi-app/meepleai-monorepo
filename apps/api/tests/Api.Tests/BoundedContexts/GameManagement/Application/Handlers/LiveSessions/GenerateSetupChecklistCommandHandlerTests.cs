@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -11,6 +12,7 @@ using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using MediatR;
+using AuthUserDto = Api.BoundedContexts.Authentication.Application.DTOs.UserDto;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -30,8 +32,9 @@ public class GenerateSetupChecklistCommandHandlerTests
     private readonly Mock<IFeatureFlagService> _featureFlagServiceMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly GenerateSetupChecklistCommandHandler _handler;
-    // #4206: chi chiede la checklist; la guida alla preparazione ne ha bisogno per il cancello RAG.
-    private static readonly Guid TestUserId = Guid.NewGuid();
+    // #4234: un partecipante che non e' l'host, e uno estraneo alla sessione.
+    private static readonly Guid PlayerUserId = Guid.NewGuid();
+    private static readonly Guid OutsiderUserId = Guid.NewGuid();
 
     private static readonly Guid DefaultSessionId = Guid.NewGuid();
     private static readonly Guid DefaultGameId = Guid.NewGuid();
@@ -71,6 +74,15 @@ public class GenerateSetupChecklistCommandHandlerTests
             "Test Game",
             TimeProvider.System,
             gameId: null);
+    }
+
+    private void SetupHost(string role)
+    {
+        _mediatorMock
+            .Setup(x => x.Send(It.Is<GetUserByIdQuery>(q => q.UserId == DefaultUserId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AuthUserDto(
+                DefaultUserId, "host@example.com", "Host", role, "free",
+                DateTime.UtcNow, false, null, 1, 0));
     }
 
     private void SetupFeatureFlagEnabled(bool enabled = true)
@@ -132,7 +144,7 @@ public class GenerateSetupChecklistCommandHandlerTests
     {
         // Arrange
         SetupFeatureFlagEnabled(false);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId);
 
         // Act & Assert
         var act =
@@ -150,7 +162,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         // Arrange
         SetupFeatureFlagEnabled();
         SetupRepoGetById(DefaultSessionId, null);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId);
 
         // Act & Assert
         var act =
@@ -169,7 +181,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         SetupFeatureFlagEnabled();
         var session = CreateSessionWithoutGameId();
         SetupRepoGetById(DefaultSessionId, session);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId);
 
         // Act & Assert
         var act =
@@ -189,7 +201,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId();
         SetupRepoGetById(DefaultSessionId, session);
         SetupStreamingResponse(DefaultGameId.ToString(), 4);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -208,7 +220,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId();
         SetupRepoGetById(DefaultSessionId, session);
         SetupStreamingResponse(DefaultGameId.ToString(), 4);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId);
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -228,7 +240,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId(sessionId, gameId);
         SetupRepoGetById(sessionId, session);
         SetupStreamingResponse(gameId.ToString(), 3);
-        var command = new GenerateSetupChecklistCommand(sessionId, 3, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(sessionId, 3, DefaultUserId);
 
         // Act
         await _handler.Handle(command, CancellationToken.None);
@@ -239,8 +251,8 @@ public class GenerateSetupChecklistCommandHandlerTests
                 It.Is<StreamSetupGuideQuery>(q =>
                     q.GameId == gameId.ToString() &&
                     q.PlayerCount == 3 &&
-                    // #4206: l'identità arriva fino alla query, dove decide il cancello RAG.
-                    q.UserId == TestUserId &&
+                    // #4234: alla query arriva l'identita' dell'host, dove decide il cancello RAG.
+                    q.UserId == DefaultUserId &&
                     q.UserRole == "User"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -254,7 +266,7 @@ public class GenerateSetupChecklistCommandHandlerTests
         var session = CreateSessionWithGameId();
         SetupRepoGetById(DefaultSessionId, session);
         SetupStreamingResponse(DefaultGameId.ToString(), 2);
-        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 2, TestUserId, "User");
+        var command = new GenerateSetupChecklistCommand(DefaultSessionId, 2, DefaultUserId);
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
@@ -264,5 +276,91 @@ public class GenerateSetupChecklistCommandHandlerTests
         result.SetupSteps[0].Instruction.Should().Be("Place the board in the center");
         result.SetupSteps[1].Instruction.Should().Be("Deal 7 cards to each player");
         result.SetupSteps[2].Instruction.Should().Be("Each player takes their tokens");
+    }
+
+    // === #4234: per una sessione conta l'accesso dell'host ===
+
+    [Fact]
+    public async Task Handle_ParticipantWhoIsNotTheHost_AsksTheGuideWithTheHostIdentity()
+    {
+        // Un partecipante senza dichiarazione di possesso: decide l'accesso dell'host.
+        SetupFeatureFlagEnabled();
+        SetupHost("User");
+        var session = CreateSessionWithGameId();
+        session.AddPlayer(PlayerUserId, "Giocatore", PlayerColor.Blue, TimeProvider.System);
+        SetupRepoGetById(DefaultSessionId, session);
+        SetupStreamingResponse(DefaultGameId.ToString(), 4);
+
+        await _handler.Handle(
+            new GenerateSetupChecklistCommand(DefaultSessionId, 4, PlayerUserId),
+            CancellationToken.None);
+
+        _mediatorMock.Verify(
+            x => x.CreateStream(
+                It.Is<StreamSetupGuideQuery>(q => q.UserId == DefaultUserId && q.UserId != PlayerUserId),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_TheGateReceivesTheHostRole_NotTheCallerRole()
+    {
+        SetupFeatureFlagEnabled();
+        SetupHost("Admin");
+        var session = CreateSessionWithGameId();
+        session.AddPlayer(PlayerUserId, "Giocatore", PlayerColor.Blue, TimeProvider.System);
+        SetupRepoGetById(DefaultSessionId, session);
+        SetupStreamingResponse(DefaultGameId.ToString(), 4);
+
+        await _handler.Handle(
+            new GenerateSetupChecklistCommand(DefaultSessionId, 4, PlayerUserId),
+            CancellationToken.None);
+
+        _mediatorMock.Verify(
+            x => x.CreateStream(
+                It.Is<StreamSetupGuideQuery>(q => q.UserRole == "Admin"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_CallerOutsideTheSession_IsRefused_BeforeAnyKbRead()
+    {
+        // Senza questo controllo chiunque conosca l'id della sessione userebbe l'accesso dell'host.
+        SetupFeatureFlagEnabled();
+        SetupHost("User");
+        var session = CreateSessionWithGameId();
+        SetupRepoGetById(DefaultSessionId, session);
+
+        var act = () => _handler.Handle(
+            new GenerateSetupChecklistCommand(DefaultSessionId, 4, OutsiderUserId),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _mediatorMock.Verify(
+            x => x.CreateStream(It.IsAny<StreamSetupGuideQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_HostNoLongerExists_TheGateEvaluatesItAsAPlainUser()
+    {
+        // Un host cancellato: GetUserByIdQuery non lo trova. Il cancello lo valuta come utente
+        // semplice, quindi senza una voce in libreria nega, salvo un gioco con RAG pubblico.
+        SetupFeatureFlagEnabled();
+        _mediatorMock
+            .Setup(x => x.Send(It.Is<GetUserByIdQuery>(q => q.UserId == DefaultUserId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AuthUserDto?)null);
+        var session = CreateSessionWithGameId();
+        SetupRepoGetById(DefaultSessionId, session);
+        SetupStreamingResponse(DefaultGameId.ToString(), 4);
+
+        await _handler.Handle(new GenerateSetupChecklistCommand(DefaultSessionId, 4, DefaultUserId), CancellationToken.None);
+
+        _mediatorMock.Verify(
+            x => x.CreateStream(
+                It.Is<StreamSetupGuideQuery>(q => q.UserId == DefaultUserId && q.UserRole == "User"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

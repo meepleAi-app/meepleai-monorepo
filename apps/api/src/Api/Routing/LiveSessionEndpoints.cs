@@ -746,7 +746,8 @@ internal static class LiveSessionEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        // #4206: la guida alla preparazione legge la KB del gioco, e il cancello RAG decide per utente.
+        // #4234: passa chi chiede, che deve essere un partecipante. La guida alla preparazione legge
+        // la KB del gioco, e il cancello RAG valuta l'accesso dell'host della sessione.
         var (authenticated, session, error) = httpContext.TryGetActiveSession();
         if (!authenticated) return error!;
 
@@ -754,8 +755,7 @@ internal static class LiveSessionEndpoints
             new GenerateSetupChecklistCommand(
                 sessionId,
                 request.PlayerCount,
-                session!.Principal!.Subject.Id,
-                session.Principal!.EffectiveActor.Role),
+                session!.Principal!.Subject.Id),
             cancellationToken).ConfigureAwait(false);
         return Results.Ok(checklist);
     }

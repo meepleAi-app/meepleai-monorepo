@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
@@ -69,12 +70,27 @@ internal class GenerateSetupChecklistCommandHandler
             throw new ConflictException("Session has no associated game");
         }
 
-        // 4. Stream setup guide from KnowledgeBase
-        // #4206: l'identità di chi chiede, per il cancello RAG della guida.
+        // 4. #4234: per una sessione conta l'accesso dell'host alla KB del gioco (decisione di
+        // prodotto su #4206), non quello di chi chiede. Chi chiede deve pero' essere della
+        // sessione: la rotta lo controlla gia' (RequireLiveSessionParticipant), qui lo si
+        // ricontrolla perche' senza questo vincolo chiunque conosca l'id userebbe l'accesso
+        // dell'host.
+        if (!session.IsAuthorizedParticipant(command.UserId))
+        {
+            throw new ForbiddenException("Only session participants can generate the setup checklist");
+        }
+
+        // L'host e' l'account che possiede la sessione (CreatedByUserId), lo stesso riferimento
+        // di IsAuthorizedParticipant. Il ruolo di giocatore «Host» non basta: puo' essere un ospite
+        // senza account. Il suo ruolo arriva al cancello, cosi' un host admin passa come tale.
+        var hostId = session.CreatedByUserId;
+        var host = await _mediator.Send(new GetUserByIdQuery(hostId), cancellationToken).ConfigureAwait(false);
+
+        // 5. Stream setup guide from KnowledgeBase
         var query = new StreamSetupGuideQuery(
             GameId: session.GameId.ToString()!,
-            UserId: command.UserId,
-            UserRole: command.UserRole,
+            UserId: hostId,
+            UserRole: host?.Role ?? "User",
             PlayerCount: command.PlayerCount);
         var steps = new List<SetupStep>();
         var components = new List<SetupComponent>();

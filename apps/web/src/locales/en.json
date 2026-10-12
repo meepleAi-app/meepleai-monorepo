@@ -2340,6 +2340,24 @@
         "toast": {
           "saved": "{count} interests saved!"
         }
+      },
+      "firstGame": {
+        "intro": "Search for a board game to add to your library. You can always add more later.",
+        "searchPlaceholder": "e.g. Catan, Wingspan, Ticket to Ride…",
+        "ownsCopy": {
+          "label": "I own a copy of this game",
+          "hint": "It lets the assistant read the rulebook: rulebooks are copyrighted, and we only read them for players who own the game."
+        },
+        "add": "Add to Library",
+        "adding": "Adding…",
+        "skip": "Skip for now",
+        "toast": {
+          "added": "{title} added to your library!",
+          "ownershipFailed": "{title} is in your library, but the ownership declaration failed: you can declare it from the chat."
+        },
+        "error": {
+          "addFailed": "Failed to add game to library."
+        }
       }
     },
     "discover": {

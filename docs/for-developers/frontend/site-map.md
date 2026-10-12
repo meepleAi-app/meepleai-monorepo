@@ -996,7 +996,7 @@ _Route-group: `(authenticated)` · 9 pagine_
 ##### `/onboarding`
 - **Page gate (useAuth)**: loading→spinner Loader2 full-screen; `!user || user.onboardingCompleted`→`return null`; altrimenti monta OnboardingGenericWizard; `refreshUser()` chiamato on mount — `apps/web/src/app/(authenticated)/onboarding/page.tsx`
 - **Step 1 InterestsStep**: validate gate = `interestsCompleted` (da onComplete/onSkip); `optional=true` → Skip disponibile — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
-- **Step 2 FirstGameStep**: validate gate = `firstGameCompleted` (onComplete/onSkip/onGameAdded); `optional=true`; usa catalogo interno `api.games.getAll` (NON BoardGameGeek, ToS #1903) — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
+- **Step 2 FirstGameStep**: validate gate = `firstGameCompleted` (onComplete/onSkip/onGameAdded); `optional=true`; cerca nel catalogo pubblico col `GamePicker` canonico, `source="catalog"` (NON BoardGameGeek, ToS #1903; #4227) — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
 - **Step 3 InviteFriendComingSoonStep**: placeholder skip-only, `optional=true` (nessun validate); testo coming-soon — `apps/web/src/app/(authenticated)/onboarding/InviteFriendComingSoonStep.tsx`
 - **WizardModal controlli**: indicatore "Step X of N"; Back nascosto sul primo step (`isFirst`→`<span/>`); Skip solo se `currentStep.optional && !isLast`; Next label "Complete" sull'ultimo step (disabled durante `isValidating`); lista errori `role='alert'` se `errors.length>0`; Cancel apre dialog conferma annidato (overlay `z-[70]`/content `z-[71]`) — `apps/web/src/components/ui/wizard-modal/wizard-modal.tsx`
 - **Titolo Step 1**: "Ciao {userName}, scegli i tuoi interessi" se `userName` presente (`user.displayName` trimmed), altrimenti "Scegli i tuoi interessi" — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
@@ -1075,7 +1075,7 @@ _Route-group: `(authenticated)` · 9 pagine_
 | OnboardingGenericWizard | `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx` | Orchestratore 3-step su WizardModal; redirect `/library` on complete/cancel |
 | WizardModal | `apps/web/src/components/ui/wizard-modal/wizard-modal.tsx` | Primitiva modal multi-step (Radix Dialog) con Skip/Back/Next/Cancel |
 | InterestsStep | `apps/web/src/components/onboarding/InterestsStep.tsx` | Step 1: selezione categorie board game |
-| FirstGameStep | `apps/web/src/components/onboarding/FirstGameStep.tsx` | Step 2: aggiunta primo gioco dal catalogo interno |
+| FirstGameStep | `apps/web/src/components/onboarding/FirstGameStep.tsx` | Step 2: aggiunta primo gioco dal catalogo pubblico, col `GamePicker` canonico (#4227) |
 | InviteFriendComingSoonStep | `apps/web/src/app/(authenticated)/onboarding/InviteFriendComingSoonStep.tsx` | Step 3 placeholder coming-soon skip-only |
 | VersionHistoryContent | `apps/web/src/app/(authenticated)/versions/page.tsx` | Inner: auth self-check, load history/diff/timeline, restore versione |
 | VersionTimeline | `apps/web/src/components/versioning/VersionTimeline.tsx` | Vista timeline versioni con onVersionClick |
@@ -2777,10 +2777,8 @@ _Route-group: `(authenticated)` · 10 pagine_
 | useBggSearch / usePhotoBatchUpload / usePhotoBatchStatus | `apps/web/src/hooks/queries/` + `apps/web/src/lib/gamebook/hooks/` | Ricerca BGG (admin) / mutation upload batch / polling stato batch |
 | useAdminRole | `apps/web/src/hooks/useAdminRole.ts` | Gate BGG integration + gate 'Vai alla Queue' (isAdminOrAbove/isLoading) |
 | RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | Guardia client-side ruolo (Admin/Editor +superadmin), redirect `/login?from` o `/` |
-| UploadClient | `apps/web/src/app/(authenticated)/upload/upload-client.tsx` | Wizard 4-step lazy (upload/parse/review/publish); handlePublish `PUT /api/v1/games/{id}/rulespec` |
-| GamePicker | `apps/web/src/components/game/GamePicker.tsx` | Selettore/creazione gioco |
 | PdfUploadForm | `apps/web/src/components/pdf/` | Upload singolo. `MultiFileUpload`, `PdfTable` e `MultiDocumentCollectionUpload` servivano solo al wizard `/upload` e sono stati tolti con #4257 |
-| WizardSteps | `apps/web/src/components/wizard/WizardSteps.tsx` | Indicatore step wizard upload |
+| WizardSteps | `apps/web/src/components/wizard/WizardSteps.tsx` | Indicatore step dei wizard (serata, setup, import del catalogo) |
 | N8nWorkflowManagement | `apps/web/src/app/(authenticated)/n8n/page.tsx` | Pagina intera CRUD config n8n via fetch diretto a `/admin/n8n` (no client mediator) |
 | PipelineBuilder | `apps/web/src/components/pipeline-builder/PipelineBuilder.tsx` | Layout 3-pannelli resizable (palette/canvas/config-test) |
 | PluginPalette / PipelineCanvas / NodeConfigPanel / EdgeConfigPanel / PipelinePreview / PipelineToolbar | `apps/web/src/components/pipeline-builder/` | Palette plugin / canvas drag-drop / config nodo / config edge / anteprima-test / toolbar (no route nav) |

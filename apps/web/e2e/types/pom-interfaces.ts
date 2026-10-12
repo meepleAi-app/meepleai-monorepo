@@ -43,13 +43,13 @@ export interface RegistrationData {
 }
 
 export interface TwoFactorData {
-  code?: string;         // TOTP 6-digit code
-  backupCode?: string;   // Backup code (XXXX-XXXX format)
+  code?: string; // TOTP 6-digit code
+  backupCode?: string; // Backup code (XXXX-XXXX format)
 }
 
 export interface PasswordResetData {
   email: string;
-  newPassword?: string;  // After clicking email link
+  newPassword?: string; // After clicking email link
 }
 
 export interface OAuthProvider {
@@ -130,11 +130,12 @@ export interface RuleSpecData {
   gameId: string;
   version: string;
   createdAt: string;
-  rules: any[];  // Schema-specific
+  rules: any[]; // Schema-specific
 }
 
 export interface EditorToolbarButton {
-  action: 'bold' | 'italic' | 'heading1' | 'heading2' | 'bulletList' | 'orderedList' | 'link' | 'code';
+  action:
+    'bold' | 'italic' | 'heading1' | 'heading2' | 'bulletList' | 'orderedList' | 'link' | 'code';
   shortcut?: string;
 }
 
@@ -160,7 +161,7 @@ export interface User {
   email: string;
   displayName: string;
   role: UserRole;
-  password?: string;  // Only for creation
+  password?: string; // Only for creation
   createdAt?: string;
   lastSeenAt?: string | null;
   isActive?: boolean;
@@ -180,13 +181,13 @@ export interface UserSearchFilters {
 export interface UserBulkAction {
   action: 'delete' | 'changeRole' | 'activate' | 'deactivate';
   userIds: string[];
-  targetRole?: UserRole;  // For changeRole action
+  targetRole?: UserRole; // For changeRole action
 }
 
 export interface AnalyticsMetric {
   name: string;
   value: number;
-  change?: number;  // Percentage change
+  change?: number; // Percentage change
   trend?: 'up' | 'down' | 'stable';
 }
 
@@ -277,12 +278,12 @@ export interface FormValidationError {
 export interface ToastNotification {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
-  duration?: number;  // milliseconds
+  duration?: number; // milliseconds
 }
 
 export interface FileUploadConfig {
-  accept?: string[];  // MIME types
-  maxSize?: number;   // bytes
+  accept?: string[]; // MIME types
+  maxSize?: number; // bytes
   multiple?: boolean;
 }
 
@@ -350,7 +351,7 @@ export interface MockAuthResponse {
 
 export interface MockApiConfig {
   baseUrl: string;
-  defaultDelay?: number;  // milliseconds
+  defaultDelay?: number; // milliseconds
   enableCors?: boolean;
 }
 
@@ -440,10 +441,10 @@ export interface IChatPage extends IBasePage {
 
   // Assertions
   assertChatPageVisible(): Promise<void>;
-  assertLoginRequired(): Promise<'modal' | 'inline'>;
+  assertLoginRequired(): Promise<void>;
   assertAnswerContains(text: string): Promise<void>;
   assertCitationVisible(title: string): Promise<void>;
-  goToLoginFromGate(): Promise<void>;
+  loginFromRedirect(email: string, password: string): Promise<void>;
 }
 
 export interface IUploadPage extends IBasePage {
@@ -456,10 +457,7 @@ export interface IUploadPage extends IBasePage {
   selectLanguage(languageCode: string): Promise<void>;
 
   // File Upload
-  uploadPdf(
-    filePath: string,
-    options?: { language?: string; autoWait?: boolean }
-  ): Promise<void>;
+  uploadPdf(filePath: string, options?: { language?: string; autoWait?: boolean }): Promise<void>;
   waitForUploadSuccess(): Promise<void>;
 
   // Status and Information
@@ -521,14 +519,16 @@ export interface IGameListPage extends IBasePage {
 }
 
 export interface IHomePage extends IBasePage {
+  mockRegistrationMode(publicRegistrationEnabled: boolean): Promise<void>;
   assertHeroLoaded(): Promise<void>;
   assertBrandLinkVisible(): Promise<void>;
   assertPrimaryCtaVisible(): Promise<void>;
-  openAuthModal(): Promise<void>;
-  switchAuthTab(tab: 'login' | 'register'): Promise<void>;
+  openRegistration(): Promise<void>;
+  goToLoginFromRegistration(): Promise<void>;
   assertRegistrationFormFields(): Promise<void>;
+  assertRequestAccessForm(): Promise<void>;
   assertLoginFormFields(): Promise<void>;
-  assertFeaturesOverview(): Promise<void>;
+  assertHowItWorksSection(): Promise<void>;
 }
 
 export interface IUserManagementPage extends IBasePage {
@@ -615,7 +615,7 @@ export interface IFileUpload {
   getSelectedFileNames(): Promise<string[]>;
   clearSelection(): Promise<void>;
   waitForUploadComplete(): Promise<void>;
-  getUploadProgress(): Promise<number>;  // 0-100
+  getUploadProgress(): Promise<number>; // 0-100
   assertUploadSuccess(): Promise<void>;
   assertUploadError(message: string | RegExp): Promise<void>;
 }
@@ -698,18 +698,11 @@ export function isUser(obj: any): obj is User {
 }
 
 export function isGame(obj: any): obj is Game {
-  return (
-    typeof obj === 'object' &&
-    typeof obj.id === 'string' &&
-    typeof obj.title === 'string'
-  );
+  return typeof obj === 'object' && typeof obj.id === 'string' && typeof obj.title === 'string';
 }
 
 export function isChatMessage(obj: any): obj is ChatMessage {
-  return (
-    typeof obj === 'object' &&
-    typeof obj.question === 'string'
-  );
+  return typeof obj === 'object' && typeof obj.question === 'string';
 }
 
 export function isValidEmail(email: string): boolean {

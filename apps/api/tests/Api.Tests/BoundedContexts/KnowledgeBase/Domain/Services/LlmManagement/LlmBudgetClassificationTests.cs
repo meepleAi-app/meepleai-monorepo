@@ -31,6 +31,7 @@ public sealed class LlmBudgetClassificationTests
     [InlineData(RequestSource.RagClassification, "Answer")]
     [InlineData(RequestSource.Translation, "Answer")]
     [InlineData(RequestSource.AgentTask, "Answer")] // chat dell'agente di sessione, risposta ancorata, arbitro
+    [InlineData(RequestSource.SessionAssistant, "Answer")] // assistente in partita: l'host aspetta la risposta
     [InlineData(RequestSource.ChunkTranslation, "Background")]
     [InlineData(RequestSource.AdminOperation, "Background")]
     [InlineData(RequestSource.EventDriven, "Background")]

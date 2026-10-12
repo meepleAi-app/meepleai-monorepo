@@ -97,6 +97,8 @@
     <!-- Issue #1629: Resend transactional email provider (replaces Gmail SMTP for FROM @meepleai.app) -->
     <PackageReference Include="Resend" Version="0.1.4" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.8" />
+    <!-- ADR-097: IChatClient sopra il gateway. 10.6.0 dipende dalle Microsoft.Extensions.* 10.0.8 già in uso. -->
+    <PackageReference Include="Microsoft.Extensions.AI" Version="10.6.0" />
     <!-- PERF-05: HybridCache for AI/RAG response caching with L1+L2 support -->
     <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="10.0.8" />

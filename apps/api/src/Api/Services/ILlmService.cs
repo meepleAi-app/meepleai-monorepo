@@ -182,6 +182,14 @@ internal interface ILlmService
     Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
         => GenerateCompletionWithModelAsync(
             request.PrimaryModelId, request.SystemPrompt, request.UserPrompt, request.Source, request.MaxTokens, ct);
+
+    /// <summary>
+    /// ADR-097: una chiamata di chat con strumenti, con le garanzie di <see cref="GenerateAnswerAsync"/>.
+    /// Il risultato porta il testo, le chiamate a strumenti chieste dal modello, o entrambi. Chi non la
+    /// implementa fallisce in modo esplicito.
+    /// </summary>
+    Task<LlmCompletionResult> ChatAsync(LlmChatRequest request, CancellationToken ct = default)
+        => Task.FromResult(LlmCompletionResult.CreateFailure("Tool calling is not supported by this LLM service."));
 }
 
 /// <summary>
@@ -291,6 +299,12 @@ internal record LlmCompletionResult
     /// della pipeline; <c>null</c> per ogni altra chiamata. Il registro costi la copia nella riga.
     /// </summary>
     public Guid? ProfileVersionId { get; init; }
+
+    /// <summary>
+    /// ADR-097: le chiamate a strumenti chieste dal modello in una chat con strumenti. Vuota per ogni
+    /// altra chiamata.
+    /// </summary>
+    public IReadOnlyList<LlmToolCall> ToolCalls { get; init; } = [];
 
     public static LlmCompletionResult CreateSuccess(
         string response,

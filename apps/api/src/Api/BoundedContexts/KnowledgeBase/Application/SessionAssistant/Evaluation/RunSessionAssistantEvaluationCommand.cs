@@ -20,7 +20,17 @@ internal sealed class RunSessionAssistantEvaluationCommandValidator : AbstractVa
     {
         RuleFor(c => c.PrimaryModelId).NotEmpty();
         RuleFor(c => c.Scenarios).NotNull();
+        // La cascata Stop è globale (ApplicationServiceExtensions): dopo un NotEmpty fallito il Must non gira.
         RuleFor(c => c.Scenarios.Scenarios).NotEmpty().Must(s => s.Count <= 200).When(c => c.Scenarios is not null);
+        RuleForEach(c => c.Scenarios.Scenarios)
+            .Custom((scenario, context) =>
+            {
+                if (AssistantScenarioRules.Problem(scenario) is { } problem)
+                {
+                    context.AddFailure(problem);
+                }
+            })
+            .When(c => c.Scenarios?.Scenarios is not null);
         RuleFor(c => c.Temperature).InclusiveBetween(0, 2);
         RuleFor(c => c.MaxTokens).InclusiveBetween(64, 4000);
         RuleFor(c => c.MaxToolIterations).InclusiveBetween(1, 10);

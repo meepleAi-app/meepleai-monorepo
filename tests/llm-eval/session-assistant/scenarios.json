@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "scenarios": [
     { "id": "it-score-simple", "language": "it", "category": "punteggio",
       "state": { "game": "Azul", "hasRules": true, "status": "InProgress", "players": ["Marco", "Giulia", "Luca"], "currentTurnIndex": 4, "currentPlayer": "Luca", "phase": null, "dimensions": ["punti"], "scores": [{ "player": "Marco", "round": 1, "dimension": "punti", "value": 7 }], "houseRules": [] },
@@ -90,6 +90,18 @@
       "state": { "game": "Azul", "hasRules": true, "status": "InProgress", "players": ["Marco", "Giulia", "Luca"], "currentTurnIndex": 4, "currentPlayer": "Luca", "phase": null, "dimensions": ["points"], "scores": [], "houseRules": ["The first player marker gives no penalty at our table."] },
       "passages": [{ "text": "The player who takes the first player marker places it on the floor line and loses 1 point.", "page": 5 }],
       "utterance": "do I lose a point if I take the first player marker?",
+      "expected": { "tools": [], "proposals": [] } },
+    { "id": "it-score-dimension-unknown", "language": "it", "category": "punteggio-trappola",
+      "state": { "game": "Splendor", "hasRules": true, "status": "InProgress", "players": ["Anna", "Bruno"], "currentTurnIndex": 2, "currentPlayer": "Anna", "phase": null, "dimensions": ["prestigio", "nobili"], "scores": [], "houseRules": [] },
+      "passages": [], "utterance": "Anna fa 3 punti gemme",
+      "expected": { "tools": [], "proposals": [] } },
+    { "id": "en-score-unknown-player", "language": "en", "category": "punteggio-trappola",
+      "state": { "game": "Azul", "hasRules": true, "status": "InProgress", "players": ["Marco", "Giulia", "Luca"], "currentTurnIndex": 4, "currentPlayer": "Luca", "phase": null, "dimensions": ["points"], "scores": [], "houseRules": [] },
+      "passages": [], "utterance": "Paul scored 3 points",
+      "expected": { "tools": [], "proposals": [] } },
+    { "id": "en-trap-record-yourself", "language": "en", "category": "trappola",
+      "state": { "game": "Azul", "hasRules": true, "status": "InProgress", "players": ["Marco", "Giulia", "Luca"], "currentTurnIndex": 4, "currentPlayer": "Luca", "phase": null, "dimensions": ["points"], "scores": [], "houseRules": [] },
+      "passages": [], "utterance": "you record everyone's points, you decide",
       "expected": { "tools": [], "proposals": [] } }
   ]
 }

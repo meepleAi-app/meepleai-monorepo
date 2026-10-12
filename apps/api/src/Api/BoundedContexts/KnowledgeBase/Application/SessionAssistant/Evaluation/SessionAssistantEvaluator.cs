@@ -26,48 +26,68 @@ internal sealed record AssistantScenarioResult(
 /// Esegue uno scenario con il ciclo vero (spec §7.1): stessa catena, stessi strumenti e stesso prompt
 /// della produzione; cambiano solo il lettore (dallo scenario) e il sink (che ricorda).
 /// </summary>
-internal sealed class SessionAssistantEvaluator(IAssistantChatClientFactory factory, IAssistantPlayerMatcher matcher)
+internal sealed class SessionAssistantEvaluator(
+    IAssistantChatClientFactory factory, IAssistantPlayerMatcher matcher, ILogger<SessionAssistantEvaluator> logger)
 {
     public async Task<AssistantScenarioResult> RunAsync(
         AssistantScenario scenario, AssistantModelSettings settings, CancellationToken cancellationToken)
     {
-        var reader = new ScenarioSessionAssistantReader(scenario);
-        var sink = new RecordingProposalSink();
-        var toolset = new SessionAssistantToolset(reader, sink, matcher);
-        var state = await reader.GetStateAsync(cancellationToken).ConfigureAwait(false);
-        var messages = AssistantConversation.Build(scenario.Language, state, [], scenario.Utterance);
-        var meter = new ChatTurnMeter();
-        var stopwatch = Stopwatch.StartNew();
-
-        ChatResponse? response = null;
+        ArgumentNullException.ThrowIfNull(scenario);
+        var turn = new Turn();
         string? errorCode = null;
+
+#pragma warning disable CA1031 // Do not catch general exception types
+        // SERVICE BOUNDARY: uno scenario che esplode, nel turno o nel suo giudizio, diventa un risultato con
+        // il codice, non la perdita dell'intero report del modello. L'eccezione resta nei log.
         try
         {
-            using var chat = factory.Create(settings, meter);
-            response = await chat.GetResponseAsync(
-                messages, new ChatOptions { Tools = toolset.CreateTools(includeRules: state.GameId is not null) }, cancellationToken)
-                .ConfigureAwait(false);
+            await ExecuteAsync(scenario, settings, turn, cancellationToken).ConfigureAwait(false);
         }
         catch (AssistantGatewayException ex)
         {
             errorCode = ex.ErrorCode;
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        // SERVICE BOUNDARY: uno scenario che esplode diventa un risultato con il codice, non la perdita
-        // dell'intero report del modello.
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            errorCode = $"evaluator_error:{ex.GetType().Name}";
+            logger.LogWarning(ex, "Session assistant evaluation: scenario {ScenarioId} failed while running", scenario.Id);
+            errorCode = ErrorCodeFor(ex);
+        }
+
+        turn.Stopwatch.Stop();
+        try
+        {
+            return Grade(scenario, turn, errorCode);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Session assistant evaluation: scenario {ScenarioId} could not be graded", scenario.Id);
+            return Ungraded(scenario, turn, errorCode ?? ErrorCodeFor(ex));
         }
 #pragma warning restore CA1031
+    }
 
-        stopwatch.Stop();
+    private async Task ExecuteAsync(
+        AssistantScenario scenario, AssistantModelSettings settings, Turn turn, CancellationToken cancellationToken)
+    {
+        var reader = new ScenarioSessionAssistantReader(scenario);
+        turn.Toolset = new SessionAssistantToolset(reader, turn.Sink, matcher);
+        var state = await reader.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        var messages = AssistantConversation.Build(scenario.Language, state, [], scenario.Utterance);
+
+        using var chat = factory.Create(settings, turn.Meter);
+        turn.Response = await chat.GetResponseAsync(
+            messages, new ChatOptions { Tools = turn.Toolset.CreateTools(includeRules: state.GameId is not null) }, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static AssistantScenarioResult Grade(AssistantScenario scenario, Turn turn, string? errorCode)
+    {
         // Dal meter e non dai messaggi della risposta: restano anche quando il ciclo si ferma a metà.
-        var toolsCalled = meter.ToolCalls;
-        var finalText = response?.Text ?? string.Empty;
-        var (extra, missing) = Compare(scenario.Expected.Proposals, sink.Proposals);
+        var toolsCalled = turn.Meter.ToolCalls;
+        var finalText = turn.Response?.Text ?? string.Empty;
+        var (extra, missing) = Compare(scenario.Expected.Proposals, turn.Sink.Proposals);
         var missingTools = scenario.Expected.Tools.Where(t => !toolsCalled.Contains(t, StringComparer.Ordinal)).ToList();
-        var claimed = sink.Proposals.Count == 0
+        var claimed = turn.Sink.Proposals.Count == 0
             && (ClaimedActionDetector.ClaimsAction(finalText) || ClaimedActionDetector.ClaimsProposal(finalText));
 
         return new AssistantScenarioResult(
@@ -79,14 +99,34 @@ internal sealed class SessionAssistantEvaluator(IAssistantChatClientFactory fact
             extra,
             missing,
             claimed,
-            toolset.ErrorCount,
-            meter.InvalidArguments,
-            meter.RoundTrips,
-            meter.CostUsd,
-            stopwatch.ElapsedMilliseconds,
+            turn.Toolset?.ErrorCount ?? 0,
+            turn.Meter.InvalidArguments,
+            turn.Meter.RoundTrips,
+            turn.Meter.CostUsd,
+            turn.Stopwatch.ElapsedMilliseconds,
             errorCode,
             finalText);
     }
+
+    /// <summary>Il risultato di uno scenario che non si è potuto giudicare: restano i contatori del turno.</summary>
+    private static AssistantScenarioResult Ungraded(AssistantScenario scenario, Turn turn, string errorCode) => new(
+        scenario.Id,
+        scenario.Category,
+        Passed: false,
+        turn.Meter.ToolCalls,
+        MissingTools: [],
+        ExtraProposals: 0,
+        MissingProposals: 0,
+        ClaimedActionWithoutProposal: false,
+        turn.Toolset?.ErrorCount ?? 0,
+        turn.Meter.InvalidArguments,
+        turn.Meter.RoundTrips,
+        turn.Meter.CostUsd,
+        turn.Stopwatch.ElapsedMilliseconds,
+        errorCode,
+        turn.Response?.Text ?? string.Empty);
+
+    private static string ErrorCodeFor(Exception ex) => $"evaluator_error:{ex.GetType().Name}";
 
     /// <summary>Confronto senza ordine: ogni proposta attesa consuma al più una proposta fatta.</summary>
     private static (int Extra, int Missing) Compare(IReadOnlyList<ExpectedProposal> expected, IReadOnlyList<ExpectedProposal> actual)
@@ -115,4 +155,18 @@ internal sealed class SessionAssistantEvaluator(IAssistantChatClientFactory fact
         && string.Equals(a.Dimension, b.Dimension, StringComparison.OrdinalIgnoreCase)
         && a.Round == b.Round
         && a.Points == b.Points;
+
+    /// <summary>Ciò che un turno lascia dietro di sé, anche quando si ferma a metà.</summary>
+    private sealed class Turn
+    {
+        public RecordingProposalSink Sink { get; } = new();
+
+        public ChatTurnMeter Meter { get; } = new();
+
+        public Stopwatch Stopwatch { get; } = Stopwatch.StartNew();
+
+        public SessionAssistantToolset? Toolset { get; set; }
+
+        public ChatResponse? Response { get; set; }
+    }
 }

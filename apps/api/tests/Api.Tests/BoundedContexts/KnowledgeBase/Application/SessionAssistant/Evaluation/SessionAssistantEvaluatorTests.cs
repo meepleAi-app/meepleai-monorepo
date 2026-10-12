@@ -88,6 +88,91 @@ public sealed class SessionAssistantEvaluatorTests
         result.Passed.Should().BeTrue();
     }
 
+    // Il confronto delle proposte regge la soglia principale del gate («nessuna proposta non dovuta»): se
+    // Extra tornasse sempre zero, lo spike direbbe «zero proposte non dovute» con qualunque modello.
+    [Fact]
+    public async Task Run_ModelProposesForTheWrongPlayer_IsAnExtraAndAMissingProposal()
+    {
+        var gateway = Script(
+            Calls(("proponi_punteggio", """{"giocatore":"Giulia","punti":5}""")),
+            Answer("Ho preparato una proposta: +5 punti a Giulia. Confermi?"));
+
+        var result = await Evaluator(gateway).RunAsync(
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+
+        result.ExtraProposals.Should().Be(1);
+        result.MissingProposals.Should().Be(1);
+        result.Passed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Run_ModelProposesTheSameScoreTwice_TheDuplicateIsAnExtraProposal()
+    {
+        var gateway = Script(
+            Calls(("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""), ("proponi_punteggio", """{"giocatore":"Marco","punti":5}""")),
+            Answer("Ho preparato la proposta: +5 a Marco. Confermi?"));
+
+        var result = await Evaluator(gateway).RunAsync(
+            Scenario(new ExpectedProposal("Score", "Marco", "punti", 2, 5)), Settings, TestContext.Current.CancellationToken);
+
+        result.ExtraProposals.Should().Be(1, "l'host vedrebbe due card per gli stessi punti");
+        result.MissingProposals.Should().Be(0);
+        result.Passed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Run_ModelProposesWhenNothingIsExpected_IsAnExtraProposal()
+    {
+        var gateway = Script(Calls(("proponi_turno", "{}")), Answer("Ho preparato la proposta per passare il turno."));
+
+        var result = await Evaluator(gateway).RunAsync(
+            Scenario() with { Expected = new AssistantExpectation([], []) }, Settings, TestContext.Current.CancellationToken);
+
+        result.ExtraProposals.Should().Be(1);
+        result.MissingProposals.Should().Be(0);
+        result.Passed.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Run_ProposalsInAnotherOrderAndCase_StillMatch()
+    {
+        var gateway = Script(
+            Calls(("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""), ("proponi_turno", "{}")),
+            Answer("Ho preparato due proposte da confermare."));
+
+        var result = await Evaluator(gateway).RunAsync(
+            Scenario(new ExpectedProposal("AdvanceTurn", null, null, null, null), new ExpectedProposal("Score", "marco", "PUNTI", 2, 5)),
+            Settings, TestContext.Current.CancellationToken);
+
+        result.ExtraProposals.Should().Be(0);
+        result.MissingProposals.Should().Be(0);
+        result.Passed.Should().BeTrue();
+    }
+
+    // Chi scrive gli scenari non deve ricevere un 500 muto, né perdere i risultati degli altri scenari
+    // della stessa richiesta: uno scenario che non si riesce a valutare è un risultato con il suo codice.
+    [Fact]
+    public async Task Run_ScenarioWithoutState_IsAnErrorResult_NotAnException()
+    {
+        var result = await Evaluator(Script(Answer("ok"))).RunAsync(
+            Scenario() with { State = null! }, Settings, TestContext.Current.CancellationToken);
+
+        result.Id.Should().Be("it-score-simple");
+        result.Passed.Should().BeFalse();
+        result.ErrorCode.Should().StartWith("evaluator_error:");
+    }
+
+    [Fact]
+    public async Task Run_ScenarioWithoutExpectation_IsAnErrorResult_AndKeepsTheTurnCounters()
+    {
+        var result = await Evaluator(Script(Answer("Tocca a Luca."))).RunAsync(
+            Scenario() with { Expected = null! }, Settings, TestContext.Current.CancellationToken);
+
+        result.Passed.Should().BeFalse();
+        result.ErrorCode.Should().StartWith("evaluator_error:");
+        result.RoundTrips.Should().Be(1, "il turno è stato eseguito: i suoi contatori restano");
+    }
+
     [Fact]
     public async Task Run_GatewayRefuses_IsAnErrorResult_NotAnException()
     {
@@ -136,7 +221,7 @@ public sealed class SessionAssistantEvaluatorTests
 
     private static SessionAssistantEvaluator Evaluator(Mock<ILlmService> gateway) =>
         new(new AssistantChatClientFactory(gateway.Object, NullLoggerFactory.Instance, new ServiceCollection().BuildServiceProvider()),
-            new ExactNameMatcher());
+            new ExactNameMatcher(), NullLogger<SessionAssistantEvaluator>.Instance);
 
     private static Mock<ILlmService> Script(params LlmCompletionResult[] turns)
     {

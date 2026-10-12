@@ -57,6 +57,19 @@ public sealed class AssistantConversationTests
     [InlineData("Ti propongo +5 a Marco: conferma la card.", false)]
     [InlineData("Marco ha 12 punti.", false)]
     [InlineData("I prepared a proposal: please confirm it.", false)]
+    // Review di A1: l'apostrofo tipografico e un avverbio bastavano ad aggirare il rilevatore.
+    [InlineData("I’ve recorded 5 points for Marco.", true)]
+    [InlineData("Ho appena segnato 5 punti a Marco.", true)]
+    [InlineData("Ho già registrato il punteggio.", true)]
+    [InlineData("I just added 5 points to Marco.", true)]
+    [InlineData("I have already updated the score.", true)]
+    // Review di A1: il rifiuto corretto di una trappola non è un'azione dichiarata.
+    [InlineData("Non ho registrato nulla: quale Marco intendi?", false)]
+    [InlineData("La partita è conclusa, quindi non ho segnato i 2 punti.", false)]
+    [InlineData("Non abbiamo aggiunto nessun punto.", false)]
+    [InlineData("Non ti ho segnato niente.", false)]
+    [InlineData("I have not recorded anything.", false)]
+    [InlineData("I haven't added any points.", false)]
     public void ClaimedActionDetector_FlagsCompletedActions(string text, bool expected) =>
         ClaimedActionDetector.ClaimsAction(text).Should().Be(expected);
 
@@ -77,6 +90,21 @@ public sealed class AssistantConversationTests
     [InlineData("I haven't prepared a proposal yet: which Marco do you mean?", false)]
     [InlineData("Tocca a Luca (round 2).", false)]
     [InlineData("", false)]
+    // Review di A1: altre forme con cui si dice che una proposta esiste.
+    [InlineData("I’ve prepared a proposal to pass the turn.", true)]
+    [InlineData("Proposta creata: +5 a Marco. Confermi?", true)]
+    [InlineData("Ho proposto +5 a Marco.", true)]
+    [InlineData("I've proposed +4 points for Giulia.", true)]
+    [InlineData("Please confirm the proposal below.", true)]
+    [InlineData("Conferma la proposta qui sotto.", true)]
+    // Review di A1: dire che una proposta NON esiste non è dichiararla.
+    [InlineData("Nessuna proposta è pronta: dimmi quale Marco.", false)]
+    [InlineData("No proposal is ready yet: which Marco do you mean?", false)]
+    [InlineData("Non ti ho preparato una proposta.", false)]
+    [InlineData("Non ho proposto nulla.", false)]
+    [InlineData("Non ho creato alcuna proposta.", false)]
+    [InlineData("Nessuna proposta creata: la partita è conclusa.", false)]
+    [InlineData("Vuoi che prepari una proposta da confermare?", false)]
     public void ClaimedActionDetector_FlagsDeclaredProposals(string text, bool expected) =>
         ClaimedActionDetector.ClaimsProposal(text).Should().Be(expected);
 }

@@ -42,4 +42,8 @@ internal sealed record AssistantScenarioPassage(string Text, int? Page);
 internal sealed record AssistantExpectation(IReadOnlyList<string> Tools, IReadOnlyList<ExpectedProposal> Proposals);
 
 /// <summary><c>Kind</c> è <c>Score</c> o <c>AdvanceTurn</c>; per <c>AdvanceTurn</c> gli altri campi sono nulli.</summary>
-internal sealed record ExpectedProposal(string Kind, string? Player, string? Dimension, int? Round, int? Points);
+internal sealed record ExpectedProposal(string Kind, string? Player, string? Dimension, int? Round, int? Points)
+{
+    public const string ScoreKind = "Score";
+    public const string AdvanceTurnKind = "AdvanceTurn";
+}

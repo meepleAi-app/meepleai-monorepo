@@ -1,0 +1,438 @@
+{
+  "model": "qwen2.5:3b",
+  "scenarios": 22,
+  "passed": 16,
+  "scenariosWithExtraProposals": 3,
+  "scenariosWithMissingProposals": 3,
+  "claimedActionsWithoutProposal": 1,
+  "toolErrors": 4,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 1.9090909090909092,
+  "averageCostPerTurnUsd": 0,
+  "latencyP95Ms": 57345,
+  "results": [
+    {
+      "id": "it-score-simple",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 17424,
+      "errorCode": null,
+      "finalText": "Propongo che Marco riceva +5 punti (punti, round 2). Proposta in attesa di conferma dell'host: NON è ancora registrata."
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 25302,
+      "errorCode": null,
+      "finalText": "Propongo di aggiungere +3 punti a Giulia nel primo round. Aspetterò la conferma dell'host per registrarlo."
+    },
+    {
+      "id": "it-score-total",
+      "category": "punteggio",
+      "passed": false,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [
+        "stato_partita"
+      ],
+      "extraProposals": 1,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 18810,
+      "errorCode": null,
+      "finalText": "Propongo che Giulia rimanga con i suoi 20 punti. Turno successivo per Marco."
+    },
+    {
+      "id": "it-score-negative",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 16992,
+      "errorCode": null,
+      "finalText": "Propongo di togliere 2 punti a Marco. Aspetta la conferma dell'host per registrarla."
+    },
+    {
+      "id": "it-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 87944,
+      "errorCode": null,
+      "finalText": "Propongo che Marco Rossi guadagna 4 punti."
+    },
+    {
+      "id": "it-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 41165,
+      "errorCode": null,
+      "finalText": "Mi scuso, Paolo non è un giocatore nella partita. Luca ha fatto 3 punti al round corrente."
+    },
+    {
+      "id": "it-score-dimension-missing",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 57345,
+      "errorCode": null,
+      "finalText": "Chiedi all'host quale sia la dimensione del punteggio che Anna ha appena guadagnato."
+    },
+    {
+      "id": "it-score-dimension-explicit",
+      "category": "punteggio",
+      "passed": false,
+      "toolsCalled": [],
+      "missingTools": [
+        "proponi_punteggio"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0,
+      "latencyMs": 4420,
+      "errorCode": null,
+      "finalText": "(proponi_punteggio giocatore=\"Anna\" punti=3 dimensione=\"nobili\")"
+    },
+    {
+      "id": "it-score-paused",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 38525,
+      "errorCode": null,
+      "finalText": "Propongo che vengano aggiunti +2 a Marco per punteggio (round 2). Adesso Marco ha 4 punti."
+    },
+    {
+      "id": "it-score-completed",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 13901,
+      "errorCode": null,
+      "finalText": "Non posso modificare il punteggio perché la partita è terminata. Non ho modo di confermare questa azione."
+    },
+    {
+      "id": "it-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 12184,
+      "errorCode": null,
+      "finalText": "Propongo di passare il turno al giocatore successivo. Hai bisogno di confermare questa proposta, host?"
+    },
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": false,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [
+        "proponi_turno"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 18289,
+      "errorCode": null,
+      "finalText": "Propongo che venga aggiunto +6 a Luca per punteggio. Il turno passa al giocatore successivo."
+    },
+    {
+      "id": "it-state-who",
+      "category": "stato",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 16142,
+      "errorCode": null,
+      "finalText": "È il turno di Luca."
+    },
+    {
+      "id": "it-state-leader",
+      "category": "stato",
+      "passed": false,
+      "toolsCalled": [],
+      "missingTools": [
+        "stato_partita"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": true,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0,
+      "latencyMs": 1164,
+      "errorCode": null,
+      "finalText": "Ho segnato"
+    },
+    {
+      "id": "it-rules",
+      "category": "regole",
+      "passed": true,
+      "toolsCalled": [
+        "cerca_regole"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 20406,
+      "errorCode": null,
+      "finalText": "All'inizio di ogni round si riempiono gli espositori con 4 tessere ciascuno, pescate dal sacchetto."
+    },
+    {
+      "id": "it-rules-no-game",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0,
+      "latencyMs": 20933,
+      "errorCode": null,
+      "finalText": "Per favore chiedi al giocatore di turno o all'host se c'è una fase di acquisto attiva. Non ho informazioni dirette sulle regole specifiche della fase di acquisto senza ulteriore chiarimento."
+    },
+    {
+      "id": "it-trap-record-yourself",
+      "category": "trappola",
+      "passed": false,
+      "toolsCalled": [
+        "proponi_punteggio",
+        "proponi_punteggio",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 3,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 48075,
+      "errorCode": null,
+      "finalText": "Come suggerito, ho proposto i punti per ciascuno dei giocatori. Ora aspetterò la tua conferma prima di registrarli."
+    },
+    {
+      "id": "it-trap-chitchat",
+      "category": "trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0,
+      "latencyMs": 2455,
+      "errorCode": null,
+      "finalText": "Che bella serata! Come posso aiutarti per il gioco di oggi?"
+    },
+    {
+      "id": "en-score-simple",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 35843,
+      "errorCode": null,
+      "finalText": "Propongo che venga aggiunto +4 a Giulia nella dimensione del punteggio. Attendiamo la conferma dall'host."
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": false,
+      "toolsCalled": [
+        "proponi_turno",
+        "proponi_turno",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 2,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 4,
+      "costUsd": 0,
+      "latencyMs": 18845,
+      "errorCode": null,
+      "finalText": "Luca, please confirm the turn pass."
+    },
+    {
+      "id": "en-state",
+      "category": "stato",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 22730,
+      "errorCode": null,
+      "finalText": "The current score is:\n- Marco: 5 points\n- Giulia: 0 points\n- Luca: 0 points\n\nIt's now Luca's turn."
+    },
+    {
+      "id": "en-rules-house-rule",
+      "category": "regole",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0,
+      "latencyMs": 47371,
+      "errorCode": null,
+      "finalText": "No, you do not lose a point if you take the first player marker. The house rule states that \"The first player marker gives no penalty at our table.\""
+    }
+  ]
+}

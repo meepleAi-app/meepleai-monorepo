@@ -12,4 +12,6 @@ Set di scenari ed esecutore della spec `docs/for-developers/specs/2026-10-11-ses
 6. `node tests/llm-eval/session-assistant/run-eval.mjs deepseek-flash qwen2.5:3b`
 7. Ripristina l'immagine annotata al punto 2: `API_IMAGE=<immagine> docker compose -f docker-compose.yml -f compose.dev.yml up -d --no-deps --no-build api`.
 
-I risultati grezzi vanno in `results/`, che è ignorata da git; l'esito si riassume nella spec. I modelli via OpenRouter richiedono una chiave locale valida (oggi `401`: va risincronizzata con `make secrets-sync`).
+I risultati grezzi vanno in `results/`, che è ignorata da git, e il file di un modello si sovrascrive a ogni run dello stesso giorno: copialo prima di rilanciare. L'esito si riassume nella spec, e i run citati dalla spec si copiano in `baselines/<data>/`.
+
+Le chiamate passano dal gateway con la quota giornaliera delle valutazioni (`GET /api/v1/admin/llm/budget/usage` la mostra): quando finisce, ogni scenario esce con `AI_BUDGET_DAILY_EXHAUSTED` fino al giorno dopo. Per iterare su un prompt esegui solo gli scenari che falliscono. I modelli via OpenRouter richiedono una chiave locale valida (oggi `401`: va risincronizzata con `make secrets-sync`).

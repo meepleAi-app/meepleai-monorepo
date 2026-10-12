@@ -1,6 +1,6 @@
 # Assistente in partita: un agente con strumenti — design
 
-**Data**: 2026-10-11, rivista il 2026-10-12 · **Origine**: `/sc:brainstorm` del 2026-10-11 · **Stato**: spec rivista dopo una review avversariale (§0). A0 consegnata (#4247); spike di A1 concluso, con l'esito in §7.1.
+**Data**: 2026-10-11, rivista il 2026-10-12 · **Origine**: `/sc:brainstorm` del 2026-10-11 · **Stato**: spec rivista dopo una review avversariale (§0). A0 consegnata (#4247); spike di A1 concluso, con l'esito in §7.1: nessun modello supera tutte le trappole, e la pubblicazione dell'assistente aspetta #4256.
 **Base misurata**: `origin/main-dev` a `afd0cdbb3` (#4233).
 **Contesto**: [ADR-094](../../for-claude/architecture/adr/adr-094-single-system-agent.md) (un solo agente di sistema) · [ADR-095](../../for-claude/architecture/adr/adr-095-single-answer-pipeline-and-versioned-agent-profile.md) e il [piano delle fette](../plans/2026-10-10-adr-095-slices-plan.md) · [ADR-090](../../for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) (`KnowledgeBase` possiede la risposta ancorata) · [ADR-089](../../for-claude/architecture/adr/adr-089-session-scoring-ssot.md) (`LiveGameSession.RoundScores` è la fonte unica del punteggio in partita) · [`copyright-tier-rag.md`](../../for-claude/architecture/copyright-tier-rag.md) · [`user-use-cases.md`](../user-use-cases.md) (SES-07, SES-17) · [correzione dei bloccanti](./2026-10-10-user-use-case-blockers-fix-design.md) (#4156, decisione D3 sulla scheda Score) · [brief del 2026-10-10](./2026-10-10-single-agent-ai-architecture-brief.md).
 
@@ -110,9 +110,9 @@ Il prezzo è un refactor di `HybridLlmService`: la sequenza di un tentativo va e
 | Gateway | `ILlmService.ChatAsync(LlmChatRequest)`: messaggi (sistema, utente, assistente, strumento), definizioni degli strumenti, temperatura e lunghezza massima, `RequestSource`. Restituisce testo e/o chiamate a strumenti, con l'uso dei token. `ILlmClient` riceve lo stesso metodo, implementato da OpenRouter e DeepSeek (formato OpenAI `tools`/`tool_calls`) e da Ollama (`api/chat` con `tools`) |
 | Facciata M.E.AI | `GatewayChatClient : IChatClient` traduce i tipi M.E.AI (`ChatMessage`, `FunctionCallContent`, `FunctionResultContent`) da e verso `LlmChatRequest`. Non dipende da `ILlmClient` né da `HttpClient` |
 | Strumenti | **Non ricevono `IMediator`.** Ricevono `ISessionAssistantReader`, una porta di sola lettura implementata in Infrastructure con query MediatR (`GetLiveSessionQuery`, `GetTurnPhasesQuery`, `GetGameMemoryQuery`) e con `IPlayerNameResolutionService` (stesso precedente di `ParseAndRecordScoreCommandHandler`), e `IAssistantProposalRepository`. Alcuni comandi di scrittura di GameManagement implementano `IRequest` e non `ICommand`, quindi un divieto su `ICommand` non basterebbe |
-| Profilo | Un parametro opzionale in coda ad `AgentProfileContentJson.Document` e una proprietà in `AgentProfileContent`, «Assistente in partita»: abilitato, prompt di sistema per lingua, numero massimo di giri, scadenza per turno. Entra in `GetEqualityComponents`; assente vale disabilitato; `AgentProfileFieldEffectTests` riceve le sue righe campo → effetto |
+| Profilo | Un parametro opzionale in coda ad `AgentProfileContentJson.Document` e una proprietà in `AgentProfileContent`, «Assistente in partita»: abilitato, prompt di sistema per lingua, numero massimo di giri, scadenza per turno, uso della riserva del profilo (spento finché la riserva non supera il gate, §7.1). Entra in `GetEqualityComponents`; assente vale disabilitato; `AgentProfileFieldEffectTests` riceve le sue righe campo → effetto |
 | Catalogo | `SupportsToolCalling` dentro `SettingsJson` di `AiModelConfiguration` (jsonb, nessuna migrazione), esposto a `KnowledgeBase` da una porta |
-| Pubblicazione | `AgentProfile.PublishDraft` rifiuta una bozza con l'assistente abilitato se il modello principale o quello di riserva del profilo non supportano il tool calling. Finché non esiste la pagina admin (fetta 6c), l'abilitazione del pilota è una migrazione di dati che pubblica una nuova versione, come `20261011061616_RepublishAgentProfileWithCurrentModels` |
+| Pubblicazione | `AgentProfile.PublishDraft` rifiuta una bozza con l'assistente abilitato se il modello principale del profilo non supporta il tool calling, o se l'assistente usa la riserva e la riserva non lo supporta. Finché non esiste la pagina admin (fetta 6c), l'abilitazione del pilota è una migrazione di dati che pubblica una nuova versione, come `20261011061616_RepublishAgentProfileWithCurrentModels` |
 | `RequestSource` | Un valore nuovo, `SessionAssistant`, mappato su `Answer` in `LlmBudgetClassification.For`. `RequestSourceTests` conta i valori dell'enum, quindi va aggiornato |
 | ADR | **ADR-097**: `Microsoft.Extensions.AI` come facciata del gateway per il tool calling, sopra `ILlmService`. Chiude la domanda aperta n. 4 di ADR-095 |
 
@@ -159,7 +159,7 @@ Il prezzo è un refactor di `HybridLlmService`: la sequenza di un tentativo va e
 
 ### 4.3 Degrado (ADR-095 D6)
 
-L'assistente non si può servire dalla cache. Oltre il 100% del tetto risponde «assistente in pausa» e l'inserimento manuale resta disponibile. Sotto la soglia di degrado (80% di default, configurabile) il gateway passa al modello di riserva **del profilo**, e solo se costa meno del principale (`IsCheaperReserveAsync`). Per questo la pubblicazione richiede che anche la riserva supporti il tool calling (§3.2).
+L'assistente non si può servire dalla cache. Oltre il 100% del tetto risponde «assistente in pausa» e l'inserimento manuale resta disponibile. Sotto la soglia di degrado (80% di default, configurabile) il gateway passa al modello di riserva **del profilo**, e solo se costa meno del principale (`IsCheaperReserveAsync`). Vale per l'assistente solo quando la sua sezione del profilo usa la riserva, e in quel caso la pubblicazione richiede che anche la riserva supporti il tool calling (§3.2). Dopo lo spike la riserva è **spenta** (§7.1): un turno non scende a un modello che il set di scenari non ha misurato. L'assistente resta sul modello principale fino al 100% del tetto, e se il provider non risponde il turno fallisce con «assistente non disponibile».
 
 ---
 
@@ -276,28 +276,28 @@ Domanda: **i modelli disponibili chiamano gli strumenti in modo affidabile?**
 
 #### Esito dello spike (2026-10-12)
 
-I numeri di questa sezione sono misure di quel giorno, non totali da tenere aggiornati. Vengono dallo stack locale, attraverso il gateway vero, con l'immagine dell'API costruita dal branch di #4240 (commit `87eba5269`): prompt v1 (`SessionAssistantPrompts`), temperatura 0,2, `maxTokens` 600, al massimo quattro giri con strumenti, set `scenarios.json` alla versione 1. Ogni scenario è un turno solo, senza storia. I risultati grezzi restano in `results/`, fuori dal repository.
+I numeri di questa sezione sono misure di quel giorno, non totali da tenere aggiornati. Vengono dallo stack locale, attraverso il gateway vero, con l'immagine dell'API costruita dal branch di #4240 dopo le correzioni della review: prompt v1 (`SessionAssistantPrompts`), temperatura 0,2, `maxTokens` 600, al massimo quattro giri con strumenti. Ogni scenario è un turno solo, senza storia. I risultati grezzi dei run citati sono in `tests/llm-eval/session-assistant/baselines/2026-10-12/`.
 
-**Risposta alla domanda: `deepseek-flash` chiama gli strumenti in modo affidabile, `qwen2.5:3b` no.**
+**Risposta alla domanda: nessun modello supera tutte le trappole.** `deepseek-flash` chiama gli strumenti con argomenti sempre validi e supera quasi tutto il set, ma con il prompt v1 sbaglia in due modi che il gate non ammette. `qwen2.5:3b` inventa punteggi. Come previsto dal piano, la pubblicazione dell'assistente resta bloccata finché il prompt non migliora: gli scenari falliti e un prompt candidato sono in #4256.
 
-| Metrica | `deepseek-flash`, quattro run | `qwen2.5:3b`, un run |
+| Metrica | `deepseek-flash`, sei run del set alla versione 2 | `qwen2.5:3b`, un run del set alla versione 1 |
 |---|---|---|
-| Scenari superati | 21 su 22 in ogni run, sempre gli stessi | 16 su 22 |
-| Scenari con proposte non dovute | 0 | 3, fra cui una trappola |
-| Scenari con proposte mancate | 1 (`en-turn`) | 3 |
-| Azioni dichiarate senza proposta | 1 (`en-turn`) | 1 |
-| Errori tipizzati degli strumenti | 2 per run | 4 |
-| Argomenti non validi | 0 | 0 |
-| Errori del gateway | 0 | 0 |
-| Chiamate al gateway per turno | media fra 2,14 e 2,18; massimo 3 | media 1,91; massimo 4 |
-| Costo per turno | media $0,00084; massimo $0,00132 | zero (self-hosted) |
-| Latenza per turno | p50 2,1 s · p95 3,3 s · massimo 3,8 s | p50 19 s · p95 57 s · massimo 88 s, su CPU |
+| Scenari superati per run | 24, 23, 24, 24, 22 e 23 su 25 | 16 su 22 |
+| Turni con proposte non dovute | 4 su 150 | 3 su 22, fra cui una trappola |
+| Turni con una proposta dichiarata e mai creata | 6 su 150, sempre `en-turn` | 1 su 22 |
+| Argomenti non validi, errori del gateway | 0 | 0 |
+| Chiamate al gateway per turno | media 2,1; massimo 3 | media 1,9; massimo 4 |
+| Costo per turno | media $0,00083; massimo $0,00137 | zero (self-hosted) |
+| Latenza per turno | p50 2,1 s · p95 3,2 s · massimo 3,4 s | p50 19 s · p95 57 s · massimo 88 s, su CPU |
 
-Per `deepseek-flash` la latenza è calcolata sugli 88 turni dei quattro run; la singola chiamata dura in media 1,0 s (p95 1,3 s, massimo 1,5 s). Il costo è a prezzo di listino, senza lo sconto della cache del provider: è un limite superiore.
+I 150 turni sono 25 frasi ripetute sei volte a temperatura 0,2: mostrano quanto il comportamento è stabile, non sono 150 campioni indipendenti. Prima della review il set aveva 22 scenari (versione 1): quattro run avevano dato 21 su 22 ogni volta, con il solo `en-turn` fallito. La versione 2 aggiunge la trappola «dimensione inesistente», che questa spec elencava e il set non aveva, e due trappole in inglese; è la trappola nuova a mostrare il secondo difetto. Il costo è a prezzo di listino, senza lo sconto della cache del provider, e vale per questi turni: senza storia e con poche celle di punteggio.
 
-**Il registro del gateway conferma i conti.** `llm_cost_logs` con `request_source = 'Evaluation'` ha una riga per chiamata: 192 per `deepseek-flash`, cioè le 190 dei quattro run più le 2 di uno scenario eseguito da solo, per $0,0744, la stessa somma che riporta l'esecutore. Per `qwen2.5:3b` le righe sono 44: le 42 del run più le 2 dello scenario di prova.
+**Dove sbaglia `deepseek-flash` con il prompt v1.**
 
-**Lo scenario che `deepseek-flash` fallisce.** `en-turn` («next player please») fallisce in tutti i run allo stesso modo: il modello chiama `stato_partita` e poi risponde «I've prepared a proposal to pass the turn to the next player — please confirm it», senza chiamare `proponi_turno`. L'equivalente italiano, `it-turn`, passa sempre. Con il prompt inglese il modello legge lo stato prima di ogni proposta (`en-score-simple` costa tre chiamate, `it-score-simple` due), e qui si ferma dopo la lettura.
+- **Dichiara una proposta che non ha creato.** `en-turn` («next player please») fallisce in tutti i run: il modello chiama `stato_partita` e poi risponde «I've prepared a proposal to pass the turn to the next player — please confirm it», senza chiamare `proponi_turno`. L'equivalente italiano, `it-turn`, passa sempre. Gli altri cinque scenari inglesi passano in tutti i run.
+- **Risolve da solo un dubbio, e propone mentre chiede.** In `it-score-dimension-unknown` («Anna fa 3 punti gemme», con le dimensioni «prestigio» e «nobili») in tre run su sei sceglie «prestigio» e crea la proposta, avvisando che «gemme» non esiste. In `it-score-explicit-round` («segna 3 punti a Giulia nel primo round») in un run su sei propone sul round corrente invece che sul primo. In tutti i casi ha prima letto lo stato, e la dimensione o il round che manda sono validi: nessuna validazione dello strumento può fermarlo.
+
+Le altre nove trappole passano in tutti e sei i run. In due (`it-score-dimension-missing`, `it-score-completed`) il modello prova comunque a proporre, e la proposta non nasce perché lo strumento la rifiuta con un errore tipizzato: «zero proposte non dovute» dipende dalle validazioni degli strumenti quanto dal modello.
 
 **Dove fallisce `qwen2.5:3b`.**
 
@@ -310,39 +310,44 @@ Per `deepseek-flash` la latenza è calcolata sugli 88 turni dei quattro run; la 
 
 Anche fra gli scenari che supera ci sono testi falsi («Adesso Marco ha 4 punti», con Marco a zero) e risposte in italiano a domande in inglese.
 
-**Due difetti trovati dallo spike e corretti in questa fetta.**
+**Il gateway ha retto i conti, e il tetto.** `llm_cost_logs` con `request_source = 'Evaluation'` ha una riga per chiamata: dopo i primi quattro run contava 192 righe per `deepseek-flash`, cioè le 190 chiamate dei run più le 2 di uno scenario eseguito da solo, per $0,0744, la stessa somma riportata dall'esecutore. A fine giornata lo spike aveva speso $0,199 e la **quota giornaliera delle valutazioni** (il 20% di $1,00) si è esaurita: il gateway ha rifiutato ogni chiamata successiva con `AI_BUDGET_DAILY_EXHAUSTED`, senza toccare le risposte. Un run del set costa circa due centesimi: la quota ne permette nove al giorno, valutazioni di KbQuality comprese.
+
+**Tre difetti trovati dallo spike e dalla sua review, corretti in questa fetta.**
 
 1. *Il client Ollama mandava schemi che Ollama 0.5.4 rifiuta.* M.E.AI descrive un parametro opzionale con `"type": ["string","null"]`; Ollama 0.5.4 legge `type` come stringa e risponde `400` all'intera richiesta. Dopo cinque rifiuti il circuit breaker si apriva e ogni turno usciva con `AI_PROVIDER_UNAVAILABLE` in un decimo di secondo: il primo run di `qwen2.5:3b` non misurava il modello. I test di A0 usavano uno schema scritto a mano, a tipo singolo. Ora il client manda un solo tipo per parametro, e un test passa dagli strumenti veri.
-2. *Il rilevatore non vedeva una proposta dichiarata e mai creata.* Riconosceva «ho segnato» e simili, non «ho preparato una proposta»: il report dava zero azioni dichiarate per `en-turn`. `ClaimedActionDetector.ClaimsProposal` riconosce chi dice che una proposta esiste, e l'esecutore lo conta solo nei turni senza proposte. Il controllo finale di §6.3 deve usare entrambe le condizioni.
+2. *Il rilevatore non vedeva una proposta dichiarata e mai creata.* Riconosceva «ho segnato» e simili, non «ho preparato una proposta»: il report dava zero azioni dichiarate per `en-turn`. `ClaimedActionDetector.ClaimsProposal` riconosce chi dice che una proposta esiste, e l'esecutore lo conta solo nei turni senza proposte. La review ha poi trovato che un apostrofo tipografico o un avverbio lo aggiravano e che una negazione («non ho registrato nulla») lo faceva scattare: corretti. Il controllo finale di §6.3 deve usare entrambe le condizioni.
+3. *Uno scenario malformato faceva rispondere 500.* Ora il validator nomina lo scenario e il campo, e uno scenario che non si riesce a eseguire o a giudicare diventa un risultato con il suo codice, senza perdere gli altri.
 
 **Raccomandazioni.**
 
 | Parametro | Valore | Perché |
 |---|---|---|
-| Modello predefinito | `deepseek-flash` | Unico candidato che supera le trappole: nessuna proposta non dovuta in 88 turni |
-| Modello di riserva | **nessuno**, finché uno non supera il gate | `qwen2.5:3b` inventa punteggi sulla trappola. La riserva del profilo pubblicato (`meta-llama/llama-3.3-70b-instruct`) non è misurata, perché la chiave OpenRouter locale risponde `401`. Una riserva non misurata può fare ciò che ha fatto `qwen2.5:3b`: meglio un turno che fallisce con «assistente non disponibile» |
+| Modello predefinito | `deepseek-flash`, con un prompt che superi il gate | È l'unico candidato che usa bene gli strumenti; i suoi due difetti sono di istruzioni, non di capacità. Che un prompt li corregga è un'ipotesi: il candidato di #4256 è stato scritto e non misurato, perché la quota era finita |
+| Modello di riserva | **nessuno**, finché uno non supera il gate | `qwen2.5:3b` inventa punteggi. La riserva del profilo pubblicato (`meta-llama/llama-3.3-70b-instruct`) non è misurata: la chiave OpenRouter locale risponde `401`. Meglio un turno che fallisce con «assistente non disponibile» di una riserva che nessuno ha misurato (§4.3) |
 | Giri con strumenti | 3, cioè al più 4 chiamate per turno | Il caso peggiore misurato ne usa 2 (lettura dello stato, poi le proposte). Il terzo copre un nuovo tentativo dopo un errore tipizzato. Nessun turno ha toccato il limite, quindi le misure valgono per ogni limite da 2 in su |
-| Scadenza per turno | 15 s | Quattro chiamate alla durata massima misurata fanno 6 s; il margine di 2,5 volte copre i momenti lenti del provider. È 4,5 volte il p95 per turno. La misura viene da una sola finestra di mezz'ora, in locale: va rivista con il p95 di staging |
-| Costo per partita | turni × $0,00084 | Cento turni con l'assistente costano circa $0,08. La quota del tetto la fissa l'utente (§13) |
+| Scadenza per turno | 15 s | La latenza di un turno divisa per le sue chiamate è in media 1,0 s e al massimo 1,7 s: quattro chiamate fanno meno di 7 s, e 15 s lasciano un margine di oltre due volte per i momenti lenti del provider. È 4,7 volte il p95 per turno. La misura viene da due finestre di pochi minuti nello stesso pomeriggio, in locale: va rivista con il p95 di staging |
+| Costo per partita | turni × $0,00083 | Cento turni con l'assistente costano circa $0,08, da ricalcolare quando i turni avranno storia e tabelle di punteggio piene. La quota del tetto la fissa l'utente (§13) |
 
 **Soglie del gate di pubblicazione (fetta A6)**, ricavate da questa baseline:
 
-1. **Nessuna proposta non dovuta, in tutto il set.** La baseline è zero su 88 turni, quindi la regola vale ovunque e non solo sulle trappole.
-2. **Nessuna azione dichiarata senza proposta negli scenari delle categorie `trappola`, `punteggio-trappola` e `regole-trappola`.**
+1. **Nessuna proposta non dovuta, in tutto il set.**
+2. **Nessuna azione o proposta dichiarata senza una proposta, in tutto il set.** Non solo sulle trappole: l'unico caso osservato, `en-turn`, non è una trappola, ed è il rischio che §6.3 chiama il più insidioso.
 3. **Nessun errore del gateway e nessun argomento non valido.**
-4. **Nessuno scenario in meno rispetto alla versione pubblicata**: una bozza non si pubblica se fallisce uno scenario che la versione pubblicata supera. Il confronto è per nome dello scenario, non per percentuale, così regge quando il set cresce. Per la prima versione la baseline è questa: fallisce solo `en-turn`.
-5. Le regole si applicano al **caso peggiore di tre esecuzioni** del set. Qui quattro run hanno dato lo stesso esito, ma una regola «zero» su un sistema non deterministico merita più di un campione, e un run costa due centesimi e meno di un minuto.
+4. **La prima versione supera tutti gli scenari; le successive nessuno in meno della versione pubblicata.** Il confronto è per nome dello scenario, non per percentuale, così regge quando il set cresce.
+5. Le regole si applicano al **caso peggiore di tre esecuzioni** del set: `it-score-dimension-unknown` fallisce in un run su due, e un solo run lo avrebbe mancato la metà delle volte. Tre run costano sei centesimi, cioè un terzo della quota giornaliera delle valutazioni.
+
+Con il prompt v1 `deepseek-flash` non passa le regole 1, 2 e 4. Se l'inglese non si riesce a correggere, l'alternativa è un pilota solo in italiano, con gli scenari inglesi fuori dal gate per una decisione scritta (§13).
 
 **Cosa chiede lo spike alle fette successive.**
 
-- **A2, prompt.** Il prompt deve nominare solo gli strumenti offerti. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
-- **A2, `en-turn`.** Il prompt v1 resta il seme della sezione «Assistente in partita», con `en-turn` come primo scenario da far passare. Con il prompt nel profilo lo si corregge senza ricostruire l'immagine; lo spike lo ha misurato così com'è.
+- **Prima di A2, il prompt (#4256).** Due regole da provare: non scegliere mai giocatore, dimensione o round al posto dell'host (chiedere, senza proporre); dire di aver preparato una proposta solo dopo che lo strumento l'ha restituita. Due ipotesi da verificare su `en-turn`: nelle sessioni inglesi il contesto statico, i nomi e i messaggi degli strumenti restano in italiano, e `SessionAssistantPrompts.For("en-US")` restituisce il prompt italiano.
+- **A2, strumenti offerti.** Il prompt deve nominare solo gli strumenti del turno. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata, che il report non conta fra gli strumenti. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
 - **A2, duplicati.** `qwen2.5:3b` ha creato tre proposte di turno identiche in un turno. Alla conferma le ferma `Stale` (§5.3), ma serve un test: di più proposte identiche se ne conferma una sola.
 - **A3, testo mostrato.** `ChatResponse.Text` concatena il testo di tutti i giri («I'll check the current game state first.» seguito dalla risposta). All'host va solo l'ultimo messaggio dell'assistente.
-- **A3, errori tipizzati.** In due delle quattro trappole sui punteggi (`it-score-dimension-missing`, `it-score-completed`) `deepseek-flash` prova comunque a proporre, e la proposta non nasce perché lo strumento la rifiuta. «Zero proposte non dovute» dipende dalle validazioni degli strumenti quanto dal modello: ciascuna va provata con il lettore reale.
-- **A6, limiti dell'esecutore.** Valuta la traiettoria (strumenti e proposte), non il testo: una frase falsa o una risposta nella lingua sbagliata passano. Il rilevatore riconosce le frasi viste, non le parafrasi: «Propongo che Marco Rossi guadagna 4 punti», detto da `qwen2.5:3b` senza alcuna proposta, non scatta. Per il gate conviene aggiungere a ogni scenario il testo atteso (un nome, un numero, la lingua) e scenari con più turni.
+- **A3, errori tipizzati e confini.** Ogni validazione degli strumenti va provata con il lettore reale. Il test di architettura oggi guarda costruttori e campi: prima che arrivi un sink vero deve coprire anche i parametri dei metodi. I nomi dei giocatori entrano in un messaggio di sistema: conviene un blocco di dati delimitato.
+- **A6, limiti dell'esecutore.** Valuta la traiettoria (strumenti e proposte), non il testo: una frase falsa o una risposta nella lingua sbagliata passano. Il rilevatore riconosce le forme viste, non ogni parafrasi: «Propongo che Marco Rossi guadagna 4 punti», detto da `qwen2.5:3b` senza alcuna proposta, non scatta. Non c'è una scadenza per scenario, e la richiesta è sincrona. Per il gate conviene aggiungere a ogni scenario il testo atteso (un nome, un numero, la lingua), scenari con più turni e tabelle di punteggio piene.
 
-**Non misurato:** i modelli via OpenRouter; la latenza su staging; le conversazioni con storia; `cerca_regole` con il recupero vero, perché gli scenari hanno passaggi finti.
+**Non misurato:** il prompt candidato; i modelli via OpenRouter; la latenza su staging; le conversazioni con storia; `cerca_regole` con il recupero vero, perché gli scenari hanno passaggi finti.
 
 ### 7.2 Test, ciascuno «rosso prima» nella sua fetta
 
@@ -382,7 +387,7 @@ Stato di ADR-095 su `origin/main-dev` al 2026-10-12: fette 1, 2, 3, 4 e 6 (6a, 6
 |---|---|---|---|
 | **A0** | ADR-097; pacchetto `Microsoft.Extensions.AI`; estrazione della sequenza di un tentativo in `HybridLlmService`; `ILlmService.ChatAsync` e `ILlmClient.ChatAsync` nei tre client; `GatewayChatClient`; `RequestSource.SessionAssistant`; doppi di test estesi | ADR-095 fette 1-3 e 5b | Caratterizzazione invariata; tre giri, tre ammissioni e tre righe di costo; con il tetto raggiunto il giro non parte |
 | **A1** | Definizioni degli strumenti con lettori finti, set di scenari, endpoint admin di valutazione, **spike** | A0 | Nessuno per lo spike: l'uscita è una raccomandazione, scritta in questa spec. I test dell'esecutore sì |
-| **A2** | `AssistantProposal` e migrazione; sezione «Assistente in partita» nel profilo; `SupportsToolCalling` nel catalogo e porta verso KB; invariante di `PublishDraft`; migrazione di dati che pubblica la versione con l'assistente abilitato | ADR-095 fetta 4 | Invarianti della proposta; pubblicazione rifiutata con un modello senza tool calling |
+| **A2** | `AssistantProposal` e migrazione; sezione «Assistente in partita» nel profilo; `SupportsToolCalling` nel catalogo e porta verso KB; invariante di `PublishDraft`; migrazione di dati che pubblica la versione con l'assistente abilitato | ADR-095 fetta 4; **#4256** per la migrazione che pubblica | Invarianti della proposta; pubblicazione rifiutata con un modello senza tool calling |
 | **A3** | Lettore reale, ciclo, strumenti di proposta, endpoint SSE, conferma e rifiuto; `ChatThread.LiveSessionId`; test di architettura | A1, A2 | Doppio tap su `AdvanceTurn` applicato una volta; `Stale` e `Failed` con codici distinti; strumenti senza `IMediator` |
 | **A4** | Frontend: pannello in `/sessions/[id]/live` con eventi di stato, card di proposta (da `ScoreProposalCard`), conferma, correzione, rifiuto. **Prima** gli schemi Zod tolleranti, in `live-sessions.schemas.ts` (consumatori prima dei produttori, #4154) | contratto di A3; **#4156** per la verifica nel browser | Test di contratto; partita completa nel browser |
 | **A5** | `cerca_regole` con accesso, tier e `FinalizeAsync` | emendamento E1 | Una risposta dell'agente che riporta un passaggio protetto oltre il limite viene sanificata |
@@ -460,7 +465,8 @@ Vincoli che valgono già per il pilota: la conversazione dell'assistente passa s
 
 1. **Round**: la definizione derivata di §5.1 va confermata con l'editor della scheda Score di #4156. Se #4156 sceglie diversamente, l'assistente si adegua: il round è un parametro dello strumento, non un concetto del dominio.
 2. **Gioco pilota**: uno con dimensioni di punteggio semplici, KB indicizzata e house rules di prova, fra quelli del golden set.
-3. **Quota del tetto** da riservare al costo per partita. Lo spike dà il costo per turno (§7.1): manca la decisione.
+3. **Quota del tetto** da riservare al costo per partita. Lo spike dà il costo per turno (§7.1): manca la decisione. Lo spike ha anche esaurito in un pomeriggio la quota giornaliera delle valutazioni: va deciso se basta per iterare sul prompt.
 4. **Chi scrive gli scenari** dello spike, e se partire da partite reali trascritte.
-5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese. Il prompt v1 è misurato (§7.1): in A2 va corretto per `en-turn` e allineato agli strumenti offerti.
-6. **Chiave OpenRouter locale**: va risincronizzata (`make secrets-sync`, che richiede SSH) per misurare i modelli via OpenRouter e la riserva del profilo. Fino ad allora l'assistente non ha un modello di riserva (§7.1).
+5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese. Il prompt v1 è misurato e non supera il gate (§7.1): lo corregge #4256, e in A2 va allineato agli strumenti offerti.
+6. **Pilota solo in italiano?** Se `en-turn` non si riesce a correggere (#4256), l'alternativa è togliere gli scenari inglesi dal gate con una decisione scritta qui, e abilitare l'assistente solo per gli host italiani.
+7. **Chiave OpenRouter locale**: va risincronizzata (`make secrets-sync`, che richiede SSH) per misurare i modelli via OpenRouter e la riserva del profilo. Fino ad allora l'assistente non ha un modello di riserva (§7.1).

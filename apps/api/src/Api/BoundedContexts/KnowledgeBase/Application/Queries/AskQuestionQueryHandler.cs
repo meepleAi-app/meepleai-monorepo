@@ -125,6 +125,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var profile = await ReadProfileAsync(cancellationToken).ConfigureAwait(false);
         var language = AnswerLanguageResolver
             .Resolve(_languageDetection, query.Question, query.AcceptLanguage, query.Language).Language;
+        var cacheScope = new SemanticCacheScope(profile.VersionId, language);
 
         _logger.LogInformation(
             "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, profile v{ProfileVersion}, language {Language}, Question={Question}",
@@ -210,20 +211,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 if (embeddingResult.Success && embeddingResult.Embeddings.Count > 0)
                 {
                     queryVector = embeddingResult.ToFloatArray();
+                    // #4168: la ricerca resta nell'ambito della versione pubblicata e della lingua
+                    // della risposta: una risposta di un'altra lingua o versione non si riserve.
                     var cached = await _responseCache.TryGetAsync(
-                        query.GameId, queryVector, cancellationToken).ConfigureAwait(false);
-                    // #4168: una risposta di un'altra lingua o di un'altra versione del profilo non si
-                    // riserve; nemmeno una voce scritta prima di #4168, che non le porta.
-                    if (cached != null
-                        && (!string.Equals(cached.Language, language, StringComparison.Ordinal)
-                            || cached.ProfileVersionId != profile.VersionId))
-                    {
-                        _logger.LogDebug(
-                            "[AskQuestionHandler] Cached answer for game {GameId} is for language {CachedLanguage} and profile {CachedVersion}: not served",
-                            query.GameId, cached.Language, cached.ProfileVersionId);
-                        cached = null;
-                    }
-
+                        query.GameId, cacheScope, queryVector, cancellationToken).ConfigureAwait(false);
                     if (cached != null)
                     {
                         _logger.LogInformation(
@@ -450,14 +441,13 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 .ToList() ?? [];
             await _responseCache.SetAsync(
                 query.GameId,
+                cacheScope,
                 queryVector,
                 new CachedRagResponse(
                     response.Answer,
                     citations,
                     llmResult.Cost.ModelId ?? "unknown",
-                    DateTimeOffset.UtcNow,
-                    Language: language,
-                    ProfileVersionId: profile.VersionId),
+                    DateTimeOffset.UtcNow),
                 cancellationToken).ConfigureAwait(false);
         }
 

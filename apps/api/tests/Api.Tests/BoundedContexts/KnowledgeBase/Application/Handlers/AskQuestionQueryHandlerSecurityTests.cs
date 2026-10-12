@@ -137,7 +137,7 @@ public class AskQuestionQueryHandlerSecurityTests
         // P1-5: Mock semantic cache (always returns null — cache miss) and embedding service
         _mockResponseCache = new Mock<ISemanticResponseCache>();
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CachedRagResponse?)null);
         _mockAskEmbeddingService = new Mock<IEmbeddingService>();
         _mockAskEmbeddingService

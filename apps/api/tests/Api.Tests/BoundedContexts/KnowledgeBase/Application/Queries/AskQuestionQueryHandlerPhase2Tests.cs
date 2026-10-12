@@ -112,7 +112,7 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         // Default: cache miss
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CachedRagResponse?)null);
 
         _mockEmbeddingService
@@ -456,7 +456,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
 
         _mockResponseCache.Verify(
-            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "la risposta cita la house rule verbatim (#3875) e la cache e' per gioco, non per " +
             "utente: scriverla li' la rende servibile a chiunque interroghi lo stesso gioco");
@@ -493,7 +493,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
 
         _mockResponseCache.Verify(
-            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "una risposta generica in cache non deve poter sopprimere la house rule di chi ce l'ha");
     }
@@ -532,12 +532,10 @@ public class AskQuestionQueryHandlerPhase2Tests
                 new("Snippet without a page.", null, "doc-c"),
             },
             ModelUsed: "test-model",
-            CachedAt: DateTimeOffset.UtcNow,
-            Language: "en",
-            ProfileVersionId: AnswerPipelineTestDoubles.SeedVersionId);
+            CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var query = new AskQuestionQuery(
@@ -597,12 +595,10 @@ public class AskQuestionQueryHandlerPhase2Tests
                 new("Snippet from page 13.", 13, "doc-c"),
             },
             ModelUsed: "test-model",
-            CachedAt: DateTimeOffset.UtcNow,
-            Language: "en",
-            ProfileVersionId: AnswerPipelineTestDoubles.SeedVersionId);
+            CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var query = new AskQuestionQuery(
@@ -659,12 +655,10 @@ public class AskQuestionQueryHandlerPhase2Tests
                 new("Con documento, di nuovo.", 4, "doc-d"),
             },
             ModelUsed: "test-model",
-            CachedAt: DateTimeOffset.UtcNow,
-            Language: "en",
-            ProfileVersionId: AnswerPipelineTestDoubles.SeedVersionId);
+            CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var trackerMock = new Mock<IRagQualityTracker>();
@@ -724,12 +718,10 @@ public class AskQuestionQueryHandlerPhase2Tests
                 new("Snippet C.", null, "doc-c"),
             },
             ModelUsed: "test-model",
-            CachedAt: DateTimeOffset.UtcNow,
-            Language: "en",
-            ProfileVersionId: AnswerPipelineTestDoubles.SeedVersionId);
+            CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var trackerMock = new Mock<IRagQualityTracker>();
@@ -1275,36 +1267,34 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         (await act.Should().ThrowAsync<LlmCallRefusedException>()).Which.ErrorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
         _mockResponseCache.Verify(
-            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Theory]
-    [InlineData("en", false)]
-    [InlineData("it", true)]
-    public async Task Handle_OnCacheHit_OfAnotherVersionOrLanguage_AsksTheModelInstead(string cachedLanguage, bool sameVersion)
+    [InlineData(null, "en")]
+    [InlineData("it", "it")]
+    public async Task Handle_TheSemanticCache_IsScopedToThePublishedVersionAndTheAnswerLanguage(string? requested, string expected)
     {
-        // #4168: la cache semantica e' per gioco e per somiglianza della domanda; una voce di
-        // un'altra lingua o di un'altra versione del profilo non e' la risposta di adesso.
+        // #4168: la cache semantica e' per gioco e per somiglianza; l'ambito (versione del profilo,
+        // lingua della risposta) sta nella chiave, cosi' una risposta di un'altra versione o lingua
+        // non si trova nemmeno — e non nasconde quelle buone.
         var gameId = Guid.NewGuid();
         SetupDefaultMocksWithSearchResults(gameId, "Fresh answer [Page 1]");
         AllowQuota();
         _mockEmbeddingService
             .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 1f, 0f } }));
-        _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CachedRagResponse(
-                "Stale answer.", [], "test-model", DateTimeOffset.UtcNow,
-                Language: cachedLanguage,
-                ProfileVersionId: sameVersion ? AnswerPipelineTestDoubles.SeedVersionId : Guid.NewGuid()));
 
-        var result = await BuildHandler().Handle(
-            new AskQuestionQuery(GameId: gameId, Question: "How do I win?", Language: "en", UserId: Guid.NewGuid(), UserRole: "User"),
+        await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How do I win?", Language: requested, UserId: Guid.NewGuid(), UserRole: "User"),
             TestContext.Current.CancellationToken);
 
-        result.Answer.Should().NotBe("Stale answer.");
-        _mockLlmService.Verify(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        var scope = new SemanticCacheScope(AnswerPipelineTestDoubles.SeedVersionId, expected);
+        _mockResponseCache.Verify(c => c.TryGetAsync(gameId, scope, It.IsAny<float[]>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockResponseCache.Verify(
+            c => c.SetAsync(gameId, scope, It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private void AllowQuota() =>

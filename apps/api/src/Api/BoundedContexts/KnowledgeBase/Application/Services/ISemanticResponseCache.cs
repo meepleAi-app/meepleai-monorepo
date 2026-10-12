@@ -3,19 +3,21 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 internal interface ISemanticResponseCache
 {
     /// <summary>
-    /// Try to get a cached response for a semantically similar query.
+    /// Try to get a cached response for a semantically similar query, within <paramref name="scope"/>.
     /// Returns null on cache miss or if similarity &lt; threshold.
     /// </summary>
     Task<CachedRagResponse?> TryGetAsync(
         Guid gameId,
+        SemanticCacheScope scope,
         float[] queryVector,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Store a RAG response in the semantic cache.
+    /// Store a RAG response in the semantic cache, within <paramref name="scope"/>.
     /// </summary>
     Task SetAsync(
         Guid gameId,
+        SemanticCacheScope scope,
         float[] queryVector,
         CachedRagResponse response,
         CancellationToken ct = default);
@@ -45,8 +47,17 @@ internal sealed record CachedRagResponse(
     string Answer,
     IReadOnlyList<CachedCitation> Citations,
     string ModelUsed,
-    DateTimeOffset CachedAt,
-    // #4168: la lingua della risposta e la versione del profilo che l'ha prodotta. Una voce di
-    // un'altra lingua o versione, o scritta prima di #4168 (entrambi null), non si serve.
-    string? Language = null,
-    Guid? ProfileVersionId = null);
+    DateTimeOffset CachedAt);
+
+/// <summary>
+/// #4168: l'ambito di una voce della cache semantica — la versione del profilo che ha prodotto la
+/// risposta e la lingua della risposta. Sta nel prefisso della chiave, così la ricerca per
+/// somiglianza scorre solo le voci dell'ambito: un controllo a valle, sulla prima voce simile
+/// trovata, scartava anche le buone quando una vecchia veniva enumerata prima.
+/// </summary>
+internal sealed record SemanticCacheScope(Guid ProfileVersionId, string Language)
+{
+    /// <summary>Il prefisso delle chiavi dell'ambito per un gioco.</summary>
+    public string KeyPrefix(Guid gameId) =>
+        $"rag:cache:{gameId}:v3:{ProfileVersionId:N}:{new string(Language.Where(char.IsAsciiLetter).ToArray()).ToLowerInvariant()}:";
+}

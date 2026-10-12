@@ -32,5 +32,7 @@ public sealed class SessionAssistantRegistrationTests
 
         scope.ServiceProvider.GetRequiredService<IAssistantChatClientFactory>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IAssistantPlayerMatcher>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation.SessionAssistantEvaluator>()
+            .Should().NotBeNull();
     }
 }

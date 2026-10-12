@@ -39,7 +39,6 @@ const mockUseWishlist = vi.hoisted(() => vi.fn());
 const mockUseRemoveFromWishlist = vi.hoisted(() => vi.fn());
 const mockUseAddToWishlist = vi.hoisted(() => vi.fn());
 const mockUseUpdateWishlistItem = vi.hoisted(() => vi.fn());
-const mockUseLibrary = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const pushSpy = vi.hoisted(() => vi.fn());
 
@@ -48,10 +47,6 @@ vi.mock('@/hooks/queries/useWishlist', () => ({
   useRemoveFromWishlist: mockUseRemoveFromWishlist,
   useAddToWishlist: mockUseAddToWishlist,
   useUpdateWishlistItem: mockUseUpdateWishlistItem,
-}));
-
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: mockUseLibrary,
 }));
 
 // #4187: i nomi dei giochi della wishlist si leggono per id dal catalogo, non da una pagina
@@ -96,16 +91,6 @@ function renderPage(ui: ReactElement) {
   );
 }
 
-const LIBRARY_DATA = {
-  items: [
-    { gameId: 'game-1', gameTitle: 'Wingspan' },
-    { gameId: 'game-2', gameTitle: 'Catan' },
-  ],
-  page: 1,
-  pageSize: 500,
-  totalCount: 2,
-};
-
 function buildItem(overrides: Partial<WishlistItemDto> = {}): WishlistItemDto {
   return {
     id: '00000000-0000-0000-0000-000000000001',
@@ -146,7 +131,6 @@ function normalizeNbsp(value: string): string {
 describe('WishlistPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseLibrary.mockReturnValue({ data: LIBRARY_DATA, isLoading: false, isError: false });
     mockUseSharedGamesByIds.mockImplementation((ids: readonly string[]) => ({
       gamesById: Object.fromEntries(
         ids.filter(id => CATALOG_TITLES[id]).map(id => [id, { id, title: CATALOG_TITLES[id] }])
@@ -302,7 +286,7 @@ describe('WishlistPage', () => {
 
   it('in modifica il dialogo mostra il titolo del gioco anche se il DTO non porta gameName (#4187)', async () => {
     // Il WishlistItemDto del backend non ha GameName: il titolo lo conosce solo la pagina,
-    // dalla sua mappa della libreria. Il dialogo, in modifica, non interroga la libreria.
+    // che lo legge per id dal catalogo. Il dialogo, in modifica, non interroga la libreria.
     const user = userEvent.setup();
     mockUseWishlist.mockReturnValue({
       data: [buildItem({ gameName: undefined })],

@@ -292,8 +292,8 @@ export default function WishlistPage(): JSX.Element {
         <AddToWishlistDialog
           key={editingItem.id}
           mode="edit"
-          // The backend WishlistItemDto carries no game name: the page knows it from its
-          // library map, and the dialog does not query the library while editing (#4187).
+          // The backend WishlistItemDto carries no game name: the page reads it by id from the
+          // catalog, and the dialog does not query the library while editing (#4187).
           item={{
             ...editingItem,
             gameName: editingItem.gameName ?? gameNameMap.get(editingItem.gameId),

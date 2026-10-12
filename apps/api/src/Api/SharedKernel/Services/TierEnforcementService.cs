@@ -180,11 +180,13 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             Tier: tier);
     }
 
+    internal static string TierDefinitionCacheKey(string tierName) => $"tier_def:{tierName}";
+
     // ─── Private helpers ──────────────────────────────────────────────────
 
     private async Task<TierDefinition?> GetTierDefinitionAsync(string tierName, CancellationToken ct)
     {
-        var cacheKey = $"tier_def:{tierName}";
+        var cacheKey = TierDefinitionCacheKey(tierName);
 
         if (_cache.TryGetValue(cacheKey, out TierDefinition? cached))
             return cached;

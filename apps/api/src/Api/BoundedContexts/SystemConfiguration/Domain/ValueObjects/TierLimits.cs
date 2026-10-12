@@ -31,6 +31,14 @@ public record TierLimits
     /// </summary>
     public int MaxGamebookTranslationsPerMonth { get; init; }
 
+    /// <summary>
+    /// Max games in the user's library. Issue #4212: the limit moved here from the
+    /// <c>LibraryLimits:{tier}:MaxGames</c> configuration keys, which the admin page never wrote
+    /// (it saved <c>GameLibrary:*TierLimit</c>, a different key). At least 1: a client that omits
+    /// the field sends 0, and a 0 would block every add for the whole tier.
+    /// </summary>
+    public int MaxLibraryGames { get; init; }
+
     private TierLimits() { }
 
     public static TierLimits Create(
@@ -39,6 +47,7 @@ public record TierLimits
         int maxAgentQueriesPerDay, int maxSessionQueries,
         int maxSessionPlayers, int maxPhotosPerSession,
         bool sessionSaveEnabled, int maxCatalogProposalsPerWeek,
+        int maxLibraryGames,
         bool raptorRebuildEnabled = false,
         int maxGamebookTranslationsPerMonth = 0)
     {
@@ -60,6 +69,8 @@ public record TierLimits
             throw new ArgumentException("Cannot be negative", nameof(maxCatalogProposalsPerWeek));
         if (maxGamebookTranslationsPerMonth < 0)
             throw new ArgumentException("Cannot be negative", nameof(maxGamebookTranslationsPerMonth));
+        if (maxLibraryGames < 1)
+            throw new ArgumentException("Must be at least 1", nameof(maxLibraryGames));
 
         return new TierLimits
         {
@@ -73,7 +84,8 @@ public record TierLimits
             SessionSaveEnabled = sessionSaveEnabled,
             MaxCatalogProposalsPerWeek = maxCatalogProposalsPerWeek,
             RaptorRebuildEnabled = raptorRebuildEnabled,
-            MaxGamebookTranslationsPerMonth = maxGamebookTranslationsPerMonth
+            MaxGamebookTranslationsPerMonth = maxGamebookTranslationsPerMonth,
+            MaxLibraryGames = maxLibraryGames
         };
     }
 
@@ -81,16 +93,25 @@ public record TierLimits
     public static TierLimits Unlimited => Create(
         int.MaxValue, int.MaxValue, 500L * 1024 * 1024,
         int.MaxValue, int.MaxValue,
-        12, int.MaxValue, true, int.MaxValue, raptorRebuildEnabled: true,
+        12, int.MaxValue, true, int.MaxValue, int.MaxValue, raptorRebuildEnabled: true,
         maxGamebookTranslationsPerMonth: int.MaxValue);
 
     /// <summary>Free tier defaults.</summary>
     public static TierLimits FreeTier => Create(
-        3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, raptorRebuildEnabled: false,
+        3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, 5, raptorRebuildEnabled: false,
         maxGamebookTranslationsPerMonth: 50);
 
     /// <summary>Premium tier defaults.</summary>
     public static TierLimits PremiumTier => Create(
-        15, 15, 200L * 1024 * 1024, 200, 150, 12, 20, true, 5, raptorRebuildEnabled: true,
+        15, 15, 200L * 1024 * 1024, 200, 150, 12, 20, true, 5, 50, raptorRebuildEnabled: true,
         maxGamebookTranslationsPerMonth: 500);
+
+    /// <summary>
+    /// Normal tier defaults. Issue #4212: until then no "normal" plan existed and normal users
+    /// fell back to the free plan for every limit except the library (20 games, kept outside the
+    /// plan). This preset is exactly that, so seeding it changes nothing a normal user sees.
+    /// </summary>
+    public static TierLimits NormalTier => Create(
+        3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, 20, raptorRebuildEnabled: false,
+        maxGamebookTranslationsPerMonth: 50);
 }

@@ -73,6 +73,9 @@ internal class TierDefinitionConfiguration : IEntityTypeConfiguration<TierDefini
             // Issue #2750 (C14): monthly gamebook translation quota (display-only).
             limits.Property(l => l.MaxGamebookTranslationsPerMonth)
                 .HasColumnName("max_gamebook_translations_per_month");
+            // Issue #4212: the library limit, moved into the plan from configuration keys.
+            limits.Property(l => l.MaxLibraryGames)
+                .HasColumnName("max_library_games");
         });
 
         // Unique index on name

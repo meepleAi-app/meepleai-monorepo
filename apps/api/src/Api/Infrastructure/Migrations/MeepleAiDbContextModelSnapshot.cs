@@ -17149,6 +17149,10 @@ namespace Api.Infrastructure.Migrations
                                 .HasColumnType("integer")
                                 .HasColumnName("max_gamebook_translations_per_month");
 
+                            b1.Property<int>("MaxLibraryGames")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_library_games");
+
                             b1.Property<long>("MaxPdfSizeBytes")
                                 .HasColumnType("bigint")
                                 .HasColumnName("max_pdf_size_bytes");

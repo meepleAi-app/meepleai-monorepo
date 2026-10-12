@@ -323,7 +323,10 @@ export default function AdminTiersPage() {
   const tiers = tiersQuery.data ?? [];
 
   return (
-    <div className="space-y-6">
+    // #4255: `text-foreground` here because the admin shell scopes a dark theme to its container
+    // without setting the text colour: text with no colour class of its own inherits the dark
+    // text of the light theme. The title and every cell of the table were dark on dark.
+    <div className="space-y-6 text-foreground">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -349,7 +352,7 @@ export default function AdminTiersPage() {
           Errore nel caricamento dei tier.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <div className="overflow-x-auto rounded-md border border-border">
           <table className="w-full text-sm" data-testid="tiers-table">
             <thead>
               <tr className="border-b bg-muted/50">

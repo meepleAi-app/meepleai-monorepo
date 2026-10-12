@@ -266,4 +266,20 @@ describe('AdminTiersPage', () => {
       expect(field('maxLibraryGames').value).toBe('1');
     });
   });
+
+  /**
+   * Issue #4255. The admin shell scopes a dark theme to its container but does not set the text
+   * colour, so text with no colour class of its own inherits the dark text of the light theme:
+   * the title and every cell of this table were dark on dark. Until the shell is fixed the page
+   * declares its own colours. jsdom does not compute Tailwind, so this asserts the declaration;
+   * the rendered contrast is measured in the browser (see the PR).
+   */
+  it('declares its text and border colours instead of inheriting them', async () => {
+    renderWithQuery(<AdminTiersPage />);
+    await waitFor(() => expect(screen.getByTestId('tiers-table')).toBeInTheDocument());
+
+    expect(screen.getByText('Tier Management').closest('.text-foreground')).not.toBeNull();
+    expect(screen.getByTestId('tiers-table').closest('.text-foreground')).not.toBeNull();
+    expect(screen.getByTestId('tiers-table').parentElement).toHaveClass('border-border');
+  });
 });

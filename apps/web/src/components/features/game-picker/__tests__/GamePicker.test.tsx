@@ -740,7 +740,11 @@ describe('GamePicker', () => {
       // Nuovo testo, debounce non ancora passato: a schermo c’è ancora la lista di prima.
       fireEvent.change(input, { target: { value: 'asx' } });
       fireEvent.keyDown(input, { key: 'ArrowDown' });
-      fireEvent.keyDown(input, { key: 'Enter' });
+      // fireEvent restituisce false quando l'evento è stato annullato: l'Invio è ingoiato,
+      // così non invia un form attorno su una scelta vecchia.
+      const enterWentThrough = fireEvent.keyDown(input, { key: 'Enter' });
+
+      expect(enterWentThrough).toBe(false);
 
       expect(input).not.toHaveAttribute('aria-activedescendant');
       expect(onChange).not.toHaveBeenCalled();

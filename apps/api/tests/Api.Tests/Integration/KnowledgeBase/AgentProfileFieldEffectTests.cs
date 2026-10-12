@@ -511,6 +511,65 @@ public sealed class AgentProfileFieldEffectTests
         log.Language.Should().Be("it");
     }
 
+    /// <summary>
+    /// Il feedback su una risposta salvata porta la versione e la lingua di quella risposta, prese
+    /// dal messaggio: è il terzo posto di ADR-095 D2.
+    /// </summary>
+    [Fact]
+    public async Task Feedback_RecordsTheVersionAndTheLanguageOfTheAnswer()
+    {
+        var published = await PublishedVersionIdAsync();
+        var (threadId, messageId) = await SaveAnswerAsync(published, "it");
+
+        var response = await SendFeedbackAsync(threadId, messageId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var feedback = await db.KbUserFeedbacks.AsNoTracking().SingleAsync(f => f.MessageId == messageId, Ct);
+        feedback.ProfileVersionId.Should().Be(published);
+        feedback.Language.Should().Be("it");
+    }
+
+    /// <summary>
+    /// Un feedback su un messaggio che non c'è non si registra: prima finiva in tabella con un id
+    /// qualunque, e non c'era modo di ricondurlo a una risposta.
+    /// </summary>
+    [Fact]
+    public async Task Feedback_OnAMessageThatIsNotInTheThread_IsNotFound()
+    {
+        var (threadId, _) = await SaveAnswerAsync(await PublishedVersionIdAsync(), "it");
+
+        var response = await SendFeedbackAsync(threadId, Guid.NewGuid());
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync(Ct));
+    }
+
+    private async Task<(Guid ThreadId, Guid MessageId)> SaveAnswerAsync(Guid profileVersionId, string language)
+    {
+        var created = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/chat-threads", _token, new { gameId = _gameId, title = "Feedback" }), Ct);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Ct));
+        using var thread = JsonDocument.Parse(await created.Content.ReadAsStringAsync(Ct));
+        var threadId = thread.RootElement.GetProperty("id").GetGuid();
+
+        var added = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", _token,
+            new { content = "Five cards.", role = "assistant", profileVersionId, language }), Ct);
+        var body = await added.Content.ReadAsStringAsync(Ct);
+        added.IsSuccessStatusCode.Should().BeTrue(body);
+        using var saved = JsonDocument.Parse(body);
+        var messageId = saved.RootElement.GetProperty("messages").EnumerateArray()
+            .Single(m => m.GetProperty("role").GetString() == "assistant")
+            .GetProperty("id").GetGuid();
+        return (threadId, messageId);
+    }
+
+    private Task<HttpResponseMessage> SendFeedbackAsync(Guid threadId, Guid messageId) =>
+        _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/games/{_gameId}/knowledge-base/feedback", _token,
+            new { chatSessionId = threadId, messageId, outcome = "helpful" }), Ct);
+
     private async Task<Guid> PublishedVersionIdAsync()
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();

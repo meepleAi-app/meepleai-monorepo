@@ -8,6 +8,8 @@
  *
  * Una risposta completa, invece, si salva con la versione del profilo e la lingua che il
  * completamento le ha dato (ADR-095 D2): il feedback e le valutazioni si riferiscono a quella.
+ * Il feedback su quella risposta parte con l'id che il backend le ha dato salvandola, non con
+ * l'id provvisorio della bolla: con quello il backend non trova la risposta.
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
@@ -37,6 +39,9 @@ vi.mock('@/lib/api', () => ({
     },
     library: {
       declareOwnership: vi.fn(),
+    },
+    knowledgeBase: {
+      submitKbFeedback: vi.fn(),
     },
   },
 }));
@@ -235,6 +240,56 @@ describe('ChatThreadView — risposta completa (#4168)', () => {
       profileVersionId: 'b4c5d6e7-0000-4000-8000-000000000001',
       language: 'it',
     });
+  });
+});
+
+describe('ChatThreadView — feedback sulla risposta appena salvata (#4168)', () => {
+  const SAVED_ID = '6f1c2a3b-4d5e-4f60-8a71-b2c3d4e5f607';
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const { api } = await import('@/lib/api');
+    apiMock = api;
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue(thread);
+    (apiMock.games.getById as Mock).mockResolvedValue({ id: 'game-1', title: 'Catan' });
+    (apiMock.knowledgeBase.submitKbFeedback as Mock).mockResolvedValue(undefined);
+    (apiMock.chat.addMessage as Mock).mockImplementation(async (_threadId, message) =>
+      message.role === 'assistant'
+        ? {
+            ...thread,
+            messages: [
+              {
+                backendMessageId: SAVED_ID,
+                role: 'assistant',
+                content: message.content,
+                timestamp: '2026-10-12T08:01:00Z',
+              },
+            ],
+          }
+        : thread
+    );
+  });
+
+  it('sends the feedback with the id the backend gave the answer', async () => {
+    qa.script = [
+      { type: qa.EVENT.TOKEN, data: { token: 'Ogni giocatore pesca due carte.' } },
+      {
+        type: qa.EVENT.COMPLETE,
+        data: { answer: 'Ogni giocatore pesca due carte.', snippets: [] },
+      },
+    ];
+    const user = userEvent.setup();
+
+    await ask(user);
+    await waitFor(() => expect(savedAssistantMessages()).toHaveLength(1));
+    await user.click(await screen.findByRole('button', { name: 'Rate as helpful' }));
+
+    await waitFor(() =>
+      expect(apiMock.knowledgeBase.submitKbFeedback).toHaveBeenCalledWith(
+        'game-1',
+        expect.objectContaining({ chatSessionId: 'thread-1', messageId: SAVED_ID })
+      )
+    );
   });
 });
 

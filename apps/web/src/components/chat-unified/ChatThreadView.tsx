@@ -478,12 +478,20 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
         // Persist assistant message to backend
         if (finalAnswer) {
-          await api.chat.addMessage(threadId, {
+          const saved = await api.chat.addMessage(threadId, {
             content: finalAnswer,
             role: 'assistant',
             profileVersionId,
             language: answerLanguage,
           });
+          // #4168: la bolla prende l'id che il backend ha dato alla risposta. Il feedback parte con
+          // quello: con l'id provvisorio il backend non trova la risposta da valutare.
+          const savedId = saved?.messages
+            ?.filter(m => m.role === 'assistant')
+            .at(-1)?.backendMessageId;
+          if (savedId) {
+            patchMessageById(assistantMsgId, { id: savedId });
+          }
         }
 
         // TTS: auto-speak response when last message was voice-initiated

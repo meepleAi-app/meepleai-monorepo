@@ -130,6 +130,15 @@ public sealed class AnswerPipelinePartsTests
     }
 
     [Fact]
+    public void BuildAcrossGames_ForbidsPageReferences_TheLibraryPageCannotLinkThem()
+    {
+        // Nel browser il modello scriveva «[2, Pagina 3]»: il prompt del profilo chiede le pagine fra
+        // parentesi, l'istruzione cross-game i marcatori [N]. La pagina collega solo [N] e [N,M].
+        AnswerPromptBuilder.NumberedCitationInstruction(CitationStyle.PageReferencesInText)
+            .Should().Contain("never write [Page N]").And.Contain("Never put page numbers inside the brackets");
+    }
+
+    [Fact]
     public void BuildAcrossGames_WithoutProtectedSources_AsksForNoParaphrase()
     {
         var prompt = AnswerPromptBuilder.BuildAcrossGames(Content(), "it", "ctx", "q?", hasProtectedSources: false);

@@ -128,9 +128,12 @@ internal static class AnswerPromptBuilder
     /// </summary>
     internal static string NumberedCitationInstruction(CitationStyle style) => style switch
     {
+        // Verificato nel browser: il prompt del seed chiede «[Page 3]», e senza un divieto esplicito il
+        // modello mescolava le due forme («[2, Pagina 3]»), che la pagina non sa collegare.
         CitationStyle.PageReferencesInText =>
-            "Each source in the context is numbered [N]. After every statement drawn from a source, add its marker, "
-            + "for example [2]; use [2,5] when a statement is supported by several sources.",
+            "Each source in the context is numbered [N]. Cite sources ONLY with their marker, right after the statement "
+            + "drawn from them: for example [2], or [2,5] when several sources support it. Never put page numbers inside "
+            + "the brackets and never write [Page N], even if asked elsewhere: the marker already links to the page.",
         CitationStyle.StructuredEvents =>
             "Do not add source markers in the text: the sources are attached to the answer separately.",
         _ => throw new ArgumentOutOfRangeException(nameof(style), style, "Unknown citation style."),

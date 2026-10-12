@@ -121,6 +121,40 @@ public sealed class CreateChatThreadCommandHandlerTests
         NothingWasStored();
     }
 
+    /// <summary>
+    /// A deleted game is gone for the chat too. For a shared game this is a change: its row
+    /// stays in the table (soft delete), so the foreign key held and the thread used to be
+    /// created on a game nobody can open.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnASoftDeletedSharedGame_IsNotFound()
+    {
+        var game = new SharedGameEntity { Id = Guid.NewGuid(), Title = "Withdrawn", IsDeleted = true };
+        _db.SharedGames.Add(game);
+        await _db.SaveChangesAsync();
+        var command = new CreateChatThreadCommand(UserId: Guid.NewGuid(), GameId: game.Id, Title: "Gone");
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        NothingWasStored();
+    }
+
+    [Fact]
+    public async Task Handle_OnTheCallersOwnSoftDeletedPrivateGame_IsNotFound()
+    {
+        var userId = Guid.NewGuid();
+        var game = new PrivateGameEntity { Id = Guid.NewGuid(), OwnerId = userId, Title = "Deleted", MinPlayers = 1, MaxPlayers = 4, IsDeleted = true };
+        _db.PrivateGames.Add(game);
+        await _db.SaveChangesAsync();
+        var command = new CreateChatThreadCommand(UserId: userId, GameId: game.Id, Title: "Gone");
+
+        var act = () => _handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        NothingWasStored();
+    }
+
     [Fact]
     public async Task Handle_WithNoGameId_CreatesThreadWithNullGameId()
     {

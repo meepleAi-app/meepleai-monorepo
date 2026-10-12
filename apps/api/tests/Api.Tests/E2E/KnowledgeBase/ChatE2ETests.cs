@@ -132,9 +132,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // l assenza di un servizio esterno.
         response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
             "CreateChatThread (invalid game) ha risposto 500: " + await DescribeResponseAsync(response));
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.NotFound,
-            HttpStatusCode.BadRequest);
+        // #4230: 404 and nothing else. The assertion used to accept a 400 as well, which would
+        // have let the unknown-id path drift to a different refusal without a red test.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     /// <summary>

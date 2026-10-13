@@ -304,6 +304,7 @@ public sealed class DocumentFilterIdentityTests
             new SearchQuery(
                 GameId: _gameId,
                 Query: Question,
+                Access: SearchAccess.AlreadyChecked,
                 TopK: 10,
                 SearchMode: mode,
                 PdfDocumentIds: documentIds),

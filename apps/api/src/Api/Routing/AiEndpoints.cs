@@ -519,6 +519,8 @@ internal static class AiEndpoints
         var explainQuery = new BoundedContexts.KnowledgeBase.Application.Queries.ExplainQuery(
             GameId: gameGuid,
             Topic: req.topic,
+            UserId: session.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role,
             Language: "en"
         );
 
@@ -758,7 +760,9 @@ internal static class AiEndpoints
             GameId = req.gameId,
             GameState = req.gameState,
             Query = req.query,
-            ChatThreadId = req.chatThreadId
+            ChatThreadId = req.chatThreadId,
+            UserId = session.Principal!.Subject.Id,
+            UserRole = session.Principal!.EffectiveActor.Role
         }, ct).ConfigureAwait(false);
 
         logger.LogInformation(

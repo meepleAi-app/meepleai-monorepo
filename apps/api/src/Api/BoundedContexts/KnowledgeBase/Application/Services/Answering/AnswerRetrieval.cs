@@ -59,6 +59,10 @@ internal sealed class AnswerRetrieval
             new SearchQuery(
                 GameId: request.GameId,
                 Query: request.Question,
+                // Whoever uses this class passes the RAG gate first: AnswerPipeline always, and
+                // AskQuestionQueryHandler whenever the question names a user. Its one sender
+                // without a user is the game wizard's auto-test, behind an admin route.
+                Access: SearchAccess.AlreadyChecked,
                 TopK: profile.CandidatePoolSize,
                 MinScore: (double)profile.MinScore,
                 SearchMode: request.SearchMode,

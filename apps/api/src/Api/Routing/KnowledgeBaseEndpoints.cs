@@ -435,12 +435,11 @@ internal static class KnowledgeBaseEndpoints
         var query = new SearchQuery(
             GameId: gameId,
             Query: req.query,
+            Access: SearchAccess.OfUser(session!.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role),
             TopK: req.topK ?? 5,
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
-            Language: req.language ?? "en",
-            UserId: session!.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            Language: req.language ?? "en"
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);

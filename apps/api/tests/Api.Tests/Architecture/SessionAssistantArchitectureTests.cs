@@ -157,4 +157,23 @@ public sealed class SessionAssistantArchitectureTests
             }
         }
     }
+
+    /// <summary>
+    /// Spec §5.3: la conferma è l'unico ponte verso le scritture. La porta che scrive la riceve solo il suo
+    /// handler: se la ricevesse il turno, il modello potrebbe arrivare a una scrittura senza una persona.
+    /// </summary>
+    [Fact]
+    public void OnlyTheConfirmHandler_ReceivesThePortThatWritesTheGame()
+    {
+        var applier = typeof(Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation.IAssistantProposalApplier);
+
+        var receivers = applier.Assembly.GetTypes()
+            .Where(t => t is { IsClass: true, IsAbstract: false })
+            .Where(t => t.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .Any(c => c.GetParameters().Any(p => p.ParameterType == applier)))
+            .Select(t => t.Name)
+            .ToList();
+
+        receivers.Should().Equal("ConfirmAssistantProposalCommandHandler");
+    }
 }

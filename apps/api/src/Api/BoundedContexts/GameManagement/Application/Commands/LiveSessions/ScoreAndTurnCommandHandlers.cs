@@ -102,6 +102,14 @@ internal class AdvanceLiveSessionTurnCommandHandler : ICommandHandler<AdvanceLiv
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
+        // #4277: controllo sull'aggregato appena caricato, atomico con il salvataggio (xmin).
+        if (command.ExpectedTurnIndex is { } expected && session.CurrentTurnIndex != expected)
+        {
+            throw new ConflictException(
+                AdvanceLiveSessionTurnCommand.TurnChangedCode,
+                $"The turn already moved: expected turn {expected}, found {session.CurrentTurnIndex}.");
+        }
+
         session.AdvanceTurn(_timeProvider);
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

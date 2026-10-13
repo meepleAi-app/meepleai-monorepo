@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.Extensions;
 using Api.Infrastructure.Serialization;
@@ -27,6 +28,31 @@ internal static class SessionAssistantEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Ask the in-game assistant (SSE)")
             .WithDescription("Host only. Streams status, proposal, answer and done (or error) events. The assistant never writes the game: it creates proposals the host confirms.");
+
+        group.MapPost("/live-sessions/{sessionId}/assistant/proposals/{proposalId}/confirm", HandleConfirm)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces<AssistantProposalDto>(200)
+            .Produces(400)  // una correzione su una proposta di turno
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)  // proposal_stale · proposal_not_pending · session_state_invalid · proposal_not_applicable
+            .Produces(422)  // una correzione fuori dai limiti
+            .WithTags("LiveSessions")
+            .WithSummary("Confirm a proposal of the in-game assistant")
+            .WithDescription("Host only. Applies the proposal to the game: the only write path of the assistant. A second tap returns the current state.");
+
+        group.MapPost("/live-sessions/{sessionId}/assistant/proposals/{proposalId}/reject", HandleReject)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces<AssistantProposalDto>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)  // proposal_not_pending
+            .WithTags("LiveSessions")
+            .WithSummary("Reject a proposal of the in-game assistant");
 
         return group;
     }
@@ -62,6 +88,32 @@ internal static class SessionAssistantEndpoints
         }
         while (await events.MoveNextAsync().ConfigureAwait(false));
     }
+
+    private static async Task<IResult> HandleConfirm(
+        [FromRoute] Guid sessionId,
+        [FromRoute] Guid proposalId,
+        [FromBody] ConfirmAssistantProposalRequest? request,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var proposal = await mediator.Send(
+            new ConfirmAssistantProposalCommand(sessionId, proposalId, httpContext.User.GetUserId(), request?.Points),
+            cancellationToken).ConfigureAwait(false);
+        return Results.Ok(proposal);
+    }
+
+    private static async Task<IResult> HandleReject(
+        [FromRoute] Guid sessionId, [FromRoute] Guid proposalId, HttpContext httpContext, IMediator mediator, CancellationToken cancellationToken)
+    {
+        var proposal = await mediator.Send(
+            new RejectAssistantProposalCommand(sessionId, proposalId, httpContext.User.GetUserId()), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(proposal);
+    }
+
+    /// <summary>Il corpo è opzionale: senza, si conferma l'incremento proposto.</summary>
+    internal sealed record ConfirmAssistantProposalRequest(int? Points);
 
     internal sealed record AskSessionAssistantRequest(string Question, string? Language);
 }

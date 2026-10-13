@@ -46,5 +46,7 @@ public sealed class SessionAssistantRegistrationTests
         scope.ServiceProvider.GetRequiredService<IAssistantSessionDirectory>().Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn.AssistantTurnRunner>()
             .Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation.IAssistantProposalApplier>()
+            .Should().NotBeNull();
     }
 }

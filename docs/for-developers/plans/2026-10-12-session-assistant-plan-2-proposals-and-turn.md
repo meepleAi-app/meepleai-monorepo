@@ -68,7 +68,7 @@ Le condizioni che la spec implica e che i test dei task non coprirebbero da soli
 
 1. **Un aggiornamento del prezzo di un modello azzera `SupportsToolCalling`.** `AiModelConfiguration` ricostruisce `ModelSettings` con il costruttore in tre punti: una proprietà nuova fuori dal costruttore sparirebbe a ogni modifica dell'admin, e l'assistente si spegnerebbe da solo. → Task 4, `UpdatePricing_KeepsTheToolCallingCapability` e i due test gemelli.
 2. **Una versione del profilo salvata prima di questo piano.** Il jsonb non ha la chiave `sessionAssistant`: deve caricarsi come «disabilitato», non fallire. → Task 3, `LegacyContentWithoutTheSection_LoadsAsDisabled`.
-3. **Due conferme nello stesso istante.** La seconda non deve scrivere né restituire un errore incomprensibile. → Task 2 (`SecondConcurrentSave_FailsOnXmin`) e Task 13 (`TwoConcurrentConfirms_OfAnAdvanceTurn_AdvanceOnce`).
+3. **Due conferme nello stesso istante.** La seconda non deve scrivere né restituire un errore incomprensibile. → Task 2 (`SecondConcurrentSave_FailsOnXmin`) e Task 13 (`ConcurrentConfirms_OfAnAdvanceTurn_AdvanceOnce`).
 4. **Lo stato della partita è cambiato fra proposta e conferma** (un altro punteggio nella stessa cella, il turno già passato a mano). → Task 11, `Confirm_WhenTheCellChanged_IsStaleAndDoesNotWrite`; Task 13 lo ripete sul database vero.
 5. **Il turno fallisce a metà** (tetto, scadenza, provider): le proposte già create restano confermabili e l'host riceve un evento `error`, non una connessione troncata. → Task 9, `Turn_BudgetRefusedMidLoop_KeepsTheProposalsAndEmitsBudgetPaused` e `Turn_Timeout_EmitsTurnTimeout`.
 6. **Il primo turno di una partita non ancora avviata** (`CurrentTurnIndex` a 0, nessun punteggio): il round è 1 e gli strumenti di proposta rispondono con un errore tipizzato, non con un'eccezione. → Task 6, `Round_IsOneBeforeTheSessionStarts_AndNothingCanBeWritten`.
@@ -7451,3 +7451,13 @@ Ciò che la spec nomina e questo piano non fa, con il motivo e dove va.
 - **Review Focus.** 1 → Task 4; 2 → Task 3; 3 → Task 2, 11, 13; 4 → Task 11, 13; 5 → Task 9; 6 → Task 6; 7 → Task 7; 8 → Task 11; 9 → Task 7.
 - **Review.** Il piano è stato rivisto contro il codice da due revisori indipendenti prima dell'esecuzione; le loro correzioni sono in questo testo.
 - **Tipi fra i task.** `IAssistantProposalRepository`: `GetAsync`, `GetReadOnlyAsync`, `ListOpenBySessionAsync`, `ListByThreadAsync`, `AddAsync` (Task 2), `ExpirePendingBySessionAsync` (Task 8). `AssistantProposalDto` nasce nel Task 8 nello spazio dei nomi `…SessionAssistant.Turn` ed è usato dai Task 9, 11 e 12. `IAssistantSessionDirectory` nasce nel Task 6 ed è usato dai Task 9, 11 e 12. `AgentProfile.AssistantModelWithoutToolsCode` nasce nel Task 5 ed è usato dal Task 9.
+
+## Dopo l'esecuzione
+
+Il piano è stato eseguito in tre fette: A2 (#4275, PR #4289), A3a (#4276, PR #4297), A3b (#4277). Dove il codice consegnato differisce dal testo dei task, per decisione presa in esecuzione o per una correzione chiesta dalla review dell'intero branch:
+
+- **Task 1 e 3 (A2).** `ScoreValueToWrite` applica il limite dei punti anche alla correzione dell'host, e rifiuta una proposta di punteggio senza la sua cella attesa. `AgentProfileContent.Create` e `Restore` prendono la sezione dell'assistente come argomento obbligatorio.
+- **Task 7 (A3a).** Il thread dell'assistente è escluso anche dal cruscotto (conteggio e attività recente) e dalla timeline delle attività, che leggono `ChatThreads` senza passare dal repository.
+- **Task 9 (A3a).** `AskSessionAssistantCommandHandler.Handle` è diviso in controllo dell'argomento e iteratore privato, come `StreamQaQueryHandler`. La scadenza delle proposte precedenti vale anche quando il turno poi fallisce, ed è contratto: la annuncia il primo evento `status`.
+- **Task 11 (A3b).** Il valore da scrivere si calcola prima della prenotazione. La porta di scrittura porta lo stato su cui la proposta è nata (`AssistantScoreWrite`, `expectedTurnIndex`) e i due comandi della sessione lo ricontrollano sull'aggregato che stanno per salvare. Chiude la riga «Una modifica a mano fra il controllo dello stato atteso e la scrittura» di «Fuori dal piano», e corregge la riga «Due proposte sulla stessa cella»: era sicuro solo confermandole una dopo l'altra.
+- **Task 13 (A3b).** I test dei tap concorrenti si chiamano `ConcurrentConfirms_…` e mandano otto richieste: con due, tolto il token di concorrenza, restavano verdi. In più: di più proposte uguali se ne conferma una sola, e due proposte diverse confermate una dentro l'altra.

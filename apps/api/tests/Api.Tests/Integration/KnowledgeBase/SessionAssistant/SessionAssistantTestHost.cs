@@ -3,9 +3,11 @@ using System.Net;
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Hubs;
 using Api.Infrastructure;
@@ -37,6 +39,8 @@ public sealed class SessionAssistantHostFixture(SharedTestcontainersFixture shar
 
     internal RecordingSessionHub Hub { get; } = new();
 
+    internal ProposalWriteGate WriteGate { get; } = new();
+
     protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
         factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
@@ -44,6 +48,10 @@ public sealed class SessionAssistantHostFixture(SharedTestcontainersFixture shar
             services.AddSingleton(Llm.Service);
             // SignalR registra IHubContext<> aperto: una registrazione chiusa per questo hub vince.
             services.AddSingleton(Hub.Context);
+            // La porta di scrittura vera, dietro un cancello che i test possono armare.
+            services.RemoveAll<IAssistantProposalApplier>();
+            services.AddSingleton<IAssistantProposalApplier>(provider => new GatedProposalApplier(
+                new LiveSessionProposalApplier(provider.GetRequiredService<IServiceScopeFactory>()), WriteGate));
         }));
 }
 
@@ -116,6 +124,70 @@ internal sealed class RecordingSessionHub
 }
 
 internal sealed record LiveTable(Guid SessionId, IReadOnlyDictionary<string, Guid> Players);
+
+/// <summary>
+/// Un cancello sulla porta di scrittura dell'assistente: un test può fermare la prossima scrittura un
+/// attimo prima che parta, per far passare un'altra conferma nel mezzo. Non armato, è trasparente.
+/// </summary>
+internal sealed class ProposalWriteGate
+{
+    private HeldWrite? _held;
+
+    /// <summary>Ferma la prossima scrittura (una sola) finché il test non la rilascia.</summary>
+    public HeldWrite HoldNextWrite()
+    {
+        var held = new HeldWrite();
+        Volatile.Write(ref _held, held);
+        return held;
+    }
+
+    /// <summary>Rilascia una scrittura rimasta ferma da un test precedente, e disarma il cancello.</summary>
+    public void Reset() => Interlocked.Exchange(ref _held, null)?.Release();
+
+    internal async Task WaitAsync()
+    {
+        var held = Interlocked.Exchange(ref _held, null);
+        if (held is null)
+        {
+            return;
+        }
+
+        held.MarkEntered();
+        await held.Released;
+    }
+
+    internal sealed class HeldWrite
+    {
+        private readonly TaskCompletionSource _entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _released = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Completo quando la scrittura è arrivata al cancello: ha già superato i controlli della conferma.</summary>
+        public Task Entered => _entered.Task;
+
+        internal Task Released => _released.Task;
+
+        internal void MarkEntered() => _entered.TrySetResult();
+
+        public void Release() => _released.TrySetResult();
+    }
+}
+
+/// <summary>La porta di scrittura vera, dietro il cancello.</summary>
+internal sealed class GatedProposalApplier(IAssistantProposalApplier inner, ProposalWriteGate gate) : IAssistantProposalApplier
+{
+    public async Task ApplyScoreAsync(
+        Guid liveSessionId, Guid confirmingUserId, AssistantScoreWrite write, CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync();
+        await inner.ApplyScoreAsync(liveSessionId, confirmingUserId, write, cancellationToken);
+    }
+
+    public async Task AdvanceTurnAsync(Guid liveSessionId, int expectedTurnIndex, CancellationToken cancellationToken)
+    {
+        await gate.WaitAsync();
+        await inner.AdvanceTurnAsync(liveSessionId, expectedTurnIndex, cancellationToken);
+    }
+}
 
 internal static class SessionAssistantTestData
 {

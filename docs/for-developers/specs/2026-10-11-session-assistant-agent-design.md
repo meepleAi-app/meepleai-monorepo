@@ -227,13 +227,15 @@ La risposta finale si bufferizza, perché passa da `FinalizeAsync` **prima** di 
 
 1. **`POST /live-sessions/{id}/assistant`**. Si verifica nell'handler che l'utente sia `CreatedByUserId`, che la sessione non sia `Completed` (anche `Created`: `MoveToSetup` non ha chiamanti, quindi una sessione passa da `Created` a `InProgress`, e senza `Created` l'assistente non risponderebbe mai prima dell'avvio), e che l'assistente sia abilitato nella versione pubblicata. Gli strumenti di proposta rifiutano con un errore tipizzato quando lo stato non permette la scrittura.
 2. **Messaggi**, nell'ordine di §4.1. Della storia entrano gli ultimi messaggi del `ChatThread` della sessione. `ChatThread` riceve un `LiveSessionId` nullable (migrazione additiva) e il thread dell'assistente nasce **senza** `GameId`: la chiave esterna del gioco punta al catalogo condiviso, e una sessione può essere su un gioco privato. Quel thread non compare fra le chat dell'utente (elenco, storico, cruscotto); resta nell'export dei suoi dati. Il legame fra un messaggio e le sue proposte sta nella proposta (`message_id`): le `parts` in `MessagesJson` arrivano con le citazioni, nella fetta A5. Dei turni passati si rimandano solo il testo e gli esiti delle proposte, non i risultati degli strumenti.
-3. **Ciclo** con al massimo N giri con strumenti, preso dal profilo, più una chiamata finale senza strumenti che obbliga il modello a rispondere: un turno costa al più N+1 chiamate (semantica di `FunctionInvokingChatClient`, fissata da un test in A0). Ogni chiamata passa dal gateway con la versione del profilo, l'id della sessione e `RequestSource.SessionAssistant`.
+3. **Ciclo** con al massimo N giri con strumenti, preso dal profilo, più una chiamata finale senza strumenti che obbliga il modello a rispondere: un turno costa al più N+1 chiamate (semantica di `FunctionInvokingChatClient`, fissata da un test in A0). Ogni chiamata passa dal gateway con la versione del profilo e `RequestSource.SessionAssistant`; l'id della sessione arriva con le metriche della fetta A6, a cui serve per il costo per partita, perché `LlmChatRequest` non ha il campo.
 4. **Eventi SSE**, nella convenzione degli endpoint SSE esistenti (`AgentSessionEndpoints.cs`): eventi `data:` senza nome, con un campo `type`:
-   - `status` mentre gira uno strumento («leggo i punteggi…»);
-   - `proposal` per ogni card;
-   - `answer`, con testo e citazioni, dopo `FinalizeAsync`;
+   - `status` all'avvio del turno e poi a ogni strumento che parte, con il suo nome («leggo i punteggi…» lo compone il client);
+   - `proposal` per ogni card, **dopo il salvataggio**: una card mostrata prima si potrebbe confermare quando la proposta non è ancora nel database;
+   - `answer`, con il testo (e, dalla fetta A5, le citazioni dopo `FinalizeAsync`);
    - `done`, con `responseId` e versione del profilo;
-   - `error`, con un codice.
+   - `error`, con un codice (`budget_paused`, `turn_timeout`, `assistant_unavailable`), al posto di `done` quando il turno si ferma a metà: le proposte già create sono state comunque salvate e inviate.
+
+   I controlli del passo 1 avvengono prima del primo evento: se falliscono la risposta è un errore HTTP in JSON (`403`, `404`, `409` con `assistant_disabled`, `assistant_model_without_tools` o `session_state_invalid`), non uno stream.
 5. **Salvataggio**: messaggi con le loro `parts` (testo, citazioni, riferimenti alle proposte) e proposte. Le righe di costo le scrive il gateway.
 
 **Quota per piano**: fuori dal pilota. Arriva con la fetta 5g di ADR-095, non ancora consegnata; fino ad allora vale il tetto globale. L'host del pilota è uno solo.

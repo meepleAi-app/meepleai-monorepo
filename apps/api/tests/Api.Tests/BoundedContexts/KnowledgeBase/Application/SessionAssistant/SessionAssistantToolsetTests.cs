@@ -58,13 +58,20 @@ public sealed class SessionAssistantToolsetTests
         Scores: [new(Marco, 2, "punti", 7)],
         HouseRules: []);
 
+    /// <summary>
+    /// L'indice di turno del dominio vale 0 prima dell'avvio e parte da 1 con <c>Start()</c>
+    /// (<c>LiveGameSession.GetCurrentTurnPlayerId</c> usa <c>(indice - 1) % n</c>). Con tre giocatori i
+    /// turni 1, 2 e 3 sono il primo giro: con la formula a base 0 l'ultimo giocatore cadeva nel round 2.
+    /// </summary>
     [Theory]
     [InlineData(0, 3, 1)]
-    [InlineData(2, 3, 1)]
-    [InlineData(3, 3, 2)]
-    [InlineData(5, 3, 2)]
-    [InlineData(6, 3, 3)]
+    [InlineData(1, 3, 1)]
+    [InlineData(3, 3, 1)]
+    [InlineData(4, 3, 2)]
+    [InlineData(6, 3, 2)]
+    [InlineData(7, 3, 3)]
     [InlineData(4, 0, 1)]
+    [InlineData(-2, 3, 1)]
     public void Round_IsAFullTurnOfTheTable(int turnIndex, int activePlayers, int expected) =>
         AssistantRound.Current(turnIndex, activePlayers).Should().Be(expected);
 
@@ -83,6 +90,25 @@ public sealed class SessionAssistantToolsetTests
         await Toolset().ProposeScoreAsync("Marco", -2, cancellationToken: TestContext.Current.CancellationToken);
 
         _scores.Should().ContainSingle().Which.Points.Should().Be(-2);
+    }
+
+    /// <summary>
+    /// Spec §6.3: argomenti non validi sono un errore tipizzato che il modello può leggere, non
+    /// un'eccezione dentro lo strumento. Il limite è quello dell'aggregato (scostamento S14).
+    /// </summary>
+    [Theory]
+    [InlineData(100_001)]
+    [InlineData(-100_001)]
+    [InlineData(int.MinValue)]
+    public async Task ProposeScore_PointsBeyondTheLimit_IsATypedError(int points)
+    {
+        var toolset = Toolset();
+
+        var result = await toolset.ProposeScoreAsync("Marco", points, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<AssistantToolError>().Which.Error.Should().Be("punti_fuori_limite");
+        toolset.ErrorCount.Should().Be(1);
+        _scores.Should().BeEmpty();
     }
 
     [Fact]

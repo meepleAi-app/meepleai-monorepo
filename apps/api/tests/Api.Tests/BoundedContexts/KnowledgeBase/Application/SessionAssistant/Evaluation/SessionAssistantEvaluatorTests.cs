@@ -285,6 +285,29 @@ public sealed class SessionAssistantEvaluatorTests
         set.Scenarios.Should().OnlyContain(s => s.Language == "it" || s.Language == "en");
     }
 
+    /// <summary>
+    /// Uno scenario deve descrivere uno stato che la sessione vera può produrre: con l'indice di turno a
+    /// base 1 del dominio, il giocatore di turno è <c>players[(indice - 1) % n]</c>. Dalla versione 4 del
+    /// set è così; prima gli indici erano scritti a base 0.
+    /// </summary>
+    [Fact]
+    public void ScenarioSet_TurnIndexAndCurrentPlayer_AgreeWithTheDomain()
+    {
+        var path = Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "scenarios.json");
+        var set = JsonSerializer.Deserialize<AssistantScenarioSet>(File.ReadAllText(path), AssistantScenarioSet.Json)!;
+
+        set.Version.Should().BeGreaterThanOrEqualTo(4);
+        foreach (var scenario in set.Scenarios.Where(s => s.State.CurrentPlayer is not null))
+        {
+            var players = scenario.State.Players;
+            var index = scenario.State.CurrentTurnIndex;
+
+            index.Should().BeGreaterThan(0, $"{scenario.Id}: una partita con un giocatore di turno è avviata");
+            players[(index - 1) % players.Count].Should().Be(scenario.State.CurrentPlayer,
+                $"{scenario.Id}: all'indice {index} il dominio dà il turno a un altro giocatore");
+        }
+    }
+
     private static SessionAssistantEvaluator Evaluator(Mock<ILlmService> gateway) =>
         new(new AssistantChatClientFactory(gateway.Object, NullLoggerFactory.Instance, new ServiceCollection().BuildServiceProvider()),
             new ExactNameMatcher(), NullLogger<SessionAssistantEvaluator>.Instance);

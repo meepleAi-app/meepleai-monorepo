@@ -178,7 +178,7 @@ Il pilota ne ha pochi, di proposito: con i modelli economici meno strumenti sign
 
 Le **house rules** non sono uno strumento: vanno nel contesto statico (§4.1), lette con `GetGameMemoryQuery(GameId, OwnerId)`.
 
-**Round.** `LiveGameSession` non ha un round: ha `CurrentTurnIndex`, che cresce a ogni turno di ogni giocatore. Il precursore S4 usa l'indice di turno come round, quindi ogni passaggio di turno apre una nuova cella. L'assistente usa invece un **round derivato**: `CurrentTurnIndex / giocatori attivi + 1`, cioè un giro completo del tavolo. Questa definizione va allineata con l'editor della scheda Score di #4156, che lavora su «giocatore × dimensione × round» (§13).
+**Round.** `LiveGameSession` non ha un round: ha `CurrentTurnIndex`, che vale 0 prima dell'avvio, 1 con `Start()` e cresce a ogni turno di ogni giocatore. Il precursore S4 usa l'indice di turno come round, quindi ogni passaggio di turno apre una nuova cella. L'assistente usa invece un **round derivato**: `(CurrentTurnIndex − 1) / n + 1` per un indice ≥ 1, e 1 prima dell'avvio, dove `n` sono i giocatori attivi non spettatori, cioè quelli fra cui gira il turno. È un giro completo del tavolo, coerente con `GetCurrentTurnPlayerId`, che usa `(CurrentTurnIndex − 1) % n`. Questa definizione va allineata con l'editor della scheda Score di #4156, che lavora su «giocatore × dimensione × round» (§13). Dalla versione 4 il set di scenari usa lo stesso indice a base 1. **Limite noto**: il dominio conta sull'ordine di turno impostato con `SetTurnOrder`, che `LiveSessionDto` non espone; se l'host imposta un ordine che esclude un giocatore attivo, il round derivato diverge.
 
 **Semantica del valore.** `RecordScore` sostituisce la cella (giocatore, round, dimensione). L'assistente propone invece un **incremento**: «Marco fa 5 punti» vuol dire +5 alla cella del round. Il valore scritto alla conferma è il valore della cella più l'incremento. Se l'host dice un totale («Marco è a 30»), il modello calcola l'incremento dallo stato e la card mostra il totale risultante, che l'host verifica.
 
@@ -199,7 +199,7 @@ Le **house rules** non sono uno strumento: vanno nel contesto statico (§4.1), l
 | `created_at`, `resolved_at`, `resolved_by` | tempi e autore |
 | `xmin` | concorrenza ottimistica, come gli altri aggregati (ADR-060) |
 
-**Scadenza**: una proposta ancora `Pending` diventa `Expired` quando inizia il turno successivo dell'assistente o quando la sessione si chiude.
+**Scadenza**: una proposta ancora `Pending` diventa `Expired` quando inizia il turno successivo dell'assistente, con un solo `UPDATE` eseguito subito: così una conferma che arriva nello stesso istante non fa fallire il turno, trova la proposta non più `Pending`. Vale anche se quel turno poi fallisce: chiedere di nuovo supera le card di prima. Alla chiusura della sessione le proposte rimaste `Pending` non si toccano: una conferma tardiva viene comunque rifiutata dal dominio (`session_state_invalid`), e la pulizia arriva con le metriche della fetta A6.
 
 ### 5.3 Conferma: «prima prenota, poi applica»
 
@@ -225,16 +225,18 @@ La risposta finale si bufferizza, perché passa da `FinalizeAsync` **prima** di 
 
 ### 6.2 Un turno
 
-1. **`POST /live-sessions/{id}/assistant`**. Si verifica nell'handler che l'utente sia `CreatedByUserId`, che la sessione sia `Setup`, `InProgress` o `Paused`, e che l'assistente sia abilitato nella versione pubblicata. Gli strumenti di proposta rifiutano con un errore tipizzato quando lo stato non permette la scrittura.
-2. **Messaggi**, nell'ordine di §4.1. Della storia entrano gli ultimi messaggi del `ChatThread` della sessione. `ChatThread` riceve un `LiveSessionId` nullable (migrazione additiva); le `parts` dei messaggi vanno nel `MessagesJson` esistente, senza migrazione. Dei turni passati si rimandano solo il testo e gli esiti delle proposte, non i risultati degli strumenti.
-3. **Ciclo** con al massimo N giri con strumenti, preso dal profilo, più una chiamata finale senza strumenti che obbliga il modello a rispondere: un turno costa al più N+1 chiamate (semantica di `FunctionInvokingChatClient`, fissata da un test in A0). Ogni chiamata passa dal gateway con la versione del profilo, l'id della sessione e `RequestSource.SessionAssistant`.
+1. **`POST /live-sessions/{id}/assistant`**. Si verifica nell'handler che l'utente sia `CreatedByUserId`, che la sessione non sia `Completed` (anche `Created`: `MoveToSetup` non ha chiamanti, quindi una sessione passa da `Created` a `InProgress`, e senza `Created` l'assistente non risponderebbe mai prima dell'avvio), e che l'assistente sia abilitato nella versione pubblicata. Gli strumenti di proposta rifiutano con un errore tipizzato quando lo stato non permette la scrittura.
+2. **Messaggi**, nell'ordine di §4.1. Della storia entrano gli ultimi messaggi del `ChatThread` della sessione. `ChatThread` riceve un `LiveSessionId` nullable (migrazione additiva) e il thread dell'assistente nasce **senza** `GameId`: la chiave esterna del gioco punta al catalogo condiviso, e una sessione può essere su un gioco privato. Quel thread non compare fra le chat dell'utente (elenco, storico, cruscotto e attività recente); resta nell'export dei suoi dati. Il legame fra un messaggio e le sue proposte sta nella proposta (`message_id`): le `parts` in `MessagesJson` arrivano con le citazioni, nella fetta A5. Dei turni passati si rimandano solo il testo e gli esiti delle proposte, non i risultati degli strumenti.
+3. **Ciclo** con al massimo N giri con strumenti, preso dal profilo, più una chiamata finale senza strumenti che obbliga il modello a rispondere: un turno costa al più N+1 chiamate (semantica di `FunctionInvokingChatClient`, fissata da un test in A0). Ogni chiamata passa dal gateway con la versione del profilo e `RequestSource.SessionAssistant`; l'id della sessione arriva con le metriche della fetta A6, a cui serve per il costo per partita, perché `LlmChatRequest` non ha il campo.
 4. **Eventi SSE**, nella convenzione degli endpoint SSE esistenti (`AgentSessionEndpoints.cs`): eventi `data:` senza nome, con un campo `type`:
-   - `status` mentre gira uno strumento («leggo i punteggi…»);
-   - `proposal` per ogni card;
-   - `answer`, con testo e citazioni, dopo `FinalizeAsync`;
+   - `status` all'avvio del turno e poi a ogni strumento che parte, con il suo nome («leggo i punteggi…» lo compone il client). Il primo `status` dice anche che le proposte ancora `Pending` dei turni precedenti sono scadute (§5.2), comunque finisca il turno: da lì il client le mostra come scadute;
+   - `proposal` per ogni card, **dopo il salvataggio**: una card mostrata prima si potrebbe confermare quando la proposta non è ancora nel database;
+   - `answer`, con il testo (e, dalla fetta A5, le citazioni dopo `FinalizeAsync`);
    - `done`, con `responseId` e versione del profilo;
-   - `error`, con un codice.
-5. **Salvataggio**: messaggi con le loro `parts` (testo, citazioni, riferimenti alle proposte) e proposte. Le righe di costo le scrive il gateway.
+   - `error`, con un codice, al posto di `done`. Con `budget_paused`, `turn_timeout` e `assistant_unavailable` per un rifiuto del provider il ciclo si è fermato a metà: messaggi e proposte già create sono stati salvati, le proposte sono state inviate e `answer` porta il testo di ripiego. Un errore imprevisto dà `assistant_unavailable` da solo, senza `answer`: di quel turno non è stato salvato nulla.
+
+   I controlli del passo 1 avvengono prima del primo evento: se falliscono la risposta è un errore HTTP in JSON (`400` per una domanda vuota o troppo lunga, `403`, `404`, `409` con `assistant_disabled`, `assistant_model_without_tools` o `session_state_invalid`), non uno stream.
+5. **Salvataggio**: i due messaggi del turno e le proposte, in un solo salvataggio. Le proposte citano il messaggio dell'assistente con `message_id`; le `parts` (citazioni) arrivano con la fetta A5. Le righe di costo le scrive il gateway.
 
 **Quota per piano**: fuori dal pilota. Arriva con la fetta 5g di ADR-095, non ancora consegnata; fino ad allora vale il tetto globale. L'host del pilota è uno solo.
 
@@ -344,7 +346,7 @@ Con il prompt v1 `deepseek-flash` non passa le regole 1, 2 e 4; con il prompt v2
 - **Prima di pubblicare (#4270), strumenti offerti.** Il prompt deve nominare solo gli strumenti del turno. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata, che il report non conta fra gli strumenti. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
 - **A3, duplicati.** `qwen2.5:3b` ha creato tre proposte di turno identiche in un turno. Il turno non le unisce: le proposte di troppo le conta il set di valutazione, e unirle in produzione nasconderebbe ciò che il gate misura. Alla conferma le ferma `Stale` (§5.3), e lo fissa un test di integrazione della fetta A3b: di più proposte identiche se ne conferma una sola.
 - **A3, testo mostrato.** `ChatResponse.Text` concatena il testo di tutti i giri («I'll check the current game state first.» seguito dalla risposta). All'host va solo l'ultimo messaggio dell'assistente.
-- **A3, errori tipizzati e confini.** Ogni validazione degli strumenti va provata con il lettore reale. Il test di architettura oggi guarda costruttori e campi: prima che arrivi un sink vero deve coprire anche i parametri dei metodi. I nomi dei giocatori entrano in un messaggio di sistema: conviene un blocco di dati delimitato.
+- **A3, errori tipizzati e confini.** Ogni validazione degli strumenti va provata con il lettore reale. Il test di architettura oggi guarda costruttori e campi: prima che arrivi un sink vero deve coprire anche i parametri dei metodi. I nomi dei giocatori entrano in un messaggio di sistema: conviene un blocco di dati delimitato. Cambia ciò che il modello vede, quindi va con il testo da pubblicare e si misura con lui (#4270), non in A3.
 - **A6, limiti dell'esecutore.** Valuta la traiettoria (strumenti e proposte), non il testo: una frase falsa o una risposta nella lingua sbagliata passano. Il rilevatore riconosce le forme viste, non ogni parafrasi: «Propongo che Marco Rossi guadagna 4 punti», detto da `qwen2.5:3b` senza alcuna proposta, non scatta. Non c'è una scadenza per scenario, e la richiesta è sincrona. Per il gate conviene aggiungere a ogni scenario il testo atteso (un nome, un numero, la lingua), scenari con più turni e tabelle di punteggio piene.
 
 **Non misurato:** i modelli via OpenRouter; la latenza su staging; le conversazioni con storia; `cerca_regole` con il recupero vero, perché gli scenari hanno passaggi finti.

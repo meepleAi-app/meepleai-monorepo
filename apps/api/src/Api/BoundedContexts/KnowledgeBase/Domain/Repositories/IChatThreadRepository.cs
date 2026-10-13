@@ -31,6 +31,12 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
     Task<IReadOnlyList<ChatThread>> FindActiveByAgentIdAsync(Guid agentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Il thread dell'assistente in partita di una sessione live (#4276), o <c>null</c> al primo turno.
+    /// Se due primi turni concorrenti ne hanno creati due, vale il più vecchio.
+    /// </summary>
+    Task<ChatThread?> FindByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds recent threads (ordered by last message).
     /// </summary>
     /// <summary>

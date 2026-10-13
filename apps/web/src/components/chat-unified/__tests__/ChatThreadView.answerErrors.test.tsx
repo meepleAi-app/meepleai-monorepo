@@ -216,7 +216,7 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     expect(notice).toHaveTextContent(
       'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3)'
     );
-    expect(notice).toHaveTextContent('mezzanotte UTC');
+    expect(notice).toHaveTextContent(/riparte alle \d{2}:\d{2} \(mezzanotte UTC\)/);
     expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
     expect(screen.queryByText(/Tier limit exceeded/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -245,9 +245,41 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     await user.type(screen.getByTestId('message-input'), 'E adesso?');
     await user.click(screen.getByTestId('send-btn'));
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument()
-    );
+    // La domanda successiva è passata davvero: la risposta è arrivata, e l'avviso non c'è più.
+    expect(await screen.findByText('Cinque carte.')).toBeInTheDocument();
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
+  /**
+   * La pagina non rimonta la vista quando si passa da un thread all'altro: l'avviso di un thread
+   * non deve restare sull'altro.
+   */
+  it('the quota notice does not follow the user to another thread', async () => {
+    qa.script = [
+      {
+        type: qa.EVENT.ERROR,
+        data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    ];
+    const user = userEvent.setup();
+    const { rerender } = render(<ChatThreadView threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+    await user.type(screen.getByTestId('message-input'), 'Quante carte si pescano?');
+    await user.click(screen.getByTestId('send-btn'));
+    await screen.findByTestId('tier-limit-exceeded');
+
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...thread,
+      id: 'thread-2',
+      title: 'Azul',
+    });
+    rerender(<ChatThreadView threadId="thread-2" />);
+
+    // Mentre il thread nuovo si carica la vista mostra solo l'attesa, e l'avviso non c'è comunque:
+    // l'asserzione vale a thread caricato.
+    await waitFor(() => expect(apiMock.chat.getThreadById).toHaveBeenCalledWith('thread-2'));
+    await screen.findByTestId('message-input');
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
   });
 
   it.each([

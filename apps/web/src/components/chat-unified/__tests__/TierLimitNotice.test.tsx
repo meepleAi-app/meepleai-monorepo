@@ -9,7 +9,12 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import { readTierLimit, tierLimitMessage, TierLimitNotice } from '../TierLimitNotice';
+import {
+  quotaResetLocalTime,
+  readTierLimit,
+  tierLimitMessage,
+  TierLimitNotice,
+} from '../TierLimitNotice';
 
 describe('readTierLimit', () => {
   it('reads the numbers and the link the backend sends', () => {
@@ -45,6 +50,8 @@ describe('readTierLimit', () => {
     [{ current: '3', max: '3' }],
     [{ current: 3, max: 0 }],
     [{ current: -1, max: 3 }],
+    [{ current: 1.5, max: 3 }],
+    [{ current: 3, max: 1e21 }],
     [null],
     ['not an object'],
   ])('leaves the numbers out when they are not both there: %j', data => {
@@ -56,16 +63,34 @@ describe('readTierLimit', () => {
   });
 });
 
+/**
+ * La quota conta per giorno UTC. Dire solo «mezzanotte UTC» lascia il conto a chi legge, che in
+ * Italia la trova all'una o alle due di notte: la frase dà l'ora del posto in cui è l'utente e
+ * tiene «UTC» accanto, perché è lì che il conteggio riparte davvero.
+ */
+describe('quotaResetLocalTime', () => {
+  it.each([
+    ['2026-01-15T10:00:00Z', 'Europe/Rome', '01:00'],
+    ['2026-07-15T10:00:00Z', 'Europe/Rome', '02:00'],
+    ['2026-07-15T10:00:00Z', 'UTC', '00:00'],
+    ['2026-01-15T10:00:00Z', 'America/New_York', '19:00'],
+    // A un minuto dalla mezzanotte UTC la prossima è fra un minuto, non fra un giorno e un minuto.
+    ['2026-01-15T23:59:00Z', 'Europe/Rome', '01:00'],
+  ])('at %s in %s the count starts again at %s', (now, timeZone, expected) => {
+    expect(quotaResetLocalTime(new Date(now), timeZone)).toBe(expected);
+  });
+});
+
 describe('tierLimitMessage', () => {
   it('says how many questions were used and when the count starts again', () => {
-    expect(tierLimitMessage({ current: 3, max: 3, upgradeUrl: '/pricing' })).toBe(
-      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3). Il conteggio riparte a mezzanotte UTC.'
+    expect(tierLimitMessage({ current: 3, max: 3, upgradeUrl: '/pricing' }, '02:00')).toBe(
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3). Il conteggio riparte alle 02:00 (mezzanotte UTC).'
     );
   });
 
   it('does without the numbers when the backend did not send them', () => {
-    expect(tierLimitMessage({ upgradeUrl: '/pricing' })).toBe(
-      'Hai usato tutte le domande di oggi previste dal tuo piano. Il conteggio riparte a mezzanotte UTC.'
+    expect(tierLimitMessage({ upgradeUrl: '/pricing' }, '01:00')).toBe(
+      'Hai usato tutte le domande di oggi previste dal tuo piano. Il conteggio riparte alle 01:00 (mezzanotte UTC).'
     );
   });
 });
@@ -74,7 +99,16 @@ describe('TierLimitNotice', () => {
   it('explains the limit and links to the plans', () => {
     render(<TierLimitNotice limit={{ current: 3, max: 3, upgradeUrl: '/pricing' }} />);
 
-    expect(screen.getByTestId('tier-limit-exceeded')).toHaveTextContent('3 su 3');
+    const notice = screen.getByTestId('tier-limit-exceeded');
+    expect(notice).toHaveTextContent('3 su 3');
+    expect(notice).toHaveTextContent(/riparte alle \d{2}:\d{2} \(mezzanotte UTC\)/);
     expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+  });
+
+  /** Compare dopo l'invio, senza che il fuoco si sposti: uno screen reader deve annunciarlo. */
+  it('is announced as a status', () => {
+    render(<TierLimitNotice limit={{ upgradeUrl: '/pricing' }} />);
+
+    expect(screen.getByRole('status')).toBe(screen.getByTestId('tier-limit-exceeded'));
   });
 });

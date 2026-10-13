@@ -29,7 +29,12 @@ import { CitationBlock } from './CitationBlock';
 import { ContinueButton } from './ContinueButton';
 import { InlineCitationText } from './InlineCitationText';
 import { QuickPromptChips } from './QuickPromptChips';
-import { TIER_LIMIT_EXCEEDED, readTierLimit, tierLimitMessage } from './TierLimitNotice';
+import {
+  TIER_LIMIT_EXCEEDED,
+  TierLimitNotice,
+  readTierLimit,
+  type TierLimit,
+} from './TierLimitNotice';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -80,7 +85,10 @@ function MessageBubble({
   const isUser = message.role === 'user';
 
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+    <div
+      data-testid={`message-${message.role}`}
+      className={cn('flex', isUser ? 'justify-end' : 'justify-start')}
+    >
       <div
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
@@ -182,6 +190,8 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  // #4168 (5g-b): la domanda fermata dalla quota del piano.
+  const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
   const qaAbortRef = useRef<AbortController | null>(null);
 
   // SSE Streaming
@@ -237,6 +247,8 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
 
   // Load thread
   useEffect(() => {
+    // L'avviso di un thread non deve restare sull'altro: la pagina non rimonta la vista.
+    setTierLimit(null);
     async function loadThread() {
       setIsLoading(true);
       setLoadError(null);
@@ -318,6 +330,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       if (!text || streamState.isStreaming || isSending) return;
 
       setInputValue('');
+      setTierLimit(null);
 
       // Optimistic: add user message
       const userMessage: LocalMessage = {
@@ -452,12 +465,16 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                     errorCode?: string;
                     message?: string;
                   };
-                  // #4168 (5g-b): la quota del piano si spiega in italiano, con i numeri che il
-                  // backend manda. Qui la spiegazione sta nella bolla, senza il link ai piani.
+                  if (errData?.errorCode === TIER_LIMIT_EXCEEDED) {
+                    // #4168 (5g-b): non è un guasto — per oggi le domande del piano sono finite.
+                    // Come sul desktop: la bolla vuota se ne va e compare l'avviso, col link ai piani.
+                    setMessages(prev => prev.filter(m => m.id !== assistantMsgId));
+                    setTierLimit(readTierLimit(errData));
+                    abortController.abort();
+                    return;
+                  }
                   const errorMsg =
-                    errData?.errorCode === TIER_LIMIT_EXCEEDED
-                      ? tierLimitMessage(readTierLimit(errData))
-                      : (errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta');
+                    errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta';
                   setMessages(prev =>
                     prev.map(m =>
                       m.id === assistantMsgId ? { ...m, content: errorMsg, isError: true } : m
@@ -607,6 +624,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             {streamState.error}
           </div>
         )}
+
+        {/* #4168 (5g-b): la quota del piano */}
+        {tierLimit && <TierLimitNotice limit={tierLimit} />}
 
         <div ref={messagesEndRef} />
       </div>

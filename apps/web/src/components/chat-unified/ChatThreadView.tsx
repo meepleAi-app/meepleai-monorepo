@@ -228,6 +228,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // (invariant: tests/ChatThreadView.invariants.test.tsx).
   useEffect(() => {
     abortCurrent();
+    // La pagina non rimonta la vista cambiando thread: gli avvisi nati da una domanda del
+    // thread di prima non devono restare su questo. Quello del possesso offrirebbe la
+    // dichiarazione per il gioco di QUESTO thread, che nessuno ha negato.
+    deniedQuestionRef.current = null;
+    setOwnershipDenied(false);
+    setNoManualNotice(false);
+    setTierLimit(null);
     async function loadThread() {
       setIsLoading(true);
       setError(null);

@@ -3,7 +3,7 @@
  *
  * Il backend ha fermato la domanda con `TIER_LIMIT_EXCEEDED`: il piano dell'utente prevede un
  * numero di domande al giorno, e per oggi sono finite. Non è un guasto, quindi non usa il banner
- * d'errore: dice quante ne sono state usate, quando riparte il conteggio, e porta ai piani.
+ * d'errore: dice quante ne sono state usate, a che ora riparte il conteggio, e porta ai piani.
  *
  * I campi sono gli stessi del 403 `tier_limit_exceeded` (`limitType`, `current`, `max`,
  * `upgradeUrl`), che qui arrivano dentro l'evento Error dello stream.
@@ -33,7 +33,7 @@ export interface TierLimit {
 }
 
 function isCount(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
 /**
@@ -58,14 +58,37 @@ export function readTierLimit(data: unknown): TierLimit {
   return { upgradeUrl };
 }
 
-/** La spiegazione in una frase, per chi non può mostrare il link (la bolla della chat mobile). */
-export function tierLimitMessage(limit: TierLimit): string {
+/**
+ * L'ora, nel fuso di chi legge, in cui riparte il conteggio: la prossima mezzanotte UTC. La quota
+ * conta per giorno UTC, e «mezzanotte UTC» da sola lascia il conto a chi legge, che in Italia la
+ * trova all'una o alle due di notte.
+ *
+ * @param timeZone Il fuso in cui dire l'ora. Per difetto quello del browser.
+ */
+export function quotaResetLocalTime(now: Date = new Date(), timeZone?: string): string {
+  const nextUtcMidnight = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
+  );
+
+  return new Intl.DateTimeFormat('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone,
+  }).format(nextUtcMidnight);
+}
+
+/** La spiegazione in una frase. */
+export function tierLimitMessage(
+  limit: TierLimit,
+  resetsAt: string = quotaResetLocalTime()
+): string {
   const used =
     limit.current !== undefined && limit.max !== undefined
       ? ` (${limit.current} su ${limit.max})`
       : '';
 
-  return `Hai usato tutte le domande di oggi previste dal tuo piano${used}. Il conteggio riparte a mezzanotte UTC.`;
+  return `Hai usato tutte le domande di oggi previste dal tuo piano${used}. Il conteggio riparte alle ${resetsAt} (mezzanotte UTC).`;
 }
 
 export interface TierLimitNoticeProps {
@@ -75,6 +98,8 @@ export interface TierLimitNoticeProps {
 export function TierLimitNotice({ limit }: TierLimitNoticeProps): React.JSX.Element {
   return (
     <div
+      // Compare dopo l'invio, senza che il fuoco si sposti: così uno screen reader lo annuncia.
+      role="status"
       data-testid="tier-limit-exceeded"
       className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-foreground"
     >

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.BoundedContexts.SystemConfiguration.Infrastructure.Persistence;
@@ -109,5 +110,28 @@ public sealed class SeedAiModelsIntegrationTests : IAsyncLifetime
         var second = await after.Set<AiModelConfigurationEntity>()
             .AsNoTracking().Select(m => new { m.ModelId, m.UpdatedAt }).ToListAsync(ct);
         second.Should().BeEquivalentTo(first);
+    }
+
+    /// <summary>
+    /// #4275: su un catalogo che ha già <c>deepseek-flash</c> senza la capacità (ogni database esistente),
+    /// il seed la dichiara, e la porta di KnowledgeBase la legge dal jsonb vero.
+    /// </summary>
+    [Fact]
+    public async Task AFlashRowWrittenBeforeTheCapability_GetsIt_AndThePortSeesIt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        await using (var context = _fixture.CreateDbContext(_connectionString))
+        {
+            var repository = new EfAiModelConfigurationRepository(context, new DomainEventCollector());
+            await repository.AddRangeAsync(
+                [Row("deepseek-flash", "DeepSeek", 8, new ModelPricing(0.30m, 1.20m), isActive: false)], ct);
+            await context.SaveChangesAsync(ct);
+        }
+
+        await SeedAsync(ct);
+
+        await using var verification = _fixture.CreateDbContext(_connectionString);
+        var port = new CatalogToolCallingModels(new EfAiModelConfigurationRepository(verification, new DomainEventCollector()));
+        (await port.GetToolCallingModelIdsAsync(ct)).Should().BeEquivalentTo(["deepseek-flash"]);
     }
 }

@@ -131,4 +131,26 @@ public sealed class AiModelCatalogAdminCommandsTests
         validator.Validate(new CreateAiModelCommand("gpt-x", "GPT X", "OpenAI", 1, true, false, settings))
             .IsValid.Should().BeFalse("OpenAI non ha un client: il modello non sarebbe chiamabile");
     }
+
+    /// <summary>
+    /// #4275: la capacità di tool calling la dichiara solo il seed, per i modelli misurati. Il corpo della
+    /// richiesta di creazione è lo stesso tipo che finisce nel jsonb, quindi un client potrebbe mandarla a
+    /// «vero»: la creazione la ignora, altrimenti basterebbe una POST per far passare l'invariante di
+    /// pubblicazione dell'assistente su un modello mai misurato.
+    /// </summary>
+    [Fact]
+    public async Task ANewModel_NeverDeclaresToolCalling_WhateverTheRequestSays()
+    {
+        AiModelConfiguration? created = null;
+        _repository.Setup(r => r.AddAsync(It.IsAny<AiModelConfiguration>(), It.IsAny<CancellationToken>()))
+            .Callback<AiModelConfiguration, CancellationToken>((model, _) => created = model)
+            .Returns(Task.CompletedTask);
+        var settings = new ModelSettings(4096, 0.3m, new ModelPricing(0.3m, 1.2m)) { SupportsToolCalling = true };
+
+        var dto = await new CreateAiModelCommandHandler(_repository.Object, _unitOfWork.Object)
+            .Handle(new CreateAiModelCommand("deepseek-reasoner", "DeepSeek Reasoner", "DeepSeek", 9, false, false, settings), Ct);
+
+        created!.Settings.SupportsToolCalling.Should().BeFalse();
+        dto.Settings.SupportsToolCalling.Should().BeFalse();
+    }
 }

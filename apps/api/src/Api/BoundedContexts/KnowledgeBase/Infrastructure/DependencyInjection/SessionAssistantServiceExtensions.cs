@@ -1,5 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
 
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
@@ -12,6 +14,7 @@ internal static class SessionAssistantServiceExtensions
         services.AddScoped<IAssistantChatClientFactory, AssistantChatClientFactory>();
         services.AddScoped<IAssistantPlayerMatcher, AssistantPlayerMatcher>();
         services.AddScoped<SessionAssistantEvaluator>();
+        services.AddScoped<IToolCallingModelCatalog, CatalogToolCallingModels>();
         return services;
     }
 }

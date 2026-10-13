@@ -260,6 +260,75 @@ public sealed class PrivateGameRetrievalTests
         title.Should().BeNull();
     }
 
+    // ─── Le altre rotte che restituiscono i passaggi di un gioco (#4294) ───
+
+    /// <summary>
+    /// La spiegazione di un argomento cerca nella KB del gioco e ne restituisce i passaggi. Al
+    /// proprietario arrivano quelli del suo PDF: è la prova che questa rotta legge il gioco privato,
+    /// e quindi che il rifiuto del test successivo protegge qualcosa.
+    /// </summary>
+    [Fact]
+    public async Task Explain_GivesTheOwnerThePassagesOfThePrivatePdf()
+    {
+        var response = await PostExplainAsync(_token);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using var json = JsonDocument.Parse(body);
+        var passages = json.RootElement.GetProperty("citations").EnumerateArray()
+            .Select(c => c.GetProperty("text").GetString())
+            .ToList();
+        passages.Should().Contain(BothArms);
+    }
+
+    [Fact]
+    public async Task Explain_RefusesAnotherUser()
+    {
+        var response = await PostExplainAsync(await CreateStrangerAsync());
+
+        await AssertRefusedAsync(response);
+    }
+
+    /// <summary>Il suggerimento di mossa restituisce i passaggi in <c>sources</c>: stesso cancello.</summary>
+    [Fact]
+    public async Task PlayerModeSuggest_RefusesAnotherUser()
+    {
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/agents/player-mode/suggest", await CreateStrangerAsync(),
+            new
+            {
+                gameId = _privateGameId.ToString(),
+                gameState = new { players = new[] { new { name = "Anna", score = 3 } } },
+                query = Question,
+            }), Ct);
+
+        await AssertRefusedAsync(response);
+        _hostFixture.Llm.LastUserPrompt.Should().BeNull("a un estraneo non si costruisce nessun prompt");
+    }
+
+    private Task<HttpResponseMessage> PostExplainAsync(string token) =>
+        _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/agents/explain", token,
+            new { gameId = _privateGameId.ToString(), topic = "setup" }), Ct);
+
+    private async Task<string> CreateStrangerAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = await TestSessionHelper.CreateUserSessionAsync(db, cancellationToken: Ct);
+        return token;
+    }
+
+    private async Task AssertRefusedAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, body);
+
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("error").GetString().Should().Be("RAG_OWNERSHIP_REQUIRED");
+        body.Should().NotContain(BothArms).And.NotContain(LexicalOnly).And.NotContain(VectorOnly);
+    }
+
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
     private async Task<List<JsonElement>> AskAsync(string token)

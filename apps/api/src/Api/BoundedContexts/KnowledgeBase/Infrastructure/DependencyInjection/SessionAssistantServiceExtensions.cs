@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
@@ -14,6 +15,7 @@ internal static class SessionAssistantServiceExtensions
         services.AddScoped<IAssistantChatClientFactory, AssistantChatClientFactory>();
         services.AddScoped<IAssistantPlayerMatcher, AssistantPlayerMatcher>();
         services.AddScoped<SessionAssistantEvaluator>();
+        services.AddScoped<AssistantTurnRunner>();
         services.AddScoped<IAssistantSessionDirectory, LiveSessionAssistantDirectory>();
         services.AddScoped<IToolCallingModelCatalog, CatalogToolCallingModels>();
         return services;

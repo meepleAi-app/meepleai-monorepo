@@ -27,6 +27,11 @@ public sealed class SessionAssistantRegistrationTests
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.GameManagement.Application.Services.IPlayerNameResolutionService>());
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.SystemConfiguration.Domain.Repositories.IAiModelConfigurationRepository>());
         services.AddScoped(_ => Mock.Of<MediatR.IMediator>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IPublishedAgentProfileReader>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IChatThreadRepository>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAssistantProposalRepository>());
+        services.AddScoped(_ => Mock.Of<Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork>());
+        services.AddSingleton(TimeProvider.System);
         services.AddSessionAssistant();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
@@ -39,5 +44,7 @@ public sealed class SessionAssistantRegistrationTests
         scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Services.IToolCallingModelCatalog>()
             .Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<IAssistantSessionDirectory>().Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn.AssistantTurnRunner>()
+            .Should().NotBeNull();
     }
 }

@@ -26,6 +26,12 @@ internal sealed class ChatTurnMeter
     /// <summary>Gli strumenti chiamati nel turno, in ordine; restano anche se il ciclo si ferma per un errore.</summary>
     public IReadOnlyList<string> ToolCalls => Volatile.Read(ref _toolCalls);
 
+    /// <summary>
+    /// Chiamato a ogni strumento che parte, con il suo nome: è da qui che il turno emette l'evento
+    /// <c>status</c> mentre il ciclo è ancora in corso (spec §6.2).
+    /// </summary>
+    public Action<string>? ToolCalled { get; init; }
+
     internal void Record(LlmCompletionResult result)
     {
         lock (_lock)
@@ -43,6 +49,9 @@ internal sealed class ChatTurnMeter
         {
             Volatile.Write(ref _toolCalls, _toolCalls.Add(name));
         }
+
+        // Fuori dal lock: chi osserva non deve poter bloccare il contatore.
+        ToolCalled?.Invoke(name);
     }
 
     internal void RecordInvalidArguments()

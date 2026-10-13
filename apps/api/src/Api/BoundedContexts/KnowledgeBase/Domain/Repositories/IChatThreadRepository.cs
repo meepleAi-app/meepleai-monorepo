@@ -14,11 +14,6 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
     Task<IReadOnlyList<ChatThread>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Finds threads by game ID.
-    /// </summary>
-    Task<IReadOnlyList<ChatThread>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Finds threads by user ID and game ID.
     /// </summary>
     Task<IReadOnlyList<ChatThread>> FindByUserIdAndGameIdAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default);

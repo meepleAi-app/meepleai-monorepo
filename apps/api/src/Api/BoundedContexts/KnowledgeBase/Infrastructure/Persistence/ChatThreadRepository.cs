@@ -58,17 +58,6 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return threadEntities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<ChatThread>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
-    {
-        var threadEntities = await DbContext.ChatThreads
-            .AsNoTracking()
-            .Where(t => t.GameId == gameId)
-            .OrderByDescending(t => t.LastMessageAt)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-        return threadEntities.Select(MapToDomain).ToList();
-    }
-
     public async Task<IReadOnlyList<ChatThread>> FindByUserIdAndGameIdAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
     {
         var threadEntities = await DbContext.ChatThreads

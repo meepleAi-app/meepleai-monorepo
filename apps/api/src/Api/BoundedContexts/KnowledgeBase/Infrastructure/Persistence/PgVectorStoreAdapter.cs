@@ -390,9 +390,15 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             // after Phase 2d (#1345) dropped that table; resolution now relies on the modern
             // vd.shared_game_id column populated by post-Phase 2d ingestion, with a defensive
             // fallback to vd.GameId for legacy rows.
+            //
+            // #4244: and to vd."PrivateGameId" for the PDF of a private game, whose two other
+            // columns are null. pgvector_embeddings.game_id is ONE id with NO foreign key, shared
+            // or private: a deliberate exception to the "a column per kind of game" rule the other
+            // tables follow. It is a search index; splitting it would cost a data migration and
+            // buy nothing. Do not "fix" it.
             lookupCmd.CommandText = """
                 SELECT vd."Id",
-                       COALESCE(vd.shared_game_id, vd."GameId") AS resolved_game_id
+                       COALESCE(vd.shared_game_id, vd."GameId", vd."PrivateGameId") AS resolved_game_id
                 FROM vector_documents vd
                 WHERE vd."Id" = ANY(@ids)
                 """;

@@ -916,6 +916,9 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
             {
                 Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
                 GameId = pdfDoc.SharedGameId,
+                // #4244: without this a private game's chunks carried no game at all, and the
+                // keyword arm (which filters by game) never found them.
+                PrivateGameId = pdfDoc.PrivateGameId,
                 PdfDocumentId = pdfGuid,
                 ChunkIndex = index,
                 PageNumber = chunk.Page,

@@ -109,13 +109,16 @@ internal class KeywordSearchService : IKeywordSearchService
             // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
             // Phase D (D6): include role_tags in the projection so the hybrid re-ranker can
             // apply a role-match boost without an extra round-trip.
+            // #4244: a private game lives in "PrivateGameId"; "GameId" is an FK to shared_games and
+            // is null for its chunks. The filter looks at both columns, and the projection
+            // coalesces them, because the row type reads the game as a non-nullable Guid.
             var sql = $@"
                 SELECT * FROM (
                     SELECT
                         ""Id"",
                         ""Content"",
                         ""PdfDocumentId"",
-                        ""GameId"",
+                        COALESCE(""GameId"", ""PrivateGameId"") AS ""GameId"",
                         ""ChunkIndex"",
                         ""PageNumber"",
                         role_tags AS ""RoleTags"",
@@ -123,7 +126,7 @@ internal class KeywordSearchService : IKeywordSearchService
                         ts_rank_cd({tsvectorExpr}, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
-                        ""GameId"" = @gameId::uuid
+                        (""GameId"" = @gameId::uuid OR ""PrivateGameId"" = @gameId::uuid)
                         AND {tsvectorExpr} @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
                 ) ranked
                 WHERE ""RelevanceScore"" >= @minScore
@@ -673,7 +676,8 @@ internal class KeywordSearchService : IKeywordSearchService
                     SELECT pd.""Language"" AS ""Value""
                     FROM text_chunks tc
                     JOIN pdf_documents pd ON pd.""Id"" = tc.""PdfDocumentId""
-                    WHERE tc.""GameId"" = @gameId::uuid AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
+                    WHERE (tc.""GameId"" = @gameId::uuid OR tc.""PrivateGameId"" = @gameId::uuid)
+                      AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
                     GROUP BY pd.""Language""
                     ORDER BY count(*) DESC
                     LIMIT 1",

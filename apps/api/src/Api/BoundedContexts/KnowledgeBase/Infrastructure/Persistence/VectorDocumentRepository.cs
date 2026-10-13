@@ -48,9 +48,17 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
+        // #4244: a private game's documents carry it in PrivateGameId (GameId is an FK to
+        // shared_games and stays null). Without the second column the citations of a private game
+        // could not resolve their PDF, and a document filter named nothing.
+        //
+        // This method does not check who is asking. Its callers are the answer pipeline, which
+        // has already passed the RAG access check for this game, and the admin debug handler.
+        // The other "by game" methods of this repository stay on GameId: some are reached from
+        // routes that check no ownership, and widening them would expose private documents.
         var entities = await DbContext.VectorDocuments
             .AsNoTracking()
-            .Where(vd => vd.GameId == gameId)
+            .Where(vd => vd.GameId == gameId || vd.PrivateGameId == gameId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(e => e.ToDomain()).ToList();

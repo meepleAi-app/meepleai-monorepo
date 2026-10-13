@@ -341,6 +341,69 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc!.IndexingStatus.Should().Be("completed");
         vectorDoc.ChunkCount.Should().BeGreaterThan(0);
     }
+
+    /// <summary>
+    /// Issue #4244, il primo «rosso prima». Il PDF di un gioco PRIVATO si indicizza come quello di un
+    /// gioco del catalogo: i passaggi finiscono in <c>text_chunks</c> e il documento vettoriale è
+    /// completo. Su Postgres, perché il difetto è una chiave esterna: <c>text_chunks.GameId</c> punta
+    /// a <c>shared_games</c>, e il provider in memoria non applica chiavi esterne.
+    /// </summary>
+    [Fact]
+    public async Task IndexPdfOfAPrivateGame_Success()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var userId = (await _dbContext!.Users.FirstAsync(TestCancellationToken)).Id;
+        var privateGame = new Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = userId,
+            Title = "Gioco privato da indicizzare",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
+        };
+        _dbContext.PrivateGames.Add(privateGame);
+        var pdfId = Guid.NewGuid();
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            PrivateGameId = privateGame.Id,
+            UploadedByUserId = userId,
+            FileName = "PrivateRules.pdf",
+            FilePath = "/test/PrivateRules.pdf",
+            FileSizeBytes = 1024,
+            UploadedAt = DateTime.UtcNow,
+            PageCount = 3,
+            ExtractedText = "Game setup instructions.\n\nPlace components on board.\n\nEach player takes 5 cards.",
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue($"{result.ErrorCode}: {result.ErrorMessage}");
+
+        // i passaggi ci sono, e il gioco privato sta nella sua colonna: GameId è una chiave esterna
+        // verso shared_games e per un gioco privato resta vuota
+        var chunks = await _dbContext.TextChunks
+            .Where(c => c.PdfDocumentId == pdfId)
+            .Select(c => new { c.GameId, c.PrivateGameId })
+            .ToListAsync(TestCancellationToken);
+        chunks.Should().NotBeEmpty("i passaggi del PDF privato sono in text_chunks");
+        chunks.Should().OnlyContain(c => c.GameId == null && c.PrivateGameId == privateGame.Id);
+
+        var vectorDoc = await _dbContext.Set<VectorDocumentEntity>()
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorDoc.Should().NotBeNull();
+        vectorDoc!.IndexingStatus.Should().Be("completed");
+        vectorDoc.GameId.Should().BeNull();
+        vectorDoc.PrivateGameId.Should().Be(privateGame.Id);
+    }
+
     [Fact]
     public async Task IndexPdfWithoutExtractedText_ReturnsTextExtractionRequired()
     {

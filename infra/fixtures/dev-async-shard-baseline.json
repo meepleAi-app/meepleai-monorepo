@@ -40,8 +40,8 @@
     "l'artifact di uno non esiste finche' il suo job gira. La provenienza che conta e' quella",
     "nel `_comment` di ciascuno shard, che ha precedenza su questi due campi."
   ],
-  "runId": "37281025300",
-  "capturedAt": "2026-10-05",
+  "runId": "38377985336",
+  "capturedAt": "2026-10-13",
   "shards": {
     "Core": {
       "_comment": [
@@ -111,26 +111,41 @@
     },
     "Games": {
       "_comment": [
-        "🔴 QUESTI DUE NUMERI NON MISURANO LO SHARD: misurano cio' che e' entrato in 75 minuti.",
+        "MISURATI su un run COMPLETO: run 38377985336 (SHA 0dceda78a), job 115234039649, .trx",
+        "dell'artifact `integration-results-Games` passato a shard-skip-assert.sh --update-baseline,",
+        "col log come controprova. Nessun abort nel log (`grep -c 'Aborting test run: test run",
+        "timeout'` -> 0): Total 1142, 58 m 52 s.",
         "",
-        "Lo shard Games sfora il TestSessionTimeout in modo cronico. Misurato su due run",
-        "consecutivi, scaricando i log degli artifact:",
-        "  36997819474 -> 'Aborting test run: test run timeout of 4500000 ms exceeded'",
-        "                 Failed: 2, Passed: 763, Skipped: 8, Total: 773, 1 h 13 m",
-        "  37070363707 -> idem, Total: 791",
-        "Due run, due tagli a conteggi diversi, perche' il taglio cade su un confine di TEMPO e non",
-        "di selezione. La causa e' documentata in #3742: GroupA vuota e GroupB con una classe sola,",
-        "quindi una catena seriale di 113 classi in GroupC per tutto il resto della run.",
+        "Fino a questa cattura i due numeri erano un LIMITE INFERIORE preso da run troncati",
+        "(failed 2, skipped 8), e sui run troncati il confronto non avviene. Su ogni run completo",
+        "avrebbero dato un falso allarme: «i SALTI sono aumentati: 8 -> 10».",
         "",
-        "Conseguenza da non perdere: finche' dura, una regressione nei salti di questo shard puo'",
-        "restare INVISIBILE, perche' il test che la rivelerebbe puo' non essere stato eseguito.",
-        "Per questo shard-skip-assert.sh esce 2 (NON MISURABILE) invece di confrontare, e queste",
-        "cifre restano come limite inferiore, non come attesa.",
+        "Il fallimento e' Probe_Provider401_Returns200WithUnauthorized, INTERMITTENTE: errorCode",
+        "'timeout' invece del valore atteso (#3887 chiusa, ripreso in #4298). Nei run in cui passa il",
+        "conteggio scende a 0 e lo script lo segnala come discesa, non come errore.",
         "",
-        "Ricatturare quando #3742 e' chiusa, da un run il cui log non contenga la riga di abort."
+        "I dieci salti, per nome: BggCover_Uploaded_ResolvesViaRawKeyNoSuffix_And200 e",
+        "PdfCover_Uploaded_ResolvesViaPreviewSuffix_And200 (#4016), i cinque Post_RotateKey_*,",
+        "ImportExcel_DuplicateBggId_SkipsSecondRow,",
+        "Scenario5_ConcurrentDispatch_MultiInstance_BoundedDuplicates e",
+        "Search_WhenRateLimitExceeded_Returns429. Gli stessi dieci compaiono gia' nei .trx dei run",
+        "troncati 38301109128 e 38319008253: non sono salti nuovi, sono salti che la baseline non",
+        "aveva mai potuto contare.",
+        "",
+        "🔴 LO SHARD TRONCA ANCORA, a run alterni. Tre run consecutivi del 2026-10-13:",
+        "  38356211209  completo   Total 1142, 55 m 33 s",
+        "  38365996683  TRONCATO   Total 1007, 1 h 14 m",
+        "  38377985336  completo   Total 1142, 58 m 52 s",
+        "Stessa selezione, durate diverse: lo shard sta a ridosso del TestSessionTimeout di 75 minuti",
+        "e l'esito dipende dal runner. Nei run troncati shard-skip-assert.sh esce 2 (NON MISURABILE)",
+        "e questo confronto non avviene: la causa resta in #3742.",
+        "",
+        "Cio' che sta dopo il taglio non e' «probabilmente verde», e' non misurato. Il primo run",
+        "completo (38356211209) aveva DIECI fallimenti che nei .trx dei run troncati risultavano non",
+        "eseguiti; erano test rimasti indietro rispetto al prodotto, corretti in #4303."
       ],
-      "failed": 2,
-      "skipped": 8
+      "failed": 1,
+      "skipped": 10
     }
   }
 }

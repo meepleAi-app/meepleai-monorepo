@@ -55,7 +55,7 @@ import { qaStreamErrorMessage } from './qaStreamErrors';
 import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
 import {
   TIER_LIMIT_EXCEEDED,
-  TierLimitNotice,
+  TierLimitRegion,
   readTierLimit,
   type TierLimit,
 } from './TierLimitNotice';
@@ -836,7 +836,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         />
       )}
       {/* #4168 (5g-b): la quota del piano — quante domande, quando riparte, dove sono i piani */}
-      {tierLimit && <TierLimitNotice limit={tierLimit} />}
+      <TierLimitRegion limit={tierLimit} className="mx-4 mt-2" />
       {noManualNotice && (
         <div
           data-testid="rag-no-manual"

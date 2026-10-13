@@ -98,10 +98,8 @@ export interface TierLimitNoticeProps {
 export function TierLimitNotice({ limit }: TierLimitNoticeProps): React.JSX.Element {
   return (
     <div
-      // Compare dopo l'invio, senza che il fuoco si sposti: così uno screen reader lo annuncia.
-      role="status"
       data-testid="tier-limit-exceeded"
-      className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-foreground"
+      className="rounded-lg border border-border bg-muted p-3 text-sm text-foreground"
     >
       <p>{tierLimitMessage(limit)}</p>
       <Link
@@ -110,6 +108,26 @@ export function TierLimitNotice({ limit }: TierLimitNoticeProps): React.JSX.Elem
       >
         Vedi i piani
       </Link>
+    </div>
+  );
+}
+
+export interface TierLimitRegionProps {
+  /** Il limite da spiegare, o `null` finché non c'è niente da dire. */
+  limit: TierLimit | null;
+  /** I margini che la vista dà all'avviso. Valgono solo quando l'avviso c'è. */
+  className?: string;
+}
+
+/**
+ * Il posto in cui l'avviso compare. È nella pagina da subito, vuoto: l'avviso arriva dopo l'invio
+ * e senza che il fuoco si sposti, e una regione viva montata già piena non viene annunciata da
+ * tutti gli screen reader. Una che c'è da prima e poi si riempie, sì.
+ */
+export function TierLimitRegion({ limit, className }: TierLimitRegionProps): React.JSX.Element {
+  return (
+    <div role="status" data-testid="tier-limit-region" className={limit ? className : undefined}>
+      {limit && <TierLimitNotice limit={limit} />}
     </div>
   );
 }

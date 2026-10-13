@@ -31,7 +31,7 @@ import { InlineCitationText } from './InlineCitationText';
 import { QuickPromptChips } from './QuickPromptChips';
 import {
   TIER_LIMIT_EXCEEDED,
-  TierLimitNotice,
+  TierLimitRegion,
   readTierLimit,
   type TierLimit,
 } from './TierLimitNotice';
@@ -626,7 +626,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         )}
 
         {/* #4168 (5g-b): la quota del piano */}
-        {tierLimit && <TierLimitNotice limit={tierLimit} />}
+        <TierLimitRegion limit={tierLimit} className="mx-2" />
 
         <div ref={messagesEndRef} />
       </div>

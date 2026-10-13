@@ -14,6 +14,7 @@ import {
   readTierLimit,
   tierLimitMessage,
   TierLimitNotice,
+  TierLimitRegion,
 } from '../TierLimitNotice';
 
 describe('readTierLimit', () => {
@@ -104,11 +105,34 @@ describe('TierLimitNotice', () => {
     expect(notice).toHaveTextContent(/riparte alle \d{2}:\d{2} \(mezzanotte UTC\)/);
     expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
   });
+});
 
-  /** Compare dopo l'invio, senza che il fuoco si sposti: uno screen reader deve annunciarlo. */
-  it('is announced as a status', () => {
-    render(<TierLimitNotice limit={{ upgradeUrl: '/pricing' }} />);
+/**
+ * L'avviso compare dopo l'invio, senza che il fuoco si sposti. Una regione viva montata già piena
+ * non viene annunciata da tutti gli screen reader; una che c'è da prima e poi si riempie, sì. Per
+ * questo le viste montano la regione sempre, vuota, e l'avviso ci entra dentro.
+ */
+describe('TierLimitRegion', () => {
+  it('is in the page before there is anything to say', () => {
+    render(<TierLimitRegion limit={null} className="mx-4" />);
 
-    expect(screen.getByRole('status')).toBe(screen.getByTestId('tier-limit-exceeded'));
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+    // Vuota non occupa spazio: i margini arrivano con l'avviso.
+    expect(region).not.toHaveClass('mx-4');
+  });
+
+  it('holds the notice once the quota stops a question', () => {
+    const { rerender } = render(<TierLimitRegion limit={null} className="mx-4" />);
+    const region = screen.getByRole('status');
+
+    rerender(
+      <TierLimitRegion limit={{ current: 3, max: 3, upgradeUrl: '/pricing' }} className="mx-4" />
+    );
+
+    // Lo stesso nodo di prima, ora pieno: è questo che fa partire l'annuncio.
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toContainElement(screen.getByTestId('tier-limit-exceeded'));
+    expect(region).toHaveClass('mx-4');
   });
 });

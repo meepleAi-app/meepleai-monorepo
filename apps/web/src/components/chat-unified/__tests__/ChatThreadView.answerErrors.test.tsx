@@ -226,6 +226,19 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     expect(savedAssistantMessages()).toHaveLength(0);
   });
 
+  /**
+   * Il posto dell'avviso è nella pagina da prima, vuoto: è così che uno screen reader si accorge
+   * di quando si riempie. Montato insieme all'avviso, non tutti lo annuncerebbero.
+   */
+  it('the place for the quota notice is in the page before any question, empty', async () => {
+    render(<ChatThreadView threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+
+    const region = screen.getByTestId('tier-limit-region');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+  });
+
   /** L'avviso riguarda la domanda appena fermata: con la successiva se ne va. */
   it('the quota notice goes away with the next question', async () => {
     qa.script = [

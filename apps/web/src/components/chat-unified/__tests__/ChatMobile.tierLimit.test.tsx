@@ -126,6 +126,63 @@ describe('ChatMobile — la quota del piano (#4168, 5g-b)', () => {
     expect(screen.queryAllByTestId('message-assistant')).toHaveLength(0);
   });
 
+  const QUOTA_STOP = {
+    type: qa.EVENT.ERROR,
+    data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3, upgradeUrl: '/pricing' },
+  };
+
+  /** Il posto dell'avviso è nella pagina da prima, vuoto, come sul desktop. */
+  it('the place for the quota notice is in the page before any question, empty', async () => {
+    render(<ChatMobile threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+
+    const region = screen.getByTestId('tier-limit-region');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+  });
+
+  /** L'avviso riguarda la domanda appena fermata: con la successiva se ne va. */
+  it('the quota notice goes away with the next question', async () => {
+    qa.script = [QUOTA_STOP];
+    const user = userEvent.setup();
+    await ask(user);
+    await screen.findByTestId('tier-limit-exceeded');
+
+    qa.script = [
+      { type: qa.EVENT.TOKEN, data: { token: 'Cinque carte.' } },
+      { type: qa.EVENT.COMPLETE, data: { answer: 'Cinque carte.', snippets: [] } },
+    ];
+    await user.type(screen.getByTestId('message-input'), 'E adesso?');
+    await user.click(screen.getByTestId('send-btn'));
+
+    expect(await screen.findByText('Cinque carte.')).toBeInTheDocument();
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
+  /** La pagina non rimonta la vista cambiando thread: l'avviso non deve restare sull'altro. */
+  it('the quota notice does not follow the user to another thread', async () => {
+    qa.script = [QUOTA_STOP];
+    const user = userEvent.setup();
+    const { rerender } = render(<ChatMobile threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+    await user.type(screen.getByTestId('message-input'), 'Quante carte si pescano?');
+    await user.click(screen.getByTestId('send-btn'));
+    await screen.findByTestId('tier-limit-exceeded');
+
+    const { api } = await import('@/lib/api');
+    (api.chat.getThreadById as Mock).mockResolvedValue({
+      ...thread,
+      id: 'thread-2',
+      title: 'Azul',
+    });
+    rerender(<ChatMobile threadId="thread-2" />);
+
+    // L'asserzione vale a thread caricato: durante il caricamento la vista mostra solo l'attesa.
+    await waitFor(() => expect(api.chat.getThreadById).toHaveBeenCalledWith('thread-2'));
+    await screen.findByTestId('message-input');
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
   /** Gli altri codici restano com'erano: questa vista mostra il messaggio del backend. */
   it('still shows the backend message for another error', async () => {
     qa.script = [

@@ -51,4 +51,13 @@ internal sealed class AssistantProposalRepository : IAssistantProposalRepository
         ArgumentNullException.ThrowIfNull(proposal);
         await _db.Set<AssistantProposal>().AddAsync(proposal, cancellationToken).ConfigureAwait(false);
     }
+
+    public Task<int> ExpirePendingBySessionAsync(Guid liveSessionId, DateTime now, CancellationToken cancellationToken = default) =>
+        _db.Set<AssistantProposal>()
+            .Where(p => p.LiveSessionId == liveSessionId && p.Status == AssistantProposalStatus.Pending)
+            .ExecuteUpdateAsync(
+                update => update
+                    .SetProperty(p => p.Status, AssistantProposalStatus.Expired)
+                    .SetProperty(p => p.ResolvedAt, now),
+                cancellationToken);
 }

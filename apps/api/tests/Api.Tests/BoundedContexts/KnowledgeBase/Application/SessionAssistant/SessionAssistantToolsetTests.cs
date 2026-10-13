@@ -92,6 +92,25 @@ public sealed class SessionAssistantToolsetTests
         _scores.Should().ContainSingle().Which.Points.Should().Be(-2);
     }
 
+    /// <summary>
+    /// Spec §6.3: argomenti non validi sono un errore tipizzato che il modello può leggere, non
+    /// un'eccezione dentro lo strumento. Il limite è quello dell'aggregato (scostamento S14).
+    /// </summary>
+    [Theory]
+    [InlineData(100_001)]
+    [InlineData(-100_001)]
+    [InlineData(int.MinValue)]
+    public async Task ProposeScore_PointsBeyondTheLimit_IsATypedError(int points)
+    {
+        var toolset = Toolset();
+
+        var result = await toolset.ProposeScoreAsync("Marco", points, cancellationToken: TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<AssistantToolError>().Which.Error.Should().Be("punti_fuori_limite");
+        toolset.ErrorCount.Should().Be(1);
+        _scores.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task ProposeScore_UsesTheMatcherNotAnExactComparison()
     {

@@ -24,5 +24,13 @@ public interface IAssistantProposalRepository
     /// <summary>Tutte le proposte nate in un thread, in sola lettura: servono alla storia del turno.</summary>
     Task<IReadOnlyList<AssistantProposal>> ListByThreadAsync(Guid chatThreadId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Porta a <c>Expired</c> le proposte ancora <c>Pending</c> di una sessione: è l'inizio di un altro
+    /// turno dell'assistente (spec §5.2). Un solo <c>UPDATE</c>, eseguito subito e fuori dalla unit of
+    /// work: una conferma concorrente non fa fallire il turno, trova la proposta non più <c>Pending</c>.
+    /// </summary>
+    /// <returns>Quante proposte sono scadute.</returns>
+    Task<int> ExpirePendingBySessionAsync(Guid liveSessionId, DateTime now, CancellationToken cancellationToken = default);
+
     Task AddAsync(AssistantProposal proposal, CancellationToken cancellationToken = default);
 }

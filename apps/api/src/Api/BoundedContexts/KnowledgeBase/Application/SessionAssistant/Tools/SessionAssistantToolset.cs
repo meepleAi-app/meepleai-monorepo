@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Microsoft.Extensions.AI;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Tools;
@@ -78,6 +79,15 @@ internal sealed class SessionAssistantToolset
         if (string.IsNullOrWhiteSpace(giocatore))
         {
             return Error("giocatore_mancante", "Serve il nome del giocatore: chiedilo all'host.");
+        }
+
+        // Su long: Math.Abs(int.MinValue) lancerebbe. Il limite è quello dell'aggregato, che resta l'ultima
+        // difesa: qui il modello riceve un errore che può leggere e riportare all'host.
+        if (Math.Abs((long)punti) > AssistantProposal.MaxPointsPerProposal)
+        {
+            return Error(
+                "punti_fuori_limite",
+                $"I punti devono stare fra -{AssistantProposal.MaxPointsPerProposal} e {AssistantProposal.MaxPointsPerProposal}: chiedi all'host di ripetere il numero.");
         }
 
         var state = await _reader.GetStateAsync(cancellationToken).ConfigureAwait(false);

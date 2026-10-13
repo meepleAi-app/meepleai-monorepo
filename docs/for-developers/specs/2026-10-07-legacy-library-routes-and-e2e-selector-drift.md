@@ -36,7 +36,7 @@ Il redirect non avrebbe nessun beneficiario: né utenti (non c'è produzione), n
 
 ## 3. 🔴 Il difetto vero: i redirect legacy aprono il tab sbagliato, in silenzio
 
-> **✅ Stato 2026-10-07 — risolto** sul ramo `fix/legacy-tab-redirects`. Le nove destinazioni sono valide, e `apps/web/src/__tests__/next-config-tab-redirects.test.ts` lega ogni `?tab=` prodotto da `next.config.js` a `isGameTabId`. Verificato **per perturbazione in due direzioni**: id invalido nella config → rosso; rinomina di un id in `types.ts` → rosso. Il commento di #1004 e l'header di `layout.tsx` sono corretti nello stesso ramo.
+> **✅ Stato 2026-10-07 — risolto** con la PR #4119 (ramo `fix/legacy-tab-redirects`). Le nove destinazioni sono valide, e `apps/web/src/__tests__/next-config-tab-redirects.test.ts` lega ogni `?tab=` prodotto da `next.config.js` a `isGameTabId`. Verificato **per perturbazione in due direzioni**: id invalido nella config → rosso; rinomina di un id in `types.ts` → rosso. Il commento di #1004 e l'header di `layout.tsx` sono corretti nello stesso ramo.
 >
 > **Reperto collaterale, non risolto**: `#5042` non è un caso isolato. `#5001`, `#5003`, `#5004`, `#5005`, `#5023`, `#5024`, `#5026`–`#5029`, `#5039`, `#5055` e altri compaiono nel codice e **nessuno risolve in questo repository** — `grep -rhoE '#50[0-9]{2}' apps/web/src apps/web/next.config.js | sort -u` li elenca. Sono una numerazione venuta da fuori. L'header di `layout.tsx` ora lo dichiara invece di far inseguire un numero morto; la famiglia merita un trattamento proprio.
 
@@ -76,10 +76,10 @@ grep -nE "source: '/library/games|source: '/games/:id/agent|destination: '/libra
 
 ### Cosa serve
 
-- [ ] Rimappare i tre che hanno un tab corrispondente: `agent` → `aiChat`, `toolkit` → `toolbox`, `sessions` → `partite`
-- [ ] Decidere per i quattro che **non** hanno alcun tab nella superficie a 5 (`faq`, `reviews`, `rules`, `strategies`): puntarli a `/library/:id` senza `?tab=` (stesso esito di oggi, ma dichiarato) oppure rimuovere il redirect. Scegliere **non** lasciarli puntare a un id inesistente, che è il difetto
-- [ ] Un test che leghi le destinazioni dei redirect al validatore: ogni `?tab=` prodotto da `next.config.js` deve soddisfare `isGameTabId`. Senza questo legame la deriva si ripete — è già successa una volta in silenzio
-- [ ] Correggere il commento di #1004 (premessa caduta **e** l'affermazione sui sotto-percorsi) e l'`Issue #5042` di `layout.tsx:3`
+- [x] Rimappare i tre che hanno un tab corrispondente: `agent` → `aiChat`, `toolkit` → `toolbox`, `sessions` → `partite`
+- [x] Decidere per i quattro che **non** hanno alcun tab nella superficie a 5 (`faq`, `reviews`, `rules`, `strategies`): puntarli a `/library/:id` senza `?tab=` (stesso esito di oggi, ma dichiarato) oppure rimuovere il redirect. Scegliere **non** lasciarli puntare a un id inesistente, che è il difetto
+- [x] Un test che leghi le destinazioni dei redirect al validatore: ogni `?tab=` prodotto da `next.config.js` deve soddisfare `isGameTabId`. Senza questo legame la deriva si ripete — è già successa una volta in silenzio
+- [x] Correggere il commento di #1004 (premessa caduta **e** l'affermazione sui sotto-percorsi) e l'`Issue #5042` di `layout.tsx:3`
 
 ---
 
@@ -145,11 +145,11 @@ Tre istanze della stessa malformazione in due giorni — lo scaffold #4068 elimi
 
 ### Forma del gate
 
-- [ ] Estrarre i `data-testid` **cercati** da `apps/web/e2e/**` (tutte le forme: `[data-testid="x"]`, `getByTestId('x')`, selettori composti con attributi aggiuntivi)
-- [ ] Estrarre i `data-testid` **dichiarati** in `apps/web/src/**`, escludendo `__tests__/**` — l'unica occorrenza di `meeple-card` era un mock Vitest, e contarla avrebbe mascherato il difetto
-- [ ] Il gate fallisce quando un testid cercato non è dichiarato. Deve girare in un workflow che si attiva sulle PR verso `main-dev` (`dev-fast.yml`), **non** in `backend-e2e-tests.yml`, che su quel target non gira
-- [ ] Prima dell'attivazione: misurare la baseline. Se l'elenco degli orfani non è vuoto — e §4 dice che non lo è — il gate va introdotto insieme alla bonifica, oppure con una lista di eccezioni **nominata e con la issue che la chiude**, come fa l'elenco `Exempt` di `SkipReasonClassArchitectureTests`
-- [ ] Verificare il gate **per perturbazione**: aggiungere un testid inesistente a una spec e constatare che il gate diventa rosso. Un gate che non si è visto fallire non è un gate
+- [x] Estrarre i `data-testid` **cercati** da `apps/web/e2e/**` (tutte le forme: `[data-testid="x"]`, `getByTestId('x')`, selettori composti con attributi aggiuntivi)
+- [x] Estrarre i `data-testid` **dichiarati** in `apps/web/src/**`, escludendo `__tests__/**` — l'unica occorrenza di `meeple-card` era un mock Vitest, e contarla avrebbe mascherato il difetto
+- [x] Il gate fallisce quando un testid cercato non è dichiarato. Deve girare in un workflow che si attiva sulle PR verso `main-dev` (`dev-fast.yml`), **non** in `backend-e2e-tests.yml`, che su quel target non gira
+- [x] Prima dell'attivazione: misurare la baseline. Se l'elenco degli orfani non è vuoto — e §4 dice che non lo è — il gate va introdotto insieme alla bonifica, oppure con una lista di eccezioni **nominata e con la issue che la chiude**, come fa l'elenco `Exempt` di `SkipReasonClassArchitectureTests`
+- [x] Verificare il gate **per perturbazione**: aggiungere un testid inesistente a una spec e constatare che il gate diventa rosso. Un gate che non si è visto fallire non è un gate
 
 ---
 

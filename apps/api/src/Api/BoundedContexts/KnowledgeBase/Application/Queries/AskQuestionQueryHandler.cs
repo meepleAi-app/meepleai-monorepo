@@ -36,7 +36,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly ILlmService _llmService;
     private readonly IRagValidationPipelineService _validationPipeline;
-    private readonly IRagAccessService _ragAccessService;
+    private readonly IAnswerPreconditions _preconditions;
     private readonly IRagQualityTracker _qualityTracker;
     private readonly QueryComplexityAnalyzer _complexityAnalyzer;
     private readonly ISemanticResponseCache _responseCache;
@@ -59,7 +59,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IPdfDocumentRepository pdfDocumentRepository,
         ILlmService llmService,
         IRagValidationPipelineService validationPipeline,
-        IRagAccessService ragAccessService,
+        IAnswerPreconditions preconditions,
         IRagQualityTracker qualityTracker,
         QueryComplexityAnalyzer complexityAnalyzer,
         ISemanticResponseCache responseCache,
@@ -81,7 +81,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
-        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _qualityTracker = qualityTracker ?? throw new ArgumentNullException(nameof(qualityTracker));
         _complexityAnalyzer = complexityAnalyzer ?? throw new ArgumentNullException(nameof(complexityAnalyzer));
         _responseCache = responseCache ?? throw new ArgumentNullException(nameof(responseCache));
@@ -112,13 +112,13 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // #4168: il livello di complessità resta nelle metriche; il modello non lo sceglie più lui
         // (l'override di `LlmRouting:QueryComplexityModels`), ma la versione pubblicata del profilo.
 
-        // RAG access enforcement
+        // Passo 1 di D3 — e, con la 5g-b, il 2 — nel passo condiviso con la chat e la ricerca fra
+        // giochi. Solo quando la domanda nomina un utente: l'unico mittente che non lo fa è
+        // l'auto-test del wizard (RunAgentAutoTestCommandHandler), dietro una rotta admin.
         if (query.UserId.HasValue)
         {
-            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
-                ? parsedRole : UserRole.User;
-            await _ragAccessService.EnsureRagAccessAsync(
-                query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
+            await _preconditions.EnsureCanAskAboutGameAsync(
+                query.UserId.Value, query.UserRole, query.GameId, cancellationToken).ConfigureAwait(false);
         }
 
         // D2: la versione pubblicata, letta una volta. Senza profilo nessuna risposta, mai i valori compilati.

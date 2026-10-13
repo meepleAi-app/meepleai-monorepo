@@ -12,7 +12,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <param name="GameId">The game ID to ask question about</param>
 /// <param name="Query">The user's question</param>
 /// <param name="ThreadId">Optional chat thread ID for context</param>
-/// <param name="DocumentIds">Optional document IDs to filter sources (null = all documents)</param>
+/// <param name="DocumentIds">Optional filter by document, as the client names them: <c>VectorDocument.Id</c> (<c>GameDocumentDto.Id</c>). Null or empty = all documents. The pipeline translates them to PDF ids once (#4243)</param>
 /// <param name="ResponseStyle">Response style: "concise" (default), "detailed", or "continuation"</param>
 /// <param name="ContinuationContext">Partial answer text from a previous truncated response</param>
 /// <param name="UserId">Authenticated user id — per-game RAG access is enforced against it</param>

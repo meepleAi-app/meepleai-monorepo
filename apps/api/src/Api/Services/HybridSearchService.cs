@@ -532,7 +532,7 @@ internal class HybridSearchService : IHybridSearchService
                 queryVector,
                 topK: limit,
                 minScore: 0.3,
-                documentIds: documentIds,
+                pdfDocumentIds: documentIds,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

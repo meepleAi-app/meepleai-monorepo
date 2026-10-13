@@ -100,11 +100,11 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         var searchResults = query.SearchMode.ToLowerInvariant() switch
         {
             "vector" => await PerformVectorSearchAsync(
-                query.GameId, queryVector, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.TopK, query.MinScore, query.PdfDocumentIds, cancellationToken).ConfigureAwait(false),
 
             // Phase D (D6): forward QueryRoleHint to the hybrid search re-ranker.
             "hybrid" => await PerformHybridSearchAsync(
-                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.DocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.PdfDocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();

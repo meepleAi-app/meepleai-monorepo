@@ -16,7 +16,7 @@ internal record QaRequest(
     string query,
     Guid? chatId = null,
     SearchMode searchMode = SearchMode.Hybrid, // AI-14: Default to hybrid search
-    IReadOnlyList<Guid>? documentIds = null, // Issue #2051: Filter by document IDs (null = all)
+    IReadOnlyList<Guid>? documentIds = null, // #2051: filter by document, VectorDocument ids as GetGameDocuments returns them (null or empty = all); translated to PDF ids by the pipeline (#4243)
     string responseStyle = "concise",
     string? continuationToken = null);
 internal record QaResponse(

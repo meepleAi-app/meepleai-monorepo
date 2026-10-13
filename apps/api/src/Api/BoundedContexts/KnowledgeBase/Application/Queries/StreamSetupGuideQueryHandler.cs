@@ -257,7 +257,7 @@ etc.";
             new Vector(queryEmbedding),
             SetupSearchTopK,
             SetupSearchMinScore,
-            documentIds: null,
+            pdfDocumentIds: null,
             cancellationToken).ConfigureAwait(false);
 
         if (embeddings == null || embeddings.Count == 0)

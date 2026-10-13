@@ -20,9 +20,9 @@ namespace Api.BoundedContexts.KbQuality.Infrastructure.Adapters;
 /// and reversible: if KB ever extracts to its own assembly, only this adapter changes.</para>
 ///
 /// <para>Doc-scoped search: <see cref="SearchQuery"/> requires a <c>GameId</c> + accepts an
-/// optional <c>DocumentIds</c> filter. We resolve the game id from the
+/// optional <c>PdfDocumentIds</c> filter. We resolve the game id from the
 /// <see cref="Api.Infrastructure.Entities.PdfDocumentEntity"/> (<c>SharedGameId</c> first, else
-/// <c>PrivateGameId</c>) and pin <c>DocumentIds=[docId]</c> so chunks from sibling docs in the
+/// <c>PrivateGameId</c>) and pin <c>PdfDocumentIds=[docId]</c> so chunks from sibling docs in the
 /// same game are not retrievable. Search runs as the system (no UserId), since KbQuality is
 /// admin-only and the RAG access service short-circuits when UserId is null.</para>
 ///
@@ -66,7 +66,7 @@ internal sealed class KbSearchProviderAdapter(IMediator mediator, MeepleAiDbCont
             Query: question,
             TopK: topK,
             Language: pdfMeta.Language ?? "en",
-            DocumentIds: new[] { docId });
+            PdfDocumentIds: new[] { docId });
 
         var hits = await mediator.Send(query, ct).ConfigureAwait(false);
 

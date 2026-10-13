@@ -213,7 +213,7 @@ internal sealed class SuggestPlayerMoveCommandHandler
                 MinScore: 0.55,
                 SearchMode: "hybrid",
                 Language: "en",
-                DocumentIds: null
+                PdfDocumentIds: null
             );
 
             var searchResults = await _mediator.Send(searchCommand, cancellationToken).ConfigureAwait(false);

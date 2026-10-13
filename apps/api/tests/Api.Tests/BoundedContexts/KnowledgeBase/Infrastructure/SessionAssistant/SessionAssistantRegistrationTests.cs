@@ -26,6 +26,7 @@ public sealed class SessionAssistantRegistrationTests
         services.AddScoped(_ => Mock.Of<ILlmService>());
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.GameManagement.Application.Services.IPlayerNameResolutionService>());
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.SystemConfiguration.Domain.Repositories.IAiModelConfigurationRepository>());
+        services.AddScoped(_ => Mock.Of<MediatR.IMediator>());
         services.AddSessionAssistant();
 
         using var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
@@ -37,5 +38,6 @@ public sealed class SessionAssistantRegistrationTests
             .Should().NotBeNull();
         scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Services.IToolCallingModelCatalog>()
             .Should().NotBeNull();
+        scope.ServiceProvider.GetRequiredService<IAssistantSessionDirectory>().Should().NotBeNull();
     }
 }

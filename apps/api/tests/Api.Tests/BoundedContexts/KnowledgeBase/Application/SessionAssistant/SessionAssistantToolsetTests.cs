@@ -58,13 +58,20 @@ public sealed class SessionAssistantToolsetTests
         Scores: [new(Marco, 2, "punti", 7)],
         HouseRules: []);
 
+    /// <summary>
+    /// L'indice di turno del dominio vale 0 prima dell'avvio e parte da 1 con <c>Start()</c>
+    /// (<c>LiveGameSession.GetCurrentTurnPlayerId</c> usa <c>(indice - 1) % n</c>). Con tre giocatori i
+    /// turni 1, 2 e 3 sono il primo giro: con la formula a base 0 l'ultimo giocatore cadeva nel round 2.
+    /// </summary>
     [Theory]
     [InlineData(0, 3, 1)]
-    [InlineData(2, 3, 1)]
-    [InlineData(3, 3, 2)]
-    [InlineData(5, 3, 2)]
-    [InlineData(6, 3, 3)]
+    [InlineData(1, 3, 1)]
+    [InlineData(3, 3, 1)]
+    [InlineData(4, 3, 2)]
+    [InlineData(6, 3, 2)]
+    [InlineData(7, 3, 3)]
     [InlineData(4, 0, 1)]
+    [InlineData(-2, 3, 1)]
     public void Round_IsAFullTurnOfTheTable(int turnIndex, int activePlayers, int expected) =>
         AssistantRound.Current(turnIndex, activePlayers).Should().Be(expected);
 

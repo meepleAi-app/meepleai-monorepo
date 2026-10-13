@@ -14,6 +14,7 @@ internal static class SessionAssistantServiceExtensions
         services.AddScoped<IAssistantChatClientFactory, AssistantChatClientFactory>();
         services.AddScoped<IAssistantPlayerMatcher, AssistantPlayerMatcher>();
         services.AddScoped<SessionAssistantEvaluator>();
+        services.AddScoped<IAssistantSessionDirectory, LiveSessionAssistantDirectory>();
         services.AddScoped<IToolCallingModelCatalog, CatalogToolCallingModels>();
         return services;
     }

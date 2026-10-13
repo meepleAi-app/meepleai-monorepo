@@ -267,7 +267,13 @@ jobs:
     name: E2E Quality Gate
     runs-on: ${{ vars.RUNNER && fromJSON(vars.RUNNER) || 'ubuntu-latest' }}
     needs: e2e-tests
-    if: always()
+    # Issue #4126 — il gate giudica gli shard. Un dispatch che chiede UN browser li salta di
+    # proposito, e con il solo `always()` il gate leggeva `needs.e2e-tests.result == 'skipped'`
+    # come un fallimento: il run diventava rosso nel primo minuto, prima che un solo test
+    # partisse (run 37735940694). Fuori da quel caso la condizione resta `always()`.
+    if: >-
+      always()
+      && !(github.event_name == 'workflow_dispatch' && (github.event.inputs.project || 'all') != 'all')
     steps:
       - name: Download All Shard Reports
         uses: actions/download-artifact@v8

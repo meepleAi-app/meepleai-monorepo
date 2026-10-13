@@ -19,7 +19,7 @@
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks (must be registered before component import)
@@ -307,5 +307,125 @@ describe('LoginPageContent — error logging dedup (#2171)', () => {
     });
 
     expect(logger.error).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #4134 — il login si conclude a pagina smontata
+// ---------------------------------------------------------------------------
+
+/**
+ * Un login riuscito naviga via: quando `router.push` si risolve la pagina non c'è più, e il
+ * `finally` dei due gestori chiamava comunque `setIsAuthenticating(false)`. Per dare una priorità
+ * a quell'aggiornamento React legge `window.event`; se nel frattempo jsdom è stato smantellato
+ * esce «ReferenceError: window is not defined» come rifiuto non gestito, con zero test falliti
+ * (shard 3/4 della PR #4293, da `_content.auth-provider.test.tsx`).
+ *
+ * Sotto lo smantellamento non è riproducibile in isolamento. Quello che si può asserire è il
+ * contratto: a pagina smontata nessun aggiornamento parte, quindi React non tocca `window.event`.
+ * Senza la guardia questi test leggono `window.event` una volta.
+ */
+describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', () => {
+  const USER = { id: 'u1', email: 'user@example.com', role: 'User' };
+
+  /** Sostituisce `window.event` con un getter che conta le letture. */
+  function countReadsOfWindowEvent() {
+    const reads = vi.fn(() => undefined);
+    Object.defineProperty(window, 'event', { configurable: true, get: reads });
+    return reads;
+  }
+
+  /** Una navigazione che resta in volo finché il test non la conclude. */
+  function navigationInFlight() {
+    let finish!: () => void;
+    pushMock.mockImplementationOnce(
+      () =>
+        new Promise<void>(resolve => {
+          finish = resolve;
+        })
+    );
+    return () => finish();
+  }
+
+  const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+
+  afterEach(() => {
+    delete (window as unknown as { event?: unknown }).event;
+  });
+
+  it('does not schedule a React update when the password login finishes after unmount', async () => {
+    const finishNavigation = navigationInFlight();
+    loginMock.mockResolvedValueOnce({ user: USER, requiresTwoFactor: false });
+
+    const { unmount } = render(<LoginPageContent />);
+    fillAndSubmit();
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+
+    unmount();
+    const reads = countReadsOfWindowEvent();
+    finishNavigation();
+    await settle();
+
+    expect(reads).not.toHaveBeenCalled();
+  });
+
+  it('does not schedule a React update when the 2FA login finishes after unmount', async () => {
+    const finishNavigation = navigationInFlight();
+    loginMock.mockResolvedValueOnce({
+      user: null,
+      requiresTwoFactor: true,
+      tempSessionToken: 'temp-token-abc',
+    });
+    verify2FAMock.mockResolvedValueOnce(USER);
+
+    const { unmount } = render(<LoginPageContent />);
+    fillAndSubmit();
+    const code = await screen.findByLabelText(/code|codice/i);
+    fireEvent.change(code, { target: { value: '123456' } });
+    fireEvent.submit(code.closest('form')!);
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+
+    unmount();
+    const reads = countReadsOfWindowEvent();
+    finishNavigation();
+    await settle();
+
+    expect(reads).not.toHaveBeenCalled();
+  });
+
+  /**
+   * L'altra direzione: a pagina montata il form deve uscire dallo stato di attesa. Senza questa
+   * asserzione una guardia sbagliata lascerebbe il form bloccato dopo un login fallito, e nessun
+   * test se ne accorgerebbe.
+   */
+  it('still leaves the loading state when the login fails and the page is mounted', async () => {
+    loginMock.mockRejectedValueOnce(new Error('Credenziali non valide'));
+
+    render(<LoginPageContent />);
+    fillAndSubmit();
+
+    expect(await screen.findByText('Credenziali non valide')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByLabelText(/auth\.login\.emailLabel/i)).not.toBeDisabled()
+    );
+  });
+
+  it('still leaves the loading state when the 2FA verification fails and the page is mounted', async () => {
+    loginMock.mockResolvedValueOnce({
+      user: null,
+      requiresTwoFactor: true,
+      tempSessionToken: 'temp-token-abc',
+    });
+    // Sempre rifiutata: il campo del codice invia da solo a sei cifre, oltre all'invio del test.
+    verify2FAMock.mockRejectedValue(new Error('Codice non valido'));
+
+    render(<LoginPageContent />);
+    fillAndSubmit();
+    const code = await screen.findByLabelText(/code|codice/i);
+    fireEvent.change(code, { target: { value: '123456' } });
+    fireEvent.submit(code.closest('form')!);
+
+    expect(await screen.findByText('Codice non valido')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/code|codice/i)).not.toBeDisabled());
   });
 });

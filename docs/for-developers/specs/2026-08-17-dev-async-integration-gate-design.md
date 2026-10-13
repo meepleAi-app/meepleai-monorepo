@@ -1,9 +1,22 @@
 # Dev Async — il gate di integrazione non misura la selezione intera
 
 **Data**: 2026-08-17
-**Stato**: design approvato, implementazione non iniziata
+**Stato**: ⚠️ **superato** — vedi il riquadro qui sotto
 **Contesto**: residuo di [#3633](https://github.com/meepleAi-app/meepleai-monorepo/issues/3633) (problema 2) + un difetto nuovo sulla concurrency
 **File toccati**: `.github/workflows/dev-async.yml`, `apps/api/tests/Api.Tests/Infrastructure/SharedTestcontainersFixture.cs`, ~370 file di test (solo l'attributo `[Collection]`)
+
+> ⚠️ **Superato il 2026-08-19, e di nuovo il 2026-10-13.** Delle tre PR previste qui, la prima
+> (#3744: `.trx` come artifact e guardia sulla troncatura) è unita ed è ciò che ha reso misurabile
+> tutto il resto. Le altre due sono state **chiuse senza unione**: le collection ortogonali (#3745)
+> e il database da modello (#3746) poggiavano su una diagnosi che le misure hanno smentito — su
+> Games +2% di test eseguiti e venti falliti in più.
+>
+> La diagnosi corrente e la decisione stanno in
+> [#3742](https://github.com/meepleAi-app/meepleai-monorepo/issues/3742), riscritta il 2026-10-13:
+> uno shard dura quanto la sua catena seriale più lunga, e `Games` è stato diviso in due shard
+> lungo il confine che spezza quella catena. Il `cancel-in-progress` descritto in S2 non c'è più.
+>
+> Questo documento resta come storia: i sintomi sono descritti bene, le cause no.
 
 ---
 

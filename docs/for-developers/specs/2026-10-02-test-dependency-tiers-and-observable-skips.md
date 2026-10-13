@@ -269,6 +269,20 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   `.trx` il nome del metodo da solo ricorre in classi diverse) e un test fuori lista è un errore
   anche a conteggio invariato. Prova nei casi `bats` «nomi: …», e sui `.trx` veri: sostituendo un
   nome dichiarato di Core, a conteggio invariato, lo script esce 1 nominando il test.
+  **Aggiunta del 2026-10-13 (#3742): lo shard che non entrava nel limite.** Reso leggibile il
+  colore, la troncatura di Games è diventata il rosso più frequente: tre run su sette in un giorno,
+  a selezione invariata. Non era un test lento. Lo shard gira in due modi a seconda del runner — sui
+  lenti ogni test dura circa il 45% in più dal primo minuto — e la sua durata è quella della catena
+  seriale più lunga: `Integration-GroupC`, con le classi di `SharedGameCatalog` e di
+  `GameManagement`, occupava il runner da sola dal ventesimo minuto alla fine. `dev-async.yml`
+  divide ora `Games` in `Catalog` e `GamesAdmin` lungo quel confine, su due runner, senza spostare
+  alcuna classe di collection; `ci.yml` resta a tre shard con la stessa selezione (#4329).
+  Due cose restano dopo la correzione, perché il margine si consuma di nuovo con la crescita della
+  suite: `shard-session-budget.sh` scrive a ogni run quanta parte del `TestSessionTimeout` ha usato
+  la sessione e avvisa oltre l'80%, e `integration-shard-matrix.bats` verifica che la matrice non
+  possa perdere test in silenzio — i token esclusi da `Core` sono esattamente quelli selezionati
+  dagli altri shard, i due workflow selezionano lo stesso insieme, ogni shard ha la sua voce nella
+  baseline.
 - [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
   (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
   puntata a un tag inesistente:

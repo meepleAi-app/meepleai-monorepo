@@ -21,7 +21,7 @@
 import { useEffect, useState } from 'react';
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks (must be registered before component import)
@@ -324,7 +324,8 @@ describe('LoginPageContent — error logging dedup (#2171)', () => {
  * (shard 3/4 della PR #4293, da `_content.auth-provider.test.tsx`).
  *
  * Sotto lo smantellamento non è riproducibile in isolamento. Quello che si può asserire è il
- * contratto: a pagina smontata il codice dell'app non chiede nessun aggiornamento.
+ * contratto: a pagina smontata il codice dell'app non chiede nessun aggiornamento. Vale per il
+ * login che riesce e per quello che fallisce: anche il `catch` aggiorna lo stato.
  *
  * ⚠️ «Nessuna lettura di `window.event`» NON è quel contratto, e la prima stesura asseriva
  * quello. React legge `window.event` anche per conto suo: per esempio nel compito che svuota gli
@@ -348,8 +349,12 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
   /**
    * Sostituisce `window.event` con un getter che registra lo stack di chi lo legge.
    *
-   * Un `setState` chiamato da un componente ha quel componente nello stack. Le letture che React
-   * fa per conto suo hanno solo React e lo scheduler.
+   * Un `setState` chiamato dal codice dell'app ha nello stack il file che lo chiama. Le letture
+   * che React fa per conto suo hanno solo React e lo scheduler.
+   *
+   * Il limite, misurato: non vede un setter passato direttamente a qualcosa che nessuna funzione
+   * dell'app attende (`void promise.then(setX)`, `setTimeout(setX)`). I gestori del login
+   * chiamano i setter dal proprio corpo, dopo un `await`.
    */
   function watchReadsOfWindowEvent() {
     const stacks: string[] = [];
@@ -360,8 +365,11 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
         // I dieci frame di default oggi bastano. Un wrapper in più non deve nascondere l'app.
         const limit = Error.stackTraceLimit;
         Error.stackTraceLimit = 50;
-        stacks.push(new Error('window.event').stack ?? '');
-        Error.stackTraceLimit = limit;
+        try {
+          stacks.push(new Error('window.event').stack ?? '');
+        } finally {
+          Error.stackTraceLimit = limit;
+        }
         return undefined;
       },
     });
@@ -373,16 +381,18 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
     };
   }
 
-  /** Una navigazione che resta in volo finché il test non la conclude. */
-  function navigationInFlight() {
+  /** Una chiamata che resta in volo finché il test non la conclude o la fa fallire. */
+  function inFlight(mock: Mock) {
     let finish!: () => void;
-    pushMock.mockImplementationOnce(
+    let fail!: (reason: Error) => void;
+    mock.mockImplementationOnce(
       () =>
-        new Promise<void>(resolve => {
+        new Promise<void>((resolve, reject) => {
           finish = resolve;
+          fail = reject;
         })
     );
-    return () => finish();
+    return { finish: () => finish(), fail: (reason: Error) => fail(reason) };
   }
 
   const settle = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -401,7 +411,7 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
   /**
    * Il rilevatore, prima direzione: un aggiornamento chiesto dopo lo smontaggio DEVE comparire.
    * Il giorno in cui React smette di leggere `window.event` per un `setState`, o lo stack cambia
-   * forma, è questo test a dirlo. Senza, i due sul login passerebbero per niente.
+   * forma, è questo test a dirlo. Senza, quelli sul login passerebbero per niente.
    */
   it('sees an update the app requests after unmount', () => {
     const late = { requestUpdate: () => {} };
@@ -418,7 +428,8 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
 
     late.requestUpdate();
 
-    expect(reads.requestedByTheApp()).toHaveLength(1);
+    // Oggi è una lettura per `setState`. Quante siano è affare di React, non di questo test.
+    expect(reads.requestedByTheApp().length).toBeGreaterThanOrEqual(1);
   });
 
   /**
@@ -432,12 +443,13 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
     setTimeout(Reflect.get, 0, window, 'event');
     await settle();
 
-    expect(reads.all()).toHaveLength(1);
+    // Almeno quella del timer. Se nel frattempo ne arriva una di React, non conta nemmeno lei.
+    expect(reads.all().length).toBeGreaterThanOrEqual(1);
     expect(reads.requestedByTheApp()).toEqual([]);
   });
 
   it('does not schedule a React update when the password login finishes after unmount', async () => {
-    const finishNavigation = navigationInFlight();
+    const navigation = inFlight(pushMock);
     loginMock.mockResolvedValueOnce({ user: USER, requiresTwoFactor: false });
 
     const { unmount } = render(<LoginPageContent />);
@@ -446,14 +458,31 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
 
     unmount();
     const reads = watchReadsOfWindowEvent();
-    finishNavigation();
+    navigation.finish();
     await settle();
 
     expect(reads.requestedByTheApp()).toEqual([]);
   });
 
+  it('does not schedule a React update when the password login fails after unmount', async () => {
+    const sessionRefresh = inFlight(mockAuth.refreshUser);
+    loginMock.mockResolvedValueOnce({ user: USER, requiresTwoFactor: false });
+
+    const { unmount } = render(<LoginPageContent />);
+    fillAndSubmit();
+    await waitFor(() => expect(mockAuth.refreshUser).toHaveBeenCalled());
+
+    unmount();
+    const reads = watchReadsOfWindowEvent();
+    sessionRefresh.fail(new Error('sessione non disponibile'));
+    await settle();
+
+    expect(reads.requestedByTheApp()).toEqual([]);
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it('does not schedule a React update when the 2FA login finishes after unmount', async () => {
-    const finishNavigation = navigationInFlight();
+    const navigation = inFlight(pushMock);
     loginMock.mockResolvedValueOnce({
       user: null,
       requiresTwoFactor: true,
@@ -469,20 +498,45 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
       target: { value: '123456' },
     });
     await waitFor(() => expect(pushMock).toHaveBeenCalled());
-    expect(verify2FAMock).toHaveBeenCalledTimes(1);
 
     unmount();
     const reads = watchReadsOfWindowEvent();
-    finishNavigation();
+    navigation.finish();
     await settle();
 
     expect(reads.requestedByTheApp()).toEqual([]);
+    expect(verify2FAMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not schedule a React update when the 2FA login fails after unmount', async () => {
+    const sessionRefresh = inFlight(mockAuth.refreshUser);
+    loginMock.mockResolvedValueOnce({
+      user: null,
+      requiresTwoFactor: true,
+      tempSessionToken: 'temp-token-abc',
+    });
+    verify2FAMock.mockResolvedValueOnce(USER);
+
+    const { unmount } = render(<LoginPageContent />);
+    fillAndSubmit();
+    fireEvent.change(await screen.findByLabelText(/code|codice/i), {
+      target: { value: '123456' },
+    });
+    await waitFor(() => expect(mockAuth.refreshUser).toHaveBeenCalled());
+
+    unmount();
+    const reads = watchReadsOfWindowEvent();
+    sessionRefresh.fail(new Error('sessione non disponibile'));
+    await settle();
+
+    expect(reads.requestedByTheApp()).toEqual([]);
+    expect(verify2FAMock).toHaveBeenCalledTimes(1);
   });
 
   /**
-   * L'altra direzione: a pagina montata il form deve uscire dallo stato di attesa. Senza questa
-   * asserzione una guardia sbagliata lascerebbe il form bloccato dopo un login fallito, e nessun
-   * test se ne accorgerebbe.
+   * L'altra direzione: a pagina montata il form deve mostrare l'errore e uscire dallo stato di
+   * attesa. Senza queste asserzioni una guardia sbagliata lascerebbe il form bloccato, o muto,
+   * dopo un login fallito, e nessun test se ne accorgerebbe.
    */
   it('still leaves the loading state when the login fails and the page is mounted', async () => {
     loginMock.mockRejectedValueOnce(new Error('Credenziali non valide'));

@@ -45,7 +45,7 @@ internal class HybridSearchService : IHybridSearchService
         Guid gameId,
         SearchMode mode = SearchMode.Hybrid,
         int limit = 10,
-        List<Guid>? documentIds = null,
+        List<Guid>? pdfDocumentIds = null,
         float vectorWeight = 0.7f,
         float keywordWeight = 0.3f,
         double keywordMinScore = 0.0,
@@ -65,22 +65,26 @@ internal class HybridSearchService : IHybridSearchService
         // Security: Cap limit parameter to prevent resource exhaustion
         var safeLimit = Math.Min(Math.Max(limit, 1), 100); // Min: 1, Max: 100
 
+        // #4243: an empty filter means no filter, for BOTH arms. The vector arm already read it that
+        // way and the keyword arm did not (it kept nothing), so the two disagreed on an empty list.
+        var documentFilter = pdfDocumentIds is { Count: > 0 } ? pdfDocumentIds : null;
+
         _logger.LogInformation(
             "Hybrid search started: query='{Query}', gameId={GameId}, mode={Mode}, documentFilter={HasFilter}, vectorWeight={VectorWeight}, keywordWeight={KeywordWeight}, limit={Limit}, roleHint={RoleHint}",
-            query, gameId, mode, documentIds != null, vectorWeight, keywordWeight, limit, queryRoleHint);
+            query, gameId, mode, documentFilter != null, vectorWeight, keywordWeight, limit, queryRoleHint);
 
         try
         {
             switch (mode)
             {
                 case SearchMode.Semantic:
-                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentIds, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
+                    return await SearchSemanticOnlyAsync(query, gameId, safeLimit, documentFilter, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Keyword:
-                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentIds, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
+                    return await SearchKeywordOnlyAsync(query, gameId, safeLimit, documentFilter, keywordMinScore, queryRoleHint, cancellationToken).ConfigureAwait(false);
 
                 case SearchMode.Hybrid:
-                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentIds, keywordMinScore, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
+                    return await SearchHybridAsync(query, gameId, safeLimit, vectorWeight, keywordWeight, documentFilter, keywordMinScore, queryRoleHint, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
                 default:
                     throw new ArgumentException($"Unsupported search mode: {mode}", nameof(mode));
@@ -112,13 +116,13 @@ internal class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         GameBookRole queryRoleHint,
         QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
         var vectorResults = await ExecuteVectorSearchAsync(
-            query, gameId, limit, documentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
+            query, gameId, limit, pdfDocumentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
         var results = vectorResults.Select((r, index) =>
         {
@@ -172,7 +176,7 @@ internal class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         double keywordMinScore,
         GameBookRole queryRoleHint,
         CancellationToken cancellationToken)
@@ -187,9 +191,9 @@ internal class HybridSearchService : IHybridSearchService
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Issue #2051: Filter by document IDs if specified
-        var filteredResults = documentIds == null
+        var filteredResults = pdfDocumentIds == null
             ? keywordResults
-            : keywordResults.Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
+            : keywordResults.Where(r => pdfDocumentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
         _logger.LogInformation(
             "Keyword search: {TotalResults} results from PostgreSQL, {FilteredResults} after document filter",
@@ -240,7 +244,7 @@ internal class HybridSearchService : IHybridSearchService
         int limit,
         float vectorWeight,
         float keywordWeight,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         double keywordMinScore,
         GameBookRole queryRoleHint,
         QueryEmbedding? precomputedQueryEmbedding,
@@ -288,7 +292,7 @@ internal class HybridSearchService : IHybridSearchService
         // #2480 aveva gia' corretto la stessa classe di errore FRA giochi, dando a ciascuno il
         // proprio scope; questo e' il caso residuo DENTRO un singolo gioco.
         var vectorEmbeddings = await ExecuteVectorSearchAsync(
-            query, gameId, fetchLimit, documentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
+            query, gameId, fetchLimit, pdfDocumentIds, precomputedQueryEmbedding, cancellationToken).ConfigureAwait(false);
 
         var keywordResults = await _keywordSearchService.SearchAsync(
             query,
@@ -300,9 +304,9 @@ internal class HybridSearchService : IHybridSearchService
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Apply document filter to keyword results
-        var filteredKeywordResults = documentIds == null
+        var filteredKeywordResults = pdfDocumentIds == null
             ? keywordResults
-            : keywordResults.Where(r => documentIds.Any(id =>
+            : keywordResults.Where(r => pdfDocumentIds.Any(id =>
                 string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal))).ToList();
 
         // Convert pgvector results to SearchResultItem for RRF fusion.
@@ -467,7 +471,7 @@ internal class HybridSearchService : IHybridSearchService
         string query,
         Guid gameId,
         int limit,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         QueryEmbedding? precomputedQueryEmbedding,
         CancellationToken cancellationToken)
     {
@@ -532,7 +536,7 @@ internal class HybridSearchService : IHybridSearchService
                 queryVector,
                 topK: limit,
                 minScore: 0.3,
-                pdfDocumentIds: documentIds,
+                pdfDocumentIds: pdfDocumentIds,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(

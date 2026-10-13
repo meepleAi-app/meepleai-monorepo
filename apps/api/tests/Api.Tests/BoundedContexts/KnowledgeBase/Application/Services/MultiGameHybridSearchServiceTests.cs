@@ -544,7 +544,7 @@ public class MultiGameHybridSearchServiceTests
             limit: 10,
             mode: SearchMode.Hybrid,
             minScore: 0.0,
-            documentIds: documentIds,
+            pdfDocumentIds: documentIds,
             cancellationToken: CancellationToken.None);
 
         // Assert — each game received the same documentIds allowlist

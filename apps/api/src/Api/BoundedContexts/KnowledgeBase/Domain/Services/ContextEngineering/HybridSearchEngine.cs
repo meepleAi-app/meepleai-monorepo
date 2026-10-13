@@ -82,7 +82,7 @@ internal sealed class HybridSearchEngine : IHybridSearchEngine
                 request.GameId,
                 SearchMode.Hybrid,
                 limit: request.MaxResults * 2, // Fetch 2x for reranking
-                documentIds: request.DocumentIds,
+                pdfDocumentIds: request.DocumentIds,
                 vectorWeight: vectorWeight,
                 keywordWeight: keywordWeight,
                 keywordMinScore: 0.01,

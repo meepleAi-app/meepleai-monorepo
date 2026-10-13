@@ -147,7 +147,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         int limit,
         SearchMode mode = SearchMode.Hybrid,
         double minScore = 0.0,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         // EC-1: no accessible games → return empty immediately
@@ -156,11 +156,11 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
 
         _logger.LogInformation(
             "MultiGameHybridSearch: query='{Query}', gameCount={GameCount}, limit={Limit}, mode={Mode}, minScore={MinScore}, documentIdsCount={DocCount}",
-            query, gameIds.Count, limit, mode, minScore, documentIds?.Count);
+            query, gameIds.Count, limit, mode, minScore, pdfDocumentIds?.Count);
 
         // Convert IReadOnlyList → List once (interface requires List<Guid>? on the per-game service).
         // Materialise outside the per-game loop so all parallel calls share the same instance.
-        var documentIdsList = documentIds is null ? null : new List<Guid>(documentIds);
+        var pdfDocumentIdsList = pdfDocumentIds is null ? null : new List<Guid>(pdfDocumentIds);
 
         // Step 1: Launch parallel per-game searches.
         // We request 'limit' results per game so each game contributes enough candidates
@@ -198,7 +198,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
 
         using var throttle = new SemaphoreSlim(MaxConcurrentGameSearches);
         var tasks = gameIds
-            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, documentIdsList, queryEmbedding, throttle, cancellationToken))
+            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, pdfDocumentIdsList, queryEmbedding, throttle, cancellationToken))
             .ToList();
 
         // Task.WhenAll guarantees parallel execution (all tasks start before any is awaited);
@@ -264,7 +264,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     /// Issues a single-game search in its OWN DI scope (own DbContext), catching and logging any
     /// exception so that one failing game does not abort the entire cross-game query (EC-2 resilience).
     /// The <paramref name="throttle"/> bounds how many per-game searches hit the DB concurrently.
-    /// The <paramref name="documentIds"/> allowlist (Issue #1686) restricts the per-game hit set to a
+    /// The <paramref name="pdfDocumentIds"/> allowlist (Issue #1686) restricts the per-game hit set to a
     /// subset of PDF documents; <c>null</c> = no document filter.
     /// </summary>
     private async Task<(Guid GameId, List<HybridSearchResult> Results)> SearchGameSafeAsync(
@@ -272,7 +272,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         Guid gameId,
         int limit,
         SearchMode mode,
-        List<Guid>? documentIds,
+        List<Guid>? pdfDocumentIds,
         QueryEmbedding? queryEmbedding,
         SemaphoreSlim throttle,
         CancellationToken cancellationToken)
@@ -291,7 +291,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
                 gameId,
                 mode,
                 limit,
-                documentIds: documentIds,
+                pdfDocumentIds: pdfDocumentIds,
                 precomputedQueryEmbedding: queryEmbedding,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 

@@ -53,6 +53,7 @@ public sealed class DocumentFilterIdentityTests
     private const string LexicalOnlyInA = "Each player draws two extra cards at setup when the long variant is used.";
     private const string VectorOnlyInA = "Deal a starting hand of five to everybody.";
     private const string BothArmsInB = "In the expansion each player draws seven cards at setup.";
+    private const string VectorOnlyInB = "Hand seven of them to everybody in the expansion.";
 
     private readonly AgentProfileFieldEffectHostFixture _hostFixture;
     private HttpClient _client = null!;
@@ -106,12 +107,13 @@ public sealed class DocumentFilterIdentityTests
         });
         await db.SaveChangesAsync(Ct);
 
-        _pdfA = await IndexPdfAsync(db, "rulebook-a.pdf", _gameId,
+        _pdfA = await IndexPdfAsync(db, "rulebook-a.pdf", _gameId, documentType: "base",
             (BothArmsInA, QueryVectorEmbeddings.Axis(1f, 0f)),
             (LexicalOnlyInA, QueryVectorEmbeddings.Axis(0f, 1f)),
             (VectorOnlyInA, QueryVectorEmbeddings.Axis(1f, 0f)));
-        _pdfB = await IndexPdfAsync(db, "expansion-b.pdf", _gameId,
-            (BothArmsInB, QueryVectorEmbeddings.Axis(1f, 0f)));
+        _pdfB = await IndexPdfAsync(db, "expansion-b.pdf", _gameId, documentType: "expansion",
+            (BothArmsInB, QueryVectorEmbeddings.Axis(1f, 0f)),
+            (VectorOnlyInB, QueryVectorEmbeddings.Axis(1f, 0f)));
     }
 
     public ValueTask DisposeAsync()
@@ -152,13 +154,30 @@ public sealed class DocumentFilterIdentityTests
         texts.Should().BeEquivalentTo([BothArmsInA, LexicalOnlyInA, VectorOnlyInA]);
     }
 
-    /// <summary>L'altra direzione: il filtro sceglie il PDF nominato, non sempre lo stesso.</summary>
+    /// <summary>
+    /// L'altra direzione: il filtro sceglie il PDF nominato, non sempre lo stesso. Anche qui un
+    /// passaggio lo trova solo il braccio vettoriale, altrimenti il test passerebbe col solo lessicale.
+    /// </summary>
     [Fact]
-    public async Task Hybrid_WithTheOtherPdfId_ReturnsTheOtherPdfOnly()
+    public async Task Hybrid_WithTheOtherPdfId_UsesBothArms_OnTheOtherPdfOnly()
     {
         var texts = await SearchAsync("hybrid", documentIds: [_pdfB.PdfId]);
 
-        texts.Should().BeEquivalentTo([BothArmsInB]);
+        texts.Should().BeEquivalentTo([BothArmsInB, VectorOnlyInB]);
+    }
+
+    /// <summary>
+    /// Una lista vuota vuol dire «nessun filtro», per entrambi i bracci. Il vettoriale la leggeva
+    /// già così; il lessicale la prendeva come filtro e non teneva niente.
+    /// </summary>
+    [Fact]
+    public async Task AnEmptyFilter_IsNoFilter_ForBothArms()
+    {
+        var withoutFilter = await SearchAsync("hybrid", documentIds: null);
+        var withAnEmptyFilter = await SearchAsync("hybrid", documentIds: []);
+
+        withoutFilter.Should().Contain(LexicalOnlyInA, "il controllo: senza filtro il braccio lessicale c'è");
+        withAnEmptyFilter.Should().Equal(withoutFilter);
     }
 
     /// <summary>
@@ -190,6 +209,21 @@ public sealed class DocumentFilterIdentityTests
 
         withoutFacet.Should().NotBeEmpty("il controllo: senza facet la ricerca trova qualcosa");
         withFacet.Should().Equal(withoutFacet);
+    }
+
+    /// <summary>
+    /// Un facet che esclude un documento lo toglie da entrambi i bracci, e sui documenti rimasti i
+    /// due bracci lavorano ancora: il passaggio che trova solo il vettoriale è fra i risultati.
+    /// </summary>
+    [Fact]
+    public async Task GlobalSearch_AFacetThatExcludesADocument_KeepsBothArmsOnTheRest()
+    {
+        var results = await GlobalSearchAsync(language: null, docType: ["base"]);
+
+        results.Should().Contain(r => r.EndsWith(BothArmsInA, StringComparison.Ordinal))
+            .And.Contain(r => r.EndsWith(VectorOnlyInA, StringComparison.Ordinal))
+            .And.NotContain(r => r.EndsWith(BothArmsInB, StringComparison.Ordinal))
+            .And.NotContain(r => r.EndsWith(VectorOnlyInB, StringComparison.Ordinal));
     }
 
     // ─── La chat: il client manda l'id del documento vettoriale (GameDocumentDto.Id) ───
@@ -246,7 +280,7 @@ public sealed class DocumentFilterIdentityTests
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             var otherGameId = await TestSessionHelper.SeedSharedGameAsync(db, "Un altro gioco");
-            elsewhere = await IndexPdfAsync(db, "elsewhere.pdf", otherGameId,
+            elsewhere = await IndexPdfAsync(db, "elsewhere.pdf", otherGameId, documentType: "base",
                 (BothArmsInB, QueryVectorEmbeddings.Axis(1f, 0f)));
         }
 
@@ -279,7 +313,7 @@ public sealed class DocumentFilterIdentityTests
     }
 
     /// <summary>La ricerca fra giochi, con l'utente del test: passaggio e punteggio, nell'ordine.</summary>
-    private async Task<List<string>> GlobalSearchAsync(string? language)
+    private async Task<List<string>> GlobalSearchAsync(string? language, IReadOnlyList<string>? docType = null)
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -293,6 +327,7 @@ public sealed class DocumentFilterIdentityTests
                 MinScore: 0.0,
                 UserId: _userId,
                 Role: UserRole.User,
+                DocType: docType,
                 Language: language),
             Ct);
 
@@ -334,7 +369,7 @@ public sealed class DocumentFilterIdentityTests
     /// produzione) e i suoi passaggi nelle due tabelle che i bracci leggono.
     /// </summary>
     private async Task<IndexedPdf> IndexPdfAsync(
-        MeepleAiDbContext db, string fileName, Guid gameId, params (string Text, float[] Vector)[] chunks)
+        MeepleAiDbContext db, string fileName, Guid gameId, string documentType, params (string Text, float[] Vector)[] chunks)
     {
         var pdfId = Guid.NewGuid();
         db.PdfDocuments.Add(new PdfDocumentEntity
@@ -347,6 +382,7 @@ public sealed class DocumentFilterIdentityTests
             ProcessingState = "Ready",
             ProcessedAt = DateTime.UtcNow,
             SharedGameId = gameId,
+            DocumentType = documentType,
         });
 
         var vectorDocumentId = Guid.NewGuid();

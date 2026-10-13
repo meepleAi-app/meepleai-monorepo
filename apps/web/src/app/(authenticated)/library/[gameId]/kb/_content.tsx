@@ -38,6 +38,7 @@ import {
   type ReindexModalLabels,
   type ReindexPhase,
 } from '@/components/features/kb-hub';
+import { PdfUploadModal } from '@/components/library/PdfUploadModal';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import {
@@ -143,6 +144,7 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
   const [reindexPhase, setReindexPhase] = useState<ReindexPhase>('confirm');
   const [actionsMenuPdf, setActionsMenuPdf] = useState<GamePdfDto | null>(null);
   const [deletePdfTarget, setDeletePdfTarget] = useState<GamePdfDto | null>(null);
+  const [uploadOpen, setUploadOpen] = useState(false);
 
   // ─── Loading ──────────────────────────────────────────
   if (statusQuery.isLoading || pdfsQuery.isLoading) {
@@ -316,9 +318,16 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
   const isEmpty = pdfs.length === 0;
   const game = { title: gameTitle, emoji: '📚' };
 
+  // #4257: the CTA was a placeholder waiting for "the PDF upload page" — `/upload`, which
+  // was Admin/Editor only and is now retired. A user uploads here, with the same modal the
+  // library cards open.
   const handleUpload = (): void => {
-    // Upload flow is owned by another route; CTA acts as a no-op placeholder for MVP.
-    // Real wireup will route to the existing PDF upload page when the link is decided.
+    setUploadOpen(true);
+  };
+
+  const handleUploadSuccess = (): void => {
+    void pdfsQuery.refetch();
+    void statusQuery.refetch();
   };
 
   const handlePdfActionTrigger = (pdfId: string): void => {
@@ -407,6 +416,14 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
           setReindexOpen(false);
           setReindexPhase('confirm');
         }}
+      />
+
+      <PdfUploadModal
+        isOpen={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+        gameId={gameId}
+        gameTitle={gameTitle}
+        onUploadSuccess={handleUploadSuccess}
       />
 
       <DeleteDialog

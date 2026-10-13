@@ -49,8 +49,8 @@ internal sealed class SearchDocumentChunksByVectorQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Step 1: Resolve VectorDocument → VectorDocumentId (the FK used in pgvector_embeddings)
-        // and GameId (required by the search index filter).
+        // Step 1: Resolve the VectorDocument of this PDF: it says whether the PDF is indexed
+        // and gives the GameId the search index filters by.
         var vectorDoc = await _db.VectorDocuments
             .AsNoTracking()
             .Where(v => v.PdfDocumentId == query.PdfDocumentId)
@@ -66,7 +66,6 @@ internal sealed class SearchDocumentChunksByVectorQueryHandler
             return NotIndexedResult;
         }
 
-        var vectorDocumentId = vectorDoc.Id;
         var gameId = vectorDoc.GameId.Value;
 
         // Step 2: Embed the query string. #3737: retrieval question -> e5 "query:" prefix.
@@ -86,14 +85,14 @@ internal sealed class SearchDocumentChunksByVectorQueryHandler
         var queryVector = new Vector(embResult.Embeddings[0]);
         var topK = Math.Clamp(query.TopK, 1, 100);
 
-        // Step 3: Search pgvector filtered to this document's VectorDocumentId.
+        // Step 3: Search pgvector filtered to this document (#4243: the filter is the PDF id).
         var hits = await _embeddingRepo
             .SearchByVectorWithScoresAsync(
                 gameId,
                 queryVector,
                 topK,
                 query.MinScore,
-                documentIds: new[] { vectorDocumentId },
+                pdfDocumentIds: new[] { query.PdfDocumentId },
                 cancellationToken)
             .ConfigureAwait(false);
 

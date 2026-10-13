@@ -45,7 +45,6 @@ internal static class UserUsageEndpoints
 - PDF uploads this month vs. max
 - Agent queries today vs. max
 - Session queries vs. max
-- Agents count vs. max
 - Photos this session vs. max
 - Session save enabled flag
 - Catalog proposals this week vs. max")

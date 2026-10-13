@@ -76,17 +76,13 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
             ? owner.DisplayName
             : owner.Email?.Split('@')[0] ?? "Anonymous";
 
-        // Get library entries
-        var (entries, totalCount) = await _libraryRepository.GetUserLibraryPaginatedAsync(
-            userId: shareLink.UserId,
-            search: null,
-            favoritesOnly: null,
-            stateFilter: null,
+        // Every library entry, page by page (#4187): one page of 100 "for the shared view" showed
+        // at most 100 games while the response declared the real total.
+        var (entries, totalCount) = await _libraryRepository.GetAllUserLibraryEntriesAsync(
+            shareLink.UserId,
             sortBy: "addedAt",
             descending: true,
-            page: 1,
-            pageSize: 100, // Get all for shared view
-            cancellationToken: cancellationToken
+            cancellationToken
         ).ConfigureAwait(false);
 
         // Get SharedGame info for each entry

@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { api } from '@/lib/api';
+import { NotFoundError } from '@/lib/api/core/errors';
 import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 
 export interface OwnershipDeclarationDialogProps {
@@ -53,8 +54,14 @@ export function OwnershipDeclarationDialog({
       onOwnershipDeclared(result);
       onOpenChange(false);
     } catch (error) {
+      // #4155: il 404 significa che il gioco non è (più) in libreria, e il messaggio del
+      // backend è in inglese: si dice cosa fare.
       toast.error(
-        error instanceof Error ? error.message : 'Impossibile dichiarare il possesso. Riprova.'
+        error instanceof NotFoundError
+          ? `${gameName} non è nella tua libreria: aggiungilo prima di dichiararne il possesso.`
+          : error instanceof Error
+            ? error.message
+            : 'Impossibile dichiarare il possesso. Riprova.'
       );
     } finally {
       setIsLoading(false);
@@ -120,12 +127,12 @@ export function OwnershipDeclarationDialog({
 
               <details className="text-xs">
                 <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
-                  Perch\u00e9 lo chiediamo?
+                  Perché lo chiediamo?
                 </summary>
                 <p className="mt-2 text-muted-foreground">
-                  La dichiarazione di possesso ci aiuta a offrirti funzionalit\u00e0 personalizzate
-                  e a rispettare le licenze dei contenuti editoriali. Dichiarando il possesso
-                  confermi di avere una copia fisica o digitale del gioco.
+                  La dichiarazione di possesso ci aiuta a offrirti funzionalità personalizzate e a
+                  rispettare le licenze dei contenuti editoriali. Dichiarando il possesso confermi
+                  di avere una copia fisica o digitale del gioco.
                 </p>
               </details>
             </div>
@@ -136,7 +143,12 @@ export function OwnershipDeclarationDialog({
             Non ancora
           </AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
+            onClick={e => {
+              // #4155: Radix AlertDialog.Action chiude il dialogo al click, prima che la
+              // richiesta finisca. Lo chiude handleConfirm, e solo a dichiarazione riuscita.
+              e.preventDefault();
+              void handleConfirm();
+            }}
             disabled={!confirmed || isLoading}
             className="bg-amber-600 text-white hover:bg-amber-700"
           >

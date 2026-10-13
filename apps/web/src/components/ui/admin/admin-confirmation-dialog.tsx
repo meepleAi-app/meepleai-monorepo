@@ -100,15 +100,21 @@ export function AdminConfirmationDialog({
   const requiredPhrase = confirmPhrase ?? 'CONFIRM';
   const isConfirmDisabled = isLevel2 && typedConfirmation !== requiredPhrase;
 
-  // PR #2428 — Guard `setIsSubmitting(false)` in `handleConfirm`'s `finally`
-  // against the post-unmount race. The typical flow is:
+  // PR #2428 / issue #4132 — Mount sentinel guarding every state update that
+  // `handleConfirm` can perform after its `await`. The flow is:
   //   1. await onConfirm()  // host may setState that flips `isOpen` to false
-  //   2. onClose()           // host's onOpenChange unmounts the Dialog tree
-  //   3. finally { setIsSubmitting(false) }  // ← would fire on torn-down node
+  //   2. onClose()           // the HOST's state setter, not a no-op
+  //   3. finally { setIsSubmitting(false) }  // this component's own state
   // React 19's dispatchSetState eagerly resolves update priority via `window`,
-  // and jsdom may have cleared `window` by the time the finally runs, surfacing
-  // as `ReferenceError: window is not defined`. The canonical fix is a mount
-  // sentinel that short-circuits the late setState.
+  // and jsdom may have cleared `window` by the time either of them runs,
+  // surfacing as `ReferenceError: window is not defined`.
+  //
+  // PR #2428 guarded step 3 only, and described step 2 as a no-op. It is not:
+  // RestartAllPanel passes `() => setShowConfirm(false)`, so a late `onClose()`
+  // updates the host on a torn-down tree. That is what kept turning the
+  // frontend test shard red with zero failing tests (#4132). Both steps are
+  // guarded now, and the suite asserts both directions: onClose IS called while
+  // mounted, and is NOT called after unmount.
   const isMountedRef = useRef(true);
   useEffect(() => {
     isMountedRef.current = true;
@@ -130,7 +136,15 @@ export function AdminConfirmationDialog({
     setIsSubmitting(true);
     try {
       await onConfirm();
-      onClose();
+      // Issue #4132 — `onClose` is the host's state setter, not a no-op: calling
+      // it after this component unmounted dispatches a React update on a dead
+      // tree, and React 19 resolves the update priority through `window`, so
+      // under jsdom teardown it surfaces as `ReferenceError: window is not
+      // defined` and turns a green test shard red. Closing an already-unmounted
+      // dialog has no meaning anyway.
+      if (isMountedRef.current) {
+        onClose();
+      }
     } finally {
       if (isMountedRef.current) {
         setIsSubmitting(false);

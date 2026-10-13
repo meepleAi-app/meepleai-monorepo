@@ -16,7 +16,8 @@
  *     only shows when the BE explicitly tells us the email is unverified.
  *   - Locally dismissible per-session via `sessionStorage` so a user can
  *     temporarily hide the banner; it returns on the next page load.
- *   - Primary CTA links to `/email-verification` (the existing pending page).
+ *   - Primary CTA links to `/verification-pending`, which resolves the signed-in
+ *     user's email when no `?email=` is given (#4183).
  */
 
 import { useEffect, useState } from 'react';
@@ -80,7 +81,7 @@ export function EmailVerificationBanner() {
         </p>
       </div>
       <Link
-        href="/email-verification"
+        href="/verification-pending"
         className="rounded-md bg-[hsl(var(--c-warning-ink))] px-3 py-1 text-xs font-bold text-white hover:bg-[hsl(var(--c-warning-ink)/0.9)]"
         data-testid="email-verification-banner-cta"
       >

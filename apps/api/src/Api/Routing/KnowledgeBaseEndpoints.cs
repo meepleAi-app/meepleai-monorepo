@@ -224,8 +224,8 @@ internal static class KnowledgeBaseEndpoints
                 Query: request.Query,
                 UserId: userId,
                 Role: userRole,
-                AgentLanguage: request.Language ?? "it",
-                TopK: request.TopK ?? 8);
+                AgentLanguage: request.Language,
+                AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString()); // #4168
 
             await foreach (var evt in mediator.CreateStream(query, streamCt).ConfigureAwait(false))
             {
@@ -394,7 +394,10 @@ internal static class KnowledgeBaseEndpoints
         logger.LogDebug("GetKnowledgeBaseStatus for game {GameId} by user {UserId}",
             gameId, session!.Principal!.Subject.Id);
 
-        var query = new GetKnowledgeBaseStatusQuery(gameId);
+        var query = new GetKnowledgeBaseStatusQuery(
+            gameId,
+            session.Principal!.Subject.Id,
+            session.Principal!.EffectiveActor.Role);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         if (result is null)
@@ -432,12 +435,11 @@ internal static class KnowledgeBaseEndpoints
         var query = new SearchQuery(
             GameId: gameId,
             Query: req.query,
+            Access: SearchAccess.OfUser(session!.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role),
             TopK: req.topK ?? 5,
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
-            Language: req.language ?? "en",
-            UserId: session!.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            Language: req.language ?? "en"
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -488,10 +490,11 @@ internal static class KnowledgeBaseEndpoints
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
-            Language: req.language ?? "en",
+            Language: req.language,
             BypassCache: req.bypassCache ?? false,
             UserId: session!.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            UserRole: session.Principal!.EffectiveActor.Role,
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString() // #4168
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -512,7 +515,9 @@ internal static class KnowledgeBaseEndpoints
             llmConfidence = response.LlmConfidence,
             overallConfidence = response.OverallConfidence,
             isLowQuality = response.IsLowQuality,
-            citations = response.Citations
+            citations = response.Citations,
+            profileVersionId = response.ProfileVersionId, // #4168
+            language = response.Language
         });
     }
 
@@ -885,7 +890,9 @@ internal static class KnowledgeBaseEndpoints
         var command = new AddMessageCommand(
             ThreadId: threadId,
             Content: req.Content,
-            Role: req.Role
+            Role: req.Role,
+            ProfileVersionId: req.ProfileVersionId,
+            Language: req.Language
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -1540,9 +1547,8 @@ internal sealed record GlobalKbSearchRequest(
 /// User/Role are NOT in the request — they are resolved from the authenticated session.
 /// </summary>
 /// <param name="Query">The natural-language question to ask across all accessible games.</param>
-/// <param name="Language">ISO 639-1 language code for the LLM prompt (default: "it").</param>
-/// <param name="TopK">Max chunks to retrieve cross-game (default: 8, capped by handler).</param>
+/// <param name="Language">ISO 639-1 language the client asks for; used when the question is too short to detect it (#4168).</param>
+/// <remarks>#4168: the number of chunks comes from the published agent profile; a `topK` in the body is ignored.</remarks>
 internal sealed record GlobalKbAskRequest(
     string Query,
-    string? Language = null,
-    int? TopK = null);
+    string? Language = null);

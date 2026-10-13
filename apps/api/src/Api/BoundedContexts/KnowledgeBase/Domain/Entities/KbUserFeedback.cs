@@ -17,12 +17,19 @@ public sealed class KbUserFeedback : AggregateRoot<Guid>
     /// <summary>Commento opzionale (max 500 char).</summary>
     public string? Comment { get; private set; }
     public DateTime CreatedAt { get; private set; }
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta valutata, e la sua
+    /// lingua. Null per i feedback anteriori a #4168 e per le risposte salvate senza provenienza.
+    /// </summary>
+    public Guid? ProfileVersionId { get; private set; }
+    /// <inheritdoc cref="ProfileVersionId"/>
+    public string? Language { get; private set; }
 
     private KbUserFeedback() : base() { }
 
     public static KbUserFeedback Create(
         Guid userId, Guid gameId, Guid chatSessionId, Guid messageId,
-        string outcome, string? comment)
+        string outcome, string? comment, Guid? profileVersionId = null, string? language = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outcome);
         if (outcome is not "helpful" and not "not_helpful")
@@ -40,6 +47,8 @@ public sealed class KbUserFeedback : AggregateRoot<Guid>
             MessageId = messageId,
             Outcome = outcome,
             Comment = comment,
+            ProfileVersionId = profileVersionId,
+            Language = language,
             CreatedAt = DateTime.UtcNow
         };
     }

@@ -55,7 +55,8 @@ export const agentDefinitionDtoSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   description: z.string(),
-  type: z.string().optional().default(''),
+  // Issue #4138: `type` stood here on the response DTO. The backend no longer sends it:
+  // the agent types never had an effect on the answer path, so the field lied.
   config: agentConfigSchema,
   strategyName: z.string().optional().default(''),
   strategyParameters: z.record(z.string(), z.unknown()).optional().default({}),

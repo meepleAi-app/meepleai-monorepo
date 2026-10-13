@@ -253,7 +253,7 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
             tierMock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects.TierLimits.Unlimited);
             tierMock.Setup(t => t.GetUsageAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
+                .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
             services.AddSingleton<ITierEnforcementService>(tierMock.Object);
         }
 

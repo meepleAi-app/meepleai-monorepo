@@ -288,10 +288,7 @@ test.describe('AUTH-13: Remember Me', () => {
 
       // May show expiration warning
       // This depends on implementation - some apps show warning
-      const _warningVisible = await page
-        .getByText(/expir|session.*ending/i)
-        .isVisible()
-        .catch(() => false);
+      const _warningVisible = await page.getByText(/expir|session.*ending/i).isVisible();
       // Just ensure page loads
       await expect(page.locator('body')).toBeVisible();
     });

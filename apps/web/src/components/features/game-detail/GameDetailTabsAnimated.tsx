@@ -20,7 +20,7 @@ import {
   type AnimatedUnderlineTabsProps,
 } from '@/components/ui/navigation/animated-underline-tabs';
 
-export type TabKey = 'info' | 'rules' | 'faqs' | 'sessions' | 'stats' | 'agents' | 'documents';
+export type TabKey = 'info' | 'rules' | 'faqs' | 'sessions' | 'stats' | 'chat' | 'documents';
 
 export type GameDetailTabConfig<TKey extends string = string> = AnimatedUnderlineTabConfig<TKey>;
 

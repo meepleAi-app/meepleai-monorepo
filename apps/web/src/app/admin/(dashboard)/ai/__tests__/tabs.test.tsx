@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getStats: vi.fn().mockResolvedValue({ agents: [] }),
-  getAgentTypologies: vi.fn().mockResolvedValue([]),
   getPrompts: vi.fn().mockResolvedValue([]),
   getAiModels: vi.fn().mockResolvedValue({ models: [], totalCount: 0, page: 1, pageSize: 20 }),
   getAiRequests: vi.fn().mockResolvedValue({ requests: [], totalCount: 0 }),
@@ -23,8 +22,6 @@ const mocks = vi.hoisted(() => ({
     datapoints: [],
   }),
   deletePrompt: vi.fn().mockResolvedValue(undefined),
-  approveAgentTypology: vi.fn().mockResolvedValue(undefined),
-  deleteAgentTypology: vi.fn().mockResolvedValue(undefined),
   setPrimaryModel: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -62,7 +59,6 @@ import { ModelsTab } from '../ModelsTab';
 import { PromptsTab } from '../PromptsTab';
 import { RagTab } from '../RagTab';
 import { RequestsTab } from '../RequestsTab';
-import { TypologiesTab } from '../TypologiesTab';
 
 describe('AgentsTab', () => {
   it('renders heading', () => {
@@ -78,18 +74,6 @@ describe('AgentsTab', () => {
   it('renders link to full catalog', () => {
     render(<AgentsTab />);
     expect(screen.getByText('Full Catalog')).toBeInTheDocument();
-  });
-});
-
-describe('TypologiesTab', () => {
-  it('renders heading', () => {
-    render(<TypologiesTab />);
-    expect(screen.getByText('Agent Typologies')).toBeInTheDocument();
-  });
-
-  it('shows empty state when no typologies', async () => {
-    render(<TypologiesTab />);
-    expect(await screen.findByText('No typologies found')).toBeInTheDocument();
   });
 });
 
@@ -137,7 +121,7 @@ describe('PromptsTab', () => {
 describe('ModelsTab', () => {
   it('renders heading', () => {
     render(<ModelsTab />);
-    expect(screen.getByText('AI Models')).toBeInTheDocument();
+    expect(screen.getByText('Models & prices')).toBeInTheDocument();
   });
 
   it('shows empty state when no models', async () => {
@@ -163,7 +147,7 @@ describe('ModelsTab', () => {
     render(<ModelsTab />);
 
     const alert = await screen.findByTestId('models-tab-error');
-    expect(alert).toHaveTextContent(/Impossibile caricare i modelli AI/);
+    expect(alert).toHaveTextContent(/Could not load the AI models/);
     expect(alert).toHaveTextContent(/Schema validation failed/);
     expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
   });
@@ -212,10 +196,11 @@ describe('ModelsTab', () => {
 
     render(<ModelsTab />);
 
-    expect(await screen.findByText('gpt-test')).toBeInTheDocument();
-    // L'identificatore del modello e` reso accanto al provider: se il componente tornasse a
-    // leggere `modelIdentifier` (inesistente) qui comparirebbe "undefined".
-    expect(await screen.findByText(/OpenRouter · meta-llama/)).toBeInTheDocument();
+    // #4169: la riga mostra l'identificatore del modello, e sotto provider e nome visualizzato.
+    // Se il componente tornasse a leggere `modelIdentifier` (inesistente) comparirebbe "undefined".
+    expect(await screen.findByText('meta-llama/llama-3.3-70b-instruct:free')).toBeInTheDocument();
+    expect(screen.getByText(/OpenRouter · gpt-test/)).toBeInTheDocument();
+    expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
     expect(screen.queryByText('No AI models configured')).not.toBeInTheDocument();
     expect(screen.queryByTestId('models-tab-error')).not.toBeInTheDocument();
   });

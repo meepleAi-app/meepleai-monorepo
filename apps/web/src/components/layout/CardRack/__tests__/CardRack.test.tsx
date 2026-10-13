@@ -32,10 +32,11 @@ describe('CardRack', () => {
     expect(screen.getByRole('link', { name: 'Serate' })).toBeInTheDocument();
   });
 
+  // Issue #4138: the 'Agenti' entry is gone with the /agents section.
   it('renders bottom navigation items', () => {
     render(<CardRack />);
-    expect(screen.getByRole('link', { name: 'Agenti' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Badge' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Agenti' })).not.toBeInTheDocument();
   });
 
   it('is hidden on mobile (has hidden md:flex classes)', () => {

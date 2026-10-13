@@ -80,7 +80,7 @@ internal sealed class VectorSemanticSearchQueryHandler
                     queryVector,
                     query.Limit,
                     DefaultMinScore,
-                    documentIds: null,
+                    pdfDocumentIds: null,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }
@@ -115,7 +115,7 @@ internal sealed class VectorSemanticSearchQueryHandler
                     queryVector,
                     query.Limit,
                     DefaultMinScore,
-                    documentIds: null,
+                    pdfDocumentIds: null,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
         }

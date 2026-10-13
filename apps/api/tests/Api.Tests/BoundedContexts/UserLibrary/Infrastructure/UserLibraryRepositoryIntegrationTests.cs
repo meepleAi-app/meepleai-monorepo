@@ -10,7 +10,6 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -42,8 +41,7 @@ public sealed class UserLibraryRepositoryIntegrationTests : IAsyncLifetime
         _dbContext = TestDbContextFactory.CreateInMemoryDbContext($"UserLibraryRepoTest_{Guid.NewGuid()}");
         _repository = new UserLibraryRepository(
             _dbContext,
-            _eventCollector.Object,
-            NullLogger<UserLibraryRepository>.Instance);
+            _eventCollector.Object);
 
         // Seed test data
         await SeedTestDataAsync();

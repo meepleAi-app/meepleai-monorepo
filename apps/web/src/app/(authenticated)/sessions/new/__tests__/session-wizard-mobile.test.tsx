@@ -2,6 +2,7 @@
  * SessionWizardMobile — S1 prefill + S2 turn order tests
  */
 import { render as rtlRender, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -20,11 +21,28 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: () => ({ data: { items: [] }, isLoading: false }),
+// #4227: the game step uses the canonical GamePicker, which asks the library itself.
+vi.mock('@/hooks/useDebounce', () => ({
+  useDebounce: (value: string) => value,
 }));
 
+const WINGSPAN = { gameId: 'game-wingspan', gameTitle: 'Wingspan' };
+const AZUL = { gameId: 'game-azul', gameTitle: 'Azul' };
+
+function libraryPage(items: ReadonlyArray<{ gameId: string; gameTitle: string }>) {
+  return {
+    items,
+    page: 1,
+    pageSize: 30,
+    totalCount: items.length,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPreviousPage: false,
+  };
+}
+
 const mockApi = vi.hoisted(() => ({
+  library: { getLibrary: vi.fn() },
   games: { getPhaseTemplates: vi.fn().mockResolvedValue([]) },
   liveSessions: {
     createSession: vi.fn().mockResolvedValue('session-123'),
@@ -42,10 +60,127 @@ vi.mock('@/lib/api', () => ({ api: mockApi }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // La libreria come si comporta: filtra per titolo.
+  mockApi.library.getLibrary.mockImplementation((params?: { search?: string }) => {
+    const term = params?.search?.toLowerCase();
+    return Promise.resolve(
+      libraryPage([AZUL, WINGSPAN].filter(g => !term || g.gameTitle.toLowerCase().includes(term)))
+    );
+  });
+  // clearAllMocks non svuota la coda dei valori «Once»: senza questo reset un test che
+  // aggiunge un giocatore sposta gli id attesi da quelli dopo.
+  mockApi.liveSessions.addPlayer.mockReset();
   mockApi.liveSessions.addPlayer
     .mockResolvedValueOnce('player-uuid-1')
     .mockResolvedValueOnce('player-uuid-2')
     .mockResolvedValueOnce('player-uuid-3');
+});
+
+// ── #4187 / #4227: la scelta del gioco, col selettore canonico ───────────────
+
+describe('SessionWizardMobile — scelta del gioco (#4187, #4227)', () => {
+  it('a campo vuoto elenca la libreria, in ordine di titolo', async () => {
+    render(<SessionWizardMobile />);
+
+    expect(await screen.findByTestId('session-wizard-game-result-game-azul')).toBeInTheDocument();
+    expect(screen.getByTestId('session-wizard-game-result-game-wingspan')).toBeInTheDocument();
+    expect(mockApi.library.getLibrary).toHaveBeenCalledWith(
+      expect.objectContaining({ search: undefined, sortBy: 'title', sortDescending: false })
+    );
+  });
+
+  it('scrivere nella ricerca manda il testo al server', async () => {
+    const user = userEvent.setup();
+    render(<SessionWizardMobile />);
+    await screen.findByTestId('session-wizard-game-result-game-azul');
+
+    await user.type(screen.getByRole('combobox', { name: 'Cerca un gioco' }), 'Wing');
+
+    await waitFor(() =>
+      expect(mockApi.library.getLibrary).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: 'Wing' })
+      )
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId('session-wizard-game-result-game-azul')).not.toBeInTheDocument()
+    );
+    expect(screen.getByTestId('session-wizard-game-result-game-wingspan')).toBeInTheDocument();
+  });
+
+  it('mentre la risposta per il testo nuovo non è arrivata non dice che non c’è nulla', async () => {
+    const user = userEvent.setup();
+    mockApi.library.getLibrary.mockImplementation((params?: { search?: string }) =>
+      params?.search ? new Promise(() => {}) : Promise.resolve(libraryPage([AZUL, WINGSPAN]))
+    );
+    render(<SessionWizardMobile />);
+    await screen.findByTestId('session-wizard-game-result-game-azul');
+
+    await user.type(screen.getByRole('combobox', { name: 'Cerca un gioco' }), 'Zz');
+
+    expect(screen.queryByTestId('session-wizard-game-empty')).not.toBeInTheDocument();
+    // La lista di prima resta a schermo finché non arriva quella nuova.
+    expect(screen.getByTestId('session-wizard-game-result-game-azul')).toBeInTheDocument();
+  });
+
+  it('«Avanti» resta spento finché non c’è un gioco', async () => {
+    render(<SessionWizardMobile />);
+    await screen.findByTestId('session-wizard-game-result-game-azul');
+
+    expect(screen.getByRole('button', { name: 'Avanti' })).toBeDisabled();
+  });
+
+  it('un gioco scelto dalla libreria fa nascere la sessione col suo id', async () => {
+    render(<SessionWizardMobile />);
+    fireEvent.click(await screen.findByTestId('session-wizard-game-result-game-wingspan'));
+    expect(screen.getByTestId('session-wizard-game-selected')).toHaveTextContent('Wingspan');
+
+    fireEvent.click(screen.getByText('Avanti')); // → step 2
+    fireEvent.click(screen.getByText('Avanti')); // → step 3
+    fireEvent.click(screen.getByText('Avanti')); // → step 4
+    fireEvent.click(screen.getByText('Salta')); // → step 5
+    fireEvent.click(screen.getByText('Inizia a Giocare'));
+
+    await waitFor(() =>
+      expect(mockApi.liveSessions.createSession).toHaveBeenCalledWith({
+        gameName: 'Wingspan',
+        gameId: 'game-wingspan',
+      })
+    );
+  });
+
+  it('un nome scritto a mano fa nascere la sessione senza id di gioco', async () => {
+    render(<SessionWizardMobile />);
+    await screen.findByTestId('session-wizard-game-result-game-azul');
+
+    fireEvent.change(screen.getByTestId('session-wizard-game-manual-input'), {
+      target: { value: 'Gioco di casa' },
+    });
+    fireEvent.click(screen.getByTestId('session-wizard-game-manual-confirm'));
+    expect(screen.getByTestId('session-wizard-game-selected')).toHaveTextContent('Gioco di casa');
+
+    fireEvent.click(screen.getByText('Avanti')); // → step 2
+    fireEvent.click(screen.getByText('Avanti')); // → step 3
+    fireEvent.click(screen.getByText('Avanti')); // → step 4
+    fireEvent.click(screen.getByText('Salta')); // → step 5
+    fireEvent.click(screen.getByText('Inizia a Giocare'));
+
+    await waitFor(() =>
+      expect(mockApi.liveSessions.createSession).toHaveBeenCalledWith({
+        gameName: 'Gioco di casa',
+        gameId: undefined,
+      })
+    );
+  });
+
+  it('la «×» toglie il gioco scelto e «Avanti» si rispegne', async () => {
+    render(<SessionWizardMobile />);
+    fireEvent.click(await screen.findByTestId('session-wizard-game-result-game-wingspan'));
+
+    fireEvent.click(screen.getByTestId('session-wizard-game-clear'));
+
+    expect(screen.queryByTestId('session-wizard-game-selected')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Avanti' })).toBeDisabled();
+  });
 });
 
 // ── S1: Pre-fill ───────────────────────────────────────────────────────────────

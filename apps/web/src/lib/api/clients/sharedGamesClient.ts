@@ -9,12 +9,7 @@ import { z } from 'zod';
 
 import { createApiError, isNotFoundError } from '../core/errors';
 import { type HttpClient, downloadFile, getApiBase } from '../core/httpClient';
-import {
-  agentDefinitionDtoSchema,
-  kbCardDtoSchema,
-  type AgentDefinitionDto,
-  type KbCardDto,
-} from '../schemas/agent-definitions.schemas';
+import { kbCardDtoSchema, type KbCardDto } from '../schemas/agent-definitions.schemas';
 import {
   MECHANIC_CARD_FEEDBACK_ROUTES,
   type SubmitMechanicCardFeedbackBody,
@@ -1016,44 +1011,6 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
       });
 
       return httpClient.post('/api/v1/admin/shared-games/wizard/create', request, ResultSchema);
-    },
-
-    // ========== AI Agent Linking (Issue #4924 + #4926) ==========
-
-    /**
-     * Get linked AI agent for a shared game (ADMIN/EDITOR)
-     * GET /api/v1/admin/shared-games/{gameId}/linked-agent
-     * Returns null (204 NoContent) if no agent is linked.
-     *
-     * @param gameId - Game UUID
-     * @returns Linked agent or null if no agent linked
-     */
-    async getLinkedAgent(gameId: string): Promise<AgentDefinitionDto | null> {
-      return httpClient.get(
-        `/api/v1/admin/shared-games/${gameId}/linked-agent`,
-        agentDefinitionDtoSchema
-      );
-    },
-
-    /**
-     * Link an AI agent to a shared game (ADMIN/EDITOR)
-     * POST /api/v1/admin/shared-games/{gameId}/link-agent/{agentId}
-     *
-     * @param gameId - Game UUID
-     * @param agentId - Agent UUID
-     */
-    async linkAgent(gameId: string, agentId: string): Promise<void> {
-      await httpClient.post(`/api/v1/admin/shared-games/${gameId}/link-agent/${agentId}`, {});
-    },
-
-    /**
-     * Unlink AI agent from a shared game (ADMIN/EDITOR)
-     * DELETE /api/v1/admin/shared-games/{gameId}/unlink-agent
-     *
-     * @param gameId - Game UUID
-     */
-    async unlinkAgent(gameId: string): Promise<void> {
-      await httpClient.delete(`/api/v1/admin/shared-games/${gameId}/unlink-agent`);
     },
 
     // ========== KB Cards (Issue #4925 + #4926) ==========

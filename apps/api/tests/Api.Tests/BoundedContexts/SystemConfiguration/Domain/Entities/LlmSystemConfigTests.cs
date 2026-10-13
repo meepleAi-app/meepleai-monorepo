@@ -22,8 +22,12 @@ public sealed class LlmSystemConfigTests
         config.CircuitBreakerFailureThreshold.Should().Be(5);
         config.CircuitBreakerOpenDurationSeconds.Should().Be(30);
         config.CircuitBreakerSuccessThreshold.Should().Be(3);
-        config.DailyBudgetUsd.Should().Be(10.00m);
-        config.MonthlyBudgetUsd.Should().Be(100.00m);
+        // #4166: il vincolo di ADR-095 (sotto 20 € al mese) vale finché l'admin non salva altro
+        config.DailyBudgetUsd.Should().Be(1.00m);
+        config.MonthlyBudgetUsd.Should().Be(20.00m);
+        config.DegradeThresholdPercent.Should().Be(80);
+        config.BackgroundQuotaPercent.Should().Be(30);
+        config.EvaluationQuotaPercent.Should().Be(20);
         config.FallbackChainJson.Should().Be("[\"Ollama\",\"OpenRouter\"]");
     }
 
@@ -97,6 +101,32 @@ public sealed class LlmSystemConfigTests
         var config = LlmSystemConfig.CreateDefault();
 
         ((Action)(() => config.UpdateBudgetLimits(500.00m, 100.00m))).Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void UpdateBudgetPolicy_ValidValues_UpdatesProperties()
+    {
+        var config = LlmSystemConfig.CreateDefault();
+        var adminId = Guid.NewGuid();
+
+        config.UpdateBudgetPolicy(degradeThresholdPercent: 70, backgroundQuotaPercent: 40, evaluationQuotaPercent: 10, adminId);
+
+        config.DegradeThresholdPercent.Should().Be(70);
+        config.BackgroundQuotaPercent.Should().Be(40);
+        config.EvaluationQuotaPercent.Should().Be(10);
+        config.UpdatedByUserId.Should().Be(adminId);
+    }
+
+    [Theory]
+    [InlineData(0, 30, 20)]
+    [InlineData(101, 30, 20)]
+    [InlineData(80, -1, 20)]
+    [InlineData(80, 30, 101)]
+    [InlineData(80, 60, 50)] // insieme le quote non possono superare il tetto
+    public void UpdateBudgetPolicy_InvalidValues_ThrowsArgumentException(int degrade, int background, int evaluation)
+    {
+        var config = LlmSystemConfig.CreateDefault();
+        ((Action)(() => config.UpdateBudgetPolicy(degrade, background, evaluation))).Should().Throw<ArgumentException>();
     }
 
     [Fact]

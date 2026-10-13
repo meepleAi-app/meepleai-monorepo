@@ -2,7 +2,7 @@
  * OAuth URL builder helper
  *
  * Extracted from legacy OAuthButtons component.
- * Used by AuthModal (and potentially other consumers) to build
+ * Used by the login and register pages to build
  * the backend OAuth login URL per provider.
  */
 

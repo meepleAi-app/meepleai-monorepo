@@ -13,12 +13,9 @@ export interface AgentOption {
   icon: string;
 }
 
-/** Custom agent from backend — user-owned */
-export interface CustomAgent {
-  id: string;
-  name: string;
-  type: string;
-}
+// Issue #4138: an exported `CustomAgent` interface stood here, describing the per-game agents
+// read from user_library_entries.CustomAgentConfigJson. Nothing on the answer path read that
+// configuration, so the type described a choice that could not change an answer.
 
 /** Quick start suggestion */
 export interface QuickStartSuggestion {

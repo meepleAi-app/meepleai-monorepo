@@ -66,8 +66,11 @@ public sealed class GetLlmSystemConfigQueryHandlerTests
         result.CircuitBreakerFailureThreshold.Should().Be(7);
         result.CircuitBreakerOpenDurationSeconds.Should().Be(45);
         result.CircuitBreakerSuccessThreshold.Should().Be(4);
-        result.DailyBudgetUsd.Should().Be(10.00m);
-        result.MonthlyBudgetUsd.Should().Be(100.00m);
+        result.DailyBudgetUsd.Should().Be(1.00m);
+        result.MonthlyBudgetUsd.Should().Be(20.00m);
+        result.DegradeThresholdPercent.Should().Be(80);
+        result.BackgroundQuotaPercent.Should().Be(30);
+        result.EvaluationQuotaPercent.Should().Be(20);
         result.Source.Should().Be("appsettings");
         result.LastUpdatedAt.Should().BeNull();
         result.LastUpdatedByUserId.Should().BeNull();

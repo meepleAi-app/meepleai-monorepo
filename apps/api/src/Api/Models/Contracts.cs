@@ -16,7 +16,7 @@ internal record QaRequest(
     string query,
     Guid? chatId = null,
     SearchMode searchMode = SearchMode.Hybrid, // AI-14: Default to hybrid search
-    IReadOnlyList<Guid>? documentIds = null, // Issue #2051: Filter by document IDs (null = all)
+    IReadOnlyList<Guid>? documentIds = null, // #2051: filter by document, VectorDocument ids as GetGameDocuments returns them (null or empty = all); translated to PDF ids by the pipeline (#4243)
     string responseStyle = "concise",
     string? continuationToken = null);
 internal record QaResponse(
@@ -27,7 +27,10 @@ internal record QaResponse(
     int totalTokens = 0,
     double? confidence = null,
     IReadOnlyDictionary<string, string>? metadata = null,
-    IReadOnlyList<string>? followUpQuestions = null);  // CHAT-02: AI-generated follow-up questions
+    IReadOnlyList<string>? followUpQuestions = null,  // CHAT-02: AI-generated follow-up questions
+    // #4168 (ADR-095 D2): versione del profilo e lingua della risposta
+    Guid? profileVersionId = null,
+    string? language = null);
 internal record Snippet(string text, string source, int page, int line, float score)
 {
     /// <summary>
@@ -156,6 +159,10 @@ internal record StreamingComplete(
     string? strategyTier = null,
     Guid? executionId = null,
     IReadOnlyList<CitationDto>? Citations = null,
+    // #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta e la lingua della
+    // risposta. Chi salva la risposta e chi la valuta le riceve da qui; null fuori dalla pipeline.
+    Guid? ProfileVersionId = null,
+    string? Language = null,
     // #3388: grounding-contract invariant. Every producer below explicitly passes this
     // (derived from its own citation count: Grounded iff count>0, else Ungrounded) rather
     // than relying on the default — the default only exists because C# requires optional
@@ -217,7 +224,12 @@ internal record CitationRegion(int Page, double X, double Y, double Width, doubl
         PropertyNameCaseInsensitive = true,
     };
 }
-internal record StreamingError(string errorMessage, string? errorCode = null);
+// #4155: gameId solo per i dinieghi legati a un gioco (RAG_OWNERSHIP_REQUIRED); omesso altrove, cosi'
+// gli altri eventi di errore restano byte-identici.
+internal record StreamingError(
+    string errorMessage,
+    string? errorCode = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? gameId = null);
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
 
@@ -553,9 +565,9 @@ internal record UserDto(
     string? SuspendReason = null,
     int Level = 1,
     int ExperiencePoints = 0,
-    string Tier = "Free",           // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
-    int TokenUsage = 0,             // Issue #3698: Tokens used this month
-    int TokenLimit = 10_000         // Issue #3698: Monthly token limit for tier
+    // Issue #4212: TokenUsage and TokenLimit stood here. They came from the token-tier tables,
+    // which nothing ever populated: every user showed 0 of 10,000.
+    string Tier = "Free"            // Issue #3698: User tier (Free, Basic, Pro, Enterprise)
 );
 
 /// <summary>

@@ -109,6 +109,19 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
+        // #4244: the PDF says whether this document belongs to a private game. The callers do not
+        // agree on `gameId` for a private PDF — one passes the private id, the others the shared
+        // game, which is null — and vector_documents.GameId is an FK to shared_games, so for a
+        // private game it stays null and the game goes in PrivateGameId. Read here, in the one
+        // write path every indexing flow goes through, so no caller can get it wrong.
+        var privateGameId = await _db.PdfDocuments
+            .AsNoTracking()
+            .Where(p => p.Id == pdfDocumentId)
+            .Select(p => p.PrivateGameId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var gameIdForTheForeignKey = privateGameId.HasValue ? null : gameId;
+
         // AsTracking required: we may update an existing row in-place.
         var existing = await _db.VectorDocuments
             .AsTracking()
@@ -135,7 +148,8 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             // mapper round-trip (mapper now writes domain.TotalCharacters instead of 0).
             newDomainAggregate = VectorDocument.Create(
                 pdfDocumentId: pdfDocumentId,
-                gameId: gameId ?? Guid.Empty,
+                // The game the event announces: the private one when the PDF is private.
+                gameId: privateGameId ?? gameId ?? Guid.Empty,
                 totalChunks: chunkCount,
                 language: language,
                 sharedGameId: sharedGameId,
@@ -144,8 +158,9 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             existing = new VectorDocumentEntity
             {
                 Id = newDomainAggregate.Id,
-                GameId = gameId,
+                GameId = gameIdForTheForeignKey,
                 SharedGameId = sharedGameId,
+                PrivateGameId = privateGameId,
                 PdfDocumentId = pdfDocumentId,
                 ChunkCount = chunkCount,
                 TotalCharacters = totalCharacters,
@@ -174,6 +189,9 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             {
                 existing.SharedGameId = sharedGameId;
             }
+
+            // #4244: same healing for the private game, on a row created before the column existed.
+            existing.PrivateGameId ??= privateGameId;
         }
 
         try
@@ -196,7 +214,9 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
         // stantie le risposte in cache esattamente come il primo index, quindi va invalidata anche
         // su quel percorso. Dopo il SaveChanges perche' invalidare una cache per un indice che non
         // si e' committato aprirebbe una finestra in cui si riempie di nuovo col vecchio contenuto.
-        await InvalidateSemanticCacheSafelyAsync(gameId, pdfDocumentId, cancellationToken).ConfigureAwait(false);
+        // #4244: le domande su un gioco privato hanno come chiave il suo id, anche quando chi chiama
+        // ha passato solo il gioco del catalogo (che per un PDF privato è null).
+        await InvalidateSemanticCacheSafelyAsync(privateGameId ?? gameId, pdfDocumentId, cancellationToken).ConfigureAwait(false);
 
         if (!wasNotCompletedBefore)
         {
@@ -226,7 +246,7 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             await _mediator.Publish(
                 new VectorDocumentIndexedEvent(
                     documentId: existing.Id,
-                    gameId: existing.GameId ?? Guid.Empty,
+                    gameId: existing.GameId ?? existing.PrivateGameId ?? Guid.Empty,
                     chunkCount: existing.ChunkCount,
                     // Prefer the healed row value; fall back to the caller-supplied id so the
                     // KB-flag projection never receives a null SharedGameId when the caller knew it.

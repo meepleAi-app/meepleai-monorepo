@@ -2,26 +2,27 @@ import type { ConnectionChipProps } from '../types';
 
 export interface GameConnectionsCounts {
   kbCount: number;
-  agentCount: number;
   chatCount: number;
   sessionCount: number;
 }
 
 export interface GameConnectionsHandlers {
   onKbClick?: () => void;
-  onAgentClick?: () => void;
   onChatClick?: () => void;
   onSessionClick?: () => void;
   onKbPlus?: () => void;
-  onAgentPlus?: () => void;
   onChatPlus?: () => void;
   onSessionPlus?: () => void;
 }
 
 /**
- * Build the canonical 4-slot connection channel for game entity cards.
+ * Build the canonical 3-slot connection channel for game entity cards.
  *
- * Slots: KB | Agent | Chat | Sessioni
+ * Slots: KB | Chat | Sessioni
+ *
+ * Issue #4138: there was a fourth slot, Agent, between KB and Chat. With a single
+ * system agent (ADR-094) it showed the same global agent on every card, so it said
+ * nothing about the game. Chat is the way into that agent.
  * - gameId provided → items get href for direct Link navigation
  * - count > 0 → shows count badge
  * - count === 0 → plus indicator wired via onCreate (fires onXxxPlus handler)
@@ -46,15 +47,6 @@ export function buildGameConnections(
       onClick: handlers.onKbClick,
       onCreate: counts.kbCount === 0 ? handlers.onKbPlus : undefined,
       href: gameId ? `/games/${gameId}/kb` : undefined,
-    },
-    {
-      label: 'Agent',
-      entityType: 'agent',
-      count: counts.agentCount > 0 ? counts.agentCount : undefined,
-      disabled: !handlers.onAgentClick && !gameId,
-      onClick: handlers.onAgentClick,
-      onCreate: counts.agentCount === 0 ? handlers.onAgentPlus : undefined,
-      href: gameId ? `/games/${gameId}/agent` : undefined,
     },
     {
       label: 'Chat',

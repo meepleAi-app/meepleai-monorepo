@@ -103,25 +103,6 @@ internal class ChatSessionRepository : RepositoryBase, IChatSessionRepository
         return entities.Select(MapToDomainSummary).ToList();
     }
 
-    public async Task<int> CountByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
-    {
-        return await DbContext.Set<ChatSessionEntity>()
-            .AsNoTracking()
-            .CountAsync(s => s.UserId == userId && !s.IsArchived, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    public async Task<ChatSession?> GetOldestActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
-    {
-        var entity = await DbContext.Set<ChatSessionEntity>()
-            .AsNoTracking()
-            .Where(s => s.UserId == userId && !s.IsArchived)
-            .OrderBy(s => s.LastMessageAt)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-        return entity != null ? MapToDomainSummary(entity) : null;
-    }
-
     public async Task<int> CountByUserAndGameAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
     {
         return await DbContext.Set<ChatSessionEntity>()

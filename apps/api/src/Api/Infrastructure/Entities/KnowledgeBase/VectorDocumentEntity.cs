@@ -30,6 +30,13 @@ public class VectorDocumentEntity
     // Cross-BC reference to SharedGameCatalog (Issue #4921: admin KB cards)
     public Guid? SharedGameId { get; set; }
 
+    /// <summary>
+    /// Issue #4244: il gioco PRIVATO del PDF indicizzato, quando il PDF è di un gioco privato. In
+    /// quel caso <see cref="GameId"/> resta null, perché è una chiave esterna verso
+    /// <c>shared_games</c>. È da qui che gli embedding prendono il loro <c>game_id</c>.
+    /// </summary>
+    public Guid? PrivateGameId { get; set; }
+
     // Navigation properties
     public SharedGameEntity Game { get; set; } = default!;
     public PdfDocumentEntity PdfDocument { get; set; } = default!;

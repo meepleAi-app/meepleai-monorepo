@@ -290,7 +290,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
 
                 var queryVector = new Vector(embeddingResult.Embeddings[0]);
                 var scoredEmbeddings = await _embeddingRepository
-                    .SearchByVectorWithScoresAsync(gameId, queryVector, profile.TopK, profile.MinScore, documentIds: null, ct)
+                    .SearchByVectorWithScoresAsync(gameId, queryVector, profile.TopK, profile.MinScore, pdfDocumentIds: null, ct)
                     .ConfigureAwait(false);
 
                 foreach (var scored in scoredEmbeddings)

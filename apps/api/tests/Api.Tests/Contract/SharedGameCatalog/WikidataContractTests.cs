@@ -1,6 +1,7 @@
 using System.Net;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -50,11 +51,10 @@ public sealed class WikidataContractTests : IAsyncLifetime
     private WireMockServer _wikidataServer = null!;
     private WireMockServer _commonsServer = null!;
 
-    public ValueTask InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        _wikidataServer = WireMockServer.Start();
-        _commonsServer = WireMockServer.Start();
-        return ValueTask.CompletedTask;
+        _wikidataServer = await WarmWireMockServer.StartAsync();
+        _commonsServer = await WarmWireMockServer.StartAsync();
     }
 
     public ValueTask DisposeAsync()

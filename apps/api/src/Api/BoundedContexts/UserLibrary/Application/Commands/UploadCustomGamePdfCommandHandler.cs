@@ -69,16 +69,6 @@ internal class UploadCustomGamePdfCommandHandler : ICommandHandler<UploadCustomG
             CurrentState: entry.CurrentState.Value.ToString(),
             StateChangedAt: entry.CurrentState.ChangedAt,
             StateNotes: entry.CurrentState.StateNotes,
-            CustomAgentConfig: entry.CustomAgentConfig is not null
-                ? new AgentConfigDto(
-                    LlmModel: entry.CustomAgentConfig.LlmModel,
-                    Temperature: entry.CustomAgentConfig.Temperature,
-                    MaxTokens: entry.CustomAgentConfig.MaxTokens,
-                    Personality: entry.CustomAgentConfig.Personality,
-                    DetailLevel: entry.CustomAgentConfig.DetailLevel,
-                    PersonalNotes: entry.CustomAgentConfig.PersonalNotes
-                )
-                : null,
             CustomPdf: new CustomPdfDto(
                 Url: pdfMetadata.Url,
                 UploadedAt: pdfMetadata.UploadedAt,

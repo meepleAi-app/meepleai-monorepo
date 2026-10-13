@@ -64,7 +64,7 @@ test.describe('Game Management - Critical Paths', () => {
 
       // TEST: Pagination controls (if present)
       const pageSizeSelect = page.getByRole('combobox', { name: /per page|page size/i });
-      if (await pageSizeSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await pageSizeSelect.isVisible({ timeout: 2000 })) {
         // Pagination exists, test it
         const initialCount = await gameCards.count();
 
@@ -84,7 +84,7 @@ test.describe('Game Management - Critical Paths', () => {
         .getByRole('combobox', { name: /publisher|filter/i })
         .or(page.locator('[data-testid="publisher-filter"]'));
 
-      if (await publisherFilter.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await publisherFilter.isVisible({ timeout: 2000 })) {
         // Get available options
         const options = await publisherFilter.locator('option').count();
 
@@ -122,12 +122,12 @@ test.describe('Game Management - Critical Paths', () => {
         .getByRole('button', { name: /upload|add pdf|rulebook/i })
         .or(page.getByRole('button', { name: /upload|add pdf|rulebook/i }).first());
 
-      if (await uploadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await uploadButton.isVisible({ timeout: 2000 })) {
         await uploadButton.click();
 
         // FILE UPLOAD: Look for file input
         const fileInput = page.locator('input[type="file"]');
-        if (await fileInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+        if (await fileInput.isVisible({ timeout: 3000 })) {
           // Create a test PDF blob
           const pdfContent = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]); // PDF magic bytes
           await fileInput.setInputFiles({
@@ -138,7 +138,7 @@ test.describe('Game Management - Critical Paths', () => {
 
           // VERIFY: Upload button available
           const submitButton = page.getByRole('button', { name: /upload|submit|confirm/i });
-          if (await submitButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await submitButton.isVisible({ timeout: 2000 })) {
             await submitButton.click();
 
             // VERIFY: Processing or success indication
@@ -159,7 +159,7 @@ test.describe('Game Management - Critical Paths', () => {
         const detailsUploadButton = page.getByRole('button', {
           name: /upload|add pdf|rulebook/i,
         });
-        if (await detailsUploadButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await detailsUploadButton.isVisible({ timeout: 2000 })) {
           await detailsUploadButton.click();
           // Continue with file upload...
         }
@@ -180,7 +180,7 @@ test.describe('Game Management - Critical Paths', () => {
       .or(page.locator('input[placeholder*="BGG"]'))
       .or(page.locator('[data-testid="bgg-search-input"]'));
 
-    if (await searchInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await searchInput.isVisible({ timeout: 5000 })) {
       await searchInput.fill('Scythe');
 
       // Click search button
@@ -195,12 +195,7 @@ test.describe('Game Management - Critical Paths', () => {
         .locator('[data-testid="bgg-game-card"]')
         .or(page.getByText(/scythe/i).first());
 
-      if (
-        await results
-          .first()
-          .isVisible({ timeout: 10000 })
-          .catch(() => false)
-      ) {
+      if (await results.first().isVisible({ timeout: 10000 })) {
         // SELECT GAME: Click on first result
         const firstResult = results.first();
 
@@ -267,15 +262,15 @@ test.describe('Admin Operations - Critical Paths', () => {
 
       // At least one stat should be visible
       const hasStats =
-        (await totalRequests.isVisible({ timeout: 2000 }).catch(() => false)) ||
-        (await successRate.isVisible({ timeout: 2000 }).catch(() => false)) ||
-        (await avgLatency.isVisible({ timeout: 2000 }).catch(() => false));
+        (await totalRequests.isVisible({ timeout: 2000 })) ||
+        (await successRate.isVisible({ timeout: 2000 })) ||
+        (await avgLatency.isVisible({ timeout: 2000 }));
 
       expect(hasStats).toBeTruthy();
 
       // TEST REFRESH: Look for refresh button
       const refreshButton = page.getByRole('button', { name: /refresh|reload|update/i });
-      if (await refreshButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await refreshButton.isVisible({ timeout: 2000 })) {
         // Click refresh and verify page doesn't error
         await refreshButton.click();
         await page.waitForLoadState('networkidle');
@@ -291,7 +286,7 @@ test.describe('Admin Operations - Critical Paths', () => {
       .or(page.locator('table'))
       .or(page.locator('[role="table"]'));
 
-    if (await requestList.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await requestList.isVisible({ timeout: 2000 })) {
       // Request history exists
       await expect(requestList).toBeVisible();
     }
@@ -327,7 +322,7 @@ test.describe('Admin Operations - Critical Paths', () => {
 
         // SAVE CHANGES
         const saveButton = page.getByRole('button', { name: /save|apply|update/i });
-        if (await saveButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await saveButton.isVisible({ timeout: 2000 })) {
           await saveButton.click();
 
           // VERIFY: Success notification
@@ -353,7 +348,7 @@ test.describe('Admin Operations - Critical Paths', () => {
 
           // Save and verify
           const saveButton = page.getByRole('button', { name: /save|apply/i });
-          if (await saveButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await saveButton.isVisible({ timeout: 2000 })) {
             await saveButton.click();
             await expect(page.getByText(/saved|updated|success/i).first()).toBeVisible({
               timeout: 5000,
@@ -378,7 +373,7 @@ test.describe('Admin Operations - Critical Paths', () => {
     // CREATE NEW ALERT: Look for create button
     const createButton = page.getByRole('button', { name: /create|new alert|add alert/i });
 
-    if (await createButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 5000 })) {
       await createButton.click();
 
       // Look for template selector or alert configuration form
@@ -386,7 +381,7 @@ test.describe('Admin Operations - Critical Paths', () => {
         .getByRole('combobox', { name: /template|select template/i })
         .or(page.locator('[data-testid="alert-template-select"]'));
 
-      if (await templateSelector.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await templateSelector.isVisible({ timeout: 3000 })) {
         // Templates available - select one
         const options = await templateSelector.locator('option').count();
 
@@ -400,13 +395,13 @@ test.describe('Admin Operations - Critical Paths', () => {
             .locator('input[name="email"]')
             .or(page.getByLabel(/email|notification email/i));
 
-          if (await emailInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await emailInput.isVisible({ timeout: 2000 })) {
             await emailInput.fill('admin@meepleai.dev');
           }
 
           // SAVE ALERT
           const saveButton = page.getByRole('button', { name: /save|create|confirm/i });
-          if (await saveButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await saveButton.isVisible({ timeout: 2000 })) {
             await saveButton.click();
 
             // VERIFY: Alert created
@@ -419,7 +414,7 @@ test.describe('Admin Operations - Critical Paths', () => {
               .locator('[data-testid="test-alert-button"]')
               .or(page.getByRole('button', { name: /test|trigger|simulate/i }).first());
 
-            if (await testButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+            if (await testButton.isVisible({ timeout: 3000 })) {
               await testButton.click();
 
               // VERIFY: Test result displayed
@@ -433,11 +428,11 @@ test.describe('Admin Operations - Critical Paths', () => {
         // Manual alert creation form (no templates)
         const alertNameInput = page.locator('input[name="name"]').or(page.getByLabel(/name/i));
 
-        if (await alertNameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await alertNameInput.isVisible({ timeout: 2000 })) {
           await alertNameInput.fill('Test Alert Rule');
 
           const saveButton = page.getByRole('button', { name: /save|create/i });
-          if (await saveButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+          if (await saveButton.isVisible({ timeout: 2000 })) {
             await saveButton.click();
             await expect(page.getByText(/created|success/i).first()).toBeVisible({
               timeout: 5000,

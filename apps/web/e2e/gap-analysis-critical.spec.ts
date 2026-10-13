@@ -65,20 +65,6 @@ test.describe('Gap Analysis: Critical Features', () => {
 
       // TODO: Verify all notifications marked as read in list
     });
-
-    test('Notifications - Toast for critical events', async ({ page }) => {
-      await page.goto('/upload');
-
-      // TODO: Upload PDF that will cause error
-      // Verify toast appears
-      const toast = page.locator('[data-testid="toast-notification"]');
-      await expect(toast).toBeVisible({ timeout: 10000 });
-      await expect(toast).toHaveClass(/error/);
-
-      // Dismiss toast
-      await toast.locator('[data-testid="toast-close"]').click();
-      await expect(toast).toBeHidden();
-    });
   });
 
   /**

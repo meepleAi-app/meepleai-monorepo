@@ -33,8 +33,6 @@ const MOCK_USER_DETAIL = {
   lastSeenAt: '2026-03-14T08:00:00Z',
   isTwoFactorEnabled: false,
   tier: 'Free',
-  tokenUsage: 500,
-  tokenLimit: 10000,
 };
 
 const MOCK_ROLE_HISTORY = [
@@ -166,7 +164,7 @@ test.describe('Admin User Journey Smoke', () => {
 
     // Attempt a role change if a select / button is present
     const roleSelect = page.getByRole('combobox').first();
-    if (await roleSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await roleSelect.isVisible({ timeout: 2000 })) {
       await roleSelect.click();
       await page
         .getByRole('option', { name: /contributor/i })
@@ -174,7 +172,7 @@ test.describe('Admin User Journey Smoke', () => {
         .click();
 
       const saveBtn = page.getByRole('button', { name: /save|update|change/i }).first();
-      if (await saveBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await saveBtn.isVisible({ timeout: 2000 })) {
         await saveBtn.click();
       }
     }
@@ -193,7 +191,7 @@ test.describe('Admin User Journey Smoke', () => {
       .getByRole('link', { name: /back|users/i })
       .or(page.getByText(/back to users/i))
       .first();
-    if (await backLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await backLink.isVisible({ timeout: 2000 })) {
       await backLink.click();
     } else {
       await page.goto('/admin/users');

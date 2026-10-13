@@ -7,7 +7,7 @@
  * `HybridHubSources` of pre-mapped `HybridHubItem`s.
  *
  * Contract under test (plan §4c + #1605 AC):
- *   - 6 hub tabs: all / games / agents / kb / sessions / chat
+ *   - 5 hub tabs: all / games / kb / sessions / chat (#4154: niente scheda agenti)
  *   - 5-state FSM: default | loading | empty | filtered-empty | error,
  *     partial-failure-aware (error only when ALL ready sources fail).
  *   - `?state=...` URL override gated by NODE_ENV !== 'production' (test env).
@@ -17,8 +17,8 @@
  *     forced to browse when leaving it.
  *   - Bulk delete: enter select mode (games tab) → toggle cards → confirm
  *     dialog → `Promise.allSettled` fan-out + clear selection + exit.
- *   - Hero stats are hybrid counts (games/agents/docs/chats) from totalCounts.
- *   - `useMiniNavConfig` NOT invoked: LibraryHub owns its 6 hub tabs (HUB_TABS)
+ *   - Hero stats are hybrid counts (games/docs/chats) from totalCounts.
+ *   - `useMiniNavConfig` NOT invoked: LibraryHub owns its 5 hub tabs (HUB_TABS)
  *     and the CTA lives in `LibraryHeroDesktop`; registering a parallel breadcrumb
  *     + Hub/Wishlist tabs + primaryAction in MiniNavSlot produced visible duplicates
  *     (issue #2158, Fix #1).
@@ -435,15 +435,16 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     });
   });
 
-  // ─── 6 hub tabs ──────────────────────────────────────────────────────────
+  // ─── 5 hub tabs ──────────────────────────────────────────────────────────
 
-  it('renders 6 hub tabs (all/games/agents/kb/sessions/chat)', () => {
+  // #4154 (ADR-095 fetta 0b): l'agente di sistema non è un oggetto della libreria, quindi niente
+  // scheda «Agenti» (sarebbe rimasta sempre vuota, con contatore 0).
+  it('renders 5 hub tabs (all/games/kb/sessions/chat) — no agents tab', () => {
     renderHub(makeHub());
     const tabs = screen.getAllByRole('tab');
     expect(tabs.map(tab => tab.getAttribute('data-tab-key'))).toEqual([
       'all',
       'games',
-      'agents',
       'kb',
       'sessions',
       'chat',
@@ -467,16 +468,15 @@ describe('LibraryHub (Phase 2a hybrid hub)', () => {
     expect(container.querySelector('[data-slot="library-empty-state"]')).not.toBeInTheDocument();
   });
 
-  it('derives hero stats from hybrid totalCounts (games/agents/docs/chats)', () => {
-    // makeHub default: games:2 agents:0 kb(docs):0 chats:1
+  it('derives hero stats from hybrid totalCounts (games/docs/chats) — no agents stat (#4154)', () => {
+    // makeHub default: games:2 kb(docs):0 chats:1
     const { container } = renderHub(makeHub());
     const stats = container.querySelectorAll('[data-slot="library-hero-stat-value"]');
-    expect(stats).toHaveLength(4);
-    // Order = games, agents, docs, chats (plan §4c hero stat ordering)
+    expect(stats).toHaveLength(3);
+    // Order = games, docs, chats
     expect(stats[0]).toHaveTextContent('2');
     expect(stats[1]).toHaveTextContent('0');
-    expect(stats[2]).toHaveTextContent('0');
-    expect(stats[3]).toHaveTextContent('1');
+    expect(stats[2]).toHaveTextContent('1');
   });
 
   // ─── FSM: loading ──────────────────────────────────────────────────────

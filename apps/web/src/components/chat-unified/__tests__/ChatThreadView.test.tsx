@@ -43,6 +43,10 @@ vi.mock('@/lib/api', () => ({
     },
     games: {
       getAll: vi.fn(),
+      getById: vi.fn(),
+    },
+    library: {
+      getPrivateGame: vi.fn(),
     },
   },
 }));
@@ -93,12 +97,6 @@ vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
       <span data-testid="question-count">{suggestedQuestions?.length ?? 0}</span>
     </div>
   ),
-}));
-
-// Mock AgentSettingsDrawer (Issue #3250)
-vi.mock('@/components/agent/settings', () => ({
-  AgentSettingsDrawer: ({ isOpen }: any) =>
-    isOpen ? <div data-testid="agent-settings-drawer">Settings Drawer</div> : null,
 }));
 
 // Mock AgentSelector (Issue #4465)
@@ -235,6 +233,7 @@ describe('ChatThreadView', () => {
 
     (apiMock.chat.getThreadById as Mock).mockResolvedValue(mockThread);
     (apiMock.games.getAll as Mock).mockResolvedValue(mockGames);
+    (apiMock.games.getById as Mock).mockResolvedValue(mockGames.games[0]);
     (apiMock.chat.addMessage as Mock).mockResolvedValue(mockThread);
     (apiMock.chat.updateThreadTitle as Mock).mockResolvedValue({});
     (apiMock.chat.deleteThread as Mock).mockResolvedValue(undefined);
@@ -472,6 +471,58 @@ describe('ChatThreadView', () => {
     });
     // Should show capabilities
     expect(screen.getByText(/Cosa posso fare/)).toBeInTheDocument();
+  });
+
+  // #4158: il gioco del thread si risolve per id. Scorrendo la prima pagina del catalogo
+  // (20 giochi in ordine alfabetico) un gioco oltre quella pagina restava senza nome.
+  it('names the thread game even when it is beyond the first catalog page', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentType: 'Tutor',
+    });
+    (apiMock.games.getAll as Mock).mockResolvedValue({
+      games: [],
+      total: 165,
+      page: 1,
+      pageSize: 20,
+      totalPages: 9,
+    });
+    (apiMock.games.getById as Mock).mockResolvedValue({ id: 'game-1', title: 'Catan' });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ho studiato il regolamento di Catan/)).toBeInTheDocument();
+    });
+    expect(apiMock.games.getById).toHaveBeenCalledWith('game-1');
+  });
+
+  // #4244: il gioco di un thread può essere privato. `/games/{id}` risolve solo il catalogo, quindi
+  // il titolo si chiede alla rotta dei giochi privati; senza titolo non parte nemmeno il benvenuto.
+  it('names the thread game when it is a private game', async () => {
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...mockThread,
+      messages: [],
+      agentType: 'Tutor',
+      gameId: 'private-1',
+      privateGameId: 'private-1',
+    });
+    (apiMock.games.getById as Mock).mockRejectedValue(new Error('404'));
+    (apiMock.library.getPrivateGame as Mock).mockResolvedValue({
+      id: 'private-1',
+      title: 'Il mio prototipo',
+    });
+
+    await renderView();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Ho studiato il regolamento di Il mio prototipo/)
+      ).toBeInTheDocument();
+    });
+    expect(apiMock.library.getPrivateGame).toHaveBeenCalledWith('private-1');
+    expect(apiMock.games.getById).not.toHaveBeenCalled();
   });
 
   it('shows welcome message for new thread with agent (Arbitro)', async () => {

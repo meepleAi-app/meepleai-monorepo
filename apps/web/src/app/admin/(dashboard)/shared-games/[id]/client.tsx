@@ -3,7 +3,7 @@
  * Game Detail Client Component - New Admin Dashboard
  *
  * Route: /admin/shared-games/[id]
- * Three tabs: Details (game info + image), Documents (PDF upload + list), Agent (KB linking).
+ * Three tabs: Details (game info + image), Documents (PDF upload + list), Knowledge Base (indexing status).
  */
 
 'use client';
@@ -20,11 +20,9 @@ import {
   ExternalLink,
   FileText,
   Image as ImageIcon,
-  Link2,
   MoreHorizontal,
   Settings2,
   Trash2,
-  Unlink,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -60,16 +58,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/overlays/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { api, type SharedGameDocument } from '@/lib/api';
-import { getAgentDefinitions } from '@/lib/api/admin-agent-client';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -202,20 +192,11 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
     },
   });
 
-  // ── Agent linking state ──────────────────────────────────────────────────
-  const [selectedAgentId, setSelectedAgentId] = useState('');
-
   // ── Edit Game drawer ─────────────────────────────────────────────────────
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
 
   // ── Cover-da-PDF picker dialog (Task 8: "Imposta cover" action) ──────────
   const [coverPickerDocument, setCoverPickerDocument] = useState<SharedGameDocument | null>(null);
-
-  const { data: linkedAgent, isLoading: linkedAgentLoading } = useQuery({
-    queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
-    queryFn: () => api.sharedGames.getLinkedAgent(gameId),
-    enabled: !!game,
-  });
 
   // Issue #2246 Block D: refetch kb-cards while any card is still indexing,
   // so the freshly-uploaded PDF transitions Completed without page reload.
@@ -232,31 +213,6 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
         return s !== 'completed' && s !== 'failed';
       });
       return hasInProgress ? 5_000 : false;
-    },
-  });
-
-  const { data: agentDefinitions, isLoading: agentsLoading } = useQuery({
-    queryKey: ['admin', 'agent-definitions', 'list'],
-    queryFn: () => getAgentDefinitions({ activeOnly: true }),
-    enabled: !!game,
-  });
-
-  const linkAgentMutation = useMutation({
-    mutationFn: (agentId: string) => api.sharedGames.linkAgent(gameId, agentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
-      });
-      setSelectedAgentId('');
-    },
-  });
-
-  const unlinkAgentMutation = useMutation({
-    mutationFn: () => api.sharedGames.unlinkAgent(gameId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['admin', 'shared-games', gameId, 'linked-agent'],
-      });
     },
   });
 
@@ -364,7 +320,9 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           <TabsTrigger value="documents">
             Documents{documents && documents.length > 0 ? ` (${documents.length})` : ''}
           </TabsTrigger>
-          <TabsTrigger value="agent">Agent{linkedAgent ? ' ✓' : ''}</TabsTrigger>
+          <TabsTrigger value="knowledge-base">
+            Knowledge Base{kbTotalCount > 0 ? ` (${kbCompletedCount}/${kbTotalCount})` : ''}
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Details Tab ─────────────────────────────────────────────────── */}
@@ -486,140 +444,8 @@ export function GameDetailClient({ params }: GameDetailClientProps) {
           </div>
         </TabsContent>
 
-        {/* ── Agent Tab ───────────────────────────────────────────────────── */}
-        <TabsContent value="agent" className="space-y-6 mt-6">
-          {/* Current linked agent */}
-          <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
-            <CardHeader>
-              <CardTitle className="font-quicksand flex items-center gap-2">
-                <Bot className="h-5 w-5" />
-                Linked Agent
-              </CardTitle>
-              <CardDescription>
-                One AI agent definition can be linked to this game to power its chat experience.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {linkedAgentLoading ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-4 w-32" />
-                </div>
-              ) : linkedAgent ? (
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                      <Bot className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">{linkedAgent.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{linkedAgent.type}</p>
-                      {linkedAgent.strategyName && (
-                        <Badge variant="outline" className="mt-1.5 text-xs">
-                          {linkedAgent.strategyName}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => unlinkAgentMutation.mutate()}
-                    disabled={unlinkAgentMutation.isPending}
-                    className="text-destructive hover:text-destructive shrink-0"
-                  >
-                    <Unlink className="mr-1.5 h-3.5 w-3.5" />
-                    {unlinkAgentMutation.isPending ? 'Unlinking…' : 'Unlink'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Bot className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm font-medium">No agent linked</p>
-                  <p className="text-xs mt-1">
-                    Select an agent below to enable AI chat for this game.
-                  </p>
-                  <Link
-                    href="/admin/agents/definitions/create"
-                    className="text-xs text-primary underline underline-offset-2 mt-2 inline-block hover:text-primary/80"
-                  >
-                    Create a new agent →
-                  </Link>
-                </div>
-              )}
-
-              {unlinkAgentMutation.isError && (
-                <Alert variant="destructive" className="mt-3">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    {unlinkAgentMutation.error instanceof Error
-                      ? unlinkAgentMutation.error.message
-                      : 'Failed to unlink agent.'}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Link new agent — only shown when no agent is linked */}
-          {!linkedAgent && !linkedAgentLoading && (
-            <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
-              <CardHeader>
-                <CardTitle className="font-quicksand text-base">Link an Agent</CardTitle>
-                <CardDescription>
-                  Choose an active agent definition to connect to this game.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <Select
-                    value={selectedAgentId}
-                    onValueChange={setSelectedAgentId}
-                    disabled={agentsLoading || linkAgentMutation.isPending}
-                  >
-                    <SelectTrigger className="flex-1 h-9 text-sm">
-                      <SelectValue
-                        placeholder={agentsLoading ? 'Loading agents…' : 'Select agent definition'}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {agentDefinitions?.map(agent => (
-                        <SelectItem key={agent.id} value={agent.id} className="text-sm">
-                          <span className="font-medium">{agent.name}</span>
-                          <span className="text-muted-foreground ml-2 text-xs">{agent.type}</span>
-                        </SelectItem>
-                      ))}
-                      {agentDefinitions?.length === 0 && (
-                        <div className="px-3 py-2 text-sm text-muted-foreground">
-                          No active agents found.
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="sm"
-                    onClick={() => linkAgentMutation.mutate(selectedAgentId)}
-                    disabled={!selectedAgentId || linkAgentMutation.isPending}
-                  >
-                    <Link2 className="mr-1.5 h-3.5 w-3.5" />
-                    {linkAgentMutation.isPending ? 'Linking…' : 'Link'}
-                  </Button>
-                </div>
-
-                {linkAgentMutation.isError && (
-                  <Alert variant="destructive" className="mt-3">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      {linkAgentMutation.error instanceof Error
-                        ? linkAgentMutation.error.message
-                        : 'Failed to link agent.'}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
+        {/* ── Knowledge Base Tab ──────────────────────────────────────────── */}
+        <TabsContent value="knowledge-base" className="space-y-6 mt-6">
           {/* KB Cards status */}
           <Card className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md border-border/50 dark:border-zinc-700/50">
             <CardHeader>

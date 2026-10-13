@@ -111,6 +111,20 @@ public class LlmCostLogEntity
     /// </summary>
     public string RequestSource { get; set; } = "Manual";
 
+    /// <summary>
+    /// #4164 (ADR-095): come è stato prezzato il costo — <c>Priced</c>, <c>Free</c> o <c>Unpriced</c>
+    /// (vedi <c>LlmPricingStatus</c>). <c>null</c> per una chiamata fallita, senza token da prezzare,
+    /// e per le righe scritte prima di #4164.
+    /// </summary>
+    public string? PricingStatus { get; set; }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente che ha prodotto la risposta. È ciò che
+    /// rende confrontabili due versioni (costo per domanda). <c>null</c> per le chiamate che non
+    /// vengono dalla pipeline e per le righe scritte prima di #4168.
+    /// </summary>
+    public Guid? ProfileVersionId { get; set; }
+
     // Navigation properties
     public UserEntity? User { get; set; }
 }

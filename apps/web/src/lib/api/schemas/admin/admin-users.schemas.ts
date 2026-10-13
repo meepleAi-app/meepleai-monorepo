@@ -16,8 +16,6 @@ export const AdminUserSchema = z.object({
   displayName: z.string(), // Allow empty display names from backend
   role: z.string().min(1),
   tier: z.string().optional().default('Free'), // Issue #3698: User tier
-  tokenUsage: z.number().int().optional().default(0), // Issue #3698: Tokens used
-  tokenLimit: z.number().int().optional().default(10_000), // Issue #3698: Monthly limit
   createdAt: z.string(),
   lastSeenAt: z.string().nullable().optional(),
   isTwoFactorEnabled: z.boolean().optional(),

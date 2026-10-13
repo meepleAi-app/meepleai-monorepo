@@ -22,6 +22,7 @@ export const agentDataKeys = {
   all: ['agent-data'] as const,
   kbDocs: (gameId: string) => [...agentDataKeys.all, 'kb-docs', gameId] as const,
   threads: (agentId: string) => [...agentDataKeys.all, 'threads', agentId] as const,
+  threadsByGame: (gameId: string) => [...agentDataKeys.all, 'threads-by-game', gameId] as const,
 };
 
 // ========== Mapping Functions ==========
@@ -110,12 +111,44 @@ export function useAgentThreads(agentId: string): UseQueryResult<ChatThreadPrevi
   return useQuery({
     queryKey: agentDataKeys.threads(agentId),
     queryFn: async () => {
+      // 🔴 Issue #4138 — THE BACKEND IGNORES `agentId`. `GET /api/v1/chat-threads/my`
+      // (KnowledgeBaseEndpoints → HandleGetMyFilteredThreads) binds exactly
+      // `gameId`, `agentType`, `status`, `search`, `page`, `pageSize`. `agentId` is not
+      // among them, and ASP.NET drops unknown query parameters silently — so this
+      // returns the caller's threads UNFILTERED, not the agent's.
+      //
+      // Not fixed here: the three remaining callers (AgentCharacterSheet,
+      // AgentChatDrawerLayout, AgentExtraMeepleCard) are agent-detail surfaces outside
+      // the scope of this retirement, and "filter by agent" may not be expressible at
+      // all once there is one system agent. `useGameThreads` below is the correct
+      // scoping for anything that asks about a GAME.
       const res = await fetch(`/api/v1/chat-threads/my?agentId=${agentId}`);
       if (!res.ok) throw new Error('Failed to fetch threads');
       const json = (await res.json()) as unknown[];
       return mapThreads(json);
     },
     enabled: !!agentId,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Chat threads of the caller for a GAME.
+ *
+ * Issue #4138: `useAgentThreads` was used for a per-game chat preview by way of
+ * `agents[0].id`, which was wrong twice over — the agent was incidental, and the
+ * `agentId` parameter does not exist on the endpoint. `gameId` does.
+ */
+export function useGameThreads(gameId: string): UseQueryResult<ChatThreadPreview[]> {
+  return useQuery({
+    queryKey: agentDataKeys.threadsByGame(gameId),
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/chat-threads/my?gameId=${gameId}`);
+      if (!res.ok) throw new Error('Failed to fetch threads');
+      const json = (await res.json()) as unknown[];
+      return mapThreads(json);
+    },
+    enabled: !!gameId,
     staleTime: 30_000,
   });
 }

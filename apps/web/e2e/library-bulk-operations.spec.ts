@@ -427,6 +427,7 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
+            // Issue #4138: still sent by the BE until its own slice drops it; not rendered.
             totalCustomAgents: 1,
             totalPrivatePdfs: 1,
             totalChatSessions: 5,
@@ -485,7 +486,7 @@ test.describe('Bulk Collection Actions (Issue #4268)', () => {
     });
 
     // Verify aggregated data items
-    await expect(userPage.locator('text=/1 agenti AI personalizzati/')).toBeVisible();
+    await expect(userPage.locator('text=/agenti AI personalizzati/')).toHaveCount(0);
     await expect(userPage.locator("text=/5 chat con l'agente/")).toBeVisible();
     await expect(userPage.locator('text=/1 PDF privati caricati/')).toBeVisible();
     await expect(userPage.locator('text=/8 sessioni registrate/')).toBeVisible();

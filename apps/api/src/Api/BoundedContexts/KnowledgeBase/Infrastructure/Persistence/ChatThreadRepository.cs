@@ -58,22 +58,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return threadEntities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<ChatThread>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default)
-    {
-        var threadEntities = await DbContext.ChatThreads
-            .AsNoTracking()
-            .Where(t => t.GameId == gameId)
-            .OrderByDescending(t => t.LastMessageAt)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-        return threadEntities.Select(MapToDomain).ToList();
-    }
-
     public async Task<IReadOnlyList<ChatThread>> FindByUserIdAndGameIdAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default)
     {
         var threadEntities = await DbContext.ChatThreads
             .AsNoTracking()
-            .Where(t => t.UserId == userId && t.GameId == gameId)
+            // #4244: il gioco è nel catalogo oppure privato, in due colonne diverse.
+            .Where(t => t.UserId == userId && (t.GameId == gameId || t.PrivateGameId == gameId))
             .OrderByDescending(t => t.LastMessageAt)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -84,7 +74,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         return await DbContext.ChatThreads
             .AsNoTracking()
-            .CountAsync(t => t.UserId == userId, cancellationToken)
+            .CountAsync(t => t.UserId == userId && t.LiveSessionId == null, cancellationToken) // #4276: il totale dello storico delle chat
             .ConfigureAwait(false);
     }
 
@@ -99,6 +89,26 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<ChatThread?> FindByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+    {
+        var threadEntity = await DbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => t.LiveSessionId == liveSessionId)
+            .OrderBy(t => t.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (threadEntity is null)
+        {
+            return null;
+        }
+
+        // La reidratazione passa dal costruttore e da AddMessage, che sollevano eventi di dominio. Questo
+        // thread viene aggiornato a ogni turno: senza azzerarli, ogni UpdateAsync riscriverebbe
+        // nell'outbox e nell'audit l'intera storia della conversazione.
+        var thread = MapToDomain(threadEntity);
+        thread.ClearDomainEvents();
+        return thread;
     }
 
     public async Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default)
@@ -124,11 +134,13 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         var query = DbContext.ChatThreads
             .AsNoTracking()
-            .Where(t => t.UserId == userId);
+            // #4276: il thread dell'assistente in partita vive nella pagina della sessione, non
+            // nell'elenco delle chat: continuarlo da lì mescolerebbe le due conversazioni.
+            .Where(t => t.UserId == userId && t.LiveSessionId == null);
 
         // Apply filters
         if (gameId.HasValue)
-            query = query.Where(t => t.GameId == gameId.Value);
+            query = query.Where(t => t.GameId == gameId.Value || t.PrivateGameId == gameId.Value); // #4244
 
         if (!string.IsNullOrWhiteSpace(agentType))
             query = query.Where(t => t.AgentType == agentType);
@@ -322,6 +334,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
                 typeof(ChatMessage).GetProperty(nameof(ChatMessage.TokenCount))?.SetValue(message, dto.TokenCount);
             }
 
+            // #4168: versione del profilo e lingua della risposta
+            if (dto.ProfileVersionId.HasValue || dto.Language != null)
+            {
+                message.SetAnswerProvenance(dto.ProfileVersionId, dto.Language);
+            }
+
             return message;
         }).ToList();
 
@@ -329,10 +347,13 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         var thread = new ChatThread(
             id: entity.Id,
             userId: entity.UserId,
-            gameId: entity.GameId,
+            // #4244: il gioco del thread è quello della colonna valorizzata; al più una lo è.
+            gameId: entity.PrivateGameId ?? entity.GameId,
             title: entity.Title,
             agentId: entity.AgentId, // Issue #2030
-            agentType: entity.AgentType // Issue #4362
+            agentType: entity.AgentType, // Issue #4362
+            liveSessionId: entity.LiveSessionId, // #4276
+            gameIsPrivate: entity.PrivateGameId.HasValue
         );
 
         // Add messages via domain method (but disable Status validation during hydration)
@@ -397,7 +418,9 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             AgentType: m.AgentType,
             Confidence: m.Confidence,
             CitationsJson: m.CitationsJson,
-            TokenCount: m.TokenCount
+            TokenCount: m.TokenCount,
+            ProfileVersionId: m.ProfileVersionId,
+            Language: m.Language
         )).ToList();
 
         var messagesJson = JsonSerializer.Serialize(messageDtos);
@@ -406,9 +429,14 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         {
             Id = domainEntity.Id,
             UserId = domainEntity.UserId,
-            GameId = domainEntity.GameId,
+            // #4244: GameId è una chiave esterna verso shared_games; il gioco privato ha la sua
+            // colonna. Entrambe scritte a ogni salvataggio: UpdateAsync riscrive tutta la riga, e una
+            // colonna dimenticata qui verrebbe azzerata al primo messaggio.
+            GameId = domainEntity.SharedGameId,
+            PrivateGameId = domainEntity.PrivateGameId,
             AgentId = domainEntity.AgentId, // Issue #2030
             AgentType = domainEntity.AgentType, // Issue #4362
+            LiveSessionId = domainEntity.LiveSessionId, // #4276
             Title = domainEntity.Title,
             Status = domainEntity.Status.Value,
             CreatedAt = domainEntity.CreatedAt,
@@ -457,7 +485,10 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         string? AgentType = null,
         float? Confidence = null,
         string? CitationsJson = null,
-        int? TokenCount = null
+        int? TokenCount = null,
+        // #4168: versione del profilo e lingua della risposta
+        Guid? ProfileVersionId = null,
+        string? Language = null
     );
 
 }

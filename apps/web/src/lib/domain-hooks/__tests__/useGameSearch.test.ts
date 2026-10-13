@@ -24,6 +24,28 @@ vi.mock('@/components/ui/data-display/entity-list-view/hooks/use-debounce', () =
   useDebounce: vi.fn((value: string) => value), // No debounce in tests by default
 }));
 
+// #4187: la sorgente «libreria» passa dal client tipizzato, non da fetch.
+const mockGetLibrary = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/api', () => ({ api: { library: { getLibrary: mockGetLibrary } } }));
+
+/** Una libreria finta che il server filtra per titolo, come fa `ILike` su UserLibraryRepository. */
+const FAKE_LIBRARY = [
+  ...Array.from({ length: 30 }, (_, i) => ({
+    gameId: `game-${String(i).padStart(2, '0')}`,
+    gameTitle: `Agricola ${i}`,
+    gameImageUrl: null,
+  })),
+  { gameId: 'game-wingspan', gameTitle: 'Wingspan', gameImageUrl: 'https://example.com/w.jpg' },
+];
+
+function serveLibrary(params?: { search?: string; page?: number; pageSize?: number }) {
+  const pool = params?.search
+    ? FAKE_LIBRARY.filter(e => e.gameTitle.toLowerCase().includes(params.search!.toLowerCase()))
+    : FAKE_LIBRARY;
+  const size = params?.pageSize ?? 20;
+  return Promise.resolve({ items: pool.slice(0, size), totalCount: pool.length });
+}
+
 // The hook maps backend results to GameSearchResult with source: 'catalog'
 const mockApiResponse = {
   games: [
@@ -158,7 +180,7 @@ describe('useGameSearch', () => {
     });
 
     it('should support custom debounce delay', () => {
-      renderHook(() => useGameSearch('Test', 500), {
+      renderHook(() => useGameSearch('Test', { debounceMs: 500 }), {
         wrapper: createWrapper(),
       });
 
@@ -394,6 +416,107 @@ describe('useGameSearch', () => {
       rerender({ query: 'Catan' });
 
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
+    });
+  });
+
+  describe('source: library (#4187)', () => {
+    beforeEach(() => {
+      mockGetLibrary.mockImplementation(serveLibrary);
+    });
+
+    it('cerca sul server: «Wingspan», oltre la prima pagina della libreria, si trova', async () => {
+      const { result } = renderHook(() => useGameSearch('Wingspan', { source: 'library' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(mockGetLibrary).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'Wingspan', page: 1, sortBy: 'title' })
+      );
+      expect(result.current.data).toEqual([
+        {
+          id: 'game-wingspan',
+          name: 'Wingspan',
+          source: 'library',
+          imageUrl: 'https://example.com/w.jpg',
+        },
+      ]);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('senza testo mostra la prima pagina della libreria in ordine di titolo', async () => {
+      const { result } = renderHook(() => useGameSearch('', { source: 'library', limit: 6 }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      const params = mockGetLibrary.mock.calls[0][0];
+      // Il backend ordina in discesa se non glielo si dice (`sortDescending ?? true`).
+      expect(params).toEqual(
+        expect.objectContaining({ page: 1, pageSize: 6, sortBy: 'title', sortDescending: false })
+      );
+      expect(params.search).toBeUndefined();
+      expect(result.current.data).toHaveLength(6);
+    });
+
+    it('non chiede al server più di quanto restituisca (pageSize 1..100)', async () => {
+      const { result } = renderHook(() => useGameSearch('', { source: 'library', limit: 500 }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(mockGetLibrary.mock.calls[0][0].pageSize).toBe(100);
+    });
+
+    it('lo stesso testo su sorgenti diverse non condivide la cache', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ games: [{ id: 'cat-1', title: 'Wingspan (catalogo)' }] }),
+      } as Response);
+
+      const catalog = renderHook(() => useGameSearch('Wingspan'), { wrapper: createWrapper() });
+      await waitFor(() => expect(catalog.result.current.isSuccess).toBe(true));
+      const library = renderHook(() => useGameSearch('Wingspan', { source: 'library' }), {
+        wrapper: createWrapper(),
+      });
+      await waitFor(() => expect(library.result.current.isSuccess).toBe(true));
+
+      expect(catalog.result.current.data?.[0].source).toBe('catalog');
+      expect(library.result.current.data?.[0].source).toBe('library');
+    });
+
+    it('resultsMatchQuery è falso finché il debounce non ha raggiunto il testo', async () => {
+      // Il debounce resta indietro di una lettera: i risultati sono per «Win», non per «Wing».
+      vi.mocked(useDebounceModule.useDebounce).mockImplementation((value: string) =>
+        value.slice(0, -1)
+      );
+
+      const { result } = renderHook(() => useGameSearch('Wing', { source: 'library' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.resultsMatchQuery).toBe(false);
+    });
+
+    it('resultsMatchQuery è vero quando i risultati sono del testo corrente', async () => {
+      const { result } = renderHook(() => useGameSearch('Wing', { source: 'library' }), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.resultsMatchQuery).toBe(true);
+    });
+
+    it('con enabled: false non fa richieste', () => {
+      renderHook(() => useGameSearch('Wingspan', { source: 'library', enabled: false }), {
+        wrapper: createWrapper(),
+      });
+
+      expect(mockGetLibrary).not.toHaveBeenCalled();
     });
   });
 });

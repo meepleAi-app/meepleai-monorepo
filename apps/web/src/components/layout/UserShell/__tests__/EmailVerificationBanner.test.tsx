@@ -10,6 +10,9 @@
  *   - Dismissible per-session via sessionStorage; stays hidden after dismiss
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { render, screen, fireEvent } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
@@ -94,8 +97,22 @@ describe('EmailVerificationBanner (F1 #1974)', () => {
     expect(screen.getByText('Verifica la tua email')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /verifica ora/i })).toHaveAttribute(
       'href',
-      '/email-verification'
+      '/verification-pending'
     );
+  });
+
+  // #4183: il test precedente asseriva '/email-verification', una rotta che non esiste, e così
+  // blindava il 404 invece di vederlo. Questo verifica che la CTA punti a una pagina di app/,
+  // qualunque nome abbia.
+  it('links the CTA to a route that exists in app/', () => {
+    mockUseCurrentUser.mockReturnValue({
+      data: fakeUser({ emailVerified: false }),
+      isLoading: false,
+    });
+    renderBanner();
+    const href = screen.getByTestId('email-verification-banner-cta').getAttribute('href') ?? '';
+
+    expect(existingAppRoutes()).toContain(href);
   });
 
   it('hides the banner after the dismiss button is clicked', () => {
@@ -124,3 +141,24 @@ describe('EmailVerificationBanner (F1 #1974)', () => {
     expect(screen.queryByTestId('email-verification-banner')).toBeNull();
   });
 });
+
+/** Le rotte servite da app/: ogni page.tsx, senza i gruppi di rotta "(nome)". */
+function existingAppRoutes(): string[] {
+  const appDir = path.resolve(__dirname, '../../../../app');
+  const routes: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === 'page.tsx') {
+        const segments = path
+          .relative(appDir, dir)
+          .split(path.sep)
+          .filter(segment => segment && !/^\(.+\)$/.test(segment));
+        routes.push('/' + segments.join('/'));
+      }
+    }
+  };
+  walk(appDir);
+  return routes;
+}

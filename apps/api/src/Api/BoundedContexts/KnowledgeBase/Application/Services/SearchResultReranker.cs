@@ -56,6 +56,23 @@ internal static class SearchResultReranker
             logger, cancellationToken);
 
     /// <summary>
+    /// #4168: reranks <see cref="MultiGameSearchResultItem"/> results (the cross-game path, which
+    /// before the answer pipeline did not rerank at all). Same index-keyed core: the original items
+    /// come back reordered/trimmed, with GameId and ChunkId intact for the deep-links.
+    /// </summary>
+    public static Task<List<MultiGameSearchResultItem>> RerankAsync(
+        ICrossEncoderReranker reranker,
+        string query,
+        IReadOnlyList<MultiGameSearchResultItem> results,
+        int topK,
+        ILogger logger,
+        CancellationToken cancellationToken)
+        => RerankByIndexAsync(
+            reranker, query, results, topK,
+            static r => r.Content, static r => (double)r.HybridScore,
+            logger, cancellationToken);
+
+    /// <summary>
     /// Index-keyed reranking core shared by both public overloads. The list index is the stable key
     /// that maps a <see cref="RerankChunk"/> back to its original element, so the reranker only needs
     /// a text + score projection and all other fields pass through opaquely.

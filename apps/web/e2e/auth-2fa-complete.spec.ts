@@ -172,13 +172,11 @@ test.describe('2FA Setup & Enable Flow', () => {
       (await page
         .getByRole('alert')
         .filter({ hasText: /invalid|error|failed|incorrect/i })
-        .isVisible({ timeout: 3000 })
-        .catch(() => false)) ||
+        .isVisible({ timeout: 3000 })) ||
       (await page
         .getByText(/invalid|error|failed|incorrect/i)
         .first()
-        .isVisible({ timeout: 3000 })
-        .catch(() => false));
+        .isVisible({ timeout: 3000 }));
 
     expect(hasError).toBe(true);
   });
@@ -402,17 +400,14 @@ test.describe('Disable 2FA', () => {
       (await page
         .getByRole('alert')
         .filter({ hasText: /failed|error|invalid/i })
-        .isVisible({ timeout: 3000 })
-        .catch(() => false)) ||
+        .isVisible({ timeout: 3000 })) ||
       (await page
         .getByText(/failed|error|invalid/i)
         .first()
-        .isVisible({ timeout: 3000 })
-        .catch(() => false));
+        .isVisible({ timeout: 3000 }));
     const stillEnabled = await page
       .getByText(/two.factor authentication is enabled/i)
-      .isVisible({ timeout: 3000 })
-      .catch(() => false);
+      .isVisible({ timeout: 3000 });
 
     // Either error shows or we're still enabled
     expect(errorVisible || stillEnabled).toBe(true);

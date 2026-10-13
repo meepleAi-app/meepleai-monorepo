@@ -19,8 +19,9 @@ public sealed class NotificationRoutesTests
     private static readonly string[] GoldenRouteValues =
     {
         // parameterized templates
-        "/library/games/{id}/agent",
+        "/library/{id}?tab=aiChat",
         "/library/private/{id}/toolkit",
+        "/library/private/{id}",
         "/contributions/requests/{id}",
         "/shared-games/{id}",
         "/admin/shared-games/{id}",
@@ -66,8 +67,9 @@ public sealed class NotificationRoutesTests
         var id = Guid.Parse("11111111-2222-3333-4444-555555555555");
         var s = id.ToString();
 
-        NotificationRoutes.LibraryAgent(id).Should().Be($"/library/games/{s}/agent");
+        NotificationRoutes.LibraryGameChat(id).Should().Be($"/library/{s}?tab=aiChat");
         NotificationRoutes.PrivateToolkit(id).Should().Be($"/library/private/{s}/toolkit");
+        NotificationRoutes.PrivateGame(id).Should().Be($"/library/private/{s}");
         NotificationRoutes.ContributionRequest(id).Should().Be($"/contributions/requests/{s}");
         NotificationRoutes.SharedGame(id).Should().Be($"/shared-games/{s}");
         NotificationRoutes.AdminSharedGame(id).Should().Be($"/admin/shared-games/{s}");

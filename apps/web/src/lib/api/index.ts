@@ -155,12 +155,7 @@ export type {
   BulkExportRequest,
 } from './clients/chatClient';
 
-export type {
-  GameFilters,
-  GameSortOptions,
-  GameSortField,
-  SortDirection,
-} from './clients/gamesClient';
+export type { GameFilters } from './clients/gamesClient';
 
 export type { SessionHistoryFilters } from './clients/sessionsClient';
 

@@ -2,6 +2,10 @@ namespace Api.Infrastructure.Entities.BusinessSimulations;
 
 /// <summary>
 /// Persistence entity for the AppBudget aggregate (Issue #1838 SP5 F4-C5).
+/// #4169 (ADR-095 D6/D8): AppBudget is retired. It was a second budget the LLM gateway never applied;
+/// the only caps are those of <c>LlmSystemConfig</c>. Nothing reads or writes this entity any more: it
+/// stays mapped only so that a rollback of the code still finds its table, until the contract
+/// delivery drops the table.
 ///
 /// <para>Singleton: at most one row exists per environment. Enforcement is
 /// application-level (the repository's upsert routes writes to either insert

@@ -27,7 +27,6 @@ public class HybridAdaptiveRoutingStrategyTests
     private readonly IOptions<AiProviderSettings> _aiSettings;
     private readonly Mock<IStrategyModelMappingService> _mockStrategyMappingService;
     private readonly Mock<ITierStrategyAccessService> _mockTierAccessService;
-    private readonly Mock<ILlmModelOverrideService> _mockOverrideService;
     private readonly Mock<IServiceScopeFactory> _mockScopeFactory;
     private readonly Mock<IServiceScope> _mockScope;
     private readonly Mock<IServiceProvider> _mockServiceProvider;
@@ -50,7 +49,6 @@ public class HybridAdaptiveRoutingStrategyTests
 
         _mockStrategyMappingService = new Mock<IStrategyModelMappingService>();
         _mockTierAccessService = new Mock<ITierStrategyAccessService>();
-        _mockOverrideService = new Mock<ILlmModelOverrideService>();
         _mockScopeFactory = new Mock<IServiceScopeFactory>();
         _mockScope = new Mock<IServiceScope>();
         _mockServiceProvider = new Mock<IServiceProvider>();
@@ -83,26 +81,22 @@ public class HybridAdaptiveRoutingStrategyTests
                 var mapping = StrategyModelMapping.Default(strategy);
                 return mapping.FallbackModels;
             });
-
-        // Default mock setup: no budget mode
-        _mockOverrideService.Setup(s => s.IsInBudgetMode()).Returns(false);
     }
 
-    private HybridAdaptiveRoutingStrategy CreateStrategy(ILlmModelOverrideService? overrideService = null)
+    private HybridAdaptiveRoutingStrategy CreateStrategy()
     {
         return new HybridAdaptiveRoutingStrategy(
             _mockStrategyMappingService.Object,
             _mockScopeFactory.Object,
             _aiSettings,
-            _logger,
-            overrideService ?? _mockOverrideService.Object);
+            _logger);
     }
 
     #region Strategy-Based Model Selection Tests
 
     [Theory]
-    [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct:free")]
-    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-chat")]
+    [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct")]
+    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-flash")]
     [InlineData(RagStrategy.Precise, "Anthropic", "anthropic/claude-sonnet-4.5")]
     [InlineData(RagStrategy.Expert, "Anthropic", "anthropic/claude-sonnet-4.5")]
     [InlineData(RagStrategy.Consensus, "Mixed", "anthropic/claude-sonnet-4.5")]
@@ -135,7 +129,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert
         decision.ProviderName.Should().Be("DeepSeek");
-        decision.ModelId.Should().Be("deepseek-chat");
+        decision.ModelId.Should().Be("deepseek-flash");
         decision.Reason.Should().Contain("Tier: User");
     }
 
@@ -365,70 +359,6 @@ public class HybridAdaptiveRoutingStrategyTests
 
     #endregion
 
-    #region Budget Mode Override Tests
-
-    [Fact]
-    public void SelectProvider_BudgetModeActive_DowngradesExpensiveModel()
-    {
-        // Arrange
-        var mockOverride = new Mock<ILlmModelOverrideService>();
-        mockOverride.Setup(s => s.IsInBudgetMode()).Returns(true);
-        mockOverride.Setup(s => s.GetOverrideModel("anthropic/claude-sonnet-4.5"))
-            .Returns("meta-llama/llama-3.3-70b-instruct:free");
-
-        var sut = CreateStrategy(mockOverride.Object);
-        var adminContext = CreateContext(LlmUserTier.Admin);
-
-        // Act
-        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
-
-        // Assert
-        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
-        decision.Reason.Should().Contain("Budget mode");
-        mockOverride.Verify(s => s.IsInBudgetMode(), Times.Once);
-        mockOverride.Verify(s => s.GetOverrideModel("anthropic/claude-sonnet-4.5"), Times.Once);
-    }
-
-    [Fact]
-    public void SelectProvider_BudgetModeInactive_UsesNormalModel()
-    {
-        // Arrange
-        var mockOverride = new Mock<ILlmModelOverrideService>();
-        mockOverride.Setup(s => s.IsInBudgetMode()).Returns(false);
-
-        var sut = CreateStrategy(mockOverride.Object);
-        var adminContext = CreateContext(LlmUserTier.Admin);
-
-        // Act
-        var decision = sut.SelectProvider(adminContext, RagStrategy.Expert);
-
-        // Assert
-        decision.ModelId.Should().Be("anthropic/claude-sonnet-4.5");
-        decision.Reason.Should().NotContain("Budget mode");
-        mockOverride.Verify(s => s.GetOverrideModel(It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public void SelectProvider_BudgetModeActive_NoMappingExists_KeepsOriginalModel()
-    {
-        // Arrange
-        var mockOverride = new Mock<ILlmModelOverrideService>();
-        mockOverride.Setup(s => s.IsInBudgetMode()).Returns(true);
-        mockOverride.Setup(s => s.GetOverrideModel(It.IsAny<string>()))
-            .Returns((string model) => model); // No mapping = return same model
-
-        var sut = CreateStrategy(mockOverride.Object);
-        var userContext = CreateContext(LlmUserTier.User);
-
-        // Act
-        var decision = sut.SelectProvider(userContext, RagStrategy.Fast);
-
-        // Assert - Original model kept when no mapping exists
-        decision.ModelId.Should().Be("meta-llama/llama-3.3-70b-instruct:free");
-        decision.Reason.Should().NotContain("Budget mode:"); // No downgrade occurred
-    }
-
-    #endregion
 
     #region Strategy Model Mapping Integration Tests
 
@@ -467,7 +397,7 @@ public class HybridAdaptiveRoutingStrategyTests
 
         // Assert - Should fall back to default
         decision.ProviderName.Should().Be("DeepSeek");
-        decision.ModelId.Should().Be("deepseek-chat");
+        decision.ModelId.Should().Be("deepseek-flash");
     }
 
     #endregion

@@ -42,7 +42,7 @@ async function setupAdminSessionLimitsMocks(
   const currentLimits = { ...initialLimits };
 
   // Mock admin auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -59,7 +59,7 @@ async function setupAdminSessionLimitsMocks(
   });
 
   // Mock session limits config endpoint (GET)
-  await page.route(`${API_BASE}/api/v1/admin/system/session-limits`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/system/session-limits`, async route => {
     const method = route.request().method();
 
     if (method === 'GET') {
@@ -119,7 +119,7 @@ async function setupAdminSessionLimitsMocks(
   });
 
   // Mock admin config navigation endpoint
-  await page.route(`${API_BASE}/api/v1/admin/configuration**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/configuration**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -134,7 +134,7 @@ async function setupAdminSessionLimitsMocks(
   });
 
   // Mock audit log endpoint (for tracking changes)
-  await page.route(`${API_BASE}/api/v1/admin/audit-log`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/audit-log`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -151,7 +151,7 @@ async function setupAdminSessionLimitsMocks(
   });
 
   // Mock common admin endpoints
-  await page.route(`${API_BASE}/api/v1/admin/**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/admin/**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -181,9 +181,9 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       }
 
       // Look for session limits option
-      const sessionLimitsLink = page.getByRole('link', { name: /session.*limit/i }).or(
-        page.getByText(/session.*limit/i)
-      );
+      const sessionLimitsLink = page
+        .getByRole('link', { name: /session.*limit/i })
+        .or(page.getByText(/session.*limit/i));
       await expect(sessionLimitsLink.first()).toBeVisible();
     });
 
@@ -213,12 +213,12 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       await page.waitForLoadState('networkidle');
 
       // Should have input fields for Free and Normal tiers
-      const freeInput = page.getByLabel(/free.*limit|free.*session/i).or(
-        page.locator('input[name*="free"]')
-      );
-      const normalInput = page.getByLabel(/normal.*limit|normal.*session/i).or(
-        page.locator('input[name*="normal"]')
-      );
+      const freeInput = page
+        .getByLabel(/free.*limit|free.*session/i)
+        .or(page.locator('input[name*="free"]'));
+      const normalInput = page
+        .getByLabel(/normal.*limit|normal.*session/i)
+        .or(page.locator('input[name*="normal"]'));
 
       await expect(freeInput.first()).toBeVisible();
       await expect(normalInput.first()).toBeVisible();
@@ -235,9 +235,10 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       await page.waitForLoadState('networkidle');
 
       // Find Free tier input
-      const freeInput = page.getByLabel(/free.*limit/i).or(
-        page.locator('input[name*="free"], input[id*="free"]')
-      ).first();
+      const freeInput = page
+        .getByLabel(/free.*limit/i)
+        .or(page.locator('input[name*="free"], input[id*="free"]'))
+        .first();
 
       if (await freeInput.isVisible()) {
         await freeInput.clear();
@@ -259,9 +260,10 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       await page.waitForLoadState('networkidle');
 
       // Find Normal tier input
-      const normalInput = page.getByLabel(/normal.*limit/i).or(
-        page.locator('input[name*="normal"], input[id*="normal"]')
-      ).first();
+      const normalInput = page
+        .getByLabel(/normal.*limit/i)
+        .or(page.locator('input[name*="normal"], input[id*="normal"]'))
+        .first();
 
       if (await normalInput.isVisible()) {
         await normalInput.clear();
@@ -282,9 +284,10 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       await page.goto('/admin/config/session-limits');
       await page.waitForLoadState('networkidle');
 
-      const freeInput = page.getByLabel(/free.*limit/i).or(
-        page.locator('input[name*="free"]')
-      ).first();
+      const freeInput = page
+        .getByLabel(/free.*limit/i)
+        .or(page.locator('input[name*="free"]'))
+        .first();
 
       if (await freeInput.isVisible()) {
         await freeInput.clear();
@@ -304,9 +307,10 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       await page.goto('/admin/config/session-limits');
       await page.waitForLoadState('networkidle');
 
-      const freeInput = page.getByLabel(/free.*limit/i).or(
-        page.locator('input[name*="free"]')
-      ).first();
+      const freeInput = page
+        .getByLabel(/free.*limit/i)
+        .or(page.locator('input[name*="free"]'))
+        .first();
 
       if (await freeInput.isVisible()) {
         await freeInput.clear();
@@ -330,9 +334,9 @@ test.describe('ADM-11: Session Limits Configuration', () => {
 
       // Premium should show as unlimited
       const premiumSection = page.locator('text=Premium').locator('..');
-      await expect(premiumSection.getByText(/unlimited|∞/i).or(
-        page.getByText(/unlimited|∞/i)
-      )).toBeVisible();
+      await expect(
+        premiumSection.getByText(/unlimited|∞/i).or(page.getByText(/unlimited|∞/i))
+      ).toBeVisible();
     });
 
     test('should not have editable input for Premium tier', async ({ page }) => {
@@ -343,7 +347,7 @@ test.describe('ADM-11: Session Limits Configuration', () => {
 
       // Premium should not have an editable number input
       const premiumInput = page.locator('input[name*="premium"][type="number"]');
-      const isVisible = await premiumInput.isVisible().catch(() => false);
+      const isVisible = await premiumInput.isVisible();
 
       if (isVisible) {
         // If visible, it should be disabled
@@ -371,9 +375,10 @@ test.describe('ADM-11: Session Limits Configuration', () => {
       await page.goto('/admin/config/session-limits');
       await page.waitForLoadState('networkidle');
 
-      const freeInput = page.getByLabel(/free.*limit/i).or(
-        page.locator('input[name*="free"]')
-      ).first();
+      const freeInput = page
+        .getByLabel(/free.*limit/i)
+        .or(page.locator('input[name*="free"]'))
+        .first();
 
       if (await freeInput.isVisible()) {
         await freeInput.clear();

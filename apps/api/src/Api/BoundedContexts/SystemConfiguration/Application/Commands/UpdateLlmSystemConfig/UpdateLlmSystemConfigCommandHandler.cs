@@ -33,19 +33,35 @@ internal sealed class UpdateLlmSystemConfigCommandHandler
         var config = await _repository.GetCurrentAsync(cancellationToken).ConfigureAwait(false)
                      ?? LlmSystemConfig.CreateDefault();
 
-        // Apply updates via domain methods (validation happens here)
-        config.UpdateCircuitBreakerSettings(
-            request.CircuitBreakerFailureThreshold,
-            request.CircuitBreakerOpenDurationSeconds,
-            request.CircuitBreakerSuccessThreshold,
-            request.UpdatedByUserId);
+        // Apply updates via domain methods (validation happens here). #4169: le soglie del circuit
+        // breaker arrivano tutte e tre o nessuna (lo garantisce il validator).
+        if (request.CircuitBreakerFailureThreshold is { } failure
+            && request.CircuitBreakerOpenDurationSeconds is { } openSeconds
+            && request.CircuitBreakerSuccessThreshold is { } success)
+        {
+            config.UpdateCircuitBreakerSettings(failure, openSeconds, success, request.UpdatedByUserId);
+        }
 
         config.UpdateBudgetLimits(
             request.DailyBudgetUsd,
             request.MonthlyBudgetUsd,
             request.UpdatedByUserId);
 
-        config.UpdateFallbackChain(request.FallbackChainJson, request.UpdatedByUserId);
+        if (request.DegradeThresholdPercent.HasValue
+            || request.BackgroundQuotaPercent.HasValue
+            || request.EvaluationQuotaPercent.HasValue)
+        {
+            config.UpdateBudgetPolicy(
+                request.DegradeThresholdPercent ?? config.DegradeThresholdPercent,
+                request.BackgroundQuotaPercent ?? config.BackgroundQuotaPercent,
+                request.EvaluationQuotaPercent ?? config.EvaluationQuotaPercent,
+                request.UpdatedByUserId);
+        }
+
+        if (request.FallbackChainJson is not null)
+        {
+            config.UpdateFallbackChain(request.FallbackChainJson, request.UpdatedByUserId);
+        }
 
         await _repository.UpsertAsync(config, cancellationToken).ConfigureAwait(false);
 
@@ -53,10 +69,9 @@ internal sealed class UpdateLlmSystemConfigCommandHandler
         _configProvider.InvalidateCache();
 
         _logger.LogInformation(
-            "LLM system config updated by user {UserId} (CB: {Failure}/{Open}s/{Success}, Budget: ${Daily}/{Monthly})",
-            request.UpdatedByUserId, request.CircuitBreakerFailureThreshold,
-            request.CircuitBreakerOpenDurationSeconds, request.CircuitBreakerSuccessThreshold,
-            request.DailyBudgetUsd, request.MonthlyBudgetUsd);
+            "LLM system config updated by user {UserId} (Budget: ${Daily}/{Monthly}, degrade {Degrade}%, quotas {Background}%/{Evaluation}%)",
+            request.UpdatedByUserId, config.DailyBudgetUsd, config.MonthlyBudgetUsd,
+            config.DegradeThresholdPercent, config.BackgroundQuotaPercent, config.EvaluationQuotaPercent);
 
         return new LlmSystemConfigDto(
             config.CircuitBreakerFailureThreshold,
@@ -64,6 +79,9 @@ internal sealed class UpdateLlmSystemConfigCommandHandler
             config.CircuitBreakerSuccessThreshold,
             config.DailyBudgetUsd,
             config.MonthlyBudgetUsd,
+            config.DegradeThresholdPercent,
+            config.BackgroundQuotaPercent,
+            config.EvaluationQuotaPercent,
             config.FallbackChainJson,
             Source: "database",
             LastUpdatedAt: config.UpdatedAt,

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.UserLibrary;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -76,6 +77,17 @@ internal class TextChunkEntityConfiguration : IEntityTypeConfiguration<TextChunk
             .WithMany()
             .HasForeignKey(e => e.PdfDocumentId)
             .OnDelete(DeleteBehavior.Cascade);
+        // Issue #4244: il gioco privato sta in una colonna sua, con la sua chiave esterna. CASCADE
+        // vale per le cancellazioni fisiche; `PrivateGame.Delete()` è un soft delete e non la fa
+        // scattare: lì la rimozione è esplicita.
+        builder.Property(e => e.PrivateGameId).IsRequired(false);
+        builder.HasOne<PrivateGameEntity>()
+            .WithMany()
+            .HasForeignKey(e => e.PrivateGameId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(e => e.PrivateGameId);
+
         builder.HasIndex(e => e.GameId);
         builder.HasIndex(e => e.SharedGameId);
         builder.HasIndex(e => e.PdfDocumentId);

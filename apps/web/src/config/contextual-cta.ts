@@ -49,14 +49,6 @@ const CTA_MAP: Array<{ prefix: string; config: CtaConfig }> = [
       gradient: 'from-sky-600 to-blue-500',
     },
   },
-  {
-    prefix: '/agents',
-    config: {
-      label: '+ Nuovo agente',
-      href: '/agents/new',
-      gradient: 'from-pink-600 to-rose-500',
-    },
-  },
 ];
 
 /**

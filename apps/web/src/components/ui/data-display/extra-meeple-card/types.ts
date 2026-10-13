@@ -242,14 +242,6 @@ export interface AITabData {
 /** Entity types supported by ExtraMeepleCard variants */
 export type ExtraMeepleCardEntity = 'session' | 'game' | 'player' | 'collection';
 
-/** Compact agent preview for the GameExtraMeepleCard Agent tab (Issue #5029) */
-export interface GameAgentPreview {
-  id: string;
-  name: string;
-  model?: string;
-  isActive: boolean;
-}
-
 /** Game entity detail data */
 export interface GameDetailData {
   id: string;
@@ -269,8 +261,6 @@ export interface GameDetailData {
   kbDocuments?: KbDocumentPreview[];
   /** Full PDF document data with processing state (Issue #5195) */
   pdfDocuments?: PdfDocumentDto[];
-  /** Agent configured for this game (Issue #5029) */
-  agent?: GameAgentPreview;
 }
 
 /** Player entity detail data */
@@ -522,14 +512,7 @@ export interface TimerActions {
 
 /** Extended event types for timeline filtering */
 export type SessionEventType =
-  | 'system'
-  | 'turn'
-  | 'score'
-  | 'action'
-  | 'media'
-  | 'phase'
-  | 'snapshot'
-  | 'chat';
+  'system' | 'turn' | 'score' | 'action' | 'media' | 'phase' | 'snapshot' | 'chat';
 
 /** Enhanced timeline event with expanded details */
 export interface EnhancedTimelineEvent {
@@ -607,7 +590,8 @@ export interface SharedGameDetailData extends GameDetailData {
   status: string;
   documents: SharedGameDocumentInfo[];
   kbCards: SharedGameKbCardInfo[];
-  linkedAgent: { id: string; name: string; isActive: boolean } | null;
+  // Issue #4138: `linkedAgent` removed — an agent is no longer bound to a game.
+  // The readable linkage still exposed by RAG readiness lives in `rag-setup.schemas.ts`.
 }
 
 /** Toolkit entity detail data (drawer view) */
@@ -652,7 +636,6 @@ export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';
 export interface SharedGameExtraMeepleCardProps {
   data: SharedGameDetailData;
   onUploadPdf?: () => void;
-  onCreateAgent?: () => void;
   loading?: boolean;
   error?: string;
   className?: string;

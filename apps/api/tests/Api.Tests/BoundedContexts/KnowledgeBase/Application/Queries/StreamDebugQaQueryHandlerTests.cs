@@ -290,8 +290,6 @@ public class StreamDebugQaQueryHandlerTests
             id: id,
             name: name,
             description: "Test agent",
-            typeValue: "tutor",
-            typeDescription: "Board game tutor",
             config: AgentDefinitionConfig.Default(),
             strategyJson: "{}",
             promptsJson: "[]",

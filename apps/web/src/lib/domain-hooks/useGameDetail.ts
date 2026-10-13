@@ -39,7 +39,6 @@ export interface GameDetail {
   avgDuration: string | null;
   recentSessions?: GameSession[];
   checklist?: ChecklistItem[];
-  customAgentConfig?: unknown;
   customPdf?: unknown;
 }
 

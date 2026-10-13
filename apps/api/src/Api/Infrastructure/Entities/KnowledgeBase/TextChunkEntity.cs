@@ -21,6 +21,14 @@ public class TextChunkEntity
     /// </summary>
     public Guid? SharedGameId { get; set; }
 
+    /// <summary>
+    /// Issue #4244: il gioco PRIVATO del PDF da cui viene il passaggio, quando il PDF è di un gioco
+    /// privato. In quel caso <see cref="GameId"/> resta null: quella colonna è una chiave esterna
+    /// verso <c>shared_games</c>, e scriverci l'id di un gioco privato faceva fallire il salvataggio
+    /// (<c>FK_text_chunks_shared_games_GameId</c>). La ricerca lessicale filtra su una delle due.
+    /// </summary>
+    public Guid? PrivateGameId { get; set; }
+
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid PdfDocumentId { get; set; }
     public string Content { get; set; } = default!;

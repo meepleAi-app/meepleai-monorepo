@@ -52,7 +52,6 @@ export type {
   AIQuickAction,
   AITabData,
   GameDetailData,
-  GameAgentPreview,
   PlayerDetailData,
   CollectionDetailData,
   AgentDetailData,

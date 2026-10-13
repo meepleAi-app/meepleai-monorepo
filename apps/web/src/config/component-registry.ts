@@ -2308,16 +2308,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tags: ['game', 'card', 'admin'],
   },
   {
-    id: 'agent-builder-modal',
-    name: 'AgentBuilderModal',
-    importPath: '@/components/admin/shared-games/AgentBuilderModal',
-    category: 'Agent',
-    areas: ['admin'],
-    tier: 'interactive',
-    description: 'Modal for configuring an agent linked to a shared game.',
-    tags: ['agent', 'modal', 'game'],
-  },
-  {
     id: 'bgg-search-panel',
     name: 'BggSearchPanel',
     importPath: '@/components/admin/shared-games/BggSearchPanel',
@@ -2483,16 +2473,6 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
     tier: 'interactive',
     description: 'Inline chat panel for testing RAG setup on a shared game.',
     tags: ['chat', 'rag', 'test', 'inline'],
-  },
-  {
-    id: 'agent-setup-panel',
-    name: 'AgentSetupPanel',
-    importPath: '@/components/admin/shared-games/rag-setup/AgentSetupPanel',
-    category: 'Agent',
-    areas: ['admin'],
-    tier: 'interactive',
-    description: 'Panel guiding admin through linking an agent to a shared game.',
-    tags: ['agent', 'setup', 'panel', 'game'],
   },
 
   // ─── Admin — Users ────────────────────────────────────────────────────────

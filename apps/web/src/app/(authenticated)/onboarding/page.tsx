@@ -17,8 +17,9 @@ import { OnboardingGenericWizard } from './OnboardingGenericWizard';
  * `OnboardingTourClient` 5-step page-flow has been replaced by the 3-step
  * `OnboardingGenericWizard` built on the asse-B `WizardModal` primitive.
  *
- * Invited users (token-based) continue to use the dedicated 5-step
- * `OnboardingWizard` mounted by `/accept-invite` — that flow is untouched.
+ * Invited users land here too: `/accept-invite` accepts the token and redirects
+ * to this page. (A separate 5-step `OnboardingWizard` existed, mounted by no
+ * route; Issue #4138 deleted it.)
  */
 export default function OnboardingPage(): JSX.Element | null {
   const router = useRouter();

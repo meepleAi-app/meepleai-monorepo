@@ -11,14 +11,16 @@ internal interface IVectorStoreAdapter
 {
     /// <summary>
     /// Performs vector similarity search.
-    /// Issue #2051: Supports document filtering via documentIds
+    /// Issue #2051: supports document filtering.
+    /// Issue #4243: the filter is a list of <c>pdf_documents.Id</c>, the identity the keyword arm
+    /// compares, never <c>vector_documents.Id</c>.
     /// </summary>
     Task<List<Embedding>> SearchAsync(
         Guid gameId,
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -31,7 +33,7 @@ internal interface IVectorStoreAdapter
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -67,7 +69,7 @@ internal interface IVectorStoreAdapter
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

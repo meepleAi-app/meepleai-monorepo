@@ -61,19 +61,12 @@ vi.mock('@/lib/stores/play-records-store', () => ({
   }),
 }));
 
-vi.mock('@/components/play-records/GameCombobox', () => ({
-  GameCombobox: ({
-    placeholder,
-  }: {
-    value?: string;
-    onSelect: (id: string, name: string) => void;
-    onNotFound?: () => void;
-    disabled?: boolean;
-    placeholder?: string;
-  }) => (
+// The real GamePicker has its own axe test (features/game-picker/__tests__).
+vi.mock('@/components/features/game-picker', () => ({
+  GamePicker: ({ placeholder }: { placeholder?: string }) => (
     <div>
       <input
-        data-testid="game-combobox"
+        data-testid="play-record-game-stub"
         placeholder={placeholder ?? 'Search game'}
         aria-label={placeholder ?? 'Search game'}
         readOnly

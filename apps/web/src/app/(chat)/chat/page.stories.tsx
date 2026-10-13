@@ -10,7 +10,6 @@
  * Route /chat → ChatListPage. Auth-gated via useAuth (Storybook preview's
  * MockAuthProvider supplies user.id='storybook-user', so the queries run). On mount:
  *   GET /users/:userId/chat-sessions/recent → ChatSessionSummaryDto[] (bare array, Zod-validated)
- *   GET /users/:userId/chat-sessions/limit  → { limit, used, tier }
  * States: default (sessions) / empty / loading / error. The recent fixtures MUST be
  * Zod-valid (uuid v4 ids + RFC3339 datetimes WITH offset) or the client throws
  * SchemaValidationError and the query lands in error.
@@ -22,7 +21,6 @@ import ChatListPage from './page';
 import type { Meta, StoryObj } from '@storybook/react';
 
 const RECENT_URL = '*/api/v1/users/:userId/chat-sessions/recent';
-const LIMIT_URL = '*/api/v1/users/:userId/chat-sessions/limit';
 
 /** ChatSessionSummaryDto[] — bare array (client wraps into { sessions, totalCount }). */
 const RECENT_SESSIONS = [
@@ -58,12 +56,6 @@ const RECENT_SESSIONS = [
   },
 ];
 
-const LIMIT_LOW = { limit: 50, used: 3, tier: 'free' };
-const LIMIT_NEAR_CAP = { limit: 50, used: 45, tier: 'free' };
-
-/** Limit handler always resolves; the recent handler drives the canonical state. */
-const okLimit = http.get(LIMIT_URL, () => HttpResponse.json(LIMIT_LOW));
-
 const meta: Meta<typeof ChatListPage> = {
   title: 'Authenticated / chat-list',
   component: ChatListPage,
@@ -77,7 +69,7 @@ const meta: Meta<typeof ChatListPage> = {
       description: {
         component:
           'Chat list. Default = grouped recent sessions; Empty = no sessions; ' +
-          'Loading = skeleton; Error = 500. TierNearCap = quota banner (used/limit ≥ 0.8).',
+          'Loading = skeleton; Error = 500.',
       },
     },
   },
@@ -91,7 +83,7 @@ type Story = StoryObj<typeof ChatListPage>;
 export const Default: Story = {
   parameters: {
     msw: {
-      handlers: [http.get(RECENT_URL, () => HttpResponse.json(RECENT_SESSIONS)), okLimit],
+      handlers: [http.get(RECENT_URL, () => HttpResponse.json(RECENT_SESSIONS))],
     },
   },
 };
@@ -100,7 +92,7 @@ export const Default: Story = {
 export const Empty: Story = {
   parameters: {
     msw: {
-      handlers: [http.get(RECENT_URL, () => HttpResponse.json([])), okLimit],
+      handlers: [http.get(RECENT_URL, () => HttpResponse.json([]))],
     },
   },
 };
@@ -109,7 +101,7 @@ export const Empty: Story = {
 export const Loading: Story = {
   parameters: {
     msw: {
-      handlers: [http.get(RECENT_URL, () => new Promise<Response>(() => {})), okLimit],
+      handlers: [http.get(RECENT_URL, () => new Promise<Response>(() => {}))],
     },
   },
 };
@@ -120,19 +112,6 @@ export const Error: Story = {
     msw: {
       handlers: [
         http.get(RECENT_URL, () => HttpResponse.json({ error: 'server_error' }, { status: 500 })),
-        okLimit,
-      ],
-    },
-  },
-};
-
-/** TierNearCap: sessions load AND the tier banner shows (45/50 = 0.9 ≥ 0.8). */
-export const TierNearCap: Story = {
-  parameters: {
-    msw: {
-      handlers: [
-        http.get(RECENT_URL, () => HttpResponse.json(RECENT_SESSIONS)),
-        http.get(LIMIT_URL, () => HttpResponse.json(LIMIT_NEAR_CAP)),
       ],
     },
   },

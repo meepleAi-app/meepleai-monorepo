@@ -46,6 +46,56 @@ export const KbCitationSchema = z.object({
 });
 export type KbCitation = z.infer<typeof KbCitationSchema>;
 
+/**
+ * #4168: la citazione come la serializza davvero il backend — il record C# `Snippet`
+ * (`text, source, page, line, score` più `chunkId`/`chunkPosition` sul percorso cross-game).
+ * Lo schema sopra chiedeva `docId` e `snippet`, che il backend non ha mai mandato: l'evento
+ * Citations falliva la validazione e `kbAskClient` lo scartava in silenzio. Qui la forma del filo
+ * diventa quella che la pagina usa: `docId` è la `source` senza l'eventuale prefisso `PDF:`
+ * (che porta la chat per gioco), `snippet` è il `text`.
+ */
+const KbWireCitationSchema = z
+  .object({
+    text: z.string(),
+    source: z.string(),
+    page: z.number().int().nonnegative(),
+    line: z.number().optional(),
+    score: z.number(),
+    chunkId: z.string().optional(),
+    chunkPosition: z.number().int().nonnegative().optional(),
+  })
+  .transform((c): KbCitation => ({
+    docId: c.source.startsWith('PDF:') ? c.source.slice('PDF:'.length) : c.source,
+    source: c.source,
+    page: c.page,
+    snippet: c.text,
+    score: c.score,
+    ...(c.chunkId !== undefined ? { chunkId: c.chunkId } : {}),
+    ...(c.chunkPosition !== undefined ? { chunkPosition: c.chunkPosition } : {}),
+  }));
+
+/** Una citazione nella forma della pagina, o in quella del filo. */
+const KbIncomingCitationSchema = z.union([KbCitationSchema, KbWireCitationSchema]);
+
+/**
+ * #4168: l'errore come lo serializza il backend — il record C# `StreamingError`
+ * (`errorMessage`, `errorCode` nullable, `gameId` solo per i dinieghi legati a un gioco).
+ * Come per le citazioni, la forma attesa (`message`, `code`) non arrivava mai, e un errore del
+ * backend chiudeva lo stream senza dire perché.
+ */
+const KbErrorDataSchema = z.union([
+  z.object({
+    message: z.string(),
+    code: z.string(),
+  }),
+  z
+    .object({
+      errorMessage: z.string(),
+      errorCode: z.string().nullable().optional(),
+    })
+    .transform(e => ({ message: e.errorMessage, code: e.errorCode ?? 'UNKNOWN' })),
+]);
+
 /** Event types (mirror BE StreamingEventType enum — numeric values).
  *  Only the subset emitted by `/ask/global` is parsed here. */
 export const KbAskEventType = {
@@ -69,7 +119,7 @@ export const KbAskEventSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal(1),
     data: z.object({
-      citations: z.array(KbCitationSchema),
+      citations: z.array(KbIncomingCitationSchema),
     }),
     timestamp: z.string().optional(),
   }),
@@ -86,10 +136,7 @@ export const KbAskEventSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal(5),
-    data: z.object({
-      message: z.string(),
-      code: z.string(),
-    }),
+    data: KbErrorDataSchema,
     timestamp: z.string().optional(),
   }),
   z.object({

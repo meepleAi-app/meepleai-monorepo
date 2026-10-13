@@ -94,8 +94,7 @@ apps/web/e2e/
 │   │   ├── EditorPage.ts           # RuleSpec editor
 │   │   └── VersionHistoryPage.ts   # Version management
 │   ├── game/
-│   │   ├── GameListPage.ts         # Browse/search games
-│   │   └── PdfUploadPage.ts        # PDF upload wizard
+│   │   └── GameListPage.ts         # Browse/search games
 │   └── admin/
 │       ├── UserManagementPage.ts   # User CRUD
 │       └── AnalyticsPage.ts        # Analytics dashboard
@@ -133,7 +132,6 @@ apps/web/e2e/
 
 - EditorPage
 - GameListPage
-- PdfUploadPage
 - UserManagementPage
 - AnalyticsPage
 - ConfigurationPage

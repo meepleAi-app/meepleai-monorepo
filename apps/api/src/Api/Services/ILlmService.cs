@@ -10,13 +10,17 @@ namespace Api.Services;
 /// Usage: Token usage metadata (only in final chunk)
 /// Cost: Cost metadata (only in final chunk)
 /// IsFinal: True if this is the last chunk containing usage metadata
+/// ErrorCode / ErrorMessage: #4166, set on the only chunk of a call the gateway refused before
+/// reaching the provider (budget cap, quota, model not in the catalog)
 /// </summary>
 internal record StreamChunk(
     string? Content,
     LlmUsage? Usage = null,
     LlmCost? Cost = null,
     bool IsFinal = false,
-    string? FinishReason = null);
+    string? FinishReason = null,
+    string? ErrorCode = null,
+    string? ErrorMessage = null);
 
 /// <summary>
 /// Interface for LLM chat completion services
@@ -125,6 +129,101 @@ internal interface ILlmService
         int? maxTokens = null,
         CancellationToken ct = default)
         => GenerateCompletionWithModelAsync(preferredModel, systemPrompt, userPrompt, source, maxTokens, ct);
+
+    /// <summary>
+    /// #4166: streaming con un modello esplicito e parametri propri, attraverso il gateway (tetto di
+    /// spesa, registro costi). Serve al playground admin, che prova il modello e i parametri di un
+    /// agente e prima chiamava i client direttamente.
+    /// </summary>
+    /// <remarks>
+    /// L'implementazione di default ignora modello e parametri e delega allo streaming instradato,
+    /// come <see cref="GenerateCompletionWithModelFallbackAsync"/> per mock e doppi;
+    /// <c>HybridLlmService</c> la sostituisce.
+    /// </remarks>
+    IAsyncEnumerable<StreamChunk> GenerateCompletionStreamWithModelAsync(
+        string explicitModel,
+        string systemPrompt,
+        string userPrompt,
+        RequestSource source,
+        double? temperature = null,
+        int? maxTokens = null,
+        CancellationToken ct = default)
+        => GenerateCompletionStreamAsync(systemPrompt, userPrompt, source, ct);
+
+    /// <summary>
+    /// #4168 (ADR-095 D3, passo 6): la risposta della pipeline in streaming. Modello, riserva,
+    /// temperatura e lunghezza arrivano dalla versione pubblicata del profilo, non dal gateway.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Le garanzie (D3): fallback sulla riserva solo PRIMA del primo token, circuit breaker
+    /// aggiornato a ogni tentativo. Se lo stream si interrompe dopo il primo token non si passa a un
+    /// secondo modello: l'ultimo chunk porta <see cref="LlmAnswerErrorCodes.StreamInterrupted"/>, il
+    /// costo dei token generati finisce nel registro e il circuit breaker conta il fallimento. Se
+    /// nessun modello risponde, l'unico chunk porta <see cref="LlmAnswerErrorCodes.ProviderUnavailable"/>:
+    /// mai uno stream vuoto.
+    /// </para>
+    /// <para>
+    /// L'implementazione di default serve a mock e doppi: chiama il modello principale senza
+    /// fallback. <c>HybridLlmService</c> la sostituisce.
+    /// </para>
+    /// </remarks>
+    IAsyncEnumerable<StreamChunk> GenerateAnswerStreamAsync(LlmAnswerRequest request, CancellationToken ct = default)
+        => GenerateCompletionStreamWithModelAsync(
+            request.PrimaryModelId, request.SystemPrompt, request.UserPrompt, request.Source,
+            request.Temperature, request.MaxTokens, ct);
+
+    /// <summary>
+    /// #4168: la risposta della pipeline in un colpo solo, con le stesse garanzie dello streaming
+    /// (riserva se il principale fallisce, circuit breaker aggiornato). Il risultato porta il
+    /// <see cref="LlmCompletionResult.ProfileVersionId"/> della richiesta.
+    /// </summary>
+    /// <remarks>L'implementazione di default serve a mock e doppi: chiama il modello principale senza fallback.</remarks>
+    Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
+        => GenerateCompletionWithModelAsync(
+            request.PrimaryModelId, request.SystemPrompt, request.UserPrompt, request.Source, request.MaxTokens, ct);
+
+    /// <summary>
+    /// ADR-097: una chiamata di chat con strumenti, con le garanzie di <see cref="GenerateAnswerAsync"/>.
+    /// Il risultato porta il testo, le chiamate a strumenti chieste dal modello, o entrambi. Chi non la
+    /// implementa fallisce in modo esplicito.
+    /// </summary>
+    Task<LlmCompletionResult> ChatAsync(LlmChatRequest request, CancellationToken ct = default)
+        => Task.FromResult(LlmCompletionResult.CreateFailure("Tool calling is not supported by this LLM service."));
+}
+
+/// <summary>
+/// #4168 (ADR-095 D3): una risposta della pipeline. Il chiamante decide modello e parametri,
+/// presi dalla versione pubblicata del profilo; il gateway resta il solo a chiamare il provider,
+/// con tetto, fallback, circuit breaker e registro.
+/// </summary>
+/// <param name="SystemPrompt">Il prompt di sistema, già nella lingua dell'utente.</param>
+/// <param name="UserPrompt">La domanda con il contesto recuperato.</param>
+/// <param name="PrimaryModelId">Il modello principale della versione pubblicata, dal catalogo.</param>
+/// <param name="FallbackModelId">La riserva: si usa se il principale non risponde prima del primo
+/// token, e al posto del principale quando il tetto è in degrado e la riserva costa meno.</param>
+/// <param name="Temperature">La temperatura della versione pubblicata.</param>
+/// <param name="MaxTokens">La lunghezza massima della risposta, in token.</param>
+/// <param name="ProfileVersionId">La versione del profilo usata davvero: finisce nella riga del registro costi (D2).</param>
+/// <param name="Source">La sorgente per il tetto e il registro: una risposta, salvo eccezioni.</param>
+internal sealed record LlmAnswerRequest(
+    string SystemPrompt,
+    string UserPrompt,
+    string PrimaryModelId,
+    string? FallbackModelId,
+    double Temperature,
+    int MaxTokens,
+    Guid? ProfileVersionId,
+    RequestSource Source = RequestSource.RagPipeline);
+
+/// <summary>#4168: i codici d'errore che il gateway mette sull'ultimo chunk di una risposta.</summary>
+internal static class LlmAnswerErrorCodes
+{
+    /// <summary>Nessun modello ha risposto prima del primo token: provider giù, circuito aperto, chiave rifiutata.</summary>
+    public const string ProviderUnavailable = "AI_PROVIDER_UNAVAILABLE";
+
+    /// <summary>Lo stream si è interrotto dopo il primo token: la risposta è parziale e non va mostrata come completa.</summary>
+    public const string StreamInterrupted = "AI_STREAM_INTERRUPTED";
 }
 
 /// <summary>
@@ -167,6 +266,11 @@ internal record LlmCost
     public required string Provider { get; init; }
 
     /// <summary>
+    /// #4164 (ADR-095): come è stato prezzato il costo; <c>null</c> se non c'era nulla da prezzare.
+    /// </summary>
+    public Api.BoundedContexts.KnowledgeBase.Domain.Models.LlmPricingStatus? PricingStatus { get; init; }
+
+    /// <summary>
     /// Empty cost (zero cost)
     /// </summary>
     public static readonly LlmCost Empty = new()
@@ -189,6 +293,18 @@ internal record LlmCompletionResult
     public LlmUsage Usage { get; init; } = LlmUsage.Empty;
     public LlmCost Cost { get; init; } = LlmCost.Empty;
     public IReadOnlyDictionary<string, string> Metadata { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente con cui è stata prodotta una risposta
+    /// della pipeline; <c>null</c> per ogni altra chiamata. Il registro costi la copia nella riga.
+    /// </summary>
+    public Guid? ProfileVersionId { get; init; }
+
+    /// <summary>
+    /// ADR-097: le chiamate a strumenti chieste dal modello in una chat con strumenti. Vuota per ogni
+    /// altra chiamata.
+    /// </summary>
+    public IReadOnlyList<LlmToolCall> ToolCalls { get; init; } = [];
 
     public static LlmCompletionResult CreateSuccess(
         string response,

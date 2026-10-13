@@ -218,6 +218,88 @@ public sealed class RagOwnershipRequiredEndpointsIntegrationTests
             "superato il cancello, la guida comincia a prepararsi");
     }
 
+    // ─── #4294: explain e il suggerimento di mossa leggono la stessa KB e restituiscono i passaggi ───
+
+    [Fact]
+    public async Task Explain_WithoutDeclaredOwnership_Returns403_NamingTheCodeAndTheGame()
+    {
+        var response = await PostExplainAsync();
+
+        // Prima di #4294 la rotta cercava nella KB del gioco e restituiva i passaggi in `citations`
+        // a chiunque avesse una sessione.
+        await AssertOwnershipDenialAsync(response);
+    }
+
+    [Fact]
+    public async Task Explain_AfterDeclaringOwnership_PassesTheGate()
+    {
+        await DeclareOwnershipAsync();
+
+        var response = await PostExplainAsync();
+
+        // Il gioco non ha un manuale indicizzato: superato il cancello, la ricerca non trova nulla
+        // e la rotta risponde lo stesso, senza passaggi.
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+    }
+
+    [Fact]
+    public async Task PlayerModeSuggest_WithoutDeclaredOwnership_Returns403_NamingTheCodeAndTheGame()
+    {
+        var response = await PostPlayerModeSuggestAsync();
+
+        // Prima di #4294 il suggerimento cercava nella KB del gioco, passava i passaggi all'LLM e li
+        // restituiva in `sources`.
+        await AssertOwnershipDenialAsync(response);
+    }
+
+    [Fact]
+    public async Task PlayerModeSuggest_AfterDeclaringOwnership_PassesTheGate()
+    {
+        await DeclareOwnershipAsync();
+
+        var response = await PostPlayerModeSuggestAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+    }
+
+    private Task<HttpResponseMessage> PostExplainAsync() =>
+        _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/agents/explain", _token,
+                new { gameId = _gameId.ToString(), topic = "preparazione" }),
+            Ct);
+
+    private Task<HttpResponseMessage> PostPlayerModeSuggestAsync() =>
+        _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/agents/player-mode/suggest", _token,
+                new
+                {
+                    gameId = _gameId.ToString(),
+                    gameState = new { players = new[] { new { name = "Anna", score = 3 } } },
+                    query = "Cosa mi conviene fare?",
+                }),
+            Ct);
+
+    private async Task DeclareOwnershipAsync()
+    {
+        var declare = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, $"/api/v1/library/{_gameId}/declare-ownership", _token),
+            Ct);
+        declare.StatusCode.Should().Be(HttpStatusCode.OK, await declare.Content.ReadAsStringAsync(Ct));
+    }
+
+    private async Task AssertOwnershipDenialAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden, body);
+
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("error").GetString().Should().Be(OwnershipCode);
+        json.RootElement.GetProperty("gameId").GetGuid().Should().Be(_gameId);
+    }
+
     private async Task<IReadOnlyList<JsonElement>> StreamSetupGuideAsync()
     {
         var response = await _client.SendAsync(

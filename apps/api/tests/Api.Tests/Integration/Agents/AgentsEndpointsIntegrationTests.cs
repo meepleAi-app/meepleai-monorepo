@@ -368,7 +368,8 @@ public sealed class AgentsEndpointsIntegrationTests
 
     /// <summary>
     /// AC1: scope=my-library returns agents whose GameId is in the caller's library
-    /// plus system agents (GameId == null). Agents for games NOT in the library are excluded.
+    /// plus system agents (<c>IsSystemDefined</c>). Agents for games NOT in the library are
+    /// excluded, and so is an agent with no game that is not system-defined (#4081, #4083).
     /// Assertions are seeded-id-scoped (not exact count) because this class shares one
     /// isolated DB across all tests and other tests may have seeded additional agents.
     /// </summary>
@@ -399,7 +400,11 @@ public sealed class AgentsEndpointsIntegrationTests
         // when seeding multiple agents per test). Helper returns the Id directly.
         var a1Id = await SeedUniqueAgentAsync(dbContext, gameId: catanId);
         var a2Id = await SeedUniqueAgentAsync(dbContext, gameId: azulId);
-        await SeedUniqueAgentAsync(dbContext, gameId: null); // a3 system — id not needed
+        // #4083: "system agent" means IsSystemDefined, not "has no game". One of each, so the
+        // two cannot be taken for one another again: the first passes the scope, the second
+        // does not. This test seeded only the second and called it a system agent.
+        var systemId = await SeedSystemAgentAsync(dbContext);
+        var gamelessId = await SeedUniqueAgentAsync(dbContext, gameId: null);
 
         // Seed caller's library: Catan only (Azul is NOT added).
         dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
@@ -432,9 +437,13 @@ public sealed class AgentsEndpointsIntegrationTests
         payload.Agents.Should().NotContain(a => a.Id == a2Id,
             "agent linked to a game not in the caller's library should be excluded");
 
-        // System agents (GameId == null) MUST always pass through the scope filter.
-        payload.Agents.Should().Contain(a => a.GameId == null,
-            "system agents (null GameId) are always included by the my-library scope");
+        // The system agent MUST always pass through the scope filter, and say what it is.
+        payload.Agents.Should().Contain(a => a.Id == systemId && a.IsSystemDefined,
+            "the system agent is always included by the my-library scope");
+
+        // An agent with no game that is NOT system-defined belongs to nobody's library.
+        payload.Agents.Should().NotContain(a => a.Id == gamelessId,
+            "having no game does not make an agent a system agent (#4081)");
     }
 
     /// <summary>
@@ -501,7 +510,7 @@ public sealed class AgentsEndpointsIntegrationTests
 
         // Seed one game-linked agent and one system agent (unique names).
         var gameLinkedId = await SeedUniqueAgentAsync(dbContext, gameId: catanId);
-        await SeedUniqueAgentAsync(dbContext, gameId: null);
+        var systemId = await SeedSystemAgentAsync(dbContext);
 
         // Caller's library is empty — no UserLibraryEntry seeded.
 
@@ -522,6 +531,10 @@ public sealed class AgentsEndpointsIntegrationTests
         // Game-linked agent must be absent (not in empty library).
         payload.Agents.Should().NotContain(a => a.Id == gameLinkedId,
             "agent for a game not in the caller's (empty) library should be excluded");
+
+        // What an account with an empty library is left with: the system agent.
+        payload.Agents.Should().Contain(a => a.Id == systemId,
+            "the system agent is what a new account has to start from");
     }
 
     /// <summary>
@@ -617,72 +630,14 @@ public sealed class AgentsEndpointsIntegrationTests
         dto.IsCurrent.Should().BeTrue();
     }
 
-    // -------------------------------------------------------------------------
-    // PATCH /api/v1/agents/{id}/configuration — Issue #658
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task UpdateAgentConfiguration_WithoutAuth_ReturnsUnauthorized()
-    {
-        // Act
-        var response = await _client.PatchAsJsonAsync(
-            $"/api/v1/agents/{Guid.NewGuid()}/configuration",
-            new { temperature = 0.5m });
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Fact]
-    public async Task UpdateAgentConfiguration_WithUnknownId_ReturnsNotFound()
-    {
-        // Arrange
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Patch,
-            $"/api/v1/agents/{Guid.NewGuid()}/configuration",
-            sessionToken,
-            new { temperature = 0.5m });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
-    }
-
-    [Fact]
-    public async Task UpdateAgentConfiguration_WithValidPatch_ReturnsUpdatedView()
-    {
-        // Arrange
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
-
-        await TestSessionHelper.SeedAgentDefinitionsAsync(dbContext, activeCount: 1, inactiveCount: 0);
-        var seededId = await dbContext.AgentDefinitions.AsNoTracking().Select(a => a.Id).FirstAsync();
-
-        var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Patch,
-            $"/api/v1/agents/{seededId}/configuration",
-            sessionToken,
-            new { temperature = 0.42m, maxTokens = 1234 });
-
-        // Act
-        var response = await _client.SendAsync(request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var dto = await response.Content.ReadFromJsonAsync<AgentConfigurationDto>();
-        dto.Should().NotBeNull();
-        dto!.AgentId.Should().Be(seededId);
-        dto.Temperature.Should().BeApproximately(0.42m, 0.001m);
-        dto.MaxTokens.Should().Be(1234);
-        dto.LlmModel.Should().Be("gpt-4"); // unchanged
-    }
+    // ── PATCH /api/v1/agents/{id}/configuration ritirata (#4138, #4162) ────────
+    // Tre test la guidavano. La rotta lasciava a qualunque utente riscrivere il modello
+    // dell'agente condiviso; gli admin hanno PUT /admin/agent-definitions/{id}. Che resti
+    // smontata lo asserisce `RetiredRoutes` in Routing/EndpointContractTests.cs.
+    //
+    // 🔴 Come per le rotte di creazione qui sopra, il compilatore non poteva segnalarli: la
+    // guidavano per STRINGA. Sono rimasti rossi (405) nello shard Core di dev-async dal
+    // merge di #4162, e nessuno l'ha visto perché il job era già rosso — #4280.
 
     // -------------------------------------------------------------------------
     // BE-2 #1589 test infrastructure
@@ -708,6 +663,24 @@ public sealed class AgentsEndpointsIntegrationTests
         {
             agent.SetGameId(gameId.Value);
         }
+        dbContext.AgentDefinitions.Add(agent);
+        await dbContext.SaveChangesAsync();
+        return agent.Id;
+    }
+
+    /// <summary>
+    /// Seeds an agent that is system-defined (<c>AgentDefinition.CreateSystem</c>), with a
+    /// unique name. It has no game, like the one <see cref="SeedUniqueAgentAsync"/> makes with
+    /// a null <c>gameId</c> — the difference the my-library scope filters on is the flag.
+    /// </summary>
+    private static async Task<Guid> SeedSystemAgentAsync(MeepleAiDbContext dbContext)
+    {
+        var agent = AgentDefinition.CreateSystem(
+            name: $"BE2-System-{Guid.NewGuid():N}",
+            description: "BE-2 #1589 system agent",
+            config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f),
+            typologySlug: "rules-expert");
+        agent.Activate();
         dbContext.AgentDefinitions.Add(agent);
         await dbContext.SaveChangesAsync();
         return agent.Id;

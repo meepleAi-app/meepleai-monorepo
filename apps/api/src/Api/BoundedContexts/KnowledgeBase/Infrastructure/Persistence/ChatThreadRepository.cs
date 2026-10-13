@@ -84,7 +84,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         return await DbContext.ChatThreads
             .AsNoTracking()
-            .CountAsync(t => t.UserId == userId, cancellationToken)
+            .CountAsync(t => t.UserId == userId && t.LiveSessionId == null, cancellationToken) // #4276: il totale dello storico delle chat
             .ConfigureAwait(false);
     }
 
@@ -99,6 +99,26 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return threadEntities.Select(MapToDomain).ToList();
+    }
+
+    public async Task<ChatThread?> FindByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default)
+    {
+        var threadEntity = await DbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => t.LiveSessionId == liveSessionId)
+            .OrderBy(t => t.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (threadEntity is null)
+        {
+            return null;
+        }
+
+        // La reidratazione passa dal costruttore e da AddMessage, che sollevano eventi di dominio. Questo
+        // thread viene aggiornato a ogni turno: senza azzerarli, ogni UpdateAsync riscriverebbe
+        // nell'outbox e nell'audit l'intera storia della conversazione.
+        var thread = MapToDomain(threadEntity);
+        thread.ClearDomainEvents();
+        return thread;
     }
 
     public async Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default)
@@ -124,7 +144,9 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
     {
         var query = DbContext.ChatThreads
             .AsNoTracking()
-            .Where(t => t.UserId == userId);
+            // #4276: il thread dell'assistente in partita vive nella pagina della sessione, non
+            // nell'elenco delle chat: continuarlo da lì mescolerebbe le due conversazioni.
+            .Where(t => t.UserId == userId && t.LiveSessionId == null);
 
         // Apply filters
         if (gameId.HasValue)
@@ -338,7 +360,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             gameId: entity.GameId,
             title: entity.Title,
             agentId: entity.AgentId, // Issue #2030
-            agentType: entity.AgentType // Issue #4362
+            agentType: entity.AgentType, // Issue #4362
+            liveSessionId: entity.LiveSessionId // #4276
         );
 
         // Add messages via domain method (but disable Status validation during hydration)
@@ -417,6 +440,7 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             GameId = domainEntity.GameId,
             AgentId = domainEntity.AgentId, // Issue #2030
             AgentType = domainEntity.AgentType, // Issue #4362
+            LiveSessionId = domainEntity.LiveSessionId, // #4276
             Title = domainEntity.Title,
             Status = domainEntity.Status.Value,
             CreatedAt = domainEntity.CreatedAt,

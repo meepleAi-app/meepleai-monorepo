@@ -4914,6 +4914,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("LastSummarizedMessageCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("LiveSessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("MessagesJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -4934,6 +4937,9 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("LiveSessionId")
+                        .HasDatabaseName("IX_ChatThreads_LiveSessionId");
 
                     b.HasIndex("UserId");
 

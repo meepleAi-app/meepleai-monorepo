@@ -201,8 +201,12 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task Get_EventTypes_ReturnsStatsWithCounts()
     {
-        // Arrange — seed one event of a specific type within last 24h
-        await SeedEventAsync("agent.created", "Agent");
+        // Arrange — seed one event of a specific type within last 24h.
+        // The stats report the aliases in EventTypeRegistry and nothing else. This seeded
+        // "agent.created", which left the registry with #4147, so the row was written and the
+        // endpoint rightly did not list it: the test stayed red on the Games shard of
+        // dev-async from that merge (#4280).
+        await SeedEventAsync("kb.doc.indexed", "PdfDocument");
 
         // Act
         var response = await _client.GetAsync(EventsTypes);
@@ -220,11 +224,11 @@ public sealed class AdminEventsEndpointsIntegrationTests : IAsyncLifetime
         firstEntry.TryGetProperty("eventType", out _).Should().BeTrue();
         firstEntry.TryGetProperty("count", out _).Should().BeTrue();
 
-        // agent.created should have count >= 1 since we seeded it
-        var agentCreated = types.FirstOrDefault(t =>
-            t.GetProperty("eventType").GetString() == "agent.created");
-        agentCreated.ValueKind.Should().NotBe(JsonValueKind.Undefined);
-        agentCreated.GetProperty("count").GetInt32().Should().BeGreaterThanOrEqualTo(1);
+        // kb.doc.indexed should have count >= 1 since we seeded it
+        var seededType = types.FirstOrDefault(t =>
+            t.GetProperty("eventType").GetString() == "kb.doc.indexed");
+        seededType.ValueKind.Should().NotBe(JsonValueKind.Undefined);
+        seededType.GetProperty("count").GetInt32().Should().BeGreaterThanOrEqualTo(1);
     }
 
     // -------------------------------------------------------------------------

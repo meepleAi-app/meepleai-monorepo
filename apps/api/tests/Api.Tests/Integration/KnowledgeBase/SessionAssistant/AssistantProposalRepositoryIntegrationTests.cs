@@ -129,4 +129,36 @@ public sealed class AssistantProposalRepositoryIntegrationTests(AssistantProposa
 
         proposals.Select(p => p.Id).Should().Equal(firstId, secondId);
     }
+
+    /// <summary>
+    /// #4276: la scadenza all'inizio di un turno è un solo UPDATE. Tocca le proposte Pending di quella
+    /// sessione e nient'altro: non quella che l'host sta confermando, non quelle di un'altra sessione.
+    /// </summary>
+    [Fact]
+    public async Task ExpirePendingBySession_ExpiresOnlyThePendingProposalsOfThatSession()
+    {
+        var session = Guid.NewGuid();
+        var pendingId = await SaveAsync(NewScore(session, Guid.NewGuid()));
+        var reserved = NewScore(session, Guid.NewGuid());
+        reserved.BeginApplying(HostUser);
+        var reservedId = await SaveAsync(reserved);
+        var otherSessionId = await SaveAsync(NewScore(Guid.NewGuid(), Guid.NewGuid()));
+        var now = new DateTime(2026, 10, 12, 21, 0, 0, DateTimeKind.Utc);
+
+        int expired;
+        await using (var scope = host.Factory.Services.CreateAsyncScope())
+        {
+            expired = await scope.ServiceProvider.GetRequiredService<IAssistantProposalRepository>()
+                .ExpirePendingBySessionAsync(session, now, Ct);
+        }
+
+        expired.Should().Be(1);
+        await using var verify = host.Factory.Services.CreateAsyncScope();
+        var repository = verify.ServiceProvider.GetRequiredService<IAssistantProposalRepository>();
+        var pending = await repository.GetReadOnlyAsync(pendingId, Ct);
+        pending!.Status.Should().Be(AssistantProposalStatus.Expired);
+        pending.ResolvedAt.Should().Be(now);
+        (await repository.GetReadOnlyAsync(reservedId, Ct))!.Status.Should().Be(AssistantProposalStatus.Applying);
+        (await repository.GetReadOnlyAsync(otherSessionId, Ct))!.Status.Should().Be(AssistantProposalStatus.Pending);
+    }
 }

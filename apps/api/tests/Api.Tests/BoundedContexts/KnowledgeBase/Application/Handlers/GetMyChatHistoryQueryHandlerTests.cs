@@ -123,6 +123,28 @@ public class GetMyChatHistoryQueryHandlerTests
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
+    /// <summary>
+    /// #4276: lo storico delle chat (e il cruscotto, che lo usa) non mostra il thread dell'assistente in
+    /// partita. Il repository glielo restituisce comunque, perché lo stesso metodo serve all'export.
+    /// </summary>
+    [Fact]
+    public async Task Handle_LeavesOutTheAssistantThreads()
+    {
+        var userId = Guid.NewGuid();
+        var ordinary = CreateThread(userId, Guid.NewGuid(), "Regole di Azul");
+        var assistant = new ChatThread(Guid.NewGuid(), userId, gameId: null, title: null, agentId: null,
+            agentType: "session-assistant", liveSessionId: Guid.NewGuid());
+        _mockRepository.Setup(r => r.CountByUserIdAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync(1);
+        _mockRepository.Setup(r => r.FindByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<ChatThread> { assistant, ordinary });
+
+        var result = await _handler.Handle(
+            new GetMyChatHistoryQuery(userId, Skip: 0, Take: 10), TestContext.Current.CancellationToken);
+
+        result.Chats.Select(chat => chat.Id).Should().Equal(ordinary.Id);
+        result.TotalCount.Should().Be(1);
+    }
+
     private static ChatThread CreateThread(Guid userId, Guid? gameId, string title)
     {
         var thread = new ChatThread(Guid.NewGuid(), userId, gameId, title);

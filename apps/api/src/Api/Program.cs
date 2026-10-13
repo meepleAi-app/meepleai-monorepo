@@ -943,6 +943,7 @@ v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and manag
 // Game Management extended
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapSessionAssistantEndpoints(); // spec 2026-10-11 §6.2: assistente in partita
 v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
 v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace

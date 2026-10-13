@@ -403,4 +403,82 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
     }
 
     #endregion
+
+    #region LiveSessionId (#4276)
+
+    private static readonly Guid TestLiveSessionId = new("50000000-0000-0000-0000-000000000001");
+
+    private static ChatThread CreateAssistantThread(Guid threadId, Guid userId, Guid liveSessionId) =>
+        new(id: threadId, userId: userId, gameId: null, title: null, agentId: null,
+            agentType: "session-assistant", liveSessionId: liveSessionId);
+
+    [Fact]
+    public async Task FindByLiveSessionIdAsync_ReturnsTheThreadOfTheSession_WithItsMessageIds()
+    {
+        await CleanDatabaseAsync();
+        await EnsureUserExistsAsync(TestUserId1);
+        var thread = CreateAssistantThread(TestThreadId1, TestUserId1, TestLiveSessionId);
+        thread.AddUserMessage("Marco fa 5 punti");
+        var answerId = Guid.NewGuid();
+        thread.AddMessage(new Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.ChatMessage(
+            "Ho preparato la proposta.", "assistant", thread.Messages.Count, id: answerId));
+        await _repository!.AddAsync(thread, TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+
+        var found = await _repository.FindByLiveSessionIdAsync(TestLiveSessionId, TestCancellationToken);
+
+        found.Should().NotBeNull();
+        found!.Id.Should().Be(TestThreadId1);
+        found.LiveSessionId.Should().Be(TestLiveSessionId);
+        found.GameId.Should().BeNull("un gioco privato violerebbe la chiave esterna verso shared_games");
+        found.Messages.Should().HaveCount(2);
+        found.Messages[1].Id.Should().Be(answerId, "le proposte puntano al messaggio dell'assistente per id");
+        found.DomainEvents.Should().BeEmpty(
+            "ricaricare un thread non è un evento: senza, ogni turno riscriverebbe nell'outbox tutta la sua storia");
+        (await _repository.FindByLiveSessionIdAsync(Guid.NewGuid(), TestCancellationToken)).Should().BeNull();
+    }
+
+    /// <summary>
+    /// <c>UpdateAsync</c> riscrive l'intera riga da <c>MapToPersistence</c>: una colonna che la mappatura
+    /// dimentica viene azzerata al secondo turno, e il thread smette di appartenere alla sessione.
+    /// </summary>
+    [Fact]
+    public async Task UpdateAsync_KeepsTheLiveSessionId()
+    {
+        await CleanDatabaseAsync();
+        await EnsureUserExistsAsync(TestUserId1);
+        await _repository!.AddAsync(CreateAssistantThread(TestThreadId1, TestUserId1, TestLiveSessionId), TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+
+        var loaded = await _repository.FindByLiveSessionIdAsync(TestLiveSessionId, TestCancellationToken);
+        loaded!.AddUserMessage("a chi tocca?");
+        await _repository.UpdateAsync(loaded, TestCancellationToken);
+        await _unitOfWork.SaveChangesAsync(TestCancellationToken);
+
+        var persisted = await _dbContext!.ChatThreads.AsNoTracking()
+            .SingleAsync(t => t.Id == TestThreadId1, TestCancellationToken);
+        persisted.LiveSessionId.Should().Be(TestLiveSessionId);
+        (await _repository.FindByLiveSessionIdAsync(TestLiveSessionId, TestCancellationToken))!.Messages.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async Task TheUserChatLists_LeaveOutTheAssistantThreads_ButTheExportStillSeesThem()
+    {
+        await CleanDatabaseAsync();
+        await EnsureUserExistsAsync(TestUserId1);
+        await _repository!.AddAsync(CreateTestChatThread(TestThreadId1, TestUserId1, null, "Regole di Azul"), TestCancellationToken);
+        await _repository.AddAsync(CreateAssistantThread(TestThreadId2, TestUserId1, TestLiveSessionId), TestCancellationToken);
+        await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+
+        var (items, total) = await _repository.FindByUserIdFilteredAsync(TestUserId1, cancellationToken: TestCancellationToken);
+        var counted = await _repository.CountByUserIdAsync(TestUserId1, TestCancellationToken);
+        var exported = await _repository.FindByUserIdAsync(TestUserId1, TestCancellationToken);
+
+        items.Select(t => t.Id).Should().Equal(TestThreadId1);
+        total.Should().Be(1);
+        counted.Should().Be(1, "è il totale dello storico delle chat");
+        exported.Should().HaveCount(2, "l'export dei dati dell'utente comprende ogni sua conversazione");
+    }
+
+    #endregion
 }

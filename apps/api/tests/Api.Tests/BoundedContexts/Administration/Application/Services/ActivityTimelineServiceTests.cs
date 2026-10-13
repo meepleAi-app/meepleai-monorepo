@@ -242,6 +242,32 @@ public sealed class ActivityTimelineServiceTests : IDisposable
         result.Should().ContainSingle(); // Only the game_added for our user
     }
 
+    /// <summary>
+    /// #4276: il thread dell'assistente in partita vive nella pagina della sessione. Nella timeline
+    /// porterebbe il suo id, e con l'id gli endpoint delle chat lo aprirebbero come una chat qualunque.
+    /// </summary>
+    [Fact]
+    public async Task GetRecentActivities_LeavesOutTheAssistantThreadOfALiveSession()
+    {
+        SeedChatThread("Regole di Azul", DateTime.UtcNow.AddHours(-2));
+        var assistantThread = new ChatThreadEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            Title = null,
+            LastMessageAt = DateTime.UtcNow,
+            LiveSessionId = Guid.NewGuid(),
+        };
+        _dbContext.ChatThreads.Add(assistantThread);
+        await _dbContext.SaveChangesAsync();
+
+        var result = await _service.GetRecentActivitiesAsync(_userId);
+
+        var chat = result.Should().ContainSingle().Which.Should().BeOfType<ChatSavedEvent>().Subject;
+        chat.ChatId.Should().NotBe(assistantThread.Id);
+        chat.Topic.Should().Be("Regole di Azul");
+    }
+
     [Fact]
     public async Task GetRecentActivities_DefaultLimitIsTen()
     {

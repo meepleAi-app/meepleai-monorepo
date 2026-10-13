@@ -71,8 +71,11 @@ public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime
         using var setupScope = _webFactory.Services.CreateScope();
         var db = setupScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        var (_, token) = await TestSessionHelper.CreateUserSessionAsync(db);
+        var (userId, token) = await TestSessionHelper.CreateUserSessionAsync(db);
         var gameId = await TestSessionHelper.SeedSharedGameAsync(db, title: "TestGame-Activity-T1");
+        // #4280: opening a chat on a game passes the RAG gate, which an ordinary user clears
+        // by owning the game. Without this the producer answered 403 and no event was written.
+        await TestSessionHelper.SeedOwnedLibraryGameAsync(db, userId, gameId);
 
         var client = _webFactory.CreateClient();
 
@@ -84,7 +87,9 @@ public sealed class ActivityFeedEndpointIntegrationTests : IAsyncLifetime
             new { gameId, title = "Activity probe" });
 
         var createResponse = await client.SendAsync(createSessionRequest);
-        createResponse.StatusCode.Should().BeOneOf(HttpStatusCode.OK, HttpStatusCode.Created);
+        createResponse.StatusCode.Should().BeOneOf(
+            new[] { HttpStatusCode.OK, HttpStatusCode.Created },
+            "the chat session is this test's producer of chat.session.created");
 
         // Act — GET /api/v1/activity?limit=20
         var getRequest = TestSessionHelper.CreateAuthenticatedRequest(

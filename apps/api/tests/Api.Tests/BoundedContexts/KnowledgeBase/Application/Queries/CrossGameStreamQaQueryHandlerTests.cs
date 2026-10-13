@@ -38,7 +38,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
     // #4168: l'handler è un adattatore; la risposta sta nel flusso cross-game della pipeline, con il
     // profilo del seed e un reranker che non riordina.
     private CrossGameStreamQaQueryHandler CreateSut() => new(new CrossGameAnswerFlow(
-        _ragAccessService,
+        new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(_ragAccessService),
         AnswerPipelineTestDoubles.RetrievalAcrossGames(_searchService),
         AnswerPipelineTestDoubles.ProfileReader(),
         AnswerPipelineTestDoubles.UncertainLanguageDetection(),

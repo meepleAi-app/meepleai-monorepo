@@ -186,6 +186,50 @@ public sealed class RagOwnershipRequiredEndpointsIntegrationTests
         events[^1].GetProperty("data").TryGetProperty("gameId", out _).Should().BeFalse();
     }
 
+    // ─── #4168 (5g-a): il ruolo della sessione arriva al cancello dai percorsi di risposta ───
+
+    /// <summary>
+    /// Un amministratore passa senza dichiarare il possesso. Il ruolo viaggia dalla sessione come
+    /// testo, e a portarlo fino al cancello è il passo condiviso (<c>IAnswerPreconditions</c>):
+    /// se lo perdesse, la chat tratterebbe l'amministratore come un utente qualsiasi.
+    /// </summary>
+    [Fact]
+    public async Task QaStream_AsAnAdminWithoutDeclaredOwnership_PassesTheGate()
+    {
+        var adminToken = await CreateAdminTokenAsync();
+
+        var events = await StreamQaAsync(adminToken);
+
+        events.Should().NotContain(e => ErrorCodeOf(e) == OwnershipCode);
+        // Come per chi ha dichiarato il possesso: la ricerca parte e non trova un manuale.
+        ErrorCodeOf(events[^1]).Should().Be("NO_RESULTS");
+    }
+
+    /// <summary>Lo stesso sulla domanda singola, che ha un percorso suo.</summary>
+    [Fact]
+    public async Task Ask_AsAnAdminWithoutDeclaredOwnership_PassesTheGate()
+    {
+        var adminToken = await CreateAdminTokenAsync();
+
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(
+                HttpMethod.Post, "/api/v1/knowledge-base/ask", adminToken,
+                new { gameId = _gameId.ToString(), query = "Come si vince?" }),
+            Ct);
+
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden, body);
+        body.Should().NotContain(OwnershipCode);
+    }
+
+    private async Task<string> CreateAdminTokenAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
+        return token;
+    }
+
     // ─── #4206: la guida alla preparazione legge la stessa KB, quindi passa dallo stesso cancello ───
 
     [Fact]
@@ -313,11 +357,11 @@ public sealed class RagOwnershipRequiredEndpointsIntegrationTests
         return ParseSseEvents(body);
     }
 
-    private async Task<IReadOnlyList<JsonElement>> StreamQaAsync()
+    private async Task<IReadOnlyList<JsonElement>> StreamQaAsync(string? token = null)
     {
         var response = await _client.SendAsync(
             TestSessionHelper.CreateAuthenticatedRequest(
-                HttpMethod.Post, "/api/v1/agents/qa/stream", _token,
+                HttpMethod.Post, "/api/v1/agents/qa/stream", token ?? _token,
                 new { gameId = _gameId.ToString(), query = "Come si vince?" }),
             Ct);
 

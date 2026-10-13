@@ -52,7 +52,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
     private const string SearchingMessage = "Ricerca nella tua libreria...";
     private const string GeneratingMessage = "Generazione risposta in corso...";
 
-    private readonly IRagAccessService _ragAccessService;
+    private readonly IAnswerPreconditions _preconditions;
     private readonly AnswerRetrieval _retrieval;
     private readonly IPublishedAgentProfileReader _profileReader;
     private readonly ILanguageDetectionService _languageDetection;
@@ -61,7 +61,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
     private readonly TimeProvider _timeProvider;
 
     public CrossGameAnswerFlow(
-        IRagAccessService ragAccessService,
+        IAnswerPreconditions preconditions,
         AnswerRetrieval retrieval,
         IPublishedAgentProfileReader profileReader,
         ILanguageDetectionService languageDetection,
@@ -69,7 +69,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
         ILogger<CrossGameAnswerFlow> logger,
         TimeProvider? timeProvider = null)
     {
-        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _retrieval = retrieval ?? throw new ArgumentNullException(nameof(retrieval));
         _profileReader = profileReader ?? throw new ArgumentNullException(nameof(profileReader));
         _languageDetection = languageDetection ?? throw new ArgumentNullException(nameof(languageDetection));
@@ -208,7 +208,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
     {
         try
         {
-            var ids = await _ragAccessService.GetAccessibleGameIdsAsync(request.UserId, request.Role, ct).ConfigureAwait(false);
+            var ids = await _preconditions.GamesOpenToAsync(request.UserId, request.Role, ct).ConfigureAwait(false);
             return (ids, null);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)

@@ -1154,7 +1154,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
             _mockValidationPipeline.Object,
-            ragAccessService ?? CreatePermissiveRagAccessServiceMock(),
+            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(ragAccessService ?? CreatePermissiveRagAccessServiceMock()),
             qualityTracker ?? Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,

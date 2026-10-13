@@ -201,7 +201,7 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
             _mockValidationPipeline.Object,
-            CreatePermissiveRagAccessServiceMock(),
+            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(CreatePermissiveRagAccessServiceMock()),
             Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,

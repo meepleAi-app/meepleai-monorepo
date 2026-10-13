@@ -479,6 +479,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IPublishedAgentProfileReader,
             Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.PublishedAgentProfileReader>();
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerRetrieval>();
+        // #4168 (5g-a): accesso — e, con la 5g-b, quota — in un passo solo per i tre percorsi di risposta.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPreconditions,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions>();
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ICrossGameAnswerFlow,
             Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.CrossGameAnswerFlow>();
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPipeline,

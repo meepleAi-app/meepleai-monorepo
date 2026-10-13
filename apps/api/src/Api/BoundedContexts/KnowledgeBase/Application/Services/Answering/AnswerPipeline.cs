@@ -34,8 +34,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// <remarks>
 /// I passi, nell'ordine di D3:
 /// <list type="number">
-/// <item>accesso (possesso dichiarato, KB pubblica, gioco privato);</item>
-/// <item>quota utente: non ancora, arriva con la consegna 5g;</item>
+/// <item>accesso (possesso dichiarato, KB pubblica, gioco privato): <see cref="IAnswerPreconditions"/>;</item>
+/// <item>quota utente: non ancora. Arriva con la consegna 5g-b, nello stesso passo dell'accesso;</item>
 /// <item>recupero nella lingua di chi chiede;</item>
 /// <item>reranking, se il profilo lo vuole;</item>
 /// <item>prompt dalla versione pubblicata;</item>
@@ -43,9 +43,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// <item>copyright: tier per citazione;</item>
 /// <item>registro: metriche, cache, costo con la versione del profilo.</item>
 /// </list>
-/// Per ora la usa <c>StreamQa</c>. <c>AskQuestion</c> e la ricerca cross-game ci passano con le
-/// consegne 5d e 5e. Il contratto SSE è quello che <c>StreamQaSseContractCharacterizationTests</c>
-/// fissava prima dello spostamento.
+/// La usa <c>StreamQa</c>. <c>AskQuestion</c> e la ricerca fra giochi (<see cref="CrossGameAnswerFlow"/>)
+/// hanno ancora il loro percorso, ma eseguono i passi 1 e 2 nello stesso punto:
+/// <see cref="IAnswerPreconditions"/> (consegna 5g-a). Il contratto SSE è quello che
+/// <c>StreamQaSseContractCharacterizationTests</c> fissava prima dello spostamento.
 /// </remarks>
 internal sealed class AnswerPipeline : IAnswerPipeline
 {
@@ -61,7 +62,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private readonly ILanguageDetectionService _languageDetection;
     private readonly InlineCitationMatcherService _citationMatcher;
     private readonly IIntentClassifierService _intentClassifier;
-    private readonly IRagAccessService _ragAccessService;
+    private readonly IAnswerPreconditions _preconditions;
     private readonly ICopyrightTierResolver _copyrightTierResolver;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
@@ -81,7 +82,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         ILanguageDetectionService languageDetection,
         InlineCitationMatcherService citationMatcher,
         IIntentClassifierService intentClassifier,
-        IRagAccessService ragAccessService,
+        IAnswerPreconditions preconditions,
         ICopyrightTierResolver copyrightTierResolver,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
@@ -100,7 +101,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         _languageDetection = languageDetection ?? throw new ArgumentNullException(nameof(languageDetection));
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
-        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
@@ -122,10 +123,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // shape question, not an authorization one.
         if (Guid.TryParse(query.GameId, out var accessGameId))
         {
-            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
-                ? parsedRole : UserRole.User;
-            await _ragAccessService.EnsureRagAccessAsync(
-                query.UserId, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
+            await _preconditions.EnsureCanAskAboutGameAsync(
+                query.UserId, query.UserRole, accessGameId, cancellationToken).ConfigureAwait(false);
         }
 
         // Issue #1445: Use centralized query validation

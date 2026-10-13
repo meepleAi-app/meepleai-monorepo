@@ -22,7 +22,7 @@
  *        feels like a real state, not a render glitch.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useId } from 'react';
 
 import { ArrowLeft, Search, X } from 'lucide-react';
 import Image from 'next/image';
@@ -32,7 +32,7 @@ import { toast } from '@/components/layout';
 import { Button } from '@/components/ui/primitives/button';
 import { useSharedGames } from '@/hooks/queries';
 import { useBatchGameStatus } from '@/hooks/queries/useBatchGameStatus';
-import { useAddGameToLibrary } from '@/hooks/queries/useLibrary';
+import { useAddGameToLibrary, useDeclareOwnership } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { SharedGame } from '@/lib/api';
 
@@ -258,6 +258,9 @@ export function CatalogSearchStep({
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [selectingId, setSelectingId] = useState<string | null>(null);
+  // #4155: «Possiedo una copia». Spenta di default: la dichiarazione di possesso resta esplicita.
+  const [ownsCopy, setOwnsCopy] = useState(false);
+  const ownsCopyHintId = useId();
   // #2269 P0-2 (M2) — non-intrusive inline alert state for already-in-library
   // clicks. `null` = hidden; `{id,title}` = visible. Auto-dismisses after
   // BLOCKED_AUTO_DISMISS_MS unless the user clicks the CTA or close button.
@@ -317,21 +320,34 @@ export function CatalogSearchStep({
   const { data: batchStatus } = useBatchGameStatus(gameIds);
 
   const addMutation = useAddGameToLibrary();
+  const declareOwnership = useDeclareOwnership();
 
   const handleSelect = useCallback(
     async (gameId: string, gameName: string) => {
       setSelectingId(gameId);
       try {
-        await addMutation.mutateAsync({ gameId });
+        try {
+          await addMutation.mutateAsync({ gameId });
+        } catch {
+          toast.error(t('pages.library.addGame.catalog.toastError', { gameName }));
+          return;
+        }
         toast.success(t('pages.library.addGame.catalog.toastAdded', { gameName }));
+        // #4155: dichiarare richiede la voce di libreria, quindi viene dopo l'aggiunta. Se fallisce
+        // il gioco resta aggiunto: lo si dice, e la dichiarazione si può rifare dalla chat.
+        if (ownsCopy) {
+          try {
+            await declareOwnership.mutateAsync(gameId);
+          } catch {
+            toast.error(t('pages.library.addGame.catalog.toastOwnershipError', { gameName }));
+          }
+        }
         onSelect(gameId);
-      } catch {
-        toast.error(t('pages.library.addGame.catalog.toastError', { gameName }));
       } finally {
         setSelectingId(null);
       }
     },
-    [addMutation, onSelect, t]
+    [addMutation, declareOwnership, ownsCopy, onSelect, t]
   );
 
   const totalPages = data ? Math.ceil(data.total / PAGE_SIZE) : 0;
@@ -381,6 +397,24 @@ export function CatalogSearchStep({
             aria-label={t('pages.library.addGame.catalog.searchAriaLabel')}
           />
         </div>
+      </div>
+
+      {/* #4155: dichiarazione di possesso all'aggiunta, spenta di default */}
+      <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+        <label className="flex items-center gap-2 text-foreground">
+          <input
+            type="checkbox"
+            checked={ownsCopy}
+            onChange={e => setOwnsCopy(e.target.checked)}
+            aria-describedby={ownsCopyHintId}
+            className="h-4 w-4"
+            data-testid="catalog-owns-copy"
+          />
+          {t('pages.library.addGame.catalog.ownsCopyLabel')}
+        </label>
+        <p id={ownsCopyHintId} className="mt-1 pl-6 text-xs text-muted-foreground">
+          {t('pages.library.addGame.catalog.ownsCopyHint')}
+        </p>
       </div>
 
       {/* Results count */}

@@ -20,7 +20,6 @@ internal record UserLibraryEntryDto(
     string CurrentState,
     DateTime? StateChangedAt = null,
     string? StateNotes = null,
-    AgentConfigDto? CustomAgentConfig = null,
     CustomPdfDto? CustomPdf = null,
     bool HasKb = false,              // Issue #4998: true if >= 1 PDF fully indexed in RAG (ProcessingState.Ready)
     int KbCardCount = 0,             // Issue #4998: total PDF documents linked to this game

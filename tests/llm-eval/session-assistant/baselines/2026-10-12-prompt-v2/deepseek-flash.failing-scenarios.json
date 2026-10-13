@@ -1,0 +1,409 @@
+{
+  "model": "deepseek-flash",
+  "setVersion": 2,
+  "only": [
+    "en-turn",
+    "it-score-dimension-unknown",
+    "it-score-explicit-round"
+  ],
+  "repeat": 6,
+  "prompts": {
+    "italian": "Sei l'assistente di MeepleAI al tavolo di gioco e aiuti l'host di una partita in corso.\nRegole:\n1. Per punteggi, turno, round, fase o giocatori chiama sempre stato_partita: non indovinare e non usare ciò che ricordi.\n2. Per una domanda sulle regole chiama cerca_regole e rispondi solo con ciò che trovi, citando la pagina. Se non trovi la risposta, dillo.\n3. Quando l'host dice che un giocatore ha fatto dei punti, chiama proponi_punteggio con i punti guadagnati adesso (un incremento, anche negativo). Se l'host dice un totale, calcola l'incremento da stato_partita. Se l'host dice un round, usa quello, anche se non è il round corrente.\n4. Non scegliere mai tu il giocatore o la dimensione. Se l'host nomina un giocatore o una dimensione che non esiste, o non dice quale fra più possibili, non proporre niente: chiedi.\n5. Quando l'host dice di passare il turno, chiama proponi_turno. Leggere lo stato non basta: il turno si propone solo con quello strumento.\n6. Tu non registri mai niente: crei solo proposte che l'host conferma. Non dire mai «ho segnato», «ho registrato» o «ho passato il turno». Di' che hai preparato una proposta solo dopo che proponi_punteggio o proponi_turno te l'ha restituita in questo turno: senza quella chiamata la proposta non esiste.\n7. Se uno strumento risponde con un errore (giocatore ambiguo, dimensione mancante, partita non in corso), spiegalo e chiedi all'host di chiarire.\n8. Rispondi in modo breve, in italiano.",
+    "english": "You are MeepleAI's assistant at the game table, helping the host of a game in progress.\nRules:\n1. For scores, turn, round, phase or players always call stato_partita: never guess and never rely on memory.\n2. For a rules question call cerca_regole and answer only with what you find, citing the page. If you find nothing, say so.\n3. When the host says a player scored points, call proponi_punteggio with the points scored now (a delta, possibly negative). If the host gives a total, compute the delta from stato_partita. If the host names a round, use that one, even if it is not the current round.\n4. Never choose the player or the dimension yourself. If the host names a player or a dimension that does not exist, or does not say which one of several, propose nothing: ask.\n5. When the host says to pass the turn, call proponi_turno. Reading the state is not enough: the turn is proposed only with that tool.\n6. You never record anything: you only create proposals that the host confirms. Never say \"I recorded\", \"I added\" or \"I passed the turn\". Say you prepared a proposal only after proponi_punteggio or proponi_turno has returned it in this turn: without that call the proposal does not exist.\n7. If a tool returns an error (ambiguous player, missing dimension, game not in progress), explain it and ask the host to clarify.\n8. Answer briefly, in English."
+  },
+  "stopped": null,
+  "scenarios": 18,
+  "passed": 18,
+  "scenariosWithExtraProposals": 0,
+  "scenariosWithMissingProposals": 0,
+  "claimedActionsWithoutProposal": 0,
+  "toolErrors": 0,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 2.1666666666666665,
+  "averageCostPerTurnUsd": 0.0008747222222222222,
+  "totalCostUsd": 0.015745,
+  "latencyP95Ms": 2379,
+  "byScenario": [
+    {
+      "id": "it-score-explicit-round",
+      "passed": 6,
+      "runs": 6
+    },
+    {
+      "id": "en-turn",
+      "passed": 6,
+      "runs": 6
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "passed": 6,
+      "runs": 6
+    }
+  ],
+  "results": [
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000844,
+      "latencyMs": 1478,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001202,
+      "latencyMs": 2129,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal to pass the turn (currently Luca's turn, round 2). It's pending your confirmation — nothing is recorded yet.",
+      "pass": 1
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000825,
+      "latencyMs": 1535,
+      "errorCode": null,
+      "finalText": "Le dimensioni disponibili sono **prestigio** e **nobili**: «gemme» non esiste. A quale delle due assegno i 3 punti di Anna?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000845,
+      "latencyMs": 1383,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001201,
+      "latencyMs": 2379,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal to pass the turn (currently Luca's turn, round 2). It's not recorded yet — confirm it to apply.",
+      "pass": 2
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000825,
+      "latencyMs": 1280,
+      "errorCode": null,
+      "finalText": "Le dimensioni sono \"prestigio\" e \"nobili\": \"gemme\" non esiste. Quale dimensione devo usare per i 3 punti di Anna?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000845,
+      "latencyMs": 1450,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001203,
+      "latencyMs": 2261,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal to pass the turn (current turn: Luca, round 2). It's awaiting your confirmation — nothing is recorded yet.",
+      "pass": 3
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000825,
+      "latencyMs": 1801,
+      "errorCode": null,
+      "finalText": "Le dimensioni sono \"prestigio\" e \"nobili\": \"gemme\" non esiste. A quale dimensione vuoi assegnare i 3 punti di Anna?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000849,
+      "latencyMs": 1493,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 punti a Giulia (punti, round 1). Confermi?",
+      "pass": 4
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000702,
+      "latencyMs": 1426,
+      "errorCode": null,
+      "finalText": "I'll propose passing the turn.\nI've prepared a proposal to pass the turn to the next player. It's pending your confirmation — nothing is recorded yet.",
+      "pass": 4
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000825,
+      "latencyMs": 1468,
+      "errorCode": null,
+      "finalText": "Le dimensioni sono \"prestigio\" e \"nobili\": \"gemme\" non esiste. A quale dimensione vuoi assegnare i 3 punti di Anna?",
+      "pass": 4
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000854,
+      "latencyMs": 1547,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Attendo la tua conferma per registrarla.",
+      "pass": 5
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000704,
+      "latencyMs": 1477,
+      "errorCode": null,
+      "finalText": "I'll propose passing the turn.\nI've prepared a proposal to pass the turn to the next player. It's pending your confirmation — nothing is recorded yet.",
+      "pass": 5
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000825,
+      "latencyMs": 1410,
+      "errorCode": null,
+      "finalText": "Le dimensioni sono \"prestigio\" e \"nobili\": \"gemme\" non esiste. A quale dimensione vuoi assegnare i 3 punti di Anna?",
+      "pass": 5
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000844,
+      "latencyMs": 1612,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Confermi?",
+      "pass": 6
+    },
+    {
+      "id": "en-turn",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000703,
+      "latencyMs": 1176,
+      "errorCode": null,
+      "finalText": "I'll propose passing the turn.\nI've prepared a proposal to pass the turn to the next player. It's pending your confirmation — nothing is recorded yet.",
+      "pass": 6
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000824,
+      "latencyMs": 1228,
+      "errorCode": null,
+      "finalText": "Le dimensioni sono \"prestigio\" e \"nobili\": \"gemme\" non esiste. In quale delle due devo mettere i 3 punti di Anna?",
+      "pass": 6
+    }
+  ]
+}

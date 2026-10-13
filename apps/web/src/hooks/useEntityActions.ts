@@ -15,7 +15,7 @@
 
 import { useMemo } from 'react';
 
-import { Bot, MessageSquare, Play, Plus, Share2, Trash2 } from 'lucide-react';
+import { MessageSquare, Play, Plus, Share2, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -46,8 +46,6 @@ export interface UseEntityActionsProps {
   };
   /** Callback to show removal warning modal (Issue #4259) */
   onShowRemovalWarning?: (data: AssociatedData, onConfirm: () => void) => void;
-  /** Callback to open agent creation wizard (Issue #4777) */
-  onCreateAgent?: () => void;
   /** Callback to open collection wizard instead of direct add (Issue #4822) */
   onAddToCollection?: () => void;
 }
@@ -97,7 +95,6 @@ export function useEntityActions({
   userId,
   data,
   onShowRemovalWarning,
-  onCreateAgent,
   onAddToCollection,
 }: UseEntityActionsProps): EntityActions {
   const router = useRouter();
@@ -140,17 +137,10 @@ export function useEntityActions({
           };
 
     const hasRag = data?.hasKb === true;
-    const hasAgent = data?.hasAgent === true;
 
     return {
       quickActions: [
         collectionAction, // Issue #4259: First action
-        {
-          icon: Bot,
-          label: 'Crea Agente',
-          onClick: () => onCreateAgent?.(),
-          hidden: hasAgent || !onCreateAgent,
-        },
         {
           icon: MessageSquare,
           label: 'Chat con Agent',
@@ -179,15 +169,5 @@ export function useEntityActions({
         },
       ],
     };
-  }, [
-    entity,
-    id,
-    router,
-    data,
-    userId,
-    gameCollection,
-    onCreateAgent,
-    onAddToCollection,
-    entityName,
-  ]);
+  }, [entity, id, router, data, userId, gameCollection, onAddToCollection, entityName]);
 }

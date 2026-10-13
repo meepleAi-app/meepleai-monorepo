@@ -80,6 +80,7 @@ internal static class ObservabilityServiceExtensions
             .AddSource(MeepleAiActivitySources.ApiSourceName)
             .AddSource(MeepleAiActivitySources.RagSourceName)
             .AddSource(MeepleAiActivitySources.VectorSearchSourceName)
+            .AddSource(Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant.AssistantChatClientFactory.TelemetrySourceName)
             .AddSource(MeepleAiActivitySources.PdfProcessingSourceName)
             .AddSource(MeepleAiActivitySources.CacheSourceName)
             // Issue #1563: Sensitive data processor (P1-SEC3)

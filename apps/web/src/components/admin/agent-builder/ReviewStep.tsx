@@ -53,9 +53,7 @@ export function ReviewStep({ agent, onSubmit, onTest, isSubmitting }: ReviewStep
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Type:</dt>
-                <dd>
-                  <Badge variant="secondary">{agent.type}</Badge>
-                </dd>
+                <dd></dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Model:</dt>

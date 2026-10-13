@@ -311,8 +311,6 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
-builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
-    builder.Configuration.GetSection(LlmQueryComplexityRoutingOptions.SectionName)); // Issue #562: per-call model override by query complexity tier
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
@@ -654,6 +652,14 @@ using (var scope = app.Services.CreateScope())
             Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
     }
 
+    // #4168 (ADR-095 D3): senza una versione pubblicata del profilo la pipeline rifiuta ogni risposta.
+    if (db != null)
+    {
+        await Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AgentProfileStartupCheck.LogIfMissingAsync(
+            scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentProfileRepository>(),
+            app.Logger).ConfigureAwait(false);
+    }
+
     // Create read-only projection views for bounded context entity decomposition.
     // Each BC gets its own view of the "users" table to avoid EF Core conflicts
     // when multiple entities map to the same underlying table/view.
@@ -937,6 +943,7 @@ v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and manag
 // Game Management extended
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapSessionAssistantEndpoints(); // spec 2026-10-11 §6.2: assistente in partita
 v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
 v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace
@@ -965,6 +972,7 @@ v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
+v1Api.MapAdminSessionAssistantEndpoints(); // spec 2026-10-11 §7.1: esecutore di valutazione dell'assistente
 v1Api.MapStatusBannerEndpoints();          // Issue #1089: Global incident/status banner (public GET + admin GET/PUT)
 if (!app.Environment.IsProduction())
     app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
@@ -988,8 +996,6 @@ app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
 v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
-v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
-v1Api.MapChatHistoryConfigEndpoints(); // Issue #4918: Chat history tier limits config
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
 v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
@@ -1072,7 +1078,6 @@ v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibili
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
 // AI extended
-v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
 v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
@@ -1085,7 +1090,6 @@ v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strate
 
 // Business Simulations
 v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
-v1Api.MapAdminBudgetEndpoints();     // SP5 F4-C5 #1838: Singleton AppBudget config (GET + PUT /admin/budget)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)

@@ -24,12 +24,12 @@ async function setupRegenerationMocks(page: Page) {
   const responses = [
     'Chess is a two-player strategy board game played on a checkered board.',
     'Chess originated in India around the 6th century AD and has evolved over centuries.',
-    'The objective in chess is to checkmate your opponent\'s king, trapping it with no escape.',
+    "The objective in chess is to checkmate your opponent's king, trapping it with no escape.",
     'Chess involves strategic thinking, pattern recognition, and tactical calculations.',
   ];
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -46,7 +46,7 @@ async function setupRegenerationMocks(page: Page) {
   });
 
   // Mock chat threads
-  await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/chat/threads**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -75,7 +75,7 @@ async function setupRegenerationMocks(page: Page) {
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -84,7 +84,7 @@ async function setupRegenerationMocks(page: Page) {
   });
 
   // Mock regeneration endpoint
-  await page.route(`${API_BASE}/api/v1/agents/regenerate*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/agents/regenerate*`, async route => {
     regenerationCount++;
     const newResponse = responses[regenerationCount % responses.length];
 
@@ -103,7 +103,7 @@ async function setupRegenerationMocks(page: Page) {
   });
 
   // Mock ask endpoint
-  await page.route(`${API_BASE}/api/v1/agents/ask*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/agents/ask*`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -129,9 +129,9 @@ test.describe('CHAT-10: Message Regeneration', () => {
 
       // Should show regenerate button on AI message
       await expect(
-        page.getByRole('button', { name: /regenerate|retry|refresh/i }).or(
-          page.locator('[data-testid="regenerate-button"]')
-        )
+        page
+          .getByRole('button', { name: /regenerate|retry|refresh/i })
+          .or(page.locator('[data-testid="regenerate-button"]'))
       ).toBeVisible({ timeout: 5000 });
     });
 
@@ -162,9 +162,9 @@ test.describe('CHAT-10: Message Regeneration', () => {
         await regenerateButton.click();
 
         // Should show new response content
-        await expect(
-          page.getByText(/originated|checkmate|strategic/i)
-        ).toBeVisible({ timeout: 5000 });
+        await expect(page.getByText(/originated|checkmate|strategic/i)).toBeVisible({
+          timeout: 5000,
+        });
       }
     });
 
@@ -179,9 +179,9 @@ test.describe('CHAT-10: Message Regeneration', () => {
         await regenerateButton.click();
 
         // Should show loading indicator
-        const loadingVisible = await page.locator('.loading, .spinner, [data-loading="true"]')
-          .isVisible({ timeout: 2000 })
-          .catch(() => false);
+        const loadingVisible = await page
+          .locator('.loading, .spinner, [data-loading="true"]')
+          .isVisible({ timeout: 2000 });
 
         // Verify regeneration completes
         await page.waitForLoadState('networkidle');
@@ -195,7 +195,8 @@ test.describe('CHAT-10: Message Regeneration', () => {
       await page.waitForLoadState('networkidle');
 
       // Get initial content
-      const initialContent = await page.locator('[data-role="assistant"], .ai-message')
+      const initialContent = await page
+        .locator('[data-role="assistant"], .ai-message')
         .first()
         .textContent()
         .catch(() => '');
@@ -226,7 +227,7 @@ test.describe('CHAT-10: Message Regeneration', () => {
 
         // Some implementations show regeneration count
         const countIndicator = page.getByText(/regenerated|version|#\d/i);
-        const hasCount = await countIndicator.isVisible().catch(() => false);
+        const hasCount = await countIndicator.isVisible();
         // Just verify no error occurred
         await expect(page.locator('body')).toBeVisible();
       }
@@ -263,9 +264,9 @@ test.describe('CHAT-10: Message Regeneration', () => {
       await page.waitForLoadState('networkidle');
 
       // Start a new message
-      const chatInput = page.getByPlaceholder(/message|question/i).or(
-        page.locator('textarea').first()
-      );
+      const chatInput = page
+        .getByPlaceholder(/message|question/i)
+        .or(page.locator('textarea').first());
 
       if (await chatInput.isVisible()) {
         await chatInput.fill('New question');

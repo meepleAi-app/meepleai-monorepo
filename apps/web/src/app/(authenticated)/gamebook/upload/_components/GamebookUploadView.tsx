@@ -196,7 +196,7 @@ export function GamebookUploadView(): ReactElement {
     () => (queryParam.length > 0 ? { search: queryParam } : undefined),
     [queryParam]
   );
-  const gamesQuery = useGames(gamesFilters, undefined, 1, 24);
+  const gamesQuery = useGames(gamesFilters, 1, 24);
 
   // Map response → CatalogGameRef[] (Gate B v1 carryover). Empty when fixture
   // mode active (orchestrator reads `fixture.catalogResults` instead).
@@ -1292,11 +1292,7 @@ function CatalogGrid({
 
 interface Step2PlaceholderProps {
   readonly kind:
-    | 'step2-ready'
-    | 'step2-capturing'
-    | 'step2-low-light'
-    | 'step2-failed'
-    | 'step2-denied';
+    'step2-ready' | 'step2-capturing' | 'step2-low-light' | 'step2-failed' | 'step2-denied';
   readonly gameId: string;
   readonly capturedCount: number;
   readonly t: (key: string, values?: Record<string, string | number>) => string;

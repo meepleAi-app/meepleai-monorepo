@@ -93,7 +93,6 @@ aggregati e zero comandi è tipicamente un'area appena abbozzata, non una featur
 | `AdminInfrastructureEndpoints.cs` | 7 |
 | `AdminEmailTemplateEndpoints.cs` | 7 |
 | `WhiteboardEndpoints.cs` | 6 |
-| `TokenManagementEndpoints.cs` | 6 |
 | `SlackIntegrationEndpoints.cs` | 6 |
 | `SessionInviteEndpoints.cs` | 6 |
 | `RateLimitAdminEndpoints.cs` | 6 |

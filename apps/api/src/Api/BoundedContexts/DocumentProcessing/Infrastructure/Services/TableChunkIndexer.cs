@@ -88,7 +88,6 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
         var vector = embedResult.Embeddings[0];
 
         var chunkId = TableRegionKey.ChunkIdFromRegionHash(regionHash);
-        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(_db, pdf, cancellationToken).ConfigureAwait(false);
         var bboxJson = ChunkBoundingBoxJson.Serialize(
             ChunkingModels.BoundingBox.FromCoordinates((float)x, (float)y, (float)width, (float)height),
             pageNumber);
@@ -117,8 +116,10 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
             _db.TextChunks.Add(new TextChunkEntity
             {
                 Id = chunkId,
-                GameId = resolvedGameId,
+                // #4244: GameId is an FK to shared_games; a private game goes in its own column.
+                GameId = pdf.SharedGameId,
                 SharedGameId = pdf.SharedGameId,
+                PrivateGameId = pdf.PrivateGameId,
                 PdfDocumentId = pdf.Id,
                 Content = markdown,
                 ChunkIndex = chunkIndex,
@@ -137,8 +138,9 @@ internal sealed class TableChunkIndexer : ITableChunkIndexer
             existing.PageNumber = pageNumber;
             existing.ElementType = TableElementType;
             existing.BoundingBoxesJson = bboxJson;
-            existing.GameId = resolvedGameId;
+            existing.GameId = pdf.SharedGameId;
             existing.SharedGameId = pdf.SharedGameId;
+            existing.PrivateGameId = pdf.PrivateGameId;
         }
 
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

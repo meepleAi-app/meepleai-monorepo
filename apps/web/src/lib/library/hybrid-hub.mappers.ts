@@ -81,7 +81,6 @@ export function agentToHubItem(agent: AgentDto): AgentHubItem {
     updatedAt: agent.lastInvokedAt ?? agent.createdAt,
     href: `/agents/${agent.id}`,
     gameName: agent.gameName ?? undefined,
-    agentType: agent.type,
     isActive: agent.isActive,
     isSystemDefined: agent.isSystemDefined,
   };

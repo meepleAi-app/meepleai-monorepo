@@ -15,7 +15,7 @@ public sealed class AgentDefinitionLanguageTests
     private static AgentDefinition CreateDefaultAgent()
     {
         var config = AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f);
-        return AgentDefinition.Create("TestAgent", "Test description", AgentType.RagAgent, config);
+        return AgentDefinition.Create("TestAgent", "Test description", config);
     }
 
     [Fact]

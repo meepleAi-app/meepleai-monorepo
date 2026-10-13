@@ -73,13 +73,16 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
       });
     });
 
-    await page.route(`${API_BASE}/api/v1/admin/shared-games/game-draft/submit-for-approval`, async route => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: 'pending_approval' }),
-      });
-    });
+    await page.route(
+      `${API_BASE}/api/v1/admin/shared-games/game-draft/submit-for-approval`,
+      async route => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'pending_approval' }),
+        });
+      }
+    );
 
     // Step 1: Navigate to game
     await page.goto('/admin/games/game-draft');
@@ -90,15 +93,25 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
       title: 'Draft Game Ready',
       description: 'Game with all required content ready for submission',
       annotations: [
-        { selector: 'text=draft, [data-status="draft"]', label: 'Draft Status', color: ANNOTATION_COLORS.warning },
-        { selector: 'button:has-text("Submit"), [data-testid="submit-approval"]', label: 'Submit', color: ANNOTATION_COLORS.success },
+        {
+          selector: 'text=draft, [data-status="draft"]',
+          label: 'Draft Status',
+          color: ANNOTATION_COLORS.warning,
+        },
+        {
+          selector: 'button:has-text("Submit"), [data-testid="submit-approval"]',
+          label: 'Submit',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Submit for approval',
     });
 
     // Step 2: Completeness check
-    const completenessScore = page.locator('text=/\\d+%|complete/i, [data-testid="completeness"]').first();
-    if (await completenessScore.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const completenessScore = page
+      .locator('text=/\\d+%|complete/i, [data-testid="completeness"]')
+      .first();
+    if (await completenessScore.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Completeness Check',
@@ -112,19 +125,25 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
     }
 
     // Step 3: Submit confirmation
-    const submitBtn = page.locator('button:has-text("Submit"), [data-testid="submit-approval"]').first();
-    if (await submitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const submitBtn = page
+      .locator('button:has-text("Submit"), [data-testid="submit-approval"]')
+      .first();
+    if (await submitBtn.isVisible({ timeout: 2000 })) {
       await submitBtn.click();
       await waitForStableState(page);
 
       const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]').first();
-      if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmDialog.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 3,
           title: 'Confirm Submission',
           description: 'Confirm submission for admin review',
           annotations: [
-            { selector: 'button:has-text("Confirm"), button:has-text("Submit")', label: 'Confirm', color: ANNOTATION_COLORS.success },
+            {
+              selector: 'button:has-text("Confirm"), button:has-text("Submit")',
+              label: 'Confirm',
+              color: ANNOTATION_COLORS.success,
+            },
           ],
           previousAction: 'Click submit',
           nextAction: 'Confirm',
@@ -133,7 +152,9 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
     }
 
     helper.setTotalSteps(3);
-    console.log(`\n✅ Submit for approval captured: ${helper.getCapturedSteps().length} screenshots`);
+    console.log(
+      `\n✅ Submit for approval captured: ${helper.getCapturedSteps().length} screenshots`
+    );
   });
 
   test('incomplete game - cannot submit', async ({ page }) => {
@@ -155,20 +176,30 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
       title: 'Incomplete Game',
       description: 'Game missing required content cannot be submitted',
       annotations: [
-        { selector: 'text=/\\d+%|incomplete/i', label: 'Incomplete', color: ANNOTATION_COLORS.warning },
+        {
+          selector: 'text=/\\d+%|incomplete/i',
+          label: 'Incomplete',
+          color: ANNOTATION_COLORS.warning,
+        },
       ],
       nextAction: 'View missing fields',
     });
 
     // Step 2: Missing fields indicator
-    const missingFields = page.locator('text=/missing|required/i, [data-testid="missing-fields"]').first();
-    if (await missingFields.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const missingFields = page
+      .locator('text=/missing|required/i, [data-testid="missing-fields"]')
+      .first();
+    if (await missingFields.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Missing Fields',
         description: 'List of required fields that need to be completed',
         annotations: [
-          { selector: 'text=/missing|required/i', label: 'Missing', color: ANNOTATION_COLORS.error },
+          {
+            selector: 'text=/missing|required/i',
+            label: 'Missing',
+            color: ANNOTATION_COLORS.error,
+          },
         ],
         previousAction: 'View status',
         nextAction: 'Complete fields',
@@ -198,14 +229,18 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
       title: 'Pending Approval',
       description: 'Game submitted and waiting for admin review',
       annotations: [
-        { selector: 'text=/pending|waiting|review/i, [data-status="pending"]', label: 'Pending', color: ANNOTATION_COLORS.warning },
+        {
+          selector: 'text=/pending|waiting|review/i, [data-status="pending"]',
+          label: 'Pending',
+          color: ANNOTATION_COLORS.warning,
+        },
       ],
       nextAction: 'Wait for review',
     });
 
     // Step 2: Submission timestamp
     const submittedInfo = page.locator('text=/submitted|sent/i').first();
-    if (await submittedInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await submittedInfo.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Submission Info',
@@ -241,20 +276,30 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
       title: 'Rejected Submission',
       description: 'Game rejected with feedback from admin',
       annotations: [
-        { selector: 'text=/rejected/i, [data-status="rejected"]', label: 'Rejected', color: ANNOTATION_COLORS.error },
+        {
+          selector: 'text=/rejected/i, [data-status="rejected"]',
+          label: 'Rejected',
+          color: ANNOTATION_COLORS.error,
+        },
       ],
       nextAction: 'View feedback',
     });
 
     // Step 2: Rejection reason
-    const rejectionReason = page.locator('text=/reason|feedback|comment/i, [data-testid="rejection-reason"]').first();
-    if (await rejectionReason.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const rejectionReason = page
+      .locator('text=/reason|feedback|comment/i, [data-testid="rejection-reason"]')
+      .first();
+    if (await rejectionReason.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Rejection Feedback',
         description: 'Admin feedback explaining why submission was rejected',
         annotations: [
-          { selector: 'text=/reason|feedback/i', label: 'Feedback', color: ANNOTATION_COLORS.warning },
+          {
+            selector: 'text=/reason|feedback/i',
+            label: 'Feedback',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'View status',
         nextAction: 'Address issues',
@@ -262,14 +307,22 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
     }
 
     // Step 3: Resubmit option
-    const resubmitBtn = page.locator('button:has-text("Resubmit"), button:has-text("Submit Again"), [data-testid="resubmit"]').first();
-    if (await resubmitBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const resubmitBtn = page
+      .locator(
+        'button:has-text("Resubmit"), button:has-text("Submit Again"), [data-testid="resubmit"]'
+      )
+      .first();
+    if (await resubmitBtn.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Resubmit Option',
         description: 'After fixing issues, resubmit for review',
         annotations: [
-          { selector: 'button:has-text("Resubmit"), [data-testid="resubmit"]', label: 'Resubmit', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button:has-text("Resubmit"), [data-testid="resubmit"]',
+            label: 'Resubmit',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'Fix issues',
         nextAction: 'Resubmit',
@@ -277,7 +330,9 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
     }
 
     helper.setTotalSteps(3);
-    console.log(`\n✅ Rejected submission captured: ${helper.getCapturedSteps().length} screenshots`);
+    console.log(
+      `\n✅ Rejected submission captured: ${helper.getCapturedSteps().length} screenshots`
+    );
   });
 
   test('published game - success state', async ({ page }) => {
@@ -304,20 +359,28 @@ test.describe('Publication Workflow - Visual Documentation (Editor)', () => {
       title: 'Published Game',
       description: 'Game successfully published and visible to users',
       annotations: [
-        { selector: 'text=/published/i, [data-status="published"]', label: 'Published', color: ANNOTATION_COLORS.success },
+        {
+          selector: 'text=/published/i, [data-status="published"]',
+          label: 'Published',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'View in catalog',
     });
 
     // Step 2: Publication details
     const publishedInfo = page.locator('text=/published at|live since/i').first();
-    if (await publishedInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await publishedInfo.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Publication Details',
         description: 'When the game was published to the catalog',
         annotations: [
-          { selector: 'text=/published at|live/i', label: 'Published Date', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'text=/published at|live/i',
+            label: 'Published Date',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'View status',
         nextAction: 'Manage published game',

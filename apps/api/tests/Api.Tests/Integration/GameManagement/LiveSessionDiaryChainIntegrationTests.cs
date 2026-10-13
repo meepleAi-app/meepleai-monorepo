@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -59,26 +61,27 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
         await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
 
-        // C1 fix (#2570 review): IntegrationWebApplicationFactory.Create() calls Sources.Clear(),
-        // so appsettings.json is NOT loaded and IOptions<DomainEventOutboxOptions>.Value.Mode
-        // resolves to the options-class C# default DomainEventDispatchMode.OutboxOnly.
-        // Under OutboxOnly the BackgroundService (which is removed by the factory) would need to
-        // drain the outbox — the inline MediatR.Publish never fires, the gateway spy never sees
-        // BroadcastAsync, and WaitForBroadcastAsync times out.
-        // Forcing Hybrid ensures MeepleAiDbContext.SaveChangesAsync dispatches inline (Step 5),
-        // which is the only mode compatible with a spy-based assertion in a synchronous test.
-        var extraConfig = new Dictionary<string, string?>
-        {
-            ["DomainEventOutbox:Mode"] = "Hybrid"
-        };
-
         // Build the factory from the shared helper, then extend it with a spy gateway.
-        var baseFactory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: extraConfig);
+        var baseFactory = IntegrationWebApplicationFactory.Create(connectionString);
 
         _factory = baseFactory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
             {
+                // Inline dispatch: MeepleAiDbContext.SaveChangesAsync publishes through MediatR only
+                // in Hybrid mode; under the default OutboxOnly the events wait for the outbox
+                // processor, which the factory removes, and the spy below is never called.
+                //
+                // #4298: this used to be extraConfig["DomainEventOutbox:Mode"] = "Hybrid", and it did
+                // nothing. The product binds DomainEventOutboxOptions inside the block that the
+                // "Testing" environment skips (AddDatabaseServices), so in this host no code reads
+                // that key: the options stayed at their default. The test passed while the default
+                // was Hybrid and went red at the OutboxOnly cutover. Registering the options is how
+                // the other inline-dispatch tests do it (see IntegrationServiceCollectionBuilder).
+                services.RemoveAll<IOptions<DomainEventOutboxOptions>>();
+                services.AddSingleton<IOptions<DomainEventOutboxOptions>>(
+                    Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.Hybrid }));
+
                 // Replace the real gateway with a spy that captures BroadcastAsync calls.
                 services.RemoveAll<ILiveSessionStreamGateway>();
                 services.AddScoped<ILiveSessionStreamGateway>(_ =>
@@ -353,7 +356,7 @@ public sealed class LiveSessionDiaryChainIntegrationTests : IAsyncLifetime
         throw new TimeoutException(
             $"Timed out waiting for '{eventType}' broadcast on session {sessionId} " +
             $"after {timeout.TotalSeconds:0}s. " +
-            "Verify DomainEventOutbox:Mode=Hybrid is configured in the test factory extraConfig.");
+            "Check that the host dispatches inline: IOptions<DomainEventOutboxOptions> must carry Mode=Hybrid.");
     }
 
     /// <summary>Returns an empty async enumerable of <see cref="LiveSessionStreamEvent"/>.</summary>

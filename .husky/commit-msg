@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Commit message hook for MeepleAI
 # Validates commit messages against Conventional Commits specification
 

@@ -74,13 +74,8 @@ internal sealed class GetAllAgentsQueryHandler
                 .ToList();
         }
 
-        // Apply optional Type filter
-        if (!string.IsNullOrWhiteSpace(request.Type))
-        {
-            agents = agents
-                .Where(a => string.Equals(a.Type.Value, request.Type, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
+        // Issue #4138: an optional Type filter stood here. AgentDefinition has no type
+        // any more, so there is nothing to filter on.
 
         // Apply optional GameId filter
         if (request.GameId.HasValue)
@@ -117,7 +112,6 @@ internal sealed class GetAllAgentsQueryHandler
         return new AgentDto(
             Id: agent.Id,
             Name: agent.Name,
-            Type: agent.Type.Value,
             StrategyName: agent.Strategy.Name,
             StrategyParameters: agent.Strategy.Parameters,
             IsActive: agent.IsActive,

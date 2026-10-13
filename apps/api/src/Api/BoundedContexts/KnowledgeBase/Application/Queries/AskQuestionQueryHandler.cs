@@ -4,50 +4,39 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
-using Api.Configuration;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
-using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
-/// Handler for AskQuestionQuery.
-/// Orchestrates RAG (Retrieval-Augmented Generation) flow:
-/// 1. Vector search for relevant context
-/// 2. LLM generation with context
-/// 3. Quality tracking and confidence scoring
+/// La domanda singola (<c>/knowledge-base/ask</c>, <c>/agents/qa</c>, l'auto-test admin).
+/// #4168 (ADR-095 D3): passa dagli stessi passi della pipeline unica — profilo pubblicato letto una
+/// volta, lingua, recupero (<see cref="AnswerRetrieval"/>), prompt (<see cref="AnswerPromptBuilder"/>)
+/// e generazione tramite il gateway con riserva e circuit breaker. Restano qui ciò che la chat in
+/// streaming non ha: house rule, cache semantica, validazione, traduzione.
 /// </summary>
 internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaResponseDto>
 {
-    private const string DefaultSystemPrompt =
-        "You are MeepleAI, a precise board game rules assistant. " +
-        "Answer ONLY using the provided rulebook context. " +
-        "For each claim you make, it MUST be directly supported by the context provided. " +
-        "If the context does not contain the answer, respond EXACTLY with: " +
-        "'This information is not available in the provided rulebook.' " +
-        "Never invent rules, game mechanics, or examples not present in the context. " +
-        "Always cite the page number in brackets, e.g. [Page 3].";
-
-    private readonly SearchQueryHandler _searchQueryHandler;
-    private readonly ICrossEncoderReranker _reranker;
+    private readonly AnswerRetrieval _retrieval;
+    private readonly IPublishedAgentProfileReader _profileReader;
+    private readonly ILanguageDetectionService _languageDetection;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
     private readonly IPdfDocumentRepository _pdfDocumentRepository;
     private readonly ILlmService _llmService;
-    private readonly IPromptTemplateService _promptTemplateService;
     private readonly IRagValidationPipelineService _validationPipeline;
-    private readonly IRagAccessService _ragAccessService;
+    private readonly IAnswerPreconditions _preconditions;
     private readonly IRagQualityTracker _qualityTracker;
     private readonly QueryComplexityAnalyzer _complexityAnalyzer;
     private readonly ISemanticResponseCache _responseCache;
@@ -56,27 +45,21 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IPricingEngine _pricingEngine;
     private readonly IGenericTranslationService _genericTranslationService;
     private readonly IIntentClassifierService _intentClassifier;
-    private readonly IOptionsMonitor<LlmQueryComplexityRoutingOptions> _routingOptions;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
-    // Issue #2708: retrieve a wider candidate pool, then let the cross-encoder narrow it to the
-    // final top-K by semantic relevance (improves precision without raising MinScore).
-    private const int RerankCandidatePoolSize = 20;
-    private const int FinalTopK = 5;
-
     public AskQuestionQueryHandler(
-        SearchQueryHandler searchQueryHandler,
-        ICrossEncoderReranker reranker,
+        AnswerRetrieval retrieval,
+        IPublishedAgentProfileReader profileReader,
+        ILanguageDetectionService languageDetection,
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
         IPdfDocumentRepository pdfDocumentRepository,
         ILlmService llmService,
-        IPromptTemplateService promptTemplateService,
         IRagValidationPipelineService validationPipeline,
-        IRagAccessService ragAccessService,
+        IAnswerPreconditions preconditions,
         IRagQualityTracker qualityTracker,
         QueryComplexityAnalyzer complexityAnalyzer,
         ISemanticResponseCache responseCache,
@@ -85,21 +68,20 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IPricingEngine pricingEngine,
         IGenericTranslationService genericTranslationService,
         IIntentClassifierService intentClassifier,
-        IOptionsMonitor<LlmQueryComplexityRoutingOptions> routingOptions,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
         ILogger<AskQuestionQueryHandler> logger)
     {
-        _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
-        _reranker = reranker ?? throw new ArgumentNullException(nameof(reranker));
+        _retrieval = retrieval ?? throw new ArgumentNullException(nameof(retrieval));
+        _profileReader = profileReader ?? throw new ArgumentNullException(nameof(profileReader));
+        _languageDetection = languageDetection ?? throw new ArgumentNullException(nameof(languageDetection));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
         _pdfDocumentRepository = pdfDocumentRepository ?? throw new ArgumentNullException(nameof(pdfDocumentRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
-        _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
         _validationPipeline = validationPipeline ?? throw new ArgumentNullException(nameof(validationPipeline));
-        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
+        _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _qualityTracker = qualityTracker ?? throw new ArgumentNullException(nameof(qualityTracker));
         _complexityAnalyzer = complexityAnalyzer ?? throw new ArgumentNullException(nameof(complexityAnalyzer));
         _responseCache = responseCache ?? throw new ArgumentNullException(nameof(responseCache));
@@ -108,7 +90,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _pricingEngine = pricingEngine ?? throw new ArgumentNullException(nameof(pricingEngine));
         _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
-        _routingOptions = routingOptions ?? throw new ArgumentNullException(nameof(routingOptions));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -128,32 +109,27 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             "[AskQuestionHandler] QueryComplexityAnalyzer: Question={Question}, RoutingTier={RoutingTier}",
             query.Question, queryRoutingTier);
 
-        // Issue #562: tier → model override resolved from `LlmRouting:QueryComplexityModels`.
-        // When the per-tier value is empty/null the handler keeps using the default model
-        // selected by ILlmService (backward-compatible no-op). Otherwise the routing
-        // dispatches through ILlmService.GenerateCompletionWithModelAsync (Issue #4332).
-        var modelOverride = _routingOptions.CurrentValue.ResolveOverride(queryRoutingTier);
-        if (modelOverride is not null)
-        {
-            _logger.LogDebug(
-                "[AskQuestionHandler] Per-tier model override active: Tier={Tier}, Model={Model}",
-                queryRoutingTier, modelOverride);
-        }
+        // #4168: il livello di complessità resta nelle metriche; il modello non lo sceglie più lui
+        // (l'override di `LlmRouting:QueryComplexityModels`), ma la versione pubblicata del profilo.
 
-        // RAG access enforcement
+        // Passo 1 di D3 — e, con la 5g-b, il 2 — nel passo condiviso con la chat e la ricerca fra
+        // giochi. Solo quando la domanda nomina un utente: l'unico mittente che non lo fa è
+        // l'auto-test del wizard (RunAgentAutoTestCommandHandler), dietro una rotta admin.
         if (query.UserId.HasValue)
         {
-            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
-                ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
-                query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
+            await _preconditions.EnsureCanAskAboutGameAsync(
+                query.UserId.Value, query.UserRole, query.GameId, cancellationToken).ConfigureAwait(false);
         }
 
+        // D2: la versione pubblicata, letta una volta. Senza profilo nessuna risposta, mai i valori compilati.
+        var profile = await ReadProfileAsync(cancellationToken).ConfigureAwait(false);
+        var language = AnswerLanguageResolver
+            .Resolve(_languageDetection, query.Question, query.AcceptLanguage, query.Language).Language;
+        var cacheScope = new SemanticCacheScope(profile.VersionId, language);
+
         _logger.LogInformation(
-            "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, Question={Question}",
-            query.GameId, query.Question);
+            "[AskQuestionHandler] ENTRY - Processing AskQuestionQuery: GameId={GameId}, profile v{ProfileVersion}, language {Language}, Question={Question}",
+            query.GameId, profile.VersionNumber, language, query.Question);
 
         // PHASE 2: House rule check (graceful degradation per AC-2.5.4)
         // Cross-BC read from AgentMemory — failure must not abort Q&A (R-23 mitigation).
@@ -225,18 +201,24 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         //
         // E' la guardia di lettura a chiudere entrambi i versi: se non si legge, `queryVector`
         // resta null e la scrittura piu' sotto non parte. Quella a valle e' difesa in profondita'.
-        if (!query.BypassCache && !injectClaims && houseRuleMatch is null)
+        //
+        // #4279: lo stesso vale per una domanda che nomina un thread. La cronologia di quella
+        // conversazione entra nel prompt, e la cache semantica non la conosce: e' per gioco, lingua
+        // e versione. Oggi nessun chiamante di produzione passa un thread a questo gestore.
+        if (!query.BypassCache && !injectClaims && houseRuleMatch is null && !query.ThreadId.HasValue)
         {
             try
             {
                 // #3737: retrieval question -> e5 "query:" prefix.
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
-                    query.Question, query.Language, EmbeddingPurpose.Query, cancellationToken).ConfigureAwait(false);
+                    query.Question, language, EmbeddingPurpose.Query, cancellationToken).ConfigureAwait(false);
                 if (embeddingResult.Success && embeddingResult.Embeddings.Count > 0)
                 {
                     queryVector = embeddingResult.ToFloatArray();
+                    // #4168: la ricerca resta nell'ambito della versione pubblicata e della lingua
+                    // della risposta: una risposta di un'altra lingua o versione non si riserve.
                     var cached = await _responseCache.TryGetAsync(
-                        query.GameId, queryVector, cancellationToken).ConfigureAwait(false);
+                        query.GameId, cacheScope, queryVector, cancellationToken).ConfigureAwait(false);
                     if (cached != null)
                     {
                         _logger.LogInformation(
@@ -307,7 +289,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                             LlmConfidence: 0,
                             OverallConfidence: 0,
                             IsLowQuality: false,
-                            Citations: servableCitations);
+                            Citations: servableCitations,
+                            // la chiave della cache porta versione e lingua: sono quelle di adesso
+                            ProfileVersionId: profile.VersionId,
+                            Language: language);
                     }
                 }
             }
@@ -345,7 +330,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 1: Starting vector search...");
         var sw1 = System.Diagnostics.Stopwatch.StartNew();
         var (searchResults, domainSearchResults, searchConfidence) = await PerformSearchAndCalculateConfidenceAsync(
-            query, queryVector, cancellationToken).ConfigureAwait(false);
+            query, queryVector, profile.Content, language, cancellationToken).ConfigureAwait(false);
         sw1.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 1 DONE: Vector search completed in {ElapsedMs}ms - {ResultCount} results, confidence: {Confidence}",
             sw1.ElapsedMilliseconds, searchResults.Count, searchConfidence.Value);
@@ -385,61 +370,29 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 2: Loading chat history context...");
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var chatHistoryContext = await LoadChatHistoryContextAsync(
-            query.ThreadId, query.GameId, cancellationToken).ConfigureAwait(false);
+            query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
         sw2.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 2 DONE: Chat context loaded in {ElapsedMs}ms - {ContextLength} chars",
             sw2.ElapsedMilliseconds, chatHistoryContext?.Length ?? 0);
 
         // Step 3: Build LLM prompts
         _logger.LogDebug("[AskQuestionHandler] Step 3: Building LLM prompts...");
-        var systemPrompt = await _promptTemplateService.GetActivePromptAsync("rag-system-prompt")
-            .ConfigureAwait(false) ?? DefaultSystemPrompt;
-        if (injectClaims)
-        {
-            // Grounding (spec §7.1): authorize the [Verified Rules] block as valid provided context so the
-            // "answer ONLY from context" constraint does not reject it when the RAG context is empty.
-            systemPrompt += " A section titled '[Verified Rules — human-approved]' may precede the Context; "
-                + "it is human-approved rulebook content and counts as provided context — you MAY answer "
-                + "from it and cite its [Page N].";
-        }
-
-        if (houseRuleMatch is not null)
-        {
-            // #3855 — the house rule block was injected into the user prompt but never authorized in
-            // the system prompt, unlike [Verified Rules] right above. Two consequences, both observed:
-            //
-            //   * "Answer ONLY using the provided rulebook context" leaves the rule unsanctioned, so
-            //     the model paraphrases it instead of quoting — "chi ha giocato più di recente" came
-            //     back as "chi ha vinto l'ultima partita", a different rule entirely.
-            //   * "Always cite the page number in brackets" has no exception, so the model invents a
-            //     page for content that has none: the answer carried [Page 10], which in that rulebook
-            //     is about shuffling the deck.
-            //
-            // A reader who checks [Page 10] finds nothing and stops trusting the citations that ARE
-            // correct — which is most of them.
-            systemPrompt += " A section titled '[House Rule for this group]' may precede the Question; "
-                + "it is a rule this group agreed on and counts as provided context. Reproduce its "
-                + "wording exactly — do not paraphrase, summarise, or reword it. It comes from the "
-                + "group's own notes, NOT from the rulebook: never attach a [Page N] citation to it, "
-                + "and say explicitly that it is the group's house rule.";
-        }
+        // Passo 5: il prompt dalla versione pubblicata. Le regole verificate (R1) precedono il contesto
+        // RAG; la house rule (#3855) arriva come blocco a sé, autorizzato e da non parafrasare.
         var context = string.Join("\n\n", searchResults.Select(sr =>
             $"[Page {sr.PageNumber}] {sr.TextContent}"));
+        if (injectClaims)
+        {
+            context = context.Length > 0 ? $"{verifiedBlock.PromptText}\n\n{context}" : verifiedBlock.PromptText;
+        }
 
-        // PHASE 2: Prepend house rule context to the user prompt when a matching house rule was found.
-        // This augments the RAG context with group-specific rules stored in AgentMemory, ensuring the
-        // LLM answers relative to the user's actual table rules rather than the rulebook alone.
-        var houseRulePrefix = houseRuleMatch is not null
-            ? $"[House Rule for this group]\n{houseRuleMatch}\n\n"
-            : string.Empty;
-
-        // R1 (spec §7.1/D8): approved claims rank between house rules and raw RAG context.
-        var verifiedPrefix = injectClaims ? $"{verifiedBlock.PromptText}\n\n" : string.Empty;
-
-        var baseQuestion = $"{houseRulePrefix}{verifiedPrefix}Question: {query.Question}\n\nContext:\n{context}";
+        var prompt = AnswerPromptBuilder.Build(
+            profile.Content, language, context, query.Question,
+            responseStyle: null, continuationContext: null, hasVerifiedRules: injectClaims, houseRule: houseRuleMatch);
+        var systemPrompt = prompt.SystemPrompt;
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
-            ? _chatContextService.EnrichPromptWithHistory(baseQuestion, chatHistoryContext)
-            : baseQuestion;
+            ? _chatContextService.EnrichPromptWithHistory(prompt.UserPrompt, chatHistoryContext)
+            : prompt.UserPrompt;
         _logger.LogDebug("[AskQuestionHandler] Step 3 DONE: Prompts built - System: {SysLen} chars, User: {UserLen} chars",
             systemPrompt.Length, userPrompt.Length);
 
@@ -447,7 +400,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 4: Generating LLM answer...");
         var sw4 = System.Diagnostics.Stopwatch.StartNew();
         var (llmResponse, llmResult) = await GenerateLlmAnswerAndRecordMetricsAsync(
-            systemPrompt, userPrompt, modelOverride, cancellationToken).ConfigureAwait(false);
+            systemPrompt, userPrompt, profile, cancellationToken).ConfigureAwait(false);
         sw4.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 4 DONE: LLM generation completed in {ElapsedMs}ms - Response: {ResponseLength} chars",
             sw4.ElapsedMilliseconds, llmResponse?.Length ?? 0);
@@ -456,8 +409,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _logger.LogDebug("[AskQuestionHandler] Step 5: Building validated response...");
         var sw5 = System.Diagnostics.Stopwatch.StartNew();
         var response = await BuildValidatedResponseAsync(
-            query, llmResponse ?? string.Empty, searchResults, domainSearchResults,
-            searchConfidence, systemPrompt, userPrompt, cancellationToken).ConfigureAwait(false);
+            query, language, llmResponse ?? string.Empty, searchResults, domainSearchResults,
+            searchConfidence, cancellationToken).ConfigureAwait(false);
+        // #4168 (ADR-095 D2): la versione e la lingua con cui la risposta è stata prodotta
+        response = response with { ProfileVersionId = profile.VersionId, Language = language };
         sw5.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 5 DONE: Response validation completed in {ElapsedMs}ms",
             sw5.ElapsedMilliseconds);
@@ -495,6 +450,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 .ToList() ?? [];
             await _responseCache.SetAsync(
                 query.GameId,
+                cacheScope,
                 queryVector,
                 new CachedRagResponse(
                     response.Answer,
@@ -521,13 +477,13 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // PHASE 2: Translate response if ResponseLanguage differs from the query language.
         // Graceful degradation: on any failure, return the original answer with a warning logged.
         if (query.ResponseLanguage is not null
-            && !string.Equals(query.ResponseLanguage, query.Language, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(query.ResponseLanguage, language, StringComparison.OrdinalIgnoreCase)
             && !string.IsNullOrWhiteSpace(response.Answer))
         {
             try
             {
                 var translationResult = await _genericTranslationService.TranslateGenericAsync(
-                    response.Answer, query.Language, query.ResponseLanguage, cancellationToken)
+                    response.Answer, language, query.ResponseLanguage, cancellationToken)
                     .ConfigureAwait(false);
 
                 if (translationResult.Success)
@@ -559,33 +515,18 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<(List<SearchResultDto> searchResults, List<Domain.Entities.SearchResult> domainResults, Confidence confidence)> PerformSearchAndCalculateConfidenceAsync(
         AskQuestionQuery query,
         float[]? precomputedQueryVector,
+        AgentProfileContent profile,
+        string language,
         CancellationToken cancellationToken)
     {
-        // Phase D (D7): classify user intent into GameBookRole tag(s) so the hybrid re-ranker
-        // can boost chunks whose role_tags overlap (D6). The classifier is rule-based, sync,
-        // and cheap (~µs); failure modes default to RulesReference.
-        var queryRoleHint = _intentClassifier.ClassifyIntent(query.Question);
-        _logger.LogDebug(
-            "[AskQuestionHandler] Intent classification: Question={Question}, RoleHint={RoleHint}",
-            query.Question, queryRoleHint);
-
-        var searchQuery = new SearchQuery(
-            GameId: query.GameId,
-            Query: query.Question,
-            TopK: RerankCandidatePoolSize,
-            MinScore: 0.55,
-            SearchMode: query.SearchMode ?? "hybrid",
-            Language: query.Language,
-            QueryVector: precomputedQueryVector, // Issue #563: reuse cache-lookup vector when available
-            QueryRoleHint: queryRoleHint // Phase D (D6): bias re-ranker toward role-matching chunks
-        );
-
-        var searchResults = await _searchQueryHandler.Handle(searchQuery, cancellationToken).ConfigureAwait(false);
-
-        // Issue #2708: rerank the wider candidate pool down to the final top-K by semantic relevance
-        // (cross-encoder; graceful degradation to raw top-K if the reranker is unavailable).
-        searchResults = await SearchResultReranker.RerankAsync(
-            _reranker, query.Question, searchResults, FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
+        // Passi 3 e 4: recupero e reranking con i numeri del profilo, condivisi con la chat in streaming.
+        var searchResults = await _retrieval.RetrieveAsync(
+            new AnswerRetrievalRequest(
+                query.GameId,
+                query.Question,
+                SearchMode: query.SearchMode ?? "hybrid",
+                QueryVector: precomputedQueryVector), // Issue #563: reuse cache-lookup vector when available
+            profile, language, cancellationToken).ConfigureAwait(false);
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
@@ -610,6 +551,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<string> LoadChatHistoryContextAsync(
         Guid? threadId,
         Guid gameId,
+        Guid? userId,
         CancellationToken cancellationToken)
     {
         if (!threadId.HasValue)
@@ -619,13 +561,19 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         if (thread == null)
             return string.Empty;
 
-        // Security: Validate thread belongs to requested game (prevent cross-game data leak)
-        if (thread.GameId.HasValue && thread.GameId.Value != gameId)
+        // Security (#4242): the history is used only for its owner, and only for its game.
+        switch (ChatThreadHistoryPolicy.WhyNot(thread, userId, gameId))
         {
-            _logger.LogWarning(
-                "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
-                threadId.Value, thread.GameId.Value, gameId);
-            return string.Empty;
+            case ChatThreadHistoryRefusal.NotTheOwner:
+                _logger.LogWarning(
+                    "Thread {ThreadId} does not belong to user {UserId}. Ignoring chat history.",
+                    threadId.Value, userId);
+                return string.Empty;
+            case ChatThreadHistoryRefusal.AnotherGame:
+                _logger.LogWarning(
+                    "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
+                    threadId.Value, thread.GameId, gameId);
+                return string.Empty;
         }
 
         if (_chatContextService.ShouldIncludeChatHistory(thread))
@@ -646,25 +594,31 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<(string llmResponse, LlmCompletionResult llmResult)> GenerateLlmAnswerAndRecordMetricsAsync(
         string systemPrompt,
         string userPrompt,
-        string? modelOverride,
+        PublishedAgentProfile profile,
         CancellationToken cancellationToken)
     {
-        // Issue #562: when modelOverride is provided (from LlmRouting:QueryComplexityModels),
-        // dispatch through GenerateCompletionWithModelAsync (Issue #4332). Otherwise
-        // fall back to the default model selection on ILlmService.
-        var llmResult = modelOverride is not null
-            ? await _llmService.GenerateCompletionWithModelAsync(
-                modelOverride,
+        // Passo 6: modello, riserva e parametri dalla versione pubblicata. Il gateway prova la riserva
+        // se il principale fallisce e aggiorna il circuit breaker.
+        var llmResult = await _llmService.GenerateAnswerAsync(
+            new LlmAnswerRequest(
                 systemPrompt,
                 userPrompt,
-                RequestSource.RagPipeline,
-                maxTokens: null,
-                cancellationToken).ConfigureAwait(false)
-            : await _llmService.GenerateCompletionAsync(
-                systemPrompt,
-                userPrompt,
-                RequestSource.RagPipeline,
-                cancellationToken).ConfigureAwait(false);
+                profile.Content.PrimaryModelId,
+                profile.Content.FallbackModelId,
+                (double)profile.Content.Temperature,
+                profile.Content.MaxResponseTokens,
+                profile.VersionId),
+            cancellationToken).ConfigureAwait(false);
+
+        // #4168: un rifiuto (tetto, quota, catalogo) o nessun modello disponibile. Prima diventava una
+        // risposta vuota, servita come riuscita e passata alla validazione: ora è un errore con il motivo.
+        if (!llmResult.Success)
+        {
+            var code = llmResult.Metadata.TryGetValue("error_code", out var errorCode) && !string.IsNullOrWhiteSpace(errorCode)
+                ? errorCode
+                : LlmAnswerErrorCodes.ProviderUnavailable;
+            throw new LlmCallRefusedException(code, llmResult.ErrorMessage ?? "The AI could not answer right now.");
+        }
 
         var llmResponse = llmResult.Response;
 
@@ -695,12 +649,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     /// </summary>
     private async Task<QaResponseDto> BuildValidatedResponseAsync(
         AskQuestionQuery query,
+        string language,
         string llmResponse,
                 List<SearchResultDto> searchResults,
         List<Domain.Entities.SearchResult> domainSearchResults,
         Confidence searchConfidence,
-        string systemPrompt,
-        string userPrompt,
         CancellationToken cancellationToken)
     {
         // Calculate quality metrics
@@ -732,12 +685,12 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                 confidence: overallConfidence.Value
             );
 
-            var validation = await _validationPipeline.ValidateWithMultiModelAsync(
+            // #4179: validazione standard (livelli 1, 3, 4). Il consenso fra due modelli è stato
+            // tolto: due chiamate in più per domanda, fuori dal gateway, verso modelli dismessi.
+            var validation = await _validationPipeline.ValidateResponseAsync(
                 qaResponse,
                 query.GameId.ToString(),
-                systemPrompt,
-                userPrompt,
-                query.Language,
+                language,
                 cancellationToken).ConfigureAwait(false);
 
             validationResult = new RagValidationResultDto(
@@ -777,6 +730,23 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         );
     }
 
+    /// <summary>
+    /// La versione pubblicata. Senza profilo la domanda si rifiuta con un 503 che dice il motivo,
+    /// come un tetto di spesa: il servizio AI non è configurato, la richiesta non è sbagliata.
+    /// </summary>
+    private async Task<PublishedAgentProfile> ReadProfileAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _profileReader.GetAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (AgentProfileNotPublishedException ex)
+        {
+            _logger.LogError(ex, "No published agent profile: the question is refused");
+            throw new LlmCallRefusedException(AgentProfileNotPublishedException.Code, ex.Message);
+        }
+    }
+
     private static bool IsLowQualityResponse(QaResponseDto response) =>
         response.IsLowQuality ||
         string.Equals(response.Answer, "This information is not available in the provided rulebook.", StringComparison.Ordinal);
@@ -784,9 +754,10 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)
     {
+        // #4244: the PDFs of the game, shared or private (see GameDocuments).
         var documents = documentIds?.Count > 0
             ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
-            : await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
+            : await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
 
         // Defensive: Handle null or empty collection
         if (documents is null or { Count: 0 }) return (true, 0, 0);

@@ -24,4 +24,14 @@ public class ForbiddenException : HttpException
         : base(StatusCodes.Status403Forbidden, "forbidden", "Access denied")
     {
     }
+
+    /// <summary>
+    /// Per i dinieghi che il client deve distinguere dal 403 generico: resta un 403 per chi
+    /// intercetta <see cref="ForbiddenException"/>, ma con un codice proprio.
+    /// </summary>
+    [SetsRequiredMembers]
+    protected ForbiddenException(string errorCode, string message)
+        : base(StatusCodes.Status403Forbidden, errorCode, message)
+    {
+    }
 }

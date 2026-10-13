@@ -39,12 +39,6 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     public bool IsFavorite { get; private set; }
 
     /// <summary>
-    /// Custom AI agent configuration for this game.
-    /// Null means use system default configuration.
-    /// </summary>
-    public AgentConfiguration? CustomAgentConfig { get; private set; }
-
-    /// <summary>
     /// Custom PDF rulebook metadata uploaded by user.
     /// Null means use the SharedGame's default PDF.
     /// </summary>
@@ -213,26 +207,6 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Configures a custom AI agent for this game.
-    /// Replaces any existing custom configuration.
-    /// </summary>
-    /// <param name="agentConfig">The agent configuration to apply</param>
-    public void ConfigureAgent(AgentConfiguration agentConfig)
-    {
-        ArgumentNullException.ThrowIfNull(agentConfig);
-        CustomAgentConfig = agentConfig;
-    }
-
-    /// <summary>
-    /// Resets the AI agent to use system default configuration.
-    /// Removes any custom agent configuration.
-    /// </summary>
-    public void ResetAgentToDefault()
-    {
-        CustomAgentConfig = null;
-    }
-
-    /// <summary>
     /// Uploads a custom PDF rulebook for this game.
     /// Replaces any existing custom PDF.
     /// </summary>
@@ -315,11 +289,6 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     {
         CustomCoverR2Key = string.IsNullOrWhiteSpace(r2Key) ? null : r2Key;
     }
-
-    /// <summary>
-    /// Returns whether this entry uses a custom agent configuration.
-    /// </summary>
-    public bool HasCustomAgent() => CustomAgentConfig is not null;
 
     // ========== GAME STATE MANAGEMENT ==========
 

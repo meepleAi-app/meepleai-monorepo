@@ -3,6 +3,8 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
+using Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
@@ -35,7 +37,6 @@ public class AskQuestionQueryHandlerPhase2Tests
     private readonly Mock<IChatThreadRepository> _mockThreadRepository;
     private readonly Mock<IPdfDocumentRepository> _mockPdfDocumentRepository;
     private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ISemanticResponseCache> _mockResponseCache;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
@@ -101,7 +102,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         _mockThreadRepository = new Mock<IChatThreadRepository>();
         _mockPdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         _mockLlmService = new Mock<ILlmService>();
-        _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockResponseCache = new Mock<ISemanticResponseCache>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
@@ -112,7 +112,7 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         // Default: cache miss
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CachedRagResponse?)null);
 
         _mockEmbeddingService
@@ -238,7 +238,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .WithMessage("*Quota*");
 
         _mockLlmService.Verify(
-            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "LLM must not be called when quota is denied");
     }
@@ -276,8 +276,8 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         // Assert — access denial precedes quota + LLM (mirrors the enforcement order at
         // AskQuestionQueryHandler.cs:137-145, ahead of the quota check at :175).
-        await act.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("*autorizzato*");
+        // #4155: the denial is typed and names the game, so the client can offer the declaration.
+        (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
 
         denyRagAccess.Verify(
             s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
@@ -287,7 +287,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             Times.Never,
             "quota must not be consumed when RAG access is denied");
         _mockLlmService.Verify(
-            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "LLM must not be called when RAG access is denied");
     }
@@ -322,8 +322,8 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         string? capturedUserPrompt = null;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((sys, user, src, ct) => capturedUserPrompt = user)
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => capturedUserPrompt = r.UserPrompt)
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: answer,
                 usage: new LlmUsage(10, 10, 20),
@@ -386,8 +386,8 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         string? capturedSystemPrompt = null;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((sys, user, src, ct) => capturedSystemPrompt = sys)
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => capturedSystemPrompt = r.SystemPrompt)
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: answer,
                 usage: new LlmUsage(10, 10, 20),
@@ -456,7 +456,7 @@ public class AskQuestionQueryHandlerPhase2Tests
         await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
 
         _mockResponseCache.Verify(
-            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "la risposta cita la house rule verbatim (#3875) e la cache e' per gioco, non per " +
             "utente: scriverla li' la rende servibile a chiunque interroghi lo stesso gioco");
@@ -493,9 +493,66 @@ public class AskQuestionQueryHandlerPhase2Tests
         await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
 
         _mockResponseCache.Verify(
-            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "una risposta generica in cache non deve poter sopprimere la house rule di chi ce l'ha");
+    }
+
+    /// <summary>
+    /// #4279. Una domanda che nomina un thread riceve nel prompt la cronologia di quella
+    /// conversazione. La cache semantica è per gioco, lingua e versione: non conosce la
+    /// conversazione. Stessa regola delle house rule e dei claim: ciò che dà forma alla risposta e
+    /// non sta nella chiave tiene la risposta fuori dalla cache condivisa.
+    ///
+    /// Oggi nessun chiamante di produzione passa un thread a questo gestore; il controllo c'è perché
+    /// il primo che lo farà non debba saperlo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheQuestionNamesAThread_DoesNotWriteToSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "In your variant the pawn moves twice.");
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            ThreadId: Guid.NewGuid(),
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una risposta nata dentro una conversazione non va servita a chi fa la stessa domanda fuori da essa");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheQuestionNamesAThread_DoesNotReadFromSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            ThreadId: Guid.NewGuid(),
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una domanda di seguito non deve ricevere la risposta in cache di un'altra conversazione");
     }
 
     /// <summary>
@@ -535,7 +592,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var query = new AskQuestionQuery(
@@ -556,6 +613,35 @@ public class AskQuestionQueryHandlerPhase2Tests
         result.Citations!.Select(c => c.DocumentId).Should().Equal(
             new string?[] { "doc-a", "doc-b", "doc-c" },
             "il documentId deve venire dalla voce in cache");
+    }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): anche una risposta servita dalla cache dice con quale versione e in che
+    /// lingua è stata prodotta. La chiave della cache le contiene, quindi sono quelle di adesso.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OnCacheHit_CarriesTheVersionAndTheLanguage()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                Answer: "Cached answer.",
+                Citations: new List<CachedCitation>(),
+                ModelUsed: "test-model",
+                CachedAt: DateTimeOffset.UtcNow));
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How does the pawn move?", Language: "en", UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("Cached answer.");
+        result.ProfileVersionId.Should().Be(AnswerPipelineTestDoubles.SeedVersionId);
+        result.Language.Should().Be("en");
     }
 
     // -------------------------------------------------------------------------
@@ -598,7 +684,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var query = new AskQuestionQuery(
@@ -658,7 +744,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var trackerMock = new Mock<IRagQualityTracker>();
@@ -721,7 +807,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             CachedAt: DateTimeOffset.UtcNow);
 
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(gameId, It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(cached);
 
         var trackerMock = new Mock<IRagQualityTracker>();
@@ -778,8 +864,8 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         string? capturedSystemPrompt = null;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((sys, user, src, ct) => capturedSystemPrompt = sys)
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => capturedSystemPrompt = r.SystemPrompt)
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: answer,
                 usage: new LlmUsage(10, 10, 20),
@@ -979,8 +1065,8 @@ public class AskQuestionQueryHandlerPhase2Tests
         var captured = new System.Collections.Generic.List<string>();
         capturedUserPrompts = captured;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, RequestSource, CancellationToken>((_, user, _, _) => captured.Add(user))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => captured.Add(r.UserPrompt))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: "In una partita a 3 si usa la plancia standard. [Page 3]",
                 usage: new LlmUsage(1, 1, 2),
@@ -1049,27 +1135,26 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         result.Answer.Should().Be(NoContextSentinel);
         _mockLlmService.Verify(
-            s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     private AskQuestionQueryHandler BuildHandler(
-        Api.Configuration.LlmQueryComplexityRoutingOptions? routingOverrides = null,
         IRagAccessService? ragAccessService = null,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
         Api.Services.IFeatureFlagService? featureFlags = null,
         IRagQualityTracker? qualityTracker = null) =>
         new(
-            _searchHandler,
-            CreatePassthroughReranker(),
+            AnswerPipelineTestDoubles.Retrieval(_searchHandler, CreatePassthroughReranker()),
+            AnswerPipelineTestDoubles.ProfileReader(),
+            AnswerPipelineTestDoubles.UncertainLanguageDetection(),
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
-            _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
-            ragAccessService ?? CreatePermissiveRagAccessServiceMock(),
+            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(ragAccessService ?? CreatePermissiveRagAccessServiceMock()),
             qualityTracker ?? Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
@@ -1079,7 +1164,6 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockTranslationService.Object,
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
-            BuildRoutingMonitor(routingOverrides ?? new Api.Configuration.LlmQueryComplexityRoutingOptions()),
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
             _mockLogger.Object);
@@ -1100,14 +1184,6 @@ public class AskQuestionQueryHandlerPhase2Tests
                         .ToList(),
                     "test-model", 1.0));
         return mock.Object;
-    }
-
-    private static Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions> BuildRoutingMonitor(
-        Api.Configuration.LlmQueryComplexityRoutingOptions value)
-    {
-        var monitor = new Mock<Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions>>();
-        monitor.Setup(m => m.CurrentValue).Returns(value);
-        return monitor.Object;
     }
 
     private void SetupDefaultMocks(Guid gameId)
@@ -1132,20 +1208,17 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Setup(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()))
             .Returns<string, string>((b, _) => b);
 
-        _mockPromptTemplateService
-            .Setup(s => s.GetActivePromptAsync("rag-system-prompt", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Test system prompt");
-
         _mockValidationPipeline
-            .Setup(v => v.ValidateWithMultiModelAsync(
+            .Setup(v => v.ValidateResponseAsync(
                 It.IsAny<Api.Models.QaResponse>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RagValidationResult
             {
                 IsValid = true,
-                LayersPassed = 4,
-                TotalLayers = 4,
+                LayersPassed = 3,
+                TotalLayers = 3,
                 ConfidenceValidation = new ConfidenceValidationResult
                 {
                     IsValid = true,
@@ -1153,32 +1226,6 @@ public class AskQuestionQueryHandlerPhase2Tests
                     Severity = ValidationSeverity.Pass,
                     ActualConfidence = 0.8,
                     RequiredThreshold = 0.7
-                },
-                MultiModelConsensus = new MultiModelConsensusResult
-                {
-                    HasConsensus = true,
-                    SimilarityScore = 0.95,
-                    RequiredThreshold = 0.90,
-                    Gpt4Response = new ModelResponse
-                    {
-                        ModelId = "gpt-4",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ClaudeResponse = new ModelResponse
-                    {
-                        ModelId = "claude-3",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ConsensusResponse = "Test response",
-                    Message = "Consensus achieved",
-                    TotalDurationMs = 200,
-                    Severity = ConsensusSeverity.High
                 },
                 CitationValidation = new CitationValidationResult
                 {
@@ -1197,7 +1244,6 @@ public class AskQuestionQueryHandlerPhase2Tests
                     Message = "No hallucinations detected",
                     Severity = HallucinationSeverity.None
                 },
-                ValidationAccuracyMetrics = "Validation accuracy tracking enabled",
                 Message = "All validations passed",
                 Severity = RagValidationSeverity.Pass,
                 DurationMs = 10
@@ -1229,7 +1275,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Returns(oneResult);
 
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: llmAnswer,
                 usage: new LlmUsage(10, 10, 20),
@@ -1251,122 +1297,94 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Issue #562 — per-tier LLM model dispatch tests
+    // #4168 — il modello e i parametri vengono dalla versione pubblicata del profilo
+    //
+    // Sostituisce i test di #562: l'override del modello per livello di complessità
+    // (`LlmRouting:QueryComplexityModels`) è stato tolto. Era configurato vuoto, quindi non cambiava
+    // nulla, e con la pipeline il modello lo decide solo il profilo.
     // ─────────────────────────────────────────────────────────────────────────
 
-    [Fact]
-    public async Task Handle_WithLowTierOverride_DispatchesGenerateCompletionWithModelAsync()
+    [Theory]
+    [InlineData("What is the winning condition?")]
+    [InlineData("Explain the full interaction between the trading phase, the robber and the longest road bonus in a 4-player game")]
+    public async Task Handle_WhateverTheComplexity_AsksTheGatewayForTheModelOfThePublishedProfile(string question)
     {
-        // Arrange — short factual query → Low tier (per QueryComplexityAnalyzer).
-        // Config sets explicit override for Low.
         var gameId = Guid.NewGuid();
-        SetupDefaultMocksWithSearchResults(gameId, "answer");
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _mockHouseRuleMatcher
-            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
-
+        SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 1]");
+        AllowQuota();
+        LlmAnswerRequest? sent = null;
         _mockLlmService
-            .Setup(s => s.GenerateCompletionWithModelAsync(
-                "openai/gpt-4o-mini",
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<RequestSource>(),
-                It.IsAny<int?>(),
-                It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((r, _) => sent = r)
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
-                response: "answer",
+                response: "Answer [Page 1]",
                 usage: new LlmUsage(10, 10, 20),
-                cost: new LlmCost
-                {
-                    InputCost = 0.001m,
-                    OutputCost = 0.002m,
-                    ModelId = "openai/gpt-4o-mini",
-                    Provider = "openai"
-                }));
+                cost: new LlmCost { InputCost = 0.001m, OutputCost = 0.002m, ModelId = "deepseek-flash", Provider = "DeepSeek" }));
 
-        // "Quanti giocatori?" matches LowComplexityPrefix "quanti" → Low tier.
-        var query = new AskQuestionQuery(GameId: gameId, Question: "Quanti giocatori sono?");
+        await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: question, UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
 
-        var handler = BuildHandler(new Api.Configuration.LlmQueryComplexityRoutingOptions
+        sent.Should().NotBeNull();
+        sent!.PrimaryModelId.Should().Be("deepseek-flash");
+        sent.FallbackModelId.Should().Be("meta-llama/llama-3.3-70b-instruct");
+        sent.ProfileVersionId.Should().Be(AnswerPipelineTestDoubles.SeedVersionId);
+    }
+
+    /// <summary>
+    /// #4168: un rifiuto del gateway diventava una risposta vuota, servita come riuscita. Ora è un
+    /// errore con il codice del gateway, e nella cache non finisce niente.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheGatewayRefuses_ThrowsWithTheCode_AndCachesNothing()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused");
+        AllowQuota();
+        var refusal = LlmCompletionResult.CreateFailure("Daily AI budget reached.") with
         {
-            Low = "openai/gpt-4o-mini"
-        });
+            Metadata = new Dictionary<string, string> { ["error_code"] = "AI_BUDGET_DAILY_EXHAUSTED" },
+        };
+        _mockLlmService.Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>())).ReturnsAsync(refusal);
 
-        // Act
-        await handler.Handle(query, TestContext.Current.CancellationToken);
+        var act = () => BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How do I win?", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
 
-        // Assert — override dispatched, default path NOT called.
-        _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
-            "openai/gpt-4o-mini",
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
-        _mockLlmService.Verify(s => s.GenerateCompletionAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<CancellationToken>()),
+        (await act.Should().ThrowAsync<LlmCallRefusedException>()).Which.ErrorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
-    [Fact]
-    public async Task Handle_WithNoTierOverride_FallsBackToDefaultGenerateCompletionAsync()
+    [Theory]
+    [InlineData(null, "en")]
+    [InlineData("it", "it")]
+    public async Task Handle_TheSemanticCache_IsScopedToThePublishedVersionAndTheAnswerLanguage(string? requested, string expected)
     {
-        // Arrange — empty routing config → handler uses default GenerateCompletionAsync path.
+        // #4168: la cache semantica e' per gioco e per somiglianza; l'ambito (versione del profilo,
+        // lingua della risposta) sta nella chiave, cosi' una risposta di un'altra versione o lingua
+        // non si trova nemmeno — e non nasconde quelle buone.
         var gameId = Guid.NewGuid();
-        SetupDefaultMocksWithSearchResults(gameId, "answer");
+        SetupDefaultMocksWithSearchResults(gameId, "Fresh answer [Page 1]");
+        AllowQuota();
+        _mockEmbeddingService
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 1f, 0f } }));
 
+        await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How do I win?", Language: requested, UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        var scope = new SemanticCacheScope(AnswerPipelineTestDoubles.SeedVersionId, expected);
+        _mockResponseCache.Verify(c => c.TryGetAsync(gameId, scope, It.IsAny<float[]>(), It.IsAny<CancellationToken>()), Times.Once);
+        _mockResponseCache.Verify(
+            c => c.SetAsync(gameId, scope, It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    private void AllowQuota() =>
         _mockPricingEngine
             .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        _mockHouseRuleMatcher
-            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
-
-        var query = new AskQuestionQuery(GameId: gameId, Question: "Quanti giocatori sono?");
-        var handler = BuildHandler(); // default empty options
-
-        // Act
-        await handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert — fall back to default path, NO override dispatch.
-        _mockLlmService.Verify(s => s.GenerateCompletionAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<CancellationToken>()),
-            Times.Once);
-        _mockLlmService.Verify(s => s.GenerateCompletionWithModelAsync(
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<string>(),
-            It.IsAny<RequestSource>(),
-            It.IsAny<int?>(),
-            It.IsAny<CancellationToken>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public void LlmQueryComplexityRoutingOptions_ResolveOverride_ReturnsNullForEmptyOrWhitespace()
-    {
-        // Contract: empty/whitespace tier overrides resolve to null so the handler
-        // dispatches to GenerateCompletionAsync (backward-compatible no-op).
-        var opts = new Api.Configuration.LlmQueryComplexityRoutingOptions
-        {
-            Low = "",
-            Medium = "   ",
-            High = "openai/gpt-4o"
-        };
-
-        opts.ResolveOverride(QueryRoutingTier.Low).Should().BeNull();
-        opts.ResolveOverride(QueryRoutingTier.Medium).Should().BeNull();
-        opts.ResolveOverride(QueryRoutingTier.High).Should().Be("openai/gpt-4o");
-    }
 }

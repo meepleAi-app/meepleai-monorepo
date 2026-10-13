@@ -30,7 +30,8 @@
  *   - `apps/web/e2e/visual-migrated/sp7-game-night-create.spec.ts` (Wave 3 Week 4)
  *   - `apps/web/e2e/v2-states/game-night-create.spec.ts` (Wave 3 Week 4)
  *
- * Mirror of: `apps/web/src/lib/agents/agent-detail-visual-test-fixture.ts` (Wave C.2)
+ * Was mirrored on `src/lib/agents/agent-detail-visual-test-fixture.ts` (Wave C.2),
+ * deleted with the user-facing agents section (#4138). This fixture stands alone.
  */
 
 import { initialWizardState } from './wizard-reducer';

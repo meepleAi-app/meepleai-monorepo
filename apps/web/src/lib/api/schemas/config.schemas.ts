@@ -96,26 +96,6 @@ export const ConfigurationExportDtoSchema = z.object({
 
 export type ConfigurationExportDto = z.infer<typeof ConfigurationExportDtoSchema>;
 
-// ========== Game Library Limits (Issue #2444) ==========
-
-export const GameLibraryLimitsDtoSchema = z.object({
-  freeTierLimit: z.number().int().min(1).max(1000),
-  normalTierLimit: z.number().int().min(1).max(1000),
-  premiumTierLimit: z.number().int().min(1).max(1000),
-  lastUpdatedAt: z.string().datetime({ offset: true }),
-  lastUpdatedByUserId: z.string().uuid().nullable(),
-});
-
-export type GameLibraryLimitsDto = z.infer<typeof GameLibraryLimitsDtoSchema>;
-
-export const UpdateGameLibraryLimitsRequestSchema = z.object({
-  freeTierLimit: z.number().int().min(1).max(1000),
-  normalTierLimit: z.number().int().min(1).max(1000),
-  premiumTierLimit: z.number().int().min(1).max(1000),
-});
-
-export type UpdateGameLibraryLimitsRequest = z.infer<typeof UpdateGameLibraryLimitsRequestSchema>;
-
 // ========== PDF Upload Limits (Issue #3078) ==========
 
 export const PdfUploadLimitsDtoSchema = z.object({
@@ -165,23 +145,3 @@ export const UpdatePdfTierUploadLimitsRequestSchema = z.object({
 export type UpdatePdfTierUploadLimitsRequest = z.infer<
   typeof UpdatePdfTierUploadLimitsRequestSchema
 >;
-
-// ========== Chat History Limits (Issue #4918) ==========
-
-export const ChatHistoryLimitsDtoSchema = z.object({
-  freeTierLimit: z.number().int().min(1),
-  normalTierLimit: z.number().int().min(1),
-  premiumTierLimit: z.number().int().min(1),
-  lastUpdatedAt: z.string().datetime({ offset: true }),
-  lastUpdatedByUserId: z.string().uuid().nullable(),
-});
-
-export type ChatHistoryLimitsDto = z.infer<typeof ChatHistoryLimitsDtoSchema>;
-
-export const UpdateChatHistoryLimitsRequestSchema = z.object({
-  freeTierLimit: z.number().int().min(1),
-  normalTierLimit: z.number().int().min(1),
-  premiumTierLimit: z.number().int().min(1),
-});
-
-export type UpdateChatHistoryLimitsRequest = z.infer<typeof UpdateChatHistoryLimitsRequestSchema>;

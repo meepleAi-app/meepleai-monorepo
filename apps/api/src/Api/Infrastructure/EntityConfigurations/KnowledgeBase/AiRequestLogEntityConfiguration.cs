@@ -27,6 +27,7 @@ internal class AiRequestLogEntityConfiguration : IEntityTypeConfiguration<AiRequ
         builder.Property(e => e.UserAgent).HasMaxLength(256);
         builder.Property(e => e.Model).HasMaxLength(128);
         builder.Property(e => e.FinishReason).HasMaxLength(64);
+        builder.Property(e => e.Language).HasMaxLength(16); // #4168: ISO 639-1
         builder.Property(e => e.CreatedAt).IsRequired();
 
         // #1728: Drill payload columns (Postgres jsonb).

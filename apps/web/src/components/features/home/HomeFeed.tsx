@@ -110,7 +110,6 @@ export function HomeFeed() {
                 key={entry.gameId}
                 game={entry}
                 variant="grid"
-                onConfigureAgent={() => {}}
                 onUploadPdf={() => {}}
                 onEditNotes={() => {}}
                 onRemove={() => {}}

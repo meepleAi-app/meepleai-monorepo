@@ -249,6 +249,7 @@ internal static class LiveSessionEndpoints
             .Produces(400)
             .Produces(404)
             .Produces(401)
+            .Produces(403) // #4206: RAG_OWNERSHIP_REQUIRED, il cancello della guida alla preparazione
             .WithTags("LiveSessions")
             .WithSummary("Generate setup checklist from game rulebook via RAG")
             .WithDescription("Generates a player-count-specific setup checklist by querying the game's PDF rulebook through the KnowledgeBase RAG pipeline.");
@@ -742,10 +743,20 @@ internal static class LiveSessionEndpoints
         Guid sessionId,
         [FromBody] GenerateSetupChecklistRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        // #4234: passa chi chiede, che deve essere un partecipante. La guida alla preparazione legge
+        // la KB del gioco, e il cancello RAG valuta l'accesso dell'host della sessione.
+        var (authenticated, session, error) = httpContext.TryGetActiveSession();
+        if (!authenticated) return error!;
+
         var checklist = await mediator.Send(
-            new GenerateSetupChecklistCommand(sessionId, request.PlayerCount), cancellationToken).ConfigureAwait(false);
+            new GenerateSetupChecklistCommand(
+                sessionId,
+                request.PlayerCount,
+                session!.Principal!.Subject.Id),
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(checklist);
     }
 

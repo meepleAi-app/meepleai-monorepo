@@ -20,6 +20,19 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
 
     private const string TableName = "pgvector_embeddings";
 
+    /// <summary>
+    /// The vector documents of the PDFs named by the document filter.
+    /// </summary>
+    /// <remarks>
+    /// Issue #4243. The filter is a list of <c>pdf_documents.Id</c>: it is what <c>text_chunks</c>
+    /// carries, so it is what the keyword arm compares, and it is what KbQuality and the global
+    /// search facets pass. This table knows a chunk only by its vector document, whose id is a
+    /// different Guid: comparing the list with <c>vector_document_id</c> matched nothing, and the
+    /// vector arm came back empty whenever a caller filtered by document.
+    /// </remarks>
+    private const string VectorDocumentsOfPdfs =
+        "SELECT \"Id\" FROM vector_documents WHERE \"PdfDocumentId\" = ANY(@pdfDocumentIds)";
+
     public PgVectorStoreAdapter(
         MeepleAiDbContext context,
         ILogger<PgVectorStoreAdapter> logger)
@@ -33,7 +46,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         DomainVector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         var connection = _context.Database.GetDbConnection();
@@ -54,9 +67,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
               AND 1 - (vector <=> @queryVector) >= @minScore
             """;
 
-        if (documentIds is { Count: > 0 })
+        if (pdfDocumentIds is { Count: > 0 })
         {
-            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND vector_document_id IN (" + VectorDocumentsOfPdfs + ")";
         }
 
         sql += $"""
@@ -76,9 +89,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             command.Parameters.AddWithValue("@minScore", minScore);
             command.Parameters.AddWithValue("@topK", topK);
 
-            if (documentIds is { Count: > 0 })
+            if (pdfDocumentIds is { Count: > 0 })
             {
-                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+                command.Parameters.AddWithValue("@pdfDocumentIds", pdfDocumentIds.ToArray());
             }
 
             var results = new List<Embedding>();
@@ -137,7 +150,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         DomainVector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         var connection = _context.Database.GetDbConnection();
@@ -167,9 +180,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
               AND 1 - (e.vector <=> @queryVector) >= @minScore
             """;
 
-        if (documentIds is { Count: > 0 })
+        if (pdfDocumentIds is { Count: > 0 })
         {
-            sql += "\n  AND e.vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND vd.\"PdfDocumentId\" = ANY(@pdfDocumentIds)";
         }
 
         sql += $"""
@@ -189,9 +202,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             command.Parameters.AddWithValue("@minScore", minScore);
             command.Parameters.AddWithValue("@topK", topK);
 
-            if (documentIds is { Count: > 0 })
+            if (pdfDocumentIds is { Count: > 0 })
             {
-                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+                command.Parameters.AddWithValue("@pdfDocumentIds", pdfDocumentIds.ToArray());
             }
 
             var results = new List<ScoredEmbedding>();
@@ -266,7 +279,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         DomainVector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         if (gameIds is not { Count: > 0 })
@@ -287,9 +300,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
               AND 1 - (vector <=> @queryVector) >= @minScore
             """;
 
-        if (documentIds is { Count: > 0 })
+        if (pdfDocumentIds is { Count: > 0 })
         {
-            sql += "\n  AND vector_document_id = ANY(@documentIds)";
+            sql += "\n  AND vector_document_id IN (" + VectorDocumentsOfPdfs + ")";
         }
 
         sql += $"""
@@ -309,9 +322,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             command.Parameters.AddWithValue("@minScore", minScore);
             command.Parameters.AddWithValue("@topK", topK);
 
-            if (documentIds is { Count: > 0 })
+            if (pdfDocumentIds is { Count: > 0 })
             {
-                command.Parameters.AddWithValue("@documentIds", documentIds.ToArray());
+                command.Parameters.AddWithValue("@pdfDocumentIds", pdfDocumentIds.ToArray());
             }
 
             var results = new List<Embedding>();
@@ -377,9 +390,15 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             // after Phase 2d (#1345) dropped that table; resolution now relies on the modern
             // vd.shared_game_id column populated by post-Phase 2d ingestion, with a defensive
             // fallback to vd.GameId for legacy rows.
+            //
+            // #4244: and to vd."PrivateGameId" for the PDF of a private game, whose two other
+            // columns are null. pgvector_embeddings.game_id is ONE id with NO foreign key, shared
+            // or private: a deliberate exception to the "a column per kind of game" rule the other
+            // tables follow. It is a search index; splitting it would cost a data migration and
+            // buy nothing. Do not "fix" it.
             lookupCmd.CommandText = """
                 SELECT vd."Id",
-                       COALESCE(vd.shared_game_id, vd."GameId") AS resolved_game_id
+                       COALESCE(vd.shared_game_id, vd."GameId", vd."PrivateGameId") AS resolved_game_id
                 FROM vector_documents vd
                 WHERE vd."Id" = ANY(@ids)
                 """;

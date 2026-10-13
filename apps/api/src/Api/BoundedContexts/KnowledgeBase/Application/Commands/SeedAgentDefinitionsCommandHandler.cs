@@ -37,15 +37,15 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
         var existingNames = new HashSet<string>(all.Select(a => a.Name), StringComparer.Ordinal);
         int seeded = 0;
 
-        // Agent 1: OpenRouter (cloud) - free Llama 3.3
+        // Agent 1: OpenRouter (cloud) - Llama 3.3 70B. #4179: la variante «:free» è sparita dal
+        // listino di OpenRouter; il seed scrive solo agenti nuovi, quelli esistenti restano come sono.
         if (!existingNames.Contains("MeepleAI Board Game Assistant"))
         {
             var agent = AgentDefinitionEntity.Create(
                 name: "MeepleAI Board Game Assistant",
                 description: "A helpful AI assistant specialized in board games. Explains rules, suggests strategies, and answers questions about any board game.",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create(
-                    model: "meta-llama/llama-3.3-70b-instruct:free",
+                    model: "meta-llama/llama-3.3-70b-instruct",
                     maxTokens: 4096,
                     temperature: 0.7f),
                 strategy: AgentStrategy.HybridSearch(),
@@ -66,7 +66,6 @@ internal sealed class SeedAgentDefinitionsCommandHandler : ICommandHandler<SeedA
             var ollamaAgent = AgentDefinitionEntity.Create(
                 name: "MeepleAI Local Assistant",
                 description: "Local Ollama-powered board game AI assistant using Llama 3.3. Runs on local hardware for privacy and low-latency responses.",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create(
                     model: "llama3.3:70b",
                     maxTokens: 4096,

@@ -22,6 +22,20 @@ on:
       - '.github/actions/**'
       - 'infra/scripts/**'
       - 'infra/seed-schema.version'
+      # #4298: la baseline degli shard di dev-async, che shard-skip-assert.bats legge dal
+      # repository (vedi il filtro `infra` più sotto).
+      - 'infra/fixtures/dev-async-shard-baseline.json'
+      # #4310: gli script di pulizia e l'hook di pre-push che li chiama, che due suite sotto
+      # infra/scripts/tests/ esaminano da qui (vedi il filtro `infra` più sotto). Senza queste due
+      # righe una PR che tocca solo l'hook non avvierebbe nemmeno il workflow.
+      # #4316: tutta la cartella degli hook, non il solo pre-push: install-git-hooks.bats controlla
+      # che ognuno sia eseguibile nell'indice, e un hook nuovo aggiunto da Windows entra come 100644.
+      - 'tools/cleanup/**'
+      - '.husky/**'
+      # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
+      # del backend leggono dal repository (vedi il filtro `backend` più sotto).
+      - 'tests/llm-eval/session-assistant/prompts/**'
+      - 'tests/llm-eval/session-assistant/scenarios.json'
   workflow_dispatch:
 
 concurrency:
@@ -63,6 +77,15 @@ jobs:
               - '.github/actions/setup-playwright/**'
             backend:
               - 'apps/api/**'
+              # #4138: FrontendModelRoutingMirrorTests (backend unit) confronta questo file con
+              # LlmModelRouting. Senza questa riga una PR solo frontend che lo cambia non lo
+              # farebbe girare, e la deriva che il test esiste per fermare passerebbe.
+              - 'apps/web/src/lib/llm-model-routing.ts'
+              # #4256: DefaultPrompts_AreTheMeasuredOnes confronta il prompt del codice con il file
+              # misurato, e due test validano scenarios.json. Senza queste righe una PR che cambia solo
+              # quei file non li farebbe girare: si potrebbe misurare un prompt e spedirne un altro.
+              - 'tests/llm-eval/session-assistant/prompts/**'
+              - 'tests/llm-eval/session-assistant/scenarios.json'
               - 'global.json'
               - '.github/workflows/dev-fast.yml'
               - '.github/actions/setup-backend/**'
@@ -91,8 +114,31 @@ jobs:
               # ones, so a PR editing infra/fixtures/ would boot a gate that
               # cannot observe the change. infra/seed-schema.version IS here —
               # snapshot-verify.bats reads the live counter.
+              #
+              # #4298: one fixture IS read from the repo. shard-skip-assert.bats
+              # checks the committed dev-async-shard-baseline.json (runId,
+              # capturedAt, the three shards), so a PR that rewrites only that
+              # file changed something this gate observes and did not wake it.
+              # Listed by name, not as infra/fixtures/**, for the reason above.
+              #
+              # #4310: two suites under infra/scripts/tests/ examine files that live
+              # elsewhere - the cleanup rules in tools/cleanup/ and the pre-push hook
+              # that calls them. Without these two lines a PR that edits only the hook
+              # or the scripts would not wake the gate that pins them.
+              #
+              # #4316: install-git-hooks.bats examines three more things that live
+              # elsewhere - every hook under .husky/ (index mode, shebang), the
+              # installer, and the `prepare` script of apps/web/package.json, which it
+              # runs as written. package.json is listed whole because a path filter
+              # cannot see one key: a dependency bump wakes this gate too, and the
+              # suites cost seconds.
               - 'infra/scripts/**'
               - 'infra/seed-schema.version'
+              - 'infra/fixtures/dev-async-shard-baseline.json'
+              - 'tools/cleanup/**'
+              - '.husky/**'
+              - 'apps/web/scripts/install-git-hooks.mjs'
+              - 'apps/web/package.json'
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min
@@ -274,10 +320,17 @@ jobs:
       # ciò che è esplicitamente marcato come lento o infra-dipendente. Le categorie escluse sono
       # pinnate da TestCategoryGateArchitectureTests, che fallisce se ne compare una nuova — senza
       # quel guard la deny-list tornerebbe incompleta al primo `Category` inedito.
+      #
+      # #4274: il logger esplicito. Con il solo `--verbosity quiet` di un test rosso resta la riga
+      # `[FAIL]` e nient'altro: né il messaggio dell'asserzione né il valore trovato. Quel dettaglio
+      # non si recupera dopo — un rerun sostituisce il log — e senza non si distingue una soglia
+      # sforata di poco da una regressione. `minimal` stampa messaggio e stack dei soli rossi e una
+      # riga per ogni salto; i test superati restano fuori dal log.
       - name: Unit tests (everything not explicitly slow/infra — #3622)
         working-directory: apps/api/tests/Api.Tests
         run: |
           dotnet test --no-build --configuration Release --verbosity quiet \
+            --logger "console;verbosity=minimal" \
             --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow"
 
   migration-safety:

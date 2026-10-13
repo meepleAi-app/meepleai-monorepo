@@ -146,7 +146,7 @@ internal sealed class GlobalKbSearchQueryHandler
                 limit: probeLimit,
                 mode: query.Mode,
                 minScore: query.MinScore,
-                documentIds: facetDocumentIds, // Issue #1686 D-4: push-down allowlist (null when no facets)
+                pdfDocumentIds: facetDocumentIds, // Issue #1686 D-4: push-down allowlist (null when no facets)
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 

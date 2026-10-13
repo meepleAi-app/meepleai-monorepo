@@ -246,7 +246,6 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
             var agent = AgentDefinition.Create(
                 name: $"test-agent-{pdfId:N}-{i}",
                 description: "Test agent for delete KB doc",
-                type: AgentType.Custom("rag", "RAG agent"),
                 config: AgentDefinitionConfig.Create("gpt-4o-mini", 2048, 0.7f));
 
             // Add the document to the agent's KB card list

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.EventHandlers;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
@@ -160,6 +161,7 @@ public sealed class VectorDocumentIndexedEventHandlerTests
         capturedEvent.UploadedByUserId.Should().Be(_userId);
         capturedEvent.FileName.Should().Be(TestFileName);
         capturedEvent.SourceContext.Should().Be("KnowledgeBase");
+        capturedEvent.PrivateGameId.Should().BeNull("il PDF è di un gioco del catalogo");
     }
 
     [Fact]
@@ -267,4 +269,52 @@ public sealed class VectorDocumentIndexedEventHandlerTests
     }
 
     #endregion
+    #region #4244: il PDF di un gioco privato
+
+    /// <summary>
+    /// Chi consuma l'evento d'integrazione deve sapere che il gioco è privato: la pagina a cui
+    /// rimandare l'utente è un'altra. Il gioco si legge dal PDF, che il gestore ha già in mano,
+    /// e vale anche quando l'evento di dominio arriva con il gioco vuoto.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ForThePdfOfAPrivateGame_TellsTheConsumersWhichPrivateGame()
+    {
+        var privateGameId = Guid.NewGuid();
+        var pdfDoc = PdfDocument.Reconstitute(
+            id: _pdfDocumentId,
+            gameId: Guid.Empty,
+            fileName: new FileName(TestFileName),
+            filePath: "/uploads/private-rules.pdf",
+            fileSize: new FileSize(1024),
+            uploadedByUserId: _userId,
+            uploadedAt: DateTime.UtcNow,
+            processedAt: null,
+            pageCount: null,
+            processingError: null,
+            language: LanguageCode.English,
+            privateGameId: privateGameId);
+
+        _vectorDocRepo.Setup(r => r.GetByIdAsync(_documentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateVectorDocument());
+        _pdfDocRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(pdfDoc);
+
+        VectorDocumentReadyIntegrationEvent? capturedEvent = null;
+        _mediator.Setup(m => m.Publish(
+                It.IsAny<VectorDocumentReadyIntegrationEvent>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<object, CancellationToken>((e, _) =>
+                capturedEvent = (VectorDocumentReadyIntegrationEvent)e);
+
+        await CreateHandler().Handle(
+            new VectorDocumentIndexedEvent(_documentId, Guid.Empty, TestChunkCount),
+            CancellationToken.None);
+
+        capturedEvent.Should().NotBeNull();
+        capturedEvent!.PrivateGameId.Should().Be(privateGameId);
+        capturedEvent.GameId.Should().Be(privateGameId);
+    }
+
+    #endregion
+
 }

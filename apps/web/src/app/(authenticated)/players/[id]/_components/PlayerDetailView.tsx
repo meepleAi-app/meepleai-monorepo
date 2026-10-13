@@ -616,9 +616,8 @@ export function PlayerDetailView({ playerId }: PlayerDetailViewProps): ReactElem
             <PlayerOverviewRegion
               stats={safeProfile}
               labels={overviewLabels}
-              onFavoriteAgentClick={
-                safeProfile.favoriteAgentName != null ? () => router.push('/agents') : undefined
-              }
+              // Issue #4138: nessuna destinazione — la sezione /agents e' ritirata.
+              onFavoriteAgentClick={undefined}
             />
           </>
         }

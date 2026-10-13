@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -23,11 +24,16 @@ public sealed class WishlistCommandHandlerTests
 {
     private readonly Mock<IWishlistRepository> _wishlistRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<ISharedGameRepository> _sharedGameRepoMock;
 
     public WishlistCommandHandlerTests()
     {
         _wishlistRepoMock = new Mock<IWishlistRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _sharedGameRepoMock = new Mock<ISharedGameRepository>();
+        _sharedGameRepoMock
+            .Setup(r => r.GetNamesByIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string>());
     }
 
     #region AddToWishlistCommandHandler Tests
@@ -351,8 +357,10 @@ public sealed class WishlistCommandHandlerTests
     public void GetWishlistHandler_NullRepository_ThrowsArgumentNullException()
     {
         var act7 = () =>
-            new GetWishlistQueryHandler(null!);
+            new GetWishlistQueryHandler(null!, _sharedGameRepoMock.Object);
         act7.Should().Throw<ArgumentNullException>();
+        var catalogMissing = () => new GetWishlistQueryHandler(_wishlistRepoMock.Object, null!);
+        catalogMissing.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -370,7 +378,7 @@ public sealed class WishlistCommandHandlerTests
             .Setup(r => r.GetUserWishlistAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
-        var handler = new GetWishlistQueryHandler(_wishlistRepoMock.Object);
+        var handler = new GetWishlistQueryHandler(_wishlistRepoMock.Object, _sharedGameRepoMock.Object);
         var query = new GetWishlistQuery(userId);
 
         // Act
@@ -392,7 +400,7 @@ public sealed class WishlistCommandHandlerTests
             .Setup(r => r.GetUserWishlistAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<WishlistItem>());
 
-        var handler = new GetWishlistQueryHandler(_wishlistRepoMock.Object);
+        var handler = new GetWishlistQueryHandler(_wishlistRepoMock.Object, _sharedGameRepoMock.Object);
 
         // Act
         var result = await handler.Handle(new GetWishlistQuery(userId), CancellationToken.None);
@@ -404,7 +412,7 @@ public sealed class WishlistCommandHandlerTests
     [Fact]
     public async Task GetWishlistHandler_NullQuery_ThrowsArgumentNullException()
     {
-        var handler = new GetWishlistQueryHandler(_wishlistRepoMock.Object);
+        var handler = new GetWishlistQueryHandler(_wishlistRepoMock.Object, _sharedGameRepoMock.Object);
 
         var act = () => handler.Handle(null!, CancellationToken.None);
 
@@ -419,8 +427,10 @@ public sealed class WishlistCommandHandlerTests
     public void GetHighlightsHandler_NullRepository_ThrowsArgumentNullException()
     {
         var act8 = () =>
-            new GetWishlistHighlightsQueryHandler(null!);
+            new GetWishlistHighlightsQueryHandler(null!, _sharedGameRepoMock.Object);
         act8.Should().Throw<ArgumentNullException>();
+        var catalogMissing = () => new GetWishlistHighlightsQueryHandler(_wishlistRepoMock.Object, null!);
+        catalogMissing.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -439,7 +449,7 @@ public sealed class WishlistCommandHandlerTests
             .Setup(r => r.GetHighlightsAsync(userId, 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
-        var handler = new GetWishlistHighlightsQueryHandler(_wishlistRepoMock.Object);
+        var handler = new GetWishlistHighlightsQueryHandler(_wishlistRepoMock.Object, _sharedGameRepoMock.Object);
 
         // Act
         var result = await handler.Handle(new GetWishlistHighlightsQuery(userId), CancellationToken.None);
@@ -452,7 +462,7 @@ public sealed class WishlistCommandHandlerTests
     [Fact]
     public async Task GetHighlightsHandler_NullQuery_ThrowsArgumentNullException()
     {
-        var handler = new GetWishlistHighlightsQueryHandler(_wishlistRepoMock.Object);
+        var handler = new GetWishlistHighlightsQueryHandler(_wishlistRepoMock.Object, _sharedGameRepoMock.Object);
 
         var act = () => handler.Handle(null!, CancellationToken.None);
 

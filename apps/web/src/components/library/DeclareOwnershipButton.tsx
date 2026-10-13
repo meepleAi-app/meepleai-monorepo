@@ -20,7 +20,6 @@ import { OwnershipDeclarationDialog } from './OwnershipDeclarationDialog';
 export interface DeclareOwnershipButtonProps {
   gameId: string;
   gameName: string;
-  sharedGameId?: string;
   gameState: string;
   onOwnershipDeclared?: (result: OwnershipResult) => void;
 }
@@ -28,7 +27,6 @@ export interface DeclareOwnershipButtonProps {
 export function DeclareOwnershipButton({
   gameId,
   gameName,
-  sharedGameId,
   gameState,
   onOwnershipDeclared,
 }: DeclareOwnershipButtonProps) {
@@ -73,7 +71,6 @@ export function DeclareOwnershipButton({
         <OwnershipConfirmationDialog
           gameId={gameId}
           gameName={gameName}
-          sharedGameId={sharedGameId}
           ownershipResult={ownershipResult}
           open={confirmationOpen}
           onOpenChange={open => {

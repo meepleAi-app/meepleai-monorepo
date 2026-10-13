@@ -45,10 +45,7 @@ export class AcceptInvitePage extends BasePage {
       await this.page.waitForTimeout(500);
     }
     // If still on accept-invite after 15s, check for success message
-    const hasSuccess = await this.page
-      .getByText(/success|account created|welcome/i)
-      .isVisible()
-      .catch(() => false);
+    const hasSuccess = await this.page.getByText(/success|account created|welcome/i).isVisible();
     if (hasSuccess) return;
     throw new Error(`Still on accept-invite page after 15s: ${this.page.url()}`);
   }

@@ -41,10 +41,6 @@ internal sealed class UpdateAgentDefinitionCommandHandler
         if (agentDefinition == null)
             throw new NotFoundException($"AgentDefinition {request.Id} not found");
 
-        // Parse and update type
-        var type = AgentType.Parse(request.Type);
-        agentDefinition.UpdateType(type);
-
         // Update strategy if provided
         if (!string.IsNullOrWhiteSpace(request.StrategyName))
         {
@@ -107,7 +103,6 @@ internal sealed class UpdateAgentDefinitionCommandHandler
             Id = agent.Id,
             Name = agent.Name,
             Description = agent.Description,
-            Type = agent.Type.Value,
             StrategyName = agent.Strategy.Name,
             StrategyParameters = agent.Strategy.Parameters as Dictionary<string, object> ?? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase),
             Config = new AgentConfigDto

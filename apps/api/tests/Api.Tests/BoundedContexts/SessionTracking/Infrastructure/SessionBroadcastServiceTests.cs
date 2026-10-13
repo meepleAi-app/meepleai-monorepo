@@ -7,10 +7,38 @@ using Xunit;
 
 namespace Api.Tests.BoundedContexts.SessionTracking.Infrastructure;
 
+/// <summary>
+/// <para>
+/// <b>Niente orologio reale sul percorso che passa</b> (#4193). <c>SubscribeAsync</c> è un iteratore
+/// lazy che si registra alla prima <c>MoveNextAsync</c>, in un momento deciso dal thread pool. #3711
+/// aveva già sostituito il <c>Task.Delay(50)</c> prima delle pubblicazioni con un'attesa sul numero di
+/// connessioni, ma i sottoscrittori vivevano ancora sotto <c>CancellationTokenSource</c> a 2 s o 5 s:
+/// sotto il carico della suite il token scadeva prima che il test finisse i suoi passi, e il test
+/// falliva su un servizio corretto (caduto sulla CI di #4192). Misurato per perturbazione: con l'avvio
+/// di ogni sottoscrizione ritardato di 2,5 s, 13 test su 20 della versione precedente fallivano.
+/// </para>
+/// <para>
+/// Ora la vita dei sottoscrittori la decide il test, che li cancella esplicitamente, e ogni attesa ha
+/// un limite di <see cref="SafetyNet"/>: scatta solo se qualcosa si blocca, e allora fallisce dicendo
+/// che cosa non è successo. Fa eccezione il test di cancellazione, in cui il token che scade è il
+/// comportamento sotto verifica.
+/// </para>
+/// <para>
+/// I test «negativi» (un evento che <b>non</b> deve arrivare) usano un evento-marcatore pubblicato
+/// dopo: ogni canale è ordinato, quindi quando il marcatore arriva, l'evento sbagliato sarebbe già
+/// arrivato prima. Prima cancellavano dopo un istante e potevano passare per niente.
+/// </para>
+/// </summary>
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SessionTracking")]
 public sealed class SessionBroadcastServiceTests : IDisposable
 {
+    /// <summary>Limite superiore per non appendere la suite. Mai sul percorso che passa.</summary>
+    private static readonly TimeSpan SafetyNet = TimeSpan.FromSeconds(30);
+
+    /// <summary>Punteggio dell'evento-marcatore dei test negativi.</summary>
+    private const decimal MarkerScore = 999;
+
     private readonly SessionBroadcastService _service;
 
     public SessionBroadcastServiceTests()
@@ -36,18 +64,11 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     /// Attende che il pool della sessione contenga esattamente <paramref name="expected"/> subscriber.
     /// </summary>
     /// <remarks>
-    /// Sostituisce l'attesa fissa (<c>Task.Delay(50)</c>) da cui questi test dipendevano per la
-    /// registrazione del subscriber. <c>SubscribeAsync</c> è un iteratore lazy: il corpo — e quindi
-    /// <c>pool.TryAdd</c> — non gira finché il consumer non chiama la prima <c>MoveNextAsync</c>, in un
-    /// momento deciso dallo scheduler del thread pool e non dal test. Se la publish precedeva la
-    /// registrazione l'evento andava perso (comportamento corretto del servizio: la consegna è garantita
-    /// solo dopo la sottoscrizione, e il recupero passa da Last-Event-ID) e il test falliva con un
-    /// <c>HaveCount(1)</c> opaco. Su un runner che esegue 22.500 test la finestra di 50 ms non era
-    /// garantita — da cui l'intermittente #3711.
-    ///
-    /// Il budget di 5 s è un limite superiore per non appendere la suite, non una finestra da
-    /// indovinare: allo scadere l'eccezione dice cosa non è successo, invece di lasciarlo dedurre
-    /// dall'assert a valle. Stesso approccio di <c>WaitForZsetCardinalityAsync</c> in
+    /// Sostituisce l'attesa fissa (<c>Task.Delay(50)</c>) con cui questi test indovinavano la
+    /// registrazione del subscriber (#3711): <c>SubscribeAsync</c> è un iteratore lazy, e
+    /// <c>pool.TryAdd</c> gira alla prima <c>MoveNextAsync</c> del consumer. Allo scadere di
+    /// <see cref="SafetyNet"/> l'eccezione dice che cosa non è successo, invece di lasciarlo dedurre
+    /// dall'asserzione a valle. Stesso approccio di <c>WaitForZsetCardinalityAsync</c> in
     /// <c>SessionBroadcastReplayTests</c>.
     /// </remarks>
     private Task WaitForConnectionCountAsync(Guid sessionId, int expected) =>
@@ -59,17 +80,16 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         Guid sessionId,
         int expected)
     {
-        var budget = TimeSpan.FromSeconds(5);
         var elapsed = System.Diagnostics.Stopwatch.StartNew();
 
         int actual;
         while ((actual = service.GetConnectionCount(sessionId)) != expected)
         {
-            if (elapsed.Elapsed > budget)
+            if (elapsed.Elapsed > SafetyNet)
             {
                 throw new TimeoutException(
                     $"Il pool della sessione {sessionId} non ha raggiunto {expected} subscriber entro " +
-                    $"{budget.TotalSeconds:0}s (osservati: {actual}). Il subscriber non si è registrato, " +
+                    $"{SafetyNet.TotalSeconds:0}s (osservati: {actual}). Il subscriber non si è registrato, " +
                     "oppure si è disconnesso prima del previsto.");
             }
 
@@ -77,12 +97,58 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         }
     }
 
+    private static ScoreUpdatedEvent Score(Guid sessionId, Guid participantId, decimal score) =>
+        new()
+        {
+            SessionId = sessionId,
+            ParticipantId = participantId,
+            ScoreEntryId = Guid.NewGuid(),
+            NewScore = score
+        };
+
+    private static bool IsMarker(SseEventEnvelope envelope) =>
+        envelope.Data is ScoreUpdatedEvent { NewScore: MarkerScore };
+
+    /// <summary>
+    /// Sottoscrive in background e raccoglie gli eventi finché <paramref name="stopAfter"/> non dice di
+    /// fermarsi. La sottoscrizione dura finché il test non cancella <paramref name="ct"/>.
+    /// </summary>
+    private Task CollectAsync(
+        Guid sessionId,
+        Guid userId,
+        string? lastEventId,
+        List<SseEventEnvelope> received,
+        Func<SseEventEnvelope, bool> stopAfter,
+        CancellationToken ct) =>
+        Task.Run(async () =>
+        {
+            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, lastEventId, ct))
+            {
+                received.Add(evt);
+                if (stopAfter(evt)) break;
+            }
+        }, CancellationToken.None);
+
+    /// <summary>Sottoscrive in background senza raccogliere niente, fino alla cancellazione.</summary>
+    private Task HoldAsync(Guid sessionId, Guid userId, CancellationToken ct) =>
+        Task.Run(async () =>
+        {
+            try
+            {
+                await foreach (var _ in _service.SubscribeAsync(sessionId, userId, null, ct)) { }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: the test cancels the subscription when it is done with it.
+            }
+        }, CancellationToken.None);
+
     #region SubscribeAsync
 
     [Fact]
     public async Task SubscribeAsync_ReturnsAsyncEnumerable_ThatCompletsOnCancellation()
     {
-        // Arrange
+        // Arrange — here the expiring token IS the behaviour under test, so a timed token is right.
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
@@ -103,24 +169,17 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
 
         // Act
-        var subscriptionTask = Task.Run(async () =>
-        {
-            await foreach (var _ in _service.SubscribeAsync(sessionId, userId, null, cts.Token))
-            {
-            }
-        }, cts.Token);
-
+        var subscription = HoldAsync(sessionId, Guid.NewGuid(), cts.Token);
         await WaitForConnectionCountAsync(sessionId, 1);
 
         // Assert
         _service.GetConnectionCount(sessionId).Should().Be(1);
 
         await cts.CancelAsync();
-        try { await subscriptionTask; } catch (OperationCanceledException) { }
+        await subscription.WaitAsync(SafetyNet);
     }
 
     [Fact]
@@ -128,22 +187,15 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
         using var cts = new CancellationTokenSource();
 
-        var subscriptionTask = Task.Run(async () =>
-        {
-            await foreach (var _ in _service.SubscribeAsync(sessionId, userId, null, cts.Token))
-            {
-            }
-        }, cts.Token);
-
+        var subscription = HoldAsync(sessionId, Guid.NewGuid(), cts.Token);
         await WaitForConnectionCountAsync(sessionId, 1);
         _service.GetConnectionCount(sessionId).Should().Be(1);
 
         // Act
         await cts.CancelAsync();
-        try { await subscriptionTask; } catch (OperationCanceledException) { }
+        await subscription.WaitAsync(SafetyNet);
         await WaitForConnectionCountAsync(sessionId, 0);
 
         // Assert
@@ -155,40 +207,31 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var ctsList = new List<CancellationTokenSource>();
-        var tasks = new List<Task>();
+        using var poolCts = new CancellationTokenSource();
+        var subscriptions = new List<Task>();
 
         // Fill the pool to max
         for (var i = 0; i < SessionBroadcastService.MaxConnectionsPerSession; i++)
         {
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            ctsList.Add(cts);
-            var task = Task.Run(async () =>
-            {
-                await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token))
-                {
-                }
-            }, cts.Token);
-            tasks.Add(task);
+            subscriptions.Add(HoldAsync(sessionId, Guid.NewGuid(), poolCts.Token));
         }
 
         await WaitForConnectionCountAsync(sessionId, SessionBroadcastService.MaxConnectionsPerSession);
         _service.GetConnectionCount(sessionId).Should().Be(SessionBroadcastService.MaxConnectionsPerSession);
 
-        // Act - attempt to add one more
+        // Act - attempt to add one more. Its token is never cancelled: a rejected subscription ends by
+        // itself (yield break); one that was wrongly accepted would wait for events and hit the safety net.
         var overflowEvents = new List<SseEventEnvelope>();
-        using var overflowCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-        await foreach (var evt in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, overflowCts.Token))
-        {
-            overflowEvents.Add(evt);
-        }
+        using var overflowCts = new CancellationTokenSource();
+        var overflow = CollectAsync(sessionId, Guid.NewGuid(), null, overflowEvents, _ => false, overflowCts.Token);
+        await overflow.WaitAsync(SafetyNet);
 
         // Assert - rejected (yield break), should receive no events
         overflowEvents.Should().BeEmpty();
 
         // Cleanup
-        foreach (var cts in ctsList) await cts.CancelAsync();
-        foreach (var cts in ctsList) cts.Dispose();
+        await poolCts.CancelAsync();
+        await Task.WhenAll(subscriptions).WaitAsync(SafetyNet);
     }
 
     [Fact]
@@ -196,41 +239,19 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var received1 = new List<SseEventEnvelope>();
         var received2 = new List<SseEventEnvelope>();
 
-        var sub1Task = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token))
-            {
-                received1.Add(evt);
-                if (received1.Count >= 1) break;
-            }
-        }, cts.Token);
-
-        var sub2Task = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token))
-            {
-                received2.Add(evt);
-                if (received2.Count >= 1) break;
-            }
-        }, cts.Token);
+        var sub1 = CollectAsync(sessionId, Guid.NewGuid(), null, received1, _ => true, cts.Token);
+        var sub2 = CollectAsync(sessionId, Guid.NewGuid(), null, received2, _ => true, cts.Token);
 
         await WaitForConnectionCountAsync(sessionId, 2);
 
         // Act
-        var testEvent = new ScoreUpdatedEvent
-        {
-            SessionId = sessionId,
-            ParticipantId = Guid.NewGuid(),
-            ScoreEntryId = Guid.NewGuid(),
-            NewScore = 10
-        };
-        await _service.PublishAsync(sessionId, testEvent);
+        await _service.PublishAsync(sessionId, Score(sessionId, Guid.NewGuid(), 10));
 
-        await Task.WhenAll(sub1Task, sub2Task);
+        await Task.WhenAll(sub1, sub2).WaitAsync(SafetyNet);
 
         // Assert
         received1.Should().HaveCount(1);
@@ -269,19 +290,10 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var receivedEvents = new List<SseEventEnvelope>();
 
-        var subTask = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, null, cts.Token))
-            {
-                receivedEvents.Add(evt);
-                if (receivedEvents.Count >= 1) break;
-            }
-        }, cts.Token);
-
+        var sub = CollectAsync(sessionId, Guid.NewGuid(), null, receivedEvents, _ => true, cts.Token);
         await WaitForConnectionCountAsync(sessionId, 1);
 
         // Act
@@ -295,7 +307,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         };
         await _service.PublishAsync(sessionId, testEvent);
 
-        await subTask;
+        await sub.WaitAsync(SafetyNet);
 
         // Assert
         receivedEvents.Should().HaveCount(1);
@@ -310,43 +322,23 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var session1Id = Guid.NewGuid();
         var session2Id = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var session1Events = new List<SseEventEnvelope>();
 
-        var sub1Task = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(session1Id, Guid.NewGuid(), null, cts.Token))
-            {
-                session1Events.Add(evt);
-                if (session1Events.Count >= 1) break;
-            }
-        }, cts.Token);
-
+        var sub1 = CollectAsync(session1Id, Guid.NewGuid(), null, session1Events, _ => true, cts.Token);
         await WaitForConnectionCountAsync(session1Id, 1);
 
-        // Act - publish to both sessions
-        var event1 = new ScoreUpdatedEvent
-        {
-            SessionId = session1Id,
-            ParticipantId = Guid.NewGuid(),
-            ScoreEntryId = Guid.NewGuid(),
-            NewScore = 10
-        };
-        var event2 = new ScoreUpdatedEvent
-        {
-            SessionId = session2Id,
-            ParticipantId = Guid.NewGuid(),
-            ScoreEntryId = Guid.NewGuid(),
-            NewScore = 20
-        };
+        // Act - the other session's event goes out FIRST: if it leaked into session 1, it would be the
+        // first (and, given the break, the only) event session 1 receives.
+        await _service.PublishAsync(session2Id, Score(session2Id, Guid.NewGuid(), 20));
+        await _service.PublishAsync(session1Id, Score(session1Id, Guid.NewGuid(), 10));
 
-        await _service.PublishAsync(session1Id, event1);
-        await _service.PublishAsync(session2Id, event2);
-
-        await sub1Task;
+        await sub1.WaitAsync(SafetyNet);
 
         // Assert - session1 only gets session1 events
-        session1Events.Should().HaveCount(1);
+        session1Events.Should().ContainSingle()
+            .Which.Data.Should().BeOfType<ScoreUpdatedEvent>()
+            .Which.NewScore.Should().Be(10);
     }
 
     #endregion
@@ -360,41 +352,19 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         var sessionId = Guid.NewGuid();
         var user1 = Guid.NewGuid();
         var user2 = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var received1 = new List<SseEventEnvelope>();
         var received2 = new List<SseEventEnvelope>();
 
-        var sub1 = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, user1, null, cts.Token))
-            {
-                received1.Add(evt);
-                if (received1.Count >= 1) break;
-            }
-        }, cts.Token);
-
-        var sub2 = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, user2, null, cts.Token))
-            {
-                received2.Add(evt);
-                if (received2.Count >= 1) break;
-            }
-        }, cts.Token);
+        var sub1 = CollectAsync(sessionId, user1, null, received1, _ => true, cts.Token);
+        var sub2 = CollectAsync(sessionId, user2, null, received2, _ => true, cts.Token);
 
         await WaitForConnectionCountAsync(sessionId, 2);
 
         // Act
-        var testEvent = new ScoreUpdatedEvent
-        {
-            SessionId = sessionId,
-            ParticipantId = user1,
-            ScoreEntryId = Guid.NewGuid(),
-            NewScore = 10
-        };
-        await _service.PublishAsync(sessionId, testEvent, EventVisibility.Public);
+        await _service.PublishAsync(sessionId, Score(sessionId, user1, 10), EventVisibility.Public);
 
-        await Task.WhenAll(sub1, sub2);
+        await Task.WhenAll(sub1, sub2).WaitAsync(SafetyNet);
 
         // Assert
         received1.Should().HaveCount(1);
@@ -408,50 +378,27 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         var sessionId = Guid.NewGuid();
         var targetUser = Guid.NewGuid();
         var otherUser = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var targetReceived = new List<SseEventEnvelope>();
         var otherReceived = new List<SseEventEnvelope>();
 
-        var targetSub = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, targetUser, null, cts.Token))
-            {
-                targetReceived.Add(evt);
-                if (targetReceived.Count >= 1) break;
-            }
-        }, cts.Token);
-
-        var otherSub = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, otherUser, null, cts.Token))
-            {
-                otherReceived.Add(evt);
-                if (otherReceived.Count >= 1) break;
-            }
-        }, cts.Token);
+        var targetSub = CollectAsync(sessionId, targetUser, null, targetReceived, _ => true, cts.Token);
+        var otherSub = CollectAsync(sessionId, otherUser, null, otherReceived, IsMarker, cts.Token);
 
         await WaitForConnectionCountAsync(sessionId, 2);
 
-        // Act - private event for targetUser only
-        var testEvent = new ScoreUpdatedEvent
-        {
-            SessionId = sessionId,
-            ParticipantId = targetUser,
-            ScoreEntryId = Guid.NewGuid(),
-            NewScore = 10
-        };
-        await _service.PublishAsync(sessionId, testEvent, EventVisibility.PrivateTo(targetUser));
+        // Act - private event for targetUser only, then a public marker
+        await _service.PublishAsync(sessionId, Score(sessionId, targetUser, 10), EventVisibility.PrivateTo(targetUser));
+        await _service.PublishAsync(sessionId, Score(sessionId, otherUser, MarkerScore), EventVisibility.Public);
 
-        // Wait for target to receive
-        await targetSub;
+        await Task.WhenAll(targetSub, otherSub).WaitAsync(SafetyNet);
 
-        // otherUser should NOT have received anything - cancel to verify
-        await cts.CancelAsync();
-        try { await otherSub; } catch (OperationCanceledException) { }
-
-        // Assert
-        targetReceived.Should().HaveCount(1);
-        otherReceived.Should().BeEmpty();
+        // Assert - the other user's stream is ordered: had the private event reached it, it would sit
+        // before the marker. Cancelling "a moment later", as before, could not tell.
+        targetReceived.Should().ContainSingle()
+            .Which.Data.Should().BeOfType<ScoreUpdatedEvent>()
+            .Which.NewScore.Should().Be(10);
+        otherReceived.Should().ContainSingle().Which.Should().Match<SseEventEnvelope>(e => IsMarker(e));
     }
 
     #endregion
@@ -464,72 +411,40 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        using var keepAliveCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var keepAliveCts = new CancellationTokenSource();
 
-        // Keep a background subscriber alive to prevent pool cleanup
-        var keepAliveTask = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, keepAliveCts.Token)) { }
-            }
-            catch (OperationCanceledException) { }
-        }, keepAliveCts.Token);
-
+        // Keep a background subscriber alive to prevent pool cleanup: an empty pool is removed together
+        // with its replay buffer. It lives until the test says so, not for 5 wall-clock seconds.
+        var keepAlive = HoldAsync(sessionId, Guid.NewGuid(), keepAliveCts.Token);
         await WaitForConnectionCountAsync(sessionId, 1);
 
         // Subscribe and receive events to build buffer
-        using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts1 = new CancellationTokenSource();
         var firstEvents = new List<SseEventEnvelope>();
-        var sub1 = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, null, cts1.Token))
-            {
-                firstEvents.Add(evt);
-                if (firstEvents.Count >= 3) break;
-            }
-        }, cts1.Token);
+        var sub1 = CollectAsync(sessionId, userId, null, firstEvents, _ => firstEvents.Count >= 3, cts1.Token);
 
         await WaitForConnectionCountAsync(sessionId, 2);
 
         // Publish 3 events
         for (var i = 0; i < 3; i++)
         {
-            var evt = new ScoreUpdatedEvent
-            {
-                SessionId = sessionId,
-                ParticipantId = userId,
-                ScoreEntryId = Guid.NewGuid(),
-                NewScore = (i + 1) * 10
-            };
-            await _service.PublishAsync(sessionId, evt, EventVisibility.Public);
-            await Task.Delay(10);
+            await _service.PublishAsync(sessionId, Score(sessionId, userId, (i + 1) * 10), EventVisibility.Public);
         }
 
-        await sub1;
+        await sub1.WaitAsync(SafetyNet);
         firstEvents.Should().HaveCount(3);
 
         // Act: Reconnect with Last-Event-ID of the first event → should replay events 2 and 3
         var lastEventId = firstEvents[0].Id;
-        using var cts2 = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+        using var cts2 = new CancellationTokenSource();
         var reconnectedEvents = new List<SseEventEnvelope>();
-
-        try
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, lastEventId, cts2.Token))
-            {
-                reconnectedEvents.Add(evt);
-                if (reconnectedEvents.Count >= 2) break;
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected if timeout fires before getting 2 events
-        }
+        var reconnect = CollectAsync(
+            sessionId, userId, lastEventId, reconnectedEvents, _ => reconnectedEvents.Count >= 2, cts2.Token);
+        await reconnect.WaitAsync(SafetyNet);
 
         // Cleanup keep-alive
         await keepAliveCts.CancelAsync();
-        try { await keepAliveTask; } catch (OperationCanceledException) { }
+        await keepAlive.WaitAsync(SafetyNet);
 
         // Assert - should have replayed events after the first one
         reconnectedEvents.Should().HaveCount(2);
@@ -543,49 +458,37 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
-        // Subscribe and publish one event to ensure pool exists
-        var firstEvents = new List<SseEventEnvelope>();
-        var sub = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, null, cts1.Token))
-            {
-                firstEvents.Add(evt);
-                if (firstEvents.Count >= 1) break;
-            }
-        }, cts1.Token);
-
+        // Keep the pool, and so the buffer, alive. Without it the first subscriber's disconnect removed
+        // the pool, and "nothing replayed" held for any id because the buffer was gone.
+        using var keepAliveCts = new CancellationTokenSource();
+        var keepAlive = HoldAsync(sessionId, Guid.NewGuid(), keepAliveCts.Token);
         await WaitForConnectionCountAsync(sessionId, 1);
 
-        await _service.PublishAsync(sessionId, new ScoreUpdatedEvent
-        {
-            SessionId = sessionId,
-            ParticipantId = userId,
-            ScoreEntryId = Guid.NewGuid(),
-            NewScore = 10
-        }, EventVisibility.Public);
+        // Subscribe and publish one event so the buffer is not empty
+        using var cts1 = new CancellationTokenSource();
+        var firstEvents = new List<SseEventEnvelope>();
+        var sub = CollectAsync(sessionId, userId, null, firstEvents, _ => true, cts1.Token);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
-        await sub;
+        await _service.PublishAsync(sessionId, Score(sessionId, userId, 10), EventVisibility.Public);
+        await sub.WaitAsync(SafetyNet);
+        await WaitForConnectionCountAsync(sessionId, 1);
 
-        // Act: Reconnect with invalid ID
-        using var cts2 = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        // Act: Reconnect with an invalid id, then publish a marker. A replay would sit before it.
+        using var cts2 = new CancellationTokenSource();
         var reconnectedEvents = new List<SseEventEnvelope>();
+        var reconnect = CollectAsync(sessionId, userId, "invalid-id", reconnectedEvents, IsMarker, cts2.Token);
+        await WaitForConnectionCountAsync(sessionId, 2);
 
-        try
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, "invalid-id", cts2.Token))
-            {
-                reconnectedEvents.Add(evt);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected: subscription cancels when no new events arrive
-        }
+        await _service.PublishAsync(sessionId, Score(sessionId, userId, MarkerScore), EventVisibility.Public);
+        await reconnect.WaitAsync(SafetyNet);
 
-        // Assert - should not replay anything (ID not found in buffer)
-        reconnectedEvents.Should().BeEmpty();
+        await keepAliveCts.CancelAsync();
+        await keepAlive.WaitAsync(SafetyNet);
+
+        // Assert - should not replay anything (ID not found in buffer): only the marker arrived
+        reconnectedEvents.Should().ContainSingle().Which.Should().Match<SseEventEnvelope>(e => IsMarker(e));
     }
 
     #endregion
@@ -607,17 +510,10 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
 
-        var sub1 = Task.Run(async () =>
-        {
-            await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token)) { }
-        }, cts.Token);
-
-        var sub2 = Task.Run(async () =>
-        {
-            await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token)) { }
-        }, cts.Token);
+        var sub1 = HoldAsync(sessionId, Guid.NewGuid(), cts.Token);
+        var sub2 = HoldAsync(sessionId, Guid.NewGuid(), cts.Token);
 
         await WaitForConnectionCountAsync(sessionId, 2);
 
@@ -625,7 +521,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         _service.GetConnectionCount(sessionId).Should().Be(2);
 
         await cts.CancelAsync();
-        try { await Task.WhenAll(sub1, sub2); } catch (OperationCanceledException) { }
+        await Task.WhenAll(sub1, sub2).WaitAsync(SafetyNet);
     }
 
     #endregion
@@ -637,30 +533,22 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         // Arrange
         var sessionId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        var completed1 = false;
-        var completed2 = false;
+        using var cts = new CancellationTokenSource();
 
-        var sub1 = Task.Run(async () =>
-        {
-            await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token)) { }
-            completed1 = true;
-        }, cts.Token);
-
-        var sub2 = Task.Run(async () =>
-        {
-            await foreach (var _ in _service.SubscribeAsync(sessionId, Guid.NewGuid(), null, cts.Token)) { }
-            completed2 = true;
-        }, cts.Token);
+        // The token is never cancelled: only DisconnectAllAsync can end these subscriptions.
+        var sub1 = HoldAsync(sessionId, Guid.NewGuid(), cts.Token);
+        var sub2 = HoldAsync(sessionId, Guid.NewGuid(), cts.Token);
 
         await WaitForConnectionCountAsync(sessionId, 2);
         _service.GetConnectionCount(sessionId).Should().Be(2);
 
         // Act
         await _service.DisconnectAllAsync(sessionId);
-        await WaitForConnectionCountAsync(sessionId, 0);
 
-        // Assert
+        // Assert - both subscriptions actually end (before #4193 the test never checked it) and the
+        // pool is empty
+        await Task.WhenAll(sub1, sub2).WaitAsync(SafetyNet);
+        await WaitForConnectionCountAsync(sessionId, 0);
         _service.GetConnectionCount(sessionId).Should().Be(0);
     }
 
@@ -674,18 +562,10 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         // Arrange
         var sessionId = Guid.NewGuid();
         var userId = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var receivedEvents = new List<SseEventEnvelope>();
 
-        var sub = Task.Run(async () =>
-        {
-            await foreach (var evt in _service.SubscribeAsync(sessionId, userId, null, cts.Token))
-            {
-                receivedEvents.Add(evt);
-                if (receivedEvents.Count >= 1) break;
-            }
-        }, cts.Token);
-
+        var sub = CollectAsync(sessionId, userId, null, receivedEvents, _ => true, cts.Token);
         await WaitForConnectionCountAsync(sessionId, 1);
 
         // Act
@@ -699,9 +579,10 @@ public sealed class SessionBroadcastServiceTests : IDisposable
             Rolls = [3, 5],
             Total = 8
         };
+        var publishedFrom = DateTime.UtcNow;
         await _service.PublishAsync(sessionId, testEvent);
-
-        await sub;
+        await sub.WaitAsync(SafetyNet);
+        var receivedBy = DateTime.UtcNow;
 
         // Assert
         var envelope = receivedEvents[0];
@@ -709,7 +590,8 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         envelope.Id.Should().HaveLength(20).And.MatchRegex(@"^\d{20}$");
         envelope.EventType.Should().Be("session:toolkit");
         envelope.Data.Should().BeOfType<DiceRolledEvent>();
-        envelope.Timestamp.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+        // Between two measured instants, not "close to now": that tolerance is a wall-clock bet too.
+        envelope.Timestamp.Should().BeOnOrAfter(publishedFrom).And.BeOnOrBefore(receivedBy);
     }
 
     #endregion
@@ -721,7 +603,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
     {
         var svc = CreateService();
         var sid = Guid.NewGuid(); var uid = Guid.NewGuid();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        using var cts = new CancellationTokenSource();
         var received = new List<SseEventEnvelope>();
         var sub = Task.Run(async () => {
             await foreach (var e in svc.SubscribeAsync(sid, uid, null, cts.Token)) { received.Add(e); break; }
@@ -729,7 +611,7 @@ public sealed class SessionBroadcastServiceTests : IDisposable
         await WaitForConnectionCountAsync(svc, sid, 1);
         await svc.PublishEnvelopeAsync(sid,
             new SseEventEnvelope { Id = "ignored", EventType = "session:score", Data = new { value = 7 } });
-        await sub;
+        await sub.WaitAsync(SafetyNet);
         Assert.Single(received);
         Assert.Equal("session:score", received[0].EventType);
     }

@@ -75,7 +75,7 @@ export function useAddToCollection(entityType: EntityType, entityId: string) {
       const previous = queryClient.getQueryData<CollectionStatusDto>(queryKey);
 
       // Optimistic update
-      queryClient.setQueryData<CollectionStatusDto>(queryKey, (old) => ({
+      queryClient.setQueryData<CollectionStatusDto>(queryKey, old => ({
         inCollection: true,
         isFavorite: old?.isFavorite ?? false,
         associatedData: null,
@@ -112,10 +112,7 @@ export function useAddToCollection(entityType: EntityType, entityId: string) {
 export function useRemoveFromCollection(
   entityType: EntityType,
   entityId: string,
-  onRemovalWarning?: (
-    data: AssociatedDataDto,
-    onConfirm: () => void
-  ) => void
+  onRemovalWarning?: (data: AssociatedDataDto, onConfirm: () => void) => void
 ) {
   const queryClient = useQueryClient();
   const queryKey = ['collection-status', entityType, entityId];
@@ -152,15 +149,13 @@ export function useRemoveFromCollection(
 
   // Wrapper that checks for associated data and shows warning
   const handleRemove = (onConfirm?: () => void) => {
-    const currentStatus =
-      queryClient.getQueryData<CollectionStatusDto>(queryKey);
+    const currentStatus = queryClient.getQueryData<CollectionStatusDto>(queryKey);
     const associatedData = currentStatus?.associatedData;
 
     // Check if has associated data
     const hasData =
       associatedData &&
-      (associatedData.hasCustomAgent ||
-        associatedData.hasPrivatePdf ||
+      (associatedData.hasPrivatePdf ||
         associatedData.chatSessionsCount > 0 ||
         associatedData.gameSessionsCount > 0 ||
         associatedData.checklistItemsCount > 0 ||

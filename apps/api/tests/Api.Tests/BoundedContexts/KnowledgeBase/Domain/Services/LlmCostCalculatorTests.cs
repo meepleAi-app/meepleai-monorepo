@@ -1,284 +1,214 @@
+using System.Diagnostics.Metrics;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
+using Api.Observability;
+using Api.Tests.Constants;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using FluentAssertions;
-using Api.Tests.Constants;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Services;
 
 /// <summary>
-/// Unit tests for LlmCostCalculator
-/// ISSUE-960: BGAI-018 - Financial cost tracking implementation
+/// #4164 (ADR-095 fetta 1): il costo di una chiamata si calcola dal catalogo modelli
+/// (<see cref="IModelPriceList"/>), non da un listino scritto nel codice. Sostituisce i test del
+/// listino statico «as of 2026-01-16».
 /// </summary>
+/// <remarks>
+/// I due test «CatalogOnly» e «CatalogPriceDiffersFromCode» sono stati visti fallire contro il
+/// calcolatore precedente: il primo dava 0 $ invece di 0,75, il secondo 1,37 $ invece di 1,50.
+/// </remarks>
 [Trait("Category", TestCategories.Unit)]
-public class LlmCostCalculatorTests
+[Trait("BoundedContext", "KnowledgeBase")]
+public sealed class LlmCostCalculatorTests
 {
-    private readonly ILlmCostCalculator _calculator;
+    private readonly Mock<ILogger<LlmCostCalculator>> _logger = new();
 
-    public LlmCostCalculatorTests()
+    private LlmCostCalculator CreateCalculator(params LlmModelPricing[] catalog) =>
+        new(new FakePriceList(catalog), _logger.Object);
+
+    private static LlmModelPricing Price(string modelId, string provider, decimal input, decimal output) => new()
     {
-        var logger = Mock.Of<ILogger<LlmCostCalculator>>();
-        _calculator = new LlmCostCalculator(logger);
+        ModelId = modelId,
+        Provider = provider,
+        InputCostPer1M = input,
+        OutputCostPer1M = output
+    };
+
+    [Fact]
+    public void CalculateCost_ModelOnlyInCatalog_UsesCatalogPrice()
+    {
+        var calculator = CreateCalculator(Price("openai/gpt-4o-mini", "OpenRouter", 0.15m, 0.60m));
+
+        var result = calculator.CalculateCost("openai/gpt-4o-mini", "OpenRouter", 1_000_000, 1_000_000);
+
+        result.InputCost.Should().Be(0.15m);
+        result.OutputCost.Should().Be(0.60m);
+        result.TotalCost.Should().Be(0.75m);
+        result.PricingStatus.Should().Be(LlmPricingStatus.Priced);
     }
 
     [Fact]
-    public void CalculateCost_DeepSeek_ReturnsCorrectCost()
+    public void CalculateCost_CatalogPriceDiffersFromCode_CatalogWins()
     {
-        // Arrange - DeepSeek: $0.27/$1.10 per 1M tokens
-        var modelId = "deepseek/deepseek-chat";
-        var promptTokens = 1000;      // 1K tokens
-        var completionTokens = 500;   // 0.5K tokens
+        // Il vecchio listino statico dava a deepseek-chat 0,27/1,10 $.
+        var calculator = CreateCalculator(Price("deepseek-chat", "DeepSeek", 0.30m, 1.20m));
 
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
+        var result = calculator.CalculateCost("deepseek-chat", "DeepSeek", 1_000_000, 1_000_000);
 
-        // Assert
-        result.ModelId.Should().Be(modelId);
+        result.TotalCost.Should().Be(1.50m);
+    }
+
+    [Fact]
+    public void CalculateCost_TracksTokensAndRoundsToMicroDollars()
+    {
+        var calculator = CreateCalculator(Price("m", "OpenRouter", 0.123456789m, 0.987654321m));
+
+        var result = calculator.CalculateCost("m", "OpenRouter", 1234, 567);
+
+        result.ModelId.Should().Be("m");
         result.Provider.Should().Be("OpenRouter");
-        result.PromptTokens.Should().Be(promptTokens);
-        result.CompletionTokens.Should().Be(completionTokens);
-
-        // Cost calculation: (1000/1M * $0.27) + (500/1M * $1.10)
-        //                 = $0.00027 + $0.00055 = $0.00082
-        result.InputCost.Should().Be(0.00027m);
-        result.OutputCost.Should().Be(0.00055m);
-        result.TotalCost.Should().Be(0.00082m);
-        result.IsFree.Should().BeFalse();
+        result.PromptTokens.Should().Be(1234);
+        result.CompletionTokens.Should().Be(567);
+        result.TotalTokens.Should().Be(1801);
+        result.InputCost.Should().Be(0.000152m);   // 1234 / 1M * 0.123456789 = 0.00015234…
+        result.OutputCost.Should().Be(0.00056m);   // 567 / 1M * 0.987654321 = 0.00055999…
     }
 
     [Fact]
-    public void CalculateCost_GeminiPro_ReturnsCorrectCost()
+    public void CalculateCost_FreeInCatalog_IsFreeNotUnpriced()
     {
-        // Arrange - Gemini Pro: $0.125/$0.375 per 1M tokens
-        var modelId = "google/gemini-pro";
-        var promptTokens = 10000;      // 10K tokens
-        var completionTokens = 2000;   // 2K tokens
+        var calculator = CreateCalculator(Price("meta-llama/llama-3.3-70b-instruct:free", "OpenRouter", 0m, 0m));
 
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
+        var result = calculator.CalculateCost("meta-llama/llama-3.3-70b-instruct:free", "OpenRouter", 5000, 2000);
 
-        // Assert
-        // Cost calculation: (10000/1M * $0.125) + (2000/1M * $0.375)
-        //                 = $0.00125 + $0.00075 = $0.002
-        result.InputCost.Should().Be(0.00125m);
-        result.OutputCost.Should().Be(0.00075m);
-        result.TotalCost.Should().Be(0.002m);
-        result.IsFree.Should().BeFalse();
-    }
-
-    [Fact]
-    public void CalculateCost_FreeTierModel_ReturnsZeroCost()
-    {
-        // Arrange - Llama 3.3 70B free tier
-        var modelId = "meta-llama/llama-3.3-70b-instruct:free";
-        var promptTokens = 5000;
-        var completionTokens = 3000;
-
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
-
-        // Assert
-        result.InputCost.Should().Be(0m);
-        result.OutputCost.Should().Be(0m);
         result.TotalCost.Should().Be(0m);
-        result.IsFree.Should().BeTrue();
+        result.PricingStatus.Should().Be(LlmPricingStatus.Free);
+        VerifyNoErrorLogged();
     }
 
     [Fact]
-    public void CalculateCost_OllamaModel_ReturnsZeroCost()
+    public void CalculateCost_SelfHostedModelAbsentFromCatalog_IsFreeWithoutError()
     {
-        // Arrange - Local Ollama model (self-hosted)
-        var modelId = "llama3:8b";
-        var promptTokens = 8000;
-        var completionTokens = 4000;
+        var calculator = CreateCalculator();
 
-        // Act
-        var result = _calculator.CalculateCost(modelId, "Ollama", promptTokens, completionTokens);
+        var result = calculator.CalculateCost("qwen2.5:3b", "Ollama", 5000, 2000);
 
-        // Assert
-        result.InputCost.Should().Be(0m);
-        result.OutputCost.Should().Be(0m);
         result.TotalCost.Should().Be(0m);
-        result.IsFree.Should().BeTrue();
+        result.PricingStatus.Should().Be(LlmPricingStatus.Free);
+        VerifyNoErrorLogged();
     }
 
     [Fact]
-    public void CalculateCost_UnknownModel_ReturnsFreeAndWarnsUser()
+    public void CalculateCost_ModelAbsentFromCatalog_IsUnpricedAndLoggedAsError()
     {
-        // Arrange - Model not in pricing database
-        var modelId = "unknown/model";
-        var promptTokens = 1000;
-        var completionTokens = 500;
+        var calculator = CreateCalculator(Price("deepseek-chat", "DeepSeek", 0.30m, 1.20m));
 
-        // Act
-        var result = _calculator.CalculateCost(modelId, "Unknown", promptTokens, completionTokens);
+        var result = calculator.CalculateCost("anthropic/claude-sonnet-4.5", "OpenRouter", 5000, 2000);
 
-        // Assert - Should treat as free
-        result.ModelId.Should().Be(modelId);
         result.TotalCost.Should().Be(0m);
-        result.IsFree.Should().BeTrue();
+        result.PricingStatus.Should().Be(LlmPricingStatus.Unpriced);
+        _logger.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("anthropic/claude-sonnet-4.5", StringComparison.Ordinal)),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]
-    public void CalculateCost_NegativeTokens_ReturnsEmpty()
+    public void CalculateCost_ModelAbsentFromCatalog_IncrementsUnpricedCounter()
     {
-        // Arrange
-        var modelId = "deepseek/deepseek-chat";
-
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", -100, 500);
-
-        // Assert - Should return empty calculation
-        result.ModelId.Should().Be("unknown");
-        result.PromptTokens.Should().Be(0);
-        result.CompletionTokens.Should().Be(0);
-        result.TotalCost.Should().Be(0m);
-    }
-
-    [Fact]
-    public void CalculateCost_ZeroTokens_ReturnsZeroCost()
-    {
-        // Arrange
-        var modelId = "deepseek/deepseek-chat";
-
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", 0, 0);
-
-        // Assert
-        result.TotalCost.Should().Be(0m);
-        result.IsFree.Should().BeTrue();
-    }
-
-    [Fact]
-    public void CalculateCost_LargeTokenCount_HandlesCorrectly()
-    {
-        // Arrange - 1M tokens (exact 1M boundary)
-        var modelId = "deepseek/deepseek-chat";
-        var promptTokens = 1_000_000;
-        var completionTokens = 500_000;
-
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
-
-        // Assert
-        // Cost: (1M/1M * $0.27) + (0.5M/1M * $1.10) = $0.27 + $0.55 = $0.82
-        result.InputCost.Should().Be(0.27m);
-        result.OutputCost.Should().Be(0.55m);
-        result.TotalCost.Should().Be(0.82m);
-    }
-
-    [Fact]
-    public void GetModelPricing_ExistingModel_ReturnsCorrectPricing()
-    {
-        // Act
-        var pricing = _calculator.GetModelPricing("deepseek/deepseek-chat");
-
-        // Assert
-        pricing.Should().NotBeNull();
-        pricing.ModelId.Should().Be("deepseek/deepseek-chat");
-        pricing.Provider.Should().Be("OpenRouter");
-        pricing.InputCostPer1M.Should().Be(0.27m);
-        pricing.OutputCostPer1M.Should().Be(1.10m);
-        pricing.IsFree.Should().BeFalse();
-    }
-
-    [Fact]
-    public void GetModelPricing_NonExistentModel_ReturnsNull()
-    {
-        // Act
-        var pricing = _calculator.GetModelPricing("nonexistent/model");
-
-        // Assert
-        pricing.Should().BeNull();
-    }
-
-    [Fact]
-    public void CalculateCost_RoundingPrecision_SixDecimalPlaces()
-    {
-        // Arrange - Test micro-dollar precision
-        var modelId = "deepseek/deepseek-chat";
-        var promptTokens = 123;      // Small number to test rounding
-        var completionTokens = 456;
-
-        // Act
-        var result = _calculator.CalculateCost(modelId, "OpenRouter", promptTokens, completionTokens);
-
-        // Assert - Should round to 6 decimal places (micro-dollars)
-        // Input: 123/1M * $0.27 = $0.00003321 → $0.000033
-        // Output: 456/1M * $1.10 = $0.0005016 → $0.000502
-        result.InputCost.Should().Be(0.000033m);
-        result.OutputCost.Should().Be(0.000502m);
-        result.TotalCost.Should().Be(0.000535m);
-    }
-
-    [Fact]
-    public void GetModelPricing_DeepSeekProviderModelId_ResolvesToSamePricingAsCanonical()
-    {
-        // Regression: DeepSeekLlmClient reports modelId as "deepseek-chat" (provider's native id),
-        // but the pricing registry historically only exposed the OpenRouter-prefixed
-        // "deepseek/deepseek-chat" key. The lookup miss caused a silent fallback to free pricing,
-        // which made the M1.2 mechanic-extractor calibration runs report $0 cost despite real API spend.
-        // Both keys must resolve to identical pricing.
-        var canonical = _calculator.GetModelPricing("deepseek/deepseek-chat");
-        var aliased = _calculator.GetModelPricing("deepseek-chat");
-
-        canonical.Should().NotBeNull();
-        aliased.Should().NotBeNull("DeepSeekLlmClient reports the provider-native modelId 'deepseek-chat'");
-        aliased!.InputCostPer1M.Should().Be(canonical!.InputCostPer1M);
-        aliased.OutputCostPer1M.Should().Be(canonical.OutputCostPer1M);
-        aliased.IsFree.Should().BeFalse(
-            "DeepSeek is paid; treating provider-native id as free silently corrupts cost telemetry");
-    }
-
-    [Fact]
-    public void CalculateCost_DeepSeekProviderNativeModelId_DoesNotFallbackToFree()
-    {
-        // Regression for the same bug observed via the calibration spike (T23):
-        // 80,583 total tokens across two runs, telemetry reported $0.000000.
-        var modelId = "deepseek-chat"; // <-- as reported by DeepSeekLlmClient.GenerateCompletionAsync
-        var promptTokens = 1000;
-        var completionTokens = 500;
-
-        var result = _calculator.CalculateCost(modelId, "DeepSeek", promptTokens, completionTokens);
-
-        // Same expected math as the canonical-key test above: $0.27/M in, $1.10/M out
-        result.InputCost.Should().Be(0.00027m);
-        result.OutputCost.Should().Be(0.00055m);
-        result.TotalCost.Should().Be(0.00082m);
-        result.IsFree.Should().BeFalse();
-    }
-
-    [Fact]
-    public void CalculateCost_AllSupportedModels_HavePricing()
-    {
-        // Arrange - Test all configured models (cost-optimized set, Issue #2593 revert)
-        var models = new[]
+        // Il MeterListener vede le misure di tutto il processo: un id di modello univoco isola
+        // questo test da chi emette lo stesso contatore in parallelo.
+        var modelId = $"test/unpriced-{Guid.NewGuid():N}";
+        long counted = 0;
+        using var listener = new MeterListener();
+        // Per nome, non per riferimento: lo strumento viene pubblicato mentre la classe statica
+        // si inizializza, quando il campo LlmUnpricedCalls non è ancora assegnato.
+        listener.InstrumentPublished = (instrument, l) =>
         {
-            ("meta-llama/llama-3.3-70b-instruct:free", "OpenRouter"),
-            ("meta-llama/llama-3.1-70b-instruct:free", "OpenRouter"),
-            ("meta-llama/llama-3.3-70b-instruct", "OpenRouter"),
-            ("google/gemini-pro", "OpenRouter"),
-            ("deepseek/deepseek-chat", "OpenRouter"),
-            ("llama3:8b", "Ollama"),
-            ("llama3:70b", "Ollama"),
-            ("mistral", "Ollama")
+            if (instrument.Meter.Name == MeepleAiMetrics.MeterName && instrument.Name == "meepleai.llm.unpriced")
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
         };
-
-        // Act & Assert
-        foreach (var (modelId, provider) in models)
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
         {
-            var pricing = _calculator.GetModelPricing(modelId);
-            pricing.Should().NotBeNull();
-            pricing.ModelId.Should().Be(modelId);
-            pricing.Provider.Should().Be(provider);
+            foreach (var tag in tags)
+            {
+                if (tag.Key == "model" && Equals(tag.Value, modelId))
+                {
+                    Interlocked.Add(ref counted, value);
+                }
+            }
+        });
+        listener.Start();
 
-            // Verify calculation works
-            var cost = _calculator.CalculateCost(modelId, provider, 1000, 500);
-            cost.Should().NotBeNull();
-            cost.ModelId.Should().Be(modelId);
-        }
+        var calculator = CreateCalculator();
+        calculator.CalculateCost(modelId, "OpenRouter", 10, 10);
+        calculator.CalculateCost(modelId, "OpenRouter", 10, 10);
+
+        Interlocked.Read(ref counted).Should().Be(2);
+    }
+
+    [Theory]
+    [InlineData(-1, 10)]
+    [InlineData(10, -1)]
+    public void CalculateCost_NegativeTokens_ReturnsEmpty(int prompt, int completion)
+    {
+        var calculator = CreateCalculator(Price("m", "OpenRouter", 1m, 1m));
+
+        calculator.CalculateCost("m", "OpenRouter", prompt, completion).Should().Be(LlmCostCalculation.Empty);
+    }
+
+    [Fact]
+    public void GetModelPricing_ReadsOnlyTheCatalog()
+    {
+        var calculator = CreateCalculator(Price("deepseek-chat", "DeepSeek", 0.30m, 1.20m));
+
+        calculator.GetModelPricing("deepseek-chat")!.InputCostPer1M.Should().Be(0.30m);
+        calculator.GetModelPricing("llama3:8b").Should().BeNull("il catalogo non lo elenca, anche se è un modello in casa");
+    }
+
+    [Theory]
+    [InlineData("deepseek-chat", "DeepSeek", 0.30)]
+    [InlineData("llama3:8b", "Ollama", 0.0)]
+    public async Task ResolvePricingAsync_CatalogOrSelfHosted(string modelId, string provider, double expectedInput)
+    {
+        var calculator = CreateCalculator(Price("deepseek-chat", "DeepSeek", 0.30m, 1.20m));
+
+        var pricing = await calculator.ResolvePricingAsync(modelId, provider);
+
+        pricing!.InputCostPer1M.Should().Be((decimal)expectedInput);
+    }
+
+    [Fact]
+    public async Task ResolvePricingAsync_UnpricedModel_ReturnsNull()
+    {
+        (await CreateCalculator().ResolvePricingAsync("anthropic/claude-sonnet-4.5", "OpenRouter")).Should().BeNull();
+    }
+
+    private void VerifyNoErrorLogged() =>
+        _logger.Verify(
+            l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+
+    private sealed class FakePriceList(IEnumerable<LlmModelPricing> prices) : IModelPriceList
+    {
+        private readonly Dictionary<string, LlmModelPricing> _prices =
+            prices.ToDictionary(p => p.ModelId, StringComparer.Ordinal);
+
+        public LlmModelPricing? Find(string modelId) => _prices.GetValueOrDefault(modelId);
+
+        public Task EnsureLoadedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }
-

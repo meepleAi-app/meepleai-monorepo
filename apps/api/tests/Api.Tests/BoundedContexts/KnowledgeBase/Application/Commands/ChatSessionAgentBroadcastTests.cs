@@ -373,7 +373,6 @@ public class ChatSessionAgentBroadcastTests
         var definition = AgentDefinition.Create(
             name: "tutor",
             description: "Test agent",
-            type: AgentType.Custom("tutor", "Tutor"),
             config: AgentDefinitionConfig.Default());
 
         var definitionRepo = new Mock<IAgentDefinitionRepository>();
@@ -452,13 +451,6 @@ public class ChatSessionAgentBroadcastTests
                 It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .Returns(CreateLlmStream("Hello world"));
 
-        // --- Budget service ---
-        var budgetService = new Mock<IUserBudgetService>();
-        budgetService
-            .Setup(b => b.HasBudgetForQueryAsync(
-                It.IsAny<Guid>(), It.IsAny<decimal>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         // --- Circuit breaker ---
         var registry = new Mock<ICircuitBreakerRegistry>();
         registry
@@ -490,7 +482,6 @@ public class ChatSessionAgentBroadcastTests
             copyrightTierResolver: tierResolver.Object,
             agentMemoryContextBuilder: memoryBuilder.Object,
             llmService: llmService.Object,
-            userBudgetService: budgetService.Object,
             circuitBreakerRegistry: registry.Object,
             scopeFactory: scopeFactory.Object,
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,

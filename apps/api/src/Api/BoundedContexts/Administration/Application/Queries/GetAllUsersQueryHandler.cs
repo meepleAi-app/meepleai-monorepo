@@ -80,48 +80,21 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             .Take(query.Limit)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
-        // Issue #3698: Fetch token usage for returned users
-        var userIds = users.Select(u => u.Id).ToList();
-        var tokenUsages = await _dbContext.UserTokenUsages
-            .Where(usage => userIds.Contains(usage.UserId))
-            .AsNoTracking()
-            .ToDictionaryAsync(usage => usage.UserId, cancellationToken)
-            .ConfigureAwait(false);
-
-        var tierIds = tokenUsages.Values.Select(u => u.TierId).Distinct().ToList();
-        var tiers = await _dbContext.Set<Api.BoundedContexts.Administration.Domain.Entities.TokenTier>()
-            .Where(t => tierIds.Contains(t.Id))
-            .AsNoTracking()
-            .ToDictionaryAsync(t => t.Id, cancellationToken)
-            .ConfigureAwait(false);
-
         return new PagedResult<UserDto>(
-            Items: users.Select(u => MapToDto(u, tokenUsages.GetValueOrDefault(u.Id), tiers)).ToList(),
+            Items: users.Select(MapToDto).ToList(),
             Total: total,
             Page: query.Page,
             PageSize: query.Limit
         );
     }
 
-    private static UserDto MapToDto(
-        UserEntity user,
-        Api.BoundedContexts.Administration.Domain.Entities.UserTokenUsage? usage,
-        Dictionary<Guid, Api.BoundedContexts.Administration.Domain.Entities.TokenTier> tiers)
+    private static UserDto MapToDto(UserEntity user)
     {
         var lastSeenAt = user.Sessions
             .Where(s => s.RevokedAt == null)
             .OrderByDescending(s => s.LastSeenAt ?? s.CreatedAt)
             .FirstOrDefault()
             ?.LastSeenAt;
-
-        // Issue #3698: Get token usage and tier info
-        var tokensUsed = usage?.TokensUsed ?? 0;
-        var tokenLimit = 10_000; // Default Free tier
-
-        if (usage != null && tiers.TryGetValue(usage.TierId, out var tier))
-        {
-            tokenLimit = tier.Limits.TokensPerMonth;
-        }
 
         return new UserDto(
             Id: user.Id.ToString(),
@@ -134,9 +107,7 @@ internal class GetAllUsersQueryHandler : IQueryHandler<GetAllUsersQuery, PagedRe
             SuspendReason: user.SuspendReason,
             Level: user.Level,
             ExperiencePoints: user.ExperiencePoints,
-            Tier: user.Tier,            // Issue #3698: Tier from UserEntity
-            TokenUsage: tokensUsed,     // Issue #3698: From UserTokenUsage
-            TokenLimit: tokenLimit      // Issue #3698: From TokenTier
+            Tier: user.Tier             // Issue #3698: Tier from UserEntity
         );
     }
 }

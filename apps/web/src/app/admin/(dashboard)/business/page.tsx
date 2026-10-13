@@ -8,27 +8,26 @@
  *
  * Layout:
  *   1. Hero header (titolo + crumbs + descrizione + range select + actions)
- *   2. BudgetKpiStrip (4 KPI)
+ *   2. CostKpiStrip (4 KPI)
  *   3. CostStackedArea (stacked area 30gg/range)
- *   4. Grid 2-col: BudgetGauge + CostSimulator
+ *   4. CostSimulator
  *   5. FeatureCostTable (drill provider)
  *
- * Range select persiste via URL `?range=30d|7d|90d|1y`. SetBudgetDialog è
- * un modal controllato da state locale.
+ * Range select persiste via URL `?range=30d|7d|90d|1y`.
+ *
+ * #4169 (ADR-095 D6/D8): via «Imposta budget», `SetBudgetDialog` e `BudgetGauge`. `AppBudget` era un
+ * secondo budget che il gateway LLM non applicava; l'unico budget è quello del gateway, nel tab
+ * Budget dell'AI, e questa pagina mostra i costi.
  */
 
-import { useState } from 'react';
-
-import { Plus, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { BudgetGauge } from '@/components/admin/business/BudgetGauge';
-import { BudgetKpiStrip } from '@/components/admin/business/BudgetKpiStrip';
+import { CostKpiStrip } from '@/components/admin/business/CostKpiStrip';
 import { CostSimulator } from '@/components/admin/business/CostSimulator';
 import { CostStackedArea } from '@/components/admin/business/CostStackedArea';
 import { FeatureCostTable } from '@/components/admin/business/FeatureCostTable';
-import { SetBudgetDialog } from '@/components/admin/business/SetBudgetDialog';
-import { Button } from '@/components/ui/primitives/button';
 import { costBreakdownRangeSchema } from '@/lib/api/schemas/business-cost.schemas';
 import type { CostBreakdownRange } from '@/lib/api/schemas/business-cost.schemas';
 
@@ -48,7 +47,6 @@ export default function BudgetPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const range = parseRange(searchParams.get('range'));
-  const [setBudgetOpen, setSetBudgetOpen] = useState(false);
 
   const handleRangeChange = (next: CostBreakdownRange) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -64,13 +62,21 @@ export default function BudgetPage() {
             aria-label="breadcrumb"
             className="font-mono text-[10.5px] uppercase tracking-wider text-muted-foreground mb-1"
           >
-            Admin &middot; Platform &amp; Operations &middot; Budget
+            Admin &middot; Platform &amp; Operations &middot; Costs
           </nav>
           <h1 className="font-quicksand text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Budget &amp; Cost
+            Costs
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            KPI di spesa per provider/feature, simulator di costo, e configurazione budget mensile.
+            Spesa per provider e per feature dal registro dei costi, e simulatore di costo. I tetti
+            di spesa dell&apos;AI li applica il gateway: si gestiscono in{' '}
+            <Link
+              href="/admin/ai?tab=config"
+              className="underline underline-offset-2 text-foreground"
+            >
+              AI → Budget
+            </Link>
+            .
           </p>
         </div>
 
@@ -91,15 +97,6 @@ export default function BudgetPage() {
               </option>
             ))}
           </select>
-          <Button
-            size="sm"
-            onClick={() => setSetBudgetOpen(true)}
-            className="gap-1.5"
-            data-testid="business-set-budget-button"
-          >
-            <Plus className="h-4 w-4" />
-            Imposta budget
-          </Button>
           <a
             href="/api/v1/admin/business/usage?period=30"
             className="inline-flex items-center gap-1.5 rounded border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted"
@@ -111,18 +108,13 @@ export default function BudgetPage() {
         </div>
       </header>
 
-      <BudgetKpiStrip />
+      <CostKpiStrip />
 
       <CostStackedArea range={range} />
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <BudgetGauge />
-        <CostSimulator />
-      </div>
+      <CostSimulator />
 
       <FeatureCostTable range={range} />
-
-      <SetBudgetDialog open={setBudgetOpen} onClose={() => setSetBudgetOpen(false)} />
     </div>
   );
 }

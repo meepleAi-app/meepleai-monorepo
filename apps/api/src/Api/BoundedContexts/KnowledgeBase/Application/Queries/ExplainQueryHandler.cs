@@ -34,10 +34,13 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
             "Processing ExplainQuery: GameId={GameId}, Topic={Topic}",
             query.GameId, query.Topic);
 
-        // Step 1: Perform vector search for relevant chunks
+        // Step 1: Perform vector search for relevant chunks.
+        // #4294: the search passes the RAG gate for the caller before anything else happens —
+        // this handler has no cache and does no work ahead of it.
         var searchQuery = new SearchQuery(
             GameId: query.GameId,
             Query: query.Topic,
+            Access: SearchAccess.OfUser(query.UserId, query.UserRole),
             TopK: 10, // Get more results for comprehensive explanation
             MinScore: 0.50, // Lower threshold for broader coverage
             SearchMode: "hybrid",

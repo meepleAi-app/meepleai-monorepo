@@ -56,7 +56,6 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         var agent = AgentDefinition.Create(
             "TestAgent",
             "Test description",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         // Act
@@ -78,7 +77,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
-        var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("UniqueAgent", "Desc", AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
         await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
@@ -96,8 +95,8 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
-        await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentType.RagAgent, AgentDefinitionConfig.Default()));
-        await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("Agent1", "Desc1", AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("Agent2", "Desc2", AgentDefinitionConfig.Default()));
         await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Act
@@ -113,9 +112,9 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
-        var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var activeAgent = AgentDefinition.Create("ActiveAgent", "Desc", AgentDefinitionConfig.Default());
         activeAgent.Activate(); // Create() now defaults to inactive
-        var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var inactiveAgent = AgentDefinition.Create("InactiveAgent", "Desc", AgentDefinitionConfig.Default());
         // inactiveAgent stays inactive (Draft default)
 
         await repository.AddAsync(activeAgent);
@@ -137,8 +136,8 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         using (var arrangeContext = _fixture.CreateDbContext(_connectionString!))
         {
             var arrangeRepo = new AgentDefinitionRepository(arrangeContext, _eventCollectorMock.Object);
-            await arrangeRepo.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
-            await arrangeRepo.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+            await arrangeRepo.AddAsync(AgentDefinition.Create("SearchableAgent", "Desc", AgentDefinitionConfig.Default()));
+            await arrangeRepo.AddAsync(AgentDefinition.Create("OtherAgent", "Desc", AgentDefinitionConfig.Default()));
             await arrangeContext.SaveChangesAsync(); // ADR-056: caller persists
         }
 
@@ -158,7 +157,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
-        var agent = AgentDefinition.Create("OriginalName", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("OriginalName", "Desc", AgentDefinitionConfig.Default());
         await repository.AddAsync(agent);
         await dbContext.SaveChangesAsync(); // ADR-056: caller persists Add
 
@@ -181,7 +180,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         using (var arrangeContext = _fixture.CreateDbContext(_connectionString!))
         {
             var arrangeRepo = new AgentDefinitionRepository(arrangeContext, _eventCollectorMock.Object);
-            var agent = AgentDefinition.Create("ToDelete", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+            var agent = AgentDefinition.Create("ToDelete", "Desc", AgentDefinitionConfig.Default());
             await arrangeRepo.AddAsync(agent);
             await arrangeContext.SaveChangesAsync(); // ADR-056: caller persists Add
             agentId = agent.Id;
@@ -208,7 +207,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         // Arrange
         using var dbContext = _fixture.CreateDbContext(_connectionString!);
         var repository = new AgentDefinitionRepository(dbContext, _eventCollectorMock.Object);
-        await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default()));
+        await repository.AddAsync(AgentDefinition.Create("ExistingAgent", "Desc", AgentDefinitionConfig.Default()));
         await dbContext.SaveChangesAsync(); // ADR-056: caller persists
 
         // Act
@@ -246,7 +245,7 @@ public sealed class AgentDefinitionRepositoryTests : IClassFixture<SharedTestcon
         {
             AgentToolConfig.Create("web_search", new Dictionary<string, object> { ["max"] = 10 })
         };
-        var agent = AgentDefinition.Create("ComplexAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default(), null, prompts, tools);
+        var agent = AgentDefinition.Create("ComplexAgent", "Desc", AgentDefinitionConfig.Default(), null, prompts, tools);
 
         // Act
         await repository.AddAsync(agent);

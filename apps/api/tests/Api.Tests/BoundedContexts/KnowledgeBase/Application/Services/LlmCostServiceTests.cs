@@ -31,7 +31,6 @@ public sealed class LlmCostServiceTests
 {
     private readonly Mock<ILlmCostLogRepository> _costLogRepoMock = new();
     private readonly Mock<IAiModelConfigurationRepository> _modelConfigRepoMock = new();
-    private readonly Mock<IUserBudgetService> _budgetServiceMock = new();
     private readonly Mock<IPublisher> _publisherMock = new();
     private readonly Mock<IOpenRouterFileLogger> _fileLoggerMock = new();
     private readonly Mock<IOpenRouterUsageService> _usageServiceMock = new();
@@ -47,7 +46,6 @@ public sealed class LlmCostServiceTests
         _serviceProviderMock = new Mock<IServiceProvider>();
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(ILlmCostLogRepository))).Returns(_costLogRepoMock.Object);
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(IAiModelConfigurationRepository))).Returns(_modelConfigRepoMock.Object);
-        _serviceProviderMock.Setup(sp => sp.GetService(typeof(IUserBudgetService))).Returns(_budgetServiceMock.Object);
         _serviceProviderMock.Setup(sp => sp.GetService(typeof(IPublisher))).Returns(_publisherMock.Object);
 
         var scopeMock = new Mock<IServiceScope>();
@@ -109,36 +107,80 @@ public sealed class LlmCostServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta arriva alla riga. Il
+    /// servizio ricopia il costo in un calcolo nuovo: senza propagazione esplicita andrebbe persa.
+    /// </summary>
     [Fact]
-    public async Task LogSuccessAsync_WithUser_RecordsBudgetUsage()
+    public async Task LogSuccessAsync_CarriesTheProfileVersionToTheRepository()
     {
-        var sut = CreateSut();
-        var result = CreateSuccessResult();
-        var user = CreateUser();
-        var userContext = new LlmUserContext(user.Id, user.Role.Value, LlmUserTier.User);
+        var versionId = Guid.NewGuid();
+        var result = CreateSuccessResult() with { ProfileVersionId = versionId };
 
-        await sut.LogSuccessAsync(result, userContext, latencyMs: 100, RequestSource.Manual);
+        await CreateSut().LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 150, RequestSource.RagPipeline);
 
-        _budgetServiceMock.Verify(b => b.RecordUsageAsync(
-            user.Id,
-            result.Cost.TotalCost,
-            result.Usage.PromptTokens + result.Usage.CompletionTokens,
-            It.IsAny<CancellationToken>()), Times.Once);
+        _costLogRepoMock.Verify(r => r.LogCostAsync(
+            It.IsAny<Guid?>(), It.IsAny<string>(),
+            It.Is<LlmCostCalculation>(c => c.ProfileVersionId == versionId),
+            "completion", true, null, 150, null, null,
+            RequestSource.RagPipeline, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #4168: uno stream interrotto dopo il primo token ha prodotto token fatturati. La riga ne porta
+    /// il costo, ma resta un fallimento con il suo errore: non una risposta riuscita.
+    /// </summary>
     [Fact]
-    public async Task LogSuccessAsync_WithoutUser_SkipsBudgetRecording()
+    public async Task LogSuccessAsync_AFailedResultWithBilledTokens_IsRecordedAsAFailureWithItsCost()
+    {
+        var interrupted = CreateSuccessResult() with
+        {
+            Success = false,
+            ErrorMessage = "Stream interrupted after the first token",
+        };
+
+        await CreateSut().LogSuccessAsync(interrupted, LlmUserContext.Anonymous, latencyMs: 90, RequestSource.RagPipeline);
+
+        _costLogRepoMock.Verify(r => r.LogCostAsync(
+            It.IsAny<Guid?>(), It.IsAny<string>(),
+            It.Is<LlmCostCalculation>(c => c.TotalCost == 0.003m),
+            "completion", false, "Stream interrupted after the first token", 90, null, null,
+            RequestSource.RagPipeline, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4164: il servizio ricopia il costo in un nuovo calcolo; senza propagazione esplicita lo
+    /// stato del prezzo si perderebbe e il registro non distinguerebbe un modello senza prezzo.
+    /// </summary>
+    [Fact]
+    public async Task LogSuccessAsync_CarriesThePricingStatusToTheRepository()
     {
         var sut = CreateSut();
-        var result = CreateSuccessResult();
+        var result = LlmCompletionResult.CreateSuccess(
+            "Test response",
+            new LlmUsage(100, 50, 150),
+            new LlmCost
+            {
+                InputCost = 0m,
+                OutputCost = 0m,
+                ModelId = "anthropic/claude-sonnet-4.5",
+                Provider = "OpenRouter",
+                PricingStatus = LlmPricingStatus.Unpriced
+            });
 
-        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 100, RequestSource.Manual);
+        await sut.LogSuccessAsync(result, LlmUserContext.Anonymous, latencyMs: 150, RequestSource.Manual);
 
-        _budgetServiceMock.Verify(b => b.RecordUsageAsync(
-            It.IsAny<Guid>(),
-            It.IsAny<decimal>(),
+        _costLogRepoMock.Verify(r => r.LogCostAsync(
+            It.IsAny<Guid?>(),
+            It.IsAny<string>(),
+            It.Is<LlmCostCalculation>(c => c.PricingStatus == LlmPricingStatus.Unpriced),
+            It.IsAny<string>(),
+            It.IsAny<bool>(),
+            It.IsAny<string?>(),
             It.IsAny<int>(),
-            It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<RequestSource>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

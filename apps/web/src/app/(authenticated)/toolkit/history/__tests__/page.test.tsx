@@ -4,7 +4,7 @@
  * Renders the real i18n catalog via `renderWithQuery` (EN messages, matching
  * the established `@/__tests__/utils/query-test-utils` pattern used across
  * the app) so assertions exercise the actual translation ids, not a
- * passthrough mock. `api.sessions.getHistory` and `useLibrary` are mocked;
+ * passthrough mock. `api.sessions.getHistory` and `useSharedGamesByIds` are mocked;
  * `next/navigation`'s `useRouter` is mocked to a `push` spy since the empty
  * state CTA navigates to `/toolkit`.
  */
@@ -17,7 +17,6 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import ToolkitHistoryPage from '../client';
 
 const mockGetHistory = vi.hoisted(() => vi.fn());
-const mockUseLibrary = vi.hoisted(() => vi.fn());
 const pushSpy = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
@@ -28,23 +27,21 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: mockUseLibrary,
-}));
-
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushSpy }),
 }));
 
-const LIBRARY_DATA = {
-  items: [
-    { gameId: 'game-1', gameTitle: 'Wingspan' },
-    { gameId: 'game-2', gameTitle: 'Pandemic' },
-  ],
-  page: 1,
-  pageSize: 500,
-  totalCount: 2,
+// #4187: i nomi dei giochi si leggono per id dal catalogo, non da una pagina della libreria
+// (ne chiedeva 500, il server ne restituisce al massimo 100).
+const CATALOG_TITLES: Record<string, string> = {
+  'game-1': 'Wingspan',
+  'game-2': 'Pandemic',
+  'game-far': 'Brass: Birmingham',
 };
+const mockUseSharedGamesByIds = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/queries/useSharedGames', () => ({
+  useSharedGamesByIds: mockUseSharedGamesByIds,
+}));
 
 const SESSION_1 = {
   id: 'session-1',
@@ -96,7 +93,19 @@ function mockHistoryResponse(sessions: unknown[]) {
 describe('ToolkitHistoryPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseLibrary.mockReturnValue({ data: LIBRARY_DATA, isLoading: false, isError: false });
+    mockUseSharedGamesByIds.mockImplementation((ids: readonly string[]) => ({
+      gamesById: Object.fromEntries(
+        ids.filter(id => CATALOG_TITLES[id]).map(id => [id, { id, title: CATALOG_TITLES[id] }])
+      ),
+      isLoading: false,
+    }));
+  });
+
+  it('nomina il gioco di una sessione anche se non sta nella pagina di libreria (#4187)', async () => {
+    mockHistoryResponse([{ ...SESSION_2, id: 'session-far', gameId: 'game-far' }]);
+    renderWithQuery(<ToolkitHistoryPage />);
+
+    expect(await screen.findByText('Brass: Birmingham')).toBeInTheDocument();
   });
 
   it('renders the localized page title', async () => {

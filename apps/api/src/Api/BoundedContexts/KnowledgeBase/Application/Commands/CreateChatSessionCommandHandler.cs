@@ -4,7 +4,6 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure.Entities;
-using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -48,43 +47,14 @@ internal sealed class CreateChatSessionCommandHandler : IRequestHandler<CreateCh
         {
             var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 request.UserId, request.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         _logger.LogInformation(
             "Creating chat session for user {UserId} and game {GameId}",
             request.UserId,
             request.GameId);
-
-        // Auto-archive: sliding window when tier limit is reached (TierLimit > 0 means enforced)
-        if (request.TierLimit > 0)
-        {
-            var currentCount = await _sessionRepository
-                .CountByUserIdAsync(request.UserId, cancellationToken)
-                .ConfigureAwait(false);
-
-            if (currentCount >= request.TierLimit)
-            {
-                var oldest = await _sessionRepository
-                    .GetOldestActiveByUserIdAsync(request.UserId, cancellationToken)
-                    .ConfigureAwait(false);
-
-                if (oldest != null)
-                {
-                    oldest.Archive();
-                    await _sessionRepository.UpdateAsync(oldest, cancellationToken).ConfigureAwait(false);
-
-                    _logger.LogInformation(
-                        "Auto-archived oldest chat session {SessionId} for user {UserId} (tier limit={Limit})",
-                        oldest.Id,
-                        request.UserId,
-                        request.TierLimit);
-                }
-            }
-        }
 
         // Resolve gameName for the ChatSessionCreatedEvent payload (BE-3 #1590 H2).
         // The event must carry gameName so the activity rail can show a meaningful title

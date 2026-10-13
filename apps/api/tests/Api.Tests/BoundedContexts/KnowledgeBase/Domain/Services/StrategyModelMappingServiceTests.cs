@@ -177,7 +177,7 @@ public class StrategyModelMappingServiceTests
 
         // Assert
         provider.Should().Be("DeepSeek");
-        modelId.Should().Be("deepseek-chat");
+        modelId.Should().Be("deepseek-flash");
     }
 
     [Fact]
@@ -334,8 +334,8 @@ public class StrategyModelMappingServiceTests
     }
 
     [Theory]
-    [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct:free")]
-    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-chat")]
+    [InlineData(RagStrategy.Fast, "OpenRouter", "meta-llama/llama-3.3-70b-instruct")]
+    [InlineData(RagStrategy.Balanced, "DeepSeek", "deepseek-flash")]
     [InlineData(RagStrategy.Precise, "Anthropic", "anthropic/claude-sonnet-4.5")]
     [InlineData(RagStrategy.Expert, "Anthropic", "anthropic/claude-sonnet-4.5")]
     [InlineData(RagStrategy.Custom, "Anthropic", "anthropic/claude-haiku-4.5")]
@@ -368,10 +368,10 @@ public class StrategyModelMappingServiceTests
     }
 
     [Fact]
-    public async Task GetFallbackModelsAsync_Consensus_ReturnsMultipleFallbacks()
+    public async Task GetFallbackModelsAsync_RagFusion_ReturnsMultipleFallbacks()
     {
-        // Arrange
-        var strategy = RagStrategy.Consensus;
+        // Arrange — #4179: CONSENSUS ha ora una sola riserva (google/gemini-pro è sparito dal listino)
+        var strategy = RagStrategy.RagFusion;
 
         _mockRepository
             .Setup(r => r.GetByStrategyAsync(strategy, It.IsAny<CancellationToken>()))
@@ -393,7 +393,7 @@ public class StrategyModelMappingServiceTests
         // Assert
         fallbacks.Should().HaveCount(2)
             .And.Contain("openai/gpt-4o")
-            .And.Contain("google/gemini-pro");
+            .And.Contain("openai/gpt-4o-mini");
     }
 
     [Fact]

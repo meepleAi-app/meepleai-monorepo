@@ -48,9 +48,26 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
+        // #4244: shared games only, on purpose. This method does not check who is asking and is
+        // reached from routes that check no ownership (GET /games/{id}/knowledge-base among them):
+        // matching PrivateGameId here would tell anyone who knows the id whether a private game
+        // is indexed, and how much. The documents of a private game are read with
+        // GetByPrivateGameIdAsync, by callers that have passed the RAG access check.
         var entities = await DbContext.VectorDocuments
             .AsNoTracking()
             .Where(vd => vd.GameId == gameId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(e => e.ToDomain()).ToList();
+    }
+
+    public async Task<List<VectorDocument>> GetByPrivateGameIdAsync(
+        Guid privateGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.PrivateGameId == privateGameId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(e => e.ToDomain()).ToList();

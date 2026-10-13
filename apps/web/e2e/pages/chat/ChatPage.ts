@@ -64,43 +64,13 @@ export class ChatPage extends BasePage implements IChatPage {
   }
 
   /**
-   * Login modal heading shown after middleware redirect
+   * #4248: the login page a guest is sent to. There is no auth modal and no inline gate:
+   * `proxy.ts` redirects to `/login?from=…`.
    */
-  private get loginModalHeading(): Locator {
-    return this.page.getByRole('heading', { name: getTextMatcher('auth.login.signInTo') });
+  private get loginForm(): Locator {
+    return this.page.getByTestId('login-form');
   }
 
-  /**
-   * Login and register tabs inside the auth modal
-   */
-  private get loginTab(): Locator {
-    // AuthModal uses English text "Login" for the tab, use testId for reliability
-    return this.page.getByTestId('auth-tab-login');
-  }
-
-  private get registerTab(): Locator {
-    // AuthModal uses English text "Register" for the tab, use testId for reliability
-    return this.page.getByTestId('auth-tab-register');
-  }
-
-  /**
-   * Inline unauthenticated state
-   */
-  private get unauthenticatedHeading(): Locator {
-    return this.page.getByRole('heading', { name: getTextMatcher('chat.loginRequired') });
-  }
-
-  private get unauthenticatedMessage(): Locator {
-    return this.page.getByText(getTextMatcher('chat.loginRequiredMessage'));
-  }
-
-  private get goToLoginLink(): Locator {
-    return this.page.getByRole('link', { name: getTextMatcher('chat.goToLogin') });
-  }
-
-  /**
-   * Game selection dropdown
-   */
   private get gameSelect(): Locator {
     return this.page.locator('select#gameSelect');
   }
@@ -384,30 +354,20 @@ export class ChatPage extends BasePage implements IChatPage {
   }
 
   /**
-   * Assert login required message is shown (unauthenticated state)
-   * @returns Which guard variant was displayed
+   * A guest is redirected to the login page, which remembers the chat (`?from=/chat`).
    */
-  async assertLoginRequired(): Promise<'modal' | 'inline'> {
-    await this.page.waitForLoadState('networkidle');
-
-    if (this.page.url().includes('/login')) {
-      await this.waitForElement(this.loginModalHeading);
-      await expect(this.loginTab).toHaveAttribute('aria-selected', 'true');
-      await expect(this.registerTab).toBeVisible();
-      return 'modal';
-    }
-
-    await this.waitForElement(this.unauthenticatedHeading);
-    await expect(this.unauthenticatedMessage).toBeVisible();
-    await expect(this.goToLoginLink).toBeVisible();
-    return 'inline';
+  async assertLoginRequired(): Promise<void> {
+    await this.page.waitForURL(url => url.pathname === '/login' && url.search === '?from=%2Fchat');
+    await expect(this.loginForm).toBeVisible();
   }
 
   /**
-   * Clicks "Go to Login" in the inline auth gate
+   * Logs in from the login page the guest was redirected to.
    */
-  async goToLoginFromGate(): Promise<void> {
-    await this.click(this.goToLoginLink);
+  async loginFromRedirect(email: string, password: string): Promise<void> {
+    await this.loginForm.locator('#login-email').fill(email);
+    await this.loginForm.locator('#login-password').fill(password);
+    await this.click(this.loginForm.locator('button[type="submit"]'));
   }
 
   /**

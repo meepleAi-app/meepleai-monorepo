@@ -61,7 +61,9 @@ public class LlmCostLogRepository : RepositoryBase, ILlmCostLogRepository
             UserAgent = userAgent,
             CreatedAt = DateTime.UtcNow,
             RequestDate = DateOnly.FromDateTime(DateTime.UtcNow),
-            RequestSource = source.ToString()
+            RequestSource = source.ToString(),
+            PricingStatus = cost.PricingStatus?.ToString(),
+            ProfileVersionId = cost.ProfileVersionId
         };
 
         DbContext.LlmCostLogs.Add(entity);
@@ -116,6 +118,24 @@ public class LlmCostLogRepository : RepositoryBase, ILlmCostLogRepository
         return await DbContext.LlmCostLogs
             .Where(x => x.UserId == userId && x.RequestDate >= startDate && x.RequestDate <= endDate)
             .SumAsync(x => x.TotalCost, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<LlmSpendBySourceAndDay>> GetSpendBySourceAndDayAsync(
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default)
+    {
+        var rows = await DbContext.LlmCostLogs
+            .Where(x => x.RequestDate >= fromDate && x.RequestDate <= toDate)
+            .GroupBy(x => new { x.RequestSource, x.RequestDate })
+            .Select(g => new { g.Key.RequestSource, g.Key.RequestDate, Total = g.Sum(x => x.TotalCost) })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return rows
+            .Select(r => new LlmSpendBySourceAndDay(r.RequestSource, r.RequestDate, r.Total))
+            .ToList();
     }
 
     /// <inheritdoc/>

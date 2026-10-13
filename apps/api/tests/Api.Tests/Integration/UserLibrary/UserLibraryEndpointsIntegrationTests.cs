@@ -465,23 +465,4 @@ public sealed class UserLibraryEndpointsIntegrationTests : IClassFixture<UserLib
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
-
-    // ========================================
-    // GAME AGENT CONFIG ENDPOINT TESTS
-    // ========================================
-
-    [Fact]
-    public async Task GetGameAgentConfig_WithoutAuth_ReturnsAppropriateError()
-    {
-        // Arrange
-        var gameId = Guid.NewGuid();
-
-        // Act
-        var response = await _client.GetAsync($"/api/v1/library/games/{gameId}/agent-config");
-
-        // Assert - May return MethodNotAllowed, NotFound, or Unauthorized
-        (response.StatusCode == HttpStatusCode.Unauthorized ||
-            response.StatusCode == HttpStatusCode.MethodNotAllowed ||
-            response.StatusCode == HttpStatusCode.NotFound).Should().BeTrue($"Expected Unauthorized, MethodNotAllowed, or NotFound, got {response.StatusCode}");
-    }
 }

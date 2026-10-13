@@ -54,9 +54,6 @@ export function UsedByAgentRow({ agent }: UsedByAgentRowProps) {
           >
             {agent.status}
           </span>
-          <span className="ml-auto text-[10.5px] font-mono text-muted-foreground">
-            {agent.type}
-          </span>
         </div>
         <div className="mt-1 flex items-center gap-3 text-[11.5px] text-muted-foreground font-mono">
           <span>{gameLabel}</span>

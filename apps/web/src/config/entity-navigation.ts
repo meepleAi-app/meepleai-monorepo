@@ -173,6 +173,14 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         idKey: 'gameId',
         buildHref: id => `/library/${id}`,
       },
+      // #4244: a thread on a private game. `/library/{id}` resolves catalog games only; the caller
+      // passes either `gameId` or `privateGameId`, never both.
+      {
+        entity: 'game',
+        label: 'Game',
+        idKey: 'privateGameId',
+        buildHref: id => `/library/private/${id}`,
+      },
       {
         entity: 'agent',
         label: 'Agent',

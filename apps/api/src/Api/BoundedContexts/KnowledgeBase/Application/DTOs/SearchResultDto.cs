@@ -53,7 +53,11 @@ internal record QaResponseDto(
     bool IsLowQuality,
     IReadOnlyList<CitationDto> Citations,
     RagValidationResultDto? ValidationResult = null,
-    string? ErrorCode = null
+    string? ErrorCode = null,
+    // #4168 (ADR-095 D2): la versione del profilo e la lingua di una risposta generata; null quando
+    // la risposta non viene dal modello (documenti in elaborazione, nessun contesto).
+    Guid? ProfileVersionId = null,
+    string? Language = null
 );
 
 /// <summary>

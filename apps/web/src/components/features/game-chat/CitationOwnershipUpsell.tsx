@@ -18,7 +18,9 @@ export function CitationOwnershipUpsell({
   gameId,
   className,
 }: CitationOwnershipUpsellProps): ReactElement {
-  const uploadHref = gameId ? `/upload?gameId=${encodeURIComponent(gameId)}` : '/upload';
+  // #4257: chi vede questa card e' un utente che non ha caricato il PDF. Il suo upload sta
+  // nella pagina KB del gioco in libreria; /upload era riservata ad Admin ed Editor.
+  const uploadHref = gameId ? `/library/${encodeURIComponent(gameId)}/kb` : '/library';
   return (
     <div
       data-slot="citation-ownership-upsell"

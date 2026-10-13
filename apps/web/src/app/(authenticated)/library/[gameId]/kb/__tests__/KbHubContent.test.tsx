@@ -35,6 +35,32 @@ vi.mock('@/hooks/queries/useLibrary', () => ({
   useLibraryGameDetail: (gameId: string) => mockUseLibraryGameDetail(gameId),
 }));
 
+// #4257: la CTA di upload apre PdfUploadModal, lo stesso delle card della libreria. Il doppio
+// espone cio' che la pagina gli passa e un pulsante per simulare un upload riuscito.
+vi.mock('@/components/library/PdfUploadModal', () => ({
+  PdfUploadModal: (props: {
+    isOpen: boolean;
+    onClose: () => void;
+    gameId: string;
+    gameTitle: string;
+    onUploadSuccess?: () => void;
+  }) =>
+    props.isOpen ? (
+      <div
+        data-testid="pdf-upload-modal"
+        data-game-id={props.gameId}
+        data-game-title={props.gameTitle}
+      >
+        <button type="button" onClick={props.onUploadSuccess}>
+          upload-done
+        </button>
+        <button type="button" onClick={props.onClose}>
+          upload-close
+        </button>
+      </div>
+    ) : null,
+}));
+
 // Mock useTranslation with a lightweight lookup in MESSAGES dict (defined below).
 // Avoids react-intl IntlProvider initialization that becomes pathological under the
 // scale of orchestrator label assembly (~90 t() calls per render).
@@ -431,6 +457,75 @@ describe('KbHubContent orchestrator (Issue #1481)', () => {
       const badge = container.querySelector('[data-slot="kb-hub-pdf-status"]');
       expect(badge).toBeInTheDocument();
       expect(badge).toHaveAttribute('data-status', 'indexing');
+    });
+  });
+
+  describe('#4257 — la CTA di upload apre il caricamento del PDF', () => {
+    const status = (documentCount: number) => ({
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+      data: {
+        gameId: GAME_ID,
+        isIndexed: documentCount > 0,
+        documentCount,
+        coverageScore: 0,
+        coverageLevel: 'None',
+        suggestedQuestions: [],
+      },
+    });
+
+    it('dallo stato vuoto: apre il modale per questo gioco, col suo titolo', () => {
+      mockUseUserKbStatus.mockReturnValue(status(0));
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [],
+        refetch: vi.fn(),
+      });
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+      expect(screen.queryByTestId('pdf-upload-modal')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Carica primo documento' }));
+
+      const modal = screen.getByTestId('pdf-upload-modal');
+      expect(modal).toHaveAttribute('data-game-id', GAME_ID);
+      expect(modal).toHaveAttribute('data-game-title', 'Catan');
+    });
+
+    it('con dei PDF: «+ Carica PDF» apre il modale, e un upload riuscito rilegge elenco e stato', () => {
+      const statusQuery = status(1);
+      const pdfsQuery = {
+        isLoading: false,
+        isError: false,
+        data: [pdfFixture()],
+        refetch: vi.fn(),
+      };
+      mockUseUserKbStatus.mockReturnValue(statusQuery);
+      mockUseGamePdfs.mockReturnValue(pdfsQuery);
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      fireEvent.click(screen.getByRole('button', { name: '+ Carica PDF' }));
+      fireEvent.click(screen.getByRole('button', { name: 'upload-done' }));
+
+      expect(pdfsQuery.refetch).toHaveBeenCalledTimes(1);
+      expect(statusQuery.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('chiudere il modale lo toglie', () => {
+      mockUseUserKbStatus.mockReturnValue(status(0));
+      mockUseGamePdfs.mockReturnValue({
+        isLoading: false,
+        isError: false,
+        data: [],
+        refetch: vi.fn(),
+      });
+      renderWithIntl(<KbHubContent gameId={GAME_ID} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Carica primo documento' }));
+      fireEvent.click(screen.getByRole('button', { name: 'upload-close' }));
+
+      expect(screen.queryByTestId('pdf-upload-modal')).not.toBeInTheDocument();
     });
   });
 

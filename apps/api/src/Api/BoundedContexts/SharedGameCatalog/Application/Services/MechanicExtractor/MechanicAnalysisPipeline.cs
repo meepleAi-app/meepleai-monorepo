@@ -180,7 +180,7 @@ internal sealed class MechanicAnalysisPipeline : IMechanicAnalysisPipeline
                 preferredModel: request.Model,
                 systemPrompt: currentSystemPrompt,
                 userPrompt: userPrompt,
-                source: RequestSource.Manual,
+                source: RequestSource.AdminOperation, // #4164: analisi lanciata da un admin, non una domanda di un utente
                 maxTokens: SectionMaxTokens,
                 ct: cancellationToken).ConfigureAwait(false);
 

@@ -1,19 +1,27 @@
 /**
  * KnowledgeBaseTab Component (Issue #4229)
  *
- * Displays Knowledge Base documents for a SharedGame.
- * Shows indexed PDFs from all agents associated with the game.
+ * Displays the Knowledge Base documents indexed for a game.
  *
- * Features:
- * - Fetches agents for the game
- * - Loads KB documents for each agent
- * - Displays documents with indexing status
- * - Empty state when no documents indexed
+ * Issue #4138: this used to fetch the game's AGENTS and then, for each one, call
+ * `api.agents.getDocuments(agent.id)` on `/agents/{id}/documents`. Two things were wrong with
+ * that:
+ *
+ *   - the route is NOT MOUNTED on the backend (marked in #4139 after enumerating every mapped
+ *     `/agents` path), so the per-agent query could only ever fail — which the tab reported as
+ *     "No Documents Indexed Yet", indistinguishable from an empty KB;
+ *   - and documents belong to a GAME, not to an agent. With one system agent, keying the KB by
+ *     agent has nothing left to key on.
+ *
+ * It now reads `useDocumentsByGame`, i.e. the per-game listing that already existed.
+ *
+ * That also fixes a defect in the card: it showed `document.gameName` as the document title, so
+ * every row displayed the same text (the game's name) instead of the file's. `PdfDocumentDto`
+ * carries `fileName`.
  */
 
 'use client';
 
-import { useQueries } from '@tanstack/react-query';
 import { Database, FileText, Loader2 } from 'lucide-react';
 
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
@@ -21,12 +29,10 @@ import { PdfStatusBadge } from '@/components/pdf';
 import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
-import { agentDocumentsKeys } from '@/hooks/queries/useAgentDocuments';
-import { useGameAgents } from '@/hooks/queries/useGameAgents';
+import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
 import { useEmbeddingStatus } from '@/hooks/useEmbeddingStatus';
-import { api } from '@/lib/api';
-import type { AgentDocumentsDto, SelectedDocumentDto } from '@/lib/api/schemas';
 import type { EmbeddingStatus } from '@/lib/api/schemas/knowledge-base.schemas';
+import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import type { PdfState } from '@/types/pdf';
 
 // ============================================================================
@@ -34,21 +40,24 @@ import type { PdfState } from '@/types/pdf';
 // ============================================================================
 
 export interface KnowledgeBaseTabProps {
-  /** Game ID to fetch agents and documents for */
+  /** Game ID whose indexed documents to list */
   gameId: string;
 }
 
-// Document type mapping
-const DOCUMENT_TYPE_LABELS: Record<number, string> = {
-  0: 'Rulebook',
-  1: 'Errata',
-  2: 'Homerule',
+// `PdfDocumentDto.documentType` is a string enum, unlike the numeric 0-2 of the retired
+// per-agent DTO.
+const DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  base: 'Rulebook',
+  expansion: 'Expansion',
+  errata: 'Errata',
+  homerule: 'Homerule',
 };
 
-const DOCUMENT_TYPE_VARIANTS: Record<number, 'default' | 'secondary' | 'outline'> = {
-  0: 'default',
-  1: 'secondary',
-  2: 'outline',
+const DOCUMENT_TYPE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'> = {
+  base: 'default',
+  expansion: 'outline',
+  errata: 'secondary',
+  homerule: 'outline',
 };
 
 /** Map backend EmbeddingStatus to frontend PdfState */
@@ -64,10 +73,6 @@ function mapEmbeddingStatusToPdfState(status: EmbeddingStatus): PdfState {
   return mapping[status];
 }
 
-// ============================================================================
-// Component
-// ============================================================================
-
 export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
   // Fetch embedding status for the game's KB
   const { data: embeddingData } = useEmbeddingStatus(gameId);
@@ -75,38 +80,9 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
     ? mapEmbeddingStatusToPdfState(embeddingData.status)
     : 'pending';
 
-  // Fetch agents for the game
-  const { data: agents, isLoading: agentsLoading, error: agentsError } = useGameAgents({ gameId });
+  const { data: documents, isLoading, error } = useDocumentsByGame({ gameId });
 
-  // Fetch documents for each agent using useQueries (fixes Rules of Hooks violation)
-  const documentsQueries = useQueries({
-    queries:
-      agents?.map(agent => ({
-        queryKey: agentDocumentsKeys.byAgent(agent.id),
-        queryFn: async (): Promise<AgentDocumentsDto | null> => api.agents.getDocuments(agent.id),
-        enabled: !!agent.id,
-        staleTime: 30_000,
-        gcTime: 5 * 60_000,
-      })) || [],
-  });
-
-  // Aggregate all documents from all agents
-  const allDocuments: Array<SelectedDocumentDto & { agentName: string }> = documentsQueries.flatMap(
-    (query, index) => {
-      if (!query.data?.documents || !agents) {
-        return [];
-      }
-      const agent = agents.at(index);
-      const agentName = agent?.name || 'Unknown Agent';
-      return query.data.documents.map(doc => ({
-        ...doc,
-        agentName,
-      }));
-    }
-  );
-
-  // Loading state
-  if (agentsLoading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -115,33 +91,20 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
     );
   }
 
-  // Error state
-  if (agentsError) {
+  // A failed fetch must NOT render as "no documents": that is exactly how the retired per-agent
+  // query hid an unmounted route for months.
+  if (error) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>Failed to load agents: {agentsError.message}</AlertDescription>
+        <AlertDescription>Failed to load documents: {error.message}</AlertDescription>
       </Alert>
     );
   }
 
-  // Empty state - no agents
-  if (!agents || agents.length === 0) {
+  if (!documents || documents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <Database className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
-        <h3 className="text-lg font-semibold mb-2">No Agents Available</h3>
-        <p className="text-sm text-muted-foreground max-w-md">
-          This game doesn't have any AI agents configured yet.
-        </p>
-      </div>
-    );
-  }
-
-  // Empty state - no documents
-  if (allDocuments.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <FileText className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Documents Indexed Yet</h3>
         <p className="text-sm text-muted-foreground max-w-md">
           Documents will appear here once they have been uploaded and indexed in the Knowledge Base.
@@ -150,7 +113,6 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
     );
   }
 
-  // Documents display
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -158,15 +120,14 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
         <div>
           <h3 className="text-lg font-semibold">Knowledge Base Documents</h3>
           <p className="text-sm text-muted-foreground">
-            {allDocuments.length} document{allDocuments.length !== 1 ? 's' : ''} indexed across{' '}
-            {agents.length} agent{agents.length !== 1 ? 's' : ''}
+            {documents.length} document{documents.length !== 1 ? 's' : ''} indexed
           </p>
         </div>
       </div>
 
       {/* Documents List */}
       <div className="grid gap-4 md:grid-cols-2">
-        {allDocuments.map(doc => (
+        {documents.map(doc => (
           <DocumentCard key={doc.id} document={doc} pdfState={gamePdfState} />
         ))}
       </div>
@@ -179,7 +140,7 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
 // ============================================================================
 
 interface DocumentCardProps {
-  document: SelectedDocumentDto & { agentName: string };
+  document: PdfDocumentDto;
   /** PDF indexing state from game-level embedding status */
   pdfState: PdfState;
 }
@@ -199,39 +160,30 @@ function DocumentCard({ document, pdfState }: DocumentCardProps) {
                 <FileText className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate" title={document.gameName || 'Untitled'}>
-                  {document.gameName || 'Untitled Document'}
+                <p className="font-medium text-sm truncate" title={document.fileName}>
+                  {document.fileName}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  Agent: {document.agentName}
-                </p>
+                {document.pageCount !== null && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {document.pageCount} page{document.pageCount !== 1 ? 's' : ''}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              {/* New: PdfStatusBadge (Issue #4217) */}
               <PdfStatusBadge state={pdfState} variant="compact" />
               <Badge variant={typeVariant}>{typeLabel}</Badge>
             </div>
           </div>
 
           {/* Indexing Status */}
-          <PdfIndexingStatus pdfId={document.pdfDocumentId} compact />
+          <PdfIndexingStatus pdfId={document.id} compact />
 
           {/* Metadata */}
           <div className="flex flex-wrap gap-2">
-            {document.version && (
+            {document.isPublic && (
               <Badge variant="outline" className="text-xs">
-                v{document.version}
-              </Badge>
-            )}
-            {document.tags.map(tag => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-            {document.isActive && (
-              <Badge variant="default" className="text-xs bg-green-600 hover:bg-green-700">
-                Active
+                Public
               </Badge>
             )}
           </div>

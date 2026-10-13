@@ -18,7 +18,6 @@
  * Epic #2718: Game Sharing from User Library to Shared Catalog
  */
 
-
 import { test as base, expect } from '../fixtures';
 import { AdminHelper } from '../pages';
 
@@ -116,7 +115,7 @@ test.describe('Admin Review Lock Flow - Issue #2748', () => {
       const emptyState = adminPage.getByText('No active reviews');
       const reviewsList = adminPage.locator('[data-testid^="active-review-"]');
 
-      const hasEmpty = await emptyState.isVisible().catch(() => false);
+      const hasEmpty = await emptyState.isVisible();
       const hasReviews = (await reviewsList.count()) > 0;
 
       expect(hasEmpty || hasReviews).toBe(true);
@@ -143,7 +142,7 @@ test.describe('Admin Review Lock Flow - Issue #2748', () => {
       await adminPage.getByRole('button', { name: /My Reviews/i }).click();
       const firstReview = adminPage.locator('[data-testid^="active-review-"]').first();
 
-      if (await firstReview.isVisible().catch(() => false)) {
+      if (await firstReview.isVisible()) {
         await firstReview.click();
 
         // Press Escape

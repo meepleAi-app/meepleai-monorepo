@@ -22,7 +22,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 // Mock useAuthUser
-vi.mock('@/hooks/useAuthUser', () => ({
+vi.mock('@/components/auth/AuthProvider', () => ({
   useAuthUser: () => ({
     user: {
       id: 'test-user-id',

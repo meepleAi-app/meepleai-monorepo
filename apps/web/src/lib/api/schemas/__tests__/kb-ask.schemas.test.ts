@@ -139,3 +139,45 @@ describe('KbAskEventSchema (discriminated union on numeric type)', () => {
     expect(() => KbAskEventSchema.parse({ type: 99, data: {} })).toThrow();
   });
 });
+
+describe('KbAskEventSchema — il filo vero del backend (#4168)', () => {
+  it('maps a per-game citation, stripping the PDF: prefix from the docId', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 1,
+      data: {
+        citations: [{ text: 'rules text', source: 'PDF:doc-123', page: 3, line: 0, score: 0.8 }],
+      },
+    });
+    expect(parsed).toEqual({
+      type: 1,
+      data: {
+        citations: [
+          { docId: 'doc-123', source: 'PDF:doc-123', page: 3, snippet: 'rules text', score: 0.8 },
+        ],
+      },
+    });
+  });
+
+  it('maps an error without a code to a generic code instead of dropping it', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: { errorMessage: 'boom', errorCode: null },
+    });
+    expect(parsed).toEqual({ type: 5, data: { message: 'boom', code: 'UNKNOWN' } });
+  });
+
+  it('ignores the gameId of an ownership denial', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: {
+        errorMessage: 'Dichiara il possesso.',
+        errorCode: 'RAG_OWNERSHIP_REQUIRED',
+        gameId: 'g-1',
+      },
+    });
+    expect(parsed.data).toEqual({
+      message: 'Dichiara il possesso.',
+      code: 'RAG_OWNERSHIP_REQUIRED',
+    });
+  });
+});

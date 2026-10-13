@@ -71,29 +71,12 @@ export interface CreateGamesClientParams {
   httpClient: HttpClient;
 }
 
+/**
+ * Filtri della lista dei giochi. Solo ciò che `GET /api/v1/games` sa filtrare sul server (#4158):
+ * un filtro applicato lato client a una pagina già ricevuta rende falsi risultati e conteggi.
+ */
 export interface GameFilters {
   search?: string;
-  minPlayers?: number;
-  maxPlayers?: number;
-  minPlayTime?: number;
-  maxPlayTime?: number;
-  yearFrom?: number;
-  yearTo?: number;
-  bggOnly?: boolean;
-}
-
-export type GameSortField =
-  | 'title'
-  | 'yearPublished'
-  | 'minPlayers'
-  | 'maxPlayers'
-  | 'minPlayTimeMinutes'
-  | 'maxPlayTimeMinutes';
-export type SortDirection = 'asc' | 'desc';
-
-export interface GameSortOptions {
-  field: GameSortField;
-  direction: SortDirection;
 }
 
 /**
@@ -126,134 +109,32 @@ export function createGamesClient({ httpClient }: CreateGamesClientParams) {
     // ========== Games CRUD ==========
 
     /**
-     * Get all games with optional filtering, sorting, and pagination
-     * Note: Filtering, sorting, and pagination are done client-side for MVP
-     * @param filters Optional filters (search, players, playtime, year, BGG)
-     * @param sort Optional sorting (field and direction)
-     * @param page Page number (1-indexed)
-     * @param pageSize Number of games per page
+     * Una pagina del catalogo. `search`, `page` e `pageSize` vanno al server, che filtra e pagina
+     * l'intero catalogo (#4158). Prima il client chiamava `/api/v1/games` senza parametri e filtrava
+     * la prima pagina ricevuta: una ricerca vedeva solo i primi 20 giochi in ordine alfabetico.
+     * Per risolvere un id usa `getById`, non questa lista.
+     * @param filters `search`: testo libero; vuoto o fatto di soli spazi viene omesso
+     * @param page Numero di pagina (da 1)
+     * @param pageSize Giochi per pagina
      */
     async getAll(
       filters?: GameFilters,
-      sort?: GameSortOptions,
       page: number = 1,
       pageSize: number = 20
     ): Promise<PaginatedGamesResponse> {
-      // Fetch all games from backend with Zod validation
-      // Backend returns paginated response: { games, total, page, pageSize, totalPages }
-      // Backend serializes to camelCase (Program.cs:204 - JsonNamingPolicy.CamelCase)
-      const response = await httpClient.get('/api/v1/games', PaginatedGamesResponseSchema);
-      const allGames: Game[] = response?.games ?? [];
-
-      // Client-side filtering
-      let filtered = allGames;
-
-      if (filters) {
-        filtered = filtered.filter(game => {
-          // Search filter (title or publisher)
-          if (filters.search) {
-            const searchLower = filters.search.toLowerCase();
-            const titleMatch = game.title.toLowerCase().includes(searchLower);
-            const publisherMatch = game.publisher?.toLowerCase().includes(searchLower) || false;
-            if (!titleMatch && !publisherMatch) {
-              return false;
-            }
-          }
-
-          // Player count filters
-          if (
-            filters.minPlayers !== undefined &&
-            game.maxPlayers !== null &&
-            game.maxPlayers < filters.minPlayers
-          ) {
-            return false;
-          }
-          if (
-            filters.maxPlayers !== undefined &&
-            game.minPlayers !== null &&
-            game.minPlayers > filters.maxPlayers
-          ) {
-            return false;
-          }
-
-          // Play time filters
-          if (
-            filters.minPlayTime !== undefined &&
-            game.maxPlayTimeMinutes !== null &&
-            game.maxPlayTimeMinutes < filters.minPlayTime
-          ) {
-            return false;
-          }
-          if (
-            filters.maxPlayTime !== undefined &&
-            game.minPlayTimeMinutes !== null &&
-            game.minPlayTimeMinutes > filters.maxPlayTime
-          ) {
-            return false;
-          }
-
-          // Year filters
-          if (
-            filters.yearFrom !== undefined &&
-            game.yearPublished !== null &&
-            game.yearPublished < filters.yearFrom
-          ) {
-            return false;
-          }
-          if (
-            filters.yearTo !== undefined &&
-            game.yearPublished !== null &&
-            game.yearPublished > filters.yearTo
-          ) {
-            return false;
-          }
-
-          // BGG-only filter
-          if (filters.bggOnly && !game.bggId) {
-            return false;
-          }
-
-          return true;
-        });
+      const params = new URLSearchParams();
+      const search = filters?.search?.trim();
+      if (search) {
+        params.set('search', search);
       }
+      params.set('page', String(page));
+      params.set('pageSize', String(pageSize));
 
-      // Client-side sorting
-      if (sort) {
-        filtered = [...filtered].sort((a, b) => {
-          const aVal = a[sort.field];
-          const bVal = b[sort.field];
-
-          // Handle null values (push to end)
-          if (aVal === null && bVal === null) return 0;
-          if (aVal === null) return 1;
-          if (bVal === null) return -1;
-
-          // Sort by field
-          let comparison = 0;
-          if (sort.field === 'title') {
-            comparison = aVal.toString().localeCompare(bVal.toString());
-          } else {
-            comparison = (aVal as number) - (bVal as number);
-          }
-
-          return sort.direction === 'asc' ? comparison : -comparison;
-        });
-      }
-
-      // Client-side pagination
-      const total = filtered.length;
-      const totalPages = Math.ceil(total / pageSize);
-      const startIndex = (page - 1) * pageSize;
-      const endIndex = startIndex + pageSize;
-      const paginatedGames = filtered.slice(startIndex, endIndex);
-
-      return {
-        games: paginatedGames,
-        total,
-        page,
-        pageSize,
-        totalPages,
-      };
+      const response = await httpClient.get(
+        `/api/v1/games?${params.toString()}`,
+        PaginatedGamesResponseSchema
+      );
+      return response ?? { games: [], total: 0, page, pageSize, totalPages: 0 };
     },
 
     /**

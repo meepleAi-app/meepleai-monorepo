@@ -120,26 +120,41 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
       title: 'Sessions Overview',
       description: 'View active and past game sessions',
       annotations: [
-        { selector: 'button:has-text("New Session"), button:has-text("Start"), [data-testid="new-session"]', label: 'New Session', color: ANNOTATION_COLORS.success },
+        {
+          selector:
+            'button:has-text("New Session"), button:has-text("Start"), [data-testid="new-session"]',
+          label: 'New Session',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Create new session',
     });
 
     // Step 2: Click new session
-    const newSessionBtn = page.locator('button:has-text("New Session"), button:has-text("Start"), [data-testid="new-session"]').first();
-    if (await newSessionBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const newSessionBtn = page
+      .locator(
+        'button:has-text("New Session"), button:has-text("Start"), [data-testid="new-session"]'
+      )
+      .first();
+    if (await newSessionBtn.isVisible({ timeout: 3000 })) {
       await newSessionBtn.click();
       await waitForStableState(page);
 
       // Step 3: Session setup modal/page
-      const setupForm = page.locator('[data-testid="session-setup"], [role="dialog"], .session-setup').first();
-      if (await setupForm.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const setupForm = page
+        .locator('[data-testid="session-setup"], [role="dialog"], .session-setup')
+        .first();
+      if (await setupForm.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Session Setup',
           description: 'Configure new game session - select game and add players',
           annotations: [
-            { selector: '[data-testid="game-select"], select', label: 'Select Game', color: ANNOTATION_COLORS.primary },
+            {
+              selector: '[data-testid="game-select"], select',
+              label: 'Select Game',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           previousAction: 'Click new session',
           nextAction: 'Select game',
@@ -148,14 +163,20 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
     }
 
     // Step 4: Player setup
-    const playerSection = page.locator('[data-testid="players"], .players-setup, text=/player/i').first();
-    if (await playerSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const playerSection = page
+      .locator('[data-testid="players"], .players-setup, text=/player/i')
+      .first();
+    if (await playerSection.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Add Players',
         description: 'Add players to the game session',
         annotations: [
-          { selector: 'button:has-text("Add Player"), [data-testid="add-player"]', label: 'Add Player', color: ANNOTATION_COLORS.info },
+          {
+            selector: 'button:has-text("Add Player"), [data-testid="add-player"]',
+            label: 'Add Player',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'Select game',
         nextAction: 'Add players',
@@ -176,20 +197,30 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
       title: 'Active Session',
       description: 'Live game session with player states',
       annotations: [
-        { selector: '[data-testid="session-header"], h1', label: 'Session', color: ANNOTATION_COLORS.primary },
+        {
+          selector: '[data-testid="session-header"], h1',
+          label: 'Session',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Track game state',
     });
 
     // Step 2: Player scoreboard
-    const scoreboard = page.locator('[data-testid="scoreboard"], .scoreboard, .player-scores').first();
-    if (await scoreboard.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const scoreboard = page
+      .locator('[data-testid="scoreboard"], .scoreboard, .player-scores')
+      .first();
+    if (await scoreboard.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Scoreboard',
         description: 'Track player scores and resources',
         annotations: [
-          { selector: '[data-testid="scoreboard"], .scoreboard', label: 'Scores', color: ANNOTATION_COLORS.success },
+          {
+            selector: '[data-testid="scoreboard"], .scoreboard',
+            label: 'Scores',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'View session',
         nextAction: 'Update scores',
@@ -197,14 +228,20 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
     }
 
     // Step 3: Turn indicator
-    const turnIndicator = page.locator('[data-testid="current-turn"], .turn-indicator, text=/turn/i').first();
-    if (await turnIndicator.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const turnIndicator = page
+      .locator('[data-testid="current-turn"], .turn-indicator, text=/turn/i')
+      .first();
+    if (await turnIndicator.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Turn Tracker',
         description: 'Shows current player turn and round number',
         annotations: [
-          { selector: '[data-testid="current-turn"], .turn-indicator', label: 'Current Turn', color: ANNOTATION_COLORS.info },
+          {
+            selector: '[data-testid="current-turn"], .turn-indicator',
+            label: 'Current Turn',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View scores',
         nextAction: 'Pass turn',
@@ -228,14 +265,20 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
     });
 
     // Step 2: State input controls
-    const stateInput = page.locator('input[type="number"], [data-testid="score-input"], .score-input').first();
-    if (await stateInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const stateInput = page
+      .locator('input[type="number"], [data-testid="score-input"], .score-input')
+      .first();
+    if (await stateInput.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Score Update',
         description: 'Input controls for updating player scores',
         annotations: [
-          { selector: 'input[type="number"], [data-testid="score-input"]', label: 'Score Input', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'input[type="number"], [data-testid="score-input"]',
+            label: 'Score Input',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View state',
         nextAction: 'Enter new score',
@@ -249,8 +292,16 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
         title: 'Score Entered',
         description: 'New score value ready to save',
         annotations: [
-          { selector: 'input[type="number"], [data-testid="score-input"]', label: 'New Score', color: ANNOTATION_COLORS.success },
-          { selector: 'button:has-text("Save"), button:has-text("Update")', label: 'Save', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'input[type="number"], [data-testid="score-input"]',
+            label: 'New Score',
+            color: ANNOTATION_COLORS.success,
+          },
+          {
+            selector: 'button:has-text("Save"), button:has-text("Update")',
+            label: 'Save',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'Enter score',
         nextAction: 'Save changes',
@@ -287,14 +338,22 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
     await waitForStableState(page);
 
     // Step 2: Save snapshot button
-    const saveSnapshotBtn = page.locator('button:has-text("Save Snapshot"), button:has-text("Save State"), [data-testid="save-snapshot"]').first();
-    if (await saveSnapshotBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const saveSnapshotBtn = page
+      .locator(
+        'button:has-text("Save Snapshot"), button:has-text("Save State"), [data-testid="save-snapshot"]'
+      )
+      .first();
+    if (await saveSnapshotBtn.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 1,
         title: 'Save Snapshot',
         description: 'Save current game state as a snapshot',
         annotations: [
-          { selector: 'button:has-text("Save Snapshot"), [data-testid="save-snapshot"]', label: 'Save Snapshot', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'button:has-text("Save Snapshot"), [data-testid="save-snapshot"]',
+            label: 'Save Snapshot',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         nextAction: 'Click save snapshot',
       });
@@ -302,14 +361,22 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
 
     // Step 3: Snapshots list
     const snapshotsList = page.locator('[data-testid="snapshots"], .snapshots-list').first();
-    if (await snapshotsList.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await snapshotsList.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Saved Snapshots',
         description: 'List of saved game state snapshots',
         annotations: [
-          { selector: '[data-testid="snapshots"], .snapshots-list', label: 'Snapshots', color: ANNOTATION_COLORS.info },
-          { selector: 'button:has-text("Restore"), [data-testid="restore-snapshot"]', label: 'Restore', color: ANNOTATION_COLORS.warning },
+          {
+            selector: '[data-testid="snapshots"], .snapshots-list',
+            label: 'Snapshots',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'button:has-text("Restore"), [data-testid="restore-snapshot"]',
+            label: 'Restore',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'View snapshots',
         nextAction: 'Restore snapshot',
@@ -333,14 +400,22 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
     });
 
     // Step 2: End session button
-    const endSessionBtn = page.locator('button:has-text("End Session"), button:has-text("Complete"), [data-testid="end-session"]').first();
-    if (await endSessionBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const endSessionBtn = page
+      .locator(
+        'button:has-text("End Session"), button:has-text("Complete"), [data-testid="end-session"]'
+      )
+      .first();
+    if (await endSessionBtn.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'End Session',
         description: 'Complete the game session and record final scores',
         annotations: [
-          { selector: 'button:has-text("End Session"), [data-testid="end-session"]', label: 'End Session', color: ANNOTATION_COLORS.warning },
+          {
+            selector: 'button:has-text("End Session"), [data-testid="end-session"]',
+            label: 'End Session',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'Review state',
         nextAction: 'Confirm end',
@@ -350,14 +425,20 @@ test.describe('Game Sessions Flow - Visual Documentation', () => {
       await waitForStableState(page);
 
       // Step 3: Confirmation/summary
-      const summary = page.locator('[role="dialog"], .session-summary, [data-testid="session-complete"]').first();
-      if (await summary.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const summary = page
+        .locator('[role="dialog"], .session-summary, [data-testid="session-complete"]')
+        .first();
+      if (await summary.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 3,
           title: 'Session Summary',
           description: 'Final game results and winner declaration',
           annotations: [
-            { selector: '[role="dialog"], .session-summary', label: 'Results', color: ANNOTATION_COLORS.success },
+            {
+              selector: '[role="dialog"], .session-summary',
+              label: 'Results',
+              color: ANNOTATION_COLORS.success,
+            },
           ],
           previousAction: 'End session',
           nextAction: 'Close summary',

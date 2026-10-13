@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { buildGameConnections } from '@/components/ui/data-display/meeple-card/nav-items/buildGameConnections';
 
-const counts = { kbCount: 3, agentCount: 1, chatCount: 0, sessionCount: 5 };
+const counts = { kbCount: 3, chatCount: 0, sessionCount: 5 };
 const handlers = {};
 
 describe('buildGameConnections', () => {
-  it('returns 4 items always', () => {
-    expect(buildGameConnections(counts, handlers).length).toBe(4);
+  // Issue #4138: the Agent slot is gone (one system agent, ADR-094).
+  it('returns 3 items always', () => {
+    expect(buildGameConnections(counts, handlers).length).toBe(3);
   });
 
   it('sets href on each item when gameId provided', () => {
     const items = buildGameConnections(counts, handlers, 'abc123');
     expect(items.find(i => i.entityType === 'kb')?.href).toBe('/games/abc123/kb');
     expect(items.find(i => i.entityType === 'session')?.href).toBe('/games/abc123/sessions');
-    expect(items.find(i => i.entityType === 'agent')?.href).toBe('/games/abc123/agent');
     // ADR-061: /games/[id]/chat was deleted (orphan route). Chat slot now
     // redirects to chat creation flow with game pre-selected via query.
     expect(items.find(i => i.entityType === 'chat')?.href).toBe('/chat/new?gameId=abc123');

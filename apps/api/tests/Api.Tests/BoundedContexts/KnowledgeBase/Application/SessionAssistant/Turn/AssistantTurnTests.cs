@@ -509,6 +509,89 @@ public sealed class AssistantTurnTests
         meter.ToolCalls.Should().Equal("stato_partita", "proponi_turno");
     }
 
+    // ─── Ciò che la review dell'intero branch ha chiesto di fissare ─────────────
+
+    /// <summary>
+    /// L'host chiude la pagina a metà turno. Lo stream non deve finire prima del turno: il turno usa i
+    /// servizi dello scope della richiesta, e toccarli dopo che lo scope è stato rilasciato sarebbe un
+    /// ObjectDisposedException sul DbContext. E nulla viene salvato.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheRequestIsCancelled_TheStreamEndsOnlyAfterTheTurnHasStopped_AndNothingIsSaved()
+    {
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Returns<LlmChatRequest, CancellationToken>(async (_, token) =>
+            {
+                entered.TrySetResult();
+                try
+                {
+                    await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                }
+                finally
+                {
+                    // La chiamata ci mette un momento a fermarsi, come una connessione vera: chi non la
+                    // aspetta se ne va prima che sia finita.
+                    await Task.Delay(TimeSpan.FromMilliseconds(250), CancellationToken.None);
+                    stopped.TrySetResult();
+                }
+
+                return Says("mai");
+            });
+        using var request = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        var events = Handler()
+            .Handle(new AskSessionAssistantCommand(Session, Owner, "a chi tocca?", "it"), request.Token)
+            .GetAsyncEnumerator(request.Token);
+
+        (await events.MoveNextAsync()).Should().BeTrue();
+        var next = events.MoveNextAsync().AsTask();
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(30), Ct);
+        await request.CancelAsync();
+
+        var act = () => next;
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        stopped.Task.IsCompleted.Should().BeTrue("lo stream aspetta che il turno si sia fermato");
+        await events.DisposeAsync();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Spec §7.1: ChatResponse.Text concatena il testo di tutti i giri. All'host va solo l'ultimo messaggio
+    /// dell'assistente, non «Controllo lo stato della partita.» incollato alla risposta.
+    /// </summary>
+    [Fact]
+    public async Task OnlyTheLastAssistantMessage_ReachesTheHost()
+    {
+        Script(
+            LlmCompletionResult.CreateSuccess("Controllo lo stato della partita.") with
+            {
+                ToolCalls = [new LlmToolCall("call_0", "stato_partita", "{}")],
+            },
+            Says("Tocca a Giulia."));
+
+        var events = await AskAsync("a chi tocca?");
+
+        events.Single(e => e.Type == "answer").Text.Should().Be("Tocca a Giulia.");
+        _savedThread!.Messages[1].Content.Should().Be("Tocca a Giulia.");
+    }
+
+    /// <summary>
+    /// Un OperationCanceledException che non viene dalla richiesta (la scadenza interna di un servizio) è
+    /// un errore come gli altri: se uscisse dal turno, lo stream si chiuderebbe in silenzio.
+    /// </summary>
+    [Fact]
+    public async Task ACancellationThatIsNotTheRequests_IsAnErrorEvent_NotASilentEnd()
+    {
+        _reader.Setup(r => r.GetStateAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException("an inner deadline"));
+
+        var events = await AskAsync();
+
+        events.Select(e => e.Type).Should().Equal("status", "error");
+        events[^1].Code.Should().Be("assistant_unavailable");
+    }
+
     private sealed class ExactNameMatcher : IAssistantPlayerMatcher
     {
         public AssistantPlayerMatch Match(string name, IReadOnlyList<AssistantPlayer> players)

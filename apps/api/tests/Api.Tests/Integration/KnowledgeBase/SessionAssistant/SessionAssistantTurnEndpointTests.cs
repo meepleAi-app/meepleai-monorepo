@@ -227,4 +227,157 @@ public sealed class SessionAssistantTurnEndpointTests(SessionAssistantHostFixtur
         events.Select(Type).Should().Equal("status", "answer", "error");
         events[^1].GetProperty("code").GetString().Should().Be("assistant_unavailable");
     }
+
+    // ─── Ciò che la review dell'intero branch ha chiesto di fissare ─────────────
+
+    /// <summary>
+    /// Review Focus 9, sul cruscotto: il conteggio e l'attività recente leggono ChatThreads senza passare
+    /// dal repository. Con l'id in mano, il thread dell'assistente si potrebbe aprire, chiudere o
+    /// cancellare dagli endpoint delle chat.
+    /// </summary>
+    [Fact]
+    public async Task TheAssistantThread_IsNotAmongTheChatsOfTheDashboard()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await StartedTableAsync();
+        host.Llm.Reset(Says("Tocca a Marco."));
+        var (asked, _, askedBody) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "a chi tocca?", Ct);
+        asked.Should().Be(HttpStatusCode.OK, askedBody);
+
+        Guid ordinaryId;
+        Guid assistantId;
+        await using (var scope = host.Factory.Services.CreateAsyncScope())
+        {
+            var threads = scope.ServiceProvider.GetRequiredService<IChatThreadRepository>();
+            var ordinary = new Api.BoundedContexts.KnowledgeBase.Domain.Entities.ChatThread(
+                Guid.NewGuid(), _owner, gameId: null, title: "Regole di Azul");
+            await threads.AddAsync(ordinary, Ct);
+            await scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork>().SaveChangesAsync(Ct);
+            ordinaryId = ordinary.Id;
+            assistantId = (await threads.FindByLiveSessionIdAsync(table.SessionId, Ct))!.Id;
+        }
+
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, "/api/v1/dashboard", _token), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var dashboard = JsonDocument.Parse(body);
+        dashboard.RootElement.GetProperty("stats").GetProperty("chatCount").GetInt32().Should().Be(1);
+        dashboard.RootElement.GetProperty("recentActivity").EnumerateArray()
+            .Where(activity => activity.GetProperty("type").GetString() == "chat_saved")
+            .Select(activity => activity.GetProperty("chatId").GetString())
+            .Should().Equal(ordinaryId.ToString());
+        body.Should().NotContain(assistantId.ToString());
+    }
+
+    /// <summary>
+    /// Il contratto della scadenza (spec §5.2 e §6.2): le proposte ancora Pending scadono quando il turno
+    /// successivo INIZIA, anche se poi quel turno fallisce. Il primo evento «status» lo dice al client.
+    /// </summary>
+    [Fact]
+    public async Task AFailedTurn_StillExpiresTheEarlierProposals()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await StartedTableAsync();
+        host.Llm.Reset(Calls("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""), Says("Proposta pronta."));
+        var (_, first, _) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "Marco fa 5 punti", Ct);
+        var firstProposal = first.Single(e => Type(e) == "proposal").GetProperty("proposal").GetProperty("id").GetGuid();
+
+        host.Llm.Reset();   // copione vuoto: il gateway fallisce
+        var (status, second, body) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "a chi tocca?", Ct);
+
+        status.Should().Be(HttpStatusCode.OK, body);
+        second.Select(Type).Should().Equal("status", "answer", "error");
+        await using var scope = host.Factory.Services.CreateAsyncScope();
+        var earlier = await scope.ServiceProvider.GetRequiredService<IAssistantProposalRepository>().GetReadOnlyAsync(firstProposal, Ct);
+        earlier!.Status.Should().Be(AssistantProposalStatus.Expired);
+    }
+
+    /// <summary>I risultati degli strumenti tornati al modello nella seconda chiamata, nell'ordine.</summary>
+    private List<string> ToolResults() =>
+        host.Llm.Requests[1].Messages.Where(message => message.Role == "tool").Select(message => message.Content).ToList();
+
+    private static Api.Services.LlmCompletionResult CallsAll(string tool, params string[] argumentsJson) =>
+        Api.Services.LlmCompletionResult.CreateSuccess(string.Empty) with
+        {
+            ToolCalls = argumentsJson.Select((arguments, i) => new Api.Services.LlmToolCall($"call_{i}", tool, arguments)).ToList(),
+        };
+
+    /// <summary>
+    /// Spec §7.1, «errori tipizzati e confini»: ogni validazione degli strumenti, con il lettore reale.
+    /// Il modello manda sette chiamate sbagliate in un giro: ognuna torna come errore tipizzato che può
+    /// leggere, e nessuna diventa una proposta.
+    /// </summary>
+    [Fact]
+    public async Task EveryToolValidation_ReachesTheModelAsATypedError_OnTheRealSession()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var sessionId = await SessionAssistantTestData.SendAsync(host.Factory, new CreateLiveSessionCommand(
+            UserId: _owner, GameName: "Azul", GameId: null, ScoringDimensions: ["punti", "bonus"]), Ct);
+        var color = 0;
+        foreach (var name in new[] { "Marco Rossi", "Marco Bianchi", "Giulia" })
+        {
+            await SessionAssistantTestData.SendAsync(host.Factory, new AddPlayerToLiveSessionCommand(
+                sessionId, name, (Api.BoundedContexts.GameManagement.Domain.Enums.PlayerColor)color++), Ct);
+        }
+
+        await SessionAssistantTestData.SendAsync(host.Factory, new StartLiveSessionCommand(
+            sessionId, _owner, Api.SharedKernel.Domain.ValueObjects.UserTier.Free, Api.SharedKernel.Domain.ValueObjects.Role.User), Ct);
+        (string Arguments, string Error)[] wrong =
+        [
+            ("""{"giocatore":"","punti":5,"dimensione":"punti"}""", "giocatore_mancante"),
+            ("""{"giocatore":"Marco","punti":5,"dimensione":"punti"}""", "giocatore_ambiguo"),
+            ("""{"giocatore":"Paolo","punti":5,"dimensione":"punti"}""", "giocatore_sconosciuto"),
+            ("""{"giocatore":"Giulia","punti":5}""", "dimensione_richiesta"),
+            ("""{"giocatore":"Giulia","punti":5,"dimensione":"oro"}""", "dimensione_sconosciuta"),
+            ("""{"giocatore":"Giulia","punti":5,"dimensione":"punti","round":0}""", "round_non_valido"),
+            ("""{"giocatore":"Giulia","punti":100001,"dimensione":"punti"}""", "punti_fuori_limite"),
+        ];
+        host.Llm.Reset(
+            CallsAll("proponi_punteggio", wrong.Select(call => call.Arguments).ToArray()),
+            Says("Mi servono più dati: chi ha fatto i punti?"));
+
+        var (status, events, body) = await SessionAssistantTestData.AskAsync(_client, _token, sessionId, "segna i punti", Ct);
+
+        status.Should().Be(HttpStatusCode.OK, body);
+        events.Select(Type).Should().NotContain("proposal");
+        Type(events[^1]).Should().Be("done");
+        var results = ToolResults();
+        results.Should().HaveCount(wrong.Length);
+        for (var i = 0; i < wrong.Length; i++)
+        {
+            results[i].Should().Contain(wrong[i].Error, $"chiamata {i}: {wrong[i].Arguments}");
+        }
+
+        await using var scope = host.Factory.Services.CreateAsyncScope();
+        (await scope.ServiceProvider.GetRequiredService<IAssistantProposalRepository>().ListOpenBySessionAsync(sessionId, Ct))
+            .Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Review Focus 6, dalla richiesta HTTP: prima dell'avvio l'assistente risponde, ma i due strumenti di
+    /// proposta rifiutano con un errore tipizzato, e la partita resta com'era.
+    /// </summary>
+    [Fact]
+    public async Task BeforeTheGameStarts_TheProposalToolsRefuse_WithATypedError()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await SessionAssistantTestData.CreateTableAsync(host.Factory, _owner, start: false, Ct, "Marco", "Giulia");
+        host.Llm.Reset(
+            Calls("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""),
+            Calls("proponi_turno", "{}"),
+            Says("La partita non è ancora iniziata."));
+
+        var (status, events, body) = await SessionAssistantTestData.AskAsync(
+            _client, _token, table.SessionId, "Marco fa 5 punti e passa il turno", Ct);
+
+        status.Should().Be(HttpStatusCode.OK, body);
+        events.Select(Type).Should().Equal("status", "status", "status", "answer", "done");
+        host.Llm.Requests[1].Messages[^1].Content.Should().Contain("sessione_non_modificabile");
+        host.Llm.Requests[2].Messages[^1].Content.Should().Contain("sessione_non_in_corso");
+        var session = await SessionAssistantTestData.SendAsync(host.Factory, new GetLiveSessionQuery(table.SessionId), Ct);
+        session.RoundScores.Should().BeEmpty();
+        session.CurrentTurnIndex.Should().Be(0);
+    }
 }

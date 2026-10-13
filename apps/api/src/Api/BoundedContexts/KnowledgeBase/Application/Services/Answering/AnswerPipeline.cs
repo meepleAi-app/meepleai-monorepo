@@ -441,7 +441,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // it 404s and the cited source is unreadable. Resolve VectorDocumentId →
         // PdfDocumentId via the game's vector documents (typically 1-2 per game).
         var vectorDocs = await _vectorDocumentRepository
-            .FindVectorDocumentsOfGameAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
+            .FindVectorDocumentsOfGameAfterAccessCheckAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
         var pdfIdByVectorId = vectorDocs.ToDictionary(v => v.Id, v => v.PdfDocumentId);
 
         // SP-C (#3407): resolve the copyright tier per citation and gate BOTH the verbatim excerpt and
@@ -699,7 +699,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             return null;
         }
 
-        var vectorDocs = await _vectorDocumentRepository.FindVectorDocumentsOfGameAsync(gameId, ct).ConfigureAwait(false);
+        var vectorDocs = await _vectorDocumentRepository.FindVectorDocumentsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
         return vectorDocs
             .Where(vd => vectorDocumentIds.Contains(vd.Id))
             .Select(vd => vd.PdfDocumentId)
@@ -713,7 +713,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // #4244: the PDFs of the game, shared or private. Before, only the shared catalogue was
         // looked at, so for a private game this guard passed whatever the state of its PDFs.
         var documents = pdfDocumentIds is null
-            ? await _pdfDocumentRepository.FindPdfsOfGameAsync(gameId, ct).ConfigureAwait(false)
+            ? await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false)
             : await _pdfDocumentRepository.GetByIdsAsync(pdfDocumentIds, ct).ConfigureAwait(false);
 
         // Defensive: Handle null or empty collection

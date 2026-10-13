@@ -29,7 +29,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 internal static class GameDocuments
 {
     /// <summary>The PDFs of the game, shared or private.</summary>
-    public static async Task<IReadOnlyList<PdfDocument>> FindPdfsOfGameAsync(
+    public static async Task<IReadOnlyList<PdfDocument>> FindPdfsOfGameAfterAccessCheckAsync(
         this IPdfDocumentRepository pdfDocuments,
         Guid gameId,
         CancellationToken cancellationToken)
@@ -46,7 +46,7 @@ internal static class GameDocuments
     }
 
     /// <summary>The vector documents of the game, shared or private.</summary>
-    public static async Task<IReadOnlyList<VectorDocument>> FindVectorDocumentsOfGameAsync(
+    public static async Task<IReadOnlyList<VectorDocument>> FindVectorDocumentsOfGameAfterAccessCheckAsync(
         this IVectorDocumentRepository vectorDocuments,
         Guid gameId,
         CancellationToken cancellationToken)

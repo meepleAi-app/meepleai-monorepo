@@ -753,7 +753,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // #4244: the PDFs of the game, shared or private (see GameDocuments).
         var documents = documentIds?.Count > 0
             ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
-            : await _pdfDocumentRepository.FindPdfsOfGameAsync(gameId, ct).ConfigureAwait(false);
+            : await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
 
         // Defensive: Handle null or empty collection
         if (documents is null or { Count: 0 }) return (true, 0, 0);

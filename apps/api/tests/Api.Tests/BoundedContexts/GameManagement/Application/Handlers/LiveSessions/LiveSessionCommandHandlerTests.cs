@@ -1501,6 +1501,42 @@ public class LiveSessionCommandHandlerTests
             Times.Once);
     }
 
+    /// <summary>
+    /// #4277: due richieste nate sullo stesso turno lo fanno passare una volta sola. Chi chiede dichiara
+    /// l'indice su cui ha deciso; se il turno è già passato il comando non avanza.
+    /// </summary>
+    [Fact]
+    public async Task AdvanceTurn_WhenTheTurnIsNoLongerTheExpectedOne_IsAConflict_AndDoesNotAdvance()
+    {
+        var sessionId = Guid.NewGuid();
+        var session = CreateSessionInProgress(sessionId);
+        var turn = session.CurrentTurnIndex;
+        SetupRepoGetById(sessionId, session);
+        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+
+        var act = () => handler.Handle(
+            new AdvanceLiveSessionTurnCommand(sessionId, ExpectedTurnIndex: turn - 1), TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode.Should().Be(AdvanceLiveSessionTurnCommand.TurnChangedCode);
+        session.CurrentTurnIndex.Should().Be(turn);
+        _repositoryMock.Verify(r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AdvanceTurn_WhenTheTurnIsTheExpectedOne_Advances()
+    {
+        var sessionId = Guid.NewGuid();
+        var session = CreateSessionInProgress(sessionId);
+        var turn = session.CurrentTurnIndex;
+        SetupRepoGetById(sessionId, session);
+        var handler = new AdvanceLiveSessionTurnCommandHandler(_repositoryMock.Object, _timeProvider, _unitOfWorkMock.Object);
+
+        await handler.Handle(
+            new AdvanceLiveSessionTurnCommand(sessionId, ExpectedTurnIndex: turn), TestContext.Current.CancellationToken);
+
+        session.CurrentTurnIndex.Should().Be(turn + 1);
+    }
+
     [Fact]
     public async Task AdvanceTurn_SessionNotFound_ThrowsNotFoundException()
     {

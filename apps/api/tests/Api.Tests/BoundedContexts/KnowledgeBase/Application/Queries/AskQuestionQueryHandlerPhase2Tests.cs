@@ -499,6 +499,63 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     /// <summary>
+    /// #4279. Una domanda che nomina un thread riceve nel prompt la cronologia di quella
+    /// conversazione. La cache semantica è per gioco, lingua e versione: non conosce la
+    /// conversazione. Stessa regola delle house rule e dei claim: ciò che dà forma alla risposta e
+    /// non sta nella chiave tiene la risposta fuori dalla cache condivisa.
+    ///
+    /// Oggi nessun chiamante di produzione passa un thread a questo gestore; il controllo c'è perché
+    /// il primo che lo farà non debba saperlo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheQuestionNamesAThread_DoesNotWriteToSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "In your variant the pawn moves twice.");
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            ThreadId: Guid.NewGuid(),
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una risposta nata dentro una conversazione non va servita a chi fa la stessa domanda fuori da essa");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheQuestionNamesAThread_DoesNotReadFromSharedCache()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        _mockPricingEngine
+            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "How does the pawn move?",
+            ThreadId: Guid.NewGuid(),
+            Language: "en",
+            UserId: Guid.NewGuid());
+
+        await BuildHandler().Handle(query, TestContext.Current.CancellationToken);
+
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "una domanda di seguito non deve ricevere la risposta in cache di un'altra conversazione");
+    }
+
+    /// <summary>
     /// Su cache-hit le pagine citate devono essere quelle vere, non l'indice nella lista.
     ///
     /// E' il sintomo del titolo di #3855 — «le attribuisce a pagine del manuale che non le

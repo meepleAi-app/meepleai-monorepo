@@ -201,7 +201,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         //
         // E' la guardia di lettura a chiudere entrambi i versi: se non si legge, `queryVector`
         // resta null e la scrittura piu' sotto non parte. Quella a valle e' difesa in profondita'.
-        if (!query.BypassCache && !injectClaims && houseRuleMatch is null)
+        //
+        // #4279: lo stesso vale per una domanda che nomina un thread. La cronologia di quella
+        // conversazione entra nel prompt, e la cache semantica non la conosce: e' per gioco, lingua
+        // e versione. Oggi nessun chiamante di produzione passa un thread a questo gestore.
+        if (!query.BypassCache && !injectClaims && houseRuleMatch is null && !query.ThreadId.HasValue)
         {
             try
             {

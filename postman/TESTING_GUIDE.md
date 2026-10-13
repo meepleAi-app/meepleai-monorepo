@@ -807,10 +807,9 @@ jobs:
 
 **File**: `.husky/pre-commit`
 
-```bash
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+Add to the existing hook (do not replace it):
 
+```bash
 # Run quick smoke tests before commit
 echo "🧪 Running API smoke tests..."
 
@@ -827,12 +826,7 @@ else
 fi
 ```
 
-**Install Husky**:
-```bash
-npm install --save-dev husky
-npx husky install
-npx husky add .husky/pre-commit "bash postman/run-smoke-tests.sh"
-```
+**No installation step.** The files in `.husky/` are plain git hooks: `pnpm install` in `apps/web` points git at them (`git config core.hooksPath .husky`). Do not run `husky install` or `npx husky`: it repoints git at a generated `.husky/_` folder that exists in one checkout only, and every other worktree stops running hooks (see [CONTRIBUTING.md § Git hooks](../CONTRIBUTING.md#git-hooks)).
 
 ---
 

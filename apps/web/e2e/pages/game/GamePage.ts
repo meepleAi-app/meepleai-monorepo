@@ -35,7 +35,7 @@ export class GamePage extends BasePage {
    * Individual game cards
    */
   private get gameCards(): Locator {
-    return this.page.locator('[data-testid="game-card"]');
+    return this.page.locator('[data-testid="meeple-card"][data-entity="game"]');
   }
 
   /**

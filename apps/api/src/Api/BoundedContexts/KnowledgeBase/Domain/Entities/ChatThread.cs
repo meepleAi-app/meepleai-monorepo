@@ -16,6 +16,13 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     public Guid? GameId { get; private set; }
     public Guid? AgentId { get; private set; } // Issue #2030 - Track which agent was used
     public string? AgentType { get; private set; } // Issue #4362 - tutor/arbitro/decisore/auto
+
+    /// <summary>
+    /// Spec 2026-10-11 §6.2: la sessione live a cui appartiene il thread dell'assistente in partita. Quel
+    /// thread nasce senza <see cref="GameId"/>, perché la chiave esterna del gioco punta al catalogo
+    /// condiviso e una sessione può essere su un gioco privato.
+    /// </summary>
+    public Guid? LiveSessionId { get; private set; }
     public string? Title { get; private set; }
     public ThreadStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -67,7 +74,8 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         Guid? gameId = null,
         string? title = null,
         Guid? agentId = null,
-        string? agentType = null) : base(id) // Issue #4362 - Added agentType parameter
+        string? agentType = null, // Issue #4362 - Added agentType parameter
+        Guid? liveSessionId = null) : base(id) // #4276
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
@@ -76,6 +84,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         GameId = gameId;
         AgentId = agentId; // Issue #2030
         AgentType = agentType?.Trim(); // Issue #4362
+        LiveSessionId = liveSessionId; // #4276
         Title = title?.Trim();
         Status = ThreadStatus.Active;
         CreatedAt = DateTime.UtcNow;

@@ -29,6 +29,7 @@ import { CitationBlock } from './CitationBlock';
 import { ContinueButton } from './ContinueButton';
 import { InlineCitationText } from './InlineCitationText';
 import { QuickPromptChips } from './QuickPromptChips';
+import { TIER_LIMIT_EXCEEDED, readTierLimit, tierLimitMessage } from './TierLimitNotice';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -451,8 +452,12 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                     errorCode?: string;
                     message?: string;
                   };
+                  // #4168 (5g-b): la quota del piano si spiega in italiano, con i numeri che il
+                  // backend manda. Qui la spiegazione sta nella bolla, senza il link ai piani.
                   const errorMsg =
-                    errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta';
+                    errData?.errorCode === TIER_LIMIT_EXCEEDED
+                      ? tierLimitMessage(readTierLimit(errData))
+                      : (errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta');
                   setMessages(prev =>
                     prev.map(m =>
                       m.id === assistantMsgId ? { ...m, content: errorMsg, isError: true } : m

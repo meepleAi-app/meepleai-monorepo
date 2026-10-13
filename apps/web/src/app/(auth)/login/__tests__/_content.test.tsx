@@ -328,9 +328,12 @@ describe('LoginPageContent — error logging dedup (#2171)', () => {
 describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', () => {
   const USER = { id: 'u1', email: 'user@example.com', role: 'User' };
 
+  let originalWindowEvent: PropertyDescriptor | undefined;
+
   /** Sostituisce `window.event` con un getter che conta le letture. */
   function countReadsOfWindowEvent() {
     const reads = vi.fn(() => undefined);
+    originalWindowEvent = Object.getOwnPropertyDescriptor(window, 'event');
     Object.defineProperty(window, 'event', { configurable: true, get: reads });
     return reads;
   }
@@ -350,7 +353,14 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
   const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
   afterEach(() => {
+    // `window.event` torna com'era: una proprietà sua, se lo era, oppure quella ereditata.
     delete (window as unknown as { event?: unknown }).event;
+    if (originalWindowEvent) {
+      Object.defineProperty(window, 'event', originalWindowEvent);
+      originalWindowEvent = undefined;
+    }
+    // I due test del 2FA danno a questo doppio una risposta permanente: non deve arrivare agli altri.
+    verify2FAMock.mockReset();
   });
 
   it('does not schedule a React update when the password login finishes after unmount', async () => {
@@ -376,7 +386,8 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
       requiresTwoFactor: true,
       tempSessionToken: 'temp-token-abc',
     });
-    verify2FAMock.mockResolvedValueOnce(USER);
+    // Risposta permanente: il campo del codice invia da solo a sei cifre, oltre all'invio del test.
+    verify2FAMock.mockResolvedValue(USER);
 
     const { unmount } = render(<LoginPageContent />);
     fillAndSubmit();

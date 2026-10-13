@@ -58,11 +58,7 @@ public sealed class PlayRecordConcurrencyTests : IAsyncLifetime
 
         // Also build DI container for handler-level tests
         var services = IntegrationServiceCollectionBuilder.CreateBase(_connectionString);
-        services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
-        services.AddScoped<PlayRecordPermissionChecker>();
-        services.AddScoped<ISharedGameRepository, SharedGameRepository>();
-        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        services.AddPlayRecordHandlerDependencies(_timeProvider);
         _serviceProvider = services.BuildServiceProvider();
     }
 

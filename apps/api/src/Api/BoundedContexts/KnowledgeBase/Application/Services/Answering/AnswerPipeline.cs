@@ -44,9 +44,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// <item>registro: metriche, cache, costo con la versione del profilo.</item>
 /// </list>
 /// La usa <c>StreamQa</c>. <c>AskQuestion</c> e la ricerca fra giochi (<see cref="CrossGameAnswerFlow"/>)
-/// hanno ancora il loro percorso, ma eseguono i passi 1 e 2 nello stesso punto:
-/// <see cref="IAnswerPreconditions"/> (consegna 5g-a). Il contratto SSE è quello che
-/// <c>StreamQaSseContractCharacterizationTests</c> fissava prima dello spostamento.
+/// hanno ancora il loro percorso, ma eseguono il passo 1 nello stesso punto,
+/// <see cref="IAnswerPreconditions"/> (consegna 5g-a): è lì che arriverà il passo 2. Il contratto
+/// SSE è quello che <c>StreamQaSseContractCharacterizationTests</c> fissava prima dello spostamento.
 /// </remarks>
 internal sealed class AnswerPipeline : IAnswerPipeline
 {

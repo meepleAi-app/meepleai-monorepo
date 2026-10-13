@@ -218,7 +218,7 @@ public sealed class RagOwnershipRequiredEndpointsIntegrationTests
             Ct);
 
         var body = await response.Content.ReadAsStringAsync(Ct);
-        response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden, body);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
         body.Should().NotContain(OwnershipCode);
     }
 

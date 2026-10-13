@@ -639,7 +639,7 @@ public sealed class AgentProfileFieldEffectTests
         var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(Ct);
         profile.Should().NotBeNull("le migrazioni pubblicano la prima versione del profilo");
         profile!.CreateDraft(change(profile.Published.Content));
-        profile.PublishDraft();
+        profile.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
         await db.SaveChangesAsync(Ct);
     }
 

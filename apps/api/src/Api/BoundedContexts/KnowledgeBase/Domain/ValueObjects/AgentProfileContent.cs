@@ -200,6 +200,41 @@ public sealed class AgentProfileContent : ValueObject
             allowedCategories.Distinct().Order().ToArray(),
             sessionAssistant ?? SessionAssistantSettings.Disabled);
 
+    /// <summary>
+    /// Spec 2026-10-11 §3.2: perché l'assistente in partita non può girare con i modelli di questo
+    /// contenuto, o <c>null</c> se può (o se è spento). La regola è una sola e ha due chiamanti: la
+    /// pubblicazione del profilo e il turno, che la ricontrolla perché una migrazione di dati scavalca
+    /// l'aggregato.
+    /// </summary>
+    /// <param name="toolCallingModels">Gli id dei modelli del catalogo con tool calling, confronto esatto.</param>
+    public string? SessionAssistantModelProblem(IReadOnlySet<string> toolCallingModels)
+    {
+        ArgumentNullException.ThrowIfNull(toolCallingModels);
+        if (!SessionAssistant.Enabled)
+        {
+            return null;
+        }
+
+        if (!toolCallingModels.Contains(PrimaryModelId))
+        {
+            return $"The session assistant is enabled, but the primary model '{PrimaryModelId}' does not support tool calling.";
+        }
+
+        if (!SessionAssistant.UseReserveModel)
+        {
+            return null;
+        }
+
+        if (FallbackModelId is null)
+        {
+            return "The session assistant is set to use the reserve model, but the profile has none.";
+        }
+
+        return toolCallingModels.Contains(FallbackModelId)
+            ? null
+            : $"The session assistant is set to use the reserve model '{FallbackModelId}', which does not support tool calling.";
+    }
+
     protected override IEnumerable<object?> GetEqualityComponents()
     {
         yield return Name;

@@ -192,7 +192,18 @@ jobs:
           printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 
+      # #4298 — questo passo ESEGUE i test e NON decide il colore del job.
+      #
+      # Prima lo decideva: bastava un test fallito, compresi quelli dichiarati nella baseline, e il
+      # job era rosso. Il confronto con la baseline girava dopo e scriveva «i FALLIMENTI sono
+      # aumentati: 2 -> 9», ma su un job gia' rosso quell'errore non cambiava nulla che qualcuno
+      # guardi. Sette test sono rimasti rossi oltre la baseline dal 2026-10-05 al 2026-10-12 cosi'
+      # (#4280): il segnale c'era, a ogni run, e non era un segnale.
+      #
+      # Ora il passo conserva il codice d'uscita di `dotnet test` e lo passa al passo di guardia,
+      # che e' l'unico a decidere: verde entro la baseline, rosso quando qualcosa e' cambiato.
       - name: Integration tests
+        id: tests
         working-directory: apps/api
         env:
           # MaxPoolSize=2 + ClearAllPools() nel teardown: evita l'accumulo contro max_connections.
@@ -212,9 +223,13 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
         run: |
-          # `set -o pipefail` è obbligatorio: senza, l'exit code che arriva a GitHub è quello di
-          # `tee` (sempre 0) e un `Test Run Aborted.` passerebbe per successo.
-          set -o pipefail
+          # 🔴 Il codice d'uscita va CATTURATO, non lasciato alla pipeline. Senza `pipefail` lo
+          # stato di `dotnet test | tee` e' quello di `tee`, sempre 0: e' giusto cosi', perche' qui
+          # il passo non deve fallire — ma allora `${PIPESTATUS[0]}`, letto subito dopo, e' l'unico
+          # posto dove il codice di `dotnet test` esiste ancora. Il passo di guardia lo confronta
+          # col .trx: un'uscita diversa da 0 senza falliti nel .trx, o un codice che non e' ne' 0
+          # ne' 1, fa fallire il job. `set +e` perche' il default di Actions e' `bash -e`.
+          set +e
           # Target esplicito del .csproj (PR #1505): `dotnet test` sulla solution invocherebbe anche
           # Api.Analyzers.Tests.dll, che non ha test Category=Integration, e vstest tratta il
           # no-match su un assembly non vuoto come exit 1.
@@ -232,19 +247,31 @@ jobs:
             --logger "console;verbosity=minimal" \
             --blame-hang-timeout 5min \
             2>&1 | tee "integration-${{ matrix.shard.name }}.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "dotnet_test_rc=${rc}" >> "$GITHUB_OUTPUT"
+          echo "dotnet test e' uscito con ${rc}. L'esito del job lo decide il passo di guardia."
 
-      # #3632/#3742 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
+      # #3632/#3742/#4298 — il verde va misurato, non dichiarato; il troncamento va NOMINATO; e il
+      # colore del job lo decide QUESTO passo.
       #
-      # `Aborting test run: test run timeout` esce già 134 e fa fallire lo step, quindi questo guard
-      # non introduce un rosso nuovo: rende distinguibile «la selezione non è stata misurata per
-      # intero» da «alcuni test sono falliti». Sono due fatti diversi e finora erano lo stesso colore.
+      # Il job e' verde quando tutte queste cose sono vere, e rosso se ne manca una:
+      #   - i test sono partiti e hanno lasciato log e .trx, con almeno cento eseguiti;
+      #   - la sessione NON e' stata troncata dal TestSessionTimeout (una selezione misurata a meta'
+      #     non e' verde: e' non misurata);
+      #   - falliti e saltati sono quelli dichiarati nella baseline, PER NOME — un conteggio uguale
+      #     con un test diverso dentro e' una regressione;
+      #   - il codice d'uscita di `dotnet test` e' coerente col .trx.
+      # Quindi «rosso» vuol dire «e' cambiato qualcosa, oppure non ho potuto misurare», e non piu'
+      # «c'e' almeno un fallimento, come sempre».
       #
       # `!cancelled()` e non `always()`: su una cancellazione non c'è niente da misurare.
-      - name: 'Guard: la selezione e stata misurata per intero (#3742)'
+      - name: 'Gate: misurato per intero ed entro la baseline (#3742, #4298)'
         if: ${{ !cancelled() }}
         working-directory: apps/api
         env:
           SHARD: ${{ matrix.shard.name }}
+          DOTNET_TEST_RC: ${{ steps.tests.outputs.dotnet_test_rc }}
         run: |
           set -uo pipefail
           status=0
@@ -342,12 +369,12 @@ jobs:
             case "$assert_rc" in
               0) assert_label="entro la baseline ✓" ;;
               2) assert_label="⚠️ NON MISURABILE — run troncata, confronto non eseguito (#3742)" ;;
-              *) assert_label="❌ REGRESSIONE dei conteggi" ; status=1 ;;
+              *) assert_label="❌ FUORI dalla baseline" ; status=1 ;;
             esac
 
             {
               echo
-              echo "<details><summary>Conteggi contro la baseline (#4024): ${assert_label}</summary>"
+              echo "<details><summary>Confronto con la baseline, per nome (#4024, #4298): ${assert_label}</summary>"
               echo
               echo '```'
               cat /tmp/shard-assert.out
@@ -365,6 +392,39 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             status=1
           fi
+
+          # #4298 — il codice d'uscita di `dotnet test`. Da quando il passo dei test non fa piu'
+          # fallire il job da solo, questo controllo impedisce di far passare per verde cio' che il
+          # .trx non racconta: un host dei test crashato, un'uscita anomala, un passo che non ha
+          # lasciato il codice. I test FALLITI non c'entrano: quelli li ha gia' giudicati, per
+          # nome, il confronto con la baseline qui sopra.
+          rc="${DOTNET_TEST_RC:-}"
+          trx_failed=""
+          if [ ${#trx_files[@]} -gt 0 ]; then
+            trx_failed=$(sed -n 's/.*<Counters[^>]* failed="\([0-9]\{1,\}\)".*/\1/p' "${trx_files[0]}" | head -1)
+          fi
+          if ! [[ "$rc" =~ ^[0-9]+$ ]]; then
+            echo "::error::Shard ${SHARD}: il passo dei test non ha lasciato un codice d'uscita (\"${rc}\"). Senza, non si sa se dotnet test e' arrivato in fondo."
+            status=1
+          elif [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+            echo "::error::Shard ${SHARD}: dotnet test e' uscito con ${rc}, che non e' ne' «tutto verde» (0) ne' «alcuni test falliti» (1): host dei test crashato, sessione abortita o altro. Va letto il log."
+            status=1
+          elif [ "$rc" -eq 1 ] && [ "${trx_failed}" = "0" ]; then
+            echo "::error::Shard ${SHARD}: dotnet test e' uscito con 1 ma il .trx non ha test falliti. Qualcosa e' fallito FUORI dai test (discovery, fixture, logger) e il confronto con la baseline non lo vede."
+            status=1
+          elif [ "$rc" -eq 0 ] && [ -n "${trx_failed}" ] && [ "${trx_failed}" != "0" ]; then
+            echo "::error::Shard ${SHARD}: dotnet test e' uscito con 0 ma il .trx ha ${trx_failed} falliti. Le due fonti si contraddicono."
+            status=1
+          fi
+
+          {
+            echo
+            if [ "$status" -eq 0 ]; then
+              echo "**Esito del gate: ✅ verde** — selezione misurata per intero, falliti e saltati sono quelli dichiarati."
+            else
+              echo "**Esito del gate: ❌ rosso** — qualcosa e' cambiato rispetto alla baseline, oppure la misura non e' completa. Gli errori sono qui sopra."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
           exit $status
 

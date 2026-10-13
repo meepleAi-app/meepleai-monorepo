@@ -73,7 +73,7 @@ Discussion happens in the issue thread before implementation begins.
 4. **Keep PRs focused** — one logical change per PR. Easier to review, easier to revert.
 5. **Self-review before requesting review**:
    - All tests pass locally
-   - Pre-commit hooks pass (`husky` runs typecheck, lint, conventional commit format)
+   - Git hooks pass (`.husky/pre-commit` runs lint-staged and typecheck, `.husky/commit-msg` the conventional commit format)
    - No new HIGH/CRITICAL findings in `pnpm audit` or CodeQL local scan
 6. **Open the PR against the correct base branch** — same parent you branched from, NOT always `main`. See `CLAUDE.md` §"PR Target Rule".
 7. **Fill in the PR body**:
@@ -109,6 +109,15 @@ make dev
 ```
 
 API docs: <http://localhost:8080/scalar/v1>
+
+### Git hooks
+
+The hooks are the tracked files in `.husky/` (`pre-commit`, `commit-msg`, `pre-push`). `pnpm install` in `apps/web` points git at them: its `prepare` script runs `git config core.hooksPath .husky`. The path is relative on purpose — git resolves it from the root of the checkout it is running in, so every worktree runs its own copy of the hooks, the one of the commit it is on.
+
+- Check: `git config --get core.hooksPath` prints `.husky`. If it does not, hooks are silently skipped or run from another checkout; fix it with `git config core.hooksPath .husky`.
+- Do not run `husky` (`npx husky`, `husky init`): it sets `core.hooksPath` to `.husky/_`, a generated, git-ignored folder that exists only in the checkout where it ran. Every other worktree then runs no hooks at all, without saying so (#4316).
+- Git runs the hooks directly, so on Linux and macOS a hook must be executable in the index. A hook added from Windows is not: `git update-index --chmod=+x .husky/<hook>`.
+- `HUSKY=0` in the environment skips the installation.
 
 ---
 
@@ -164,7 +173,7 @@ fix(api): resolve null reference in OAuth callback handler
 docs(security): add SHA pinning policy for GitHub Actions
 ```
 
-Husky `commit-msg` hook validates on every commit; CI re-validates.
+The `commit-msg` hook (`.husky/commit-msg`) validates on every commit; CI re-validates.
 
 ---
 

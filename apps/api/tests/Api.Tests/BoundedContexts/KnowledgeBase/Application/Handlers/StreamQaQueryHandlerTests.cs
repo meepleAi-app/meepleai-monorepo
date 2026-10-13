@@ -1824,5 +1824,6 @@ public class StreamQaQueryHandlerTests
         vectorWeight: 0.7m,
         keywordWeight: 0.3m,
         rerankerEnabled: true,
-        Enum.GetValues<DocumentCategory>());
+        Enum.GetValues<DocumentCategory>(),
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
 }

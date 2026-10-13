@@ -10,6 +10,13 @@ public sealed record ModelSettings
     public decimal Temperature { get; init; }
     public ModelPricing Pricing { get; init; }
 
+    /// <summary>
+    /// Spec 2026-10-11 §3.2: il modello accetta definizioni di strumenti e restituisce chiamate. Una riga
+    /// scritta prima di questa proprietà non ha la chiave e vale <c>false</c>. Si dichiara solo per i
+    /// modelli misurati sul set di scenari dell'assistente (§7.1).
+    /// </summary>
+    public bool SupportsToolCalling { get; init; }
+
     public ModelSettings(int maxTokens, decimal temperature, ModelPricing pricing)
     {
         if (maxTokens < 512 || maxTokens > 8192)

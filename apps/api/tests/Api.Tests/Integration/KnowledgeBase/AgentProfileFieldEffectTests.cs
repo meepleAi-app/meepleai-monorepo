@@ -714,7 +714,7 @@ public sealed class AgentProfileFieldEffectTests
         var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(Ct);
         profile.Should().NotBeNull("le migrazioni pubblicano la prima versione del profilo");
         profile!.CreateDraft(change(profile.Published.Content));
-        profile.PublishDraft();
+        profile.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
         await db.SaveChangesAsync(Ct);
     }
 
@@ -746,7 +746,8 @@ public sealed class AgentProfileFieldEffectTests
             c.VectorWeight,
             c.KeywordWeight,
             rerankerEnabled ?? c.RerankerEnabled,
-            c.AllowedCategories.ToList());
+            c.AllowedCategories.ToList(),
+            c.SessionAssistant);
 
     private async Task<List<JsonElement>> AskAsync(
         string query, string? acceptLanguage = null, Guid? chatId = null, string? token = null)

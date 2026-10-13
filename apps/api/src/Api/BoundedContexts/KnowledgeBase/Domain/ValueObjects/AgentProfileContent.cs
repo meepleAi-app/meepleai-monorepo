@@ -32,6 +32,9 @@ public sealed class AgentProfileContent : ValueObject
     public bool RerankerEnabled { get; }
     public IReadOnlyList<DocumentCategory> AllowedCategories { get; }
 
+    /// <summary>La sezione «Assistente in partita» (spec 2026-10-11 §3.2). Mai nulla: assente vale spenta.</summary>
+    public SessionAssistantSettings SessionAssistant { get; }
+
     private AgentProfileContent(
         string name,
         string description,
@@ -49,7 +52,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal vectorWeight,
         decimal keywordWeight,
         bool rerankerEnabled,
-        IReadOnlyList<DocumentCategory> allowedCategories)
+        IReadOnlyList<DocumentCategory> allowedCategories,
+        SessionAssistantSettings sessionAssistant)
     {
         Name = name;
         Description = description;
@@ -68,6 +72,7 @@ public sealed class AgentProfileContent : ValueObject
         KeywordWeight = keywordWeight;
         RerankerEnabled = rerankerEnabled;
         AllowedCategories = allowedCategories;
+        SessionAssistant = sessionAssistant;
     }
 
     public static AgentProfileContent Create(
@@ -87,8 +92,10 @@ public sealed class AgentProfileContent : ValueObject
         decimal vectorWeight,
         decimal keywordWeight,
         bool rerankerEnabled,
-        IReadOnlyCollection<DocumentCategory> allowedCategories)
+        IReadOnlyCollection<DocumentCategory> allowedCategories,
+        SessionAssistantSettings sessionAssistant)
     {
+        ArgumentNullException.ThrowIfNull(sessionAssistant);
         Require(!string.IsNullOrWhiteSpace(name), nameof(name), "Name is required.");
         Require(!string.IsNullOrWhiteSpace(primaryModelId), nameof(primaryModelId), "Primary model is required.");
         Require(fallbackModelId is null || !string.IsNullOrWhiteSpace(fallbackModelId),
@@ -122,6 +129,11 @@ public sealed class AgentProfileContent : ValueObject
         Require(allowedCategories is { Count: > 0 }, nameof(allowedCategories), "At least one document category is required.");
         Require(allowedCategories.All(c => Enum.IsDefined(c)), nameof(allowedCategories), "Unknown document category.");
 
+        // Obbligatoria, non opzionale: chi ricostruisce un contenuto campo per campo deve dire che cosa
+        // ne fa, invece di spegnere l'assistente per omissione.
+        Require(!sessionAssistant.Enabled || sessionAssistant.PromptFor(language) is not null, nameof(sessionAssistant),
+            $"The session assistant needs a system prompt for the fallback language '{language}'.");
+
         return new AgentProfileContent(
             name.Trim(),
             description?.Trim() ?? string.Empty,
@@ -139,7 +151,8 @@ public sealed class AgentProfileContent : ValueObject
             vectorWeight,
             keywordWeight,
             rerankerEnabled,
-            allowedCategories.Distinct().Order().ToArray());
+            allowedCategories.Distinct().Order().ToArray(),
+            sessionAssistant);
     }
 
     /// <summary>
@@ -165,7 +178,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal vectorWeight,
         decimal keywordWeight,
         bool rerankerEnabled,
-        IReadOnlyCollection<DocumentCategory> allowedCategories) =>
+        IReadOnlyCollection<DocumentCategory> allowedCategories,
+        SessionAssistantSettings sessionAssistant) =>
         new(
             name,
             description,
@@ -185,7 +199,43 @@ public sealed class AgentProfileContent : ValueObject
             rerankerEnabled,
             // Normalizzare non è validare: le categorie sono un insieme, e l'uguaglianza le confronta
             // in ordine, quindi un jsonb scritto in un altro ordine deve tornare uguale a Create.
-            allowedCategories.Distinct().Order().ToArray());
+            allowedCategories.Distinct().Order().ToArray(),
+            sessionAssistant);
+
+    /// <summary>
+    /// Spec 2026-10-11 §3.2: perché l'assistente in partita non può girare con i modelli di questo
+    /// contenuto, o <c>null</c> se può (o se è spento). La regola è una sola e ha due chiamanti: la
+    /// pubblicazione del profilo e il turno, che la ricontrolla perché una migrazione di dati scavalca
+    /// l'aggregato.
+    /// </summary>
+    /// <param name="toolCallingModels">Gli id dei modelli del catalogo con tool calling, confronto esatto.</param>
+    public string? SessionAssistantModelProblem(IReadOnlySet<string> toolCallingModels)
+    {
+        ArgumentNullException.ThrowIfNull(toolCallingModels);
+        if (!SessionAssistant.Enabled)
+        {
+            return null;
+        }
+
+        if (!toolCallingModels.Contains(PrimaryModelId))
+        {
+            return $"The session assistant is enabled, but the primary model '{PrimaryModelId}' does not support tool calling.";
+        }
+
+        if (!SessionAssistant.UseReserveModel)
+        {
+            return null;
+        }
+
+        if (FallbackModelId is null)
+        {
+            return "The session assistant is set to use the reserve model, but the profile has none.";
+        }
+
+        return toolCallingModels.Contains(FallbackModelId)
+            ? null
+            : $"The session assistant is set to use the reserve model '{FallbackModelId}', which does not support tool calling.";
+    }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {
@@ -217,6 +267,8 @@ public sealed class AgentProfileContent : ValueObject
         {
             yield return category;
         }
+
+        yield return SessionAssistant;
     }
 
     private static string NormalizeLanguage(string language) => language.Trim().ToLowerInvariant();

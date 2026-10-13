@@ -19,6 +19,9 @@ public sealed class AgentProfile : AggregateRoot<Guid>
     /// <summary>L'unico profilo di sistema. La tabella lo impone con un vincolo di check.</summary>
     public static readonly Guid SingletonId = new("a9e7f5c1-4167-4095-9a1e-000000000001");
 
+    /// <summary>Il codice del 409 quando l'assistente in partita è abilitato su un modello senza tool calling.</summary>
+    public const string AssistantModelWithoutToolsCode = "assistant_model_without_tools";
+
     private readonly List<AgentProfileVersion> _versions = new();
 
     public IReadOnlyList<AgentProfileVersion> Versions => _versions.AsReadOnly();
@@ -91,9 +94,14 @@ public sealed class AgentProfile : AggregateRoot<Guid>
         draft.ReplaceContent(content);
     }
 
-    public AgentProfileVersion PublishDraft()
+    /// <param name="toolCallingModels">
+    /// Gli id dei modelli del catalogo con tool calling: l'aggregato non legge il catalogo, quindi chi
+    /// pubblica glieli passa (spec 2026-10-11 §3.2).
+    /// </param>
+    public AgentProfileVersion PublishDraft(IReadOnlySet<string> toolCallingModels)
     {
         var draft = Draft ?? throw new ConflictException("Agent profile has no draft to publish.");
+        EnsureTheAssistantCanRun(draft.Content, toolCallingModels);
 
         var now = Touch();
         Published.Archive(now);
@@ -105,7 +113,12 @@ public sealed class AgentProfile : AggregateRoot<Guid>
     /// Ripubblica il contenuto di una versione archiviata come nuova versione. Un'eventuale bozza resta
     /// com'è: il rollback non cancella lavoro in corso.
     /// </summary>
-    public AgentProfileVersion RollbackTo(int versionNumber)
+    /// <param name="versionNumber">Il numero della versione archiviata da ripubblicare.</param>
+    /// <param name="toolCallingModels">
+    /// Gli id dei modelli del catalogo con tool calling: il catalogo può essere cambiato da quando quella
+    /// versione era pubblicata.
+    /// </param>
+    public AgentProfileVersion RollbackTo(int versionNumber, IReadOnlySet<string> toolCallingModels)
     {
         var target = _versions.SingleOrDefault(v => v.VersionNumber == versionNumber)
             ?? throw new ValidationException(nameof(versionNumber), $"Agent profile version {versionNumber} does not exist.");
@@ -114,6 +127,9 @@ public sealed class AgentProfile : AggregateRoot<Guid>
             throw new ConflictException(
                 $"Only archived versions can be rolled back to; version {versionNumber} is {target.Status}.");
         }
+
+        // Il catalogo può essere cambiato da quando quella versione era pubblicata.
+        EnsureTheAssistantCanRun(target.Content, toolCallingModels);
 
         var now = Touch();
         var restored = AgentProfileVersion.NewDraft(Id, NextVersionNumber(), target.Content, now);
@@ -129,5 +145,13 @@ public sealed class AgentProfile : AggregateRoot<Guid>
     {
         UpdatedAt = DateTime.UtcNow;
         return UpdatedAt;
+    }
+
+    private static void EnsureTheAssistantCanRun(AgentProfileContent content, IReadOnlySet<string> toolCallingModels)
+    {
+        if (content.SessionAssistantModelProblem(toolCallingModels) is { } problem)
+        {
+            throw new ConflictException(AssistantModelWithoutToolsCode, problem);
+        }
     }
 }

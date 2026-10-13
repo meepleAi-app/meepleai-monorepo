@@ -75,6 +75,15 @@ public sealed class SeedAiModelsCommandHandlerTests
         AiModelConfiguration.Create(modelId, modelId, provider, priority,
             new ModelSettings(4096, 0.7m, pricing), isActive, isPrimary);
 
+    /// <summary>Il catalogo come lo lascia il seed: prezzi verificati e capacità dichiarate.</summary>
+    private static AiModelConfiguration[] UpToDateCatalog() =>
+        SeedAiModelsCommandHandler.Models.Select(m =>
+        {
+            var row = Row(m.ModelId, m.Provider, m.Priority, m.Pricing, m.IsActive, m.IsPrimary);
+            row.DeclareToolCalling(m.SupportsToolCalling);
+            return row;
+        }).ToArray();
+
     [Fact]
     public async Task EmptyCatalog_GetsEveryModel()
     {
@@ -145,9 +154,7 @@ public sealed class SeedAiModelsCommandHandlerTests
     [Fact]
     public async Task UpToDateCatalog_SavesNothing()
     {
-        var upToDate = SeedAiModelsCommandHandler.Models
-            .Select(m => Row(m.ModelId, m.Provider, m.Priority, m.Pricing, m.IsActive, m.IsPrimary))
-            .ToArray();
+        var upToDate = UpToDateCatalog();
 
         await SeedAsync(upToDate);
 
@@ -183,8 +190,7 @@ public sealed class SeedAiModelsCommandHandlerTests
     [Fact]
     public async Task RetiredModels_AlreadyInactive_AreLeftAlone()
     {
-        var catalog = SeedAiModelsCommandHandler.Models
-            .Select(m => Row(m.ModelId, m.Provider, m.Priority, m.Pricing, m.IsActive, m.IsPrimary))
+        var catalog = UpToDateCatalog()
             .Append(Row("meta-llama/llama-3.3-70b-instruct:free", "OpenRouter", 1, ModelPricing.Free, isActive: false))
             .ToArray();
 
@@ -225,5 +231,42 @@ public sealed class SeedAiModelsCommandHandlerTests
             model.Pricing.VerifiedOn.Should().NotBeNull($"{model.ModelId} ha un prezzo, quindi deve dire quando è stato verificato");
             model.Pricing.Source.Should().StartWith("https://", $"{model.ModelId} deve dire dove");
         }
+    }
+
+    /// <summary>
+    /// Spec 2026-10-11 §7.1: il catalogo dichiara il tool calling solo per il modello che ha superato lo
+    /// spike. Un modello non misurato non riceve l'assistente per omissione.
+    /// </summary>
+    [Fact]
+    public async Task EmptyCatalog_DeclaresToolCallingOnlyForTheMeasuredModel()
+    {
+        await SeedAsync();
+
+        _added.Where(m => m.Settings.SupportsToolCalling).Select(m => m.ModelId).Should().Equal("deepseek-flash");
+    }
+
+    [Fact]
+    public async Task ExistingModelWithoutTheCapability_GetsIt()
+    {
+        var flash = Row("deepseek-flash", "DeepSeek", 8, new ModelPricing(0.30m, 1.20m), isActive: false);
+
+        await SeedAsync(flash);
+
+        _updated.Should().ContainSingle(m => m.ModelId == "deepseek-flash")
+            .Which.Settings.SupportsToolCalling.Should().BeTrue();
+        flash.IsActive.Should().BeFalse("l'abilitazione resta una scelta dell'admin");
+    }
+
+    [Fact]
+    public async Task SeedingACatalogThatAlreadyDeclaresIt_WritesNothing()
+    {
+        await SeedAsync();
+        var catalog = _added.ToArray();
+        _unitOfWork.Invocations.Clear();
+
+        await SeedAsync(catalog);
+
+        _updated.Should().BeEmpty();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

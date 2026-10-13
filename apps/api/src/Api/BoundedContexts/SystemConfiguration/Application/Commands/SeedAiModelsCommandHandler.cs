@@ -23,6 +23,8 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 /// <item><description>se lo ha, ne aggiorna <b>solo il prezzo</b>, e solo se la verifica del seed
 /// è più recente di quella registrata (<see cref="AiModelConfiguration.ApplyVerifiedPricing"/>).
 /// Abilitazione, priorità e modello primario restano quelli scelti dall'admin.</description></item>
+/// <item><description>se il seed dichiara il tool calling (#4275), lo dichiara anche sulla riga già
+/// presente: è un fatto misurato del modello, non una scelta dell'admin.</description></item>
 /// </list>
 /// <para>
 /// I modelli nuovi entrano disattivati: l'ordine di fallback dei provider si costruisce dalle
@@ -87,11 +89,12 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
         // registro come Unpriced, a $0. Stesso listino di deepseek-chat. Dal #4179 è anche il nome
         // che chiedono le chiamate instradate (strategia Balanced) e l'estrattore; resta disattivato
         // perché la scelta del modello DeepSeek viene dalla mappa della strategia, non dal catalogo.
+        // #4275: è il solo modello misurato sul set di scenari dell'assistente (spec 2026-10-11 §7.1).
         new("deepseek-flash", "DeepSeek Flash (direct API)", "DeepSeek",
             Priority: 8, MaxTokens: 4096,
             new ModelPricing(0.30m, 1.20m, cacheReadPricePerMillion: 0.006m,
                 verifiedOn: PricesVerifiedOn, source: DeepSeekPriceSource),
-            IsActive: false, IsPrimary: false)
+            IsActive: false, IsPrimary: false, SupportsToolCalling: true)
     ];
 
     /// <summary>
@@ -131,6 +134,7 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
         // istanza con la stessa chiave fa lanciare EF. Si aggiorna una volta sola, alla fine.
         var changed = new HashSet<AiModelConfiguration>(ReferenceEqualityComparer.Instance);
         var repriced = 0;
+        var declared = 0;
         var retired = Retire(existing, changed);
 
         foreach (var seed in Models)
@@ -142,7 +146,7 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                     displayName: seed.DisplayName,
                     provider: seed.Provider,
                     priority: seed.Priority,
-                    settings: new ModelSettings(seed.MaxTokens, temperature: 0.7m, seed.Pricing),
+                    settings: new ModelSettings(seed.MaxTokens, temperature: 0.7m, seed.Pricing) { SupportsToolCalling = seed.SupportsToolCalling },
                     isActive: seed.IsActive,
                     isPrimary: seed.IsPrimary));
                 continue;
@@ -153,6 +157,14 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
                 changed.Add(model);
                 repriced++;
             }
+
+            // #4275: la capacità misurata vale anche per una riga già presente. Il seed la dichiara e non
+            // la toglie mai: se un giorno un modello la perde, lo dice chi l'ha misurato.
+            if (seed.SupportsToolCalling && model.DeclareToolCalling(true))
+            {
+                changed.Add(model);
+                declared++;
+            }
         }
 
         foreach (var model in changed)
@@ -160,7 +172,7 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
             await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
         }
 
-        if (added.Count == 0 && repriced == 0 && retired.Count == 0)
+        if (added.Count == 0 && repriced == 0 && declared == 0 && retired.Count == 0)
         {
             _logger.LogInformation("AI model catalog already up to date. Skipping seed.");
             return;
@@ -174,8 +186,8 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "AI model catalog seeded: {Added} models added ({AddedIds}), {Repriced} prices updated to the {VerifiedOn} verification, {Retired} retired models deactivated ({RetiredIds})",
-            added.Count, string.Join(", ", added.Select(m => m.ModelId)), repriced, PricesVerifiedOn,
+            "AI model catalog seeded: {Added} models added ({AddedIds}), {Repriced} prices updated to the {VerifiedOn} verification, {Declared} tool-calling capabilities declared, {Retired} retired models deactivated ({RetiredIds})",
+            added.Count, string.Join(", ", added.Select(m => m.ModelId)), repriced, PricesVerifiedOn, declared,
             retired.Count, string.Join(", ", retired));
     }
 
@@ -226,7 +238,8 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
         int MaxTokens,
         ModelPricing Pricing,
         bool IsActive,
-        bool IsPrimary);
+        bool IsPrimary,
+        bool SupportsToolCalling = false);
 
     internal sealed record RetiredModel(string ModelId, string ReplacedBy);
 }

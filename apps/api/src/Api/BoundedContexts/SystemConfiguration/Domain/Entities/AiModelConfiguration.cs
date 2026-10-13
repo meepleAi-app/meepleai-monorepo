@@ -165,8 +165,12 @@ public sealed class AiModelConfiguration
     /// </summary>
     public void UpdateSettings(int maxTokens, decimal temperature)
     {
-        var newPricing = Settings.Pricing;
-        Settings = new ModelSettings(maxTokens, temperature, newPricing);
+        // Il costruttore valida i due valori; il resto delle impostazioni si porta dietro a mano, perché
+        // sta fuori dal costruttore (#4275: senza, ogni modifica azzererebbe SupportsToolCalling).
+        Settings = new ModelSettings(maxTokens, temperature, Settings.Pricing)
+        {
+            SupportsToolCalling = Settings.SupportsToolCalling,
+        };
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -187,7 +191,8 @@ public sealed class AiModelConfiguration
             Settings.Pricing.CacheReadPricePerMillion,
             DateOnly.FromDateTime(DateTime.UtcNow),
             AdminPricingSource);
-        Settings = new ModelSettings(Settings.MaxTokens, Settings.Temperature, newPricing);
+        // `with` e non il costruttore: copia tutte le impostazioni, anche quelle aggiunte dopo (#4275).
+        Settings = Settings with { Pricing = newPricing };
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -211,7 +216,24 @@ public sealed class AiModelConfiguration
         if (current is not null && current >= verified.VerifiedOn)
             return false;
 
-        Settings = new ModelSettings(Settings.MaxTokens, Settings.Temperature, verified);
+        Settings = Settings with { Pricing = verified };
+        UpdatedAt = DateTime.UtcNow;
+        return true;
+    }
+
+    /// <summary>
+    /// #4275: dichiara se il modello supporta il tool calling. È un fatto del modello, misurato, non una
+    /// scelta di instradamento: abilitazione e priorità non cambiano.
+    /// </summary>
+    /// <returns>Vero se la capacità è cambiata.</returns>
+    public bool DeclareToolCalling(bool supported)
+    {
+        if (Settings.SupportsToolCalling == supported)
+        {
+            return false;
+        }
+
+        Settings = Settings with { SupportsToolCalling = supported };
         UpdatedAt = DateTime.UtcNow;
         return true;
     }

@@ -41,7 +41,8 @@ internal static class AgentProfileContentJson
             content.VectorWeight,
             content.KeywordWeight,
             content.RerankerEnabled,
-            content.AllowedCategories.ToArray());
+            content.AllowedCategories.ToArray(),
+            ToDocument(content.SessionAssistant));
         return JsonSerializer.Serialize(document, Options);
     }
 
@@ -66,8 +67,38 @@ internal static class AgentProfileContentJson
             d.VectorWeight,
             d.KeywordWeight,
             d.RerankerEnabled,
-            d.AllowedCategories);
+            d.AllowedCategories,
+            ToSettings(d.SessionAssistant));
     }
+
+    private static SessionAssistantDocument? ToDocument(SessionAssistantSettings assistant) =>
+        assistant.Equals(SessionAssistantSettings.Disabled)
+            ? null
+            : new SessionAssistantDocument(
+                assistant.Enabled,
+                assistant.SystemPrompts.ToDictionary(StringComparer.Ordinal),
+                assistant.Temperature,
+                assistant.MaxResponseTokens,
+                assistant.MaxToolIterations,
+                assistant.TurnTimeoutSeconds,
+                assistant.UseReserveModel);
+
+    private static SessionAssistantSettings ToSettings(SessionAssistantDocument? d) =>
+        d is null
+            ? SessionAssistantSettings.Disabled
+            : SessionAssistantSettings.Restore(
+                d.Enabled, d.SystemPrompts, d.Temperature, d.MaxResponseTokens, d.MaxToolIterations, d.TurnTimeoutSeconds,
+                d.UseReserveModel);
+
+    /// <summary>I numeri sono nullable: un campo assente vale il default misurato, non zero.</summary>
+    private sealed record SessionAssistantDocument(
+        bool Enabled,
+        Dictionary<string, string>? SystemPrompts,
+        decimal? Temperature = null,
+        int? MaxResponseTokens = null,
+        int? MaxToolIterations = null,
+        int? TurnTimeoutSeconds = null,
+        bool UseReserveModel = false);
 
     private sealed record Document(
         string Name,
@@ -86,5 +117,8 @@ internal static class AgentProfileContentJson
         decimal VectorWeight,
         decimal KeywordWeight,
         bool RerankerEnabled,
-        DocumentCategory[] AllowedCategories);
+        DocumentCategory[] AllowedCategories,
+        // Opzionale e in coda: le versioni scritte prima della fetta A2 non hanno la chiave, e una sezione
+        // spenta non la scrive, così il jsonb delle versioni esistenti non cambia.
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SessionAssistantDocument? SessionAssistant = null);
 }

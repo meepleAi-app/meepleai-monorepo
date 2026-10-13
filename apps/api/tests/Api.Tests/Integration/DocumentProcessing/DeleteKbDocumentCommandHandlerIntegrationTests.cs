@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -44,6 +45,7 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IMediator? _mediator;
+    private readonly Mock<IHybridCacheService> _hybridCacheMock = new();
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -79,6 +81,13 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
         cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
+
+        // #3982 ha dato al gestore anche la cache semantica, e qui non era registrata: i tre test
+        // di questa classe fallivano alla costruzione del gestore, prima di provarlo.
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
+
+        // #4244: la cache dell'elenco «I miei documenti». Registrata per ultima, vince sulla base.
+        services.AddSingleton(_hybridCacheMock.Object);
 
         // IVectorStoreAdapter — mock so the handler can call DeleteByVectorDocumentIdAsync
         // without a real pgvector_embeddings table in the Testcontainers DB.
@@ -152,6 +161,36 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
         agents.Should().OnlyContain(
             a => !a.KbCardIds.Contains(pdfId),
             "consuming agents must have the document id removed from KbCardIds");
+    }
+
+    /// <summary>
+    /// #4244: <c>GET /api/v1/kb-docs</c> tiene in cache l'elenco dei documenti di chi li ha
+    /// caricati. Senza questa invalidazione un documento cancellato resta elencato fino alla
+    /// scadenza. Le due etichette sono quelle di <c>PdfStateChangedCacheInvalidationHandler</c>.
+    /// </summary>
+    [Fact]
+    public async Task Handle_InvalidatesTheDocumentListOfWhoUploadedIt()
+    {
+        var pdfId = await SeedIndexedDocWithAgentsAsync(agentCount: 0);
+
+        await _mediator!.Send(new DeleteKbDocumentCommand(pdfId), TestCancellationToken);
+
+        _hybridCacheMock.Verify(
+            c => c.RemoveByTagAsync($"user:{TestUserId}", It.IsAny<CancellationToken>()), Times.Once);
+        _hybridCacheMock.Verify(
+            c => c.RemoveByTagAsync("user-docs", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>Un documento che non c'è non ha un elenco da invalidare.</summary>
+    [Fact]
+    public async Task Handle_WhenTheDocIsMissing_InvalidatesNothing()
+    {
+        var act = async () => await _mediator!.Send(
+            new DeleteKbDocumentCommand(Guid.NewGuid()), TestCancellationToken);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _hybridCacheMock.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

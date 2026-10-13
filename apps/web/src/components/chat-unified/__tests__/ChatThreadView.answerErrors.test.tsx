@@ -189,6 +189,112 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     expect(savedAssistantMessages()).toHaveLength(0);
   });
 
+  /**
+   * #4168 (5g-b): la quota del piano. Non è un guasto, quindi non usa il banner d'errore: spiega
+   * quante domande sono state usate, quando riparte il conteggio, e porta ai piani. La bolla vuota
+   * dell'assistente sparisce e niente viene salvato come risposta.
+   */
+  it('a question stopped by the plan quota is explained, with the way to the plans', async () => {
+    qa.script = [
+      {
+        type: qa.EVENT.ERROR,
+        data: {
+          errorCode: 'TIER_LIMIT_EXCEEDED',
+          errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+          limitType: 'AgentQuery',
+          current: 3,
+          max: 3,
+          upgradeUrl: '/pricing',
+        },
+      },
+    ];
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    const notice = await screen.findByTestId('tier-limit-exceeded');
+    expect(notice).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3)'
+    );
+    expect(notice).toHaveTextContent(/riparte alle \d{2}:\d{2} \(mezzanotte UTC\)/);
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+    expect(screen.queryByText(/Tier limit exceeded/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // La domanda resta nel thread, la bolla vuota dell'assistente no.
+    expect(screen.getAllByTestId('message-user')).toHaveLength(1);
+    expect(screen.queryAllByTestId('message-assistant')).toHaveLength(0);
+    expect(savedAssistantMessages()).toHaveLength(0);
+  });
+
+  /**
+   * Il posto dell'avviso è nella pagina da prima, vuoto: è così che uno screen reader si accorge
+   * di quando si riempie. Montato insieme all'avviso, non tutti lo annuncerebbero.
+   */
+  it('the place for the quota notice is in the page before any question, empty', async () => {
+    render(<ChatThreadView threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+
+    const region = screen.getByTestId('tier-limit-region');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+  });
+
+  /** L'avviso riguarda la domanda appena fermata: con la successiva se ne va. */
+  it('the quota notice goes away with the next question', async () => {
+    qa.script = [
+      {
+        type: qa.EVENT.ERROR,
+        data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    ];
+    const user = userEvent.setup();
+    await ask(user);
+    await screen.findByTestId('tier-limit-exceeded');
+
+    qa.script = [
+      { type: qa.EVENT.TOKEN, data: { token: 'Cinque carte.' } },
+      { type: qa.EVENT.COMPLETE, data: { answer: 'Cinque carte.', snippets: [] } },
+    ];
+    await user.type(screen.getByTestId('message-input'), 'E adesso?');
+    await user.click(screen.getByTestId('send-btn'));
+
+    // La domanda successiva è passata davvero: la risposta è arrivata, e l'avviso non c'è più.
+    expect(await screen.findByText('Cinque carte.')).toBeInTheDocument();
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
+  /**
+   * La pagina non rimonta la vista quando si passa da un thread all'altro: l'avviso di un thread
+   * non deve restare sull'altro.
+   */
+  it('the quota notice does not follow the user to another thread', async () => {
+    qa.script = [
+      {
+        type: qa.EVENT.ERROR,
+        data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    ];
+    const user = userEvent.setup();
+    const { rerender } = render(<ChatThreadView threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+    await user.type(screen.getByTestId('message-input'), 'Quante carte si pescano?');
+    await user.click(screen.getByTestId('send-btn'));
+    await screen.findByTestId('tier-limit-exceeded');
+
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...thread,
+      id: 'thread-2',
+      title: 'Azul',
+    });
+    rerender(<ChatThreadView threadId="thread-2" />);
+
+    // Mentre il thread nuovo si carica la vista mostra solo l'attesa, e l'avviso non c'è comunque:
+    // l'asserzione vale a thread caricato.
+    await waitFor(() => expect(apiMock.chat.getThreadById).toHaveBeenCalledWith('thread-2'));
+    await screen.findByTestId('message-input');
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
   it.each([
     ['AI_BUDGET_DAILY_EXHAUSTED', /in pausa fino a domani/],
     ['AI_PROVIDER_UNAVAILABLE', /temporaneamente non disponibile/],

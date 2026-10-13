@@ -220,6 +220,25 @@ internal static partial class MeepleAiMetrics
         RagVectorArmOutcomes.Add(1, tags);
     }
 
+    // === Issue #4168 (5g-b): la quota per piano ===
+
+    /// <summary>
+    /// Le domande passate senza che la quota del piano si potesse leggere, perché Redis non ha
+    /// risposto.
+    /// </summary>
+    /// <remarks>
+    /// È voluto che passino: la spesa la protegge il tetto del gateway, che invece blocca. Ma finché
+    /// Redis è giù la quota non vale per nessuno, e questo contatore è l'unico posto in cui si vede.
+    /// Su Prometheus il nome è <c>meepleai_answer_quota_unreadable_checks_total</c>: l'exporter
+    /// aggiunge l'unità e <c>_total</c>.
+    /// </remarks>
+    public static readonly Counter<long> AnswerQuotaUnreadable = Meter.CreateCounter<long>(
+        name: "meepleai.answer.quota.unreadable",
+        unit: "checks",
+        description: "Domande passate senza poter leggere la quota del piano (Redis non risponde)");
+
+    public static void RecordAnswerQuotaUnreadable() => AnswerQuotaUnreadable.Add(1);
+
     public static readonly Counter<long> RagCragVerdicts = Meter.CreateCounter<long>(
         name: "meepleai.rag.crag.verdicts",
         unit: "evaluations",

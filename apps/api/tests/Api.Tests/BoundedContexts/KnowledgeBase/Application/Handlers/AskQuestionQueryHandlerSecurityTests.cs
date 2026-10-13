@@ -201,13 +201,12 @@ public class AskQuestionQueryHandlerSecurityTests
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
             _mockValidationPipeline.Object,
-            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(CreatePermissiveRagAccessServiceMock()),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(CreatePermissiveRagAccessServiceMock()),
             Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
             _mockAskEmbeddingService.Object,
             CreatePermissiveHouseRuleMatcherMock(),
-            CreatePermissivePricingEngineMock(),
             CreateNoOpTranslationServiceMock(),
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
@@ -629,14 +628,6 @@ public class AskQuestionQueryHandlerSecurityTests
         var mock = new Mock<IHouseRuleMatcher>();
         mock.Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
-        return mock.Object;
-    }
-
-    private static IPricingEngine CreatePermissivePricingEngineMock()
-    {
-        var mock = new Mock<IPricingEngine>();
-        mock.Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
         return mock.Object;
     }
 

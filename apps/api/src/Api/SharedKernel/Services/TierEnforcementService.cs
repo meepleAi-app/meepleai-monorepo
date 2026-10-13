@@ -29,17 +29,20 @@ internal sealed class TierEnforcementService : ITierEnforcementService
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMemoryCache _cache;
     private readonly ILogger<TierEnforcementService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public TierEnforcementService(
         IConnectionMultiplexer redis,
         MeepleAiDbContext dbContext,
         IMemoryCache cache,
-        ILogger<TierEnforcementService> logger)
+        ILogger<TierEnforcementService> logger,
+        TimeProvider? timeProvider = null)
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<TierLimits> GetLimitsAsync(Guid userId, CancellationToken ct = default)
@@ -82,6 +85,19 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         var maxAllowed = GetMaxForAction(limits, action);
 
         return currentUsage < maxAllowed;
+    }
+
+    public async Task<TierUsageCheck> CheckUsageAsync(Guid userId, TierAction action, CancellationToken ct = default)
+    {
+        var limits = await GetLimitsAsync(userId, ct).ConfigureAwait(false);
+        var max = GetMaxForAction(limits, action);
+
+        // No limit, nothing to compare the counter with: it is not read.
+        if (max == int.MaxValue)
+            return new TierUsageCheck(0, max, CounterReadable: true);
+
+        var current = await TryReadRedisCounterAsync(userId, action).ConfigureAwait(false);
+        return new TierUsageCheck(current ?? 0, max, CounterReadable: current.HasValue);
     }
 
     public async Task RecordUsageAsync(Guid userId, TierAction action, CancellationToken ct = default)
@@ -170,7 +186,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         var limits = await GetLimitsAsync(userId, ct).ConfigureAwait(false);
         var used = await GetRedisCounterAsync(userId, TierAction.TranslateGamebookParagraph).ConfigureAwait(false);
 
-        var now = DateTime.UtcNow;
+        var now = UtcNow;
         var resetDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
 
         return new GamebookQuotaSnapshot(
@@ -204,7 +220,15 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         return definition;
     }
 
-    private async Task<int> GetRedisCounterAsync(Guid userId, TierAction action)
+    /// <summary>The counter, or zero when Redis could not be read (graceful degradation).</summary>
+    private async Task<int> GetRedisCounterAsync(Guid userId, TierAction action) =>
+        await TryReadRedisCounterAsync(userId, action).ConfigureAwait(false) ?? 0;
+
+    /// <summary>
+    /// The counter, or null when Redis could not be read. A counter never written is a zero that
+    /// was read; a Redis that did not answer is a count nobody knows.
+    /// </summary>
+    private async Task<int?> TryReadRedisCounterAsync(Guid userId, TierAction action)
     {
         try
         {
@@ -219,37 +243,40 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Redis read failed for tier counter (graceful degradation)");
-            return 0;
+            return null;
         }
     }
 
-    private static string BuildRedisKey(Guid userId, TierAction action)
+    /// <summary>The buckets are UTC days, months and weeks: one clock for all of them.</summary>
+    private DateTime UtcNow => _timeProvider.GetUtcNow().UtcDateTime;
+
+    private string BuildRedisKey(Guid userId, TierAction action)
     {
         var bucket = GetDateBucket(action);
         return $"{KeyPrefix}:{userId}:{action}:{bucket}";
     }
 
-    private static string GetDateBucket(TierAction action) => action switch
+    private string GetDateBucket(TierAction action) => action switch
     {
         TierAction.AgentQuery or TierAction.SessionAgentQuery
-            => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 
         TierAction.UploadPdf or TierAction.TranslateGamebookParagraph
-            => DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+            => UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture),
 
         TierAction.ProposeToSharedCatalog
             => GetWeekBucket(),
 
         TierAction.UploadSessionPhoto
-            => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 
         // Count-based actions don't use date buckets, but we still need a key
-        _ => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        _ => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
     };
 
-    private static string GetWeekBucket()
+    private string GetWeekBucket()
     {
-        var now = DateTime.UtcNow;
+        var now = UtcNow;
         var cal = CultureInfo.InvariantCulture.Calendar;
         var week = cal.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
         return $"{now.Year}-W{week:D2}";

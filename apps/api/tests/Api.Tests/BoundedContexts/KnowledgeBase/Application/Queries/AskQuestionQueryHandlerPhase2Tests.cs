@@ -25,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
 /// Phase 2 tests for AskQuestionQueryHandler: ResponseLanguage translation,
-/// IPricingEngine quota enforcement, and IHouseRuleMatcher integration.
+/// the daily quota of the plan (#4168, 5g-b), and IHouseRuleMatcher integration.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -41,7 +41,6 @@ public class AskQuestionQueryHandlerPhase2Tests
     private readonly Mock<ISemanticResponseCache> _mockResponseCache;
     private readonly Mock<IEmbeddingService> _mockEmbeddingService;
     private readonly Mock<IHouseRuleMatcher> _mockHouseRuleMatcher;
-    private readonly Mock<IPricingEngine> _mockPricingEngine;
     private readonly Mock<IGenericTranslationService> _mockTranslationService;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
     private readonly Mock<RrfFusionDomainService> _mockRrfService;
@@ -106,7 +105,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         _mockResponseCache = new Mock<ISemanticResponseCache>();
         _mockEmbeddingService = new Mock<IEmbeddingService>();
         _mockHouseRuleMatcher = new Mock<IHouseRuleMatcher>();
-        _mockPricingEngine = new Mock<IPricingEngine>();
         _mockTranslationService = new Mock<IGenericTranslationService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
 
@@ -133,10 +131,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string translatedAnswer = "Il pedone avanza di una casella.";
 
         SetupDefaultMocksWithSearchResults(gameId, originalAnswer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -177,10 +171,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -204,43 +194,156 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Test 3: Quota denied throws ForbiddenException and no LLM call is made
+    // Test 3 (#4168, 5g-b): the daily quota of the plan. It replaces IPricingEngine, whose only
+    // implementation let every question through.
     // ─────────────────────────────────────────────────────────────────────────
 
+    private static AskQuestionQuery AQuestionFrom(Guid userId, Guid gameId) => new(
+        GameId: gameId,
+        Question: "How does the pawn move?",
+        Language: "en",
+        UserId: userId,
+        UserRole: "User");
+
+    private static void NothingWasCounted(Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        tiers.Verify(
+            t => t.RecordUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    private static void OneAnswerWasCountedFor(Guid userId, Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        tiers.Verify(
+            t => t.RecordUsageAsync(
+                userId, Api.SharedKernel.Services.TierAction.AgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+    /// <summary>
+    /// Three answers delivered today on a plan of three: the fourth question stops with the 403
+    /// the other plan limits already use, before the cache is read and before the model is called.
+    /// </summary>
     [Fact]
-    public async Task Handle_WhenQuotaDenied_ThrowsForbiddenExceptionWithoutLlmCall()
+    public async Task Handle_OverTheQuotaOfThePlan_ThrowsTheTierLimit_BeforeTheCacheAndTheLlm()
     {
-        // Arrange
         var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — the question never gets this far");
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 3, max: 3);
 
-        SetupDefaultMocks(gameId);
+        var act = () => BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(userId, gameId), TestContext.Current.CancellationToken);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), "qa_question", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
-
-        _mockHouseRuleMatcher
-            .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string?)null);
-
-        var query = new AskQuestionQuery(
-            GameId: gameId,
-            Question: "How does the pawn move?",
-            Language: "en");
-
-        var handler = BuildHandler();
-
-        // Act
-        var act = () => handler.Handle(query, TestContext.Current.CancellationToken);
-
-        // Assert
-        await act.Should().ThrowAsync<ForbiddenException>()
-            .WithMessage("*Quota*");
-
+        var refusal = (await act.Should().ThrowAsync<Api.SharedKernel.Exceptions.TierLimitExceededException>()).Which;
+        (refusal.LimitType, refusal.Current, refusal.Max, refusal.UpgradeUrl).Should().Be(("AgentQuery", 3, 3, "/pricing"));
+        _mockResponseCache.Verify(
+            c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()),
+            Times.Never);
         _mockLlmService.Verify(
             s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
-            Times.Never,
-            "LLM must not be called when quota is denied");
+            Times.Never);
+        NothingWasCounted(tiers);
+    }
+
+    [Fact]
+    public async Task Handle_AnAnswerFromTheModel_IsCountedOnce()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(userId, gameId), TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("The pawn moves forward one space.");
+        OneAnswerWasCountedFor(userId, tiers);
+    }
+
+    /// <summary>An answer served from the cache is a question answered: it counts like any other.</summary>
+    [Fact]
+    public async Task Handle_AnAnswerFromTheCache_IsCountedToo()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                Answer: "Cached answer.",
+                Citations: new List<CachedCitation>(),
+                ModelUsed: "test-model",
+                CachedAt: DateTimeOffset.UtcNow));
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(userId, gameId), TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("Cached answer.");
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        OneAnswerWasCountedFor(userId, tiers);
+    }
+
+    /// <summary>The gateway stopped the call at the spending cap: no answer, nothing to count.</summary>
+    [Fact]
+    public async Task Handle_WhenTheGatewayRefuses_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused");
+        _mockLlmService
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("Daily AI budget reached.") with
+            {
+                Metadata = new Dictionary<string, string> { ["error_code"] = "AI_BUDGET_DAILY_EXHAUSTED" },
+            });
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var act = () => BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(Guid.NewGuid(), gameId), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<LlmCallRefusedException>();
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>Nothing was found, so the model was not asked and there is no answer to count.</summary>
+    [Fact]
+    public async Task Handle_WhenNothingIsFound_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocks(gameId);
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 2, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object)
+            .Handle(AQuestionFrom(Guid.NewGuid(), gameId), TestContext.Current.CancellationToken);
+
+        result.IsLowQuality.Should().BeTrue();
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>
+    /// The only sender without a user is the auto-test of the admin wizard: no plan to ask, nothing
+    /// to count.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithoutAUser_ThePlanIsNotAsked()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 3, max: 3);
+
+        var result = await BuildHandler(tiers: tiers.Object).Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "How does the pawn move?", Language: "en"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("The pawn moves forward one space.");
+        tiers.Verify(
+            t => t.CheckUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        NothingWasCounted(tiers);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -269,23 +372,27 @@ public class AskQuestionQueryHandlerPhase2Tests
             UserId: userId,
             UserRole: "User");
 
-        var handler = BuildHandler(ragAccessService: denyRagAccess.Object);
+        // #4168 (5g-b): a plan already used up. Were the quota read first, this user would be told
+        // to upgrade a plan for a game they may not ask about at all.
+        var tiers = AnswerPipelineTestDoubles.PlanWith(used: 3, max: 3);
+        var handler = BuildHandler(ragAccessService: denyRagAccess.Object, tiers: tiers.Object);
 
         // Act
         var act = () => handler.Handle(query, TestContext.Current.CancellationToken);
 
-        // Assert — access denial precedes quota + LLM (mirrors the enforcement order at
-        // AskQuestionQueryHandler.cs:137-145, ahead of the quota check at :175).
+        // Assert — step 1 (access) precedes step 2 (quota) and the LLM.
         // #4155: the denial is typed and names the game, so the client can offer the declaration.
         (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
 
         denyRagAccess.Verify(
             s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),
             Times.Once);
-        _mockPricingEngine.Verify(
-            p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+        tiers.Verify(
+            t => t.CheckUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
             Times.Never,
-            "quota must not be consumed when RAG access is denied");
+            "the plan must not even be read when RAG access is denied");
+        NothingWasCounted(tiers);
         _mockLlmService.Verify(
             s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never,
@@ -306,10 +413,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string answer = "Based on your house rule, the pawn moves diagonally.";
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -370,10 +473,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string answer = "Based on your house rule, the pawn moves diagonally.";
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -439,10 +538,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(houseRule);
@@ -476,10 +571,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(gameId, userId, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(houseRule);
@@ -512,10 +603,6 @@ public class AskQuestionQueryHandlerPhase2Tests
     {
         var gameId = Guid.NewGuid();
         SetupDefaultMocksWithSearchResults(gameId, "In your variant the pawn moves twice.");
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "How does the pawn move?",
@@ -536,10 +623,6 @@ public class AskQuestionQueryHandlerPhase2Tests
     {
         var gameId = Guid.NewGuid();
         SetupDefaultMocksWithSearchResults(gameId, "The pawn moves forward one space.");
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "How does the pawn move?",
@@ -569,10 +652,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         var gameId = Guid.NewGuid();
 
         SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         // tre citazioni: con l'indice posizionale diventerebbero le pagine 1, 2, 3.
         //
@@ -623,11 +702,7 @@ public class AskQuestionQueryHandlerPhase2Tests
     public async Task Handle_OnCacheHit_CarriesTheVersionAndTheLanguage()
     {
         var gameId = Guid.NewGuid();
-        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        _mockResponseCache
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");        _mockResponseCache
             .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CachedRagResponse(
                 Answer: "Cached answer.",
@@ -666,10 +741,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         var gameId = Guid.NewGuid();
 
         SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         // la voce centrale e' anteriore a #3855: nessun DocumentId conservato
         var cached = new CachedRagResponse(
@@ -725,10 +796,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         var gameId = Guid.NewGuid();
 
         SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         // 4 conservate, 2 servibili
         var cached = new CachedRagResponse(
@@ -790,10 +857,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, "unused - served from cache");
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         // include una pagina assente e uno snippet vuoto: solo DocumentId decide la servibilita'
         var cached = new CachedRagResponse(
             Answer: "Cached answer.",
@@ -849,10 +912,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -896,10 +955,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string answer = "The pawn moves forward one space.";
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -949,10 +1004,6 @@ public class AskQuestionQueryHandlerPhase2Tests
 
         SetupDefaultMocksWithSearchResults(gameId, originalAnswer);
 
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string?)null);
@@ -999,10 +1050,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         const string answer = "The pawn moves forward one space.";
 
         SetupDefaultMocksWithSearchResults(gameId, answer);
-
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 
         _mockHouseRuleMatcher
             .Setup(m => m.FindMatchingHouseRuleAsync(It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1070,11 +1117,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: "In una partita a 3 si usa la plancia standard. [Page 3]",
                 usage: new LlmUsage(1, 1, 2),
-                cost: new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "test", Provider = "test" }));
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        // QualityTrackingDomainService is mocked in this class → its virtual confidence methods return
+                cost: new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "test", Provider = "test" }));        // QualityTrackingDomainService is mocked in this class → its virtual confidence methods return
         // null by default; the handler dereferences .Value on each. Return Zero for the full LLM path.
         _mockQualityService
             .Setup(q => q.CalculateSearchConfidence(It.IsAny<System.Collections.Generic.List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>()))
@@ -1143,7 +1186,8 @@ public class AskQuestionQueryHandlerPhase2Tests
         IRagAccessService? ragAccessService = null,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
         Api.Services.IFeatureFlagService? featureFlags = null,
-        IRagQualityTracker? qualityTracker = null) =>
+        IRagQualityTracker? qualityTracker = null,
+        Api.SharedKernel.Services.ITierEnforcementService? tiers = null) =>
         new(
             AnswerPipelineTestDoubles.Retrieval(_searchHandler, CreatePassthroughReranker()),
             AnswerPipelineTestDoubles.ProfileReader(),
@@ -1154,13 +1198,12 @@ public class AskQuestionQueryHandlerPhase2Tests
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
             _mockValidationPipeline.Object,
-            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(ragAccessService ?? CreatePermissiveRagAccessServiceMock()),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessService ?? CreatePermissiveRagAccessServiceMock(), tiers),
             qualityTracker ?? Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
             _mockEmbeddingService.Object,
             _mockHouseRuleMatcher.Object,
-            _mockPricingEngine.Object,
             _mockTranslationService.Object,
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
@@ -1311,7 +1354,6 @@ public class AskQuestionQueryHandlerPhase2Tests
     {
         var gameId = Guid.NewGuid();
         SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 1]");
-        AllowQuota();
         LlmAnswerRequest? sent = null;
         _mockLlmService
             .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
@@ -1340,7 +1382,6 @@ public class AskQuestionQueryHandlerPhase2Tests
     {
         var gameId = Guid.NewGuid();
         SetupDefaultMocksWithSearchResults(gameId, "unused");
-        AllowQuota();
         var refusal = LlmCompletionResult.CreateFailure("Daily AI budget reached.") with
         {
             Metadata = new Dictionary<string, string> { ["error_code"] = "AI_BUDGET_DAILY_EXHAUSTED" },
@@ -1367,7 +1408,6 @@ public class AskQuestionQueryHandlerPhase2Tests
         // non si trova nemmeno — e non nasconde quelle buone.
         var gameId = Guid.NewGuid();
         SetupDefaultMocksWithSearchResults(gameId, "Fresh answer [Page 1]");
-        AllowQuota();
         _mockEmbeddingService
             .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new float[] { 1f, 0f } }));
@@ -1383,8 +1423,4 @@ public class AskQuestionQueryHandlerPhase2Tests
             Times.Once);
     }
 
-    private void AllowQuota() =>
-        _mockPricingEngine
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
 }

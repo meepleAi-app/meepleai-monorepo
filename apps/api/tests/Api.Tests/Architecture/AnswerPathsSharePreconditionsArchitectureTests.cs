@@ -6,15 +6,15 @@ using Xunit;
 namespace Api.Tests.Architecture;
 
 /// <summary>
-/// #4168 (5g-a) — i percorsi che rispondono a una domanda eseguono le precondizioni nello stesso
-/// punto: <c>IAnswerPreconditions</c>.
+/// #4168 (5g-a, 5g-b) — i percorsi che rispondono a una domanda eseguono le precondizioni nello
+/// stesso punto: <c>IAnswerPreconditions</c>.
 ///
 /// <para>
 /// <b>Perché strutturale.</b> ADR-095 D3 mette l'accesso al passo 1 e la quota per piano al passo 2
 /// di un'unica pipeline. Oggi i percorsi sono tre (la chat, la domanda singola, la ricerca fra
 /// giochi) e ciascuno chiamava per conto suo il servizio d'accesso. Finché è così, ogni regola
-/// nuova — la quota è la prossima — va aggiunta tre volte, e quella dimenticata non rompe nessun
-/// test: il percorso che non la esegue risponde lo stesso.
+/// nuova va aggiunta tre volte, e quella dimenticata non rompe nessun test: il percorso che non la
+/// esegue risponde lo stesso. La quota (5g-b) è arrivata nel passo condiviso, una volta sola.
 /// </para>
 /// <para>
 /// <b>Cosa vede e cosa no.</b> Guarda da chi dipende un tipo: i parametri di tutti i suoi
@@ -34,10 +34,13 @@ public sealed class AnswerPathsSharePreconditionsArchitectureTests
     private const string AccessService =
         "Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService";
 
+    private const string PlanService = "Api.SharedKernel.Services.ITierEnforcementService";
+
     private const string TheSharedStep = "è il passo condiviso";
 
     private const string AnswersOutsideTheSharedStep =
-        "genera con l'LLM sulla KB e ha un cancello suo: se conta per la quota del piano si decide con la 5g-b";
+        "genera con l'LLM sulla KB e ha un cancello suo: la quota del piano (5g-b) vale per i tre percorsi di " +
+        "risposta e non lo raggiunge. Se deve contare anche qui è una decisione aperta in #4168";
 
     private const string NotAnAnswer =
         "non risponde a una domanda: cerca, gestisce la KB o legge lo stato dell'accesso";
@@ -125,9 +128,27 @@ public sealed class AnswerPathsSharePreconditionsArchitectureTests
     }
 
     /// <summary>
-    /// L'inventario di chi riceve il servizio d'accesso. Serve alla 5g-b: quattro gestori generano
-    /// con l'LLM sulla KB senza passare dal passo condiviso, e una quota messa lì non li
-    /// raggiungerebbe. Qui stanno scritti, con la ragione, invece di restare un fatto da riscoprire.
+    /// La quota del piano è il passo 2, e sta nel passo condiviso. Un percorso che chiedesse al
+    /// servizio dei piani per conto suo conterebbe due volte, o in un momento diverso dagli altri.
+    /// </summary>
+    [Fact]
+    public void NoAnswerPath_AsksThePlanOnItsOwn()
+    {
+        foreach (var path in s_answerPaths)
+        {
+            DependenciesOf(TypeNamed(path)).Should().NotContain(
+                PlanService,
+                $"{path} non deve leggere o contare la quota per conto suo: lo fa il passo condiviso");
+        }
+
+        DependenciesOf(TypeNamed("Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions"))
+            .Should().Contain(PlanService, "è il passo condiviso a leggere e contare la quota");
+    }
+
+    /// <summary>
+    /// L'inventario di chi riceve il servizio d'accesso. Quattro gestori generano con l'LLM sulla
+    /// KB senza passare dal passo condiviso: la quota del piano non li raggiunge. Qui stanno
+    /// scritti, con la ragione, invece di restare un fatto da riscoprire.
     /// </summary>
     [Fact]
     public void EveryUserOfTheAccessService_IsClassified()

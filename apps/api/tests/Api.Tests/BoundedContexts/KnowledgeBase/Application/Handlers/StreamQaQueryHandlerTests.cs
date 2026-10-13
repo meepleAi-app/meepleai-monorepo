@@ -152,7 +152,7 @@ public class StreamQaQueryHandlerTests
             _languageDetectionMock.Object,
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
-            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(CreatePermissiveRagAccessServiceMock()),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(CreatePermissiveRagAccessServiceMock()),
             _copyrightTierResolverMock.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
@@ -553,6 +553,201 @@ public class StreamQaQueryHandlerTests
         _embeddingServiceMock.VerifyNoOtherCalls();
         _llmServiceMock.Verify(
             x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ─── #4168 (5g-b): la quota del piano, passo 2 della pipeline ───────────────
+
+    private static Mock<Api.SharedKernel.Services.ITierEnforcementService> APlanWith(int used, int max) =>
+        Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.PlanWith(used, max);
+
+    private StreamQaQueryHandler HandlerOnThePlan(Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), tiers: tiers.Object);
+
+    private static async Task<List<RagStreamingEvent>> EventsOfAsync(StreamQaQueryHandler handler, StreamQaQuery query)
+    {
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        return events;
+    }
+
+    private static void NothingWasCounted(Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        tiers.Verify(
+            t => t.RecordUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    private static void OneAnswerWasCounted(Mock<Api.SharedKernel.Services.ITierEnforcementService> tiers) =>
+        tiers.Verify(
+            t => t.RecordUsageAsync(
+                TestUserId, Api.SharedKernel.Services.TierAction.AgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
+
+    /// <summary>
+    /// Tre risposte consegnate oggi su un piano da tre: la quarta domanda chiude lo stream con un
+    /// evento <c>Error</c> di codice <c>TIER_LIMIT_EXCEEDED</c>, con gli stessi campi del 403
+    /// <c>tier_limit_exceeded</c>. La cache non viene letta e il gateway non viene chiamato.
+    /// </summary>
+    [Fact]
+    public async Task Handle_OverTheQuotaOfThePlan_EndsWithTheTierLimitError_BeforeTheCacheAndTheLlm()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        var tiers = APlanWith(used: 3, max: 3);
+
+        var events = await EventsOfAsync(HandlerOnThePlan(tiers), query);
+
+        var only = events.Should().ContainSingle().Which;
+        only.Type.Should().Be(StreamingEventType.Error);
+        only.Data.Should().Be(new StreamingError(
+            "Tier limit exceeded: AgentQuery (3/3)",
+            "TIER_LIMIT_EXCEEDED",
+            limitType: "AgentQuery",
+            current: 3,
+            max: 3,
+            upgradeUrl: "/pricing"));
+        _cacheMock.Verify(
+            x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _llmServiceMock.Verify(
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>
+    /// La risposta va contata quando è stata consegnata, e prima di <c>Complete</c>: un client che
+    /// smette di leggere a <c>Complete</c> la sua risposta l'ha avuta.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AnAnswerFromTheModel_IsCountedOnce_BeforeCompleteIsSent()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        var tiers = APlanWith(used: 2, max: 3);
+        bool? countedWhenCompleteArrived = null;
+
+        await foreach (var evt in HandlerOnThePlan(tiers).Handle(query, TestContext.Current.CancellationToken))
+        {
+            if (evt.Type == StreamingEventType.Complete)
+            {
+                countedWhenCompleteArrived = tiers.Invocations.Any(i =>
+                    string.Equals(i.Method.Name, nameof(Api.SharedKernel.Services.ITierEnforcementService.RecordUsageAsync), StringComparison.Ordinal));
+            }
+        }
+
+        countedWhenCompleteArrived.Should().BeTrue();
+        OneAnswerWasCounted(tiers);
+    }
+
+    /// <summary>Una risposta servita dalla cache è una domanda che ha avuto risposta: conta come le altre.</summary>
+    [Fact]
+    public async Task Handle_AnAnswerFromTheCache_IsCountedToo()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "Cached question?", TestUserId, "User");
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QaResponse(
+                answer: "A cached answer.",
+                snippets: new List<Snippet> { new("Cached snippet", "PDF:123", 1, 0, 0.9f) },
+                promptTokens: 50,
+                completionTokens: 20,
+                totalTokens: 70,
+                confidence: 0.85,
+                metadata: null));
+        var tiers = APlanWith(used: 2, max: 3);
+
+        var events = await EventsOfAsync(HandlerOnThePlan(tiers), query);
+
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
+        _llmServiceMock.Verify(
+            x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+        OneAnswerWasCounted(tiers);
+    }
+
+    /// <summary>Il gateway ha fermato la chiamata al tetto di spesa: nessuna risposta, niente da contare.</summary>
+    [Fact]
+    public async Task Handle_WhenTheGatewayRefuses_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(RefusedStreamAsync());
+        var tiers = APlanWith(used: 2, max: 3);
+
+        var events = await EventsOfAsync(HandlerOnThePlan(tiers), query);
+
+        events[^1].Data.Should().BeOfType<StreamingError>().Which.errorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>La risposta si è interrotta a metà: l'utente non l'ha avuta, e non gli viene contata.</summary>
+    [Fact]
+    public async Task Handle_WhenTheAnswerIsInterruptedHalfway_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(InterruptedStreamAsync());
+        var tiers = APlanWith(used: 2, max: 3);
+
+        var events = await EventsOfAsync(HandlerOnThePlan(tiers), query);
+
+        events.Should().Contain(e => e.Type == StreamingEventType.Token);
+        events[^1].Data.Should().BeOfType<StreamingError>().Which.errorCode.Should().Be(LlmAnswerErrorCodes.StreamInterrupted);
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>
+    /// Il passo 1 viene prima del passo 2: a chi non può interrogare il gioco non si legge il piano,
+    /// e non gli si dice di cambiarlo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenAccessIsDenied_ThePlanIsNotEvenRead()
+    {
+        var gameId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId.ToString(), "How to win?", TestUserId, "User");
+        var denied = new Mock<IRagAccessService>();
+        denied
+            .Setup(s => s.CanAccessRagAsync(TestUserId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var tiers = APlanWith(used: 3, max: 3);
+        var handler = CreateHandlerWith(denied.Object, tiers: tiers.Object);
+
+        var act = async () => await EventsOfAsync(handler, query);
+
+        await act.Should().ThrowAsync<RagOwnershipRequiredException>();
+        tiers.Verify(
+            t => t.CheckUsageAsync(
+                It.IsAny<Guid>(), It.IsAny<Api.SharedKernel.Services.TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>Admin ed editor non hanno un limite: rispondono come prima, e il contatore non cresce.</summary>
+    [Fact]
+    public async Task Handle_OnAPlanWithoutALimit_TheAnswerIsNotCounted()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "Admin");
+        SetupHappyPathMocks(gameId, query.Query);
+        var tiers = APlanWith(used: 0, max: int.MaxValue);
+
+        var events = await EventsOfAsync(HandlerOnThePlan(tiers), query);
+
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
+        NothingWasCounted(tiers);
     }
 
     private static async IAsyncEnumerable<StreamChunk> InterruptedStreamAsync()
@@ -1782,7 +1977,8 @@ public class StreamQaQueryHandlerTests
     private StreamQaQueryHandler CreateHandlerWith(
         IRagAccessService ragAccessService,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
-        Api.Services.IFeatureFlagService? featureFlags = null)
+        Api.Services.IFeatureFlagService? featureFlags = null,
+        Api.SharedKernel.Services.ITierEnforcementService? tiers = null)
     {
         return new StreamQaQueryHandler(new AnswerPipeline(
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
@@ -1798,7 +1994,7 @@ public class StreamQaQueryHandlerTests
             _languageDetectionMock.Object,
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
-            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(ragAccessService),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessService, tiers),
             _copyrightTierResolverMock.Object,
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),

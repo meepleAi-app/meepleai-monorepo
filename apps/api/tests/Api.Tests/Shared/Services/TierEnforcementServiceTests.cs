@@ -256,6 +256,121 @@ public sealed class TierEnforcementServiceTests : IDisposable
 
     #endregion
 
+    #region CheckUsageAsync Tests (Issue #4168, 5g-b)
+
+    [Fact]
+    public async Task CheckUsageAsync_UnderTheLimit_ReportsTheCountAndIsNotExceeded()
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "user", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisValue)"5");
+
+        var usage = await _sut.CheckUsageAsync(userId, TierAction.AgentQuery);
+
+        usage.Should().Be(new TierUsageCheck(Current: 5, Max: 20, CounterReadable: true));
+        usage.Exceeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CheckUsageAsync_AtTheLimit_IsExceeded()
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "user", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisValue)"20");
+
+        var usage = await _sut.CheckUsageAsync(userId, TierAction.AgentQuery);
+
+        usage.Should().Be(new TierUsageCheck(Current: 20, Max: 20, CounterReadable: true));
+        usage.Exceeded.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A counter that was never written is a count of zero, and it was read: Redis answered.
+    /// </summary>
+    [Fact]
+    public async Task CheckUsageAsync_WhenNothingWasCountedYet_IsZeroAndReadable()
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "user", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Null);
+
+        var usage = await _sut.CheckUsageAsync(userId, TierAction.AgentQuery);
+
+        usage.Should().Be(new TierUsageCheck(Current: 0, Max: 20, CounterReadable: true));
+    }
+
+    /// <summary>
+    /// Redis down is not "zero used": the caller must be able to tell, to warn about it.
+    /// CanPerformAsync cannot say so — it reads the failure as a zero.
+    /// </summary>
+    [Fact]
+    public async Task CheckUsageAsync_WhenRedisDoesNotAnswer_SaysTheCounterWasNotRead_AndIsNotExceeded()
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "user", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ThrowsAsync(new RedisConnectionException(ConnectionFailureType.UnableToConnect, "down"));
+
+        var usage = await _sut.CheckUsageAsync(userId, TierAction.AgentQuery);
+
+        usage.Should().Be(new TierUsageCheck(Current: 0, Max: 20, CounterReadable: false));
+        usage.Exceeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CheckUsageAsync_AnAdmin_IsUnlimited_AndTheCounterIsNotRead()
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "admin", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+
+        var usage = await _sut.CheckUsageAsync(userId, TierAction.AgentQuery);
+
+        usage.IsUnlimited.Should().BeTrue();
+        usage.Exceeded.Should().BeFalse();
+        _mockDb.Verify(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+    }
+
+    /// <summary>
+    /// The window is the UTC day. The key the check reads is the key the record writes, and both
+    /// change at UTC midnight — not at the midnight of the server or of the user.
+    /// </summary>
+    [Theory]
+    [InlineData("2026-01-15T23:59:59Z", "2026-01-15")]
+    [InlineData("2026-01-16T00:00:00Z", "2026-01-16")]
+    public async Task CheckUsageAsync_ReadsTheCounterOfTheUtcDay_TheOneRecordUsageWrites(string now, string day)
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "user", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+        var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(
+            DateTimeOffset.Parse(now, System.Globalization.CultureInfo.InvariantCulture));
+        var sut = new TierEnforcementService(_mockRedis.Object, _dbContext, _memoryCache, _mockLogger.Object, time);
+        var read = new List<string>();
+        var written = new List<string>();
+        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, CommandFlags>((key, _) => read.Add(key.ToString()))
+            .ReturnsAsync((RedisValue)"1");
+        _mockDb.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, long, CommandFlags>((key, _, _) => written.Add(key.ToString()))
+            .ReturnsAsync(2);
+
+        await sut.CheckUsageAsync(userId, TierAction.AgentQuery);
+        await sut.RecordUsageAsync(userId, TierAction.AgentQuery);
+
+        read.Should().Equal($"tier:usage:{userId}:AgentQuery:{day}");
+        written.Should().Equal(read);
+    }
+
+    #endregion
+
     #region RecordUsageAsync Tests
 
     [Fact]

@@ -94,6 +94,14 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
             yield break;
         }
 
+        // Passo 2: la quota del piano. Una domanda fra giochi è una domanda, quanti che siano i giochi.
+        var quota = await _preconditions.CheckQuotaAsync(request.UserId, cancellationToken).ConfigureAwait(false);
+        if (quota.Exceeded)
+        {
+            yield return CreateEvent(StreamingEventType.Error, quota.ToStreamingError());
+            yield break;
+        }
+
         // EC-1: nessun gioco accessibile — nessuna ricerca, nessuna chiamata all'LLM.
         if (gameIds!.Count == 0)
         {
@@ -186,6 +194,9 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
                 yield return CreateEvent(StreamingEventType.Token, new StreamingToken(chunk.Content));
             }
         }
+
+        // La risposta è stata consegnata: si conta una volta, prima di Complete.
+        await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(

@@ -25,6 +25,13 @@ on:
       # #4298: la baseline degli shard di dev-async, che shard-skip-assert.bats legge dal
       # repository (vedi il filtro `infra` più sotto).
       - 'infra/fixtures/dev-async-shard-baseline.json'
+      # #4310: gli script di pulizia e l'hook di pre-push che li chiama, che due suite sotto
+      # infra/scripts/tests/ esaminano da qui (vedi il filtro `infra` più sotto). Senza queste due
+      # righe una PR che tocca solo l'hook non avvierebbe nemmeno il workflow.
+      # #4316: tutta la cartella degli hook, non il solo pre-push: install-git-hooks.bats controlla
+      # che ognuno sia eseguibile nell'indice, e un hook nuovo aggiunto da Windows entra come 100644.
+      - 'tools/cleanup/**'
+      - '.husky/**'
       # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
       # del backend leggono dal repository (vedi il filtro `backend` più sotto).
       - 'tests/llm-eval/session-assistant/prompts/**'
@@ -113,9 +120,25 @@ jobs:
               # capturedAt, the three shards), so a PR that rewrites only that
               # file changed something this gate observes and did not wake it.
               # Listed by name, not as infra/fixtures/**, for the reason above.
+              #
+              # #4310: two suites under infra/scripts/tests/ examine files that live
+              # elsewhere - the cleanup rules in tools/cleanup/ and the pre-push hook
+              # that calls them. Without these two lines a PR that edits only the hook
+              # or the scripts would not wake the gate that pins them.
+              #
+              # #4316: install-git-hooks.bats examines three more things that live
+              # elsewhere - every hook under .husky/ (index mode, shebang), the
+              # installer, and the `prepare` script of apps/web/package.json, which it
+              # runs as written. package.json is listed whole because a path filter
+              # cannot see one key: a dependency bump wakes this gate too, and the
+              # suites cost seconds.
               - 'infra/scripts/**'
               - 'infra/seed-schema.version'
               - 'infra/fixtures/dev-async-shard-baseline.json'
+              - 'tools/cleanup/**'
+              - '.husky/**'
+              - 'apps/web/scripts/install-git-hooks.mjs'
+              - 'apps/web/package.json'
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min

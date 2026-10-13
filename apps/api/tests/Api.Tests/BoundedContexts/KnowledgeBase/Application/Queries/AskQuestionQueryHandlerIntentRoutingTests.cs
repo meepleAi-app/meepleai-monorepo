@@ -197,7 +197,7 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             pdfRepoMock.Object,
             new Mock<ILlmService>().Object,
             new Mock<IRagValidationPipelineService>().Object,
-            ragAccessMock.Object,
+            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(ragAccessMock.Object),
             qaTrackerMock.Object,
             new QueryComplexityAnalyzer(),
             new Mock<ISemanticResponseCache>().Object,

@@ -86,21 +86,22 @@ fi
 # Testcontainers & Process Cleanup
 # ============================================
 
-echo "🧹 Cleaning up orphaned test containers and processes..."
+# #4310: this cleanup used to be machine-wide. It removed every Testcontainers container and
+# killed every testhost, so a push from one checkout aborted the integration tests running in
+# all the others. It now touches only what cannot be somebody else's run in progress:
+# stopped containers, and the test processes of THIS checkout.
 
-# Cleanup orphaned Testcontainers (postgres, redis from previous test runs)
-if command -v docker &> /dev/null; then
-  ORPHANED=$(docker ps -a --filter "label=org.testcontainers=true" -q 2>/dev/null)
-  if [ -n "$ORPHANED" ]; then
-    echo "$ORPHANED" | xargs docker rm -f 2>/dev/null || true
-    echo "   Removed orphaned Testcontainers"
-  fi
+echo "🧹 Cleaning up stopped test containers and this checkout's test processes..."
+
+# Stopped Testcontainers only (postgres, redis left behind by previous test runs)
+if [ -f "tools/cleanup/remove-stopped-testcontainers.sh" ]; then
+  sh tools/cleanup/remove-stopped-testcontainers.sh || true
 fi
 
-# Cleanup hanging testhost processes (Windows DLL locking fix)
+# Hanging testhost processes of this checkout (Windows DLL locking fix)
 if [ -f "tools/cleanup/cleanup-test-processes.ps1" ]; then
   if command -v powershell &> /dev/null; then
-    powershell -ExecutionPolicy Bypass -File "tools/cleanup/cleanup-test-processes.ps1" -TestHostOnly 2>/dev/null || true
+    powershell -ExecutionPolicy Bypass -File "tools/cleanup/cleanup-test-processes.ps1" -TestHostOnly -RepoRoot "$(git rev-parse --show-toplevel)" 2>/dev/null || true
   fi
 fi
 

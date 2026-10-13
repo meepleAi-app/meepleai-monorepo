@@ -3,8 +3,12 @@
     Cleanup stale test processes that lock DLL files during dotnet test
 
 .DESCRIPTION
-    Automatically kills hanging test processes (testhost, VBCSCompiler, node, dotnet)
+    Kills hanging test processes (testhost, VBCSCompiler, node, dotnet) of THIS checkout
     to prevent MSB3027 errors (DLL file locking) during dotnet build/test.
+
+    Only processes whose command line runs from this checkout are touched (#4310): on a machine
+    where several checkouts (git worktrees) work in parallel, a test process of another checkout
+    is somebody else's test run, not an orphan. Use -AllCheckouts to clean the whole machine.
 
     Includes safety protections for IDEs and development tools.
 
@@ -13,6 +17,14 @@
 
 .PARAMETER MemoryThresholdMB
     Memory threshold in MB for process cleanup (default: 100)
+
+.PARAMETER RepoRoot
+    Root of the checkout whose test processes may be killed.
+    Default: the checkout this script belongs to.
+
+.PARAMETER AllCheckouts
+    Kill matching test processes of every checkout on the machine. This aborts the test runs of
+    anyone else working on it: use it only when nothing else is running.
 
 .PARAMETER DryRun
     Show what would be killed without actually killing processes
@@ -32,18 +44,49 @@
     # Cleanup processes using >100MB memory
     .\cleanup-test-processes.ps1 -MemoryThresholdMB 100
 
+.EXAMPLE
+    # Whole machine, when no other checkout is running tests
+    .\cleanup-test-processes.ps1 -TestHostOnly -AllCheckouts
+
 .NOTES
     Author: MeepleAI Team
     Issue: #2210 - Automated cleanup for stale testhost processes
+    Issue: #4310 - Scoped to the checkout doing the cleanup
     Platform: Windows only (Unix-like systems don't experience DLL locking)
+    The rules live in TestProcessCleanup.psm1 and are tested in
+    infra/scripts/tests/cleanup-test-processes.Tests.ps1.
 #>
 
 param(
     [switch]$TestHostOnly = $false,
     [int]$MemoryThresholdMB = 100,
+    [string]$RepoRoot = '',
+    [switch]$AllCheckouts = $false,
     [switch]$DryRun = $false,
     [switch]$Verbose = $false
 )
+
+Import-Module (Join-Path $PSScriptRoot 'TestProcessCleanup.psm1') -Force
+
+if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
+    $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+}
+
+# The other checkouts of this repository. One of them can sit inside this one
+# (.claude/worktrees/...): its processes are its own. Without git, there are none to exclude.
+$otherRoots = @()
+if (-not $AllCheckouts) {
+    try {
+        $worktreeLines = & git -C $RepoRoot worktree list --porcelain 2>$null
+        if ($LASTEXITCODE -eq 0 -and $worktreeLines) {
+            $thisRoot = ConvertTo-ComparablePath $RepoRoot
+            $otherRoots = @(ConvertFrom-WorktreeList -Lines $worktreeLines |
+                Where-Object { (ConvertTo-ComparablePath $_) -ne $thisRoot })
+        }
+    } catch {
+        $otherRoots = @()
+    }
+}
 
 Write-Host "=== Test Process Cleanup ===" -ForegroundColor Cyan
 
@@ -56,10 +99,17 @@ $processesToCheck = if ($TestHostOnly) {
     Write-Host "Mode: Full Cleanup" -ForegroundColor Gray
 }
 
+if ($AllCheckouts) {
+    Write-Host "Scope: ALL checkouts on this machine" -ForegroundColor Red
+} else {
+    Write-Host "Scope: this checkout only ($RepoRoot)" -ForegroundColor Gray
+}
+
 Write-Host "Memory threshold: $MemoryThresholdMB MB" -ForegroundColor Gray
 Write-Host ""
 
 $killedCount = 0
+$otherCheckoutCount = 0
 $orphanedTestHosts = @()
 $dllLockingFixed = $false
 
@@ -70,81 +120,64 @@ foreach ($processName in $processesToCheck) {
         foreach ($proc in $processes) {
             $memoryMB = [math]::Round($proc.WorkingSet / 1MB, 2)
 
-            # Check if process should be killed
-            $shouldKill = $false
-            $reason = ""
-            $isProtected = $false
-
-            # Get command line for analysis
-            try {
-                $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
-
-                # PROTECTION: Skip Claude Code, IDEs, build tools, and development tools
-                if ($cmdLine -match "claude-code|code.exe|Visual Studio|Rider|WebStorm|cursor|cline|devenv|MSBuild") {
-                    $isProtected = $true
-                    if ($Verbose) {
-                        Write-Host "[PROTECTED] $processName (PID: $($proc.Id)) - Development tool" -ForegroundColor Cyan
-                    }
-                }
-
-                # PROTECTION: Skip current script's parent process chain
-                $currentProcess = Get-Process -Id $PID -ErrorAction SilentlyContinue
-                if ($currentProcess -and $proc.Id -eq $currentProcess.Id) {
-                    $isProtected = $true
-                }
-
-                # Check if it's a test process (contains test-related command line)
-                if (-not $isProtected -and $cmdLine -match "test|jest|xunit|nunit|testhost") {
-                    # Special handling for testhost (DLL locking culprit)
-                    if ($processName -eq "testhost") {
-                        $runtime = (Get-Date) - $proc.StartTime
-
-                        # Kill old testhost processes (>10 minutes)
-                        if ($runtime.TotalMinutes -gt 10) {
-                            $shouldKill = $true
-                            $reason = "Orphaned testhost (running $([math]::Round($runtime.TotalMinutes, 1)) min) - potential DLL lock"
-                            $orphanedTestHosts += $proc.Id
-                            $dllLockingFixed = $true
-                        }
-
-                        # Kill testhost processes even if young (TestHostOnly mode)
-                        if ($TestHostOnly -and $runtime.TotalMinutes -gt 1) {
-                            $shouldKill = $true
-                            $reason = "TestHost cleanup for DLL locking fix"
-                            $dllLockingFixed = $true
-                        }
-                    }
-
-                    # Check memory threshold only if not already marked and not in TestHostOnly mode
-                    if (-not $shouldKill -and -not $TestHostOnly -and $memoryMB -gt $MemoryThresholdMB) {
-                        $shouldKill = $true
-                        $reason = "High memory: $memoryMB MB"
-                    }
-                }
-            } catch {
-                # If we can't get command line, mark as protected (safer approach)
-                $isProtected = $true
-                if ($Verbose) {
-                    Write-Host "[PROTECTED] $processName (PID: $($proc.Id)) - Unable to analyze" -ForegroundColor Yellow
-                }
+            # PROTECTION: never the process running this script
+            if ($proc.Id -eq $PID) {
+                continue
             }
 
-            if ($shouldKill) {
-                $procInfo = "$processName (PID: $($proc.Id), Memory: $memoryMB MB)"
+            # A command line that cannot be read makes the process Protected (safer approach)
+            $cmdLine = $null
+            $runtimeMinutes = 0
+            try {
+                $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($proc.Id)").CommandLine
+                $runtimeMinutes = ((Get-Date) - $proc.StartTime).TotalMinutes
+            } catch {
+                $cmdLine = $null
+            }
 
-                if ($DryRun) {
-                    Write-Host "[DRY RUN] Would kill: $procInfo - $reason" -ForegroundColor Yellow
-                } else {
-                    try {
-                        Stop-Process -Id $proc.Id -Force -ErrorAction Stop
-                        Write-Host "[KILLED] $procInfo - $reason" -ForegroundColor Red
-                        $killedCount++
-                    } catch {
-                        Write-Host "[ERROR] Failed to kill $procInfo : $_" -ForegroundColor Magenta
+            $decision = Get-TestProcessDecision -ProcessName $processName -CommandLine $cmdLine `
+                -RuntimeMinutes $runtimeMinutes -MemoryMB $memoryMB -RepoRoot $RepoRoot -OtherRoots $otherRoots `
+                -TestHostOnly:$TestHostOnly -AllCheckouts:$AllCheckouts -MemoryThresholdMB $MemoryThresholdMB
+
+            $procInfo = "$processName (PID: $($proc.Id), Memory: $memoryMB MB)"
+
+            switch ($decision.Action) {
+                'Kill' {
+                    if ($processName -eq 'testhost') {
+                        $dllLockingFixed = $true
+                        if ($runtimeMinutes -gt 10) {
+                            $orphanedTestHosts += $proc.Id
+                        }
+                    }
+
+                    if ($DryRun) {
+                        Write-Host "[DRY RUN] Would kill: $procInfo - $($decision.Reason)" -ForegroundColor Yellow
+                    } else {
+                        try {
+                            Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+                            Write-Host "[KILLED] $procInfo - $($decision.Reason)" -ForegroundColor Red
+                            $killedCount++
+                        } catch {
+                            Write-Host "[ERROR] Failed to kill $procInfo : $_" -ForegroundColor Magenta
+                        }
                     }
                 }
-            } elseif ($Verbose -and -not $isProtected) {
-                Write-Host "[ACTIVE] $processName (PID: $($proc.Id), Memory: $memoryMB MB)" -ForegroundColor Green
+                'OtherCheckout' {
+                    $otherCheckoutCount++
+                    if ($Verbose -or $DryRun) {
+                        Write-Host "[LEFT ALONE] $procInfo - $($decision.Reason)" -ForegroundColor Cyan
+                    }
+                }
+                'Protected' {
+                    if ($Verbose) {
+                        Write-Host "[PROTECTED] $processName (PID: $($proc.Id)) - $($decision.Reason)" -ForegroundColor Cyan
+                    }
+                }
+                'Active' {
+                    if ($Verbose) {
+                        Write-Host "[ACTIVE] $procInfo" -ForegroundColor Green
+                    }
+                }
             }
         }
     }
@@ -165,6 +198,10 @@ if ($DryRun) {
     if ($dllLockingFixed) {
         Write-Host "  [OK] DLL locking issue should be resolved" -ForegroundColor Green
     }
+}
+
+if ($otherCheckoutCount -gt 0) {
+    Write-Host "Left $otherCheckoutCount test processes alone: not started from this checkout." -ForegroundColor Cyan
 }
 
 Write-Host ""

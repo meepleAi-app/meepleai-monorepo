@@ -304,6 +304,65 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
   });
 
+  /**
+   * Il pannello resta montato quando lo si chiude: senza un modo di lasciare l'avviso, riaprirlo
+   * lo rimostrerebbe, anche il giorno dopo. «Ho capito» riporta il pannello alla domanda.
+   */
+  it('lets the user leave the plan quota notice and go back to the question', async () => {
+    const onReset = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: {
+        kind: 'server',
+        message: 'Tier limit exceeded: AgentQuery (3/3)',
+        code: 'TIER_LIMIT_EXCEEDED',
+        tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={onReset}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Ho capito' }));
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Il posto dell'avviso è nel pannello da prima, vuoto: l'avviso arriva dopo l'invio senza che il
+   * fuoco si sposti, e una regione viva montata già piena non viene annunciata da tutti gli screen
+   * reader.
+   */
+  it('keeps the place for the plan quota notice in the drawer, empty', () => {
+    render(
+      <DrawerShell
+        state={baseState}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    const region = screen.getByTestId('tier-limit-region');
+    expect(region).toHaveAttribute('role', 'status');
+    expect(region).toBeEmptyDOMElement();
+    expect(screen.queryByRole('button', { name: 'Ho capito' })).not.toBeInTheDocument();
+  });
+
   it('calls onClose when header close pressed (all states)', async () => {
     const onClose = vi.fn();
     render(

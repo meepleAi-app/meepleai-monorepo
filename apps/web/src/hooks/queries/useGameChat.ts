@@ -25,7 +25,7 @@ import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
-import { readTierLimit, TIER_LIMIT_EXCEEDED, tierLimitMessage } from '@/lib/tier-limit';
+import { readTierLimit, TIER_LIMIT_EXCEEDED, type TierLimit } from '@/lib/tier-limit';
 import type { Citation } from '@/types';
 
 export interface ChatMessage {
@@ -45,6 +45,11 @@ export interface UseGameChatResult {
   readonly isLoading: boolean;
   readonly isHydrating: boolean;
   readonly isError: boolean;
+  /**
+   * #4168 (5g-b): l'ultima domanda è stata fermata dalla quota del piano. Non è un errore
+   * (`isError` resta falso e `ask` non rifiuta): i numeri del piano e il link, per l'avviso.
+   */
+  readonly tierLimit: TierLimit | null;
   readonly currentAgent: AgentKind;
   readonly chatThreadId: string | null;
   readonly hasHistoricalMessages: boolean;
@@ -137,6 +142,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
   const [currentAgent, setCurrentAgent] = useState<AgentKind>(initialAgent);
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
+  const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
   // G2: default false (set true in effect) per non rompere test esistenti
   const [isHydrating, setIsHydrating] = useState(false);
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
@@ -190,6 +196,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
       setMessages(prev => [...prev, userMsg]);
       setIsLoading(true);
       setIsError(false);
+      setTierLimit(null);
 
       let answerBuffer = '';
       let collectedCitations: Citation[] = [];
@@ -253,9 +260,11 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
           } else if (event.type === ERROR_EVENT_TYPE) {
             const errPayload = event.data as ErrorPayload;
             if (errPayload?.errorCode === TIER_LIMIT_EXCEEDED) {
-              // #4168 (5g-b): la quota del piano. Chi chiama riceve la spiegazione, con i numeri
-              // del piano e l'ora in cui il conteggio riparte.
-              throw new Error(tierLimitMessage(readTierLimit(event.data)));
+              // #4168 (5g-b): la quota del piano non è un guasto. Niente rifiuto — chi chiama non
+              // lo gestisce, e l'utente resterebbe con la domanda senza risposta e senza un
+              // perché — ma i numeri del piano, per l'avviso.
+              setTierLimit(readTierLimit(event.data));
+              return;
             }
             throw new Error(errPayload?.message ?? 'QA stream error');
           } else if (event.type === CITATIONS_EVENT_TYPE) {
@@ -288,6 +297,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     isLoading,
     isHydrating,
     isError,
+    tierLimit,
     currentAgent,
     chatThreadId,
     hasHistoricalMessages,

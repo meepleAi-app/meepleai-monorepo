@@ -17,6 +17,7 @@
 
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 
+import { TierLimitNotice } from '@/components/chat-unified/TierLimitNotice';
 import { ChatBubble } from '@/components/features/game-chat/ChatBubble';
 import { ChatBubbleSkeleton } from '@/components/features/game-chat/ChatBubbleSkeleton';
 import { ChatHistoryBanner } from '@/components/features/game-chat/ChatHistoryBanner';
@@ -220,6 +221,11 @@ export function GameChatTab({
                     <TypingIndicator hint="Cerco nella KB" />
                   </ChatBubble>
                 )}
+                {/* #4168 (5g-b): la domanda fermata dalla quota del piano. Il posto dell'avviso c'è
+                    da prima, vuoto, così chi usa uno screen reader lo sente arrivare. */}
+                <div aria-live="polite" data-testid="game-chat-tier-limit">
+                  {chat.tierLimit && <TierLimitNotice limit={chat.tierLimit} />}
+                </div>
                 <div ref={messagesEndRef} aria-hidden="true" />
               </>
             )}

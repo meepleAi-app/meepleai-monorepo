@@ -259,10 +259,11 @@ describe('useGameChat', () => {
   });
 
   /**
-   * #4168 (5g-b): la domanda fermata dalla quota del piano. Chi chiama `ask` riceve la
-   * spiegazione — i numeri del piano e quando riparte il conteggio — invece di «QA stream error».
+   * #4168 (5g-b): la domanda fermata dalla quota del piano non è un guasto. `ask` non rifiuta —
+   * chi lo chiama non gestisce i rifiuti, e l'utente vedrebbe la sua domanda senza risposta e
+   * senza un perché — e l'hook dà i numeri del piano, da mostrare nell'avviso.
    */
-  it('rejects with the plan quota explanation when the stream stops for the quota', async () => {
+  it('reports the plan quota instead of failing when the stream stops for the quota', async () => {
     vi.mocked(qaStream).mockReturnValueOnce(
       mockStream([
         {
@@ -279,7 +280,7 @@ describe('useGameChat', () => {
     );
     const { result } = renderHook(() => useGameChat('wingspan'));
 
-    let rejection: unknown;
+    let rejection: unknown = null;
     await act(async () => {
       try {
         await result.current.ask('q');
@@ -288,11 +289,32 @@ describe('useGameChat', () => {
       }
     });
 
-    expect(rejection).toBeInstanceOf(Error);
-    expect((rejection as Error).message).toMatch(
-      /^Hai usato tutte le domande di oggi previste dal tuo piano \(3 su 3\)\. Il conteggio riparte alle \d{2}:\d{2} \(mezzanotte UTC\)\.$/
+    expect(rejection).toBeNull();
+    expect(result.current.tierLimit).toEqual({ current: 3, max: 3, upgradeUrl: '/pricing' });
+    expect(result.current.isError).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    // La domanda resta; una risposta dell'agente non c'è.
+    expect(result.current.messages.map(m => m.role)).toEqual(['user']);
+  });
+
+  it('forgets the plan quota with the next question', async () => {
+    vi.mocked(qaStream).mockReturnValueOnce(
+      mockStream([
+        { type: 5, data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3 } },
+      ]) as any
     );
-    await waitFor(() => expect(result.current.isError).toBe(true));
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('q');
+    });
+    expect(result.current.tierLimit).not.toBeNull();
+
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+    await act(async () => {
+      await result.current.ask('q2');
+    });
+
+    expect(result.current.tierLimit).toBeNull();
   });
 
   it('switchAgent updates currentAgent', () => {

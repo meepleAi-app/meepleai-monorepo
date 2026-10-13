@@ -96,7 +96,8 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             vectorWeight: 0.7m,
             keywordWeight: 0.3m,
             rerankerEnabled: true,
-            allowedCategories: Enum.GetValues<DocumentCategory>());
+            allowedCategories: Enum.GetValues<DocumentCategory>(),
+            sessionAssistant: Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
 
     [Fact]
     public async Task FreshDatabase_PublishesVersionTwo_WithCurrentModels_AndArchivesTheSeed()
@@ -197,7 +198,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         profile!.CreateDraft(AgentProfileTests.Content(temperature: 0.5m));
         await _dbContext.SaveChangesAsync(ct);
-        profile.PublishDraft();
+        profile.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
         await _dbContext.SaveChangesAsync(ct);
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
@@ -226,7 +227,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
         var seenByFirst = await new AgentProfileRepository(firstContext).GetAsync(ct);
         var seenBySecond = await new AgentProfileRepository(secondContext).GetAsync(ct);
 
-        seenByFirst!.PublishDraft();
+        seenByFirst!.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
         await firstContext.SaveChangesAsync(ct);
 
         seenBySecond!.UpdateDraft(AgentProfileTests.Content(temperature: 0.9m));

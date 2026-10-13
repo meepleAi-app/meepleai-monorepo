@@ -2349,6 +2349,84 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("agent_profile_versions", "knowledge_base");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AssistantProposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ChatThreadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chat_thread_id");
+
+                    b.Property<string>("ConfirmedPayload")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("confirmed_payload");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Expected")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("expected");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("failure_code");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("live_session_id");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<Guid>("ProfileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile_version_id");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatThreadId")
+                        .HasDatabaseName("ix_assistant_proposals_thread");
+
+                    b.HasIndex("LiveSessionId", "Status")
+                        .HasDatabaseName("ix_assistant_proposals_session_status");
+
+                    b.ToTable("assistant_proposals", "knowledge_base");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback", b =>
                 {
                     b.Property<Guid>("Id")

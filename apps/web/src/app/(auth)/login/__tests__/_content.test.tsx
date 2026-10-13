@@ -404,8 +404,11 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
       Object.defineProperty(window, 'event', originalWindowEvent);
       originalWindowEvent = undefined;
     }
-    // Una risposta che un test rosso non ha consumato non deve arrivare al test dopo.
+    // Una risposta che un test rosso non ha consumato non deve arrivare al test dopo: una
+    // chiamata lasciata in volo da `inFlight` non si conclude mai, e trascina nel rosso chi segue.
     verify2FAMock.mockReset();
+    pushMock.mockReset().mockResolvedValue(undefined);
+    mockAuth.refreshUser.mockReset().mockResolvedValue(undefined);
   });
 
   /**

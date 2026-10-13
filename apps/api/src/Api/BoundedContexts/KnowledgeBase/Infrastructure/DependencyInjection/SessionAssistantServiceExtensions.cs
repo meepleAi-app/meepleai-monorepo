@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
@@ -16,6 +17,8 @@ internal static class SessionAssistantServiceExtensions
         services.AddScoped<IAssistantPlayerMatcher, AssistantPlayerMatcher>();
         services.AddScoped<SessionAssistantEvaluator>();
         services.AddScoped<AssistantTurnRunner>();
+        // Singleton: non ha stato e apre uno scope per ogni scrittura.
+        services.AddSingleton<IAssistantProposalApplier, LiveSessionProposalApplier>();
         services.AddScoped<IAssistantSessionDirectory, LiveSessionAssistantDirectory>();
         services.AddScoped<IToolCallingModelCatalog, CatalogToolCallingModels>();
         return services;

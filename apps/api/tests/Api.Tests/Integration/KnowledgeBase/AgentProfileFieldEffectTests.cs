@@ -669,17 +669,170 @@ public sealed class AgentProfileFieldEffectTests
             .And.NotContain(ThreadSecret);
     }
 
-    /// <summary>Un thread dell'utente del test, sul gioco del test, con un messaggio dentro.</summary>
-    private async Task<Guid> CreateThreadWithMessageAsync(string content)
+    // ─── La cache e ciò che dà forma alla risposta (#4279) ───
+    // La cache è condivisa fra gli utenti. La chiave portava gioco, lingua, versione e domanda; ma
+    // la risposta dipende anche dalla cronologia del thread e dal filtro per documento.
+
+    private const string FollowUp = "And how many with three players?";
+
+    private static string? FirstStateOf(IReadOnlyList<JsonElement> events) =>
+        events[0].GetProperty("data").TryGetProperty("message", out var message) ? message.GetString() : null;
+
+    /// <summary>
+    /// Una risposta nata con la conversazione di un utente nel prompt non viene riservita a chi fa
+    /// la stessa domanda senza quella conversazione. Non serve nominare il thread altrui: bastava il
+    /// testo della domanda.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_DoesNotServeAnAnswerBuiltOnAnotherUsersConversation()
     {
+        var threadId = await CreateThreadWithMessageAsync($"La nostra variante si chiama {ThreadSecret}.");
+        await AskAsync(Question, chatId: threadId);
+        _hostFixture.Llm.LastUserPrompt.Should().Contain(ThreadSecret, "la prima risposta nasce con la cronologia");
+        var strangerToken = await CreateAnotherOwnerOfTheGameAsync();
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, token: strangerToken);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull($"primo evento: «{FirstStateOf(events)}»");
+        _hostFixture.Llm.LastUserPrompt.Should().NotContain(ThreadSecret);
+    }
+
+    /// <summary>
+    /// Una domanda di seguito dipende dai turni precedenti: la stessa frase, in due conversazioni
+    /// diverse, non riceve la stessa risposta dalla cache.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_DoesNotServeAFollowUpTheAnswerOfAnotherConversation()
+    {
+        var aboutSetup = await CreateThreadWithMessageAsync("We are setting up the base game.");
+        await AskAsync(FollowUp, chatId: aboutSetup);
+        var aboutVariant = await CreateThreadWithMessageAsync($"We play the variant called {ThreadSecret}.");
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(FollowUp, chatId: aboutVariant);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull($"primo evento: «{FirstStateOf(events)}»");
+        _hostFixture.Llm.LastUserPrompt.Should().Contain(ThreadSecret, "la risposta nasce dalla sua conversazione");
+    }
+
+    /// <summary>
+    /// Il controllo. La chat salva la domanda nel thread prima di chiedere, quindi una prima
+    /// domanda ha sempre una cronologia: la domanda stessa. Due utenti che fanno la stessa prima
+    /// domanda hanno la stessa cronologia, e continuano a condividere la cache. Senza questa
+    /// direzione una correzione troppo larga spegnerebbe la cache della chat senza che nessun test
+    /// lo noti.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_IsStillSharedByTwoUsersAskingTheSameFirstQuestionInTheirOwnThreads()
+    {
+        var mine = await CreateThreadWithMessageAsync(Question);
+        await AskAsync(Question, chatId: mine);
+        var strangerToken = await CreateAnotherOwnerOfTheGameAsync();
+        var theirs = await CreateThreadWithMessageAsync(Question, strangerToken);
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, chatId: theirs, token: strangerToken);
+
+        _hostFixture.Llm.LastAnswer.Should().BeNull("la stessa prima domanda viene dalla cache");
+        FirstStateOf(events).Should().Be("Retrieved from cache");
+    }
+
+    /// <summary>
+    /// Il filtro per documento decide da quali passaggi nasce la risposta: una domanda filtrata non
+    /// riceve la risposta in cache di quella non filtrata.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_DoesNotServeAFilteredQuestionTheAnswerOfTheUnfilteredOne()
+    {
+        await AskAsync(Question);
+        var documentId = await TheVectorDocumentOfTheGameAsync();
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, documentIds: [documentId]);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull($"primo evento: «{FirstStateOf(events)}»");
+    }
+
+    /// <summary>Il controllo: lo stesso filtro, la stessa domanda, la stessa risposta dalla cache.</summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_StillServesTheSameFilteredQuestion()
+    {
+        var documentId = await TheVectorDocumentOfTheGameAsync();
+        await AskAsync(Question, documentIds: [documentId]);
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, documentIds: [documentId]);
+
+        _hostFixture.Llm.LastAnswer.Should().BeNull("la stessa domanda con lo stesso filtro viene dalla cache");
+        FirstStateOf(events).Should().Be("Retrieved from cache");
+    }
+
+    /// <summary>
+    /// «Continua» manda una domanda VUOTA e la risposta parziale da proseguire. Con la domanda sola
+    /// nella chiave, tutte le continuazioni di un gioco avevano la stessa chiave: la seconda
+    /// riceveva il seguito della prima.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_DoesNotServeAContinuationTheSequelOfAnotherAnswer()
+    {
+        await AskAsync(string.Empty, continuationToken: ContinuationOf("Each player draws five cards and then"));
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(
+            string.Empty, continuationToken: ContinuationOf($"The variant called {ThreadSecret} changes the setup:"));
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull($"primo evento: «{FirstStateOf(events)}»");
+        _hostFixture.Llm.LastUserPrompt.Should().Contain(ThreadSecret, "si prosegue la risposta di questa richiesta");
+    }
+
+    /// <summary>
+    /// Lo stile cambia le istruzioni al modello: chi chiede una risposta estesa non riceve dalla
+    /// cache quella concisa.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_DoesNotServeAConciseAnswerToADetailedRequest()
+    {
+        await AskAsync(Question, responseStyle: "concise");
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, responseStyle: "detailed");
+
+        _hostFixture.Llm.LastSystemPrompt.Should().NotBeNull($"primo evento: «{FirstStateOf(events)}»")
+            .And.Contain("Answer thoroughly");
+    }
+
+    /// <summary>Il token che il client manda con «Continua»: la risposta parziale, in base64.</summary>
+    private static string ContinuationOf(string partialAnswer) =>
+        Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { partialAnswer })));
+
+    private async Task<Guid> TheVectorDocumentOfTheGameAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.VectorDocuments.Where(v => v.GameId == _gameId).Select(v => v.Id).SingleAsync(Ct);
+    }
+
+    /// <summary>Un thread sul gioco del test, con un messaggio dentro: dell'utente del test, o di chi porta il token.</summary>
+    private async Task<Guid> CreateThreadWithMessageAsync(string content, string? token = null)
+    {
+        token ??= _token;
         var created = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, "/api/v1/chat-threads", _token, new { gameId = _gameId, title = "Cronologia" }), Ct);
+            HttpMethod.Post, "/api/v1/chat-threads", token, new { gameId = _gameId, title = "Cronologia" }), Ct);
         created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync(Ct));
         using var thread = JsonDocument.Parse(await created.Content.ReadAsStringAsync(Ct));
         var threadId = thread.RootElement.GetProperty("id").GetGuid();
 
         var added = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", _token,
+            HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", token,
             new { content, role = "user" }), Ct);
         added.IsSuccessStatusCode.Should().BeTrue(await added.Content.ReadAsStringAsync(Ct));
         return threadId;
@@ -750,12 +903,20 @@ public sealed class AgentProfileFieldEffectTests
             c.SessionAssistant);
 
     private async Task<List<JsonElement>> AskAsync(
-        string query, string? acceptLanguage = null, Guid? chatId = null, string? token = null)
+        string query, string? acceptLanguage = null, Guid? chatId = null, string? token = null,
+        IReadOnlyList<Guid>? documentIds = null, string? continuationToken = null, string? responseStyle = null)
     {
-        // Il thread entra nel corpo solo quando c'è: le altre domande restano quelle di sempre.
-        object payload = chatId is null
-            ? new { gameId = _gameId.ToString(), query }
-            : new { gameId = _gameId.ToString(), query, chatId };
+        // Il thread e il filtro entrano nel corpo solo quando ci sono: le altre domande restano
+        // quelle di sempre.
+        var payload = new Dictionary<string, object?>
+        {
+            ["gameId"] = _gameId.ToString(),
+            ["query"] = query,
+        };
+        if (chatId is not null) payload["chatId"] = chatId;
+        if (documentIds is not null) payload["documentIds"] = documentIds;
+        if (continuationToken is not null) payload["continuationToken"] = continuationToken;
+        if (responseStyle is not null) payload["responseStyle"] = responseStyle;
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post, "/api/v1/agents/qa/stream?generateFollowUps=false", token ?? _token, payload);
         if (acceptLanguage is not null)

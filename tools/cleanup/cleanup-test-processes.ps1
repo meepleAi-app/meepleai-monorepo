@@ -165,7 +165,7 @@ foreach ($processName in $processesToCheck) {
                 'OtherCheckout' {
                     $otherCheckoutCount++
                     if ($Verbose -or $DryRun) {
-                        Write-Host "[LEFT ALONE] $procInfo - another checkout's test run" -ForegroundColor Cyan
+                        Write-Host "[LEFT ALONE] $procInfo - $($decision.Reason)" -ForegroundColor Cyan
                     }
                 }
                 'Protected' {
@@ -201,7 +201,7 @@ if ($DryRun) {
 }
 
 if ($otherCheckoutCount -gt 0) {
-    Write-Host "Left $otherCheckoutCount test processes of other checkouts alone." -ForegroundColor Cyan
+    Write-Host "Left $otherCheckoutCount test processes alone: not started from this checkout." -ForegroundColor Cyan
 }
 
 Write-Host ""

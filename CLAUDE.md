@@ -261,7 +261,7 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 | DB connection | `docker compose logs postgres && dotnet ef database update` |
 | Build fails (FE) | `rm -rf .next && pnpm build` |
 | Build fails (BE) | `dotnet clean && dotnet build` |
-| Testhost blocking | `powershell -File tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` (solo i `testhost` di questo checkout), o `taskkill //PID <PID> //F` dopo aver letto la riga di comando. **Mai per nome d'immagine**: abbatte i test delle altre sessioni (#4310) |
+| Testhost blocking | `powershell -File tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` (this checkout's testhost only), or `taskkill //PID <PID> //F` after reading its command line. **Never by image name**: it aborts other sessions' test runs (#4310) |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
 | Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/for-developers/workflows/snapshot-seed-workflow.md#compat-gate--exit-codes) |
 | Full ops reference | [operations-manual.md](./docs/for-developers/operations/operations-manual.md) |

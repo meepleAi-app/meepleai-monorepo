@@ -25,6 +25,11 @@ on:
       # #4298: la baseline degli shard di dev-async, che shard-skip-assert.bats legge dal
       # repository (vedi il filtro `infra` più sotto).
       - 'infra/fixtures/dev-async-shard-baseline.json'
+      # #3742: le due matrici degli shard di integrazione, che integration-shard-matrix.bats legge
+      # da questi file (vedi il filtro `infra` più sotto). Senza queste righe una PR che cambia solo
+      # la ripartizione non avvierebbe il gate che ne verifica la forma.
+      - '.github/workflows/dev-async.yml'
+      - '.github/workflows/ci.yml'
       # #4310: gli script di pulizia e l'hook di pre-push che li chiama, che due suite sotto
       # infra/scripts/tests/ esaminano da qui (vedi il filtro `infra` più sotto). Senza queste due
       # righe una PR che tocca solo l'hook non avvierebbe nemmeno il workflow.
@@ -117,7 +122,8 @@ jobs:
               #
               # #4298: one fixture IS read from the repo. shard-skip-assert.bats
               # checks the committed dev-async-shard-baseline.json (runId,
-              # capturedAt, the three shards), so a PR that rewrites only that
+              # capturedAt; one entry per shard is checked by
+              # integration-shard-matrix.bats), so a PR that rewrites only that
               # file changed something this gate observes and did not wake it.
               # Listed by name, not as infra/fixtures/**, for the reason above.
               #
@@ -135,6 +141,15 @@ jobs:
               - 'infra/scripts/**'
               - 'infra/seed-schema.version'
               - 'infra/fixtures/dev-async-shard-baseline.json'
+              # #3742: two more suites read files that live elsewhere.
+              # integration-shard-matrix.bats reads the shard matrices of both
+              # workflows: a PR that drops a token from one shard and leaves it
+              # excluded from Core makes those tests run nowhere, and only this
+              # gate can see it before the merge. shard-session-budget.bats reads
+              # the TestSessionTimeout from the real runsettings.
+              - '.github/workflows/dev-async.yml'
+              - '.github/workflows/ci.yml'
+              - 'apps/api/tests/Api.Tests/integration.runsettings'
               - 'tools/cleanup/**'
               - '.husky/**'
               - 'apps/web/scripts/install-git-hooks.mjs'

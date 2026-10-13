@@ -96,7 +96,8 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             vectorWeight: 0.7m,
             keywordWeight: 0.3m,
             rerankerEnabled: true,
-            allowedCategories: Enum.GetValues<DocumentCategory>());
+            allowedCategories: Enum.GetValues<DocumentCategory>(),
+            sessionAssistant: Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
 
     [Fact]
     public async Task FreshDatabase_PublishesVersionTwo_WithCurrentModels_AndArchivesTheSeed()

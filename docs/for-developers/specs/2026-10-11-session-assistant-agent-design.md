@@ -173,7 +173,7 @@ Il pilota ne ha pochi, di proposito: con i modelli economici meno strumenti sign
 |---|---|---|---|
 | `stato_partita()` | lettura | Giocatori, giocatore di turno (`CurrentTurnPlayerId`), indice di turno (`CurrentTurnIndex`), **round corrente** derivato, fase (`TurnPhasesDto`), stato della sessione, dimensioni (`ScoringConfig`) e punteggi per giocatore, round e dimensione (`RoundScores`) | **Nessun parametro.** L'id della sessione lo lega il server alla richiesta: il modello non può sceglierne un'altra |
 | `cerca_regole(domanda)` | lettura | Passaggi e citazioni per il gioco della sessione, nella lingua dell'host (§4.2) | Offerto solo se la sessione ha un gioco. Arriva con la fetta A5 (§8) |
-| `proponi_punteggio(giocatore, punti, dimensione?, round?)` | proposta | Salva una proposta di **punti guadagnati** da un giocatore | Nome ambiguo o sconosciuto: errore tipizzato al modello («Marco R. o Marco B.?»), che lo chiede all'host. La dimensione deve esistere in `ScoringConfig`; se ce n'è una sola si può omettere. Round omesso = round corrente. Punti interi |
+| `proponi_punteggio(giocatore, punti, dimensione?, round?)` | proposta | Salva una proposta di **punti guadagnati** da un giocatore | Nome ambiguo o sconosciuto: errore tipizzato al modello («Marco R. o Marco B.?»), che lo chiede all'host. La dimensione deve esistere in `ScoringConfig`; se ce n'è una sola si può omettere. Round omesso = round corrente. Punti interi, entro ±100.000: il limite vale per la proposta e per la correzione dell'host, e la cella di partenza sta entro ±1.000.000.000, così la somma non può fare il giro dell'intero |
 | `proponi_turno()` | proposta | Proposta di passare il turno | La fase segue lo stesso schema, ma è fuori dal pilota |
 
 Le **house rules** non sono uno strumento: vanno nel contesto statico (§4.1), lette con `GetGameMemoryQuery(GameId, OwnerId)`.
@@ -192,7 +192,7 @@ Le **house rules** non sono uno strumento: vanno nel contesto statico (§4.1), l
 | `kind` | `Score` · `AdvanceTurn` |
 | `payload` (jsonb) | per `Score`: giocatore, dimensione, round, incremento |
 | `expected` (jsonb) | per `Score`: il valore della cella al momento della proposta; per `AdvanceTurn`: `CurrentTurnIndex` |
-| `status` | `Pending` → `Applying` → `Accepted` · `Edited` · `Failed`; da `Pending` anche `Rejected` · `Expired` · `Stale` |
+| `status` | `Pending` → `Applying` → `Accepted` · `Edited` · `Failed`; da `Pending` anche `Rejected` · `Expired` · `Stale`; `Stale` anche da `Applying`, perché lo stato atteso si controlla dopo la prenotazione (§5.3) |
 | `confirmed_payload` (jsonb, nullable) | l'incremento confermato, quando l'host lo corregge |
 | `failure_code` (nullable) | il codice dell'errore di dominio, per `Failed` |
 | `profile_version_id` | la versione del profilo che l'ha prodotta |
@@ -340,9 +340,9 @@ Con il prompt v1 `deepseek-flash` non passa le regole 1, 2 e 4; con il prompt v2
 
 **Cosa chiede lo spike alle fette successive.**
 
-- **Prima di A2, il prompt (#4256): fatto.** Il prompt v2 è il seme della sezione «Assistente in partita». Nelle sessioni inglesi i nomi e i messaggi degli strumenti restano in italiano: non ha impedito al prompt v2 di passare, ma resta da decidere in A2.
-- **A2, strumenti offerti.** Il prompt deve nominare solo gli strumenti del turno. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata, che il report non conta fra gli strumenti. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
-- **A2, duplicati.** `qwen2.5:3b` ha creato tre proposte di turno identiche in un turno. Alla conferma le ferma `Stale` (§5.3), ma serve un test: di più proposte identiche se ne conferma una sola.
+- **Prima di A2, il prompt (#4256): fatto.** Il prompt v2 è il seme della sezione «Assistente in partita». Nelle sessioni inglesi i nomi e i messaggi degli strumenti restano in italiano: non ha impedito al prompt v2 di passare, ma resta da decidere con il testo che verrà pubblicato (#4270).
+- **Prima di pubblicare (#4270), strumenti offerti.** Il prompt deve nominare solo gli strumenti del turno. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata, che il report non conta fra gli strumenti. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
+- **A3, duplicati.** `qwen2.5:3b` ha creato tre proposte di turno identiche in un turno. Il turno non le unisce: le proposte di troppo le conta il set di valutazione, e unirle in produzione nasconderebbe ciò che il gate misura. Alla conferma le ferma `Stale` (§5.3), e lo fissa un test di integrazione della fetta A3b: di più proposte identiche se ne conferma una sola.
 - **A3, testo mostrato.** `ChatResponse.Text` concatena il testo di tutti i giri («I'll check the current game state first.» seguito dalla risposta). All'host va solo l'ultimo messaggio dell'assistente.
 - **A3, errori tipizzati e confini.** Ogni validazione degli strumenti va provata con il lettore reale. Il test di architettura oggi guarda costruttori e campi: prima che arrivi un sink vero deve coprire anche i parametri dei metodi. I nomi dei giocatori entrano in un messaggio di sistema: conviene un blocco di dati delimitato.
 - **A6, limiti dell'esecutore.** Valuta la traiettoria (strumenti e proposte), non il testo: una frase falsa o una risposta nella lingua sbagliata passano. Il rilevatore riconosce le forme viste, non ogni parafrasi: «Propongo che Marco Rossi guadagna 4 punti», detto da `qwen2.5:3b` senza alcuna proposta, non scatta. Non c'è una scadenza per scenario, e la richiesta è sincrona. Per il gate conviene aggiungere a ogni scenario il testo atteso (un nome, un numero, la lingua), scenari con più turni e tabelle di punteggio piene.
@@ -496,6 +496,6 @@ Vincoli che valgono già per il pilota: la conversazione dell'assistente passa s
 2. **Gioco pilota**: uno con dimensioni di punteggio semplici, KB indicizzata e house rules di prova, fra quelli del golden set.
 3. **Quota del tetto** da riservare al costo per partita. Lo spike dà il costo per turno (§7.1): manca la decisione. La quota giornaliera delle valutazioni (il 20% del tetto) non basta per uno spike e una correzione del prompt nello stesso giorno: per #4256 è stata alzata al 35% per poche ore. Tre run del set alla versione 3 ne consumano circa il 40%.
 4. **Chi scrive gli scenari** dello spike, e se partire da partite reali trascritte.
-5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese: è il prompt v2 di #4256, che supera il gate (§7.1). In A2 va allineato agli strumenti offerti.
+5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese: è il prompt v2 di #4256, che supera il gate (§7.1). Va allineato agli strumenti offerti prima di pubblicarlo (#4270).
 6. **Pilota solo in italiano?** Non serve: con il prompt v2 gli scenari inglesi passano tutti (§7.1).
 7. **Chiave OpenRouter locale**: va risincronizzata (`make secrets-sync`, che richiede SSH) per misurare i modelli via OpenRouter e la riserva del profilo. Fino ad allora l'assistente non ha un modello di riserva (§7.1).

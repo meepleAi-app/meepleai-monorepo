@@ -128,10 +128,23 @@ public sealed class AssistantProposal : AggregateRoot<Guid>
     /// Il valore da scrivere nella cella: quello atteso più l'incremento, proposto o corretto dall'host.
     /// <c>RecordScore</c> sostituisce la cella, quindi l'incremento va sommato qui (spec §5.1).
     /// </summary>
+    /// <exception cref="ValidationException">La correzione è fuori da <see cref="MaxPointsPerProposal"/>.</exception>
     public int ScoreValueToWrite(int? correctedPoints)
     {
         EnsureKind(AssistantProposalKind.Score, "compute a score for");
-        return (Expected.CellValue ?? 0) + (correctedPoints ?? Payload.Points ?? 0);
+        if (Expected.CellValue is not { } cell || Payload.Points is not { } proposed)
+        {
+            // Una riga malformata non diventa «scrivi la cella più zero».
+            throw new InvalidOperationException(
+                $"Assistant proposal {Id} is a score proposal without its expected cell value or its points.");
+        }
+
+        // È l'ultimo passo prima della scrittura vera: il limite vale qui, non solo in MarkEdited, che
+        // arriva dopo. Con la cella e i punti nei loro limiti la somma sta in un intero.
+        var points = correctedPoints ?? proposed;
+        Require(IsWithinTheLimit(points), nameof(correctedPoints),
+            $"Points must be between -{MaxPointsPerProposal} and {MaxPointsPerProposal}.");
+        return cell + points;
     }
 
     /// <summary>La prenotazione: da qui in poi un'altra conferma trova la proposta non più <c>Pending</c>.</summary>

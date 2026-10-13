@@ -1,3 +1,4 @@
+using System.Reflection;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Domain.Enums;
@@ -61,5 +62,23 @@ public sealed class AgentProfileContentSessionAssistantTests
         var content = AgentProfileTests.Content(assistant: disabled);
 
         content.SessionAssistant.Enabled.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Review finale di A2: la sezione è un argomento obbligatorio. Con un parametro opzionale, chi
+    /// ricostruisce un contenuto campo per campo (lo farà la pagina admin del profilo) compilerebbe senza
+    /// passarla, e pubblicherebbe una versione con l'assistente spento senza che nessuno l'abbia deciso.
+    /// </summary>
+    [Theory]
+    [InlineData("Create")]
+    [InlineData("Restore")]
+    public void TheFactories_TakeTheAssistantSection_AsARequiredArgument(string factory)
+    {
+        var parameters = typeof(AgentProfileContent)
+            .GetMethod(factory, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)!
+            .GetParameters();
+
+        parameters.Should().NotContain(p => p.IsOptional);
+        parameters[^1].ParameterType.Should().Be(typeof(SessionAssistantSettings));
     }
 }

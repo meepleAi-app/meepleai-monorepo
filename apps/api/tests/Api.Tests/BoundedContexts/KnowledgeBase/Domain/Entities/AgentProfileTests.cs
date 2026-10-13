@@ -45,7 +45,7 @@ public sealed class AgentProfileTests
             keywordWeight: 0.3m,
             rerankerEnabled: true,
             allowedCategories: [DocumentCategory.Rulebook, DocumentCategory.Errata],
-            sessionAssistant: assistant);
+            sessionAssistant: assistant ?? SessionAssistantSettings.Disabled);
 
     /// <summary>Una sezione «Assistente in partita» valida per <see cref="Content"/>, che ha «en» come lingua di riserva.</summary>
     internal static SessionAssistantSettings Assistant(bool enabled = true, bool useReserveModel = false) =>

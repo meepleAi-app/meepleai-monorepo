@@ -108,6 +108,12 @@ public sealed class AssistantProposalRepositoryIntegrationTests(AssistantProposa
         var act = () => second.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
 
         await act.Should().ThrowAsync<DbUpdateConcurrencyException>();
+
+        // Chi ha perso la corsa risponde con lo stato attuale: la lettura non tracciata deve vedere ciò che
+        // ha salvato il primo, non l'istanza che questo contesto tiene ancora, con la sua prenotazione fallita.
+        var current = await second.ServiceProvider.GetRequiredService<IAssistantProposalRepository>().GetReadOnlyAsync(id, Ct);
+        current!.Status.Should().Be(AssistantProposalStatus.Applying);
+        current.ResolvedBy.Should().Be(HostUser);
     }
 
     [Fact]

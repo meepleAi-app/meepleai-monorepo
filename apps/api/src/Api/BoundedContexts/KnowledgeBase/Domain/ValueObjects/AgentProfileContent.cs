@@ -93,8 +93,9 @@ public sealed class AgentProfileContent : ValueObject
         decimal keywordWeight,
         bool rerankerEnabled,
         IReadOnlyCollection<DocumentCategory> allowedCategories,
-        SessionAssistantSettings? sessionAssistant = null)
+        SessionAssistantSettings sessionAssistant)
     {
+        ArgumentNullException.ThrowIfNull(sessionAssistant);
         Require(!string.IsNullOrWhiteSpace(name), nameof(name), "Name is required.");
         Require(!string.IsNullOrWhiteSpace(primaryModelId), nameof(primaryModelId), "Primary model is required.");
         Require(fallbackModelId is null || !string.IsNullOrWhiteSpace(fallbackModelId),
@@ -128,8 +129,9 @@ public sealed class AgentProfileContent : ValueObject
         Require(allowedCategories is { Count: > 0 }, nameof(allowedCategories), "At least one document category is required.");
         Require(allowedCategories.All(c => Enum.IsDefined(c)), nameof(allowedCategories), "Unknown document category.");
 
-        var assistant = sessionAssistant ?? SessionAssistantSettings.Disabled;
-        Require(!assistant.Enabled || assistant.PromptFor(language) is not null, nameof(sessionAssistant),
+        // Obbligatoria, non opzionale: chi ricostruisce un contenuto campo per campo deve dire che cosa
+        // ne fa, invece di spegnere l'assistente per omissione.
+        Require(!sessionAssistant.Enabled || sessionAssistant.PromptFor(language) is not null, nameof(sessionAssistant),
             $"The session assistant needs a system prompt for the fallback language '{language}'.");
 
         return new AgentProfileContent(
@@ -150,7 +152,7 @@ public sealed class AgentProfileContent : ValueObject
             keywordWeight,
             rerankerEnabled,
             allowedCategories.Distinct().Order().ToArray(),
-            assistant);
+            sessionAssistant);
     }
 
     /// <summary>
@@ -177,7 +179,7 @@ public sealed class AgentProfileContent : ValueObject
         decimal keywordWeight,
         bool rerankerEnabled,
         IReadOnlyCollection<DocumentCategory> allowedCategories,
-        SessionAssistantSettings? sessionAssistant = null) =>
+        SessionAssistantSettings sessionAssistant) =>
         new(
             name,
             description,
@@ -198,7 +200,7 @@ public sealed class AgentProfileContent : ValueObject
             // Normalizzare non è validare: le categorie sono un insieme, e l'uguaglianza le confronta
             // in ordine, quindi un jsonb scritto in un altro ordine deve tornare uguale a Create.
             allowedCategories.Distinct().Order().ToArray(),
-            sessionAssistant ?? SessionAssistantSettings.Disabled);
+            sessionAssistant);
 
     /// <summary>
     /// Spec 2026-10-11 §3.2: perché l'assistente in partita non può girare con i modelli di questo

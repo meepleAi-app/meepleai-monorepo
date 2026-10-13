@@ -263,4 +263,62 @@ public sealed class AssistantProposalTests
 
         return proposal;
     }
+
+    // ─── Review finale di A2 ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// <c>ScoreValueToWrite</c> è l'ultimo passo prima della scrittura vera: il limite sulla correzione
+    /// deve valere anche qui, non solo in <c>MarkEdited</c>, che arriva dopo la scrittura. Senza, una
+    /// correzione assurda farebbe il giro dell'intero e finirebbe nel punteggio.
+    /// </summary>
+    [Theory]
+    [InlineData(int.MaxValue)]
+    [InlineData(AssistantProposal.MaxPointsPerProposal + 1)]
+    [InlineData(-AssistantProposal.MaxPointsPerProposal - 1)]
+    public void ScoreValueToWrite_RefusesACorrectionBeyondTheLimit(int corrected)
+    {
+        var act = () => Score().ScoreValueToWrite(corrected);
+
+        act.Should().Throw<ValidationException>();
+    }
+
+    [Fact]
+    public void ScoreValueToWrite_OnATurnProposal_IsRefused()
+    {
+        var act = () => Turn().ScoreValueToWrite(correctedPoints: null);
+
+        act.Should().Throw<ConflictException>();
+    }
+
+    /// <summary>
+    /// Una riga malformata (una proposta di punteggio senza la cella attesa) non deve diventare «scrivi la
+    /// cella più zero»: deve fallire. Lo stato si costruisce come lo materializzerebbe EF.
+    /// </summary>
+    [Fact]
+    public void ScoreValueToWrite_OnAScoreProposalWithoutItsExpectedCell_Fails()
+    {
+        var proposal = Score();
+        typeof(AssistantProposal).GetProperty(nameof(AssistantProposal.Expected))!
+            .SetValue(proposal, new AssistantProposalExpectation(CellValue: null, TurnIndex: null));
+
+        var act = () => proposal.ScoreValueToWrite(correctedPoints: null);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    /// <summary>
+    /// «Prima prenota, poi applica» (spec §5.3): un esito senza la prenotazione salvata lascerebbe chiudere
+    /// la stessa proposta a due conferme. È la regola per cui l'aggregato esiste.
+    /// </summary>
+    [Fact]
+    public void AnOutcome_NeedsTheReservation()
+    {
+        var accept = () => Score().MarkAccepted(Now);
+        var edit = () => Score().MarkEdited(3, Now);
+        var fail = () => Score().MarkFailed("session_state_invalid", Now);
+
+        accept.Should().Throw<ConflictException>().Which.ErrorCode.Should().Be(AssistantProposal.NotPendingCode);
+        edit.Should().Throw<ConflictException>();
+        fail.Should().Throw<ConflictException>();
+    }
 }

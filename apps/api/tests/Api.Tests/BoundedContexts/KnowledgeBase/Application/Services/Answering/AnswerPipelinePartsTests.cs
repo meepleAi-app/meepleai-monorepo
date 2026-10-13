@@ -119,7 +119,8 @@ public sealed class AnswerPipelinePartsTests
         var content = AgentProfileContent.Create(
             "MeepleAI", "d", "p", "deepseek-flash", null, 0.3m, 1500, style,
             new Dictionary<string, string> { ["en"] = "EN prompt" }, "en", 20, 5, 0.55m, 0.7m, 0.3m, true,
-            Enum.GetValues<DocumentCategory>());
+            Enum.GetValues<DocumentCategory>(),
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
 
         var prompt = AnswerPromptBuilder.BuildAcrossGames(content, "en", "[1] [Source: Document d1, Page 3]\ntext", "q?", hasProtectedSources: true);
 
@@ -300,5 +301,6 @@ public sealed class AnswerPipelinePartsTests
             0.7m,
             0.3m,
             true,
-            Enum.GetValues<DocumentCategory>());
+            Enum.GetValues<DocumentCategory>(),
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
 }

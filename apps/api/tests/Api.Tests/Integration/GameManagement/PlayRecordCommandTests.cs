@@ -56,21 +56,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
-        services.AddScoped<PlayRecordPermissionChecker>();
-        // #4298: UpdatePlayRecordCommandHandler also takes these two (version history, #2437-3;
-        // draft-save-while-live warning, #3146). The container was not updated when the handler
-        // gained them, so the two Update tests failed before reaching it: "Unable to resolve
-        // service for type IPlayRecordVersionRepository". The real repositories, like the rest.
-        services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>();
-        services.AddScoped<ILiveSessionRepository, LiveSessionRepository>();
-        // #2349: IGameCoreDataProvider is required by CreatePlayRecordCommandHandler.
-        // Register the real SharedGameRepository (only needs DbContext + IDomainEventCollector,
-        // both provided by CreateBase) and the real GameCoreDataProvider.
-        // IPrivateGameRepository is already mocked in IntegrationServiceCollectionBuilder.CreateBase.
-        services.AddScoped<ISharedGameRepository, SharedGameRepository>();
-        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        services.AddPlayRecordHandlerDependencies(_timeProvider);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = ServiceProvider.GetRequiredService<MeepleAiDbContext>();

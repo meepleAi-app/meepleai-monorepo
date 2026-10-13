@@ -329,13 +329,165 @@ public sealed class PrivateGameRetrievalTests
         body.Should().NotContain(BothArms).And.NotContain(LexicalOnly).And.NotContain(VectorOnly);
     }
 
+    // ─── Il thread sul gioco privato (#4244, consegna B) ───
+    // `ChatThreads.GameId` è una chiave esterna verso il catalogo: il gioco privato sta nella colonna
+    // sua. Per chi legge il thread il gioco resta uno, condiviso o privato che sia.
+
+    private const string ThreadSecret = "ZAFFIRO-7731";
+
+    [Fact]
+    public async Task TheOwner_CanOpenAThreadOnThePrivateGame()
+    {
+        var response = await PostThreadAsync(_token);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.Created, body);
+
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("gameId").GetGuid().Should().Be(_privateGameId, "il gioco del thread, come lo legge il client");
+        json.RootElement.GetProperty("privateGameId").GetGuid().Should().Be(_privateGameId, "e il client deve sapere che è privato");
+
+        var row = await ThreadRowAsync(json.RootElement.GetProperty("id").GetGuid());
+        row.GameId.Should().BeNull("GameId è una chiave esterna verso shared_games");
+        row.PrivateGameId.Should().Be(_privateGameId);
+    }
+
+    /// <summary>Il gioco privato di un altro non dice nemmeno di esistere (#4230).</summary>
+    [Fact]
+    public async Task AnotherUser_CannotOpenAThreadOnThePrivateGame()
+    {
+        var response = await PostThreadAsync(await CreateStrangerAsync());
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync(Ct));
+    }
+
+    [Fact]
+    public async Task AQuestionInTheThread_UsesItsHistoryAndThePrivatePdf()
+    {
+        var threadId = await CreateThreadWithMessageAsync($"La nostra variante si chiama {ThreadSecret}.");
+
+        await AskAsync(_token, chatId: threadId);
+
+        _hostFixture.Llm.LastUserPrompt.Should().NotBeNull("il modello è stato interrogato")
+            .And.Contain(ThreadSecret, "la cronologia del thread entra nel prompt")
+            .And.Contain(BothArms, "insieme ai passaggi del PDF privato");
+    }
+
+    /// <summary>
+    /// Ogni scrittura sul thread ricostruisce la riga dal dominio: una colonna che il mapper
+    /// dimentica verrebbe azzerata al primo messaggio, e il thread resterebbe senza gioco.
+    /// </summary>
+    [Fact]
+    public async Task AddingAMessage_KeepsTheThreadOnThePrivateGame()
+    {
+        var threadId = await CreateThreadWithMessageAsync("Prima domanda.");
+
+        var row = await ThreadRowAsync(threadId);
+        row.PrivateGameId.Should().Be(_privateGameId);
+        row.GameId.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TheThread_IsListedAmongTheThreadsOfThePrivateGame()
+    {
+        var threadId = await CreateThreadWithMessageAsync("Prima domanda.");
+
+        var byGame = await GetJsonAsync($"/api/v1/chat-threads?gameId={_privateGameId}");
+        byGame.GetProperty("threads").EnumerateArray().Select(t => t.GetProperty("id").GetGuid())
+            .Should().Contain(threadId);
+
+        var mine = await GetJsonAsync($"/api/v1/chat-threads/my?gameId={_privateGameId}");
+        mine.ToString().Should().Contain(threadId.ToString(), "anche l'elenco dei propri thread filtra per gioco");
+    }
+
+    /// <summary>
+    /// La cronologia di un thread vale per il suo gioco: nominata in una domanda su un altro gioco,
+    /// non entra nel prompt (#4242). Qui l'altro gioco è un secondo gioco privato dello stesso utente.
+    /// </summary>
+    [Fact]
+    public async Task TheHistoryOfTheThread_IsNotUsedForAQuestionOnAnotherGame()
+    {
+        var threadId = await CreateThreadWithMessageAsync($"La nostra variante si chiama {ThreadSecret}.");
+        var otherGameId = await SeedAnotherPrivateGameWithAPdfAsync();
+
+        await AskAsync(_token, chatId: threadId, gameId: otherGameId);
+
+        _hostFixture.Llm.LastUserPrompt.Should().NotBeNull("la domanda sull'altro gioco riceve la sua risposta")
+            .And.NotContain(ThreadSecret);
+    }
+
+    private Task<HttpResponseMessage> PostThreadAsync(string token) =>
+        _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/chat-threads", token,
+            new { gameId = _privateGameId, title = "Chat: Il mio prototipo" }), Ct);
+
+    /// <summary>Un thread del proprietario sul gioco privato, con un messaggio dentro.</summary>
+    private async Task<Guid> CreateThreadWithMessageAsync(string content)
+    {
+        var created = await PostThreadAsync(_token);
+        var createdBody = await created.Content.ReadAsStringAsync(Ct);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, createdBody);
+        using var thread = JsonDocument.Parse(createdBody);
+        var threadId = thread.RootElement.GetProperty("id").GetGuid();
+
+        var added = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, $"/api/v1/chat-threads/{threadId}/messages", _token,
+            new { content, role = "user" }), Ct);
+        added.IsSuccessStatusCode.Should().BeTrue(await added.Content.ReadAsStringAsync(Ct));
+        return threadId;
+    }
+
+    private async Task<(Guid? GameId, Guid? PrivateGameId)> ThreadRowAsync(Guid threadId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var row = await db.ChatThreads.AsNoTracking().SingleAsync(t => t.Id == threadId, Ct);
+        return (row.GameId, row.PrivateGameId);
+    }
+
+    private async Task<JsonElement> GetJsonAsync(string path)
+    {
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, path, _token), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var json = JsonDocument.Parse(body);
+        return json.RootElement.Clone();
+    }
+
+    /// <summary>Un secondo gioco privato dello stesso utente, con un suo PDF indicizzato.</summary>
+    private async Task<Guid> SeedAnotherPrivateGameWithAPdfAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var otherGameId = Guid.NewGuid();
+        db.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = otherGameId,
+            OwnerId = _userId,
+            Title = "Un altro prototipo",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = PrivateGameSource.Manual,
+        });
+        await db.SaveChangesAsync(Ct);
+        await IndexPdfOfPrivateGameAsync(db, otherGameId, processingState: "Ready",
+            ("In the other prototype each player draws seven tiles at setup.", QueryVectorEmbeddings.Axis(1f, 0f)));
+        return otherGameId;
+    }
+
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
-    private async Task<List<JsonElement>> AskAsync(string token)
+    private async Task<List<JsonElement>> AskAsync(string token, Guid? chatId = null, Guid? gameId = null)
     {
+        var payload = new Dictionary<string, object?>
+        {
+            ["gameId"] = (gameId ?? _privateGameId).ToString(),
+            ["query"] = Question,
+        };
+        if (chatId is not null) payload["chatId"] = chatId;
+
         var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, "/api/v1/agents/qa/stream?generateFollowUps=false", token,
-            new { gameId = _privateGameId.ToString(), query = Question }), Ct);
+            HttpMethod.Post, "/api/v1/agents/qa/stream?generateFollowUps=false", token, payload), Ct);
         var body = await response.Content.ReadAsStringAsync(Ct);
         response.StatusCode.Should().Be(HttpStatusCode.OK, body);
 
@@ -362,8 +514,12 @@ public sealed class PrivateGameRetrievalTests
     /// <c>PrivateGameId</c> di <c>text_chunks</c> e <c>vector_documents</c> (con <c>GameId</c> null),
     /// e nel <c>game_id</c> unico degli embedding.
     /// </summary>
-    private async Task<Guid> IndexPrivatePdfAsync(
-        MeepleAiDbContext db, string processingState, params (string Text, float[] Vector)[] chunks)
+    private Task<Guid> IndexPrivatePdfAsync(
+        MeepleAiDbContext db, string processingState, params (string Text, float[] Vector)[] chunks) =>
+        IndexPdfOfPrivateGameAsync(db, _privateGameId, processingState, chunks);
+
+    private async Task<Guid> IndexPdfOfPrivateGameAsync(
+        MeepleAiDbContext db, Guid privateGameId, string processingState, params (string Text, float[] Vector)[] chunks)
     {
         var pdfId = Guid.NewGuid();
         db.PdfDocuments.Add(new PdfDocumentEntity
@@ -375,7 +531,7 @@ public sealed class PrivateGameRetrievalTests
             UploadedByUserId = _userId,
             ProcessingState = processingState,
             ProcessedAt = string.Equals(processingState, "Ready", StringComparison.Ordinal) ? DateTime.UtcNow : null,
-            PrivateGameId = _privateGameId,
+            PrivateGameId = privateGameId,
         });
         await db.SaveChangesAsync(Ct);
 
@@ -389,7 +545,7 @@ public sealed class PrivateGameRetrievalTests
         {
             Id = vectorDocumentId,
             GameId = null,
-            PrivateGameId = _privateGameId,
+            PrivateGameId = privateGameId,
             PdfDocumentId = pdfId,
             ChunkCount = chunks.Length,
             TotalCharacters = chunks.Sum(c => c.Text.Length),
@@ -403,7 +559,7 @@ public sealed class PrivateGameRetrievalTests
         {
             Id = Guid.NewGuid(),
             GameId = null,
-            PrivateGameId = _privateGameId,
+            PrivateGameId = privateGameId,
             PdfDocumentId = pdfId,
             Content = c.Text,
             ChunkIndex = i,
@@ -430,7 +586,7 @@ public sealed class PrivateGameRetrievalTests
                 """;
             command.Parameters.AddWithValue("@id", Guid.NewGuid());
             command.Parameters.AddWithValue("@vdId", vectorDocumentId);
-            command.Parameters.AddWithValue("@gameId", _privateGameId);
+            command.Parameters.AddWithValue("@gameId", privateGameId);
             command.Parameters.AddWithValue("@text", entities[i].Content);
             command.Parameters.AddWithValue("@vec", new Pgvector.Vector(chunks[i].Vector));
             command.Parameters.AddWithValue("@chunkIndex", i);

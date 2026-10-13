@@ -31,7 +31,7 @@ import { AgentSelector } from './AgentSelector';
 import { DEFAULT_AGENTS } from './constants';
 import { GameSelector } from './GameSelector';
 import { QuickStartSuggestions } from './QuickStartSuggestions';
-import { createThreadWithContext, explainThreadCreationFailure } from './ThreadCreator';
+import { createThreadWithContext } from './ThreadCreator';
 
 import type { PromptType } from './types';
 
@@ -118,8 +118,8 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
         });
 
         router.push(`/chat/${threadId}`);
-      } catch (err) {
-        setError(explainThreadCreationFailure(err) ?? 'Errore nella creazione della conversazione');
+      } catch {
+        setError('Errore nella creazione della conversazione');
       } finally {
         setIsCreating(false);
       }

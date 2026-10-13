@@ -10,7 +10,6 @@
  */
 
 import { api } from '@/lib/api';
-import { ApiError } from '@/lib/api/core/errors';
 
 import type { PromptType } from './types';
 
@@ -24,24 +23,6 @@ export interface CreateThreadParams {
 
 export interface CreateThreadResult {
   threadId: string;
-}
-
-/**
- * The code the backend answers when a thread is asked on the user's own private game.
- * Issue #4230: the thread cannot hold a private game yet (that arrives with #4244), and until
- * then the request is refused with this code instead of failing as a 500.
- */
-export const PRIVATE_GAME_CHAT_UNAVAILABLE = 'PRIVATE_GAME_CHAT_UNAVAILABLE';
-
-/**
- * What to tell the user when thread creation fails for a reason they can understand.
- * Returns null for every other failure: the caller keeps its own generic message.
- */
-export function explainThreadCreationFailure(error: unknown): string | null {
-  if (error instanceof ApiError && error.code === PRIVATE_GAME_CHAT_UNAVAILABLE) {
-    return 'La chat sui giochi privati non è ancora disponibile.';
-  }
-  return null;
 }
 
 /**

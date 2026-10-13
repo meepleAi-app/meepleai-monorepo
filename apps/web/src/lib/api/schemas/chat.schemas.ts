@@ -58,7 +58,11 @@ export type ChatThreadMessageDto = z.infer<typeof ChatThreadMessageDtoSchema>;
 
 export const ChatThreadDtoSchema = z.object({
   id: z.string().uuid(),
+  // Il gioco del thread, del catalogo o privato che sia.
   gameId: GameIdString.nullable(),
+  // #4244: lo stesso id quando il gioco è privato. Serve a chi deve chiederne i dati, perché le
+  // rotte dei giochi del catalogo non conoscono i giochi privati.
+  privateGameId: GameIdString.nullable().optional(),
   agentId: z.string().uuid().nullable().optional(),
   agentType: z.string().nullable().optional(),
   title: z.string().nullable(),

@@ -96,12 +96,12 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
     /// Flow: CreateChatThreadCommand on the caller's own private game.
     /// Issue #4230: this test asserted that the handler stored the private id in the thread's
     /// GameId, and it passed because nothing here enforces the foreign key to shared_games. On
-    /// Postgres that request was a 500. Until the thread can hold a private game (#4244) the
-    /// handler refuses it explicitly and stores nothing.
+    /// Postgres that request was a 500. Since #4244 the thread holds a private game in a field of
+    /// its own, and the handler stores it there.
     /// </summary>
     [Fact]
     [Trait("Category", TestCategories.Unit)]
-    public async Task Handle_PrivateGame_CreateChatThread_IsRefusedUntilTheThreadCanHoldAPrivateGame()
+    public async Task Handle_PrivateGame_CreateChatThread_StoresTheThreadOnThePrivateGame()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -124,12 +124,14 @@ public sealed class PrivateGameRagFlowIntegrationTests : IDisposable
             Title: "Private Game RAG Chat");
 
         // Act
-        var act = () => handler.Handle(command, CancellationToken.None);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<Api.Middleware.Exceptions.PrivateGameChatUnavailableException>();
+        result.PrivateGameId.Should().Be(privateGameId);
         mockRepo.Verify(
-            r => r.AddAsync(It.IsAny<ChatThread>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            r => r.AddAsync(
+                It.Is<ChatThread>(t => t.PrivateGameId == privateGameId && t.SharedGameId == null),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

@@ -9,7 +9,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 internal record ChatThreadDto(
     Guid Id,
     Guid UserId,
-    Guid? GameId,
+    Guid? GameId, // il gioco del thread, del catalogo o privato
+    Guid? PrivateGameId, // #4244: valorizzato (uguale a GameId) quando il gioco è privato
     Guid? AgentId, // Issue #2030 - Track which agent was used
     string? Title,
     string Status,

@@ -4921,6 +4921,9 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("PrivateGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("SelectedKnowledgeBaseIdsJson")
                         .HasColumnType("text");
 
@@ -4940,6 +4943,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("LiveSessionId")
                         .HasDatabaseName("IX_ChatThreads_LiveSessionId");
+
+                    b.HasIndex("PrivateGameId");
 
                     b.HasIndex("UserId");
 
@@ -17487,6 +17492,11 @@ namespace Api.Infrastructure.Migrations
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId");
+
+                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PrivateGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
                         .WithMany()

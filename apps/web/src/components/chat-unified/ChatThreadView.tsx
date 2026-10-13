@@ -255,7 +255,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         if (threadData.gameId) {
           try {
             // #4158: by id, not by scanning a list — the list is one page of the catalog.
-            const found = await api.games.getById(threadData.gameId);
+            // #4244: a private game is not in the catalog, and `/games/{id}` answers 404 for it.
+            const found = threadData.privateGameId
+              ? await api.library.getPrivateGame(threadData.privateGameId)
+              : await api.games.getById(threadData.gameId);
             if (found) {
               gameName = found.title;
               setGame({

@@ -63,7 +63,7 @@ internal sealed class AnswerRetrieval
                 MinScore: (double)profile.MinScore,
                 SearchMode: request.SearchMode,
                 Language: language,
-                DocumentIds: request.DocumentIds, // Issue #2051
+                PdfDocumentIds: request.PdfDocumentIds, // Issue #2051, #4243
                 QueryVector: request.QueryVector, // Issue #563: reuse the vector computed for the semantic cache
                 QueryRoleHint: queryRoleHint),
             cancellationToken).ConfigureAwait(false);
@@ -124,6 +124,6 @@ internal sealed class AnswerRetrieval
 internal sealed record AnswerRetrievalRequest(
     Guid GameId,
     string Question,
-    IReadOnlyList<Guid>? DocumentIds = null,
+    IReadOnlyList<Guid>? PdfDocumentIds = null,
     string SearchMode = "hybrid",
     float[]? QueryVector = null);

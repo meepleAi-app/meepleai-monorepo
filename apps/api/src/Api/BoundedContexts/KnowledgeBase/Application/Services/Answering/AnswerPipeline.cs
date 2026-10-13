@@ -237,9 +237,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // Step 0: Check if documents are still being processed
         var gameGuid = Guid.Parse(query.GameId);
-        var documentIdsList = query.DocumentIds?.ToList();
+
+        // #4243: the client names documents by vector document id (GameDocumentDto.Id), the retrieval
+        // filters by PDF id. Translated once, here, for the readiness check and for both arms.
+        var pdfFilter = await ResolvePdfFilterAsync(gameGuid, query.DocumentIds, cancellationToken).ConfigureAwait(false);
         var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
-            gameGuid, documentIdsList, cancellationToken).ConfigureAwait(false);
+            gameGuid, pdfFilter, cancellationToken).ConfigureAwait(false);
 
         if (!allReady)
         {
@@ -257,7 +260,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             new StreamingStateUpdate("Searching knowledge base..."));
 
         var (searchSuccess, snippets, domainSearchResults, searchConfidence) = await PerformSearchAndBuildCitationsAsync(
-            query.GameId, query.Query, query.DocumentIds, query.UserId, profile.Content, language, cancellationToken).ConfigureAwait(false);
+            query.GameId, query.Query, pdfFilter, query.UserId, profile.Content, language, cancellationToken).ConfigureAwait(false);
 
         // R1 (spec §6.1): the NO_RESULTS exit is skipped when an approved-claim block is present — the
         // claims become the answer source in the retrieval-miss case (e.g. Catan/TM "Setup per N").
@@ -395,15 +398,22 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private async Task<(bool success, List<Snippet>? snippets, List<Domain.Entities.SearchResult>? domainResults, Confidence? searchConfidence)> PerformSearchAndBuildCitationsAsync(
         string gameId,
         string queryText,
-        IReadOnlyList<Guid>? documentIds,
+        IReadOnlyList<Guid>? pdfDocumentIds,
         Guid userId,
         AgentProfileContent profile,
         string language,
         CancellationToken cancellationToken)
     {
+        // #4243: the request filtered by document and none of the named documents belongs to this
+        // game. That finds nothing. It must stop here: further down an empty list means "no filter".
+        if (pdfDocumentIds is { Count: 0 })
+        {
+            return (false, null, null, null);
+        }
+
         // Passi 3 e 4: recupero e reranking con i numeri del profilo, condivisi con la domanda singola.
         var searchResults = await _retrieval.RetrieveAsync(
-            new AnswerRetrievalRequest(Guid.Parse(gameId), queryText, documentIds),
+            new AnswerRetrievalRequest(Guid.Parse(gameId), queryText, pdfDocumentIds),
             profile, language, cancellationToken).ConfigureAwait(false);
 
         if (searchResults.Count == 0)
@@ -671,26 +681,38 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             .Select(vc => new Snippet(vc.Quote, $"PDF:{vc.PdfId}", vc.PdfPage, 0, 1.0f))
             .ToList();
 
-    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
-        Guid gameId, List<Guid>? documentIds, CancellationToken ct)
+    /// <summary>
+    /// The document filter of the request, as PDF ids. Null when the request does not filter.
+    /// </summary>
+    /// <remarks>
+    /// Issue #4243. The client names documents by <c>VectorDocument.Id</c> (what
+    /// <c>GetGameDocumentsQuery</c> returns as <c>GameDocumentDto.Id</c>); the two retrieval arms
+    /// compare <c>PdfDocument.Id</c>. Only the vector documents of this game are resolved, so an id
+    /// from another game names nothing. The result may be empty: the request filtered, and no
+    /// document answers to those ids.
+    /// </remarks>
+    private async Task<List<Guid>?> ResolvePdfFilterAsync(
+        Guid gameId, IReadOnlyList<Guid>? vectorDocumentIds, CancellationToken ct)
     {
-        IReadOnlyList<DocumentProcessing.Domain.Entities.PdfDocument>? documents;
+        if (vectorDocumentIds is not { Count: > 0 })
+        {
+            return null;
+        }
 
-        if (documentIds?.Count > 0)
-        {
-            // documentIds are VectorDocument.Ids (from GameDocumentDto returned by GetGameDocumentsQuery).
-            // Resolve to PdfDocument.Ids via the VectorDocument aggregate before querying the PDF repo.
-            var vectorDocs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
-            var pdfIds = (vectorDocs ?? [])
-                .Where(vd => documentIds.Contains(vd.Id))
-                .Select(vd => vd.PdfDocumentId)
-                .ToList();
-            documents = await _pdfDocumentRepository.GetByIdsAsync(pdfIds, ct).ConfigureAwait(false);
-        }
-        else
-        {
-            documents = await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
-        }
+        var vectorDocs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
+        return (vectorDocs ?? [])
+            .Where(vd => vectorDocumentIds.Contains(vd.Id))
+            .Select(vd => vd.PdfDocumentId)
+            .Distinct()
+            .ToList();
+    }
+
+    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
+        Guid gameId, List<Guid>? pdfDocumentIds, CancellationToken ct)
+    {
+        var documents = pdfDocumentIds is null
+            ? await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false)
+            : await _pdfDocumentRepository.GetByIdsAsync(pdfDocumentIds, ct).ConfigureAwait(false);
 
         // Defensive: Handle null or empty collection
         if (documents is null or { Count: 0 }) return (true, 0, 0);

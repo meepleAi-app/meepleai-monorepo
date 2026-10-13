@@ -485,7 +485,7 @@ public sealed class SearchQueryHandlerTests
             MinScore: 0.0,
             SearchMode: "hybrid",
             Language: TestLanguage,
-            DocumentIds: new List<Guid> { inScopePdf });
+            PdfDocumentIds: new List<Guid> { inScopePdf });
 
         // Act
         var result = await handler.Handle(query, TestCancellationToken);

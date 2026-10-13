@@ -1230,11 +1230,26 @@ public class StreamQaQueryHandlerTests
     public async Task Handle_MultiDocumentFiltering_Issue2051()
     {
         // Arrange
+        // #4243: the request names documents by VECTOR DOCUMENT id (GameDocumentDto.Id), and the two
+        // arms compare PDF ids. The two are different Guids, as in production: this test used one id
+        // for both, which is the one case where comparing the wrong table cannot show.
         var gameId = Guid.NewGuid().ToString();
+        var gameGuid = Guid.Parse(gameId);
+        var vectorDoc1 = Guid.NewGuid();
+        var vectorDoc2 = Guid.NewGuid();
         var docId1 = Guid.NewGuid();
         var docId2 = Guid.NewGuid();
         var outOfScopeDocId = Guid.NewGuid();
-        var documentIds = new List<Guid> { docId1, docId2 };
+        var documentIds = new List<Guid> { vectorDoc1, vectorDoc2 };
+
+        _vectorDocumentRepositoryMock
+            .Setup(x => x.GetByGameIdAsync(gameGuid, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<VectorDocument>
+            {
+                new(vectorDoc1, gameGuid, docId1, "en", totalChunks: 1),
+                new(vectorDoc2, gameGuid, docId2, "en", totalChunks: 1),
+                new(Guid.NewGuid(), gameGuid, outOfScopeDocId, "en", totalChunks: 1),
+            });
 
         var query = new StreamQaQuery(gameId, "Question for specific documents?", TestUserId, "User", ThreadId: null, DocumentIds: documentIds);
 
@@ -1314,6 +1329,14 @@ public class StreamQaQueryHandlerTests
         capturedKeywordArm!.Should().ContainSingle(
             "the out-of-scope PdfDocumentId must be filtered out before reaching RRF fusion");
         capturedKeywordArm![0].PdfDocumentId.Should().Be(docId1);
+
+        // #4243: the vector arm receives the same identity, the PDF ids, not the ids of the request.
+        _embeddingRepositoryMock.Verify(
+            x => x.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.Is<IReadOnlyList<Guid>?>(ids => ids != null && ids.Count == 2 && ids.Contains(docId1) && ids.Contains(docId2)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
 
         // Verify response completed successfully
         var completeEvent = events.LastOrDefault(e => e.Type == StreamingEventType.Complete);

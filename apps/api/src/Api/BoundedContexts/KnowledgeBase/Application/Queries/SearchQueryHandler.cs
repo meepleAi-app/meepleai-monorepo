@@ -94,17 +94,21 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             queryVector = new Vector(queryEmbedding.ToFloatArray());
         }
 
+        // #4243: an empty filter means no filter, for BOTH arms. The vector arm already read it that
+        // way and the keyword arm did not (it kept nothing), so the two disagreed on an empty list.
+        var pdfDocumentIds = query.PdfDocumentIds is { Count: > 0 } ? query.PdfDocumentIds : null;
+
         // Execute search based on mode
         _logger.LogDebug("[SearchQueryHandler] Step 2: Executing {SearchMode} search...", query.SearchMode);
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var searchResults = query.SearchMode.ToLowerInvariant() switch
         {
             "vector" => await PerformVectorSearchAsync(
-                query.GameId, queryVector, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.TopK, query.MinScore, pdfDocumentIds, cancellationToken).ConfigureAwait(false),
 
             // Phase D (D6): forward QueryRoleHint to the hybrid search re-ranker.
             "hybrid" => await PerformHybridSearchAsync(
-                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.DocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, pdfDocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();

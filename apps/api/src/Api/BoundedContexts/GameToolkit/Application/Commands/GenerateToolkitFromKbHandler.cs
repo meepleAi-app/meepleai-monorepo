@@ -115,7 +115,14 @@ internal class GenerateToolkitFromKbHandler
         if (coreData is null)
             throw new NotFoundException("Game", command.GameId.ToString());
 
-        // 2. Resolve accessible KB card IDs for this user/game
+        // 2. Resolve accessible KB card IDs for this user/game.
+        //
+        // #4243: sono id di `vector_documents`, e servono solo a sapere se c'è qualcosa da leggere.
+        // NON vanno passati alla ricerca come filtro per documento: quello è una lista di id di
+        // PDF. Finivano lì, in quinta posizione, e il braccio lessicale li confrontava con
+        // `PdfDocumentId` senza trovare nulla: il toolkit nasceva dal solo braccio vettoriale.
+        // La ricerca è già limitata al gioco, e le schede accessibili sono tutti i documenti
+        // indicizzati di quel gioco: nessun filtro in più dà lo stesso insieme, su entrambi i bracci.
         var accessibleCardIds = await _ragAccessService
             .GetAccessibleKbCardsAsync(command.UserId, command.GameId, UserRole.Admin, cancellationToken)
             .ConfigureAwait(false);
@@ -166,7 +173,7 @@ internal class GenerateToolkitFromKbHandler
             var queryResults = await _hybridSearchService
                 .SearchAsync(
                     extractionQuery, command.GameId, SearchMode.Hybrid, MaxChunksPerQuery,
-                    accessibleCardIds, vectorWeight: 0.7f, keywordWeight: 0.3f,
+                    pdfDocumentIds: null, vectorWeight: 0.7f, keywordWeight: 0.3f,
                     keywordMinScore: 0.01,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);

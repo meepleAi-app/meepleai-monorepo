@@ -63,13 +63,15 @@ public sealed class DomainEventLogMetricsTests : IAsyncLifetime
     /// here, not the event, so the producer moved rather than the test being deleted.
     /// </summary>
     [Fact]
-    public async Task InsertedCounter_G1_IncrementsWithEventTypeTag_WhenAgentCreatedEmitted()
+    public async Task InsertedCounter_G1_IncrementsWithEventTypeTag_WhenChatSessionCreatedEmitted()
     {
         // Arrange
         using var scope = _webFactory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
         var gameId = await TestSessionHelper.SeedSharedGameAsync(dbContext, title: "Catan-Metrics-G1");
+        // #4280: the RAG gate on POST /chat/sessions wants the caller to own the game.
+        await TestSessionHelper.SeedOwnedLibraryGameAsync(dbContext, userId, gameId);
 
         var measurements = new List<(long Value, KeyValuePair<string, object?>[] Tags)>();
 

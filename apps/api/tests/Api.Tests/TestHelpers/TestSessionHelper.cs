@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.UserLibrary;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Tests.TestHelpers;
@@ -328,5 +329,32 @@ internal static class TestSessionHelper
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
         return sharedGameId;
+    }
+
+    /// <summary>
+    /// Puts a catalog game in the user's library with ownership declared: what an ordinary
+    /// user needs before the RAG gate lets them open a chat on that game (rule 3 of
+    /// <c>RagAccessService.CanAccessRagAsync</c>).
+    /// </summary>
+    /// <remarks>
+    /// #4280: tests that use <c>POST /api/v1/chat/sessions</c> only as a producer of
+    /// <c>chat.session.created</c> seeded a user and a game and nothing else, and got 403.
+    /// </remarks>
+    public static async Task SeedOwnedLibraryGameAsync(
+        MeepleAiDbContext dbContext,
+        Guid userId,
+        Guid sharedGameId)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            UserId = userId,
+            SharedGameId = sharedGameId,
+            AddedAt = DateTime.UtcNow,
+            OwnershipDeclaredAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
     }
 }

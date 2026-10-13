@@ -236,6 +236,7 @@ public sealed class DiscoverEndpointsIntegrationTests
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
+        // The game carries a value only in the #2123 tombstone column, and no stored cover.
         await SeedSharedGameAsync(
             dbContext,
             "Wingspan",
@@ -256,7 +257,13 @@ public sealed class DiscoverEndpointsIntegrationTests
         item.GetProperty("id").GetString().Should().NotBeNullOrEmpty();
         item.GetProperty("name").GetString().Should().Be("Wingspan");
         item.GetProperty("year").GetInt32().Should().Be(2019);
-        item.GetProperty("imageUrl").GetString().Should().Be("https://example.com/wingspan.jpg");
+        // #4085: `imageUrl` is the cover resolved from storage, never the tombstone column.
+        // This test asserted the opposite and went red when the projection was corrected;
+        // the resolved-cover case is in GetNewGamesQueryHandlerTests, where storage is a double.
+        item.TryGetProperty("imageUrl", out var imageUrl).Should().BeTrue();
+        imageUrl.ValueKind.Should().Be(
+            JsonValueKind.Null,
+            "a game with no stored cover has no image: the tombstone URL must not reach the response");
         item.GetProperty("createdAt").GetDateTime().Should().BeCloseTo(
             DateTime.UtcNow.AddDays(-2),
             TimeSpan.FromMinutes(1));

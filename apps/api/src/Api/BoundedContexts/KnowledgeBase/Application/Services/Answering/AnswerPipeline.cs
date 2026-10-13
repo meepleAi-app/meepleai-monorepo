@@ -165,7 +165,13 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // Check cache first - if cached, return it as streaming events.
         // R1: skip the semantic cache when injecting (the (game,query) key carries no card fingerprint,
         // so a cached no-card answer must not shadow, nor a claim answer replay after suppression — §6.2).
-        var cacheKey = QaCacheKey(query, profile, language.Language);
+        // #4279: the history of the thread, read BEFORE the cache. It goes into the prompt, so it
+        // goes into the key: the cache is shared by every user, and an answer shaped by one
+        // conversation must not be served to a question asked in another, or in none.
+        var chatHistoryContext = await LoadChatThreadContextAsync(
+            query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
+
+        var cacheKey = QaCacheKey(query, profile, language.Language, chatHistoryContext);
         var cachedResponse = injectClaims
             ? null
             : await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
@@ -218,7 +224,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         }
 
         // Stream fresh QA response
-        await foreach (var evt in AskStreamInternalAsync(query, profile, language.Language, verifiedBlock, cancellationToken).ConfigureAwait(false))
+        await foreach (var evt in AskStreamInternalAsync(
+            query, profile, language.Language, verifiedBlock, chatHistoryContext, cacheKey, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -229,11 +236,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         PublishedAgentProfile profile,
         string language,
         VerifiedRulesBlock verifiedBlock,
+        string chatHistoryContext,
+        string cacheKey,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var injectClaims = !verifiedBlock.IsEmpty;
         var startTime = _timeProvider.GetUtcNow();
-        var cacheKey = QaCacheKey(query, profile, language);
 
         // Step 0: Check if documents are still being processed
         var gameGuid = Guid.Parse(query.GameId);
@@ -285,9 +293,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         yield return CreateEvent(StreamingEventType.Citations,
             new StreamingCitations(allSnippets));
 
-        // Step 2: Load chat thread context if ThreadId provided
-        var chatHistoryContext = await LoadChatThreadContextAsync(
-            query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
+        // Step 2: the chat thread context was read before the cache (it is part of the cache key).
 
         // Step 3: Build LLM prompts with context
         yield return CreateEvent(StreamingEventType.StateUpdate,
@@ -742,14 +748,67 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     }
 
     /// <summary>
-    /// La chiave della cache delle risposte: gioco e domanda, più la lingua della risposta e la
-    /// versione del profilo che l'ha prodotta. Senza la lingua, la risposta in inglese a una domanda
-    /// breve tornava a chi chiede in italiano; senza la versione, una pubblicazione restava invisibile
-    /// fino alla scadenza della cache (24 ore). Entrano nell'hash, così la chiave e i tag con cui la
-    /// cache invalida per gioco restano quelli di sempre.
+    /// La chiave della cache delle risposte: il gioco, e l'impronta di tutto ciò che dà forma alla
+    /// risposta. La cache è condivisa fra gli utenti, quindi ciò che entra nel prompt e non nella
+    /// chiave diventa una risposta servita a chi ha chiesto un'altra cosa:
+    /// <list type="bullet">
+    ///   <item>la lingua: la risposta in inglese a una domanda breve tornava a chi chiede in italiano;</item>
+    ///   <item>la versione del profilo: una pubblicazione restava invisibile fino alla scadenza (24 ore);</item>
+    ///   <item>la cronologia del thread (#4279): la risposta nata da una conversazione tornava a chi fa
+    ///   la stessa domanda in un'altra, o in nessuna;</item>
+    ///   <item>il filtro per documento (#4279): la risposta sull'intero gioco tornava a chi chiede di
+    ///   un documento solo;</item>
+    ///   <item>la risposta parziale da continuare (#4279): «Continua» manda una domanda vuota, e tutte
+    ///   le continuazioni di un gioco avevano la stessa chiave;</item>
+    ///   <item>lo stile (#4279): cambia le istruzioni al modello.</item>
+    /// </list>
+    /// Chi aggiunge qualcosa al prompt lo aggiunge qui. Tutto entra nell'hash, così la chiave e i tag
+    /// con cui la cache invalida per gioco restano quelli di sempre.
     /// </summary>
-    private string QaCacheKey(AnswerRequest query, PublishedAgentProfile profile, string language) =>
-        _cache.GenerateQaCacheKey(query.GameId, $"{language}|{profile.VersionId:N}|{query.Query}");
+    /// <remarks>
+    /// Una prima domanda in chat ha già una cronologia: il client salva la domanda nel thread prima
+    /// di chiedere. Due utenti che fanno la stessa prima domanda hanno quindi la stessa cronologia, e
+    /// continuano a condividere la risposta in cache.
+    /// </remarks>
+    private string QaCacheKey(
+        AnswerRequest query, PublishedAgentProfile profile, string language, string chatHistoryContext)
+    {
+        var shape = string.Join(
+            '|',
+            language,
+            profile.VersionId.ToString("N"),
+            $"style:{NormalizedResponseStyle(query.ResponseStyle)}",
+            $"history:{Fingerprint(chatHistoryContext)}",
+            $"documents:{Fingerprint(DocumentFilterOf(query.DocumentIds))}",
+            $"continues:{Fingerprint(query.ContinuationContext)}",
+            query.Query);
+
+        return _cache.GenerateQaCacheKey(query.GameId, shape);
+    }
+
+    /// <summary>
+    /// Lo stile come lo legge <see cref="AnswerPromptBuilder.ResponseStyleInstruction"/>: tutto ciò che
+    /// non è «detailed» o «continuation» produce le stesse istruzioni, quindi la stessa chiave.
+    /// </summary>
+    private static string NormalizedResponseStyle(string? responseStyle) => responseStyle switch
+    {
+        "detailed" => "detailed",
+        "continuation" => "continuation",
+        _ => "concise",
+    };
+
+    /// <summary>Il filtro per documento in forma canonica: senza filtro, vuoto; gli id ordinati.</summary>
+    private static string DocumentFilterOf(IReadOnlyList<Guid>? documentIds) =>
+        documentIds is { Count: > 0 }
+            ? string.Join(',', documentIds.Distinct().OrderBy(id => id).Select(id => id.ToString("N")))
+            : string.Empty;
+
+    /// <summary>
+    /// L'impronta di un ingrediente della risposta. Calcolata sul testo com'è: la chiave poi viene
+    /// portata in minuscolo, e due cronologie che differiscono per le maiuscole restano distinte.
+    /// </summary>
+    private static string Fingerprint(string? text) =>
+        string.IsNullOrEmpty(text) ? "-" : CryptographyHelper.ComputeSha256Hash(text);
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)
     {

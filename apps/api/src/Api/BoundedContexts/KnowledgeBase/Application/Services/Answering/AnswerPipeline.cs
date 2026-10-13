@@ -714,6 +714,16 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             ? await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false)
             : await _pdfDocumentRepository.GetByIdsAsync(pdfDocumentIds, ct).ConfigureAwait(false);
 
+        // #4244: FindByGameIdAsync knows shared games only, so for a private game it returned
+        // nothing and this guard passed whatever the state of its PDFs. A game is one or the
+        // other, hence the second lookup only when the first found nothing. Not folded into
+        // FindByGameIdAsync on purpose: that method also serves a route that lists the PDFs of a
+        // game without checking who asks, and this one has already passed the RAG access check.
+        if (pdfDocumentIds is null && (documents is null or { Count: 0 }))
+        {
+            documents = await _pdfDocumentRepository.FindByPrivateGameIdAsync(gameId, ct).ConfigureAwait(false);
+        }
+
         // Defensive: Handle null or empty collection
         if (documents is null or { Count: 0 }) return (true, 0, 0);
 

@@ -100,6 +100,7 @@ internal class DeleteMessageCommandHandler : ICommandHandler<DeleteMessageComman
             Id: thread.Id,
             UserId: thread.UserId,
             GameId: thread.GameId,
+            PrivateGameId: thread.PrivateGameId,
             AgentId: thread.AgentId, // Issue #2030
             Title: thread.Title,
             Status: thread.Status.Value,

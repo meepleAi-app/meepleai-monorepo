@@ -13,7 +13,22 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 internal sealed class ChatThread : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
+
+    /// <summary>
+    /// Il gioco del thread: un gioco del catalogo condiviso oppure, se <see cref="GameIsPrivate"/>, un
+    /// gioco privato. Chi legge il thread vede un gioco solo; la distinzione serve a chi lo salva,
+    /// perché in tabella i due stanno in colonne diverse (#4244).
+    /// </summary>
     public Guid? GameId { get; private set; }
+
+    /// <summary>Issue #4244: <see cref="GameId"/> è l'id di un gioco privato.</summary>
+    public bool GameIsPrivate { get; private set; }
+
+    /// <summary>Il gioco del catalogo condiviso, o null se il thread è su un gioco privato.</summary>
+    public Guid? SharedGameId => GameIsPrivate ? null : GameId;
+
+    /// <summary>Il gioco privato, o null se il thread è su un gioco del catalogo.</summary>
+    public Guid? PrivateGameId => GameIsPrivate ? GameId : null;
     public Guid? AgentId { get; private set; } // Issue #2030 - Track which agent was used
     public string? AgentType { get; private set; } // Issue #4362 - tutor/arbitro/decisore/auto
 
@@ -75,13 +90,17 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         string? title = null,
         Guid? agentId = null,
         string? agentType = null, // Issue #4362 - Added agentType parameter
-        Guid? liveSessionId = null) : base(id) // #4276
+        Guid? liveSessionId = null, // #4276
+        bool gameIsPrivate = false) : base(id) // #4244
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
+        if (gameIsPrivate && gameId is null)
+            throw new ArgumentException("A thread on a private game needs the game", nameof(gameIsPrivate));
 
         UserId = userId;
         GameId = gameId;
+        GameIsPrivate = gameIsPrivate; // #4244
         AgentId = agentId; // Issue #2030
         AgentType = agentType?.Trim(); // Issue #4362
         LiveSessionId = liveSessionId; // #4276

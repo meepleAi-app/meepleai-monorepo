@@ -124,8 +124,11 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
           throw new Error(t('auth.login.genericError'));
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : t('auth.login.genericError');
-        setError(errorMessage);
+        // #4134: un errore che arriva a pagina smontata non ha più nessuno a cui mostrarsi.
+        if (isMountedRef.current) {
+          const errorMessage = err instanceof Error ? err.message : t('auth.login.genericError');
+          setError(errorMessage);
+        }
         // Issue #2171: HttpClient already calls logApiError on failed responses
         // (apps/web/src/lib/api/core/httpClient.ts) → re-logging here produced
         // duplicate console.error noise. UX feedback is preserved via setError.
@@ -157,8 +160,10 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
         await refreshUser();
         await redirectAfterAuth(user.role);
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : t('auth.twoFactor.error');
-        setTwoFactorError(errorMessage);
+        if (isMountedRef.current) {
+          const errorMessage = err instanceof Error ? err.message : t('auth.twoFactor.error');
+          setTwoFactorError(errorMessage);
+        }
         // Issue #2171: HttpClient already logs API failures — see comment in handleLogin.
       } finally {
         if (isMountedRef.current) {

@@ -18,8 +18,10 @@
  * - open-redirect protection on fromParam (#2168)
  */
 
+import { useEffect, useState } from 'react';
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mocks (must be registered before component import)
@@ -322,32 +324,75 @@ describe('LoginPageContent — error logging dedup (#2171)', () => {
  * (shard 3/4 della PR #4293, da `_content.auth-provider.test.tsx`).
  *
  * Sotto lo smantellamento non è riproducibile in isolamento. Quello che si può asserire è il
- * contratto: a pagina smontata nessun aggiornamento parte, quindi React non tocca `window.event`.
- * Senza la guardia questi test leggono `window.event` una volta.
+ * contratto: a pagina smontata il codice dell'app non chiede nessun aggiornamento. Vale per il
+ * login che riesce e per quello che fallisce: anche il `catch` aggiorna lo stato.
+ *
+ * ⚠️ «Nessuna lettura di `window.event`» NON è quel contratto, e la prima stesura asseriva
+ * quello. React legge `window.event` anche per conto suo: per esempio nel compito che svuota gli
+ * effetti passivi, che un commit avvenuto a pagina ancora MONTATA accoda nello scheduler. Se lo
+ * scheduler cede il passo fra il commit e quel compito, il compito gira dopo lo smontaggio e il
+ * conteggio sale senza che nessuno abbia aggiornato nulla (shard 1/4 della PR #4304: rosso su un
+ * diff che il login non lo toccava). Per questo si contano solo le letture con il codice dell'app
+ * nello stack, e i primi due test tengono onesto il rilevatore in entrambe le direzioni.
  */
 describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', () => {
   const USER = { id: 'u1', email: 'user@example.com', role: 'User' };
 
   let originalWindowEvent: PropertyDescriptor | undefined;
 
-  /** Sostituisce `window.event` con un getter che conta le letture. */
-  function countReadsOfWindowEvent() {
-    const reads = vi.fn(() => undefined);
+  /** Un frame dello stack che viene dal codice sotto `src/`, escluso il getter qui sotto. */
+  const isAppFrame = (frame: string) =>
+    /[\\/]src[\\/]/.test(frame) &&
+    !frame.includes('node_modules') &&
+    !frame.includes('readWindowEvent');
+
+  /**
+   * Sostituisce `window.event` con un getter che registra lo stack di chi lo legge.
+   *
+   * Un `setState` chiamato dal codice dell'app ha nello stack il file che lo chiama. Le letture
+   * che React fa per conto suo hanno solo React e lo scheduler.
+   *
+   * Il limite, misurato: non vede un setter passato direttamente a qualcosa che nessuna funzione
+   * dell'app attende (`void promise.then(setX)`, `setTimeout(setX)`). I gestori del login
+   * chiamano i setter dal proprio corpo, dopo un `await`.
+   */
+  function watchReadsOfWindowEvent() {
+    const stacks: string[] = [];
     originalWindowEvent = Object.getOwnPropertyDescriptor(window, 'event');
-    Object.defineProperty(window, 'event', { configurable: true, get: reads });
-    return reads;
+    Object.defineProperty(window, 'event', {
+      configurable: true,
+      get: function readWindowEvent() {
+        // I dieci frame di default oggi bastano. Un wrapper in più non deve nascondere l'app.
+        const limit = Error.stackTraceLimit;
+        Error.stackTraceLimit = 50;
+        try {
+          stacks.push(new Error('window.event').stack ?? '');
+        } finally {
+          Error.stackTraceLimit = limit;
+        }
+        return undefined;
+      },
+    });
+    return {
+      /** Tutte le letture, di chiunque. */
+      all: () => stacks,
+      /** Le letture fatte per un aggiornamento che il codice dell'app ha chiesto. */
+      requestedByTheApp: () => stacks.filter(stack => stack.split('\n').some(isAppFrame)),
+    };
   }
 
-  /** Una navigazione che resta in volo finché il test non la conclude. */
-  function navigationInFlight() {
+  /** Una chiamata che resta in volo finché il test non la conclude o la fa fallire. */
+  function inFlight(mock: Mock) {
     let finish!: () => void;
-    pushMock.mockImplementationOnce(
+    let fail!: (reason: Error) => void;
+    mock.mockImplementationOnce(
       () =>
-        new Promise<void>(resolve => {
+        new Promise<void>((resolve, reject) => {
           finish = resolve;
+          fail = reject;
         })
     );
-    return () => finish();
+    return { finish: () => finish(), fail: (reason: Error) => fail(reason) };
   }
 
   const settle = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -359,12 +404,55 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
       Object.defineProperty(window, 'event', originalWindowEvent);
       originalWindowEvent = undefined;
     }
-    // I due test del 2FA danno a questo doppio una risposta permanente: non deve arrivare agli altri.
+    // Una risposta che un test rosso non ha consumato non deve arrivare al test dopo: una
+    // chiamata lasciata in volo da `inFlight` non si conclude mai, e trascina nel rosso chi segue.
     verify2FAMock.mockReset();
+    pushMock.mockReset().mockResolvedValue(undefined);
+    mockAuth.refreshUser.mockReset().mockResolvedValue(undefined);
+  });
+
+  /**
+   * Il rilevatore, prima direzione: un aggiornamento chiesto dopo lo smontaggio DEVE comparire.
+   * Il giorno in cui React smette di leggere `window.event` per un `setState`, o lo stack cambia
+   * forma, è questo test a dirlo. Senza, quelli sul login passerebbero per niente.
+   */
+  it('sees an update the app requests after unmount', () => {
+    const late = { requestUpdate: () => {} };
+    function UpdatesLate() {
+      const [, setValue] = useState(0);
+      useEffect(() => {
+        late.requestUpdate = () => setValue(1);
+      }, []);
+      return null;
+    }
+    const { unmount } = render(<UpdatesLate />);
+    unmount();
+    const reads = watchReadsOfWindowEvent();
+
+    late.requestUpdate();
+
+    // Oggi è una lettura per `setState`. Quante siano è affare di React, non di questo test.
+    expect(reads.requestedByTheApp().length).toBeGreaterThanOrEqual(1);
+  });
+
+  /**
+   * Il rilevatore, seconda direzione: una lettura che nessuno nell'app ha chiesto NON conta.
+   * È la forma del rosso della PR #4304. Qui la lettura la fa un timer che chiama `Reflect.get`,
+   * nativo: nello stack non c'è nessun file dell'app, come quando a leggere è lo scheduler.
+   */
+  it('does not count a read nobody in the app asked for', async () => {
+    const reads = watchReadsOfWindowEvent();
+
+    setTimeout(Reflect.get, 0, window, 'event');
+    await settle();
+
+    // Almeno quella del timer. Se nel frattempo ne arriva una di React, non conta nemmeno lei.
+    expect(reads.all().length).toBeGreaterThanOrEqual(1);
+    expect(reads.requestedByTheApp()).toEqual([]);
   });
 
   it('does not schedule a React update when the password login finishes after unmount', async () => {
-    const finishNavigation = navigationInFlight();
+    const navigation = inFlight(pushMock);
     loginMock.mockResolvedValueOnce({ user: USER, requiresTwoFactor: false });
 
     const { unmount } = render(<LoginPageContent />);
@@ -372,42 +460,86 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
     await waitFor(() => expect(pushMock).toHaveBeenCalled());
 
     unmount();
-    const reads = countReadsOfWindowEvent();
-    finishNavigation();
+    const reads = watchReadsOfWindowEvent();
+    navigation.finish();
     await settle();
 
-    expect(reads).not.toHaveBeenCalled();
+    expect(reads.requestedByTheApp()).toEqual([]);
+  });
+
+  it('does not schedule a React update when the password login fails after unmount', async () => {
+    const sessionRefresh = inFlight(mockAuth.refreshUser);
+    loginMock.mockResolvedValueOnce({ user: USER, requiresTwoFactor: false });
+
+    const { unmount } = render(<LoginPageContent />);
+    fillAndSubmit();
+    await waitFor(() => expect(mockAuth.refreshUser).toHaveBeenCalled());
+
+    unmount();
+    const reads = watchReadsOfWindowEvent();
+    sessionRefresh.fail(new Error('sessione non disponibile'));
+    await settle();
+
+    expect(reads.requestedByTheApp()).toEqual([]);
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('does not schedule a React update when the 2FA login finishes after unmount', async () => {
-    const finishNavigation = navigationInFlight();
+    const navigation = inFlight(pushMock);
     loginMock.mockResolvedValueOnce({
       user: null,
       requiresTwoFactor: true,
       tempSessionToken: 'temp-token-abc',
     });
-    // Risposta permanente: il campo del codice invia da solo a sei cifre, oltre all'invio del test.
-    verify2FAMock.mockResolvedValue(USER);
+    verify2FAMock.mockResolvedValueOnce(USER);
 
     const { unmount } = render(<LoginPageContent />);
     fillAndSubmit();
-    const code = await screen.findByLabelText(/code|codice/i);
-    fireEvent.change(code, { target: { value: '123456' } });
-    fireEvent.submit(code.closest('form')!);
+    // Sei cifre bastano: il campo invia da solo. Un `fireEvent.submit` in più avvia una SECONDA
+    // verifica, che finisce a pagina montata proprio mentre il test smonta.
+    fireEvent.change(await screen.findByLabelText(/code|codice/i), {
+      target: { value: '123456' },
+    });
     await waitFor(() => expect(pushMock).toHaveBeenCalled());
 
     unmount();
-    const reads = countReadsOfWindowEvent();
-    finishNavigation();
+    const reads = watchReadsOfWindowEvent();
+    navigation.finish();
     await settle();
 
-    expect(reads).not.toHaveBeenCalled();
+    expect(reads.requestedByTheApp()).toEqual([]);
+    expect(verify2FAMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not schedule a React update when the 2FA login fails after unmount', async () => {
+    const sessionRefresh = inFlight(mockAuth.refreshUser);
+    loginMock.mockResolvedValueOnce({
+      user: null,
+      requiresTwoFactor: true,
+      tempSessionToken: 'temp-token-abc',
+    });
+    verify2FAMock.mockResolvedValueOnce(USER);
+
+    const { unmount } = render(<LoginPageContent />);
+    fillAndSubmit();
+    fireEvent.change(await screen.findByLabelText(/code|codice/i), {
+      target: { value: '123456' },
+    });
+    await waitFor(() => expect(mockAuth.refreshUser).toHaveBeenCalled());
+
+    unmount();
+    const reads = watchReadsOfWindowEvent();
+    sessionRefresh.fail(new Error('sessione non disponibile'));
+    await settle();
+
+    expect(reads.requestedByTheApp()).toEqual([]);
+    expect(verify2FAMock).toHaveBeenCalledTimes(1);
   });
 
   /**
-   * L'altra direzione: a pagina montata il form deve uscire dallo stato di attesa. Senza questa
-   * asserzione una guardia sbagliata lascerebbe il form bloccato dopo un login fallito, e nessun
-   * test se ne accorgerebbe.
+   * L'altra direzione: a pagina montata il form deve mostrare l'errore e uscire dallo stato di
+   * attesa. Senza queste asserzioni una guardia sbagliata lascerebbe il form bloccato, o muto,
+   * dopo un login fallito, e nessun test se ne accorgerebbe.
    */
   it('still leaves the loading state when the login fails and the page is mounted', async () => {
     loginMock.mockRejectedValueOnce(new Error('Credenziali non valide'));
@@ -427,16 +559,17 @@ describe('LoginPageContent — il login si conclude a pagina smontata (#4134)', 
       requiresTwoFactor: true,
       tempSessionToken: 'temp-token-abc',
     });
-    // Sempre rifiutata: il campo del codice invia da solo a sei cifre, oltre all'invio del test.
-    verify2FAMock.mockRejectedValue(new Error('Codice non valido'));
+    verify2FAMock.mockRejectedValueOnce(new Error('Codice non valido'));
 
     render(<LoginPageContent />);
     fillAndSubmit();
-    const code = await screen.findByLabelText(/code|codice/i);
-    fireEvent.change(code, { target: { value: '123456' } });
-    fireEvent.submit(code.closest('form')!);
+    // Sei cifre bastano: il campo invia da solo.
+    fireEvent.change(await screen.findByLabelText(/code|codice/i), {
+      target: { value: '123456' },
+    });
 
     expect(await screen.findByText('Codice non valido')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText(/code|codice/i)).not.toBeDisabled());
+    expect(verify2FAMock).toHaveBeenCalledTimes(1);
   });
 });

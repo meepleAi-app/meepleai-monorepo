@@ -46,6 +46,7 @@ internal class SwitchThreadAgentCommandHandler : ICommandHandler<SwitchThreadAge
             Id: thread.Id,
             UserId: thread.UserId,
             GameId: thread.GameId,
+            PrivateGameId: thread.PrivateGameId,
             AgentId: thread.AgentId,
             Title: thread.Title,
             Status: thread.Status.Value,

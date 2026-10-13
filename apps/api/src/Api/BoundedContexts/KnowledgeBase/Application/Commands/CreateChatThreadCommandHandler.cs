@@ -13,14 +13,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// Handles CreateChatThreadCommand.
 /// </summary>
 /// <remarks>
-/// <c>ChatThreads.GameId</c> references <c>shared_games</c>. The game named by the request is
-/// checked before the thread is built (issue #4230): before, an id that was not in the shared
-/// catalogue was stored as it came and broke the foreign key at save time, a 500.
+/// <c>ChatThreads.GameId</c> references <c>shared_games</c>; a private game goes in
+/// <c>ChatThreads.PrivateGameId</c> (#4244). The game named by the request is checked before the
+/// thread is built (issue #4230): before, an id that was not in the shared catalogue was stored as
+/// it came and broke the foreign key at save time, a 500.
 /// <list type="bullet">
 ///   <item>a shared game: the thread is created on it;</item>
-///   <item>the caller's own private game: refused with
-///   <see cref="PrivateGameChatUnavailableException"/> until the thread can hold a private game
-///   (#4244);</item>
+///   <item>the caller's own private game: the thread is created on it, as a private game;</item>
 ///   <item>anything else, someone else's private game included: not found. The two cases answer
 ///   alike so that the response does not reveal whether a private game exists.</item>
 /// </list>
@@ -48,10 +47,8 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
         ArgumentNullException.ThrowIfNull(command);
 
         var gameId = command.PrivateGameId ?? command.GameId;
-        if (gameId.HasValue)
-        {
-            await EnsureSharedGameAsync(gameId.Value, command.UserId, cancellationToken).ConfigureAwait(false);
-        }
+        var gameIsPrivate = gameId.HasValue
+            && await IsCallersPrivateGameAsync(gameId.Value, command.UserId, cancellationToken).ConfigureAwait(false);
 
         var thread = new ChatThread(
             id: Guid.NewGuid(),
@@ -59,7 +56,8 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
             gameId: gameId,
             title: command.Title,
             agentId: command.AgentId,
-            agentType: command.AgentType);
+            agentType: command.AgentType,
+            gameIsPrivate: gameIsPrivate);
 
         if (command.SelectedKnowledgeBaseIds?.Count > 0)
         {
@@ -72,22 +70,27 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
         return MapToDto(thread);
     }
 
-    private async Task EnsureSharedGameAsync(Guid gameId, Guid userId, CancellationToken cancellationToken)
+    /// <summary>
+    /// True when the game is the caller's own private game, false when it is a shared game; any
+    /// other id is not found.
+    /// </summary>
+    private async Task<bool> IsCallersPrivateGameAsync(Guid gameId, Guid userId, CancellationToken cancellationToken)
     {
         var isShared = await _db.SharedGames
             .AnyAsync(g => g.Id == gameId, cancellationToken)
             .ConfigureAwait(false);
         if (isShared)
         {
-            return;
+            return false;
         }
 
+        // Soft-deleted private games are excluded by the query filter of PrivateGameEntity.
         var isCallersPrivateGame = await _db.PrivateGames
             .AnyAsync(g => g.Id == gameId && g.OwnerId == userId, cancellationToken)
             .ConfigureAwait(false);
         if (isCallersPrivateGame)
         {
-            throw new PrivateGameChatUnavailableException(gameId);
+            return true;
         }
 
         throw new NotFoundException("Game", gameId.ToString());
@@ -99,6 +102,7 @@ internal sealed class CreateChatThreadCommandHandler : ICommandHandler<CreateCha
             Id: thread.Id,
             UserId: thread.UserId,
             GameId: thread.GameId,
+            PrivateGameId: thread.PrivateGameId,
             AgentId: thread.AgentId,
             Title: thread.Title,
             Status: thread.Status.Value,

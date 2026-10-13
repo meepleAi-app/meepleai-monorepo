@@ -231,16 +231,21 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
 
     #endregion
 
-    #region FindByGameIdAsync Tests
+    #region FindByUserIdAndGameIdAsync — catalog game
 
+    /// <summary>
+    /// #4244: il gioco di un thread sta in una di due colonne. Un thread su un gioco del catalogo
+    /// resta nella colonna con la chiave esterna verso <c>shared_games</c>, andata e ritorno, e
+    /// la colonna del gioco privato resta vuota. (Qui c'erano i test di <c>FindByGameIdAsync</c>,
+    /// tolto: non aveva chiamanti e restituiva i thread di tutti gli utenti su un gioco.)
+    /// </summary>
     [Fact]
-    public async Task FindByGameIdAsync_MultipleThreadsForGame_ShouldReturnAll()
+    public async Task FindByUserIdAndGameIdAsync_ThreadsOnACatalogGame_KeepTheGameInTheCatalogColumn()
     {
         // Arrange
         await CleanDatabaseAsync();
         await EnsureUserExistsAsync(TestUserId1);
 
-        // Seed a SharedGameEntity to satisfy the FK constraint on ChatThread.GameId
         var gameId = Guid.NewGuid();
         _dbContext!.SharedGames.Add(new Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity
         {
@@ -257,24 +262,22 @@ public sealed class ChatThreadRepositoryIntegrationTests : IAsyncLifetime
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
 
         // Act
-        var result = await _repository.FindByGameIdAsync(gameId, TestCancellationToken);
+        var result = await _repository.FindByUserIdAndGameIdAsync(TestUserId1, gameId, TestCancellationToken);
 
         // Assert
         result.Should().HaveCount(2);
-        result.Should().AllSatisfy(t => t.GameId.Should().Be(gameId));
-    }
+        result.Should().AllSatisfy(t =>
+        {
+            t.GameId.Should().Be(gameId);
+            t.GameIsPrivate.Should().BeFalse();
+        });
 
-    [Fact]
-    public async Task FindByGameIdAsync_NoThreads_ShouldReturnEmptyList()
-    {
-        // Arrange
-        await CleanDatabaseAsync();
-
-        // Act - Use Guid that doesn't violate FK (no thread will match)
-        var result = await _repository!.FindByGameIdAsync(Guid.NewGuid(), TestCancellationToken);
-
-        // Assert
-        result.Should().BeEmpty();
+        _dbContext.ChangeTracker.Clear();
+        var rows = await _dbContext.ChatThreads.AsNoTracking()
+            .Where(t => t.Id == TestThreadId1 || t.Id == TestThreadId2)
+            .Select(t => new { t.GameId, t.PrivateGameId })
+            .ToListAsync(TestCancellationToken);
+        rows.Should().HaveCount(2).And.OnlyContain(r => r.GameId == gameId && r.PrivateGameId == null);
     }
 
     #endregion

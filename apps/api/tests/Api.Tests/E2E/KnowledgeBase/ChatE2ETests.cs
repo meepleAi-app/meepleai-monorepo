@@ -163,12 +163,12 @@ public sealed class ChatE2ETests : E2ETestBase
     }
 
     /// <summary>
-    /// Issue #4230. A thread on the caller's own private game cannot be stored yet: the thread's
-    /// game column references shared_games (the private-game column arrives with #4244). Until
-    /// then the answer says so, with a code the client can read, instead of a 500.
+    /// Issue #4244. A thread on the caller's own private game is created: the game goes in the
+    /// thread's private-game column (the other one references shared_games). Before #4230 this
+    /// request was a 500; between #4230 and #4244, a 422.
     /// </summary>
     [Fact]
-    public async Task CreateChatThread_OnOwnPrivateGame_SaysItIsNotAvailableYet()
+    public async Task CreateChatThread_OnOwnPrivateGame_CreatesTheThread()
     {
         var (sessionToken, userId) = await RegisterUserAsync(
             $"chat_pg_self_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
@@ -178,10 +178,11 @@ public sealed class ChatE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync(
             "/api/v1/chat-threads", new { gameId = privateGameId, title = "My private game" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity,
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
             "CreateChatThread (gioco privato proprio): " + await DescribeResponseAsync(response));
         var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        body.GetProperty("error").GetString().Should().Be("PRIVATE_GAME_CHAT_UNAVAILABLE");
+        body.GetProperty("gameId").GetGuid().Should().Be(privateGameId);
+        body.GetProperty("privateGameId").GetGuid().Should().Be(privateGameId);
     }
 
     private async Task<Guid> SeedPrivateGameAsync(Guid ownerId)

@@ -48,13 +48,18 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         SearchQuery query,
         CancellationToken cancellationToken)
     {
-        // RAG access enforcement
-        if (query.UserId.HasValue)
+        ArgumentNullException.ThrowIfNull(query);
+        var access = query.Access
+            ?? throw new ArgumentException("SearchQuery.Access is required", nameof(query));
+
+        // RAG access enforcement. #4294: the sender states who is asking; only one that has
+        // already passed the gate (SearchAccess.AlreadyChecked) is not checked again here.
+        if (access.UserId is { } userId)
         {
-            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+            var userRole = Enum.TryParse<UserRole>(access.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
             await _ragAccessService.EnsureRagAccessAsync(
-                query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
+                userId, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

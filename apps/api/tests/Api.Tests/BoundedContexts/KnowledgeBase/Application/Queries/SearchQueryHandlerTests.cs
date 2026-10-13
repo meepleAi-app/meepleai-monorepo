@@ -84,6 +84,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: TestGameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "vector",
@@ -163,6 +164,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: TestGameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "vector",
@@ -230,6 +232,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: TestGameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "vector",
@@ -243,6 +246,112 @@ public sealed class SearchQueryHandlerTests
         embeddingServiceMock.Verify(
             s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ─── #4294: chi manda la ricerca dichiara chi chiede ───
+
+    /// <summary>
+    /// Il cancello RAG per un utente che non può interrogare il gioco: nessun embedding, nessuna
+    /// ricerca. Prima di #4294 bastava omettere l'utente dalla query perché questo controllo non
+    /// avvenisse.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ForAUserWhoMayNotQueryTheGame_Refuses_BeforeSearching()
+    {
+        var userId = Guid.NewGuid();
+        var embeddingServiceMock = new Mock<IEmbeddingService>();
+        var embeddingRepositoryMock = new Mock<IEmbeddingRepository>();
+        var ragAccessMock = new Mock<IRagAccessService>();
+        ragAccessMock
+            .Setup(r => r.CanAccessRagAsync(userId, TestGameId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var handler = CreateHandler(embeddingRepositoryMock.Object, embeddingServiceMock.Object, ragAccessMock.Object);
+
+        var act = () => handler.Handle(
+            new SearchQuery(
+                GameId: TestGameId,
+                Query: TestQuery,
+                Access: SearchAccess.OfUser(userId, "User")),
+            TestCancellationToken);
+
+        (await act.Should().ThrowAsync<Api.Middleware.Exceptions.RagOwnershipRequiredException>())
+            .Which.GameId.Should().Be(TestGameId);
+        embeddingServiceMock.VerifyNoOtherCalls();
+        embeddingRepositoryMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>Il ruolo arriva al cancello: un amministratore non viene trattato da utente.</summary>
+    [Fact]
+    public async Task Handle_ForAUser_AsksTheGateWithTheirRole()
+    {
+        var userId = Guid.NewGuid();
+        var ragAccessMock = new Mock<IRagAccessService>();
+        ragAccessMock
+            .Setup(r => r.CanAccessRagAsync(userId, TestGameId, UserRole.Admin, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var handler = CreateHandler(
+            EmptyEmbeddingRepositoryMock().Object, EmbeddingServiceReturningAVector().Object, ragAccessMock.Object);
+
+        await handler.Handle(
+            new SearchQuery(
+                GameId: TestGameId,
+                Query: TestQuery,
+                Access: SearchAccess.OfUser(userId, "Admin"),
+                SearchMode: "vector"),
+            TestCancellationToken);
+
+        ragAccessMock.Verify(
+            r => r.CanAccessRagAsync(userId, TestGameId, UserRole.Admin, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Il mittente che ha già passato il cancello lo dichiara, e qui non si controlla due volte.
+    /// È l'unico modo di non essere controllati: un valore, non un'omissione.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheSenderHasAlreadyPassedTheGate_DoesNotCheckAgain()
+    {
+        var ragAccessMock = new Mock<IRagAccessService>();
+
+        var handler = CreateHandler(
+            EmptyEmbeddingRepositoryMock().Object, EmbeddingServiceReturningAVector().Object, ragAccessMock.Object);
+
+        await handler.Handle(
+            new SearchQuery(
+                GameId: TestGameId,
+                Query: TestQuery,
+                Access: SearchAccess.AlreadyChecked,
+                SearchMode: "vector"),
+            TestCancellationToken);
+
+        ragAccessMock.VerifyNoOtherCalls();
+    }
+
+    private static Mock<IEmbeddingService> EmbeddingServiceReturningAVector()
+    {
+        var mock = new Mock<IEmbeddingService>();
+        mock
+            .Setup(s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new[] { 0.1f, 0.2f, 0.3f } }));
+        return mock;
+    }
+
+    private static Mock<IEmbeddingRepository> EmptyEmbeddingRepositoryMock()
+    {
+        var mock = new Mock<IEmbeddingRepository>();
+        mock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
+        return mock;
     }
 
     private static SearchQueryHandler CreateHandler(
@@ -390,6 +499,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: gameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.0,
             SearchMode: "hybrid",
@@ -481,6 +591,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: gameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.0,
             SearchMode: "hybrid",

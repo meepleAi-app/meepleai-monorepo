@@ -64,6 +64,8 @@ internal sealed class KbSearchProviderAdapter(IMediator mediator, MeepleAiDbCont
         var query = new SearchQuery(
             GameId: gameId,
             Query: question,
+            // Evaluation runs start from /admin/kb/docs/{docId}/evaluations (RequireAdminOrAbove).
+            Access: SearchAccess.AlreadyChecked,
             TopK: topK,
             Language: pdfMeta.Language ?? "en",
             PdfDocumentIds: new[] { docId });

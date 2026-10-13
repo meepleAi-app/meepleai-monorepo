@@ -48,6 +48,18 @@ public class RagQueryIdentityArchitectureTests
             "RequestingUserId", "RequestingUserRole"),
         // #4206: la guida alla preparazione cerca nella KB del gioco, quindi passa dal cancello.
         ("Api.BoundedContexts.KnowledgeBase.Application.Queries.StreamSetupGuideQuery", "UserId", "UserRole"),
+        // #4294: la spiegazione di un argomento cerca nella KB del gioco e ne restituisce i passaggi.
+        ("Api.BoundedContexts.KnowledgeBase.Application.Queries.ExplainQuery", "UserId", "UserRole"),
+    };
+
+    /// <summary>
+    /// Gli stessi vincoli per i comandi scritti con proprietà <c>init</c> invece che con un
+    /// costruttore primario: lì è <c>required</c> a costringere ogni chiamante a dichiarare chi è.
+    /// </summary>
+    private static readonly (string TypeName, string UserIdProperty, string RoleProperty)[] s_ragScopedInitCommands =
+    {
+        // #4294: il suggerimento di mossa cerca nella KB del gioco, e la risposta porta i passaggi.
+        ("Api.BoundedContexts.KnowledgeBase.Application.Commands.SuggestPlayerMoveCommand", "UserId", "UserRole"),
     };
 
     private static Type ResolveQueryType(string typeName)
@@ -105,6 +117,66 @@ public class RagQueryIdentityArchitectureTests
             parameter.HasDefaultValue.Should().BeFalse(
                 $"{queryType.Name}.{roleParam} non deve avere un valore di default — " +
                 "il ruolo decide il bypass admin, e un default lo renderebbe implicito");
+        }
+    }
+
+    /// <summary>
+    /// #4294. <c>SearchQuery</c> non può avere un utente obbligatorio — la manda anche chi il
+    /// cancello l'ha già passato, come la pipeline delle risposte — ma porta, obbligatoria, la
+    /// dichiarazione di quale dei due casi sia. Prima l'utente era opzionale e il gestore
+    /// controllava solo se c'era: due rotte lo omettevano e restituivano i passaggi a chiunque.
+    /// </summary>
+    [Fact]
+    public void SearchQuery_MakesEverySenderSayWhoIsAsking()
+    {
+        var queryType = ResolveQueryType("Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchQuery");
+        var access = FindPrimaryConstructorParameter(queryType, "Access");
+
+        access.HasDefaultValue.Should().BeFalse(
+            "con un default il mittente che non dichiara nulla compila, e il controllo torna saltabile per omissione");
+
+        access.ParameterType
+            .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .Should().BeEmpty(
+                "SearchAccess si ottiene solo da OfUser(...) o da AlreadyChecked: un costruttore pubblico " +
+                "permetterebbe un terzo stato, senza utente e senza dichiarazione");
+
+        foreach (var legacy in new[] { "UserId", "UserRole" })
+        {
+            queryType.GetProperty(legacy).Should().BeNull(
+                $"SearchQuery.{legacy} era l'identità opzionale: l'identità passa da Access");
+        }
+    }
+
+    [Fact]
+    public void RagScopedInitCommands_CarryTheIdentityAsRequiredNonNullableProperties()
+    {
+        foreach (var (typeName, userIdProperty, roleProperty) in s_ragScopedInitCommands)
+        {
+            var commandType = ResolveQueryType(typeName);
+
+            var userId = commandType.GetProperty(userIdProperty);
+            userId.Should().NotBeNull($"'{commandType.Name}' deve avere una proprietà '{userIdProperty}'");
+            userId!.PropertyType.Should().Be(
+                typeof(Guid),
+                $"{commandType.Name}.{userIdProperty} deve essere Guid e non Guid?: un'identità " +
+                "annullabile rende la guardia del gestore condizionale");
+
+            foreach (var name in new[] { userIdProperty, roleProperty })
+            {
+                var property = commandType.GetProperty(name);
+                property.Should().NotBeNull($"'{commandType.Name}' deve avere una proprietà '{name}'");
+                // Per nome: una dipendenza dei test porta un proprio RequiredMemberAttribute, e
+                // typeof(...) sarebbe ambiguo.
+                property!.CustomAttributes
+                    .Any(a => string.Equals(
+                        a.AttributeType.FullName,
+                        "System.Runtime.CompilerServices.RequiredMemberAttribute",
+                        StringComparison.Ordinal))
+                    .Should().BeTrue(
+                        $"{commandType.Name}.{name} deve essere `required`: senza, un chiamante che " +
+                        "la omette compila e salta l'autorizzazione");
+            }
         }
     }
 
